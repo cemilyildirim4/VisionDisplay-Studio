@@ -1,0 +1,8 @@
+node_modules/
+client/node_modules/
+client/dist/
+database/
+src/**/bin/
+src/**/obj/
+.git/
+*.sql

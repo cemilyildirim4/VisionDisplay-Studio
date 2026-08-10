@@ -1,0 +1,286 @@
+{
+  "format": 1,
+  "restore": {
+    "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Api/DisplayConfigurator.Api.csproj": {}
+  },
+  "projects": {
+    "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Api/DisplayConfigurator.Api.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Api/DisplayConfigurator.Api.csproj",
+        "projectName": "DisplayConfigurator.Api",
+        "projectPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Api/DisplayConfigurator.Api.csproj",
+        "packagesPath": "/Users/masaustu-03/.nuget/packages/",
+        "outputPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Api/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/masaustu-03/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/DisplayConfigurator.Application.csproj": {
+                "projectPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/DisplayConfigurator.Application.csproj"
+              },
+              "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Infrastructure/DisplayConfigurator.Infrastructure.csproj": {
+                "projectPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Infrastructure/DisplayConfigurator.Infrastructure.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.OpenApi": {
+              "target": "Package",
+              "version": "[8.0.29, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.6.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.423/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/DisplayConfigurator.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/DisplayConfigurator.Application.csproj",
+        "projectName": "DisplayConfigurator.Application",
+        "projectPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/DisplayConfigurator.Application.csproj",
+        "packagesPath": "/Users/masaustu-03/.nuget/packages/",
+        "outputPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/masaustu-03/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Domain/DisplayConfigurator.Domain.csproj": {
+                "projectPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Domain/DisplayConfigurator.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.423/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Domain/DisplayConfigurator.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Domain/DisplayConfigurator.Domain.csproj",
+        "projectName": "DisplayConfigurator.Domain",
+        "projectPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Domain/DisplayConfigurator.Domain.csproj",
+        "packagesPath": "/Users/masaustu-03/.nuget/packages/",
+        "outputPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Domain/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/masaustu-03/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.423/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Infrastructure/DisplayConfigurator.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Infrastructure/DisplayConfigurator.Infrastructure.csproj",
+        "projectName": "DisplayConfigurator.Infrastructure",
+        "projectPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Infrastructure/DisplayConfigurator.Infrastructure.csproj",
+        "packagesPath": "/Users/masaustu-03/.nuget/packages/",
+        "outputPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Infrastructure/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/masaustu-03/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/DisplayConfigurator.Application.csproj": {
+                "projectPath": "/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/DisplayConfigurator.Application.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Dapper": {
+              "target": "Package",
+              "version": "[2.1.79, )"
+            },
+            "Microsoft.Extensions.Configuration.Abstractions": {
+              "target": "Package",
+              "version": "[10.0.10, )"
+            },
+            "Npgsql": {
+              "target": "Package",
+              "version": "[10.0.3, )"
+            },
+            "QuestPDF": {
+              "target": "Package",
+              "version": "[2026.7.1, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.423/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

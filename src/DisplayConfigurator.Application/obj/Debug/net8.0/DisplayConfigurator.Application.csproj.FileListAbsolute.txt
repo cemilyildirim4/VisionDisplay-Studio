@@ -1,0 +1,16 @@
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/bin/Debug/net8.0/DisplayConfigurator.Application.deps.json
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/bin/Debug/net8.0/DisplayConfigurator.Application.dll
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/bin/Debug/net8.0/DisplayConfigurator.Application.pdb
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/bin/Debug/net8.0/DisplayConfigurator.Domain.dll
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/bin/Debug/net8.0/DisplayConfigurator.Domain.pdb
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/DisplayConfigurator.Application.csproj.AssemblyReference.cache
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/DisplayConfigurator.Application.GeneratedMSBuildEditorConfig.editorconfig
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/DisplayConfigurator.Application.AssemblyInfoInputs.cache
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/DisplayConfigurator.Application.AssemblyInfo.cs
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/DisplayConfigurator.Application.csproj.CoreCompileInputs.cache
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/DisplayConfigurator.Application.sourcelink.json
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/DisplayC.465CC705.Up2Date
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/DisplayConfigurator.Application.dll
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/refint/DisplayConfigurator.Application.dll
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/DisplayConfigurator.Application.pdb
+/Users/masaustu-03/Projects/display-configurator/src/DisplayConfigurator.Application/obj/Debug/net8.0/ref/DisplayConfigurator.Application.dll
