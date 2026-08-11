@@ -4,7 +4,11 @@ namespace DisplayConfigurator.Application.Interfaces;
 
 public interface ICabinRepository
 {
-    Task<IEnumerable<Cabin>> GetAllAsync();
+    Task<IEnumerable<Cabin>> GetAllAsync(string? category = null);
     Task<Cabin?> GetByIdAsync(int id);
     Task<IEnumerable<Cabin>> GetBySeriesIdAsync(int seriesId);
+    Task<Cabin> CreateAsync(Cabin cabin);
+    Task<bool> UpdateAsync(Cabin cabin);
+    Task<bool> DeleteAsync(int id);
+    Task<bool> ModelCodeExistsAsync(string modelCode, int? excludeId);
 }

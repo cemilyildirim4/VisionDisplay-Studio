@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DisplayConfigurator.Applica
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DisplayConfigurator.Infrastructure", "DisplayConfigurator.Infrastructure\DisplayConfigurator.Infrastructure.csproj", "{78952C76-8BF8-4CE2-9B50-6B7E9A236881}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DisplayConfigurator.Tests", "..\tests\DisplayConfigurator.Tests\DisplayConfigurator.Tests.csproj", "{72D53B88-A4C3-4A18-9942-787105F80C80}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{78952C76-8BF8-4CE2-9B50-6B7E9A236881}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78952C76-8BF8-4CE2-9B50-6B7E9A236881}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78952C76-8BF8-4CE2-9B50-6B7E9A236881}.Release|Any CPU.Build.0 = Release|Any CPU
+		{72D53B88-A4C3-4A18-9942-787105F80C80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72D53B88-A4C3-4A18-9942-787105F80C80}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72D53B88-A4C3-4A18-9942-787105F80C80}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72D53B88-A4C3-4A18-9942-787105F80C80}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

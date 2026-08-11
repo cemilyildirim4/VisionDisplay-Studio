@@ -1,0 +1,514 @@
+/**
+ * Çeviri sözlüğü ve dil altyapısı.
+ *
+ * Kullanım:  const { t, lang, setLang, dir } = useLang()
+ *            <h1>{t('app.title')}</h1>
+ *
+ * Yeni metin eklerken: önce buraya üç dilde ekleyin, sonra bileşende t('anahtar') çağırın.
+ * Anahtar bulunamazsa Türkçe karşılığı, o da yoksa anahtarın kendisi gösterilir.
+ */
+
+export const LANGUAGES = [
+  { code: 'tr', label: 'Türkçe', dir: 'ltr' },
+  { code: 'en', label: 'English', dir: 'ltr' },
+  { code: 'ar', label: 'العربية', dir: 'rtl' },
+]
+
+export const DEFAULT_LANG = 'tr'
+
+const dict = {
+  // ---------- Genel / üst bar ----------
+  'app.title': { tr: 'Ekran Konfigüratörü', en: 'Display Configurator', ar: 'مُهيّئ الشاشات' },
+  'app.tagline': { tr: 'LED Ekran ve Video Duvarı Çözümleri', en: 'LED Display & Video Wall Solutions', ar: 'حلول شاشات LED وجدران الفيديو' },
+  'chat.button': { tr: 'Asistan', en: 'Assistant', ar: 'المساعد' },
+  'chat.title': { tr: 'Masaüstü Bilişim', en: 'Masaüstü Bilişim', ar: 'Masaüstü Bilişim' },
+  'chat.subtitle': { tr: 'Teknolojileri', en: 'Teknolojileri', ar: 'Teknolojileri' },
+  'chat.placeholder': { tr: 'Bir soru yazın…', en: 'Type a question…', ar: '…اكتب سؤالاً' },
+  'chat.send': { tr: 'Gönder', en: 'Send', ar: 'إرسال' },
+  'chat.examples': { tr: 'Örnek sorular', en: 'Example questions', ar: 'أسئلة نموذجية' },
+  'chat.didYouMean': { tr: 'Tam anlayamadım. Şunu mu demek istediniz?', en: 'I am not quite sure. Did you mean this?', ar: 'لم أفهم تمامًا. هل تقصد هذا؟' },
+  'contact.heading': { tr: 'İletişim', en: 'Contact', ar: 'اتصل بنا' },
+  'contact.phone': { tr: 'Telefon', en: 'Phone', ar: 'هاتف' },
+  'contact.email': { tr: 'E-posta', en: 'E-mail', ar: 'بريد إلكتروني' },
+  'contact.address': { tr: 'Adres', en: 'Address', ar: 'العنوان' },
+  'contact.whatsappNote': { tr: 'Tıklayın, WhatsApp’tan yazın', en: 'Tap to message on WhatsApp', ar: 'اضغط للمراسلة عبر واتساب' },
+  'contact.emailNote': { tr: 'Tıklayın, e-posta uygulamanız açılsın', en: 'Tap to open your mail app', ar: 'اضغط لفتح تطبيق البريد' },
+  'contact.mapNote': { tr: 'Tıklayın, haritada açılsın', en: 'Tap to open in maps', ar: 'اضغط للفتح في الخرائط' },
+  'app.adminLink': { tr: 'Model Yönetimi', en: 'Model Management', ar: 'إدارة الطُرُز' },
+  'theme.toDark': { tr: 'Koyu temaya geç', en: 'Switch to dark theme', ar: 'التبديل إلى الوضع الداكن' },
+  'theme.toLight': { tr: 'Açık temaya geç', en: 'Switch to light theme', ar: 'التبديل إلى الوضع الفاتح' },
+  'app.langLabel': { tr: 'Dil seçimi', en: 'Language', ar: 'اللغة' },
+
+  // ---------- Boş durum ----------
+  'empty.prompt': {
+    tr: 'Lütfen yapılandırma için bir ürün modeli seçin.',
+    en: 'Please select a product model for configuration.',
+    ar: 'يرجى اختيار طراز المنتج للتهيئة.',
+  },
+  'empty.start': { tr: 'Yapılandırmayı başlat', en: 'Start configuration', ar: 'ابدأ التهيئة' },
+
+  // ---------- Sol üst ikon butonları ----------
+  'tool.reset': { tr: 'Sıfırla', en: 'Reset', ar: 'إعادة تعيين' },
+  'tool.hideMeasures': { tr: 'Ölçüleri gizle', en: 'Hide measurements', ar: 'إخفاء القياسات' },
+  'tool.showMeasures': { tr: 'Ölçüleri göster', en: 'Show measurements', ar: 'إظهار القياسات' },
+
+  // ---------- Ekran modu sekmeleri ----------
+  'mode.single': { tr: 'Tek Ekran', en: 'Single Screen', ar: 'شاشة واحدة' },
+  'mode.multi': { tr: 'Çoklu Ekran', en: 'Multi Screen', ar: 'شاشات متعددة' },
+
+  // ---------- Model bölümü ----------
+  'model.heading': { tr: 'Model', en: 'Model', ar: 'الطراز' },
+  'model.select': { tr: 'Modelinizi seçin', en: 'Select your model', ar: 'اختر طرازك' },
+  'model.change': { tr: 'Model değişikliği', en: 'Change model', ar: 'تغيير الطراز' },
+  'model.defaultSeries': { tr: 'LED İç Mekan', en: 'LED Indoor', ar: 'LED داخلي' },
+
+  // ---------- Duvar bölümü ----------
+  'wall.heading': { tr: 'Duvar', en: 'Wall', ar: 'الجدار' },
+  'wall.width': { tr: 'Genişlik', en: 'Width', ar: 'العرض' },
+  'wall.height': { tr: 'Yükseklik', en: 'Height', ar: 'الارتفاع' },
+
+  // ---------- Ekran bölümü ----------
+  'screen.heading': { tr: 'Ekran', en: 'Screen', ar: 'الشاشة' },
+  'screen.type': { tr: 'Ekran Türü', en: 'Screen Type', ar: 'نوع الشاشة' },
+  'screen.flat': { tr: 'Düz', en: 'Flat', ar: 'مسطحة' },
+  'screen.curved': { tr: 'Dışa Kavisli', en: 'Convex Curved', ar: 'محدبة' },
+  'screen.curvedIn': { tr: 'İçe Kavisli', en: 'Concave Curved', ar: 'مقعرة' },
+  'screen.lshape': { tr: 'İç L Tipi', en: 'Inner L-Type', ar: 'زاوية داخلية L' },
+  'screen.orientation': { tr: 'Oryantasyon', en: 'Orientation', ar: 'الاتجاه' },
+  'screen.landscape': { tr: 'Manzara', en: 'Landscape', ar: 'أفقي' },
+  'screen.portrait': { tr: 'Portre', en: 'Portrait', ar: 'عمودي' },
+  'screen.columns': { tr: 'Sütunlar', en: 'Columns', ar: 'الأعمدة' },
+  'screen.rows': { tr: 'Satırlar', en: 'Rows', ar: 'الصفوف' },
+  'screen.changeSettings': { tr: 'Ekran ayarlarını değiştir', en: 'Change screen setting', ar: 'تغيير إعدادات الشاشة' },
+  'screen.label': { tr: 'Ekran', en: 'Screen', ar: 'شاشة' },
+
+  // ---------- Çözünürlük ----------
+  'res.heading': { tr: 'Çözünürlük', en: 'Resolution', ar: 'الدقة' },
+
+  // ---------- Yapılandırma ----------
+  'conf.heading': { tr: 'Yapılandırma', en: 'Configuration', ar: 'التهيئة' },
+  'conf.fitToWall': { tr: 'Duvara sığdır', en: 'Fit to wall', ar: 'ملاءمة الجدار' },
+
+  // ---------- S-Kutu ----------
+  'sbox.heading': { tr: 'S-Kutu Yedekliliği', en: 'S-Box Redundancy', ar: 'تكرار S-Box' },
+  'common.no': { tr: 'Hayır', en: 'No', ar: 'لا' },
+  'common.yes': { tr: 'Evet', en: 'Yes', ar: 'نعم' },
+
+  // ---------- İçerik ----------
+  'step.model':   { tr: 'Model Seçimi', en: 'Model', ar: 'اختيار الطراز' },
+  'step.wall':    { tr: 'Duvar Ölçüsü', en: 'Wall Size', ar: 'أبعاد الجدار' },
+  'step.screen':  { tr: 'Ekran Kurulumu', en: 'Screen Setup', ar: 'إعداد الشاشة' },
+  'step.content': { tr: 'İçerik', en: 'Content', ar: 'المحتوى' },
+  'step.back':    { tr: '← Geri', en: '← Back', ar: '→ رجوع' },
+  'step.next':    { tr: 'İleri →', en: 'Next →', ar: 'التالي ←' },
+  // Ekranın arkasına çizilen mekân sahnesi (Scene.jsx)
+  'scene.heading': { tr: 'Mekân', en: 'Setting', ar: 'المكان' },
+  'scene.hint': {
+    tr: 'Ekranın gerçek bir mekânda nasıl duracağını gösterir.',
+    en: 'Shows how the screen looks in a real setting.',
+    ar: 'يوضح كيف تبدو الشاشة في مكان حقيقي.',
+  },
+  // Ekran ayarları sağ panele taşındı; kendi başlığı olmadan başlıksız kalıyordu
+  'screen.settings': { tr: 'Ekran Ayarları', en: 'Screen Settings', ar: 'إعدادات الشاشة' },
+  'scene.foto': { tr: 'Cadde panosu', en: 'Street billboard', ar: 'لوحة الشارع' },
+  'scene.meydan': { tr: 'Ofis duvarı', en: 'Office wall', ar: 'جدار المكتب' },
+  'scene.salon': { tr: 'İç mekân', en: 'Indoor', ar: 'داخلي' },
+  'scene.cephe': { tr: 'Dış mekân', en: 'Outdoor', ar: 'خارجي' },
+  'scene.pano': { tr: 'Açık hava panosu', en: 'Outdoor billboard', ar: 'لوحة خارجية' },
+  'scene.customOff': { tr: 'Kapalı', en: 'Off', ar: 'معطّل' },
+  'ar.title': { tr: 'Nasıl Görüneceğini Gör', en: 'See How It Will Look', ar: 'شاهد كيف سيبدو' },
+  'ar.open': { tr: 'Nasıl görüneceğini gör', en: 'See how it will look', ar: 'شاهد كيف سيبدو' },
+  'ar.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
+  'ar.save': { tr: 'Kaydet', en: 'Save', ar: 'حفظ' },
+  'ar.shoot': { tr: 'Çek', en: 'Capture', ar: 'التقاط' },
+  'ar.lastShot': { tr: 'Son çekim', en: 'Last shot', ar: 'آخر لقطة' },
+  'ar.lens': { tr: 'Lens', en: 'Lens', ar: 'العدسة' },
+  'ar.camera': { tr: 'Kamera', en: 'Camera', ar: 'الكاميرا' },
+  // Kısa etiketler: alt bardaki küçük düğmelere uzun cümleler sığmıyor
+  'ar.removeBg': { tr: 'Kaldır', en: 'Remove', ar: 'إزالة' },
+  'ar.samples': { tr: 'Örnek mekân', en: 'Sample setting', ar: 'مكان نموذجي' },
+  'ar.bgMeeting': { tr: 'Toplantı odası', en: 'Meeting room', ar: 'غرفة اجتماعات' },
+  'ar.bgMeetingWide': { tr: 'Geniş toplantı odası', en: 'Wide meeting room', ar: 'غرفة اجتماعات واسعة' },
+  'ar.bgGreyRoom': { tr: 'Gri oda', en: 'Grey room', ar: 'غرفة رمادية' },
+  'ar.bgDarkRoom': { tr: 'Koyu oda', en: 'Dark room', ar: 'غرفة داكنة' },
+  'ar.flash': { tr: 'Flaş', en: 'Flash', ar: 'الفلاش' },
+  'ar.flash.oto': { tr: 'Oto', en: 'Auto', ar: 'تلقائي' },
+  'ar.flash.acik': { tr: 'Açık', en: 'On', ar: 'تشغيل' },
+  'ar.flash.kapali': { tr: 'Kapalı', en: 'Off', ar: 'إيقاف' },
+  'ar.mode': { tr: 'AR', en: 'AR', ar: 'الواقع المعزز' },
+  'ar.on': { tr: 'Açık', en: 'On', ar: 'تشغيل' },
+  'ar.off': { tr: 'Kapalı', en: 'Off', ar: 'إيقاف' },
+  'ar.bigger': { tr: 'Büyüt', en: 'Enlarge', ar: 'تكبير' },
+  'ar.smaller': { tr: 'Küçült', en: 'Shrink', ar: 'تصغير' },
+  'ar.hint': {
+    tr: 'Duvara tam karşıdan bakın. Tasarımı parmağınızla taşıyın, iki parmakla büyütüp küçültün.',
+    en: 'Face the wall straight-on. Drag the design with one finger, pinch with two to resize.',
+    ar: 'انظر إلى الجدار من الأمام مباشرة. حرّك التصميم بإصبع واحد، وكبّره أو صغّره بإصبعين.',
+  },
+  'ar.noFlash': {
+    tr: 'Bu cihazda flaş tarayıcıdan denetlenemiyor.',
+    en: 'Flash cannot be controlled from the browser on this device.',
+    ar: 'لا يمكن التحكم بالفلاش من المتصفح على هذا الجهاز.',
+  },
+  'ar.background': { tr: 'Arka plan', en: 'Background', ar: 'الخلفية' },
+  'ar.photo': { tr: 'Fotoğraf', en: 'Photo', ar: 'صورة' },
+  'ar.usePhoto': { tr: 'Fotoğraf kullan', en: 'Use a photo instead', ar: 'استخدم صورة بدلًا من ذلك' },
+  'ar.retry': { tr: 'Kamerayı tekrar dene', en: 'Try the camera again', ar: 'حاول فتح الكاميرا مجددًا' },
+  'ar.errInsecure': {
+    tr: 'Canlı kamera yalnızca güvenli bağlantıda çalışır. Şu an güvenli olmayan bir adrestesiniz (http). Bilgisayarda "localhost" adresini kullanın; telefonda ise https gerekir. Dilerseniz kamera yerine bir fotoğraf kullanabilirsiniz.',
+    en: 'The live camera only works over a secure connection. You are on an insecure address (http). Use "localhost" on this computer; a phone needs https. You can use a photo instead.',
+    ar: 'تعمل الكاميرا المباشرة فقط عبر اتصال آمن. أنت على عنوان غير آمن (http). استخدم "localhost" على هذا الحاسوب؛ ويحتاج الهاتف إلى https. يمكنك استخدام صورة بدلًا من ذلك.',
+  },
+  'ar.errDenied': {
+    tr: 'Tarayıcı kamera iznini vermedi. Adres çubuğundaki kilit simgesine tıklayıp kamerayı bu site için "İzin ver" yapın, sonra tekrar deneyin.',
+    en: 'The browser denied camera permission. Click the lock icon in the address bar, allow the camera for this site, then try again.',
+    ar: 'رفض المتصفح إذن الكاميرا. انقر على رمز القفل في شريط العنوان، واسمح بالكاميرا لهذا الموقع، ثم حاول مجددًا.',
+  },
+  'ar.errNoDevice': {
+    tr: 'Bu cihazda kullanılabilir bir kamera bulunamadı. Kamera yerine bir fotoğraf kullanabilirsiniz.',
+    en: 'No usable camera was found on this device. You can use a photo instead.',
+    ar: 'لم يتم العثور على كاميرا قابلة للاستخدام في هذا الجهاز. يمكنك استخدام صورة بدلًا من ذلك.',
+  },
+  'ar.errBusy': {
+    tr: 'Kamera başka bir uygulama tarafından kullanılıyor olabilir. Kamerayı kullanan programları kapatıp tekrar deneyin.',
+    en: 'The camera may be in use by another application. Close programs using the camera and try again.',
+    ar: 'قد تكون الكاميرا قيد الاستخدام من تطبيق آخر. أغلق البرامج التي تستخدمها ثم حاول مجددًا.',
+  },
+  'ar.errCamera': {
+    tr: 'Kamera açılamadı. Tarayıcı izni verilmemiş olabilir. Ayrıca canlı kamera yalnızca güvenli bağlantıda (https) çalışır.',
+    en: 'Could not open the camera. Permission may be denied. Live camera also requires a secure (https) connection.',
+    ar: 'تعذر فتح الكاميرا. قد يكون الإذن مرفوضًا. كما تتطلب الكاميرا المباشرة اتصالًا آمنًا (https).',
+  },
+  'ar.errCapture': {
+    tr: 'Görüntü alınamadı. Tekrar deneyin.',
+    en: 'Could not capture the image. Please try again.',
+    ar: 'تعذر التقاط الصورة. حاول مرة أخرى.',
+  },
+  'content.heading': { tr: 'İçerik', en: 'Content', ar: 'المحتوى' },
+  'content.led': { tr: 'LED EKRAN', en: 'LED SCREEN', ar: 'شاشة LED' },
+  'content.default': { tr: 'ÖRNEK GÖRÜNTÜ', en: 'SAMPLE IMAGE', ar: 'صورة نموذجية' },
+  'content.sample': { tr: 'ÖRNEK VİDEO', en: 'SAMPLE VIDEO', ar: 'فيديو تجريبي' },
+  'content.upload': { tr: 'Resim Ekle', en: 'Add Image', ar: 'إضافة صورة' },
+  'content.uploadVideo': { tr: 'Video Ekle', en: 'Add Video', ar: 'إضافة فيديو' },
+  'content.errVideoFormat': {
+    tr: 'Yalnızca MP4, WebM veya OGG video yükleyebilirsiniz.',
+    en: 'You can only upload MP4, WebM or OGG video.',
+    ar: 'يمكنك رفع فيديو MP4 أو WebM أو OGG فقط.',
+  },
+  'content.errVideoSize': {
+    tr: 'Video en fazla 100 MB olabilir.',
+    en: 'Video can be at most 100 MB.',
+    ar: 'الحد الأقصى لحجم الفيديو 100 ميغابايت.',
+  },
+  'content.none': { tr: 'Resim Yok', en: 'No Image', ar: 'بدون صورة' },
+  'content.hint': {
+    tr: '* Yalnızca JPG veya PNG biçiminde, maksimum 3 MB',
+    en: '* JPG or PNG only, max 3 MB',
+    ar: '* JPG أو PNG فقط، بحد أقصى 3 ميغابايت',
+  },
+  'content.errFormat': {
+    tr: 'Yalnızca JPG veya PNG formatı desteklenir.',
+    en: 'Only JPG or PNG format is supported.',
+    ar: 'يُدعم تنسيق JPG أو PNG فقط.',
+  },
+  'content.errSize': {
+    tr: 'Dosya boyutu en fazla 3 MB olabilir.',
+    en: 'File size can be at most 3 MB.',
+    ar: 'الحد الأقصى لحجم الملف 3 ميغابايت.',
+  },
+
+  // ---------- PDF ----------
+  'pdf.export': { tr: 'PDF olarak dışa aktar', en: 'Export PDF', ar: 'تصدير PDF' },
+
+  // ---------- Sıfırlama onayı ----------
+  'reset.title': { tr: 'Tasarımı sıfırla', en: 'Reset design', ar: 'إعادة تعيين التصميم' },
+  'reset.body': {
+    tr: 'Bu işlem tüm ayarları sıfırlar. Devam etmek istiyor musunuz?',
+    en: 'This will reset all settings. Do you want to continue?',
+    ar: 'سيؤدي هذا إلى إعادة تعيين جميع الإعدادات. هل تريد المتابعة؟',
+  },
+  'common.cancel': { tr: 'İptal', en: 'Cancel', ar: 'إلغاء' },
+  'common.ok': { tr: 'Tamam', en: 'OK', ar: 'موافق' },
+
+  // ---------- Model seçme penceresi ----------
+  'msm.title': { tr: 'Yapılandırma için bir model seçin', en: 'Select a model for configuration', ar: 'اختر طرازاً للتهيئة' },
+  'msm.filter': { tr: 'Filtre', en: 'Filter', ar: 'تصفية' },
+  'msm.clear': { tr: 'Temizle', en: 'Clear', ar: 'مسح' },
+  'msm.tabLed': { tr: 'İç Mekan LED Tabelaları', en: 'LED Signage Indoor', ar: 'لافتات LED داخلية' },
+  'msm.tabVideowall': { tr: 'Video duvarı', en: 'Video wall', ar: 'جدار الفيديو' },
+  'msm.productModel': { tr: 'Ürün Modeli', en: 'Product Model', ar: 'طراز المنتج' },
+  'msm.modelNamePh': { tr: 'Model Adı', en: 'Model Name', ar: 'اسم الطراز' },
+  'msm.results': { tr: 'Sonuç', en: 'Results', ar: 'نتيجة' },
+  'msm.availability': {
+    tr: '* Modelin bulunabilirliği ülkeye göre değişiklik gösterebilir.',
+    en: '* Model availability may vary by country',
+    ar: '* قد يختلف توفر الطراز حسب الدولة',
+  },
+  'msm.choose': { tr: 'Seçmek', en: 'Choose', ar: 'اختيار' },
+  'msm.pickHint': { tr: 'Listeden bir model seçin', en: 'Pick a model from the list', ar: 'اختر طرازًا من القائمة' },
+  'msm.empty': { tr: 'Bu filtrelerle eşleşen model bulunamadı.', en: 'No models match these filters.', ar: 'لا توجد طُرُز مطابقة لهذه المرشحات.' },
+  'msm.info': { tr: 'Bilgi metni yakında eklenecek.', en: 'Info text will be added soon.', ar: 'سيتم إضافة نص المعلومات قريباً.' },
+  'compare.add': { tr: 'Karşılaştırmaya ekle', en: 'Add to comparison', ar: 'أضف إلى المقارنة' },
+  'compare.selectedCount': { tr: 'model karşılaştırmaya eklendi', en: 'models added to comparison', ar: 'طُرُز أُضيفت للمقارنة' },
+  'compare.view': { tr: 'Karşılaştır', en: 'Compare', ar: 'مقارنة' },
+  'compare.title': { tr: 'Model Karşılaştırma', en: 'Model Comparison', ar: 'مقارنة الطُرُز' },
+  'compare.attribute': { tr: 'Özellik', en: 'Attribute', ar: 'الخاصية' },
+  'compare.price': { tr: 'Fiyat', en: 'Price', ar: 'السعر' },
+  'compare.pitch': { tr: 'Piksel Aralığı', en: 'Pixel Pitch', ar: 'تباعد البكسل' },
+  'compare.brightness': { tr: 'Parlaklık', en: 'Brightness', ar: 'السطوع' },
+  'compare.dimensions': { tr: 'Ölçüler', en: 'Dimensions', ar: 'الأبعاد' },
+  'compare.weight': { tr: 'Ağırlık', en: 'Weight', ar: 'الوزن' },
+  'compare.powerTypical': { tr: 'Tipik Güç', en: 'Typical Power', ar: 'الطاقة النموذجية' },
+  'compare.powerMax': { tr: 'Maksimum Güç', en: 'Maximum Power', ar: 'أقصى طاقة' },
+  'compare.refreshRate': { tr: 'Yenileme Hızı', en: 'Refresh Rate', ar: 'معدل التحديث' },
+  'compare.viewingDistance': { tr: 'İzleme Mesafesi', en: 'Viewing Distance', ar: 'مسافة المشاهدة' },
+  'scene3d.open': { tr: '3D Görünüm', en: '3D View', ar: 'عرض ثلاثي الأبعاد' },
+  'scene3d.title': { tr: '3D Görünüm (Beta)', en: '3D View (Beta)', ar: 'عرض ثلاثي الأبعاد (بيتا)' },
+  'scene3d.lodLow': { tr: '· Büyük duvar: sadeleştirilmiş detay', en: '· Large wall: simplified detail', ar: '· جدار كبير: تفاصيل مبسطة' },
+  'scene3d.lodHigh': { tr: '· Yüksek detay', en: '· High detail', ar: '· تفاصيل عالية' },
+  'scene3d.exporting': { tr: 'Hazırlanıyor…', en: 'Preparing…', ar: 'جارٍ التحضير…' },
+  'scene3d.viewInAr': { tr: "AR'da Gör", en: 'View in AR', ar: 'عرض بالواقع المعزز' },
+  'scene3d.hint': { tr: 'Sürükleyerek döndürün, tekerlek/iki parmakla yakınlaştırın.', en: 'Drag to rotate, scroll/pinch to zoom.', ar: 'اسحب للتدوير، قرّب بالتمرير أو بإصبعين.' },
+  'scene3d.arExportError': { tr: '3D model oluşturulamadı. Cihazınız veya tarayıcınız desteklemiyor olabilir.', en: 'Could not generate the 3D model. Your device or browser may not support this.', ar: 'تعذر إنشاء النموذج ثلاثي الأبعاد. قد لا يدعمه جهازك أو متصفحك.' },
+  'scene3d.arReady': { tr: 'Model hazır — telefonda AR düğmesine dokunun', en: 'Model ready — tap the AR button on your phone', ar: 'النموذج جاهز — انقر على زر الواقع المعزز على هاتفك' },
+  'wiz.entry': { tr: 'Hangi modeli seçeceğinizi bilmiyor musunuz? Sihirbazı deneyin', en: "Not sure which model to pick? Try the wizard", ar: 'لا تعرف أي طراز تختار؟ جرّب المعالج' },
+  'wiz.title': { tr: 'Model Öneri Sihirbazı', en: 'Model Recommendation Wizard', ar: 'معالج اقتراح الطراز' },
+  'wiz.step1Title': { tr: 'Ekranı ne için kullanacaksınız?', en: 'What will you use the screen for?', ar: 'لماذا ستستخدم الشاشة؟' },
+  'wiz.step2Title': { tr: 'Ekran nerede duracak?', en: 'Where will the screen be placed?', ar: 'أين ستوضع الشاشة؟' },
+  'wiz.step3Title': { tr: 'İzleyiciler ekrana ortalama ne kadar yakın olacak?', en: 'How close will viewers typically be?', ar: 'ما مدى قرب المشاهدين عادةً؟' },
+  'wiz.resultsTitle': { tr: 'Size önerdiğimiz modeller', en: 'Models we recommend for you', ar: 'الطُرُز التي نوصي بها' },
+  'wiz.back': { tr: 'Geri', en: 'Back', ar: 'رجوع' },
+  'wiz.seeAll': { tr: 'Tüm modelleri gör', en: 'See all models', ar: 'عرض جميع الطُرُز' },
+  'wiz.pick': { tr: 'Bu modeli seç', en: 'Choose this', ar: 'اختر هذا' },
+  'wiz.noResults': { tr: 'Uygun model bulunamadı, tüm listeye göz atın.', en: 'No suitable model found, browse the full list.', ar: 'لم يتم العثور على طراز مناسب، تصفح القائمة الكاملة.' },
+  'wiz.idealDistance': { tr: 'ideal mesafe', en: 'ideal distance', ar: 'المسافة المثالية' },
+  'wiz.purpose.signage': { tr: 'Reklam / Tabela', en: 'Advertising / Signage', ar: 'إعلان / لوحة' },
+  'wiz.purpose.meeting': { tr: 'Toplantı Odası / Kurumsal Sunum', en: 'Meeting Room / Corporate Presentation', ar: 'غرفة اجتماعات / عرض مؤسسي' },
+  'wiz.purpose.event': { tr: 'Sahne / Etkinlik', en: 'Stage / Event', ar: 'مسرح / حدث' },
+  'wiz.purpose.retail': { tr: 'Perakende Vitrin / Mağaza', en: 'Retail Storefront / Shop', ar: 'واجهة متجر / محل' },
+  'wiz.purpose.studio': { tr: 'Stüdyo / Sanal Prodüksiyon', en: 'Studio / Virtual Production', ar: 'استوديو / إنتاج افتراضي' },
+  'wiz.place.indoor': { tr: 'İç Mekan', en: 'Indoor', ar: 'داخلي' },
+  'wiz.place.outdoor': { tr: 'Dış Mekan', en: 'Outdoor', ar: 'خارجي' },
+  'wiz.distance.close': { tr: 'Yakın (< 3 m)', en: 'Close (< 3 m)', ar: 'قريب (< 3 م)' },
+  'wiz.distance.mid': { tr: 'Orta (3–8 m)', en: 'Medium (3–8 m)', ar: 'متوسط (3–8 م)' },
+  'wiz.distance.far': { tr: 'Uzak (8 m+)', en: 'Far (8 m+)', ar: 'بعيد (8 م+)' },
+
+  // Tablo sütunları
+  'col.modelName': { tr: 'Model Adı', en: 'Model Name', ar: 'اسم الطراز' },
+  'col.pitch': { tr: 'Piksel Aralığı', en: 'Pitch', ar: 'المسافة بين البكسل' },
+  'col.maxBrightness': { tr: 'Maksimum Parlaklık', en: 'Max Brightness', ar: 'أقصى سطوع' },
+  'col.dimensions': { tr: 'Boyutlar', en: 'Dimensions', ar: 'الأبعاد' },
+  'col.refreshRate': { tr: 'Yenileme hızı', en: 'Refresh rate', ar: 'معدل التحديث' },
+  'col.viewingDistance': { tr: 'En Uygun İzleme Mesafesi', en: 'Optimal Viewing Distance', ar: 'مسافة المشاهدة المثلى' },
+  'col.compare': { tr: 'Seç', en: 'Select', ar: 'اختر' },
+  'col.size': { tr: 'Boyut', en: 'Size', ar: 'الحجم' },
+  'col.bezel': { tr: 'Çerçeveden çerçeveye', en: 'Bezel-to-bezel', ar: 'من إطار إلى إطار' },
+
+  // Filtre başlıkları
+  'f.category': { tr: 'Kategori', en: 'Category', ar: 'الفئة' },
+  'f.usage': { tr: 'Kullanım', en: 'Usage', ar: 'الاستخدام' },
+  'f.installation': { tr: 'Kurulum', en: 'Installation', ar: 'التركيب' },
+  'f.configurable': { tr: 'Yapılandırılabilir', en: 'Configurable', ar: 'قابل للتهيئة' },
+  'f.service': { tr: 'Hizmet', en: 'Service', ar: 'الخدمة' },
+  'f.ledType': { tr: 'LED Tipi', en: 'LED Type', ar: 'نوع LED' },
+  'f.protection': { tr: 'Koruma', en: 'Protection', ar: 'الحماية' },
+  'f.certification': { tr: 'Sertifikasyon', en: 'Certification', ar: 'الشهادات' },
+  'f.pixelPitch': { tr: 'Piksel Aralığı', en: 'Pixel Pitch', ar: 'المسافة بين البكسل' },
+  'f.viewingDistance': { tr: 'En Uygun İzleme Mesafesi', en: 'Optimal Viewing Distance', ar: 'مسافة المشاهدة المثلى' },
+  'f.etc': { tr: 'Vesaire', en: 'Etc.', ar: 'أخرى' },
+  'f.panelBrightness': { tr: 'Panel Parlaklığı', en: 'Panel Brightness', ar: 'سطوع اللوحة' },
+  'f.orMore': { tr: 'veya üzeri', en: 'or more', ar: 'أو أكثر' },
+
+  // ---------- Çoklu ekran penceresi ----------
+  'mse.selectedModel': { tr: 'Seçilen Model', en: 'Selected Model', ar: 'الطراز المختار' },
+  'mse.addScreen': { tr: 'Başka bir ekran ekle', en: 'Add another screen', ar: 'أضف شاشة أخرى' },
+  'mse.reset': { tr: 'Sıfırla', en: 'Reset', ar: 'إعادة تعيين' },
+  'mse.complete': { tr: 'Tamamlamak', en: 'Complete', ar: 'إتمام' },
+  'mse.moveUp': { tr: 'Yukarı taşı', en: 'Move up', ar: 'تحريك لأعلى' },
+  'mse.moveDown': { tr: 'Aşağı taşı', en: 'Move down', ar: 'تحريك لأسفل' },
+  'mse.delete': { tr: 'Sil', en: 'Delete', ar: 'حذف' },
+  'mse.leftWing': { tr: 'Sol Kanat Sütun', en: 'Left Wing Columns', ar: 'أعمدة الجناح الأيسر' },
+  'mse.rightWing': { tr: 'Sağ Kanat Sütun', en: 'Right Wing Columns', ar: 'أعمدة الجناح الأيمن' },
+  'mse.generalSetting': { tr: 'Genel ayar', en: 'General setting', ar: 'الإعداد العام' },
+
+  // ---------- PDF dışa aktarma penceresi ----------
+  'exp.title': { tr: 'Teklif Talebi', en: 'Quote Request', ar: 'طلب عرض سعر' },
+  'exp.customer': { tr: 'Ad Soyad', en: 'Full Name', ar: 'الاسم الكامل' },
+  'exp.phone': { tr: 'Telefon', en: 'Phone', ar: 'الهاتف' },
+  'exp.email': { tr: 'E-posta', en: 'E-mail', ar: 'البريد الإلكتروني' },
+  'exp.message': { tr: 'Mesaj', en: 'Message', ar: 'رسالة' },
+  'exp.address': { tr: 'Adres', en: 'Address', ar: 'العنوان' },
+  'exp.consent': {
+    tr: 'Verilerin işlenmesini ve bu bilgilerle rapor oluşturulmasını kabul ediyorum.',
+    en: 'I agree to the processing of data and creation of a report with this information.',
+    ar: 'أوافق على معالجة البيانات وإنشاء تقرير بهذه المعلومات.',
+  },
+  'exp.generating': { tr: 'PDF oluşturuluyor…', en: 'Generating PDF…', ar: 'جارٍ إنشاء PDF…' },
+  'exp.error': { tr: 'PDF oluşturulurken bir sorun oluştu.', en: 'A problem occurred while generating the PDF.', ar: 'حدثت مشكلة أثناء إنشاء PDF.' },
+  'exp.csv': { tr: 'CSV', en: 'CSV', ar: 'CSV' },
+  'exp.csvHint': { tr: 'Yapılandırma özetini Excel/ERP için CSV olarak indir', en: 'Download the configuration summary as CSV for Excel/ERP', ar: 'تنزيل ملخص التهيئة بصيغة CSV' },
+  'exp.reportTitle': { tr: 'Ekran Yapılandırma Raporu', en: 'Screen Configuration Report', ar: 'تقرير تهيئة الشاشة' },
+  'exp.reportSub': { tr: 'Simülasyon çıktısı', en: 'Simulation output', ar: 'مخرجات المحاكاة' },
+  'exp.secConfig': { tr: 'Yapılandırma', en: 'Configuration', ar: 'التهيئة' },
+  'exp.secContact': { tr: 'İletişim', en: 'Contact', ar: 'الاتصال' },
+  'exp.wallLabel': { tr: 'Duvar (G × Y)', en: 'Wall (W × H)', ar: 'الجدار (ع × ا)' },
+  'exp.disclaimer': {
+    tr: '* Bu belge yalnızca simülasyon amaçlıdır; gerçek fiziksel özellikler farklılık gösterebilir.',
+    en: '* This document is for simulation purposes only; actual physical specifications may vary.',
+    ar: '* هذه الوثيقة لأغراض المحاكاة فقط؛ قد تختلف المواصفات الفعلية.',
+  },
+  'exp.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
+  // Rapor düzeni — belge hem müşteriye hem üreticiye gider
+  'exp.docNo': { tr: 'Belge No', en: 'Document No', ar: 'رقم الوثيقة' },
+  'exp.date': { tr: 'Tarih', en: 'Date', ar: 'التاريخ' },
+  'exp.secCustomer': { tr: 'Müşteri ve Kurulum Yeri', en: 'Customer & Installation Site', ar: 'العميل وموقع التركيب' },
+  'exp.secScreens': { tr: 'Ekran Düzeni', en: 'Screen Layout', ar: 'تخطيط الشاشة' },
+  'exp.secTech': { tr: 'Teknik Özet', en: 'Technical Summary', ar: 'ملخص فني' },
+  'exp.forProducer': { tr: 'üretim ve montaj planlaması için', en: 'for production and installation planning', ar: 'لتخطيط الإنتاج والتركيب' },
+  'exp.layout': { tr: 'Düzen', en: 'Layout', ar: 'التخطيط' },
+  'exp.single': { tr: 'Tek ekran', en: 'Single screen', ar: 'شاشة واحدة' },
+  'exp.multi': { tr: 'Çoklu ekran', en: 'Multi screen', ar: 'شاشات متعددة' },
+  'exp.screenSize': { tr: 'Ekran ölçüsü (G × Y)', en: 'Screen size (W × H)', ar: 'مقاس الشاشة (ع × ا)' },
+  'exp.signal': { tr: 'Sinyal çözünürlüğü', en: 'Signal resolution', ar: 'دقة الإشارة' },
+  'exp.pixels': { tr: 'Gerçek piksel', en: 'Native pixels', ar: 'البكسل الفعلي' },
+  'exp.no': { tr: 'No', en: 'No', ar: 'رقم' },
+  'exp.type': { tr: 'Tip', en: 'Type', ar: 'النوع' },
+  'exp.grid': { tr: 'Sütun × Satır', en: 'Columns × Rows', ar: 'أعمدة × صفوف' },
+  'exp.size': { tr: 'Ölçü', en: 'Size', ar: 'المقاس' },
+  'exp.visual': { tr: 'Yapılandırma Görseli', en: 'Configuration Drawing', ar: 'رسم التهيئة' },
+  'exp.page': { tr: 'Sayfa', en: 'Page', ar: 'صفحة' },
+  'exp.notGiven': { tr: 'Belirtilmedi', en: 'Not provided', ar: 'غير محدد' },
+
+  // ---------- Teknik Özellikler / Bileşenler ----------
+  'sp.title': { tr: 'Teknik Özellikler', en: 'Specifications', ar: 'المواصفات' },
+  'sp.preparing': { tr: 'Hazırlanıyor…', en: 'Preparing…', ar: '…جارٍ التحضير' },
+  'sp.components': { tr: 'Bileşenler', en: 'Components', ar: 'المكوّنات' },
+  'sp.screenConfigLxh': { tr: 'Ekran Yapılandırması (LXH)', en: 'Screen Configuration (LXH)', ar: 'تهيئة الشاشة (ط×ا)' },
+  'sp.screenConfig': { tr: 'Ekran Yapılandırması', en: 'Screen Configuration', ar: 'تهيئة الشاشة' },
+  'sp.unit': { tr: 'Birim', en: 'Unit', ar: 'وحدة' },
+  'sp.units': { tr: 'Ünite', en: 'Units', ar: 'وحدات' },
+  'sp.totalScreens': { tr: 'Toplam Ekran Sayısı', en: 'Total No. of Screens', ar: 'إجمالي عدد الشاشات' },
+  'sp.screenSpecs': { tr: 'Ekran Özellikleri', en: 'Screen Specifications', ar: 'مواصفات الشاشة' },
+  'sp.lengthHeight': { tr: 'Uzunluk x Yükseklik', en: 'Length x Height', ar: 'الطول × الارتفاع' },
+  'sp.lengthHeightDepth': { tr: 'Uzunluk x Yükseklik x Derinlik', en: 'Length x Height x Depth', ar: 'الطول × الارتفاع × العمق' },
+  'sp.area': { tr: 'Alan', en: 'Area', ar: 'المساحة' },
+  'sp.diagonal': { tr: 'Diyagonal', en: 'Diagonal', ar: 'القطر' },
+  'sp.inch': { tr: 'inç', en: 'inch', ar: 'بوصة' },
+  'sp.weight': { tr: 'Ağırlık', en: 'Weight', ar: 'الوزن' },
+  'sp.weightCabinets': { tr: 'Ağırlık (Sadece Dolaplar)', en: 'Weight (Cabinets Only)', ar: 'الوزن (الخزائن فقط)' },
+  'sp.viewingDistance': { tr: 'En Uygun İzleme Mesafesi', en: 'Optimal Viewing Distance', ar: 'مسافة المشاهدة المثلى' },
+  'sp.optical': { tr: 'Optik Parametre', en: 'Optical Parameter', ar: 'المعامل البصري' },
+  'sp.resolution': { tr: 'Çözünürlük', en: 'Resolution', ar: 'الدقة' },
+  'sp.power': { tr: 'Güç Gereksinimleri', en: 'Power Requirements', ar: 'متطلبات الطاقة' },
+  'sp.max': { tr: 'Maksimum', en: 'Max', ar: 'الأقصى' },
+  'sp.typical': { tr: 'Tipik', en: 'Typical', ar: 'النموذجي' },
+  'sp.watt': { tr: 'Watt', en: 'Watts', ar: 'واط' },
+  'sp.circuits': { tr: 'Devreler', en: 'Circuits', ar: 'دوائر' },
+  'sp.circuit': { tr: 'Devre', en: 'Circuit', ar: 'دائرة' },
+  'sp.perCircuit': { tr: 'Devre başına kabin sayısı', en: 'Cabinets per circuit', ar: 'عدد الخزائن لكل دائرة' },
+  'sp.cabinet': { tr: 'Dolap', en: 'Cabinet', ar: 'خزانة' },
+  'sp.heat': { tr: 'Isı Üretimi', en: 'Heat Generation', ar: 'توليد الحرارة' },
+  'sp.customerSelection': { tr: 'Müşteri Seçimi', en: 'Customer Selection', ar: 'اختيار العميل' },
+  'sp.ledCabinets': { tr: 'LED Kabinler', en: 'LED Cabinets', ar: 'خزائن LED' },
+  'sp.cabinetCount': { tr: 'Dolap sayısı', en: 'No. of Cabinets', ar: 'عدد الخزائن' },
+  'sp.spareCabinets': { tr: 'Yedek Dolap Sayısı', en: 'No. of Spare Cabinets', ar: 'عدد الخزائن الاحتياطية' },
+  'sp.totalCabinets': { tr: 'Toplam Dolap Sayısı', en: 'Total No. of Cabinets', ar: 'إجمالي عدد الخزائن' },
+  'sp.sbox': { tr: 'S-Kutu', en: 'S-Box', ar: 'S-Box' },
+  'sp.model': { tr: 'Model', en: 'Model', ar: 'الطراز' },
+  'sp.spare': { tr: 'Yedek', en: 'Spare', ar: 'احتياطي' },
+  'sp.jig': { tr: 'Jig', en: 'Jig', ar: 'أداة التثبيت' },
+  'sp.powerCord': { tr: 'Güç Kablosu', en: 'Power Cord', ar: 'سلك الطاقة' },
+  'sp.frameKit': { tr: 'Çerçeve Kiti', en: 'Frame Kit', ar: 'طقم الإطار' },
+  'sp.decoKit': { tr: 'Dekorasyon Kiti', en: 'Deco Kit', ar: 'طقم الديكور' },
+  'sp.viewQuantity': { tr: 'Miktarı görüntüle', en: 'View quantity', ar: 'عرض الكمية' },
+  'sp.download': { tr: 'İndirmek', en: 'Download', ar: 'تنزيل' },
+  'sp.footnote1': {
+    tr: '* Teknik özellikler önceden haber verilmeksizin değiştirilebilir.',
+    en: '* Specifications are subject to change without notice.',
+    ar: '* المواصفات عرضة للتغيير دون إشعار.',
+  },
+  'sp.footnote2': {
+    tr: '* Bu belgedeki yapılandırma bilgileri yalnızca simülasyon kurulumu içindir; gerçek fiziksel özellikler farklılık gösterebilir. Doğru bilgi için lütfen üretici veya kurulum ortağınızla iletişime geçin.',
+    en: '* The configuration information in this document is for simulated installation only; actual physical specifications may vary. Please consult the manufacturer or your installation partner for accurate information.',
+    ar: '* معلومات التهيئة في هذه الوثيقة مخصصة للتركيب المحاكى فقط؛ قد تختلف المواصفات الفعلية. يرجى استشارة الشركة المصنّعة أو شريك التركيب للحصول على معلومات دقيقة.',
+  },
+
+  // ---------- Gizlilik ve Güvenlik Notu (KVKK Aydınlatma Metni) ----------
+  'privacy.footerLink': { tr: 'Gizlilik ve Güvenlik Notu', en: 'Privacy & Security Notice', ar: 'إشعار الخصوصية والأمان' },
+  'privacy.readMore': { tr: 'Aydınlatma metnini oku', en: 'Read the privacy notice', ar: 'اقرأ إشعار الخصوصية' },
+  'privacy.title': { tr: 'Gizlilik ve Güvenlik Notu', en: 'Privacy & Security Notice', ar: 'إشعار الخصوصية والأمان' },
+  'privacy.intro': {
+    tr: 'Bu form aracılığıyla paylaştığınız ad, telefon, e-posta ve adres bilgileri, yalnızca talep ettiğiniz teklifin hazırlanması ve size dönüş yapılması amacıyla işlenir ve şirketimizin veritabanında saklanır.',
+    en: 'The name, phone, email and address information you share through this form is processed solely to prepare the quote you requested and to get back to you, and is stored in our company database.',
+    ar: 'يتم استخدام الاسم والهاتف والبريد الإلكتروني والعنوان التي تشاركها عبر هذا النموذج فقط لتحضير عرض السعر المطلوب والتواصل معك، ويتم تخزينها في قاعدة بيانات شركتنا.',
+  },
+  'privacy.purpose.title': { tr: 'İşleme Amaçları', en: 'Purposes of Processing', ar: 'أغراض المعالجة' },
+  'privacy.purpose.body': {
+    tr: 'Verileriniz; teklif/konfigürasyon oluşturma, teklif sürecinin takibi, size ulaşılması ve yasal saklama yükümlülüklerinin yerine getirilmesi amacıyla işlenir. Pazarlama amaçlı ayrıca bir izniniz olmadan üçüncü taraflarla paylaşılmaz veya satılmaz.',
+    en: 'Your data is processed to create your quote/configuration, follow up on the quote process, reach out to you, and fulfil legal retention obligations. It is not shared with or sold to third parties for marketing purposes without your separate consent.',
+    ar: 'تتم معالجة بياناتك لإنشاء عرض السعر/التهيئة، ومتابعة عملية العرض، والتواصل معك، والوفاء بالالتزامات القانونية للاحتفاظ بالبيانات. لا تتم مشاركتها مع أطراف ثالثة أو بيعها لأغراض تسويقية دون موافقتك الصريحة.',
+  },
+  'privacy.security.title': { tr: 'Güvenlik Önlemleri', en: 'Security Measures', ar: 'تدابير الأمان' },
+  'privacy.security.body': {
+    tr: 'Sunucularımızla iletişim HTTPS/TLS ile şifrelenir; parolalar geri döndürülemez biçimde (PBKDF2) saklanır; yönetim ekranı ve kişisel verilere erişim yalnızca yetkilendirilmiş hesaplarla ve isteğe bağlı çok katmanlı güvenlik (JWT, davet kodu) ile sınırlandırılır. API uçlarımız hız sınırlaması (rate limiting) ve güvenlik başlıkları (CSP, HSTS vb.) ile korunur.',
+    en: 'Communication with our servers is encrypted via HTTPS/TLS; passwords are stored irreversibly (PBKDF2); access to the admin panel and personal data is restricted to authorized accounts with layered security (JWT, invite codes). Our API endpoints are protected with rate limiting and security headers (CSP, HSTS, etc.).',
+    ar: 'يتم تشفير الاتصال بخوادمنا عبر HTTPS/TLS؛ ويتم تخزين كلمات المرور بشكل غير قابل للاسترجاع (PBKDF2)؛ ويقتصر الوصول إلى لوحة الإدارة والبيانات الشخصية على الحسابات المخوّلة بأمان متعدد الطبقات (JWT، رموز الدعوة). تتم حماية واجهات برمجة التطبيقات لدينا بتحديد معدل الطلبات وترويسات أمان (CSP، HSTS، إلخ).',
+  },
+  'privacy.rights.title': { tr: 'Haklarınız', en: 'Your Rights', ar: 'حقوقك' },
+  'privacy.rights.body': {
+    tr: 'Verilerinizin işlenip işlenmediğini öğrenme, düzeltilmesini veya silinmesini talep etme hakkına her zaman sahipsiniz. Bu haklarınızı kullanmak için iletişim bölümünde yer alan kanallardan bizimle irtibata geçebilirsiniz.',
+    en: 'You always have the right to learn whether your data is processed, and to request its correction or deletion. You can contact us through the channels in the contact section to exercise these rights.',
+    ar: 'لديك دائماً الحق في معرفة ما إذا كانت بياناتك تُعالج، وطلب تصحيحها أو حذفها. يمكنك التواصل معنا عبر قنوات الاتصال لممارسة هذه الحقوق.',
+  },
+  'privacy.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
+}
+
+/**
+ * Filtre seçenek DEĞERLERİ. Veritabanında Türkçe karşılıklarıyla saklandıkları için
+ * eşleştirme hep Türkçe değer üzerinden yapılır; burada yalnızca GÖRÜNEN metin çevrilir.
+ */
+const optionDict = {
+  Kapalı: { en: 'Indoor', ar: 'داخلي' },
+  Duvar: { en: 'Wall', ar: 'جدار' },
+  'Ticari İç Mekan': { en: 'Commercial Indoor', ar: 'تجاري داخلي' },
+  'Pencereye bakan': { en: 'Window Facing', ar: 'مواجه للنافذة' },
+  'Sanal Üretim': { en: 'Virtual Production', ar: 'إنتاج افتراضي' },
+  Sinema: { en: 'Cinema', ar: 'سينما' },
+  Düz: { en: 'Flat', ar: 'مسطح' },
+  Dışbükey: { en: 'Convex', ar: 'محدب' },
+  İçbükey: { en: 'Concave', ar: 'مقعر' },
+  'İç L Tipi': { en: 'Inner L-Type', ar: 'زاوية داخلية L' },
+  'Dış L Tipi': { en: 'Outer L-Type', ar: 'زاوية خارجية L' },
+  Asılı: { en: 'Hanging', ar: 'معلّق' },
+  İstifleme: { en: 'Stacking', ar: 'تكديس' },
+  'Hepsi Bir Arada': { en: 'All-in-One', ar: 'الكل في واحد' },
+  Dolap: { en: 'Cabinet', ar: 'خزانة' },
+  Ön: { en: 'Front', ar: 'أمامي' },
+  Arka: { en: 'Rear', ar: 'خلفي' },
+  'Kısmen Ön ve Kısmen Arka': { en: 'Partly Front and Partly Rear', ar: 'أمامي وخلفي جزئياً' },
+  Ağız: { en: 'Mask', ar: 'قناع' },
+  'EMC B Sınıfı': { en: 'EMC Class B', ar: 'EMC فئة B' },
+  'TÜV Göz Konforu': { en: 'TÜV Eye Comfort', ar: 'TÜV راحة العين' },
+  'TÜV Düşük Gri Tonlamalı Görüntü Netliği': { en: 'TÜV Low Grayscale Image Clarity', ar: 'TÜV وضوح الصورة بتدرج رمادي منخفض' },
+  'Pantone Renk ve Cilt Tonu Doğrulama': { en: 'Pantone Color & Skin Tone Validation', ar: 'التحقق من ألوان Pantone ودرجات البشرة' },
+  'Yangın Yönetmeliği': { en: 'Fire Regulation', ar: 'لوائح الحريق' },
+  'Deprem Testi': { en: 'Earthquake Test', ar: 'اختبار الزلازل' },
+  'Güç Yedekliliği': { en: 'Power Redundancy', ar: 'تكرار الطاقة' },
+}
+
+/** Filtre seçeneğinin görünen metnini çevirir; karşılığı yoksa olduğu gibi bırakır. */
+export function translateOption(value, lang) {
+  if (lang === DEFAULT_LANG) return value
+  return optionDict[value]?.[lang] || value
+}
+
+/** Anahtarı seçili dile çevirir. Bulunamazsa Türkçe'ye, o da yoksa anahtara düşer. */
+export function translate(key, lang) {
+  const entry = dict[key]
+  if (!entry) return key
+  return entry[lang] || entry[DEFAULT_LANG] || key
+}
+
+export function dirOf(lang) {
+  return LANGUAGES.find((l) => l.code === lang)?.dir || 'ltr'
+}

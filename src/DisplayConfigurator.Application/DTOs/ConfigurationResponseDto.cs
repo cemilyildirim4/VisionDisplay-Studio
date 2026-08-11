@@ -66,4 +66,8 @@ public class ConfigurationResponseDto
     // Fiyat & Tarih
     public decimal TotalPrice { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // Süreç takibi
+    public string Status { get; set; } = "Taslak";
+    public int Revision { get; set; } = 1;
 }

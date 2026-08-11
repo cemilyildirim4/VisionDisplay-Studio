@@ -1,0 +1,134 @@
+@import 'tailwindcss';
+
+/*
+ * KOYU TEMA
+ *
+ * Tailwind varsayılan olarak işletim sistemi ayarına bakar; biz kullanıcının
+ * düğmeyle seçmesini istiyoruz. Bu yüzden dark: öneki, kök öğedeki
+ * data-theme="dark" niteliğine bağlandı.
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/**
+ * Poppins — masaustubilisim.com.tr sitesinin kullandığı yazı tipi.
+ * Projeye dahil edildi (internet bağlantısı gerektirmez).
+ * 400 normal, 500 orta, 600 yarı kalın, 700 kalın.
+ */
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+
+/**
+ * Marka renkleri — masaustubilisim.com.tr sitesinden alındı.
+ * Tek yerden değiştirmek için burada tanımlı; bileşenlerde
+ * bg-[var(--brand)] gibi kullanılır.
+ */
+@theme {
+  /*
+   * Logodan çıkarılan palet. Ana ton logonun kendi mavisi; yardımcı tonlar
+   * paletteki komşu maviler — türetilmiş (koyulaştırılmış/açılmış) değil, o
+   * yüzden yan yana geldiklerinde aynı aileden görünüyorlar.
+   */
+  --color-brand: #2962ad; /* ana mavi — logonun rengi */
+  --color-brand-dark: #204d8a; /* üzerine gelince / basılı hâl */
+  --color-brand-light: #6d92c8; /* ikincil vurgu — paletin ara mavisi */
+  --color-brand-tint: #e6eef7; /* çok açık zemin — paletin soluk mavisi */
+}
+
+/*
+ * Koyu temada marka renginin açık tonu (brand-tint) beyaza yakın olduğu için
+ * koyu zeminde göz alıyor; koyu bir laciverte çevriliyor.
+ */
+[data-theme='dark'] {
+  --color-brand-tint: #16233d;
+  --color-brand-light: #9db9dc;
+}
+
+/*
+ * Marka rengi koyu bir lacivert (#2962ad). Koyu zeminde yazı olarak
+ * kullanıldığında okunmuyor — bu yüzden koyu temada YAZI rengi otomatik olarak
+ * açık tona çevrilir.
+ *
+ * Tek tek dark:text-brand-light yazmak yerine burada toplu çözülüyor: aksi
+ * hâlde her yeni text-brand kullanımında aynı hata tekrarlanıyor.
+ *
+ * ZEMİN olarak kullanılan bg-brand'e DOKUNULMUYOR; onun üstündeki yazı zaten
+ * beyaz ve koyu lacivert zemin koyu temada da doğru duruyor.
+ */
+[data-theme='dark'] .text-brand,
+[data-theme='dark'] .hover\:text-brand:hover,
+[data-theme='dark'] .group:hover .group-hover\:text-brand {
+  color: var(--color-brand-light);
+}
+
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: #ffffff;
+  color: #1c1c2b;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+  font-family: 'Poppins', system-ui, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* Tıklanabilir öğelerde el (pointer) imleci */
+button:not(:disabled),
+label,
+select,
+[role='button'] {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Koyu temada sayfa zemini ve yazı */
+[data-theme='dark'] html,
+[data-theme='dark'] body,
+[data-theme='dark'] #root {
+  background-color: #10141b;
+  color: #e5e7eb;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-track {
+  background: #1b2029;
+}
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: #39414f;
+}
+
+/* Kaydırma çubuğu — marka renginin açık tonunda */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-brand-tint);
+}
+::-webkit-scrollbar-thumb {
+  background: #b9c6de;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-light);
+}
+
+/* Klavyeyle gezinirken odak halkası marka renginde */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}

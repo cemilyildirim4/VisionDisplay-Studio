@@ -28,6 +28,16 @@ public class Configuration
     public bool IsFullHd { get; set; }
     public bool Is4K { get; set; }
     public decimal TotalPrice { get; set; }
+
+    /// <summary>"Taslak" | "Beklemede" | "Onaylandı" | "Reddedildi" — teklif süreç takibi.</summary>
+    public string Status { get; set; } = "Taslak";
+
+    /// <summary>Proje yeniden hesaplanıp kaydedildikçe artan sürüm numarası.</summary>
+    public int Revision { get; set; } = 1;
+
+    /// <summary>Giriş yapmış bir bayi/müşteri kaydettiyse hesabı — misafir kayıtlarında null.</summary>
+    public int? UserId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Cabin? Cabin { get; set; }

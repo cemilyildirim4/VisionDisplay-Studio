@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -7,25 +5,77 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
       POSTGRES_DB: display_configurator_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
 
   pgadmin:
     image: dpage/pgadmin4
     container_name: display_config_pgadmin
     restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: adminpassword
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin2@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-adminpassword}
     ports:
       - "5050:80"
     depends_on:
       - postgres
+    networks:
+      - app-network
+
+  api:
+    build:
+      context: ./src
+      dockerfile: DisplayConfigurator.Api/Dockerfile
+    container_name: display_config_api
+    restart: always
+    ports:
+      - "5007:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=display_configurator_db;Username=postgres;Password=${POSTGRES_PASSWORD:-postgrespassword}
+      Cors__Origins__0: http://localhost:5173
+      Cors__Origins__1: http://localhost:5174
+      Cors__Origins__2: http://localhost:5175
+      Admin__Password: ${ADMIN_PASSWORD:-}
+      Jwt__Secret: ${JWT_SECRET:-}
+      Beta__Enabled: ${BETA_ENABLED:-false}
+      Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      Smtp__Host: ${SMTP_HOST:-}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__User: ${SMTP_USER:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__From: ${SMTP_FROM:-}
+      Notifications__AdminEmail: ${NOTIFICATIONS_ADMIN_EMAIL:-}
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5007}
+    container_name: display_config_frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres_data:
