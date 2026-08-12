@@ -10,9 +10,12 @@ public class CabinInputDto
     public string Category { get; set; } = "led";
     public string ModelCode { get; set; } = string.Empty;
 
-    /// <summary>CABINET veya MODULE — Configurations (donanım/PDF) özelliğinin montaj hesabında kullanılır.</summary>
+    /// <summary>
+    /// Ürün tipi: CABINET (kabin) veya MODULE (tekli panel / modül).
+    /// Configurations montaj hesabında ve konfigüratör rozet/filtrede kullanılır.
+    /// </summary>
     public string ProductType { get; set; } = "CABINET";
-    /// <summary>Yalnızca ProductType="MODULE" iken anlamlı: bir alıcı karta kaç modülün bağlanabileceği.</summary>
+    /// <summary>Yalnızca ProductType="MODULE" iken anlamlı: bir alıcı karta kaç panel/modül bağlanır.</summary>
     public int DefaultModulesPerCard { get; set; } = 10;
     /// <summary>Birim (kabin/panel) satış fiyatı — Configurations toplam fiyat hesabında kullanılır.</summary>
     public decimal Price { get; set; }

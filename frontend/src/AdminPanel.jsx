@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { BrandMark, BrandStripe } from './BrandChrome.jsx'
 import { BRAND } from './brand.js'
+import ProductTypeBadge from './ProductTypeBadge.jsx'
+import { normalizeProductType } from './productType.js'
+import { API_URL, apiFetch } from './apiClient.js'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
@@ -16,16 +19,14 @@ import { BRAND } from './brand.js'
  * (ana sayfadaki gibi demo veriye düşmez, çünkü burada gerçek kayıt yapılıyor).
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
-
 const CATEGORIES = [
-  { v: 'led', label: 'LED (İç Mekan)' },
+  { v: 'led', label: 'LED' },
   { v: 'videowall', label: 'Video Duvarı' },
 ]
 
 const PRODUCT_TYPES = [
-  { v: 'CABINET', label: 'Kabin (tek parça)' },
-  { v: 'MODULE', label: 'Modül (kart başına gruplanır)' },
+  { v: 'CABINET', label: 'Kabin', hint: 'Hazır kabin ünitesi — duvar/istifleme montajı' },
+  { v: 'MODULE', label: 'Tekli Panel (Modül)', hint: 'Outdoor / Indoor / Flexible panel — kart başına gruplanır' },
 ]
 
 /** Sekmeler gruplu — 7 düz sekme yerine SaaS tarzı bölümler. */
@@ -307,7 +308,7 @@ function GirisEkrani({ onGiris }) {
     setHata(null)
     setBilgi(null)
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
+      const res = await apiFetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -336,7 +337,7 @@ function GirisEkrani({ onGiris }) {
     setHata(null)
     setBilgi(null)
     try {
-      const res = await fetch(`${API_URL}/api/cabinets/admin/dogrula`, {
+      const res = await apiFetch(`${API_URL}/api/cabinets/admin/dogrula`, {
         method: 'POST',
         headers: { 'X-Admin-Key': parola },
       })
@@ -373,7 +374,7 @@ function GirisEkrani({ onGiris }) {
         setHata('İlk Admin oluşturmak için .env içindeki ADMIN_PASSWORD gerekir.')
         return
       }
-      const res = await fetch(`${API_URL}/api/users/bootstrap-admin`, {
+      const res = await apiFetch(`${API_URL}/api/users/bootstrap-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Key': parola },
         body: JSON.stringify({ email, password, displayName }),
@@ -519,6 +520,7 @@ export default function AdminPanel() {
   const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
+  const [productTypeFilter, setProductTypeFilter] = useState('all') // all | CABINET | MODULE
 
   const oturumDustu = () => {
     sessionStorage.removeItem(PAROLA_ANAHTARI)
@@ -545,8 +547,8 @@ export default function AdminPanel() {
     setApiError(null)
     try {
       const [cRes, sRes] = await Promise.all([
-        fetch(`${API_URL}/api/cabinets`),
-        fetch(`${API_URL}/api/cabinets/series`),
+        apiFetch(`${API_URL}/api/cabinets`),
+        apiFetch(`${API_URL}/api/cabinets/series`),
       ])
       if (!cRes.ok || !sRes.ok) throw new Error('API yanıt vermedi')
       setCabinets(await cRes.json())
@@ -665,7 +667,7 @@ export default function AdminPanel() {
         powerCord110Code: form.powerCord110Code || null,
         powerCord220Code: form.powerCord220Code || null,
       }
-      const res = await fetch(
+      const res = await apiFetch(
         editingId ? `${API_URL}/api/cabinets/${editingId}` : `${API_URL}/api/cabinets`,
         {
           method: editingId ? 'PUT' : 'POST',
@@ -699,7 +701,7 @@ export default function AdminPanel() {
       `"${c.modelCode}" modeli kalıcı olarak silinecek. Bu işlem geri alınamaz.`,
       async () => {
         try {
-          const res = await fetch(`${API_URL}/api/cabinets/${c.id}`, {
+          const res = await apiFetch(`${API_URL}/api/cabinets/${c.id}`, {
             method: 'DELETE',
             headers: yetkiBasligi(),
           })
@@ -726,7 +728,7 @@ export default function AdminPanel() {
     setSeriesMessage(null)
     try {
       const body = { name: seriesForm.name, description: seriesForm.description || null }
-      const res = await fetch(
+      const res = await apiFetch(
         seriesForm.id ? `${API_URL}/api/cabinets/series/${seriesForm.id}` : `${API_URL}/api/cabinets/series`,
         {
           method: seriesForm.id ? 'PUT' : 'POST',
@@ -754,7 +756,7 @@ export default function AdminPanel() {
       `"${s.name}" serisi silinecek. Bağlı modeller etkilenebilir.`,
       async () => {
         try {
-          const res = await fetch(`${API_URL}/api/cabinets/series/${s.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const res = await apiFetch(`${API_URL}/api/cabinets/series/${s.id}`, { method: 'DELETE', headers: yetkiBasligi() })
           if (res.status === 401) { oturumDustu(); return }
           if (!res.ok) {
             const err = await res.json().catch(() => ({}))
@@ -784,7 +786,7 @@ export default function AdminPanel() {
     try {
       const qs = new URLSearchParams({ page: String(page), pageSize: '20' })
       if (search) qs.set('search', search)
-      const res = await fetch(`${API_URL}/api/quotes?${qs}`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/quotes?${qs}`, { headers: yetkiBasligi() })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Teklifler alınamadı.')
       const data = await res.json()
@@ -805,7 +807,7 @@ export default function AdminPanel() {
       `"${q.customerName || 'İsimsiz'}" teklifi kalıcı olarak silinecek.`,
       async () => {
         try {
-          const res = await fetch(`${API_URL}/api/quotes/${q.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const res = await apiFetch(`${API_URL}/api/quotes/${q.id}`, { method: 'DELETE', headers: yetkiBasligi() })
           if (res.status === 401) { oturumDustu(); return }
           if (!res.ok) throw new Error('Silinemedi.')
           await loadQuotes(quotesPage, quotesSearch)
@@ -818,7 +820,7 @@ export default function AdminPanel() {
 
   const updateQuoteStatus = async (q, status) => {
     try {
-      const res = await fetch(`${API_URL}/api/quotes/${q.id}/status`, {
+      const res = await apiFetch(`${API_URL}/api/quotes/${q.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
         body: JSON.stringify({ status }),
@@ -841,7 +843,7 @@ export default function AdminPanel() {
     setChatLoading(true)
     setChatError(null)
     try {
-      const res = await fetch(`${API_URL}/api/chatlogs?limit=300&onlyUnanswered=${unansweredOnly ? 'true' : 'false'}`, {
+      const res = await apiFetch(`${API_URL}/api/chatlogs?limit=300&onlyUnanswered=${unansweredOnly ? 'true' : 'false'}`, {
         headers: yetkiBasligi(),
       })
       if (res.status === 401) { oturumDustu(); return }
@@ -869,7 +871,7 @@ export default function AdminPanel() {
     try {
       const qs = new URLSearchParams({ page: String(page), pageSize: '20' })
       if (search) qs.set('search', search)
-      const res = await fetch(`${API_URL}/api/configurations?${qs}`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/configurations?${qs}`, { headers: yetkiBasligi() })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Kayıtlı projeler alınamadı.')
       const data = await res.json()
@@ -890,7 +892,7 @@ export default function AdminPanel() {
       `"${c.projectName}" projesi kalıcı olarak silinecek.`,
       async () => {
         try {
-          const res = await fetch(`${API_URL}/api/configurations/${c.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const res = await apiFetch(`${API_URL}/api/configurations/${c.id}`, { method: 'DELETE', headers: yetkiBasligi() })
           if (res.status === 401) { oturumDustu(); return }
           if (!res.ok) throw new Error('Silinemedi.')
           await loadConfigs(configsPage, configsSearch)
@@ -903,7 +905,7 @@ export default function AdminPanel() {
 
   const updateConfigStatus = async (c, status) => {
     try {
-      const res = await fetch(`${API_URL}/api/configurations/${c.id}/status`, {
+      const res = await apiFetch(`${API_URL}/api/configurations/${c.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
         body: JSON.stringify({ status }),
@@ -925,9 +927,15 @@ export default function AdminPanel() {
     setDashboardLoading(true)
     setDashboardError(null)
     try {
-      const res = await fetch(`${API_URL}/api/analytics/dashboard`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/analytics/dashboard`, { headers: yetkiBasligi() })
       if (res.status === 401) { oturumDustu(); return }
-      if (!res.ok) throw new Error('Analitik veriler alınamadı.')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        if (res.status === 503 && /Admin:Password|yapılandırılmamış/i.test(body.message || '')) {
+          throw new Error(body.message || 'Yönetim erişimi yapılandırılmamış. API\'yi Admin__Password ile yeniden başlatın.')
+        }
+        throw new Error(body.message || 'Analitik veriler alınamadı.')
+      }
       setDashboard(await res.json())
     } catch (e) {
       setDashboardError(e.message)
@@ -946,7 +954,7 @@ export default function AdminPanel() {
     setInvitesLoading(true)
     setInvitesError(null)
     try {
-      const res = await fetch(`${API_URL}/api/invite-codes`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/invite-codes`, { headers: yetkiBasligi() })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Davet kodları alınamadı.')
       setInvites(await res.json())
@@ -959,7 +967,7 @@ export default function AdminPanel() {
 
   const createInvite = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/invite-codes`, {
+      const res = await apiFetch(`${API_URL}/api/invite-codes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
         body: JSON.stringify({ maxUses: Number(newInviteMaxUses) || 1 }),
@@ -978,7 +986,7 @@ export default function AdminPanel() {
       `"${inv.code}" kodu silinecek. Bu kodla yeni giriş yapılamaz.`,
       async () => {
         try {
-          const res = await fetch(`${API_URL}/api/invite-codes/${inv.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const res = await apiFetch(`${API_URL}/api/invite-codes/${inv.id}`, { method: 'DELETE', headers: yetkiBasligi() })
           if (res.status === 401) { oturumDustu(); return }
           if (!res.ok) throw new Error('Silinemedi.')
           await loadInvites()
@@ -1000,7 +1008,7 @@ export default function AdminPanel() {
     setUsersLoading(true)
     setUsersError(null)
     try {
-      const res = await fetch(`${API_URL}/api/users`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/users`, { headers: yetkiBasligi() })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Kullanıcı listesi alınamadı.')
       setUsers(await res.json())
@@ -1017,7 +1025,7 @@ export default function AdminPanel() {
     setUserSaving(true)
     setUsersError(null)
     try {
-      const res = await fetch(`${API_URL}/api/users`, {
+      const res = await apiFetch(`${API_URL}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
         body: JSON.stringify(userForm),
@@ -1036,7 +1044,7 @@ export default function AdminPanel() {
 
   const updateUserRole = async (u, role) => {
     try {
-      const res = await fetch(`${API_URL}/api/users/${u.id}/role`, {
+      const res = await apiFetch(`${API_URL}/api/users/${u.id}/role`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
         body: JSON.stringify({ role }),
@@ -1056,7 +1064,7 @@ export default function AdminPanel() {
       `"${u.email}" hesabı silinecek.`,
       async () => {
         try {
-          const res = await fetch(`${API_URL}/api/users/${u.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const res = await apiFetch(`${API_URL}/api/users/${u.id}`, { method: 'DELETE', headers: yetkiBasligi() })
           const body = await res.json().catch(() => ({}))
           if (res.status === 401) { oturumDustu(); return }
           if (!res.ok) throw new Error(body.message || 'Silinemedi.')
@@ -1070,7 +1078,7 @@ export default function AdminPanel() {
 
   const downloadConfigPdf = async (c) => {
     try {
-      const res = await fetch(`${API_URL}/api/configurations/${c.id}/pdf`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/configurations/${c.id}/pdf`, { headers: yetkiBasligi() })
       if (!res.ok) throw new Error('PDF indirilemedi.')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -1325,7 +1333,7 @@ export default function AdminPanel() {
 
                 <div className={formSection === 'basic' ? '' : 'hidden'}>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <Field label="Model Kodu">
+                  <Field label="Model Kodu" hint="Örn: Q30H15B13V3 Outdoor Panel, 550012949A Indoor Panel">
                     <input value={form.modelCode} onChange={(e) => set('modelCode', e.target.value)} className={inputCls} placeholder="ör. LED-P1.25" />
                   </Field>
                   <Field label="Kategori">
@@ -1347,19 +1355,39 @@ export default function AdminPanel() {
                   </Field>
                 </div>
 
-                {/* --- Fiyat ve montaj (Configurations hesap motoruna girdi) --- */}
+                {/* Ürün tipi — Kabin vs Tekli Panel */}
+                <div className="mb-4">
+                  <div className="text-[12px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5">
+                    Ürün tipi <span className="font-normal text-neutral-400">(Kabin mi, Tekli Panel mi?)</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {PRODUCT_TYPES.map((p) => {
+                      const on = form.productType === p.v
+                      return (
+                        <button
+                          key={p.v}
+                          type="button"
+                          onClick={() => set('productType', p.v)}
+                          className={`text-left rounded-xl border-2 px-4 py-3 transition-colors ${
+                            on
+                              ? 'btn-selected'
+                              : 'border-neutral-200 dark:border-[#2c333f] hover:border-brand/40'
+                          }`}
+                        >
+                          <div className="text-sm font-bold">{p.label}</div>
+                          <div className={`text-[11px] mt-0.5 ${on ? 'text-white/80' : 'text-neutral-500 dark:text-neutral-400'}`}>{p.hint}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* --- Fiyat ve panel kartı (Configurations hesap motoruna girdi) --- */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <Field label="Fiyat (₺)" hint="Kayıtlı proje toplam fiyat hesabında kullanılır">
                     <input type="number" step="0.01" min="0" value={form.price} onChange={(e) => set('price', e.target.value)} className={inputCls} />
                   </Field>
-                  <Field label="Montaj Tipi" hint="Alıcı kart / RJ45 hesabını etkiler">
-                    <select value={form.productType} onChange={(e) => set('productType', e.target.value)} className={inputCls}>
-                      {PRODUCT_TYPES.map((p) => (
-                        <option key={p.v} value={p.v}>{p.label}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Kart Başına Modül" hint="Yalnızca montaj tipi 'Modül' iken anlamlı">
+                  <Field label="Kart Başına Modül" hint="Yalnızca Tekli Panel seçiliyken anlamlı">
                     <input
                       type="number"
                       min="1"
@@ -1504,16 +1532,38 @@ export default function AdminPanel() {
             )}
 
             <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
-                <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                  {loading ? 'Yükleniyor…' : `${cabinets.length} model kayıtlı`}
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-neutral-600 dark:text-neutral-400 mr-1">
+                    {loading
+                      ? 'Yükleniyor…'
+                      : `${cabinets.filter((c) => productTypeFilter === 'all' || normalizeProductType(c.productType) === productTypeFilter).length} model`}
+                  </span>
+                  {[
+                    { v: 'all', l: 'Tümü' },
+                    { v: 'CABINET', l: 'Kabin' },
+                    { v: 'MODULE', l: 'Panel' },
+                  ].map((f) => (
+                    <button
+                      key={f.v}
+                      type="button"
+                      onClick={() => setProductTypeFilter(f.v)}
+                      className={`rounded-full px-3 py-1 text-[12px] font-semibold border transition-colors ${
+                        productTypeFilter === f.v
+                          ? 'btn-selected border'
+                          : 'border-neutral-300 dark:border-[#39414f] text-neutral-600 dark:text-neutral-300'
+                      }`}
+                    >
+                      {f.l}
+                    </button>
+                  ))}
+                </div>
                 {!form && (
                   <button
                     type="button"
                     onClick={startNew}
                     disabled={!!apiError}
-                    className="rounded-full bg-brand text-white text-sm font-semibold px-5 py-2 hover:bg-brand-dark disabled:bg-neutral-300"
+                    className="rounded-full bg-brand text-white text-sm font-semibold px-5 py-2 hover:bg-brand-dark disabled:bg-neutral-300 shrink-0"
                   >
                     + Yeni model ekle
                   </button>
@@ -1524,16 +1574,19 @@ export default function AdminPanel() {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                     <tr>
-                      {['ID', 'Model Kodu', 'Kategori', 'Seri', 'Pitch', 'Ölçü (mm)', 'Piksel', 'Ağırlık', 'Fiyat', 'Montaj', ''].map((h) => (
+                      {['ID', 'Model Kodu', 'Tür', 'Kategori', 'Seri', 'Pitch', 'Ölçü (mm)', 'Piksel', 'Ağırlık', 'Fiyat', ''].map((h) => (
                         <th key={h} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {cabinets.map((c) => (
+                    {cabinets
+                      .filter((c) => productTypeFilter === 'all' || normalizeProductType(c.productType) === productTypeFilter)
+                      .map((c) => (
                       <tr key={c.id} className="border-t border-neutral-100 dark:border-[#242b36] hover:bg-neutral-50 dark:hover:bg-[#1b2029]">
                         <td className="px-4 py-2.5 text-neutral-400 dark:text-neutral-500">{c.id}</td>
                         <td className="px-4 py-2.5 font-medium">{c.modelCode}</td>
+                        <td className="px-4 py-2.5"><ProductTypeBadge productType={c.productType} /></td>
                         <td className="px-4 py-2.5">{c.category === 'videowall' ? 'Video Duvarı' : 'LED'}</td>
                         <td className="px-4 py-2.5 text-neutral-500 dark:text-neutral-400">{c.series?.name || '—'}</td>
                         <td className="px-4 py-2.5">{c.pixelPitchMm} mm</td>
@@ -1541,17 +1594,18 @@ export default function AdminPanel() {
                         <td className="px-4 py-2.5 whitespace-nowrap">{c.pixelWidth} × {c.pixelHeight}</td>
                         <td className="px-4 py-2.5">{c.weightKg} kg</td>
                         <td className="px-4 py-2.5 whitespace-nowrap">{money(c.price)}</td>
-                        <td className="px-4 py-2.5 text-neutral-500 dark:text-neutral-400">{c.productType === 'MODULE' ? 'Modül' : 'Kabin'}</td>
                         <td className="px-4 py-2.5 whitespace-nowrap text-right">
                           <button type="button" onClick={() => startEdit(c)} className="text-brand dark:text-brand-light hover:underline mr-3">Düzenle</button>
                           <button type="button" onClick={() => remove(c)} className="text-red-600 hover:underline">Sil</button>
                         </td>
                       </tr>
                     ))}
-                    {!loading && cabinets.length === 0 && !apiError && (
+                    {!loading && cabinets.filter((c) => productTypeFilter === 'all' || normalizeProductType(c.productType) === productTypeFilter).length === 0 && !apiError && (
                       <tr>
                         <td colSpan={11} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">
-                          Henüz model yok. "Yeni model ekle" ile başlayın.
+                          {productTypeFilter === 'all'
+                            ? 'Henüz model yok. "Yeni model ekle" ile başlayın.'
+                            : 'Bu ürün tipinde kayıt yok.'}
                         </td>
                       </tr>
                     )}

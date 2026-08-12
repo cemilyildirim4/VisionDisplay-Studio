@@ -12,8 +12,9 @@ import html2canvas from 'html2canvas'
 import SpecsPdf from './SpecsPdf.jsx'
 import { useLang } from './useLang.js'
 import { DASH, fmt, computeSpecs } from './specsData.js'
+import { API_URL, apiFetch } from './apiClient.js'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
+
 
 /**
  * Kart içindeki tek satır: solda etiket, sağda değer.
@@ -254,7 +255,7 @@ export default function SpecsSection({ open = false, onClose, ...props }) {
     setServerBusy(true)
     setServerError(null)
     try {
-      const res = await fetch(`${API_URL}/api/configurations/export-pdf`, {
+      const res = await apiFetch(`${API_URL}/api/configurations/export-pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

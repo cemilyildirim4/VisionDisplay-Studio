@@ -33,15 +33,25 @@ public class CabinsController : ControllerBase
     }
 
     // GET: api/cabinets
-    // İsteğe bağlı: ?category=led veya ?category=videowall
+    // İsteğe bağlı: ?category=led|videowall  &  ?productType=CABINET|MODULE
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Cabin>>> GetCabins([FromQuery] string? category)
+    public async Task<ActionResult<IEnumerable<Cabin>>> GetCabins(
+        [FromQuery] string? category,
+        [FromQuery] string? productType)
     {
-        var cacheKey = CabinsCacheKeyPrefix + (category ?? "all");
+        if (productType is not null &&
+            !productType.Equals("CABINET", StringComparison.OrdinalIgnoreCase) &&
+            !productType.Equals("MODULE", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { message = "productType 'CABINET' veya 'MODULE' olmalı." });
+        }
+
+        var normalizedType = productType?.ToUpperInvariant();
+        var cacheKey = $"{CabinsCacheKeyPrefix}{category ?? "all"}:{normalizedType ?? "all"}";
         var cabins = await _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
-            return await _cabinRepository.GetAllAsync(category);
+            return await _cabinRepository.GetAllAsync(category, normalizedType);
         });
 
         return Ok(cabins);
@@ -197,7 +207,7 @@ public class CabinsController : ControllerBase
             return "Piksel aralığı 0'dan büyük olmalı.";
 
         if (input.ProductType is not ("CABINET" or "MODULE"))
-            return "Montaj tipi 'CABINET' veya 'MODULE' olmalı.";
+            return "Ürün tipi 'CABINET' (Kabin) veya 'MODULE' (Tekli Panel) olmalı.";
 
         if (input.Price < 0)
             return "Fiyat negatif olamaz.";

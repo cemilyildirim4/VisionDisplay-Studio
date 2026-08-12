@@ -17,7 +17,10 @@ public class Cabin
     public string ModelCode { get; set; } = string.Empty;
 
     // --- Configurations/PDF özelliği için korunan alanlar ---
-    /// <summary>CABINET veya MODULE — montaj/alıcı kart hesabında kullanılır.</summary>
+    /// <summary>
+    /// Ürün tipi: CABINET (kabin) veya MODULE (tekli panel / modül).
+    /// Konfigüratörde rozet ve filtre; montaj/alıcı kart hesabında da kullanılır.
+    /// </summary>
     public string ProductType { get; set; } = "CABINET";
     public int DefaultModulesPerCard { get; set; } = 10;
     public decimal Price { get; set; }

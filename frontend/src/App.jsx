@@ -8,6 +8,7 @@ import SpecsSection from './SpecsSection.jsx'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
 import { BrandMark, BrandStripe } from './BrandChrome.jsx'
+import ProductTypeBadge from './ProductTypeBadge.jsx'
 import ProfileMenu from './ProfileMenu.jsx'
 import ChatHelp from './ChatHelp.jsx'
 import Scene, { PANO_ID, SALON_ID, CEPHE_ID } from './Scene.jsx'
@@ -37,6 +38,7 @@ const SAMPLE_CABINETS = [
   {
     id: 1,
     category: 'led',
+    productType: 'CABINET',
     modelCode: 'DEMO-P1.25',
     series: { name: 'LED İç Mekan (Duvar)' },
     pixelPitchMm: 1.25,
@@ -55,8 +57,9 @@ const SAMPLE_CABINETS = [
   {
     id: 2,
     category: 'led',
-    modelCode: 'DEMO-P1.6',
-    series: { name: 'LED İç Mekan (Duvar)' },
+    productType: 'MODULE',
+    modelCode: 'DEMO-PANEL-INDOOR',
+    series: { name: 'Indoor Panel' },
     pixelPitchMm: 1.6,
     widthMm: 320,
     heightMm: 160,
@@ -73,8 +76,9 @@ const SAMPLE_CABINETS = [
   {
     id: 3,
     category: 'led',
-    modelCode: 'DEMO-P2.0',
-    series: { name: 'LED İç Mekan (Duvar)' },
+    productType: 'MODULE',
+    modelCode: 'DEMO-PANEL-OUTDOOR',
+    series: { name: 'Outdoor Panel' },
     pixelPitchMm: 2.0,
     widthMm: 320,
     heightMm: 160,
@@ -91,6 +95,7 @@ const SAMPLE_CABINETS = [
   {
     id: 11,
     category: 'videowall',
+    productType: 'CABINET',
     modelCode: 'VW-55-088',
     series: { name: 'Video Duvarı' },
     sizeInch: 55,
@@ -130,9 +135,7 @@ const SAMPLE_CABINETS = [
   },
 ]
 
-// API adresi. Yayına çıkarken .env dosyasındaki VITE_API_URL ile değiştirilir;
-// tanımlı değilse yerel geliştirme adresi kullanılır.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
+
 
 const RESOLUTIONS = [
   {
@@ -623,7 +626,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[16px] text-neutral-400 dark:text-neutral-500 mb-1">{selectedModel.series?.name || t('model.defaultSeries')}</div>
-                  <div className="text-[28px] font-bold text-neutral-900 dark:text-neutral-100">{selectedModel.modelCode}</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="text-[28px] font-bold text-neutral-900 dark:text-neutral-100 leading-tight">{selectedModel.modelCode}</div>
+                    <ProductTypeBadge productType={selectedModel.productType} size="md" />
+                  </div>
                 </div>
                 {/* Ürün görseli — veritabanında adres varsa o, yoksa genel ekran ikonu */}
                 <div className="w-16 h-11 rounded-lg bg-neutral-50 dark:bg-[#1b2029] border border-neutral-200 dark:border-[#2c333f] shrink-0 flex items-center justify-center overflow-hidden">

@@ -7,6 +7,7 @@ import { viewingDistanceFor } from './viewingDistance.js'
 import PrivacyModal from './PrivacyModal.jsx'
 import { BRAND } from './brand.js'
 import { PdfBrandHeader } from './BrandChrome.jsx'
+import { API_URL, apiFetch } from './apiClient.js'
 
 /**
  * "PDF olarak dışa aktar" formu.
@@ -36,7 +37,7 @@ import { PdfBrandHeader } from './BrandChrome.jsx'
  * NOT: Onay metni genel bir yer tutucudur; kendi KVKK/gizlilik metninizle değiştirin.
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
+
 
 // Rapor renkleri — html2canvas değişken (var(--x)) çözemediği için hex sabit
 const MARKA = BRAND.blue
@@ -313,7 +314,7 @@ export default function ExportModal({ open, onClose, summary }) {
 
       // Teklif kaydını veritabanına gönder. Başarısız olursa PDF yine de indirildiği
       // için kullanıcıyı engellemiyoruz — sadece konsola not düşüyoruz.
-      fetch(`${API_URL}/api/quotes`, {
+      apiFetch(`${API_URL}/api/quotes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -346,7 +347,7 @@ export default function ExportModal({ open, onClose, summary }) {
        * bu senaryoda hiç kaydetmemek tercih edildi.
        */
       if (summary.screenMode !== 'multi' && model?.id) {
-        fetch(`${API_URL}/api/configurations`, {
+        apiFetch(`${API_URL}/api/configurations`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

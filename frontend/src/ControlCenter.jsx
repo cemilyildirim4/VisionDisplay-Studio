@@ -3,8 +3,9 @@ import { useLang } from './useLang.js'
 import { useTheme } from './useTheme.js'
 import { useSession } from './SessionContext.jsx'
 import { BrandMark, BrandStripe } from './BrandChrome.jsx'
+import { API_URL, apiFetch } from './apiClient.js'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
+
 
 function parseTabFromHash() {
   try {
@@ -104,7 +105,7 @@ export default function ControlCenter() {
     setLoginBusy(true)
     setLoginError(null)
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
+      const res = await apiFetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPassword }),

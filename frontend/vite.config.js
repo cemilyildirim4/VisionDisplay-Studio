@@ -40,12 +40,13 @@ export default defineConfig({
         ],
         runtimeCaching: [
           {
-            // API yanıtları: önce ağdan dene (StaleWhileRevalidate), yoksa cache'ten göster.
+            // API: her zaman ağı tercih et; kısa süreli 503'lerde eski cache yanıltmasın.
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 300 },
+              networkTimeoutSeconds: 8,
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 },
             },
           },
           {
@@ -75,5 +76,16 @@ export default defineConfig({
     // böylece yanlışlıkla ikinci bir sunucu başlatılmış olmaz.
     port: 5173,
     strictPort: true,
+    // Geliştirmede /api → backend. VITE_API_URL boş bırakılırsa frontend
+    // aynı origin üzerinden proxy kullanır; CORS ve anlık port dalgalanması azalır.
+    proxy: {
+      '/api': {
+        target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:5007',
+        changeOrigin: true,
+        secure: false,
+        timeout: 60_000,
+        proxyTimeout: 60_000,
+      },
+    },
   },
 })

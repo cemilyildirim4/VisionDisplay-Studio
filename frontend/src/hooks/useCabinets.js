@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
+import { API_URL, apiFetch } from '../apiClient.js'
 
 async function fetchCabinets() {
-  const res = await fetch(`${API_URL}/api/cabinets`)
+  const res = await apiFetch(`${API_URL}/api/cabinets`)
   if (!res.ok) throw new Error(`Kabin listesi alınamadı (HTTP ${res.status})`)
   return res.json()
 }
@@ -19,7 +18,8 @@ export function useCabinets() {
   return useQuery({
     queryKey: ['cabinets'],
     queryFn: fetchCabinets,
-    staleTime: 5 * 60 * 1000, // 5 dakika: admin panelinde model eklense de kullanıcı kısa sürede görür
+    staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    retry: 2, // React Query katmanı; apiFetch zaten geçici hataları dener
   })
 }
