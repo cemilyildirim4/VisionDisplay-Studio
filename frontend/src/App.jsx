@@ -7,6 +7,7 @@ import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
+import { BrandMark, BrandStripe } from './BrandChrome.jsx'
 import ProfileMenu from './ProfileMenu.jsx'
 import ChatHelp from './ChatHelp.jsx'
 import Scene, { PANO_ID, SALON_ID, CEPHE_ID } from './Scene.jsx'
@@ -461,23 +462,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }, [hasModel, rows, rowsMax, cols, colsMax])
 
   return (
-    <div className="bg-white dark:bg-[#161a21] text-[#1c1c2b] dark:text-neutral-100 font-sans">
+    <div className="bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans">
       {/* Konfigüratör — tek ekran yüksekliği */}
       {/* Masaüstü: tek ekran yüksekliği. Mobil: içerik alt alta dizilip sayfa kayar. */}
       <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
-      {/* Başlık */}
       {/* Başlık çubuğu — kurumsal logo + sayfa adı */}
-      <header className="bg-white dark:bg-[#161a21] border-b border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-10 py-3 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <img src="/masaustu-logo-isaret.png" alt="Masaüstü Bilişim Teknolojileri" className="h-8 sm:h-9 w-auto shrink-0" />
-          <span className="hidden sm:block w-px h-8 bg-neutral-200 dark:bg-[#2c333f] shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-sm sm:text-base font-bold tracking-tight m-0 truncate leading-tight text-neutral-900 dark:text-neutral-100">
-              {t('app.title')}
-            </h1>
-            <p className="hidden sm:block text-[11px] text-neutral-500 dark:text-neutral-400 m-0 leading-tight">{t('app.tagline')}</p>
-          </div>
-        </div>
+      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-10 py-3 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+        <BrandMark title={t('app.title')} subtitle={t('app.tagline')} />
 
         {/*
           Araç düğmeleri başlık çubuğunda. Önce solda dikey bir şeritteydi ama
@@ -569,9 +560,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           <ProfileMenu />
         </div>
       </header>
+      <BrandStripe />
 
       {/* Gövde */}
-      <div className="flex flex-col lg:flex-row flex-1 min-h-0 min-w-0">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 min-w-0 brand-page-enter">
         {/* SOL: Çalışma Alanı */}
         {/*
           Mobilde önizlemeye KESİN bir yükseklik verilir (min-h değil, h).
@@ -604,7 +596,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 }}
                 className={`py-2.5 rounded-lg text-[18px] transition-colors ${
                   screenMode === 'single'
-                    ? 'border-2 border-brand text-neutral-900 dark:text-neutral-100 font-medium'
+                    ? 'btn-selected border-2'
                     : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
                 }`}
               >
@@ -615,7 +607,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 onClick={() => setMultiModalOpen(true)}
                 className={`py-2.5 rounded-lg text-[18px] transition-colors ${
                   screenMode === 'multi'
-                    ? 'border-2 border-brand text-neutral-900 dark:text-neutral-100 font-medium'
+                    ? 'btn-selected border-2'
                     : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
                 }`}
               >
@@ -929,7 +921,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         onClick={() => setResolution(r.v)}
                         className={`py-2.5 rounded-lg text-[17px] transition-colors ${
                           resolution === r.v
-                            ? 'border-2 border-brand text-neutral-900 dark:text-neutral-100 font-medium'
+                            ? 'btn-selected border-2'
                             : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
                         }`}
                       >
@@ -986,7 +978,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       onClick={() => setContent('none')}
                       className={`py-2.5 rounded-lg text-[15px] hover:border-neutral-300 dark:hover:border-[#39414f] ${
                         content === 'none'
-                          ? 'border-2 border-brand text-neutral-900 dark:text-neutral-100 font-medium'
+                          ? 'btn-selected border-2'
                           : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
                       }`}
                     >
@@ -1013,7 +1005,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       onClick={() => fileInputRef.current?.click()}
                       className={`py-2.5 rounded-lg text-[15px] hover:border-neutral-300 dark:hover:border-[#39414f] flex items-center justify-center gap-1 ${
                         content === 'upload'
-                          ? 'border-2 border-brand text-neutral-900 dark:text-neutral-100 font-medium'
+                          ? 'btn-selected border-2'
                           : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
                       }`}
                     >
@@ -1052,7 +1044,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       onClick={() => videoInputRef.current?.click()}
                       className={`py-2.5 rounded-lg text-[15px] hover:border-neutral-300 dark:hover:border-[#39414f] flex items-center justify-center gap-1 ${
                         content === 'video'
-                          ? 'border-2 border-brand text-neutral-900 dark:text-neutral-100 font-medium'
+                          ? 'btn-selected border-2'
                           : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
                       }`}
                     >
@@ -1098,7 +1090,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       onClick={() => setScene(s.id)}
                       className={`py-2.5 rounded-lg text-[16px] transition-colors hover:border-neutral-300 dark:hover:border-[#39414f] ${
                         scene === s.id
-                          ? 'border-2 border-brand text-neutral-900 dark:text-neutral-100 font-medium'
+                          ? 'btn-selected border-2'
                           : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
                       }`}
                     >
@@ -1155,7 +1147,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             onClick={() => setExportOpen(true)}
             className={`flex-1 rounded-full text-[16px] font-semibold py-2.5 transition-colors ${
               hasModel
-                ? 'bg-brand text-white hover:bg-brand-dark cursor-pointer'
+                ? 'btn-brand-primary cursor-pointer'
                 : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
           >
@@ -1254,9 +1246,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <button
         type="button"
         onClick={() => setPrivacyOpen(true)}
-        className="fixed bottom-1.5 left-1.5 z-10 text-[10px] text-neutral-400/80 hover:text-brand dark:text-neutral-500 dark:hover:text-brand-light underline-offset-2 hover:underline transition-colors bg-white/70 dark:bg-black/30 backdrop-blur-sm rounded px-1.5 py-0.5"
+        className="fixed bottom-1.5 left-1.5 z-10 text-[10px] text-neutral-400/80 hover:text-brand dark:text-neutral-500 dark:hover:text-brand-light underline-offset-2 hover:underline transition-colors bg-white/80 dark:bg-[#121821]/80 backdrop-blur-sm rounded px-1.5 py-0.5 border border-neutral-200/60 dark:border-[#2a3342]"
       >
-        🔒 {t('privacy.footerLink')}
+        {t('privacy.footerLink')}
       </button>
 
       <ChatHelp open={chatOpen} onClose={() => setChatOpen(false)} />
@@ -1480,7 +1472,7 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
           onClick={() => onChange(o.v)}
           className={`py-1.5 px-2 rounded-md ${buyuk ? 'text-[15px]' : 'text-[12px]'} font-semibold transition-colors ${
             value === o.v
-              ? 'bg-white dark:bg-[#161a21] text-brand shadow-[0_1px_2px_rgba(0,0,0,0.08)]'
+              ? 'btn-selected'
               : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
           }`}
         >
@@ -1623,7 +1615,7 @@ function IconButton({ children, label, active, onClick }) {
       title={label}
       className={`h-9 rounded-full px-2.5 lg:pl-2.5 lg:pr-3 inline-flex items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap transition-colors shrink-0 ${
         active
-          ? 'bg-brand text-white hover:bg-brand-dark'
+          ? 'btn-selected'
           : 'border border-neutral-300 dark:border-[#39414f] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
       }`}
     >

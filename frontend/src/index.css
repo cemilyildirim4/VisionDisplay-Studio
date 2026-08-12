@@ -20,48 +20,31 @@
 @import '@fontsource/poppins/700.css';
 
 /**
- * Marka renkleri — masaustubilisim.com.tr sitesinden alındı.
- * Tek yerden değiştirmek için burada tanımlı; bileşenlerde
- * bg-[var(--brand)] gibi kullanılır.
+ * Marka renkleri — Masaüstü Bilişim logosu (mavi ark + turuncu hilal).
+ * Tek yerden değiştirmek için burada tanımlı.
  */
 @theme {
-  /*
-   * Logodan çıkarılan palet. Ana ton logonun kendi mavisi; yardımcı tonlar
-   * paletteki komşu maviler — türetilmiş (koyulaştırılmış/açılmış) değil, o
-   * yüzden yan yana geldiklerinde aynı aileden görünüyorlar.
-   */
-  --color-brand: #2962ad; /* ana mavi — logonun rengi */
-  --color-brand-dark: #204d8a; /* üzerine gelince / basılı hâl */
-  --color-brand-light: #6d92c8; /* ikincil vurgu — paletin ara mavisi */
-  --color-brand-tint: #e6eef7; /* çok açık zemin — paletin soluk mavisi */
+  --color-brand: #2962ad;
+  --color-brand-dark: #204d8a;
+  --color-brand-light: #6d92c8;
+  --color-brand-tint: #e6eef7;
+  --color-accent: #f37021;
+  --color-accent-dark: #d45c14;
+  --color-accent-tint: #fff1e8;
+  --font-sans: 'Poppins', system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
-/*
- * Koyu temada marka renginin açık tonu (brand-tint) beyaza yakın olduğu için
- * koyu zeminde göz alıyor; koyu bir laciverte çevriliyor.
- */
 [data-theme='dark'] {
   --color-brand-tint: #16233d;
   --color-brand-light: #9db9dc;
+  --color-accent-tint: #3a2214;
 }
 
-/*
- * Marka rengi koyu bir lacivert (#2962ad). Koyu zeminde yazı olarak
- * kullanıldığında okunmuyor — bu yüzden koyu temada YAZI rengi otomatik olarak
- * açık tona çevrilir.
- *
- * Tek tek dark:text-brand-light yazmak yerine burada toplu çözülüyor: aksi
- * hâlde her yeni text-brand kullanımında aynı hata tekrarlanıyor.
- *
- * ZEMİN olarak kullanılan bg-brand'e DOKUNULMUYOR; onun üstündeki yazı zaten
- * beyaz ve koyu lacivert zemin koyu temada da doğru duruyor.
- */
 [data-theme='dark'] .text-brand,
 [data-theme='dark'] .hover\:text-brand:hover,
 [data-theme='dark'] .group:hover .group-hover\:text-brand {
   color: var(--color-brand-light);
 }
-
 
 html,
 body,
@@ -70,12 +53,12 @@ body,
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  background-color: #ffffff;
+  background-color: #f7f9fc;
   color: #1c1c2b;
   transition:
-    background-color 0.15s,
-    color 0.15s;
-  font-family: 'Poppins', system-ui, 'Segoe UI', Roboto, sans-serif;
+    background-color 0.2s ease,
+    color 0.2s ease;
+  font-family: var(--font-sans);
   overflow-x: hidden;
 }
 
@@ -85,7 +68,6 @@ body,
   box-sizing: border-box;
 }
 
-/* Tıklanabilir öğelerde el (pointer) imleci */
 button:not(:disabled),
 label,
 select,
@@ -96,22 +78,20 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Koyu temada sayfa zemini ve yazı */
 [data-theme='dark'] html,
 [data-theme='dark'] body,
 [data-theme='dark'] #root {
-  background-color: #10141b;
+  background-color: #0b0f16;
   color: #e5e7eb;
 }
 
 [data-theme='dark'] ::-webkit-scrollbar-track {
-  background: #1b2029;
+  background: #121821;
 }
 [data-theme='dark'] ::-webkit-scrollbar-thumb {
-  background: #39414f;
+  background: #2a3342;
 }
 
-/* Kaydırma çubuğu — marka renginin açık tonunda */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -127,8 +107,112 @@ button:disabled {
   background: var(--color-brand-light);
 }
 
-/* Klavyeyle gezinirken odak halkası marka renginde */
 :focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
+}
+
+/* —— Kurumsal şerit (mavi → turuncu, logo oranına yakın) —— */
+.brand-stripe {
+  background: linear-gradient(
+    90deg,
+    var(--color-brand) 0%,
+    var(--color-brand) 62%,
+    var(--color-accent) 62%,
+    var(--color-accent) 100%
+  );
+}
+
+/* —— Motion: logo / sayfa girişi —— */
+@keyframes brand-logo-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes brand-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes brand-stripe-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.brand-logo-enter {
+  animation: brand-logo-in 0.45s ease-out both;
+}
+
+.brand-page-enter {
+  animation: brand-fade-up 0.4s ease-out both;
+}
+
+.brand-stripe {
+  transform-origin: left center;
+  animation: brand-stripe-draw 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-logo-enter,
+  .brand-page-enter,
+  .brand-stripe {
+    animation: none;
+  }
+}
+
+/* Seçili / aktif seçenek — kenarlık yerine dolu mavi (tema çakışmalarına dayanıklı) */
+.btn-selected {
+  background-color: #2962ad !important;
+  border-color: #2962ad !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+.btn-selected:hover {
+  background-color: #204d8a !important;
+  border-color: #204d8a !important;
+  color: #ffffff !important;
+}
+[data-theme='dark'] .btn-selected,
+[data-theme='dark'] .btn-selected:hover {
+  color: #ffffff !important;
+}
+.btn-brand-primary {
+  background: var(--color-brand);
+  color: #fff;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+.btn-brand-primary:hover {
+  background: var(--color-brand-dark);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+.btn-brand-primary:active {
+  transform: translateY(1px);
+}
+
+.btn-accent {
+  background: var(--color-accent);
+  color: #fff;
+  transition: background-color 0.15s ease;
+}
+.btn-accent:hover {
+  background: var(--color-accent-dark);
 }

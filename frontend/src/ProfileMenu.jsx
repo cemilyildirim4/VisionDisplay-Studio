@@ -1,17 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLang } from './useLang.js'
 import { ROLES, useSession } from './SessionContext.jsx'
 
 const ROLE_STYLE = {
   [ROLES.ADMIN]: {
-    badge: 'bg-[#1c1c2b] text-white dark:bg-white dark:text-[#1c1c2b]',
-    ring: 'ring-[#1c1c2b]/20 dark:ring-white/20',
-    avatar: 'bg-[#1c1c2b] text-white dark:bg-neutral-100 dark:text-[#1c1c2b]',
+    badge: 'bg-brand text-white',
+    ring: 'ring-brand/30',
+    avatar: 'bg-brand text-white',
   },
   [ROLES.TESTER]: {
-    badge: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200',
-    ring: 'ring-amber-400/30',
-    avatar: 'bg-amber-600 text-white',
+    badge: 'bg-accent-tint text-accent-dark dark:bg-accent/20 dark:text-accent',
+    ring: 'ring-accent/30',
+    avatar: 'bg-accent text-white',
   },
   [ROLES.DEALER]: {
     badge: 'bg-brand-tint text-brand dark:bg-brand/20 dark:text-brand-light',
@@ -49,7 +49,12 @@ function MenuItem({ href, onClick, icon, children, danger }) {
 
 /**
  * Sağ üst profil menüsü — dişli çarkın yerine geçer.
- * Rol rozeti + avatar; tıklanınca rol bazlı menü açılır.
+ * Menü öğeleri role göre filtrelenir; yetkisiz seçenek listede yer almaz.
+ *
+ *  Admin  → Yönetim Paneli, Kontrol Merkezi, Çıkış
+ *  Dealer → Kontrol Merkezi, Tekliflerim, Çıkış
+ *  Tester → Kontrol Merkezi, Test Araçları, Çıkış
+ *  Guest  → Kontrol Merkezi, Giriş yap
  */
 export default function ProfileMenu() {
   const { t } = useLang()
@@ -73,6 +78,27 @@ export default function ProfileMenu() {
   }, [open])
 
   const roleLabel = t(`role.${role.toLowerCase()}`)
+  const close = () => setOpen(false)
+
+  const items = useMemo(() => {
+    const list = []
+
+    if (isAdmin) {
+      list.push({ id: 'admin', type: 'adminPanel' })
+    }
+
+    list.push({ id: 'cc', type: 'controlCenter' })
+
+    if (isDealer) {
+      list.push({ id: 'quotes', type: 'myQuotes' })
+    }
+
+    if (isTester) {
+      list.push({ id: 'tester', type: 'testerTools' })
+    }
+
+    return list
+  }, [isAdmin, isDealer, isTester])
 
   return (
     <div className="relative shrink-0" ref={rootRef}>
@@ -116,73 +142,89 @@ export default function ProfileMenu() {
           </div>
 
           <div className="p-1.5 flex flex-col gap-0.5">
-            <MenuItem
-              href="#hesap"
-              onClick={() => setOpen(false)}
-              icon={
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
-                  <circle cx="12" cy="8" r="3.5" />
-                  <path d="M5 19c1.5-3.5 4-5 7-5s5.5 1.5 7 5" strokeLinecap="round" />
-                </svg>
+            {items.map((item) => {
+              if (item.type === 'adminPanel') {
+                return (
+                  <a
+                    key={item.id}
+                    href="#yonetim"
+                    onClick={close}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 mb-0.5 rounded-lg text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{
+                      background: 'linear-gradient(90deg, #f37021 0%, #e07a3a 35%, #4a7ab8 70%, #2962ad 100%)',
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" className="shrink-0">
+                      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                    </svg>
+                    {t('profile.adminPanel')}
+                  </a>
+                )
               }
-            >
-              {t('profile.controlCenter')}
-            </MenuItem>
-
-            {isAdmin && (
-              <MenuItem
-                href="#yonetim"
-                onClick={() => setOpen(false)}
-                icon={
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
-                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                    <rect x="14" y="14" width="7" height="7" rx="1.5" />
-                  </svg>
-                }
-              >
-                {t('profile.adminPanel')}
-              </MenuItem>
-            )}
-
-            {isDealer && (
-              <MenuItem
-                href="#hesap?tab=quotes"
-                onClick={() => setOpen(false)}
-                icon={
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
-                    <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-                    <path d="M14 3v5h5M9 13h6M9 17h4" strokeLinecap="round" />
-                  </svg>
-                }
-              >
-                {t('profile.myQuotes')}
-              </MenuItem>
-            )}
-
-            {isTester && (
-              <MenuItem
-                href="#hesap?tab=tester"
-                onClick={() => setOpen(false)}
-                icon={
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
-                    <path d="M9 3h6M10 3v6l-4.5 8.5a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 9V3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                }
-              >
-                {t('profile.testerTools')}
-              </MenuItem>
-            )}
+              if (item.type === 'controlCenter') {
+                return (
+                  <MenuItem
+                    key={item.id}
+                    href="#hesap"
+                    onClick={close}
+                    icon={
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
+                        <circle cx="12" cy="8" r="3.5" />
+                        <path d="M5 19c1.5-3.5 4-5 7-5s5.5 1.5 7 5" strokeLinecap="round" />
+                      </svg>
+                    }
+                  >
+                    {t('profile.controlCenter')}
+                  </MenuItem>
+                )
+              }
+              if (item.type === 'myQuotes') {
+                return (
+                  <MenuItem
+                    key={item.id}
+                    href="#hesap?tab=quotes"
+                    onClick={close}
+                    icon={
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
+                        <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+                        <path d="M14 3v5h5M9 13h6M9 17h4" strokeLinecap="round" />
+                      </svg>
+                    }
+                  >
+                    {t('profile.myQuotes')}
+                  </MenuItem>
+                )
+              }
+              if (item.type === 'testerTools') {
+                return (
+                  <MenuItem
+                    key={item.id}
+                    href="#hesap?tab=tester"
+                    onClick={close}
+                    icon={
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
+                        <path d="M9 3h6M10 3v6l-4.5 8.5a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 9V3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    }
+                  >
+                    {t('profile.testerTools')}
+                  </MenuItem>
+                )
+              }
+              return null
+            })}
           </div>
 
           <div className="border-t border-neutral-100 dark:border-[#2c333f] p-1.5">
-            {isAuthenticated ? (
+            {isAuthenticated || role !== ROLES.GUEST ? (
               <MenuItem
                 danger
                 onClick={() => {
                   logout()
-                  setOpen(false)
+                  close()
                 }}
                 icon={
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
@@ -195,7 +237,7 @@ export default function ProfileMenu() {
             ) : (
               <MenuItem
                 href="#hesap?tab=session"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 icon={
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
                     <path d="M14 7l5 5-5 5M19 12H8M10 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4" strokeLinecap="round" strokeLinejoin="round" />

@@ -70,7 +70,7 @@ function StepDots({ step, total }) {
       {Array.from({ length: total }).map((_, i) => (
         <span
           key={i}
-          className={`h-1.5 rounded-full transition-all ${i === step ? 'w-6 bg-brand' : 'w-1.5 bg-neutral-300 dark:bg-[#39414f]'}`}
+          className={`h-1.5 rounded-full transition-all ${i === step ? 'w-6 bg-accent' : i < step ? 'w-4 bg-brand' : 'w-1.5 bg-neutral-300 dark:bg-[#39414f]'}`}
         />
       ))}
     </div>
@@ -84,7 +84,7 @@ function ChoiceCard({ label, active, onClick }) {
       onClick={onClick}
       className={`w-full text-left rounded-xl border-2 px-4 py-3.5 transition-colors ${
         active
-          ? 'border-brand bg-brand-tint text-brand dark:text-brand-light font-semibold'
+          ? 'btn-selected'
           : 'border-neutral-200 dark:border-[#2c333f] hover:border-neutral-300 dark:hover:border-[#39414f]'
       }`}
     >

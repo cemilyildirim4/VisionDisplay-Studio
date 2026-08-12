@@ -81,11 +81,25 @@ export function SessionProvider({ children }) {
   }, [])
 
   const role = useMemo(() => {
-    if (adminUnlocked) return ROLES.ADMIN
-    if (session?.role === ROLES.ADMIN) return ROLES.ADMIN
-    if (session?.role === ROLES.TESTER || demoRole === ROLES.TESTER) return ROLES.TESTER
-    if (session?.role === ROLES.DEALER || demoRole === ROLES.DEALER) return ROLES.DEALER
+    // 1) Gerçek JWT oturumu her zaman baskın
+    if (session?.accessToken && session?.role) {
+      if (session.role === ROLES.ADMIN) return ROLES.ADMIN
+      if (session.role === ROLES.TESTER) return ROLES.TESTER
+      if (session.role === ROLES.DEALER) return ROLES.DEALER
+    }
+    // 2) Beta demo rolü — yönetim oturumunu UI'da ezer (rol simülasyonu)
+    if (demoRole === ROLES.GUEST) return ROLES.GUEST
     if (demoRole === ROLES.ADMIN) return ROLES.ADMIN
+    if (demoRole === ROLES.TESTER) return ROLES.TESTER
+    if (demoRole === ROLES.DEALER) return ROLES.DEALER
+    // 3) Yönetim paneli doğrulaması (demo seçilmemişken)
+    if (adminUnlocked) return ROLES.ADMIN
+    // 4) Demo session kaydı
+    if (session?.demo && session?.role) {
+      if (session.role === ROLES.ADMIN) return ROLES.ADMIN
+      if (session.role === ROLES.TESTER) return ROLES.TESTER
+      if (session.role === ROLES.DEALER) return ROLES.DEALER
+    }
     return ROLES.GUEST
   }, [adminUnlocked, session, demoRole])
 
@@ -120,6 +134,7 @@ export function SessionProvider({ children }) {
         sessionStorage.removeItem(ADMIN_KEY)
         sessionStorage.removeItem(ADMIN_JWT)
         sessionStorage.removeItem('yonetim-jwt-meta')
+        localStorage.removeItem(DEMO_ROLE_KEY)
       } catch {
         /* ignore */
       }
@@ -137,10 +152,14 @@ export function SessionProvider({ children }) {
       displayName,
       email,
       initials: initialsOf(displayName, email),
-      isAuthenticated: role !== ROLES.GUEST,
+      isAuthenticated: !!(session?.accessToken || session?.email) && role !== ROLES.GUEST,
+      // Menü / yetki: tam rol eşleşmesi (cascade yok — Admin Dealer menüsünü görmez)
       isAdmin: role === ROLES.ADMIN,
-      isTester: role === ROLES.TESTER || role === ROLES.ADMIN,
-      isDealer: role === ROLES.DEALER || role === ROLES.ADMIN,
+      isTester: role === ROLES.TESTER,
+      isDealer: role === ROLES.DEALER,
+      // Bazı ekranlar (Kontrol Merkezi sekmeleri) Admin'e de bayi/tester panelleri açabilir:
+      canDealerTools: role === ROLES.DEALER || role === ROLES.ADMIN,
+      canTesterTools: role === ROLES.TESTER || role === ROLES.ADMIN,
       session,
       demoRole,
       setSessionData,

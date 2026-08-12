@@ -58,10 +58,15 @@ export default function ContactModal({ open, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Başlık */}
-        <div className="bg-brand text-white px-5 py-4 flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold m-0 leading-tight">{t('contact.heading')}</h2>
-            <p className="text-[11px] text-white/70 m-0 mt-0.5 leading-tight">{CONTACT.company}</p>
+        <div className="bg-brand text-white px-5 py-4 flex items-start justify-between gap-3 relative">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 p-1">
+              <img src="/masaustu-logo-isaret.png" alt="" className="w-full h-full object-contain" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-base font-bold m-0 leading-tight">{t('contact.heading')}</h2>
+              <p className="text-[11px] text-white/70 m-0 mt-0.5 leading-tight">{CONTACT.company}</p>
+            </div>
           </div>
           <button
             type="button"
@@ -73,6 +78,7 @@ export default function ContactModal({ open, onClose }) {
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
+          <div className="brand-stripe absolute bottom-0 left-0 right-0 h-[3px]" aria-hidden />
         </div>
 
         <div className="p-4 flex flex-col gap-2.5">

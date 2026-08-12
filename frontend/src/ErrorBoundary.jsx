@@ -44,9 +44,10 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="fixed inset-0 z-[999] bg-white dark:bg-[#0b0d12] flex items-center justify-center p-6">
-          <div className="max-w-sm text-center">
-            <div className="text-4xl mb-3">⚠️</div>
+        <div className="fixed inset-0 z-[999] bg-[#f7f9fc] dark:bg-[#0b0f16] flex items-center justify-center p-6">
+          <div className="max-w-sm text-center brand-page-enter">
+            <img src="/masaustu-logo-isaret.png" alt="" className="h-12 w-auto mx-auto mb-4 brand-logo-enter" />
+            <div className="brand-stripe h-[3px] w-24 mx-auto mb-5 rounded-full" aria-hidden />
             <h1 className="text-base font-bold text-neutral-900 dark:text-neutral-100 mb-2">
               Bir şeyler ters gitti
             </h1>
@@ -57,7 +58,7 @@ export default class ErrorBoundary extends Component {
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="rounded-full px-5 py-2.5 text-sm font-semibold bg-brand text-white hover:bg-brand-dark transition-colors"
+              className="rounded-full px-5 py-2.5 text-sm font-semibold btn-brand-primary"
             >
               Sayfayı Yenile
             </button>

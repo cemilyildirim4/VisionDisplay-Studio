@@ -35,8 +35,16 @@ export default function PrivacyModal({ open, onClose }) {
         className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[520px] max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-brand text-white px-5 py-4 flex items-start justify-between gap-3 shrink-0">
-          <h2 className="text-base font-bold m-0 leading-tight">{t('privacy.title')}</h2>
+        <div className="bg-brand text-white px-5 py-4 flex items-start justify-between gap-3 shrink-0 relative">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 p-1">
+              <img src="/masaustu-logo-isaret.png" alt="" className="w-full h-full object-contain" />
+            </span>
+            <div className="min-w-0">
+              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/70">Masaüstü Bilişim</p>
+              <h2 className="text-base font-bold m-0 leading-tight">{t('privacy.title')}</h2>
+            </div>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -47,6 +55,7 @@ export default function PrivacyModal({ open, onClose }) {
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
+          <div className="brand-stripe absolute bottom-0 left-0 right-0 h-[3px]" aria-hidden />
         </div>
 
         <div className="p-5 overflow-y-auto">

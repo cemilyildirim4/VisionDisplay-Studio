@@ -20,6 +20,8 @@ const dict = {
   // ---------- Genel / üst bar ----------
   'app.title': { tr: 'Ekran Konfigüratörü', en: 'Display Configurator', ar: 'مُهيّئ الشاشات' },
   'app.tagline': { tr: 'LED Ekran ve Video Duvarı Çözümleri', en: 'LED Display & Video Wall Solutions', ar: 'حلول شاشات LED وجدران الفيديو' },
+  'brand.company': { tr: 'Masaüstü Bilişim Teknolojileri', en: 'Masaüstü Bilişim Teknolojileri', ar: 'ماساوستو لتقنيات المعلومات' },
+  'brand.companyShort': { tr: 'Masaüstü Bilişim', en: 'Masaüstü Bilişim', ar: 'ماساوستو' },
   'chat.button': { tr: 'Asistan', en: 'Assistant', ar: 'المساعد' },
   'chat.title': { tr: 'Masaüstü Bilişim', en: 'Masaüstü Bilişim', ar: 'Masaüstü Bilişim' },
   'chat.subtitle': { tr: 'Teknolojileri', en: 'Teknolojileri', ar: 'Teknolojileri' },

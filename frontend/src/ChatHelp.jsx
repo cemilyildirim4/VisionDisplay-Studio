@@ -103,9 +103,9 @@ export default function ChatHelp({ open, onClose }) {
       {open && (
         <div className="fixed bottom-5 right-5 z-50 w-[calc(100vw-2.5rem)] sm:w-[370px] max-h-[min(78vh,560px)] bg-white dark:bg-[#161a21] rounded-2xl shadow-2xl border border-neutral-200 dark:border-[#2c333f] flex flex-col overflow-hidden">
           {/* Başlık */}
-          <div className="bg-brand text-white px-4 py-3 flex items-center justify-between shrink-0">
+          <div className="bg-brand text-white px-4 py-3 flex items-center justify-between shrink-0 relative">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-8 h-8 rounded-lg bg-white dark:bg-[#161a21] flex items-center justify-center shrink-0 p-1">
+              <span className="w-8 h-8 rounded-lg bg-white dark:bg-[#121821] flex items-center justify-center shrink-0 p-1">
                 <img src="/masaustu-logo-isaret.png" alt="" className="w-full h-full object-contain" />
               </span>
               <div className="min-w-0">
@@ -123,6 +123,7 @@ export default function ChatHelp({ open, onClose }) {
                 <path d="M6 6l12 12M18 6L6 18" />
               </svg>
             </button>
+            <div className="brand-stripe absolute bottom-0 left-0 right-0 h-[3px]" aria-hidden />
           </div>
 
           {/* Mesajlar */}

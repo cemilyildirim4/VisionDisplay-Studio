@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
+import { BrandMark, BrandStripe } from './BrandChrome.jsx'
+import { BRAND } from './brand.js'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
@@ -392,10 +394,13 @@ function GirisEkrani({ onGiris }) {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-[#1b2029] text-[#1c1c2b] dark:text-neutral-100 font-sans flex items-center justify-center px-6">
-      <div className="w-full max-w-sm bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-6">
-        <h1 className="text-xl font-bold m-0">Yönetim Paneli</h1>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 mb-4">
+    <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans flex items-center justify-center px-6">
+      <div className="w-full max-w-sm bg-white dark:bg-[#121821] border border-neutral-200 dark:border-[#2a3342] rounded-2xl p-6 shadow-sm brand-page-enter overflow-hidden relative">
+        <div className="brand-stripe absolute top-0 left-0 right-0 h-[3px]" aria-hidden />
+        <div className="mb-4 pt-1">
+          <BrandMark title="Yönetim Paneli" subtitle={BRAND.companyShort} showCompany={false} />
+        </div>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0 mb-4">
           Admin hesabı ile giriş yapın. Beta için paylaşılan parola da kullanılabilir.
         </p>
 
@@ -1114,7 +1119,7 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-[#1b2029] text-[#1c1c2b] dark:text-neutral-100 font-sans">
+    <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans">
       <ConfirmDialog
         open={!!confirm}
         title={confirm?.title}
@@ -1123,15 +1128,19 @@ export default function AdminPanel() {
         onConfirm={confirm?.onConfirm}
       />
 
-      <header className="bg-white dark:bg-[#161a21] border-b border-neutral-200 dark:border-[#2c333f] px-8 py-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold m-0">Yönetim Paneli</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 m-0 mt-1">
-            Ürün kataloğu, satış talepleri ve sistem izleme.
-            {adminMeta?.email ? ` · ${adminMeta.displayName || adminMeta.email}` : jwtOku() ? '' : ' · paylaşılan parola oturumu'}
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
+      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
+        <BrandMark
+          title="Yönetim Paneli"
+          subtitle={
+            adminMeta?.email
+              ? `${adminMeta.displayName || adminMeta.email}`
+              : jwtOku()
+                ? 'Ürün kataloğu, satış talepleri ve sistem izleme'
+                : 'Paylaşılan parola oturumu'
+          }
+          size="lg"
+        />
+        <div className="flex items-center gap-4 shrink-0">
           <button
             type="button"
             onClick={oturumDustu}
@@ -1151,9 +1160,10 @@ export default function AdminPanel() {
           </button>
         </div>
       </header>
+      <BrandStripe />
 
       {/* ---- Gruplu sekme çubuğu ---- */}
-      <div className="bg-white dark:bg-[#161a21] border-b border-neutral-200 dark:border-[#2c333f] px-4 sm:px-8 overflow-x-auto">
+      <div className="bg-white dark:bg-[#121821] border-b border-neutral-200 dark:border-[#2a3342] px-4 sm:px-8 overflow-x-auto">
         <div className="flex items-end gap-4 sm:gap-6 min-w-max">
           {TAB_GROUPS.map((group, gi) => (
             <div key={group.label} className="flex items-end gap-1">
@@ -1170,7 +1180,7 @@ export default function AdminPanel() {
                       onClick={() => setTab(t.key)}
                       className={`whitespace-nowrap px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
                         tab === t.key
-                          ? 'border-brand text-brand dark:text-brand-light'
+                          ? 'border-[#2962ad] text-[#2962ad] dark:text-[#9db9dc]'
                           : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
                       }`}
                     >

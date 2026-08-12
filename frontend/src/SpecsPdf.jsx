@@ -10,11 +10,12 @@
  */
 
 import { DASH, fmt, computeSpecs } from './specsData.js'
+import { BRAND } from './brand.js'
+import { PdfBrandHeader } from './BrandChrome.jsx'
 
-const BRAND = '#2962ad'
-const INK = '#1c1c2b'
-const MUTED = '#6b7280'
-const LINE = '#e5e7eb'
+const INK = BRAND.ink
+const MUTED = BRAND.muted
+const LINE = BRAND.line
 const PAGE_W = 794
 
 function Row({ label, value }) {
@@ -50,7 +51,7 @@ function Group({ title, children }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
-        <span style={{ width: 3, height: 13, borderRadius: 2, background: BRAND, display: 'block' }} />
+        <span style={{ width: 3, height: 13, borderRadius: 2, background: BRAND.blue, display: 'block' }} />
         <h3 style={{ fontSize: 11.5, fontWeight: 700, color: INK, margin: 0 }}>{title}</h3>
       </div>
       <div>{children}</div>
@@ -86,31 +87,22 @@ export default function SpecsPdf({ innerRef, t, model, cols, rows, sboxRedundanc
         boxSizing: 'border-box',
       }}
     >
-      {/* Başlık */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end',
-          borderBottom: `2px solid ${BRAND}`,
-          paddingBottom: 12,
-          marginBottom: 18,
-        }}
-      >
-        <div>
-          <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: -0.3 }}>{t('sp.title')}</div>
-          <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>{t('app.title')}</div>
-        </div>
-        <div style={{ textAlign: 'right', fontSize: 10.5, color: MUTED, lineHeight: 1.7 }}>
-          <div>
-            <span style={{ color: INK, fontWeight: 600 }}>{model.modelCode}</span>
+      <PdfBrandHeader
+        productLine={t('sp.title')}
+        right={
+          <div style={{ textAlign: 'right', fontSize: 10.5, color: MUTED, lineHeight: 1.7 }}>
+            <div>
+              <span style={{ color: INK, fontWeight: 600 }}>{model.modelCode}</span>
+            </div>
+            <div>
+              {cols} × {rows} · {fmt(total)} {t('sp.unit')}
+            </div>
+            <div>{today}</div>
           </div>
-          <div>
-            {cols} × {rows} · {fmt(total)} {t('sp.unit')}
-          </div>
-          <div>{today}</div>
-        </div>
-      </div>
+        }
+      />
+
+      <div style={{ height: 18 }} />
 
       {/* Öne çıkan değerler */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
@@ -124,14 +116,15 @@ export default function SpecsPdf({ innerRef, t, model, cols, rows, sboxRedundanc
             key={m.k}
             style={{
               flex: 1,
-              background: '#eef3fb',
+              background: BRAND.blueTint,
               border: `1px solid #dbe5f5`,
+              borderLeft: `3px solid ${BRAND.orange}`,
               borderRadius: 8,
               padding: '10px 12px',
             }}
           >
             <div style={{ fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4 }}>{m.k}</div>
-            <div style={{ fontSize: 14.5, fontWeight: 700, color: BRAND, marginTop: 3 }}>{m.v}</div>
+            <div style={{ fontSize: 14.5, fontWeight: 700, color: BRAND.blue, marginTop: 3 }}>{m.v}</div>
           </div>
         ))}
       </div>

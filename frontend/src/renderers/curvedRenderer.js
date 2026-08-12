@@ -249,7 +249,7 @@ export function drawCurvedScreen(ctx, o) {
     ctx.font = '600 9px Poppins, system-ui, sans-serif'
     ctx.textBaseline = 'middle'
     const tw = ctx.measureText(resolution).width
-    ctx.fillStyle = '#2962ad' // marka rengi (index.css --color-brand)
+    ctx.fillStyle = '#2962ad' // marka mavisi (brand.js / index.css --color-brand)
     roundRectPath(ctx, bx, by, tw + 8, 13, 2)
     ctx.fill()
     ctx.fillStyle = '#ffffff'

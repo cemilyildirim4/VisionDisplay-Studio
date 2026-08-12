@@ -5,6 +5,8 @@ import html2canvas from 'html2canvas-pro'
 import { fmt } from './specsData.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import PrivacyModal from './PrivacyModal.jsx'
+import { BRAND } from './brand.js'
+import { PdfBrandHeader } from './BrandChrome.jsx'
 
 /**
  * "PDF olarak dışa aktar" formu.
@@ -37,11 +39,12 @@ import PrivacyModal from './PrivacyModal.jsx'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
 
 // Rapor renkleri — html2canvas değişken (var(--x)) çözemediği için hex sabit
-const MARKA = '#2962ad'
-const MURE = '#1c1c2b' // ana metin
-const SOLUK = '#64748b' // etiket
-const CIZGI = '#e2e8f0'
-const ZEMIN = '#f5f7fb'
+const MARKA = BRAND.blue
+const VURGU = BRAND.orange
+const MURE = BRAND.ink
+const SOLUK = BRAND.muted
+const CIZGI = BRAND.line
+const ZEMIN = BRAND.surface
 
 function Field({ label, children }) {
   return (
@@ -88,7 +91,10 @@ function Alan({ k, v, genis = false }) {
 function Altbilgi({ t, sayfa }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', borderTop: `1px solid ${CIZGI}`, paddingTop: 7 }}>
-      <div style={{ flex: 1, fontSize: 9, color: SOLUK, lineHeight: 1.5, paddingRight: 20 }}>{t('exp.disclaimer')}</div>
+      <div style={{ flex: 1, fontSize: 9, color: SOLUK, lineHeight: 1.5, paddingRight: 20 }}>
+        <div style={{ fontWeight: 600, color: MARKA, marginBottom: 2 }}>{BRAND.company}</div>
+        {t('exp.disclaimer')}
+      </div>
       <div style={{ fontSize: 9, color: SOLUK, whiteSpace: 'nowrap' }}>
         {t('exp.page')} {sayfa} / 2
       </div>
@@ -100,7 +106,7 @@ function Altbilgi({ t, sayfa }) {
 function Kutu({ k, v, birim }) {
   return (
     <div style={{ width: '25%', boxSizing: 'border-box', paddingRight: 7, marginBottom: 7 }}>
-      <div style={{ padding: '9px 10px', background: ZEMIN, borderLeft: `2.5px solid ${MARKA}` }}>
+      <div style={{ padding: '9px 10px', background: ZEMIN, borderLeft: `2.5px solid ${VURGU}` }}>
         <div style={{ fontSize: 9, color: SOLUK, letterSpacing: 0.4, textTransform: 'uppercase', lineHeight: 1.3, minHeight: 22 }}>{k}</div>
         <div style={{ fontSize: 15, fontWeight: 700, color: MURE, marginTop: 3 }}>
           {v}
@@ -488,24 +494,20 @@ export default function ExportModal({ open, onClose, summary }) {
       >
         {/* ---------------------------------------------------- 1. SAYFA */}
         <div ref={reportRef} style={{ background: '#ffffff' }}>
-          {/* Antet: solda kim gönderiyor, sağda belgenin kimliği */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', borderBottom: `3px solid ${MARKA}`, paddingBottom: 12 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 17, fontWeight: 700, color: MARKA, lineHeight: 1.15 }}>
-                {t('chat.title')} {t('chat.subtitle')}
+          <PdfBrandHeader
+            productLine={`${t('chat.title')} ${t('chat.subtitle')}`}
+            right={
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: 0.4 }}>{t('exp.reportTitle')}</div>
+                <div style={{ fontSize: 10, color: SOLUK, marginTop: 4 }}>
+                  {t('exp.docNo')}: {belgeNo}
+                </div>
+                <div style={{ fontSize: 10, color: SOLUK, marginTop: 1 }}>
+                  {t('exp.date')}: {tarih}
+                </div>
               </div>
-              <div style={{ fontSize: 11, color: SOLUK, marginTop: 3 }}>{t('app.tagline')}</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: 0.4 }}>{t('exp.reportTitle')}</div>
-              <div style={{ fontSize: 10, color: SOLUK, marginTop: 4 }}>
-                {t('exp.docNo')}: {belgeNo}
-              </div>
-              <div style={{ fontSize: 10, color: SOLUK, marginTop: 1 }}>
-                {t('exp.date')}: {tarih}
-              </div>
-            </div>
-          </div>
+            }
+          />
 
           {/* --- Müşteri: üreticinin geri dönebilmesi için telefon/e-posta da burada --- */}
           <Baslik>{t('exp.secCustomer')}</Baslik>
@@ -589,13 +591,23 @@ export default function ExportModal({ open, onClose, summary }) {
 
         {/* ---------------------------------------------------- 2. SAYFA */}
         <div ref={sayfa2Ref} style={{ background: '#ffffff' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', borderBottom: `1.5px solid ${MARKA}`, paddingBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', borderBottom: `3px solid ${MARKA}`, paddingBottom: 8, position: 'relative' }}>
             <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: MARKA, flex: 1 }}>
               {t('exp.visual')}
             </span>
             <span style={{ fontSize: 10, color: SOLUK }}>
               {summary.modelCode || ''} · {olcu(toplamWm, enYuksekHm)} · {t('exp.docNo')} {belgeNo}
             </span>
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: -3,
+                height: 3,
+                background: `linear-gradient(90deg, ${MARKA} 0%, ${MARKA} 62%, ${VURGU} 62%, ${VURGU} 100%)`,
+              }}
+            />
           </div>
         </div>
         <div ref={altbilgi2Ref} style={{ background: '#ffffff' }}>

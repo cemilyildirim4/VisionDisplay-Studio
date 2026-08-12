@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLang } from './useLang.js'
 import { useTheme } from './useTheme.js'
 import { useSession } from './SessionContext.jsx'
+import { BrandMark, BrandStripe } from './BrandChrome.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
 
@@ -22,7 +23,7 @@ function TabButton({ active, onClick, children }) {
       onClick={onClick}
       className={`px-3.5 py-2 rounded-lg text-[13px] font-semibold whitespace-nowrap transition-colors ${
         active
-          ? 'bg-brand text-white'
+          ? 'btn-selected'
           : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#1f2530]'
       }`}
     >
@@ -33,7 +34,7 @@ function TabButton({ active, onClick, children }) {
 
 function Panel({ title, hint, children }) {
   return (
-    <section className="border border-neutral-200 dark:border-[#2c333f] rounded-2xl p-5 sm:p-6">
+    <section className="border border-neutral-200 dark:border-[#2a3342] rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#121821]">
       <div className="mb-4">
         <h2 className="text-base font-bold m-0 text-neutral-900 dark:text-neutral-100">{title}</h2>
         {hint && <p className="text-[13px] text-neutral-500 dark:text-neutral-400 m-0 mt-1 leading-relaxed">{hint}</p>}
@@ -58,6 +59,8 @@ export default function ControlCenter() {
     isAdmin,
     isTester,
     isDealer,
+    canDealerTools,
+    canTesterTools,
     isAuthenticated,
     setDemoRole,
     setSessionData,
@@ -87,11 +90,11 @@ export default function ControlCenter() {
 
   const tabs = useMemo(() => {
     const list = [{ id: 'overview', label: t('cc.tab.overview') }]
-    if (isDealer) list.push({ id: 'quotes', label: t('cc.tab.quotes') })
-    if (isTester) list.push({ id: 'tester', label: t('cc.tab.tester') })
+    if (canDealerTools) list.push({ id: 'quotes', label: t('cc.tab.quotes') })
+    if (canTesterTools) list.push({ id: 'tester', label: t('cc.tab.tester') })
     list.push({ id: 'session', label: t('cc.tab.session') })
     return list
-  }, [isDealer, isTester, t])
+  }, [canDealerTools, canTesterTools, t])
 
   const roleLabel = t(`role.${role.toLowerCase()}`)
 
@@ -144,14 +147,9 @@ export default function ControlCenter() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-[#0f1218] text-[#1c1c2b] dark:text-neutral-100 font-sans">
-      <header className="border-b border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#161a21] px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 m-0 mb-0.5">
-            Vision Display Studio
-          </p>
-          <h1 className="text-lg sm:text-xl font-bold m-0 truncate">{t('cc.title')}</h1>
-        </div>
+    <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans">
+      <header className="border-b border-neutral-200/80 dark:border-[#2a3342] bg-white dark:bg-[#121821] px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
+        <BrandMark title={t('cc.title')} subtitle={t('app.tagline')} size="lg" />
         <a
           href="#"
           onClick={(e) => {
@@ -164,8 +162,9 @@ export default function ControlCenter() {
           ← {t('cc.back')}
         </a>
       </header>
+      <BrandStripe />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 brand-page-enter">
         {/* Kimlik şeridi */}
         <div className="flex items-center gap-4 mb-6">
           <div className="h-14 w-14 rounded-full bg-brand text-white inline-flex items-center justify-center text-lg font-bold shrink-0">
@@ -233,7 +232,7 @@ export default function ControlCenter() {
           </div>
         )}
 
-        {tab === 'quotes' && isDealer && (
+        {tab === 'quotes' && canDealerTools && (
           <Panel title={t('cc.quotes.title')} hint={t('cc.quotes.hint')}>
             <p className="text-[13px] text-neutral-600 dark:text-neutral-300 m-0 leading-relaxed">
               {t('cc.quotes.body')}
@@ -254,7 +253,7 @@ export default function ControlCenter() {
           </Panel>
         )}
 
-        {tab === 'tester' && isTester && (
+        {tab === 'tester' && canTesterTools && (
           <div className="flex flex-col gap-4">
             <Panel title={t('cc.tester.title')} hint={t('cc.tester.hint')}>
               <textarea
@@ -343,7 +342,7 @@ export default function ControlCenter() {
                     type="button"
                     onClick={() => {
                       if (r === R.GUEST) {
-                        setDemoRole(null)
+                        setDemoRole(R.GUEST)
                         setSessionData(null)
                       } else {
                         setDemoRole(r)
@@ -357,7 +356,7 @@ export default function ControlCenter() {
                     }}
                     className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold border transition-colors ${
                       role === r
-                        ? 'border-brand bg-brand text-white'
+                        ? 'btn-selected border'
                         : 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-brand'
                     }`}
                   >

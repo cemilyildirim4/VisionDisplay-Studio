@@ -196,7 +196,7 @@ function FilterDropdown({ filter, selected, onToggle, isOpen, onOpen }) {
         onClick={onOpen}
         className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
           count > 0
-            ? 'border-brand text-brand dark:text-brand-light font-medium bg-brand-tint'
+            ? 'btn-selected border'
             : 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-neutral-400 dark:hover:border-[#4a5364]'
         }`}
       >
@@ -435,7 +435,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                   type="button"
                   onClick={() => switchTab(key)}
                   className={`px-3.5 py-1.5 rounded-md text-[12.5px] font-semibold transition-colors ${
-                    tab === key ? 'bg-white dark:bg-[#161a21] text-brand' : 'text-neutral-300 hover:text-white'
+                    tab === key ? 'btn-selected' : 'text-neutral-300 hover:text-white'
                   }`}
                 >
                   {t(meta.labelKey)}
@@ -461,7 +461,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                 type="button"
                 onClick={() => switchTab(key)}
                 className={`py-2 rounded-lg text-[13px] font-semibold transition-colors ${
-                  tab === key ? 'bg-brand text-white' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-600 dark:text-neutral-400'
+                  tab === key ? 'btn-selected' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-600 dark:text-neutral-400'
                 }`}
               >
                 {t(meta.labelKey)}
