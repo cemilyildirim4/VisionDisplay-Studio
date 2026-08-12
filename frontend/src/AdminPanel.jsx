@@ -4,12 +4,11 @@ import { useEffect, useState, useCallback } from 'react'
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
  * Adres: http://localhost:5173/#yonetim
  *
- * Sekmeler:
- *  - Modeller:         Kabin/panel CRUD (var olan işlev + fiyat/montaj alanları)
- *  - Seriler:          Ürün ailesi (series) CRUD
- *  - Teklifler:        ExportModal'dan gelen teklif kayıtları (salt okunur + sil)
- *  - Sohbet Kayıtları: ChatHelp asistanına sorulan sorular (salt okunur + sil değil, filtre)
- *  - Kayıtlı Projeler: Configurations tablosuna kaydedilen projeler (PDF indir + sil)
+ * Gruplar:
+ *  - Genel:   Dashboard (özet)
+ *  - Ürün:    Modeller, Seriler
+ *  - Satış:   Teklifler, Kayıtlı Projeler
+ *  - Sistem:  Analitik, Sohbet Kayıtları, Davet Kodları
  *
  * Veriler doğrudan API üzerinden okunur/yazılır; API kapalıysa ekran uyarı gösterir
  * (ana sayfadaki gibi demo veriye düşmez, çünkü burada gerçek kayıt yapılıyor).
@@ -27,14 +26,35 @@ const PRODUCT_TYPES = [
   { v: 'MODULE', label: 'Modül (kart başına gruplanır)' },
 ]
 
-const TABS = [
-  { key: 'cabins', label: 'Modeller' },
-  { key: 'series', label: 'Seriler' },
-  { key: 'quotes', label: 'Teklifler' },
-  { key: 'chatlogs', label: 'Sohbet Kayıtları' },
-  { key: 'configs', label: 'Kayıtlı Projeler' },
-  { key: 'analytics', label: 'Analitik' },
-  { key: 'invites', label: 'Davet Kodları' },
+/** Sekmeler gruplu — 7 düz sekme yerine SaaS tarzı bölümler. */
+const TAB_GROUPS = [
+  {
+    label: 'Genel',
+    items: [{ key: 'dashboard', label: 'Dashboard' }],
+  },
+  {
+    label: 'Ürün',
+    items: [
+      { key: 'cabins', label: 'Modeller' },
+      { key: 'series', label: 'Seriler' },
+    ],
+  },
+  {
+    label: 'Satış',
+    items: [
+      { key: 'quotes', label: 'Teklifler' },
+      { key: 'configs', label: 'Kayıtlı Projeler' },
+    ],
+  },
+  {
+    label: 'Sistem',
+    items: [
+      { key: 'analytics', label: 'Analitik' },
+      { key: 'chatlogs', label: 'Sohbet Kayıtları' },
+      { key: 'users', label: 'Kullanıcılar' },
+      { key: 'invites', label: 'Davet Kodları' },
+    ],
+  },
 ]
 
 const STATUS_OPTIONS_QUOTE = ['Beklemede', 'Onaylandı', 'Reddedildi']
@@ -44,12 +64,12 @@ const STATUS_OPTIONS_CONFIG = ['Taslak', 'Beklemede', 'Onaylandı', 'Reddedildi'
 function StatusBadge({ status }) {
   const cls =
     status === 'Onaylandı'
-      ? 'bg-green-50 text-green-700 border-green-200'
+      ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800'
       : status === 'Reddedildi'
-      ? 'bg-red-50 text-red-700 border-red-200'
+      ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800'
       : status === 'Taslak'
-      ? 'bg-neutral-100 text-neutral-600 border-neutral-200'
-      : 'bg-amber-50 text-amber-800 border-amber-200'
+      ? 'bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-[#222833] dark:text-neutral-300 dark:border-[#39414f]'
+      : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800'
   return <span className={`rounded-full px-2 py-0.5 text-xs border whitespace-nowrap ${cls}`}>{status || '—'}</span>
 }
 
@@ -65,6 +85,38 @@ function Pagination({ page, totalPages, onChange }) {
       <button type="button" disabled={page >= totalPages} onClick={() => onChange(page + 1)} className="px-2 py-1 rounded border border-neutral-200 dark:border-[#39414f] disabled:opacity-40">
         Sonraki →
       </button>
+    </div>
+  )
+}
+
+/** Tarayıcı window.confirm yerine kurumsal silme onayı. */
+function ConfirmDialog({ open, title, body, confirmLabel = 'Sil', onConfirm, onCancel }) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-[90] bg-[#001334]/45 flex items-center justify-center p-4" onClick={onCancel}>
+      <div
+        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-neutral-200 dark:border-[#2c333f]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base font-bold m-0 text-neutral-900 dark:text-neutral-100">{title}</h3>
+        <p className="text-sm text-neutral-600 dark:text-neutral-300 m-0 mt-2 leading-relaxed">{body}</p>
+        <div className="flex items-center justify-end gap-2 mt-5">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 py-2 text-sm font-semibold hover:bg-neutral-50 dark:hover:bg-[#1b2029]"
+          >
+            Vazgeç
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-full bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-700"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -196,31 +248,91 @@ function Banner({ message }) {
 }
 
 /*
- * YÖNETİM PAROLASI
+ * YÖNETİM OTURUMU
  *
- * sessionStorage: sekme kapanınca silinir. localStorage kalıcı olurdu ve ortak
- * bir bilgisayarda bir sonraki kişi doğrudan içeri girerdi.
+ * Tercih edilen yol: Admin rolündeki hesapla JWT (e-posta/parola).
+ * Yedek yol: paylaşılan X-Admin-Key (ADMIN_PASSWORD) — beta / acil durum.
  *
- * Asıl koruma SUNUCUDA (Security/AdminOnlyAttribute.cs). Buradaki ekran sadece
- * parolayı bir kez sorup isteklere ekliyor; tek başına bir güvenlik katmanı
- * değil, çünkü tarayıcıda çalışan hiçbir şey güvenilir sayılamaz.
+ * sessionStorage: sekme kapanınca silinir.
+ * Asıl koruma SUNUCUDA (AdminOnlyAttribute): JWT Role=Admin VEYA X-Admin-Key.
  */
 const PAROLA_ANAHTARI = 'yonetim-parolasi'
-const parolaOku = () => sessionStorage.getItem(PAROLA_ANAHTARI) || ''
-/** Yazma isteklerine parola başlığını ekler. */
-const yetkiBasligi = () => ({ 'X-Admin-Key': parolaOku() })
+const JWT_ANAHTARI = 'yonetim-jwt'
+const JWT_META = 'yonetim-jwt-meta'
 
-/** Parola sorma ekranı — doğrulanmadan yönetim ekranı hiç çizilmiyor. */
+const parolaOku = () => sessionStorage.getItem(PAROLA_ANAHTARI) || ''
+const jwtOku = () => sessionStorage.getItem(JWT_ANAHTARI) || ''
+
+/** Yazma isteklerine JWT ve/veya paylaşılan parola başlığını ekler. */
+const yetkiBasligi = () => {
+  const h = {}
+  const jwt = jwtOku()
+  const key = parolaOku()
+  if (jwt) h.Authorization = `Bearer ${jwt}`
+  if (key) h['X-Admin-Key'] = key
+  return h
+}
+
+const oturumVarMi = () => !!(jwtOku() || parolaOku())
+
+/** Parola / JWT sorma ekranı — doğrulanmadan yönetim ekranı hiç çizilmiyor. */
 function GirisEkrani({ onGiris }) {
+  const [mode, setMode] = useState('jwt') // jwt | shared | bootstrap
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('Admin')
   const [parola, setParola] = useState('')
   const [hata, setHata] = useState(null)
+  const [bilgi, setBilgi] = useState(null)
   const [deneniyor, setDeneniyor] = useState(false)
 
-  const gonder = async (e) => {
+  const kaydetJwt = (data) => {
+    sessionStorage.setItem(JWT_ANAHTARI, data.accessToken)
+    sessionStorage.setItem(JWT_META, JSON.stringify({
+      email: data.email,
+      displayName: data.displayName,
+      role: data.role,
+    }))
+    sessionStorage.removeItem(PAROLA_ANAHTARI)
+    window.dispatchEvent(new Event('vds-admin-auth'))
+    onGiris({ type: 'jwt', ...data })
+  }
+
+  const gonderJwt = async (e) => {
+    e.preventDefault()
+    if (deneniyor) return
+    setDeneniyor(true)
+    setHata(null)
+    setBilgi(null)
+    try {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setHata(body.message || 'Giriş başarısız.')
+        return
+      }
+      if (body.role !== 'Admin') {
+        setHata('Bu hesap Admin değil. Yönetim paneli yalnızca Admin rolüne açıktır.')
+        return
+      }
+      kaydetJwt(body)
+    } catch {
+      setHata('API\'ye bağlanılamadı. Backend (Docker API veya dotnet) çalışıyor mu kontrol edin.')
+    } finally {
+      setDeneniyor(false)
+    }
+  }
+
+  const gonderShared = async (e) => {
     e.preventDefault()
     if (deneniyor || !parola) return
     setDeneniyor(true)
     setHata(null)
+    setBilgi(null)
     try {
       const res = await fetch(`${API_URL}/api/cabinets/admin/dogrula`, {
         method: 'POST',
@@ -236,9 +348,44 @@ function GirisEkrani({ onGiris }) {
         return
       }
       sessionStorage.setItem(PAROLA_ANAHTARI, parola)
-      onGiris()
+      sessionStorage.removeItem(JWT_ANAHTARI)
+      sessionStorage.removeItem(JWT_META)
+      window.dispatchEvent(new Event('vds-admin-auth'))
+      onGiris({ type: 'shared' })
     } catch {
-      setHata('API\'ye bağlanılamadı. "2-API-BASLAT" dosyasının çalıştığından emin olun.')
+      setHata('API\'ye bağlanılamadı. Backend (Docker API veya dotnet) çalışıyor mu kontrol edin.')
+    } finally {
+      setDeneniyor(false)
+    }
+  }
+
+  const gonderBootstrap = async (e) => {
+    e.preventDefault()
+    if (deneniyor) return
+    setDeneniyor(true)
+    setHata(null)
+    setBilgi(null)
+    try {
+      // Önce paylaşılan parola ile kimlik doğrula (AdminOnly), sonra ilk Admin'i oluştur
+      if (!parola) {
+        setHata('İlk Admin oluşturmak için .env içindeki ADMIN_PASSWORD gerekir.')
+        return
+      }
+      const res = await fetch(`${API_URL}/api/users/bootstrap-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': parola },
+        body: JSON.stringify({ email, password, displayName }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setHata(body.message || 'Admin oluşturulamadı.')
+        return
+      }
+      setBilgi(`Admin oluşturuldu: ${body.email}. Şimdi e-posta ile giriş yapın.`)
+      setMode('jwt')
+      setPassword('')
+    } catch {
+      setHata('API\'ye bağlanılamadı.')
     } finally {
       setDeneniyor(false)
     }
@@ -246,47 +393,117 @@ function GirisEkrani({ onGiris }) {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-[#1b2029] text-[#1c1c2b] dark:text-neutral-100 font-sans flex items-center justify-center px-6">
-      <form onSubmit={gonder} className="w-full max-w-sm bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-6">
+      <div className="w-full max-w-sm bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-6">
         <h1 className="text-xl font-bold m-0">Yönetim Paneli</h1>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 mb-5">
-          Bu bölüm yalnızca yöneticilere açıktır.
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 mb-4">
+          Admin hesabı ile giriş yapın. Beta için paylaşılan parola da kullanılabilir.
         </p>
-        <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
-          Yönetim parolası
-        </label>
-        <input
-          type="password"
-          autoFocus
-          value={parola}
-          onChange={(e) => setParola(e.target.value)}
-          className="w-full border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
-        />
-        {hata && <p className="text-[13px] text-red-600 mt-2 mb-0">{hata}</p>}
-        <button
-          type="submit"
-          disabled={deneniyor || !parola}
-          className="w-full mt-5 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors"
-        >
-          {deneniyor ? 'Kontrol ediliyor…' : 'Giriş'}
-        </button>
+
+        <div className="flex gap-1 mb-4 p-1 rounded-lg bg-neutral-100 dark:bg-[#1b2029]">
+          {[
+            { id: 'jwt', label: 'Admin hesap' },
+            { id: 'shared', label: 'Paylaşılan parola' },
+            { id: 'bootstrap', label: 'İlk Admin' },
+          ].map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => { setMode(m.id); setHata(null); setBilgi(null) }}
+              className={`flex-1 rounded-md py-1.5 text-[11px] font-semibold transition-colors ${
+                mode === m.id ? 'bg-white dark:bg-[#161a21] text-brand shadow-sm' : 'text-neutral-500'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'jwt' && (
+          <form onSubmit={gonderJwt} className="flex flex-col gap-3">
+            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+              E-posta
+              <input type="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
+            </label>
+            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+              Parola
+              <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
+            </label>
+            {hata && <p className="text-[13px] text-red-600 m-0">{hata}</p>}
+            {bilgi && <p className="text-[13px] text-emerald-600 m-0">{bilgi}</p>}
+            <button type="submit" disabled={deneniyor} className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors">
+              {deneniyor ? 'Kontrol ediliyor…' : 'Giriş'}
+            </button>
+          </form>
+        )}
+
+        {mode === 'shared' && (
+          <form onSubmit={gonderShared} className="flex flex-col gap-3">
+            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+              Yönetim parolası (.env ADMIN_PASSWORD)
+              <input type="password" autoFocus value={parola} onChange={(e) => setParola(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
+            </label>
+            {hata && <p className="text-[13px] text-red-600 m-0">{hata}</p>}
+            <button type="submit" disabled={deneniyor || !parola} className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors">
+              {deneniyor ? 'Kontrol ediliyor…' : 'Giriş'}
+            </button>
+          </form>
+        )}
+
+        {mode === 'bootstrap' && (
+          <form onSubmit={gonderBootstrap} className="flex flex-col gap-3">
+            <p className="text-[12px] text-neutral-500 dark:text-neutral-400 m-0">
+              Sistemde henüz Admin yoksa, paylaşılan parola ile ilk Admin hesabını oluşturun.
+            </p>
+            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+              ADMIN_PASSWORD
+              <input type="password" required value={parola} onChange={(e) => setParola(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
+            </label>
+            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+              Admin e-posta
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
+            </label>
+            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+              Görünen ad
+              <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
+            </label>
+            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+              Yeni parola (min. 8)
+              <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
+            </label>
+            {hata && <p className="text-[13px] text-red-600 m-0">{hata}</p>}
+            <button type="submit" disabled={deneniyor} className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors">
+              {deneniyor ? 'Oluşturuluyor…' : 'İlk Admin’i oluştur'}
+            </button>
+          </form>
+        )}
+
         <button
           type="button"
           onClick={() => {
             window.history.replaceState(null, '', window.location.pathname + window.location.search)
             window.dispatchEvent(new Event('hashchange'))
           }}
-          className="w-full mt-3 text-[13px] text-brand dark:text-brand-light hover:underline"
+          className="w-full mt-4 text-[13px] text-brand dark:text-brand-light hover:underline"
         >
           ← Konfigüratöre dön
         </button>
-      </form>
+      </div>
     </div>
   )
 }
 
 export default function AdminPanel() {
-  const [girisYapildi, setGirisYapildi] = useState(() => !!parolaOku())
-  const [tab, setTab] = useState('cabins')
+  const [girisYapildi, setGirisYapildi] = useState(() => oturumVarMi())
+  const [adminMeta, setAdminMeta] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(JWT_META) || 'null')
+    } catch {
+      return null
+    }
+  })
+  const [tab, setTab] = useState('dashboard')
+  const [formSection, setFormSection] = useState('basic') // basic | tech | parts
+  const [confirm, setConfirm] = useState(null) // { title, body, onConfirm }
 
   // ---- Modeller + Seriler (birlikte yüklenir, çünkü form seri listesine ihtiyaç duyar) ----
   const [cabinets, setCabinets] = useState([])
@@ -300,7 +517,22 @@ export default function AdminPanel() {
 
   const oturumDustu = () => {
     sessionStorage.removeItem(PAROLA_ANAHTARI)
+    sessionStorage.removeItem(JWT_ANAHTARI)
+    sessionStorage.removeItem(JWT_META)
+    window.dispatchEvent(new Event('vds-admin-auth'))
+    setAdminMeta(null)
     setGirisYapildi(false)
+  }
+
+  const askConfirm = (title, body, onConfirm) => {
+    setConfirm({
+      title,
+      body,
+      onConfirm: async () => {
+        setConfirm(null)
+        await onConfirm()
+      },
+    })
   }
 
   const load = useCallback(async () => {
@@ -316,7 +548,7 @@ export default function AdminPanel() {
       setSeriesList(await sRes.json())
     } catch {
       setApiError(
-        'API\'ye bağlanılamadı. "2-API-BASLAT" dosyasının çalıştığından ve veritabanının açık olduğundan emin olun.',
+        'API\'ye bağlanılamadı. Docker API konteynerinin (port 5007) çalıştığından ve veritabanının açık olduğundan emin olun. Yerel dotnet run ile Docker aynı portta çakışmasın.',
       )
     } finally {
       setLoading(false)
@@ -329,12 +561,14 @@ export default function AdminPanel() {
 
   const startNew = () => {
     setEditingId(null)
+    setFormSection('basic')
     setForm({ ...BLANK, seriesId: seriesList[0]?.id ?? 1 })
     setMessage(null)
   }
 
   const startEdit = (c) => {
     setEditingId(c.id)
+    setFormSection('basic')
     setForm({
       seriesId: c.seriesId,
       category: c.category,
@@ -454,19 +688,24 @@ export default function AdminPanel() {
     }
   }
 
-  const remove = async (c) => {
-    if (!window.confirm(`"${c.modelCode}" modeli silinecek. Emin misiniz?`)) return
-    try {
-      const res = await fetch(`${API_URL}/api/cabinets/${c.id}`, {
-        method: 'DELETE',
-        headers: yetkiBasligi(),
-      })
-      if (!res.ok) throw new Error('Silinemedi.')
-      setMessage({ type: 'ok', text: `"${c.modelCode}" silindi.` })
-      await load()
-    } catch (e) {
-      setMessage({ type: 'err', text: e.message })
-    }
+  const remove = (c) => {
+    askConfirm(
+      'Modeli sil',
+      `"${c.modelCode}" modeli kalıcı olarak silinecek. Bu işlem geri alınamaz.`,
+      async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/cabinets/${c.id}`, {
+            method: 'DELETE',
+            headers: yetkiBasligi(),
+          })
+          if (!res.ok) throw new Error('Silinemedi.')
+          setMessage({ type: 'ok', text: `"${c.modelCode}" silindi.` })
+          await load()
+        } catch (e) {
+          setMessage({ type: 'err', text: e.message })
+        }
+      },
+    )
   }
 
   // ---- Seriler ----
@@ -504,20 +743,25 @@ export default function AdminPanel() {
     }
   }
 
-  const removeSeries = async (s) => {
-    if (!window.confirm(`"${s.name}" serisi silinecek. Emin misiniz?`)) return
-    try {
-      const res = await fetch(`${API_URL}/api/cabinets/series/${s.id}`, { method: 'DELETE', headers: yetkiBasligi() })
-      if (res.status === 401) { oturumDustu(); return }
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.message || 'Silinemedi.')
-      }
-      setSeriesMessage({ type: 'ok', text: `"${s.name}" silindi.` })
-      await load()
-    } catch (e) {
-      setSeriesMessage({ type: 'err', text: e.message })
-    }
+  const removeSeries = (s) => {
+    askConfirm(
+      'Seriyi sil',
+      `"${s.name}" serisi silinecek. Bağlı modeller etkilenebilir.`,
+      async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/cabinets/series/${s.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          if (res.status === 401) { oturumDustu(); return }
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            throw new Error(err.message || 'Silinemedi.')
+          }
+          setSeriesMessage({ type: 'ok', text: `"${s.name}" silindi.` })
+          await load()
+        } catch (e) {
+          setSeriesMessage({ type: 'err', text: e.message })
+        }
+      },
+    )
   }
 
   // ---- Teklifler (Quotes) ----
@@ -550,16 +794,21 @@ export default function AdminPanel() {
     }
   }, [])
 
-  const removeQuote = async (q) => {
-    if (!window.confirm(`"${q.customerName || 'İsimsiz'}" teklifi silinecek. Emin misiniz?`)) return
-    try {
-      const res = await fetch(`${API_URL}/api/quotes/${q.id}`, { method: 'DELETE', headers: yetkiBasligi() })
-      if (res.status === 401) { oturumDustu(); return }
-      if (!res.ok) throw new Error('Silinemedi.')
-      await loadQuotes(quotesPage, quotesSearch)
-    } catch (e) {
-      setQuotesError(e.message)
-    }
+  const removeQuote = (q) => {
+    askConfirm(
+      'Teklifi sil',
+      `"${q.customerName || 'İsimsiz'}" teklifi kalıcı olarak silinecek.`,
+      async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/quotes/${q.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          if (res.status === 401) { oturumDustu(); return }
+          if (!res.ok) throw new Error('Silinemedi.')
+          await loadQuotes(quotesPage, quotesSearch)
+        } catch (e) {
+          setQuotesError(e.message)
+        }
+      },
+    )
   }
 
   const updateQuoteStatus = async (q, status) => {
@@ -630,16 +879,21 @@ export default function AdminPanel() {
     }
   }, [])
 
-  const removeConfig = async (c) => {
-    if (!window.confirm(`"${c.projectName}" projesi silinecek. Emin misiniz?`)) return
-    try {
-      const res = await fetch(`${API_URL}/api/configurations/${c.id}`, { method: 'DELETE', headers: yetkiBasligi() })
-      if (res.status === 401) { oturumDustu(); return }
-      if (!res.ok) throw new Error('Silinemedi.')
-      await loadConfigs(configsPage, configsSearch)
-    } catch (e) {
-      setConfigsError(e.message)
-    }
+  const removeConfig = (c) => {
+    askConfirm(
+      'Projeyi sil',
+      `"${c.projectName}" projesi kalıcı olarak silinecek.`,
+      async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/configurations/${c.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          if (res.status === 401) { oturumDustu(); return }
+          if (!res.ok) throw new Error('Silinemedi.')
+          await loadConfigs(configsPage, configsSearch)
+        } catch (e) {
+          setConfigsError(e.message)
+        }
+      },
+    )
   }
 
   const updateConfigStatus = async (c, status) => {
@@ -713,16 +967,100 @@ export default function AdminPanel() {
     }
   }
 
-  const removeInvite = async (inv) => {
-    if (!window.confirm(`"${inv.code}" kodu silinecek. Emin misiniz?`)) return
+  const removeInvite = (inv) => {
+    askConfirm(
+      'Davet kodunu sil',
+      `"${inv.code}" kodu silinecek. Bu kodla yeni giriş yapılamaz.`,
+      async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/invite-codes/${inv.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          if (res.status === 401) { oturumDustu(); return }
+          if (!res.ok) throw new Error('Silinemedi.')
+          await loadInvites()
+        } catch (e) {
+          setInvitesError(e.message)
+        }
+      },
+    )
+  }
+
+  // ---- Kullanıcılar (Admin / Dealer / Tester) ----
+  const [users, setUsers] = useState([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [usersError, setUsersError] = useState(null)
+  const [userForm, setUserForm] = useState({ email: '', password: '', displayName: '', role: 'Dealer' })
+  const [userSaving, setUserSaving] = useState(false)
+
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true)
+    setUsersError(null)
     try {
-      const res = await fetch(`${API_URL}/api/invite-codes/${inv.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+      const res = await fetch(`${API_URL}/api/users`, { headers: yetkiBasligi() })
       if (res.status === 401) { oturumDustu(); return }
-      if (!res.ok) throw new Error('Silinemedi.')
-      await loadInvites()
+      if (!res.ok) throw new Error('Kullanıcı listesi alınamadı.')
+      setUsers(await res.json())
     } catch (e) {
-      setInvitesError(e.message)
+      setUsersError(e.message)
+    } finally {
+      setUsersLoading(false)
     }
+  }, [])
+
+  const createUser = async (e) => {
+    e.preventDefault()
+    if (userSaving) return
+    setUserSaving(true)
+    setUsersError(null)
+    try {
+      const res = await fetch(`${API_URL}/api/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
+        body: JSON.stringify(userForm),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (res.status === 401) { oturumDustu(); return }
+      if (!res.ok) throw new Error(body.message || 'Kullanıcı oluşturulamadı.')
+      setUserForm({ email: '', password: '', displayName: '', role: 'Dealer' })
+      await loadUsers()
+    } catch (err) {
+      setUsersError(err.message)
+    } finally {
+      setUserSaving(false)
+    }
+  }
+
+  const updateUserRole = async (u, role) => {
+    try {
+      const res = await fetch(`${API_URL}/api/users/${u.id}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
+        body: JSON.stringify({ role }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (res.status === 401) { oturumDustu(); return }
+      if (!res.ok) throw new Error(body.message || 'Rol güncellenemedi.')
+      await loadUsers()
+    } catch (err) {
+      setUsersError(err.message)
+    }
+  }
+
+  const removeUser = (u) => {
+    askConfirm(
+      'Kullanıcıyı sil',
+      `"${u.email}" hesabı silinecek.`,
+      async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/users/${u.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const body = await res.json().catch(() => ({}))
+          if (res.status === 401) { oturumDustu(); return }
+          if (!res.ok) throw new Error(body.message || 'Silinemedi.')
+          await loadUsers()
+        } catch (err) {
+          setUsersError(err.message)
+        }
+      },
+    )
   }
 
   const downloadConfigPdf = async (c) => {
@@ -746,11 +1084,12 @@ export default function AdminPanel() {
   // Sekme değişince ilgili veriyi getir
   useEffect(() => {
     if (!girisYapildi) return
+    if (tab === 'dashboard' || tab === 'analytics') loadDashboard()
     if (tab === 'quotes') loadQuotes(1, '')
     if (tab === 'chatlogs') loadChatLogs(onlyUnanswered)
     if (tab === 'configs') loadConfigs(1, '')
-    if (tab === 'analytics') loadDashboard()
     if (tab === 'invites') loadInvites()
+    if (tab === 'users') loadUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, girisYapildi])
 
@@ -759,22 +1098,39 @@ export default function AdminPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlyUnanswered])
 
-  if (!girisYapildi) return <GirisEkrani onGiris={() => setGirisYapildi(true)} />
+  if (!girisYapildi) {
+    return (
+      <GirisEkrani
+        onGiris={(info) => {
+          if (info?.type === 'jwt') {
+            setAdminMeta({ email: info.email, displayName: info.displayName, role: info.role })
+          } else {
+            setAdminMeta(null)
+          }
+          setGirisYapildi(true)
+        }}
+      />
+    )
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-[#1b2029] text-[#1c1c2b] dark:text-neutral-100 font-sans">
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.title}
+        body={confirm?.body}
+        onCancel={() => setConfirm(null)}
+        onConfirm={confirm?.onConfirm}
+      />
+
       <header className="bg-white dark:bg-[#161a21] border-b border-neutral-200 dark:border-[#2c333f] px-8 py-5 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold m-0">Yönetim Paneli</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 m-0 mt-1">Modeller, seriler, teklifler, sohbet kayıtları ve kayıtlı projeler.</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 m-0 mt-1">
+            Ürün kataloğu, satış talepleri ve sistem izleme.
+            {adminMeta?.email ? ` · ${adminMeta.displayName || adminMeta.email}` : jwtOku() ? '' : ' · paylaşılan parola oturumu'}
+          </p>
         </div>
-        {/*
-          Konfigüratöre dönüş.
-          href="#" KULLANILMIYOR: tarayıcı onu adrese boş bir '#' olarak yazıyor
-          ve sayfa yenilense bile orada kalıyordu (localhost:5173/#).
-          Onun yerine adresi history ile temizleyip Root'a haber veriyoruz —
-          sayfa yeniden yüklenmediği için geçiş de anında oluyor.
-        */}
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -796,22 +1152,36 @@ export default function AdminPanel() {
         </div>
       </header>
 
-      {/* ---- Sekme çubuğu ---- */}
-      <div className="bg-white dark:bg-[#161a21] border-b border-neutral-200 dark:border-[#2c333f] px-8 flex gap-1 overflow-x-auto">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={`whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === t.key
-                ? 'border-brand text-brand dark:text-brand-light'
-                : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* ---- Gruplu sekme çubuğu ---- */}
+      <div className="bg-white dark:bg-[#161a21] border-b border-neutral-200 dark:border-[#2c333f] px-4 sm:px-8 overflow-x-auto">
+        <div className="flex items-end gap-4 sm:gap-6 min-w-max">
+          {TAB_GROUPS.map((group, gi) => (
+            <div key={group.label} className="flex items-end gap-1">
+              {gi > 0 && <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 mb-2" />}
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-neutral-400 px-2 mb-0.5">
+                  {group.label}
+                </span>
+                <div className="flex">
+                  {group.items.map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setTab(t.key)}
+                      className={`whitespace-nowrap px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                        tab === t.key
+                          ? 'border-brand text-brand dark:text-brand-light'
+                          : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="px-8 py-6">
@@ -819,6 +1189,95 @@ export default function AdminPanel() {
           <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {apiError}
             <button type="button" onClick={load} className="ml-3 underline">Tekrar dene</button>
+          </div>
+        )}
+
+        {/* ================= DASHBOARD ================= */}
+        {tab === 'dashboard' && (
+          <div>
+            {dashboardError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{dashboardError}</div>}
+            {dashboardLoading && !dashboard && <p className="text-sm text-neutral-500 dark:text-neutral-400">Yükleniyor…</p>}
+            {dashboard && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  {[
+                    { label: 'Toplam Teklif', value: dashboard.totalQuotes, go: 'quotes' },
+                    { label: 'Beklemede', value: dashboard.pendingQuotes, go: 'quotes' },
+                    { label: 'Kayıtlı Proje', value: dashboard.totalConfigurations, go: 'configs' },
+                    { label: 'Cevaplanamayan Soru', value: dashboard.unansweredChatLogs, go: 'chatlogs' },
+                  ].map((s) => (
+                    <button
+                      key={s.label}
+                      type="button"
+                      onClick={() => setTab(s.go)}
+                      className="text-left bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-4 hover:border-brand transition-colors"
+                    >
+                      <div className="text-2xl font-bold">{s.value}</div>
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{s.label}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 bg-white dark:bg-[#161a21]">
+                    <h3 className="text-sm font-bold m-0 mb-3">Hızlı işlemler</h3>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => setTab('cabins')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Modeller</button>
+                      <button type="button" onClick={() => setTab('quotes')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Teklifler</button>
+                      <button type="button" onClick={() => setTab('analytics')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Analitik</button>
+                      <button type="button" onClick={() => setTab('invites')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Davet Kodları</button>
+                    </div>
+                  </div>
+                  <div className="border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 bg-white dark:bg-[#161a21]">
+                    <h3 className="text-sm font-bold m-0 mb-2">Katalog özeti</h3>
+                    <p className="text-[13px] text-neutral-600 dark:text-neutral-300 m-0">
+                      {loading ? '…' : `${cabinets.length} model · ${seriesList.length} seri`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] flex items-center justify-between">
+                      <h3 className="text-sm font-bold m-0">Popüler modeller</h3>
+                      <button type="button" onClick={() => setTab('analytics')} className="text-xs text-brand hover:underline">Tümü</button>
+                    </div>
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {(dashboard.topModels || []).slice(0, 5).map((m) => (
+                          <tr key={m.cabinId} className="border-t border-neutral-100 dark:border-[#242b36]">
+                            <td className="px-4 py-2.5 font-medium">{m.modelCode}</td>
+                            <td className="px-4 py-2.5 text-right text-neutral-500 dark:text-neutral-400">{m.configurationCount} proje</td>
+                          </tr>
+                        ))}
+                        {(dashboard.topModels || []).length === 0 && (
+                          <tr><td className="px-4 py-6 text-center text-neutral-400 dark:text-neutral-500">Henüz veri yok.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] flex items-center justify-between">
+                      <h3 className="text-sm font-bold m-0">SSS adayları</h3>
+                      <button type="button" onClick={() => setTab('chatlogs')} className="text-xs text-brand hover:underline">Loglar</button>
+                    </div>
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {(dashboard.faqSuggestions || []).slice(0, 5).map((f, i) => (
+                          <tr key={i} className="border-t border-neutral-100 dark:border-[#242b36] align-top">
+                            <td className="px-4 py-2.5">{f.question}</td>
+                            <td className="px-4 py-2.5 text-right text-neutral-500 dark:text-neutral-400 whitespace-nowrap">{f.askedCount}×</td>
+                          </tr>
+                        ))}
+                        {(dashboard.faqSuggestions || []).length === 0 && (
+                          <tr><td className="px-4 py-6 text-center text-neutral-400 dark:text-neutral-500">Cevaplanamayan soru yok.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -833,6 +1292,28 @@ export default function AdminPanel() {
                   {editingId ? `Model düzenle (#${editingId})` : 'Yeni model ekle'}
                 </h2>
 
+                <div className="flex gap-1.5 mb-5">
+                  {[
+                    { id: 'basic', label: 'Temel' },
+                    { id: 'tech', label: 'Teknik' },
+                    { id: 'parts', label: 'Bileşenler & Filtre' },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setFormSection(s.id)}
+                      className={`px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${
+                        formSection === s.id
+                          ? 'bg-brand text-white'
+                          : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#1f2530]'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className={formSection === 'basic' ? '' : 'hidden'}>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <Field label="Model Kodu">
                     <input value={form.modelCode} onChange={(e) => set('modelCode', e.target.value)} className={inputCls} placeholder="ör. LED-P1.25" />
@@ -879,7 +1360,9 @@ export default function AdminPanel() {
                     />
                   </Field>
                 </div>
+                </div>
 
+                <div className={formSection === 'tech' ? '' : 'hidden'}>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <Field label="Genişlik (mm)">
                     <input type="number" value={form.widthMm} onChange={(e) => set('widthMm', e.target.value)} className={inputCls} />
@@ -940,7 +1423,9 @@ export default function AdminPanel() {
                     <input type="number" step="0.01" value={form.bezelMm} onChange={(e) => set('bezelMm', e.target.value)} className={inputCls} disabled={form.category !== 'videowall'} />
                   </Field>
                 </div>
+                </div>
 
+                <div className={formSection === 'parts' ? '' : 'hidden'}>
                 {/* --- Filtre nitelikleri --- */}
                 <div className="border-t border-neutral-100 dark:border-[#242b36] pt-5 mb-5">
                   <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 m-0 mb-1">Filtre Nitelikleri</h3>
@@ -985,6 +1470,7 @@ export default function AdminPanel() {
                       <input value={form.powerCord220Code} onChange={(e) => set('powerCord220Code', e.target.value)} className={inputCls} />
                     </Field>
                   </div>
+                </div>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -1192,13 +1678,16 @@ export default function AdminPanel() {
                       <td className="px-4 py-2.5">{q.columns ?? '—'} × {q.rows ?? '—'}</td>
                       <td className="px-4 py-2.5">{q.resolution || '—'}</td>
                       <td className="px-4 py-2.5">
-                        <select
-                          value={q.status || 'Beklemede'}
-                          onChange={(e) => updateQuoteStatus(q, e.target.value)}
-                          className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-2 py-1 bg-transparent"
-                        >
-                          {STATUS_OPTIONS_QUOTE.map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={q.status || 'Beklemede'} />
+                          <select
+                            value={q.status || 'Beklemede'}
+                            onChange={(e) => updateQuoteStatus(q, e.target.value)}
+                            className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-2 py-1 bg-transparent"
+                          >
+                            {STATUS_OPTIONS_QUOTE.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{dt(q.createdAt)}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-right">
@@ -1313,13 +1802,16 @@ export default function AdminPanel() {
                       <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{c.recommendedProcessor || '—'}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap">{money(c.totalPrice)}</td>
                       <td className="px-4 py-2.5">
-                        <select
-                          value={c.status || 'Taslak'}
-                          onChange={(e) => updateConfigStatus(c, e.target.value)}
-                          className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-2 py-1 bg-transparent"
-                        >
-                          {STATUS_OPTIONS_CONFIG.map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={c.status || 'Taslak'} />
+                          <select
+                            value={c.status || 'Taslak'}
+                            onChange={(e) => updateConfigStatus(c, e.target.value)}
+                            className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-2 py-1 bg-transparent"
+                          >
+                            {STATUS_OPTIONS_CONFIG.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{dt(c.createdAt)}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-right">
@@ -1402,6 +1894,85 @@ export default function AdminPanel() {
                 </div>
               </>
             )}
+          </div>
+        )}
+
+        {/* ================= KULLANICILAR ================= */}
+        {tab === 'users' && (
+          <div className="flex flex-col gap-5">
+            <form onSubmit={createUser} className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+              <Field label="E-posta">
+                <input required type="email" value={userForm.email} onChange={(e) => setUserForm((f) => ({ ...f, email: e.target.value }))} className={inputCls} />
+              </Field>
+              <Field label="Görünen ad">
+                <input value={userForm.displayName} onChange={(e) => setUserForm((f) => ({ ...f, displayName: e.target.value }))} className={inputCls} />
+              </Field>
+              <Field label="Parola (min. 8)">
+                <input required minLength={8} type="password" value={userForm.password} onChange={(e) => setUserForm((f) => ({ ...f, password: e.target.value }))} className={inputCls} />
+              </Field>
+              <Field label="Rol">
+                <select value={userForm.role} onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value }))} className={inputCls}>
+                  <option value="Dealer">Bayi (Dealer)</option>
+                  <option value="Tester">Tester</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </Field>
+              <button type="submit" disabled={userSaving} className="rounded-full bg-brand text-white text-sm font-semibold px-4 py-2.5 hover:bg-brand-dark disabled:opacity-50">
+                {userSaving ? 'Ekleniyor…' : '+ Kullanıcı ekle'}
+              </button>
+            </form>
+
+            <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+                <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                  {usersLoading ? 'Yükleniyor…' : `${users.length} kullanıcı`}
+                </span>
+                <button type="button" onClick={loadUsers} className="text-sm text-brand dark:text-brand-light hover:underline">Yenile</button>
+              </div>
+              {usersError && <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{usersError}</div>}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
+                    <tr>
+                      {['ID', 'E-posta', 'Ad', 'Rol', 'Oluşturulma', ''].map((h) => (
+                        <th key={h} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} className="border-t border-neutral-100 dark:border-[#242b36] hover:bg-neutral-50 dark:hover:bg-[#1b2029]">
+                        <td className="px-4 py-2.5 text-neutral-400 dark:text-neutral-500">{u.id}</td>
+                        <td className="px-4 py-2.5 font-medium">{u.email}</td>
+                        <td className="px-4 py-2.5">{u.displayName || '—'}</td>
+                        <td className="px-4 py-2.5">
+                          <select
+                            value={u.role}
+                            onChange={(e) => updateUserRole(u, e.target.value)}
+                            className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-2 py-1 bg-transparent"
+                          >
+                            <option value="Admin">Admin</option>
+                            <option value="Dealer">Dealer</option>
+                            <option value="Tester">Tester</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{dt(u.createdAt)}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          <button type="button" onClick={() => removeUser(u)} className="text-red-600 hover:underline">Sil</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {!usersLoading && users.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">
+                          Henüz kullanıcı yok. Giriş ekranından “İlk Admin” ile başlayın veya buradan ekleyin.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 

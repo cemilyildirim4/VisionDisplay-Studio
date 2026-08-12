@@ -14,7 +14,7 @@ public class User
 
     public string? DisplayName { get; set; }
 
-    /// <summary>"Admin" | "Dealer" — JWT'deki role claim'iyle birebir eşleşir.</summary>
+    /// <summary>"Admin" | "Dealer" | "Tester" — JWT'deki role claim'iyle birebir eşleşir.</summary>
     public string Role { get; set; } = "Dealer";
 
     /// <summary>Google/Microsoft ile giriş yapıldıysa sağlayıcı adı; yerel hesaplarda null.</summary>

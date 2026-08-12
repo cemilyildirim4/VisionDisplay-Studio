@@ -2,20 +2,28 @@ import { useEffect, useState, Suspense, lazy } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import App from './App.jsx'
 import { LanguageProvider } from './LanguageContext.jsx'
+import { SessionProvider } from './SessionContext.jsx'
 import { useTheme } from './useTheme.js'
 import { queryClient } from './queryClient.js'
 
-// Yönetim ekranı müşteri akışından tamamen ayrı bir hedef kitleye (dahili
-// ekip) hitap ediyor; kod bölme ile normal ziyaretçinin paketine hiç girmez.
+// Yönetim / hesap ekranları müşteri ana paketinden ayrı tutulur (kod bölme).
 const AdminPanel = lazy(() => import('./AdminPanel.jsx'))
+const ControlCenter = lazy(() => import('./ControlCenter.jsx'))
 
 /**
  * Basit adres yönlendirmesi (ek kütüphane gerektirmez):
  *   http://localhost:5173/          → Konfigüratör
  *   http://localhost:5173/#yonetim  → Model yönetim ekranı
+ *   http://localhost:5173/#hesap    → Kontrol Merkezi / Hesap Yönetimi
  */
+function routeFromHash(hash) {
+  if (hash === '#yonetim' || hash.startsWith('#yonetim?')) return 'admin'
+  if (hash === '#hesap' || hash.startsWith('#hesap?')) return 'account'
+  return 'app'
+}
+
 export default function Root() {
-  const [hash, setHash] = useState(window.location.hash)
+  const [route, setRoute] = useState(() => routeFromHash(window.location.hash))
 
   /*
    * Tema BURADA kuruluyor, App'in içinde değil. Yönetim ekranı App'i hiç
@@ -25,7 +33,7 @@ export default function Root() {
   const { theme, toggle: temaDegistir } = useTheme()
 
   useEffect(() => {
-    const onHashChange = () => setHash(window.location.hash)
+    const onHashChange = () => setRoute(routeFromHash(window.location.hash))
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
@@ -33,13 +41,19 @@ export default function Root() {
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        {hash === '#yonetim' ? (
-          <Suspense fallback={null}>
-            <AdminPanel />
-          </Suspense>
-        ) : (
-          <App theme={theme} onToggleTheme={temaDegistir} />
-        )}
+        <SessionProvider>
+          {route === 'admin' ? (
+            <Suspense fallback={null}>
+              <AdminPanel />
+            </Suspense>
+          ) : route === 'account' ? (
+            <Suspense fallback={null}>
+              <ControlCenter />
+            </Suspense>
+          ) : (
+            <App theme={theme} onToggleTheme={temaDegistir} />
+          )}
+        </SessionProvider>
       </LanguageProvider>
     </QueryClientProvider>
   )

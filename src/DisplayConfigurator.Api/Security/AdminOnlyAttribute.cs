@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -6,22 +7,12 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace DisplayConfigurator.Api.Security;
 
 /// <summary>
-/// Yönetim işlemlerini paylaşılan bir parolayla korur.
+/// Yönetim uçlarını korur. İki geçerli yol (geçiş dönemi):
+///  1. JWT Bearer + Role=Admin  (canlıya yakın, hesap bazlı)
+///  2. X-Admin-Key paylaşılan parola (beta / acil durum yedek anahtarı)
 ///
-/// NEDEN SUNUCUDA:
-/// Koruma yalnızca arayüzde olsaydı gerçek bir koruma olmazdı — API adresini
-/// bilen herkes tarayıcıdan ya da curl ile doğrudan POST/PUT/DELETE atıp model
-/// ekleyip silebilirdi. Yetki kontrolü isteği KARŞILAYAN tarafta olmak zorunda.
-///
-/// KAPSAM:
-/// Yalnızca DEĞİŞTİREN uçlar korunuyor. Model listesi (GET) herkese açık
-/// kalmalı, çünkü konfigüratörün kendisi onu okuyor.
-///
-/// PAROLA NEREDE:
-/// appsettings.Development.json içindeki "Admin:Password" (o dosya .gitignore
-/// ile hariç tutulmalı) ya da ortam değişkeni: Admin__Password=...
-/// Parola tanımlı değilse uçlar KAPALI kalır — "parola yoksa serbest" davranışı
-/// sessizce güvensiz bir kurulum üretirdi.
+/// JWT Admin varken paylaşılan parola hâlâ çalışır; canlıda Admin:Password
+/// boş bırakılarak yalnızca JWT zorunlu hale getirilebilir.
 /// </summary>
 public class AdminOnlyAttribute : Attribute, IAsyncActionFilter
 {
@@ -29,52 +20,65 @@ public class AdminOnlyAttribute : Attribute, IAsyncActionFilter
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        var config = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+        var http = context.HttpContext;
+        var user = http.User;
+
+        // 1) JWT Admin
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var role = user.FindFirstValue(ClaimTypes.Role) ?? user.FindFirstValue("role");
+            if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                await next();
+                return;
+            }
+        }
+
+        // 2) Paylaşılan yönetim parolası (X-Admin-Key)
+        var config = http.RequestServices.GetRequiredService<IConfiguration>();
         var beklenen = config["Admin:Password"];
 
-        if (string.IsNullOrWhiteSpace(beklenen))
+        if (!string.IsNullOrWhiteSpace(beklenen))
+        {
+            var gelen = http.Request.Headers[HeaderName].ToString();
+            if (!string.IsNullOrEmpty(gelen) && SabitSuredeEsit(gelen, beklenen))
+            {
+                await next();
+                return;
+            }
+
+            // Parola tanımlı ama eşleşmedi / gönderilmedi
+            if (!string.IsNullOrEmpty(gelen))
+            {
+                context.Result = new UnauthorizedObjectResult(new { message = "Yönetim parolası geçersiz." });
+                return;
+            }
+        }
+
+        // Ne JWT Admin ne de geçerli X-Admin-Key
+        if (string.IsNullOrWhiteSpace(beklenen) && user.Identity?.IsAuthenticated != true)
         {
             context.Result = new ObjectResult(new
             {
-                message = "Yönetim parolası sunucuda tanımlı değil. " +
-                          "appsettings.Development.json içine \"Admin\": { \"Password\": \"...\" } ekleyin."
+                message = "Yönetim erişimi yapılandırılmamış. Ya Admin:Password (ortam değişkeni) tanımlayın " +
+                          "ya da Role=Admin olan bir hesapla JWT girişi yapın."
             })
             { StatusCode = StatusCodes.Status503ServiceUnavailable };
             return;
         }
 
-        var gelen = context.HttpContext.Request.Headers[HeaderName].ToString();
-
-        if (!SabitSuredeEsit(gelen, beklenen))
+        context.Result = new UnauthorizedObjectResult(new
         {
-            context.Result = new UnauthorizedObjectResult(new { message = "Yönetim parolası geçersiz." });
-            return;
-        }
-
-        await next();
+            message = "Yönetim paneli için Admin hesabıyla giriş yapın veya geçerli X-Admin-Key gönderin."
+        });
     }
 
-    /// <summary>
-    /// Sabit süreli karşılaştırma. Sıradan == ilk farklı karakterde durur ve
-    /// yanıt süresinden parola karakter karakter tahmin edilebilir.
-    ///
-    /// NOT: FixedTimeEquals farklı uzunluktaki dizilerde İSTİSNA fırlatır — bu
-    /// hem "uzunluk oracle"ı (yanıttan parola uzunluğu tahmin edilebilir) hem de
-    /// yakalanmazsa 500 hatasına yol açar. Kısa girdi önce beklenen uzunluğa
-    /// (hash ile) sabitlenir, böylece karşılaştırma her zaman eşit uzunlukta
-    /// ve sabit sürede yapılır.
-    /// </summary>
     private static bool SabitSuredeEsit(string a, string b)
     {
         var beklenenBayt = Encoding.UTF8.GetBytes(b);
         var gelenBayt = Encoding.UTF8.GetBytes(a);
-
-        // Gelen değeri SHA-256 ile beklenenle aynı sabit uzunluğa (32 bayt)
-        // getiriyoruz ki uzunluk farkı hiçbir zaman FixedTimeEquals'a sızmasın.
         var gelenSabitUzunluk = SHA256.HashData(gelenBayt);
         var beklenenSabitUzunluk = SHA256.HashData(beklenenBayt);
-
-        var hashEsit = CryptographicOperations.FixedTimeEquals(gelenSabitUzunluk, beklenenSabitUzunluk);
-        return hashEsit;
+        return CryptographicOperations.FixedTimeEquals(gelenSabitUzunluk, beklenenSabitUzunluk);
     }
 }

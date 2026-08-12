@@ -2,3 +2,5 @@
 **/obj
 **/.vs
 **/appsettings.Development.json
+
+"Admin": { "Password": "admin123" } 

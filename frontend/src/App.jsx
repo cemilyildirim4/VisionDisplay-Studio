@@ -7,6 +7,7 @@ import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
+import ProfileMenu from './ProfileMenu.jsx'
 import ChatHelp from './ChatHelp.jsx'
 import Scene, { PANO_ID, SALON_ID, CEPHE_ID } from './Scene.jsx'
 import { salonOlcek } from './Salon.jsx'
@@ -564,18 +565,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 hidden sm:block" />
 
-          {/* Model Yönetimi — yalnızca dişli simgesi; ok yok, çünkü menü değil doğrudan bağlantı */}
-          <a
-            href="#yonetim"
-            title={t('app.adminLink')}
-            aria-label={t('app.adminLink')}
-            className="h-9 w-9 rounded-full border border-neutral-300 dark:border-[#39414f] text-neutral-500 dark:text-neutral-400 hover:border-brand hover:text-brand inline-flex items-center justify-center transition-colors shrink-0"
-          >
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.36.4.66.73.86.3.18.65.28 1 .28H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </a>
+          {/* Profil / rol menüsü — eski dişli (ayarlar) ikonunun yerini alır */}
+          <ProfileMenu />
         </div>
       </header>
 
