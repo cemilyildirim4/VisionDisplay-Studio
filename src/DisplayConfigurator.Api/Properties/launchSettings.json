@@ -16,7 +16,9 @@
       "launchUrl": "swagger",
       "applicationUrl": "http://localhost:5007",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Admin__Password": "test1234",
+        "Jwt__Secret": "local-dev-jwt-secret-min-32-chars!!"
       }
     },
     "https": {
@@ -26,7 +28,9 @@
       "launchUrl": "swagger",
       "applicationUrl": "https://localhost:7092;http://localhost:5007",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Admin__Password": "test1234",
+        "Jwt__Secret": "local-dev-jwt-secret-min-32-chars!!"
       }
     },
     "IIS Express": {

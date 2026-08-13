@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLang } from './useLang.js'
 import { TOPICS, FALLBACK, GREETING, findTopic, alanIlgili, enYakinKonu } from './helpTopics.js'
+import { API_URL, apiFetch } from './apiClient.js'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
+
 
 /**
  * Yardım penceresi. Açma düğmesi başlık çubuğunda (App.jsx);
@@ -93,7 +94,7 @@ export default function ChatHelp({ open, onClose }) {
      * Kayıt BAŞARISIZ OLSA BİLE sohbet aksamaz — kullanıcıyı hiçbir şekilde
      * bekletmiyor, hata da göstermiyoruz. Sunucu kapalıysa sohbet yine çalışır.
      */
-    fetch(`${API_URL}/api/chatlogs`, {
+    apiFetch(`${API_URL}/api/chatlogs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

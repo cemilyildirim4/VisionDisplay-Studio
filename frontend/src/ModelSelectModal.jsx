@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLang } from './useLang.js'
 import { translateOption } from './i18n.js'
 import { baseViewingDistance } from './viewingDistance.js'
+import ProductTypeBadge from './ProductTypeBadge.jsx'
+import { normalizeProductType, PRODUCT_TYPES } from './productType.js'
 
 /**
  * Model seçme pop-up'ı ("Yapılandırma için bir model seçin").
@@ -280,6 +282,7 @@ function OptionRow({ filterLabel, option, selected, onToggle }) {
 // Karşılaştırma tablosunda satır olarak gösterilecek nitelikler.
 // "Seç" (choose) akışından bağımsız — birden fazla model işaretlenebilir.
 const COMPARE_ROWS = [
+  { key: 'compare.type', get: (c) => (normalizeProductType(c.productType) === PRODUCT_TYPES.MODULE ? 'Panel' : 'Kabin') },
   { key: 'compare.price', get: (c) => (c.price ? `${Number(c.price).toLocaleString('tr-TR')} ₺` : '—') },
   { key: 'compare.pitch', get: (c) => (c.pixelPitchMm ? `${c.pixelPitchMm} mm` : '—') },
   { key: 'compare.brightness', get: (c) => (c.brightnessNits ? `${c.brightnessNits} nit` : '—') },
@@ -303,6 +306,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
   const [sort, setSort] = useState({ key: null, dir: 'asc' })
   const [compareIds, setCompareIds] = useState([])
   const [compareOpen, setCompareOpen] = useState(false)
+  const [typeFilter, setTypeFilter] = useState('all') // all | CABINET | MODULE
 
   /*
    * Açık filtre listesi görünüm değişince kapanır.
@@ -355,6 +359,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
     setSelectedId(null)
     setFilters({})
     setOpenFilter(null)
+    setTypeFilter('all')
     setSort({ key: null, dir: 'asc' })
     setCompareIds([])
     setCompareOpen(false)
@@ -387,6 +392,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
   const wantCat = tab === 'videowall' ? 'videowall' : 'led'
   const rows = cabinets.filter((c) => {
     if ((c.category || 'led') !== wantCat) return false
+    if (typeFilter !== 'all' && normalizeProductType(c.productType) !== typeFilter) return false
     if (!(c.modelCode || '').toLowerCase().includes(query.toLowerCase())) return false
     const rangesOk = dataFilters.every((f) => {
       if (f.field === 'pitch') return matchRanges(f, c.pixelPitchMm)
@@ -495,6 +501,29 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                 className="w-full bg-neutral-100 dark:bg-[#222833] rounded-lg py-2 pl-10 pr-3 text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand/25"
               />
             </div>
+          </div>
+
+          {/* Ürün tipi: Kabin / Panel */}
+          <div className="flex flex-wrap items-center gap-2 mb-3 shrink-0">
+            <span className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 mr-1">{t('msm.filterType')}</span>
+            {[
+              { v: 'all', labelKey: 'msm.allTypes' },
+              { v: PRODUCT_TYPES.CABINET, labelKey: 'type.cabinet' },
+              { v: PRODUCT_TYPES.MODULE, labelKey: 'type.panel' },
+            ].map((f) => (
+              <button
+                key={f.v}
+                type="button"
+                onClick={() => setTypeFilter(f.v)}
+                className={`rounded-full px-3 py-1 text-[12px] font-semibold border transition-colors ${
+                  typeFilter === f.v
+                    ? 'btn-selected border'
+                    : 'border-neutral-300 dark:border-[#39414f] text-neutral-600 dark:text-neutral-300 hover:border-brand'
+                }`}
+              >
+                {t(f.labelKey)}
+              </button>
+            ))}
           </div>
 
           {/*
@@ -623,7 +652,14 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                             : 'text-neutral-600 dark:text-neutral-300'
                         }
                       >
-                        {val}
+                        {idx === 0 ? (
+                          <span className="inline-flex items-center gap-2 min-w-0 flex-wrap">
+                            <span className="truncate">{val}</span>
+                            <ProductTypeBadge productType={c.productType} />
+                          </span>
+                        ) : (
+                          val
+                        )}
                       </span>
                     ))}
                     <span className="flex justify-center items-center gap-2">

@@ -61,7 +61,7 @@ public class CabinRepository : ICabinRepository
         return cabin;
     }
 
-    public async Task<IEnumerable<Cabin>> GetAllAsync(string? category = null)
+    public async Task<IEnumerable<Cabin>> GetAllAsync(string? category = null, string? productType = null)
     {
         using var connection = _connectionFactory.CreateConnection();
         string sql = $@"
@@ -69,12 +69,13 @@ public class CabinRepository : ICabinRepository
             FROM cabins c
             LEFT JOIN series s ON c.series_id = s.id
             WHERE (@Category IS NULL OR c.category = @Category)
+              AND (@ProductType IS NULL OR UPPER(c.product_type) = UPPER(@ProductType))
             ORDER BY c.id ASC";
 
         var cabins = await connection.QueryAsync<Cabin, Series, Cabin>(
             sql,
             MapWithSeries,
-            new { Category = category },
+            new { Category = category, ProductType = productType },
             splitOn: "Id");
 
         return cabins;

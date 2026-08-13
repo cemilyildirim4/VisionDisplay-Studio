@@ -105,25 +105,24 @@ public class ConfigurationsController : ControllerBase
         if (pdfBytes == null)
             return NotFound("Konfigürasyon bulunamadı.");
 
-        string fileName = $"SpecSheet_Config_{id}.pdf";
+        string fileName = $"Profesyonel_Rapor_{id}.pdf";
         return File(pdfBytes, "application/pdf", fileName);
     }
 
-    // POST: api/configurations/export-pdf (CANLI EKRAN / TASLAK PDF'İ - SAMSUNG MODELİ)
-    // PDF üretimi CPU maliyetli olduğu için "write" limiti burada da uygulanır.
+    // POST: api/configurations/export-pdf — teklif özeti + teknik şartname + ekran görseli
     [EnableRateLimiting("write")]
+    [RequestSizeLimit(20_000_000)]
     [HttpPost("export-pdf")]
-    public async Task<IActionResult> ExportPdfDirect([FromBody] CreateConfigurationDto dto)
+    public async Task<IActionResult> ExportPdfDirect([FromBody] PdfReportRequestDto dto)
     {
         try
         {
-            var pdfBytes = await _configurationService.GenerateSpecSheetPdfFromDtoAsync(dto);
+            var pdfBytes = await _configurationService.GenerateSpecSheetPdfFromDtoAsync(dto, dto.ToExtras());
 
             if (pdfBytes == null || pdfBytes.Length == 0)
-                return BadRequest(new { message = "PDF şartnamesi oluşturulamadı." });
+                return BadRequest(new { message = "PDF raporu oluşturulamadı." });
 
-            string fileName = "SpecSheet_Draft.pdf";
-            return File(pdfBytes, "application/pdf", fileName);
+            return File(pdfBytes, "application/pdf", "Profesyonel_Rapor.pdf");
         }
         catch (ArgumentException ex)
         {

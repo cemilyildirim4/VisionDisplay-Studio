@@ -10,7 +10,6 @@ import { useEffect } from 'react'
 import { useLang } from './useLang.js'
 import { DASH, fmt, computeSpecs } from './specsData.js'
 
-
 /**
  * Kart içindeki tek satır: solda etiket, sağda değer.
  * Etiket boşsa (ör. Çerçeve Kiti) değer tek başına, ortada ve büyük gösterilir.
@@ -229,24 +228,6 @@ export default function SpecsSection({ open = false, onClose, ...props }) {
             <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 m-0">{t('sp.title')}</h2>
           </div>
           <div className="flex items-center gap-5">
-            {/*
-              TEK BELGE
-
-              Buradaki ayrı "İndirmek" düğmesi KALDIRILDI. Teknik özellikler artık
-              "PDF olarak dışa aktar" ile üretilen yapılandırma raporunun 3. sayfası
-              olarak çıkıyor; müşteriye tek bir PDF gidiyor. Bu pop-up yalnızca
-              ekranda inceleme içindir.
-            */}
-            {/*
-              "Resmi Teknik Föy" düğmesi KALDIRILDI: iki ayrı PDF üretiliyordu ve
-              ikisi de aynı yapılandırmayı anlatıyordu. Sunucu belgesindeki
-              içerik (RJ45 port ihtiyacı, önerilen medya oynatıcı/Pro-AV işlemci,
-              en-boy oranı, çözünürlük standardı, tahmini fiyat) artık markalı
-              teknik özellik PDF'inin içinde. Tek belge, tek düğme.
-
-              Sunucu ucu (/api/configurations/export-pdf) duruyor — yönetim
-              tarafı ve kayıtlı projeler onu kullanmaya devam ediyor.
-            */}
             <button type="button" onClick={onClose} aria-label={t('exp.close')} className="text-neutral-400 dark:text-neutral-500 hover:text-brand">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <path d="M6 6l12 12M18 6L6 18" />
@@ -258,8 +239,6 @@ export default function SpecsSection({ open = false, onClose, ...props }) {
         {/* İçerik */}
         <div className="flex-1 overflow-y-auto bg-neutral-50/60 dark:bg-[#12161d] px-3 sm:px-5 py-4">
           <SpecsBody {...props} />
-          {/* PDF kaynağı buradan kaldırıldı: teknik özellik sayfası artık
-              yapılandırma raporunun içinde, ExportModal tarafından üretiliyor. */}
           <div className="mt-4 space-y-0.5 text-[10px] text-neutral-400 dark:text-neutral-500">
             <p className="m-0">{t('sp.footnote1')}</p>
             <p className="m-0">{t('sp.footnote2')}</p>

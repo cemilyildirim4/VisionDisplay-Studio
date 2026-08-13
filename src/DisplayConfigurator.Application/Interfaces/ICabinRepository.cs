@@ -4,7 +4,7 @@ namespace DisplayConfigurator.Application.Interfaces;
 
 public interface ICabinRepository
 {
-    Task<IEnumerable<Cabin>> GetAllAsync(string? category = null);
+    Task<IEnumerable<Cabin>> GetAllAsync(string? category = null, string? productType = null);
     Task<Cabin?> GetByIdAsync(int id);
     Task<IEnumerable<Cabin>> GetBySeriesIdAsync(int seriesId);
     Task<Cabin> CreateAsync(Cabin cabin);

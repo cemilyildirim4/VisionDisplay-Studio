@@ -1,5 +1,6 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using System.Net.Sockets;
 using Dapper;
 using Microsoft.AspNetCore.Diagnostics;
 using DisplayConfigurator.Application.Interfaces;
@@ -9,6 +10,7 @@ using DisplayConfigurator.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 
 // Dapper haritalama ayarı (veritabanındaki snake_case sütunları C# PascalCase ile eşleştirir)
 DefaultTypeMap.MatchNamesWithUnderscores = true;
@@ -39,6 +41,7 @@ builder.Services.AddScoped<IChatLogRepository, ChatLogRepository>();
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
 builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
+builder.Services.AddScoped<IPdfReportService, PdfReportService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IInviteCodeRepository, InviteCodeRepository>();
@@ -71,7 +74,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(izinliAdresler)
               .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
               .WithHeaders("Content-Type", "Authorization", "X-Admin-Key", "X-Guest-Token")
-              .WithExposedHeaders("Content-Disposition"); // PDF indirmede dosya adı için
+              .WithExposedHeaders("Content-Disposition") // PDF indirmede dosya adı için
+              .SetPreflightMaxAge(TimeSpan.FromMinutes(10)); // OPTIONS önbelleği — CORS dalgalanmasını azaltır
     });
 });
 
@@ -205,17 +209,29 @@ app.UseExceptionHandler(errorApp =>
         logger.LogError(exception, "Yakalanmamış istisna. Yol: {Path}, TraceId: {TraceId}",
             context.Request.Path, context.TraceIdentifier);
 
+        // Geçici DB / ağ hatalarında 503 — istemci retry yapabilsin, süreç ayakta kalsın
+        var isTransient =
+            exception is NpgsqlException
+            || exception is TimeoutException
+            || exception is SocketException
+            || exception?.InnerException is NpgsqlException
+            || exception?.InnerException is SocketException;
+
+        var status = isTransient
+            ? StatusCodes.Status503ServiceUnavailable
+            : StatusCodes.Status500InternalServerError;
+
         context.Response.ContentType = "application/problem+json";
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.StatusCode = status;
 
         var isDevelopment = context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment();
         await context.Response.WriteAsJsonAsync(new
         {
-            title = "Sunucuda beklenmeyen bir hata oluştu.",
-            status = 500,
+            title = isTransient
+                ? "Veritabanı veya ağ geçici olarak kullanılamıyor. Lütfen tekrar deneyin."
+                : "Sunucuda beklenmeyen bir hata oluştu.",
+            status,
             traceId = context.TraceIdentifier,
-            // Yalnızca geliştirme ortamında ayrıntı verilir — production'da
-            // istisna mesajı/yığın izi istemciye ASLA gönderilmez.
             detail = isDevelopment ? exception?.ToString() : null,
         });
     });
@@ -270,5 +286,25 @@ app.UseAuthorization();
 
 // 9. Controller endpoint'lerini bağlıyoruz
 app.MapControllers();
+
+// Sağlık kontrolü — Docker / yük dengeleyici / frontend canlılık için
+app.MapGet("/api/health", async (IDbConnectionFactory dbFactory, ILoggerFactory loggerFactory) =>
+{
+    var log = loggerFactory.CreateLogger("Health");
+    try
+    {
+        await using var conn = (NpgsqlConnection)dbFactory.CreateConnection();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT 1";
+        cmd.CommandTimeout = 5;
+        await cmd.ExecuteScalarAsync();
+        return Results.Ok(new { status = "healthy", time = DateTime.UtcNow });
+    }
+    catch (Exception ex)
+    {
+        log.LogWarning(ex, "Health check başarısız");
+        return Results.Json(new { status = "unhealthy", time = DateTime.UtcNow }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+});
 
 app.Run();

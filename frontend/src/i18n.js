@@ -366,7 +366,8 @@ const dict = {
   },
 
   // ---------- PDF ----------
-  'pdf.export': { tr: 'PDF olarak dışa aktar', en: 'Export PDF', ar: 'تصدير PDF' },
+  'pdf.export': { tr: 'Profesyonel PDF Raporu İndir', en: 'Download professional PDF report', ar: 'تنزيل تقرير PDF احترافي' },
+  'pdf.professional': { tr: 'Profesyonel PDF Raporu İndir', en: 'Download professional PDF report', ar: 'تنزيل تقرير PDF احترافي' },
 
   // ---------- Sıfırlama onayı ----------
   'reset.title': { tr: 'Tasarımı sıfırla', en: 'Reset design', ar: 'إعادة تعيين التصميم' },
@@ -383,6 +384,13 @@ const dict = {
   'msm.filter': { tr: 'Filtre', en: 'Filter', ar: 'تصفية' },
   'msm.clear': { tr: 'Temizle', en: 'Clear', ar: 'مسح' },
   'msm.tabLed': { tr: 'İç Mekan LED Tabelaları', en: 'LED Signage Indoor', ar: 'لافتات LED داخلية' },
+  'msm.filterType': { tr: 'Ürün tipi', en: 'Product type', ar: 'نوع المنتج' },
+  'msm.allTypes': { tr: 'Tümü', en: 'All', ar: 'الكل' },
+  'type.cabinet': { tr: 'Kabin', en: 'Cabinet', ar: 'خزانة' },
+  'type.panel': { tr: 'Panel', en: 'Panel', ar: 'لوحة' },
+  'type.cabinetHint': { tr: 'Hazır kabin ünitesi', en: 'Pre-assembled cabinet unit', ar: 'وحدة خزانة جاهزة' },
+  'type.panelHint': { tr: 'Tekli panel / modül (Indoor, Outdoor, Flexible)', en: 'Single panel / module (Indoor, Outdoor, Flexible)', ar: 'لوحة مفردة / وحدة' },
+  'compare.type': { tr: 'Ürün tipi', en: 'Product type', ar: 'نوع المنتج' },
   'msm.tabVideowall': { tr: 'Video duvarı', en: 'Video wall', ar: 'جدار الفيديو' },
   'msm.productModel': { tr: 'Ürün Modeli', en: 'Product Model', ar: 'طراز المنتج' },
   'msm.modelNamePh': { tr: 'Model Adı', en: 'Model Name', ar: 'اسم الطراز' },

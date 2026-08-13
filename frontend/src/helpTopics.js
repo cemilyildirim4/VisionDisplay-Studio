@@ -336,9 +336,9 @@ export const TOPICS = [
     },
     q: { tr: 'PDF çıktılarını nereden alırım?', en: 'Where do I get the PDF outputs?', ar: 'من أين أحصل على ملفات PDF؟' },
     a: {
-      tr: 'İki ayrı PDF var:\n\n• Teknik Özellikler — başlık çubuğundaki "Teknik Özellikler" düğmesine basın, açılan pencerenin sağ üstündeki "İndirmek" bağlantısını kullanın. Ölçü, ağırlık, güç, çözünürlük ve bileşen listesini içerir.\n\n• Teklif — sağ panelin altındaki "PDF Olarak Dışa Aktar" düğmesi. İletişim bilgilerinizi de içeren teklif talebi oluşturur.',
-      en: 'There are two PDFs:\n\n• Specifications — press "Specifications" in the header, then "Download" at the top right of the window.\n\n• Quote — the "Export as PDF" button at the bottom of the right panel.',
-      ar: 'ملفان: المواصفات من زر "المواصفات" في الأعلى، وعرض السعر من زر التصدير أسفل اللوحة.',
+      tr: 'Sağ panelin altındaki "Profesyonel PDF Raporu İndir" düğmesini kullanın. Tek belge: üstte teklif/özet, altta teknik özellikler tablosu (güç, ağırlık, RJ45, işlemci).',
+      en: 'Use "Download professional PDF report" at the bottom of the right panel. One document: quote/summary on top, detailed specifications table below.',
+      ar: 'استخدم زر تنزيل تقرير PDF الاحترافي أسفل اللوحة اليمنى. مستند واحد: الملخص أعلى والجدول التقني أسفل.',
     },
   },
   {

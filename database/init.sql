@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS public.cabins
     series_id integer,
     category character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'led'::character varying,
     model_code character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    -- product_type: CABINET (kabin) | MODULE (tekli panel / indoor-outdoor-flexible)
     product_type character varying(20) COLLATE pg_catalog."default" DEFAULT 'CABINET'::character varying,
     default_modules_per_card integer DEFAULT 10,
     price numeric(10,2) NOT NULL DEFAULT 0,

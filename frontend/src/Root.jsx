@@ -5,6 +5,7 @@ import { LanguageProvider } from './LanguageContext.jsx'
 import { SessionProvider } from './SessionContext.jsx'
 import { useTheme } from './useTheme.js'
 import { queryClient } from './queryClient.js'
+import ConnectionBanner from './ConnectionBanner.jsx'
 
 // Yönetim / hesap ekranları müşteri ana paketinden ayrı tutulur (kod bölme).
 const AdminPanel = lazy(() => import('./AdminPanel.jsx'))
@@ -42,6 +43,7 @@ export default function Root() {
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <SessionProvider>
+          <ConnectionBanner />
           {route === 'admin' ? (
             <Suspense fallback={null}>
               <AdminPanel />
