@@ -270,14 +270,12 @@ export default function Cephe({
 
         {/* CEPHE — ekranın monte edildiği yüzey */}
         <rect x={sol} y={ust} width={duvarW} height={duvarH} fill="url(#cephe-yuzey)" />
-        {/* Cephenin üst kenarındaki saçak — düz dikdörtgen bina gibi durmasın */}
-        <rect
-          x={sol - duvarW * 0.012}
-          y={ust}
-          width={duvarW * 1.024}
-          height={Math.max(1, duvarH * 0.02)}
-          fill="#8d8171"
-        />
+        {/*
+          Cephenin üst kenarındaki kahverengi saçak KALDIRILDI. Binaya karakter
+          katsın diye eklenmişti ama duvarın üstünde asılı duran, hangi
+          malzeme olduğu anlaşılmayan bir şerit gibi görünüyor ve gözü
+          ekrandan alıyordu. Cephe düz yüzey olarak kalıyor.
+        */}
 
         {/* Ekranın cepheye vuran soğuk ışığı */}
         <ellipse cx={cx} cy={cy} rx={wPx * 1.35} ry={hPx * 1.9} fill="url(#cephe-isik)" />

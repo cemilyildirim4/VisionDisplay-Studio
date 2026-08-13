@@ -303,3 +303,35 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 SELECT setval('cabins_id_seq', (SELECT COALESCE(MAX(id), 1) FROM public.cabins));
+
+-- =====================================================================
+-- Table: public.feedback_reports
+-- Test/beta kullanıcılarının gönderdiği hata ve geri bildirim notları.
+--
+-- NEDEN: Bildirim formu vardı ama not hiçbir yere kaydedilmiyor, yalnızca
+-- tarayıcı konsoluna yazılıyordu — yani kimse göremiyordu. Notlar artık
+-- burada tutuluyor ve yönetim panelinden okunuyor.
+--
+-- Ortam bilgisi (sayfa adresi, tarayıcı) hatayı tekrar üretebilmek için
+-- gerekli; kişisel veri saklanmaz.
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS public.feedback_reports
+(
+    id serial NOT NULL,
+    note text COLLATE pg_catalog."default" NOT NULL,
+    role character varying(20) COLLATE pg_catalog."default",
+    page_url character varying(500) COLLATE pg_catalog."default",
+    user_agent character varying(300) COLLATE pg_catalog."default",
+    resolved boolean NOT NULL DEFAULT false,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT feedback_reports_pkey PRIMARY KEY (id)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.feedback_reports
+    OWNER to postgres;
+
+CREATE INDEX IF NOT EXISTS idx_feedback_reports_created_at
+    ON public.feedback_reports USING btree (created_at DESC);

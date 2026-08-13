@@ -1,19 +1,32 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLang } from './useLang.js'
-import { useTheme } from './useTheme.js'
 import { useSession } from './SessionContext.jsx'
 import { BrandMark, BrandStripe } from './BrandChrome.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
 
+// "Genel Bakış" sekmesi kaldırıldı; varsayılan sekme artık Oturum.
+// Eski bağlantılarda kalmış olabilecek ?tab=overview de buraya düşer.
 function parseTabFromHash() {
   try {
     const q = window.location.hash.split('?')[1] || ''
     const params = new URLSearchParams(q)
-    return params.get('tab') || 'overview'
+    const tab = params.get('tab')
+    return !tab || tab === 'overview' ? 'session' : tab
   } catch {
-    return 'overview'
+    return 'session'
   }
+}
+
+function tarihMetni(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString()
+}
+
+function olcuMetni(g, y) {
+  if (g == null && y == null) return null
+  return `${g ?? '?'} m × ${y ?? '?'} m`
 }
 
 function TabButton({ active, onClick, children }) {
@@ -50,7 +63,6 @@ function Panel({ title, hint, children }) {
  */
 export default function ControlCenter() {
   const { t } = useLang()
-  const { theme, toggle: toggleTheme } = useTheme()
   const {
     role,
     displayName,
@@ -65,6 +77,7 @@ export default function ControlCenter() {
     setDemoRole,
     setSessionData,
     logout,
+    session,
     ROLES: R,
   } = useSession()
 
@@ -75,12 +88,71 @@ export default function ControlCenter() {
   const [loginError, setLoginError] = useState(null)
   const [bugNote, setBugNote] = useState('')
   const [bugSent, setBugSent] = useState(false)
+  const [bugSending, setBugSending] = useState(false)
+  const [bugError, setBugError] = useState(null)
+  /*
+   * KAYIT
+   *
+   * Aynı panelde giriş ile kayıt arasında geçiş yapılıyor: oturum açmak için
+   * önce hesap gerekiyordu ama hesabı açacak bir yer yoktu.
+   *
+   * Kayıt HERKESE açık ve açılan hesap "bayi" rolünde. Personel erişim kodu
+   * alanı isteğe bağlı: doğru kod girilirse hesap tester/yönetici olarak
+   * açılır, kodu bilmeyen normal bayi hesabı almaya devam eder.
+   */
+  /*
+   * TEKLİFLERİM
+   *
+   * PDF dışa aktarımı sırasında kaydedilen teklifler /api/quotes/mine ile
+   * çekilir; uç yalnızca giriş yapan kişinin kendi kayıtlarını döndürür.
+   * "Görüntüle" düğmesi kaydın yapılandırma ayrıntısını satırın altında açar.
+   */
+  const [teklifler, setTeklifler] = useState([])
+  const [teklifYukleniyor, setTeklifYukleniyor] = useState(false)
+  const [teklifHata, setTeklifHata] = useState(null)
+  const [acikTeklif, setAcikTeklif] = useState(null)
+
+  const [mod, setMod] = useState('login') // 'login' | 'register'
+  const [regName, setRegName] = useState('')
+  const [regPassword2, setRegPassword2] = useState('')
+  const [regStaffCode, setRegStaffCode] = useState('')
+  // Formun en üstünde seçilen sıfat: bayi / tester / yönetici
+  const [secilenRol, setSecilenRol] = useState(R.DEALER)
+  const personelMi = secilenRol === R.TESTER || secilenRol === R.ADMIN
 
   useEffect(() => {
     const onHash = () => setTab(parseTabFromHash())
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
+
+  const teklifleriYukle = useCallback(async () => {
+    if (!session?.accessToken) {
+      setTeklifler([])
+      return
+    }
+    setTeklifYukleniyor(true)
+    setTeklifHata(null)
+    try {
+      const res = await fetch(`${API_URL}/api/quotes/mine`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      })
+      if (!res.ok) {
+        setTeklifHata(res.status === 401 ? t('cc.quotes.needLogin') : t('cc.quotes.loadFailed'))
+        return
+      }
+      const data = await res.json()
+      setTeklifler(Array.isArray(data) ? data : [])
+    } catch {
+      setTeklifHata(t('cc.quotes.loadFailed'))
+    } finally {
+      setTeklifYukleniyor(false)
+    }
+  }, [session, t])
+
+  useEffect(() => {
+    if (tab === 'quotes') teklifleriYukle()
+  }, [tab, teklifleriYukle])
 
   const goTab = (next) => {
     setTab(next)
@@ -89,7 +161,7 @@ export default function ControlCenter() {
   }
 
   const tabs = useMemo(() => {
-    const list = [{ id: 'overview', label: t('cc.tab.overview') }]
+    const list = []
     if (canDealerTools) list.push({ id: 'quotes', label: t('cc.tab.quotes') })
     if (canTesterTools) list.push({ id: 'tester', label: t('cc.tab.tester') })
     list.push({ id: 'session', label: t('cc.tab.session') })
@@ -107,7 +179,10 @@ export default function ControlCenter() {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+        body: JSON.stringify({
+          email: loginEmail,
+          password: loginPassword,
+        }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -123,7 +198,7 @@ export default function ControlCenter() {
         displayName: data.displayName || data.email || loginEmail,
       })
       setDemoRole(null)
-      goTab('overview')
+      goTab('session')
     } catch {
       setLoginError(t('cc.login.network'))
     } finally {
@@ -131,19 +206,87 @@ export default function ControlCenter() {
     }
   }
 
-  const sendBugReport = () => {
-    if (!bugNote.trim()) return
-    // Beta: tarayıcı konsoluna yapılandırılmış kayıt; ileride /api/chat-logs'a bağlanabilir.
-    console.info('[TesterBugReport]', {
-      note: bugNote.trim(),
-      role,
-      url: window.location.href,
-      time: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-    })
-    setBugSent(true)
-    setBugNote('')
-    setTimeout(() => setBugSent(false), 2500)
+  const handleRegister = async (e) => {
+    e.preventDefault()
+    if (loginBusy) return
+    if (loginPassword !== regPassword2) {
+      setLoginError(t('cc.reg.mismatch'))
+      return
+    }
+    setLoginBusy(true)
+    setLoginError(null)
+    try {
+      const res = await fetch(`${API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: loginEmail,
+          password: loginPassword,
+          displayName: regName || null,
+          // Kod yalnızca tester/yönetici seçilince gönderilir; bayi kaydında
+          // gönderilmez ve sunucu hesabı bayi olarak açar.
+          staffCode: personelMi ? regStaffCode.trim() : null,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setLoginError(body.message || t('cc.reg.failed'))
+        return
+      }
+      const data = await res.json()
+      setSessionData({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        role: data.role || R.DEALER,
+        email: data.email || loginEmail,
+        displayName: data.displayName || regName || data.email || loginEmail,
+      })
+      setDemoRole(null)
+      goTab('session')
+    } catch {
+      setLoginError(t('cc.login.network'))
+    } finally {
+      setLoginBusy(false)
+    }
+  }
+
+  /*
+   * Hata bildirimi SUNUCUYA kaydedilir.
+   *
+   * Eskiden yalnızca `console.info` ile tarayıcı konsoluna yazılıyordu:
+   * kullanıcı "gönderildi" yazısını görüyor ama not hiçbir yere ulaşmıyordu.
+   * Artık /api/feedback'e gidiyor ve yönetim panelindeki "Geri Bildirimler"
+   * bölümünde okunuyor.
+   */
+  const sendBugReport = async () => {
+    const note = bugNote.trim()
+    if (!note || bugSending) return
+    setBugSending(true)
+    setBugError(null)
+    try {
+      const res = await fetch(`${API_URL}/api/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          note,
+          role,
+          pageUrl: window.location.href,
+          userAgent: navigator.userAgent,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.message || t('cc.tester.failed'))
+      }
+      setBugSent(true)
+      setBugNote('')
+      setTimeout(() => setBugSent(false), 2500)
+    } catch (err) {
+      // Bildirim kaybolmasın: hata gösterilir ve yazılan metin kutuda kalır.
+      setBugError(err.message === 'Failed to fetch' ? t('cc.login.network') : err.message)
+    } finally {
+      setBugSending(false)
+    }
   }
 
   return (
@@ -190,53 +333,81 @@ export default function ControlCenter() {
           ))}
         </div>
 
-        {tab === 'overview' && (
-          <div className="flex flex-col gap-4">
-            <Panel title={t('cc.overview.access')} hint={t('cc.overview.accessHint')}>
-              <ul className="m-0 p-0 list-none flex flex-col gap-2.5">
-                <li className="text-[13px] flex items-start gap-2">
-                  <span className="text-brand mt-0.5">●</span>
-                  <span>{isAdmin ? t('cc.perm.adminYes') : t('cc.perm.adminNo')}</span>
-                </li>
-                <li className="text-[13px] flex items-start gap-2">
-                  <span className="text-brand mt-0.5">●</span>
-                  <span>{isTester ? t('cc.perm.testerYes') : t('cc.perm.testerNo')}</span>
-                </li>
-                <li className="text-[13px] flex items-start gap-2">
-                  <span className="text-brand mt-0.5">●</span>
-                  <span>{isDealer ? t('cc.perm.dealerYes') : t('cc.perm.dealerNo')}</span>
-                </li>
-              </ul>
-            </Panel>
-
-            <Panel title={t('cc.overview.prefs')} hint={t('cc.overview.prefsHint')}>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 py-2 text-[13px] font-semibold hover:border-brand hover:text-brand transition-colors"
-              >
-                {theme === 'dark' ? t('theme.toLight') : t('theme.toDark')}
-              </button>
-            </Panel>
-
-            {isAdmin && (
-              <Panel title={t('cc.overview.admin')} hint={t('cc.overview.adminHint')}>
-                <a
-                  href="#yonetim"
-                  className="inline-flex rounded-full bg-brand text-white px-4 py-2 text-[13px] font-semibold hover:bg-brand-dark transition-colors"
-                >
-                  {t('profile.adminPanel')}
-                </a>
-              </Panel>
-            )}
-          </div>
-        )}
+        {/*
+          "Genel Bakış" sekmesi kaldırıldı: rol yetkileri Oturum sekmesine,
+          yönetim paneli bağlantısı da oradaki yönetici kutusuna taşındı.
+        */}
 
         {tab === 'quotes' && canDealerTools && (
           <Panel title={t('cc.quotes.title')} hint={t('cc.quotes.hint')}>
-            <p className="text-[13px] text-neutral-600 dark:text-neutral-300 m-0 leading-relaxed">
-              {t('cc.quotes.body')}
-            </p>
+            {teklifYukleniyor && (
+              <p className="text-[13px] text-neutral-500 m-0">{t('cc.quotes.loading')}</p>
+            )}
+
+            {teklifHata && (
+              <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 px-3.5 py-2.5 text-[13px] text-red-700 dark:text-red-300">
+                {teklifHata}
+              </div>
+            )}
+
+            {!teklifYukleniyor && !teklifHata && teklifler.length === 0 && (
+              <p className="text-[13px] text-neutral-600 dark:text-neutral-300 m-0 leading-relaxed">
+                {t('cc.quotes.empty')}
+              </p>
+            )}
+
+            {teklifler.length > 0 && (
+              <ul className="m-0 p-0 list-none flex flex-col gap-2">
+                {teklifler.map((q) => (
+                  <li
+                    key={q.id}
+                    className="rounded-xl border border-neutral-200 dark:border-[#39414f] px-3.5 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold truncate">
+                          {q.modelCode || t('cc.quotes.noModel')}
+                          {q.columns && q.rows ? ` — ${q.columns}×${q.rows}` : ''}
+                        </div>
+                        <div className="text-[12px] text-neutral-500 dark:text-neutral-400">
+                          {tarihMetni(q.createdAt)} · {q.status}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAcikTeklif(acikTeklif === q.id ? null : q.id)}
+                        className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[12px] font-semibold hover:border-brand transition-colors whitespace-nowrap"
+                      >
+                        {acikTeklif === q.id ? t('cc.quotes.hide') : t('cc.quotes.view')}
+                      </button>
+                    </div>
+
+                    {acikTeklif === q.id && (
+                      <dl className="mt-3 pt-3 border-t border-neutral-200 dark:border-[#39414f] grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 m-0 text-[12px]">
+                        {[
+                          [t('cc.quotes.f.model'), q.modelCode],
+                          [t('cc.quotes.f.wall'), olcuMetni(q.wallWidthM, q.wallHeightM)],
+                          [t('cc.quotes.f.grid'), q.columns && q.rows ? `${q.columns} × ${q.rows}` : null],
+                          [t('cc.quotes.f.type'), q.screenType],
+                          [t('cc.quotes.f.resolution'), q.resolution],
+                          [t('cc.quotes.f.screens'), q.screensSummary],
+                          [t('cc.quotes.f.customer'), q.customerName],
+                          [t('cc.quotes.f.note'), q.adminNote],
+                        ]
+                          .filter(([, v]) => v !== null && v !== undefined && v !== '')
+                          .map(([etiket, deger]) => (
+                            <div key={etiket} className="contents">
+                              <dt className="text-neutral-500 dark:text-neutral-400">{etiket}</dt>
+                              <dd className="m-0 break-words">{deger}</dd>
+                            </div>
+                          ))}
+                      </dl>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <div className="mt-4 flex flex-wrap gap-2">
               <a
                 href="#"
@@ -249,6 +420,13 @@ export default function ControlCenter() {
               >
                 {t('cc.quotes.new')}
               </a>
+              <button
+                type="button"
+                onClick={teklifleriYukle}
+                className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 py-2 text-[13px] font-semibold hover:border-brand transition-colors"
+              >
+                {t('cc.quotes.refresh')}
+              </button>
             </div>
           </Panel>
         )}
@@ -267,12 +445,13 @@ export default function ControlCenter() {
                 <button
                   type="button"
                   onClick={sendBugReport}
-                  disabled={!bugNote.trim()}
+                  disabled={!bugNote.trim() || bugSending}
                   className="rounded-full bg-amber-600 text-white px-4 py-2 text-[13px] font-semibold hover:bg-amber-700 disabled:opacity-40 transition-colors"
                 >
-                  {t('cc.tester.send')}
+                  {bugSending ? t('cc.tester.sending') : t('cc.tester.send')}
                 </button>
                 {bugSent && <span className="text-[12px] text-emerald-600 dark:text-emerald-400">{t('cc.tester.sent')}</span>}
+                {bugError && <span className="text-[12px] text-red-600">{bugError}</span>}
               </div>
             </Panel>
             <Panel title={t('cc.tester.beta')} hint={t('cc.tester.betaHint')}>
@@ -288,8 +467,57 @@ export default function ControlCenter() {
         {tab === 'session' && (
           <div className="flex flex-col gap-4">
             {!isAuthenticated ? (
-              <Panel title={t('cc.login.title')} hint={t('cc.login.hint')}>
-                <form onSubmit={handleLogin} className="flex flex-col gap-3 max-w-sm">
+              <Panel
+                title={mod === 'login' ? t('cc.login.title') : t('cc.reg.title')}
+                hint={mod === 'login' ? t('cc.login.hint') : t('cc.reg.hint')}
+              >
+                <form
+                  onSubmit={mod === 'login' ? handleLogin : handleRegister}
+                  className="flex flex-col gap-3 max-w-sm"
+                >
+                  {/*
+                    ROL SEÇİMİ — formun en üstünde: önce hangi sıfatla devam
+                    edileceği seçiliyor.
+
+                    KAYIT sırasında tester/yönetici seçilirse erişim kodu
+                    sorulur; kodsuz kalırsa herkes kendini yönetici yapabilirdi.
+                    GİRİŞTE kod sorulmaz, rol zaten hesabın kendisinde yazılı.
+                  */}
+                  <div>
+                    <span className="text-[12px] text-neutral-500">{t('cc.role.pick')}</span>
+                    <div className="flex flex-wrap gap-2 mt-1.5">
+                      {[R.DEALER, R.TESTER, R.ADMIN].map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => {
+                            setSecilenRol(r)
+                            setRegStaffCode('')
+                            setLoginError(null)
+                          }}
+                          className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold border transition-colors ${
+                            secilenRol === r
+                              ? 'btn-selected border'
+                              : 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-brand'
+                          }`}
+                        >
+                          {t(`role.${r.toLowerCase()}`)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {mod === 'register' && (
+                    <label className="block">
+                      <span className="text-[12px] text-neutral-500">{t('cc.reg.name')}</span>
+                      <input
+                        type="text"
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
+                        className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
+                      />
+                    </label>
+                  )}
                   <label className="block">
                     <span className="text-[12px] text-neutral-500">{t('exp.email')}</span>
                     <input
@@ -311,14 +539,69 @@ export default function ControlCenter() {
                       className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
                     />
                   </label>
+
+                  {mod === 'register' && (
+                    <>
+                      <label className="block">
+                        <span className="text-[12px] text-neutral-500">{t('cc.reg.password2')}</span>
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          value={regPassword2}
+                          onChange={(e) => setRegPassword2(e.target.value)}
+                          className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
+                        />
+                      </label>
+
+                      {/* Yalnızca tester/yönetici hesabı AÇARKEN sorulur */}
+                      {personelMi && (
+                        <label className="block">
+                          <span className="text-[12px] text-neutral-500">{t('cc.role.code')}</span>
+                          <input
+                            type="password"
+                            required
+                            autoComplete="off"
+                            value={regStaffCode}
+                            onChange={(e) => setRegStaffCode(e.target.value)}
+                            className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
+                          />
+                        </label>
+                      )}
+                    </>
+                  )}
+
                   {loginError && <p className="text-[13px] text-red-600 m-0">{loginError}</p>}
                   <button
                     type="submit"
                     disabled={loginBusy}
                     className="rounded-full bg-brand text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors"
                   >
-                    {loginBusy ? t('cc.login.busy') : t('profile.signIn')}
+                    {loginBusy
+                      ? t('cc.login.busy')
+                      : mod === 'login'
+                        ? t('profile.signIn')
+                        : t('cc.reg.submit')}
                   </button>
+
+                  {/*
+                    Kayıt buradan açılıyor: giriş yapmaya gelen ama hesabı
+                    olmayan kişi tam ihtiyaç duyduğu anda görüyor. Profil
+                    menüsünde ayrı bir "Kayıt ol" satırı yok.
+                  */}
+                  <p className="text-[13px] text-neutral-500 dark:text-neutral-400 m-0">
+                    {mod === 'login' ? t('cc.reg.noAccount') : t('cc.reg.haveAccount')}{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMod(mod === 'login' ? 'register' : 'login')
+                        setLoginError(null)
+                      }}
+                      className="font-semibold text-brand hover:underline underline-offset-2"
+                    >
+                      {mod === 'login' ? t('cc.reg.title') : t('profile.signIn')}
+                    </button>
+                  </p>
                 </form>
               </Panel>
             ) : (
@@ -333,38 +616,30 @@ export default function ControlCenter() {
               </Panel>
             )}
 
-            {/* Beta: rol simülasyonu — canlıda kaldırılabilir / admin-only yapılabilir */}
-            <Panel title={t('cc.demo.title')} hint={t('cc.demo.hint')}>
-              <div className="flex flex-wrap gap-2">
-                {[R.GUEST, R.DEALER, R.TESTER, R.ADMIN].map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => {
-                      if (r === R.GUEST) {
-                        setDemoRole(R.GUEST)
-                        setSessionData(null)
-                      } else {
-                        setDemoRole(r)
-                        setSessionData({
-                          displayName: t(`role.${r.toLowerCase()}`),
-                          email: null,
-                          role: r,
-                          demo: true,
-                        })
-                      }
-                    }}
-                    className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold border transition-colors ${
-                      role === r
-                        ? 'btn-selected border'
-                        : 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-brand'
-                    }`}
-                  >
-                    {t(`role.${r.toLowerCase()}`)}
-                  </button>
-                ))}
-              </div>
+            <Panel title={t('cc.overview.access')} hint={t('cc.overview.accessHint')}>
+              <ul className="m-0 p-0 list-none flex flex-col gap-2.5">
+                <li className="text-[13px] flex items-start gap-2">
+                  <span className="text-brand mt-0.5">●</span>
+                  <span>{isAdmin ? t('cc.perm.adminYes') : t('cc.perm.adminNo')}</span>
+                </li>
+                <li className="text-[13px] flex items-start gap-2">
+                  <span className="text-brand mt-0.5">●</span>
+                  <span>{isTester ? t('cc.perm.testerYes') : t('cc.perm.testerNo')}</span>
+                </li>
+                <li className="text-[13px] flex items-start gap-2">
+                  <span className="text-brand mt-0.5">●</span>
+                  <span>{isDealer ? t('cc.perm.dealerYes') : t('cc.perm.dealerNo')}</span>
+                </li>
+              </ul>
             </Panel>
+
+            {/*
+              "Beta: rol simülasyonu" paneli KALDIRILDI. Rol seçimi artık
+              giriş/kayıt formunun en üstünde ve gerçek doğrulamaya bağlı:
+              tıklamayla rol değiştirmek yerine tester/yönetici erişim kodunu
+              girmek gerekiyor. İki ayrı yerde rol belirlemek hem kafa
+              karıştırıyor hem de yetkiyi kontrolsüz veriyordu.
+            */}
 
             {isAdmin && (
               <Panel title={t('cc.adminGate.title')} hint={t('cc.adminGate.hint')}>

@@ -10,7 +10,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'masaustu-logo-isaret.png'],
+      includeAssets: ['logo-192.png', 'logo-512.png', 'masaustu-logo-isaret.png'],
       manifest: {
         name: 'Masaüstü LED Ekran Konfigüratörü',
         short_name: 'LED Konfigüratör',
@@ -19,10 +19,14 @@ export default defineConfig({
         background_color: '#0b0f16',
         display: 'standalone',
         start_url: '/',
+        /*
+          Şeffaf PNG ikonlar (kare, logo ortalanmış). Eski favicon.svg'nin siyah
+          arka planı vardı; ayrıca manifestte 192/512 olarak gösterilen dosya
+          aslında 384x315'ti — beyan edilen ölçüyle uyuşmuyordu.
+        */
         icons: [
-          { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-          { src: '/masaustu-logo-isaret.png', sizes: '192x192', type: 'image/png' },
-          { src: '/masaustu-logo-isaret.png', sizes: '512x512', type: 'image/png' },
+          { src: '/logo-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
         ],
       },
       workbox: {

@@ -6,14 +6,10 @@
  * yer tutucudur; kendi katalog kodlarınızla değiştirilecek.
  */
 
-import { useEffect, useRef, useState } from 'react'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
-import SpecsPdf from './SpecsPdf.jsx'
+import { useEffect } from 'react'
 import { useLang } from './useLang.js'
 import { DASH, fmt, computeSpecs } from './specsData.js'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
 
 /**
  * Kart içindeki tek satır: solda etiket, sağda değer.
@@ -206,85 +202,6 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
  */
 export default function SpecsSection({ open = false, onClose, ...props }) {
   const { t } = useLang()
-  const pdfRef = useRef(null)
-  const [busy, setBusy] = useState(false)
-  const [serverBusy, setServerBusy] = useState(false)
-  const [serverError, setServerError] = useState(null)
-
-  /**
-   * Görünmez PDF sayfasını görüntüye çevirip A4 olarak indirir.
-   * Sayfaya sığmazsa aynı görüntü kaydırılarak birden çok sayfaya bölünür.
-   */
-  const downloadPdf = async () => {
-    if (!pdfRef.current || busy) return
-    setBusy(true)
-    try {
-      const canvas = await html2canvas(pdfRef.current, { scale: 2, backgroundColor: '#ffffff' })
-      const img = canvas.toDataURL('image/png')
-      const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
-      const pageW = pdf.internal.pageSize.getWidth()
-      const pageH = pdf.internal.pageSize.getHeight()
-      const h = (canvas.height * pageW) / canvas.width
-
-      for (let y = 0; y < h; y += pageH) {
-        if (y > 0) pdf.addPage()
-        pdf.addImage(img, 'PNG', 0, -y, pageW, h)
-      }
-
-      const code = String(props.model?.modelCode || 'model').replace(/[^w.-]+/g, '-')
-      pdf.save(`teknik-ozellikler-${code}.pdf`)
-    } catch (err) {
-      console.error('PDF oluşturulamadı:', err)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  /**
-   * Backend'in donanım hesap motorunu (alıcı kart, RJ45 port, önerilen işlemci)
-   * kullanarak "resmi" bir teknik föy PDF'i üretir — QuestPDF ile sunucuda oluşturulur.
-   *
-   * Yalnızca tek ekran modunda gösterilir: Configurations tablosu/DTO'su tek bir
-   * kabin + sütun/satır ızgarası modelliyor, çoklu ekran (L tipi, farklı boyutlu
-   * paneller) düzenini temsil edemiyor. Bu backend'in bilinen bir kapsam sınırı.
-   */
-  const downloadServerPdf = async () => {
-    const model = props.model
-    if (!model?.id || serverBusy || props.screenMode === 'multi') return
-    setServerBusy(true)
-    setServerError(null)
-    try {
-      const res = await fetch(`${API_URL}/api/configurations/export-pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectName: `Taslak - ${model.modelCode || 'Model'}`,
-          cabinId: model.id,
-          cols: props.cols || 1,
-          rows: props.rows || 1,
-          assemblyType: model.productType || 'CABINET',
-          modulesPerCard: 0, // 0 => backend kabinin varsayılanını kullanır
-        }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.message || 'Resmi PDF oluşturulamadı.')
-      }
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `resmi-teknik-fey-${model.modelCode || 'model'}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-    } catch (err) {
-      setServerError(err.message)
-    } finally {
-      setServerBusy(false)
-    }
-  }
 
   // Esc ile kapatma
   useEffect(() => {
@@ -312,41 +229,24 @@ export default function SpecsSection({ open = false, onClose, ...props }) {
             <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 m-0">{t('sp.title')}</h2>
           </div>
           <div className="flex items-center gap-5">
-            {!!props.model && (
-              <button
-                type="button"
-                onClick={downloadPdf}
-                disabled={busy}
-                className="inline-flex items-center gap-1 text-sm text-neutral-600 dark:text-neutral-400 hover:text-brand disabled:text-neutral-300"
-              >
-                {busy ? t('sp.preparing') : t('sp.download')}
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 5v10" />
-                  <path d="M7 12l5 5 5-5" />
-                  <path d="M5 19h14" />
-                </svg>
-              </button>
-            )}
-            {!!props.model && !props.isVideoWall && (
-              <button
-                type="button"
-                onClick={downloadServerPdf}
-                disabled={serverBusy || props.screenMode === 'multi'}
-                title={
-                  props.screenMode === 'multi'
-                    ? 'Resmi teknik föy şu an yalnızca tek ekran modunda üretilebilir.'
-                    : 'Alıcı kart, RJ45 port ve önerilen işlemci içeren resmi teknik föy (sunucuda üretilir)'
-                }
-                className="inline-flex items-center gap-1 text-sm text-neutral-600 dark:text-neutral-400 hover:text-brand disabled:text-neutral-300"
-              >
-                {serverBusy ? t('sp.preparing') : 'Resmi Teknik Föy'}
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 5v10" />
-                  <path d="M7 12l5 5 5-5" />
-                  <path d="M5 19h14" />
-                </svg>
-              </button>
-            )}
+            {/*
+              TEK BELGE
+
+              Buradaki ayrı "İndirmek" düğmesi KALDIRILDI. Teknik özellikler artık
+              "PDF olarak dışa aktar" ile üretilen yapılandırma raporunun 3. sayfası
+              olarak çıkıyor; müşteriye tek bir PDF gidiyor. Bu pop-up yalnızca
+              ekranda inceleme içindir.
+            */}
+            {/*
+              "Resmi Teknik Föy" düğmesi KALDIRILDI: iki ayrı PDF üretiliyordu ve
+              ikisi de aynı yapılandırmayı anlatıyordu. Sunucu belgesindeki
+              içerik (RJ45 port ihtiyacı, önerilen medya oynatıcı/Pro-AV işlemci,
+              en-boy oranı, çözünürlük standardı, tahmini fiyat) artık markalı
+              teknik özellik PDF'inin içinde. Tek belge, tek düğme.
+
+              Sunucu ucu (/api/configurations/export-pdf) duruyor — yönetim
+              tarafı ve kayıtlı projeler onu kullanmaya devam ediyor.
+            */}
             <button type="button" onClick={onClose} aria-label={t('exp.close')} className="text-neutral-400 dark:text-neutral-500 hover:text-brand">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <path d="M6 6l12 12M18 6L6 18" />
@@ -357,12 +257,9 @@ export default function SpecsSection({ open = false, onClose, ...props }) {
 
         {/* İçerik */}
         <div className="flex-1 overflow-y-auto bg-neutral-50/60 dark:bg-[#12161d] px-3 sm:px-5 py-4">
-          {serverError && (
-            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{serverError}</div>
-          )}
           <SpecsBody {...props} />
-          {/* PDF kaynağı — ekran dışında durur, yalnızca indirirken okunur */}
-          <SpecsPdf innerRef={pdfRef} t={t} {...props} />
+          {/* PDF kaynağı buradan kaldırıldı: teknik özellik sayfası artık
+              yapılandırma raporunun içinde, ExportModal tarafından üretiliyor. */}
           <div className="mt-4 space-y-0.5 text-[10px] text-neutral-400 dark:text-neutral-500">
             <p className="m-0">{t('sp.footnote1')}</p>
             <p className="m-0">{t('sp.footnote2')}</p>

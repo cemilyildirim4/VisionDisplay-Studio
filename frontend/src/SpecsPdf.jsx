@@ -9,7 +9,7 @@
  * Sayfa A4 dikey oranında (794 × 1123 px @ 96dpi) tasarlandı.
  */
 
-import { DASH, fmt, computeSpecs } from './specsData.js'
+import { DASH, fmt, computeSpecs, computeControl } from './specsData.js'
 import { BRAND } from './brand.js'
 import { PdfBrandHeader } from './BrandChrome.jsx'
 
@@ -63,10 +63,30 @@ function Group({ title, children }) {
  * PDF'e çevrilecek düğüm. Ekranda görünmez (ekran dışına konumlandırılır),
  * yalnızca html2canvas okur.
  */
-export default function SpecsPdf({ innerRef, t, model, cols, rows, sboxRedundancy, screenType, isVideoWall }) {
+export default function SpecsPdf({
+  innerRef,
+  t,
+  model,
+  cols,
+  rows,
+  sboxRedundancy,
+  screenType,
+  isVideoWall,
+  /*
+   * RAPOR BİLGİLERİ (isteğe bağlı)
+   *
+   * "PDF olarak dışa aktar" akışı bu belgeyi tek sayfa olarak üretiyor: eskiden
+   * ayrı bir ilk sayfada duran müşteri ve yapılandırma bilgileri buraya, aynı
+   * kart düzenine taşındı. İki ayrı tasarım dili yerine tek belge.
+   *
+   * Verilmezse (ekrandaki inceleme pop-up'ı) bu bloklar hiç basılmaz.
+   */
+  rapor = null,
+}) {
   const s = computeSpecs(model, cols, rows)
   if (!s) return null
 
+  const k = computeControl(model, s)
   const total = s.total
   const depthM = (model.depthMm || 0) / 1000
   const circuitText = (c) => `${c.circuits} ${t('sp.circuit')} · ${t('sp.perCircuit')}: ${c.perCircuit}`
@@ -97,7 +117,8 @@ export default function SpecsPdf({ innerRef, t, model, cols, rows, sboxRedundanc
             <div>
               {cols} × {rows} · {fmt(total)} {t('sp.unit')}
             </div>
-            <div>{today}</div>
+            <div>{rapor ? `${t('exp.docNo')}: ${rapor.belgeNo}` : today}</div>
+            {rapor && <div>{rapor.tarih}</div>}
           </div>
         }
       />
@@ -129,8 +150,51 @@ export default function SpecsPdf({ innerRef, t, model, cols, rows, sboxRedundanc
         ))}
       </div>
 
-      {/* Ayrıntılar — iki sütun */}
-      <div style={{ columns: 2, columnGap: 18 }}>
+      {/*
+        Ayrıntılar — iki sütun.
+
+        CSS sütun akışı (columns: 2) yerine ELLE iki sütun: otomatik akışta
+        blokların hangi sütuna düşeceği içerik yüksekliğine göre değişiyordu,
+        bu yüzden sol sütunun altında boşluk kalırken sağ sütun doluyordu.
+        Blokları elle dağıtınca "Güç Kablosu" o boşluğa, fiyat kutusu da onun
+        boşalttığı yere yerleşiyor.
+      */}
+      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+        {/* --- Rapor blokları: yalnızca dışa aktarma akışında --- */}
+        {rapor && (
+          <Group title={t('exp.secCustomer')}>
+            <Row label={t('exp.customer')} value={rapor.customer || DASH} />
+            <Row label={t('exp.phone')} value={rapor.phone || DASH} />
+            <Row label={t('exp.email')} value={rapor.email || DASH} />
+            <Row label={t('exp.address')} value={rapor.address || DASH} />
+            {rapor.message && <Row label={t('exp.message')} value={rapor.message} />}
+          </Group>
+        )}
+
+        {rapor && (
+          <Group title={t('exp.secConfig')}>
+            <Row label={t('sp.model')} value={rapor.modelCode || DASH} />
+            <Row label={t('exp.layout')} value={rapor.layout} />
+            <Row label={t('exp.wallLabel')} value={rapor.wall || DASH} />
+            <Row label={t('exp.screenSize')} value={rapor.screenSize} />
+            <Row label={t('exp.signal')} value={rapor.signal || DASH} />
+            <Row label={t('exp.pixels')} value={rapor.pixels} />
+          </Group>
+        )}
+
+        {/*
+          Ekran dökümü yalnızca çoklu düzende: tek ekranda aynı bilgi zaten
+          yukarıdaki yapılandırma bloğunda yazıyor.
+        */}
+        {rapor && rapor.screens && rapor.screens.length > 0 && (
+          <Group title={t('exp.secScreens')}>
+            {rapor.screens.map((s, i) => (
+              <Row key={i} label={`${String(i + 1).padStart(2, '0')} · ${s.tip}`} value={`${s.grid} · ${s.olcu} · ${s.adet}`} />
+            ))}
+          </Group>
+        )}
+
         <Group title={t('sp.screenConfigLxh')}>
           <Row label={t('sp.lengthHeight')} value={`${cols} ${t('sp.unit')} × ${rows} ${t('sp.unit')}`} />
           <Row label={t('sp.totalScreens')} value={`${fmt(total)} ${t('sp.unit')}`} />
@@ -153,10 +217,36 @@ export default function SpecsPdf({ innerRef, t, model, cols, rows, sboxRedundanc
 
         <Group title={t('sp.optical')}>
           <Row label={t('sp.resolution')} value={`${fmt(s.resW)} × ${fmt(s.resH)}`} />
+          {k && <Row label={t('sp.totalPixels')} value={`${fmt(k.mpx, 2)} Mpx`} />}
+          {k && <Row label={t('sp.aspectRatio')} value={k.aspect} />}
+          {k && <Row label={t('sp.resStandard')} value={k.standart} />}
           <Row label={t('col.pitch')} value={`${model.pixelPitchMm} mm`} />
           <Row label={t('col.maxBrightness')} value={`${fmt(model.brightnessNits)} nit`} />
         </Group>
 
+        {/*
+          KONTROL SİSTEMİ — eskiden yalnızca backend'in ürettiği resmi
+          şartnamede vardı; iki belge birleştirildiği için buraya taşındı.
+        */}
+        {k && (
+          <Group title={t('sp.control')}>
+            <Row label={t('sp.rj45')} value={`${k.portText} ${t('sp.port')}`} />
+            <Row label={t('sp.mediaPlayer')} value={k.mediaBox} />
+            <Row label={t('sp.processor')} value={k.processor} />
+          </Group>
+        )}
+
+        {/* Güç Kablosu sol sütunun dibindeki boşluğa alındı */}
+        {!isVideoWall && (
+          <Group title={t('sp.powerCord')}>
+            <Row label="110V" value={model.powerCord110Code || DASH} />
+            <Row label="220V" value={model.powerCord220Code || DASH} />
+          </Group>
+        )}
+        </div>
+
+        {/* ---------------------------------------------------- SAĞ SÜTUN */}
+        <div style={{ flex: 1, minWidth: 0 }}>
         <Group title={t('sp.power')}>
           <Row label={t('sp.max')} value={`${fmt(s.pMax)} ${t('sp.watt')}`} />
           <Row label={t('sp.typical')} value={`${fmt(s.pTyp)} ${t('sp.watt')}`} />
@@ -198,19 +288,41 @@ export default function SpecsPdf({ innerRef, t, model, cols, rows, sboxRedundanc
             <Group title={t('sp.jig')}>
               <Row label={t('sp.model')} value={model.jigCode || DASH} />
             </Group>
-
-            <Group title={t('sp.powerCord')}>
-              <Row label="110V" value={model.powerCord110Code || DASH} />
-              <Row label="220V" value={model.powerCord220Code || DASH} />
-            </Group>
           </>
         )}
+
+        {/*
+          Fiyat kutusu, Güç Kablosu'nun boşalttığı yere — sağ sütunun altına,
+          sağa yaslı. Her zaman basılır; birim fiyat tanımsızsa 0 görünür.
+        */}
+        {k && (
+          <div
+            style={{
+              width: 200,
+              marginLeft: 'auto',
+              background: BRAND.blueTint,
+              border: `1px solid #dbe5f5`,
+              borderLeft: `3px solid ${BRAND.orange}`,
+              borderRadius: 8,
+              padding: '10px 12px',
+              textAlign: 'right',
+            }}
+          >
+            <div style={{ fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+              {t('sp.estimatedPrice')}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: BRAND.blue, marginTop: 3 }}>${fmt(k.fiyat, 2)}</div>
+          </div>
+        )}
+        </div>
       </div>
 
       {/* Dipnotlar */}
       <div style={{ marginTop: 14, paddingTop: 10, borderTop: `1px solid ${LINE}`, fontSize: 8.5, color: '#9ca3af', lineHeight: 1.6 }}>
         <div>{t('sp.footnote1')}</div>
         <div>{t('sp.footnote2')}</div>
+        <div>{t('sp.footnote3')}</div>
+        <div>{t('sp.footnote4')}</div>
       </div>
     </div>
     </div>

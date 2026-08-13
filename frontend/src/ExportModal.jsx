@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react'
 import { useLang } from './useLang.js'
+import { useSession } from './SessionContext.jsx'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas-pro'
 import { fmt } from './specsData.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import PrivacyModal from './PrivacyModal.jsx'
 import { BRAND } from './brand.js'
-import { PdfBrandHeader } from './BrandChrome.jsx'
+import SpecsPdf from './SpecsPdf.jsx'
 
 /**
  * "PDF olarak dışa aktar" formu.
@@ -44,7 +45,6 @@ const VURGU = BRAND.orange
 const MURE = BRAND.ink
 const SOLUK = BRAND.muted
 const CIZGI = BRAND.line
-const ZEMIN = BRAND.surface
 
 function Field({ label, children }) {
   return (
@@ -58,41 +58,12 @@ function Field({ label, children }) {
 const inputCls =
   'w-full mt-1 border-b border-neutral-300 dark:border-[#39414f] py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-neutral-800 dark:focus:border-brand placeholder:text-neutral-400'
 
-/** Bölüm başlığı — marka renginde ince bir şerit ve alt çizgi */
-function Baslik({ children, not }) {
-  return (
-    <div style={{ margin: '22px 0 10px', borderBottom: `1.5px solid ${MARKA}`, paddingBottom: 5 }}>
-      <span style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: MARKA }}>
-        {children}
-      </span>
-      {not && <span style={{ fontSize: 10, color: SOLUK, marginLeft: 8, letterSpacing: 0 }}>— {not}</span>}
-    </div>
-  )
-}
-
-/**
- * Etiket/değer çifti. İki sütuna yerleşir: tek uzun sütun hâlinde
- * sayfanın sağ yarısı bomboş kalıyor ve belge yarım görünüyordu.
- */
-function Alan({ k, v, genis = false }) {
-  return (
-    <div style={{ width: genis ? '100%' : '50%', boxSizing: 'border-box', paddingRight: 16, marginBottom: 11 }}>
-      <div style={{ fontSize: 9.5, color: SOLUK, letterSpacing: 0.5, textTransform: 'uppercase' }}>{k}</div>
-      <div style={{ fontSize: 12.5, color: MURE, marginTop: 2 }}>{v}</div>
-    </div>
-  )
-}
-
-/**
- * Alt bilgi — iki sayfada da sayfanın dibinde. Sorumluluk notu ve sayfa
- * numarası burada: belge yazdırılıp sayfaları ayrılsa bile her yaprak
- * hangi belgeye ait olduğunu ve kaçıncı sayfa olduğunu söylüyor.
- */
+/** Sayfa alt bilgisi — firma, sorumluluk notu ve sayfa numarası */
 function Altbilgi({ t, sayfa }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', borderTop: `1px solid ${CIZGI}`, paddingTop: 7 }}>
       <div style={{ flex: 1, fontSize: 9, color: SOLUK, lineHeight: 1.5, paddingRight: 20 }}>
-        <div style={{ fontWeight: 600, color: MARKA, marginBottom: 2 }}>{BRAND.company}</div>
+        <div style={{ fontWeight: 600, color: MURE, marginBottom: 2 }}>{BRAND.company}</div>
         {t('exp.disclaimer')}
       </div>
       <div style={{ fontSize: 9, color: SOLUK, whiteSpace: 'nowrap' }}>
@@ -102,23 +73,21 @@ function Altbilgi({ t, sayfa }) {
   )
 }
 
-/** Teknik özet kutucuğu — sayı büyük, birim küçük; taranarak okunsun diye */
-function Kutu({ k, v, birim }) {
-  return (
-    <div style={{ width: '25%', boxSizing: 'border-box', paddingRight: 7, marginBottom: 7 }}>
-      <div style={{ padding: '9px 10px', background: ZEMIN, borderLeft: `2.5px solid ${VURGU}` }}>
-        <div style={{ fontSize: 9, color: SOLUK, letterSpacing: 0.4, textTransform: 'uppercase', lineHeight: 1.3, minHeight: 22 }}>{k}</div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: MURE, marginTop: 3 }}>
-          {v}
-          {birim && <span style={{ fontSize: 9.5, fontWeight: 400, color: SOLUK, marginLeft: 3 }}>{birim}</span>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function ExportModal({ open, onClose, summary }) {
   const { t, lang } = useLang()
+  const { session } = useSession()
+
+  /*
+   * Kayıt istekleri oturum jetonuyla gidiyor: backend teklifi UserId ile
+   * işaretlesin ki kullanıcı "Tekliflerim" ekranında kendi kayıtlarını
+   * görebilsin. Jeton yoksa istek yine gider — misafir talebi olarak saklanır.
+   */
+  const istekBasliklari = () => {
+    const h = { 'Content-Type': 'application/json' }
+    if (session?.accessToken) h.Authorization = `Bearer ${session.accessToken}`
+    return h
+  }
+
   const [customer, setCustomer] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -127,20 +96,25 @@ export default function ExportModal({ open, onClose, summary }) {
   const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
-  const reportRef = useRef(null)
-  const altbilgi1Ref = useRef(null)
   const sayfa2Ref = useRef(null)
   const altbilgi2Ref = useRef(null)
+  const sayfa3Ref = useRef(null)
 
   if (!open) return null
 
-  const unitLabel = 'm'
+  // Teklif kaydına yazılan okunabilir ekran özeti
   const screensText =
     summary.screenMode === 'multi' && summary.screens?.length
       ? summary.screens.map((s, i) =>
           s.type === 'lshape'
-            ? `${t('screen.label')} ${String(i + 1).padStart(2, '0')}: ${t('mse.leftWing')} ${s.leftCols || Math.ceil((s.cols || 2) / 2)} + ${t('mse.rightWing')} ${s.rightCols || Math.floor((s.cols || 2) / 2)} ${t('screen.columns')} × ${s.rows} ${t('screen.rows')} (${t('screen.lshape')})`
-            : `${t('screen.label')} ${String(i + 1).padStart(2, '0')}: ${s.cols} ${t('screen.columns')} × ${s.rows} ${t('screen.rows')} (${t(`screen.${s.type}`)})`,
+            ? `${t('screen.label')} ${String(i + 1).padStart(2, '0')}: ${t('mse.leftWing')} ${
+                s.leftCols || Math.ceil((s.cols || 2) / 2)
+              } + ${t('mse.rightWing')} ${s.rightCols || Math.floor((s.cols || 2) / 2)} ${t('screen.columns')} × ${
+                s.rows
+              } ${t('screen.rows')} (${t('screen.lshape')})`
+            : `${t('screen.label')} ${String(i + 1).padStart(2, '0')}: ${s.cols} ${t('screen.columns')} × ${s.rows} ${t(
+                'screen.rows',
+              )} (${t(`screen.${s.type}`)})`,
         )
       : [`${summary.cols} ${t('screen.columns')} × ${summary.rows} ${t('screen.rows')} (${t(`screen.${summary.screenType}`)})`]
 
@@ -180,7 +154,6 @@ export default function ExportModal({ open, onClose, summary }) {
   const enBuyuk = olculu.reduce((a, s) => (s.wm * s.hm > a.wm * a.hm ? s : a), olculu[0])
   const izleme = model ? viewingDistanceFor(model, enBuyuk.cols, enBuyuk.rows) : null
 
-  const bos = t('exp.notGiven')
   const simdi = new Date()
   const iki = (n) => String(n).padStart(2, '0')
   const belgeNo = `${simdi.getFullYear()}${iki(simdi.getMonth() + 1)}${iki(simdi.getDate())}-${iki(simdi.getHours())}${iki(simdi.getMinutes())}`
@@ -267,14 +240,31 @@ export default function ExportModal({ open, onClose, summary }) {
         return h
       }
 
-      // ---- 1. SAYFA: rapor ----
-      const alt1H = await dibeYerlestir(altbilgi1Ref.current)
-      // Uzun bir mesaj ya da kalabalık bir ekran tablosu sayfayı taşırabilir;
-      // taşarsa içerik alt bilgiye değmeyecek kadar küçültülür, kesilmez.
-      const { oran: govdeOran } = await cek(reportRef.current)
-      const kullanilirH = pageH - MARJ * 2 - alt1H - 16
-      const govdeW = Math.min(icerikW, kullanilirH / govdeOran)
-      await yerlestir(reportRef.current, MARJ, govdeW)
+      /*
+       * ---- 1. SAYFA: rapor + teknik özellikler (TEK SAYFA) ----
+       *
+       * Müşteri/yapılandırma bilgileri ile teknik döküm artık iki ayrı sayfada
+       * iki ayrı tasarımla değil, tek bir belgede aynı kart düzeninde duruyor.
+       * Sayfa tam genişlikte basılır: SpecsPdf'in kendi iç kenar boşluğu var,
+       * üstüne bir kat daha eklenince yazı okunmaz hâle geliyordu.
+       *
+       * Yoğun metinli bu sayfa PNG olarak ~20 MB tutuyor ve belge e-postayla
+       * gönderilemiyordu; JPEG'de okunaklılık aynı, boyut çok küçük.
+       */
+      if (sayfa3Ref.current) {
+        const c = await html2canvas(sayfa3Ref.current, { scale: 2, backgroundColor: '#ffffff' })
+        const veri = c.toDataURL('image/jpeg', 0.92)
+        const oran = c.height / c.width
+        // Tek sayfaya sığdır: taşarsa oran korunarak küçültülür, artık satırlar
+        // ikinci sayfaya sarkmaz.
+        let w = pageW
+        let h = pageW * oran
+        if (h > pageH) {
+          h = pageH
+          w = pageH / oran
+        }
+        pdf.addImage(veri, 'JPEG', (pageW - w) / 2, (pageH - h) / 2, w, h)
+      }
 
       /*
        * 2. SAYFA — yapılandırılan ekranın çizimi.
@@ -315,7 +305,7 @@ export default function ExportModal({ open, onClose, summary }) {
       // için kullanıcıyı engellemiyoruz — sadece konsola not düşüyoruz.
       fetch(`${API_URL}/api/quotes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: istekBasliklari(),
         body: JSON.stringify({
           customerName: customer || null,
           phone: phone || null,
@@ -348,7 +338,7 @@ export default function ExportModal({ open, onClose, summary }) {
       if (summary.screenMode !== 'multi' && model?.id) {
         fetch(`${API_URL}/api/configurations`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: istekBasliklari(),
           body: JSON.stringify({
             projectName: customer ? `${customer} - ${summary.modelCode || ''}` : `Taslak - ${belgeNo}`,
             customerName: customer || null,
@@ -492,102 +482,11 @@ export default function ExportModal({ open, onClose, summary }) {
           fontFamily: 'Poppins, system-ui, Segoe UI, Roboto, sans-serif',
         }}
       >
-        {/* ---------------------------------------------------- 1. SAYFA */}
-        <div ref={reportRef} style={{ background: '#ffffff' }}>
-          <PdfBrandHeader
-            productLine={`${t('chat.title')} ${t('chat.subtitle')}`}
-            right={
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: 0.4 }}>{t('exp.reportTitle')}</div>
-                <div style={{ fontSize: 10, color: SOLUK, marginTop: 4 }}>
-                  {t('exp.docNo')}: {belgeNo}
-                </div>
-                <div style={{ fontSize: 10, color: SOLUK, marginTop: 1 }}>
-                  {t('exp.date')}: {tarih}
-                </div>
-              </div>
-            }
-          />
-
-          {/* --- Müşteri: üreticinin geri dönebilmesi için telefon/e-posta da burada --- */}
-          <Baslik>{t('exp.secCustomer')}</Baslik>
-          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            <Alan k={t('exp.customer')} v={customer || bos} />
-            <Alan k={t('exp.phone')} v={phone || bos} />
-            <Alan k={t('exp.email')} v={email || bos} />
-            <Alan k={t('exp.address')} v={address || bos} />
-            {message && <Alan k={t('exp.message')} v={message} genis />}
-          </div>
-
-          {/* --- Yapılandırma --- */}
-          <Baslik>{t('exp.secConfig')}</Baslik>
-          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            <Alan k={t('sp.model')} v={summary.modelCode || bos} />
-            <Alan k={t('exp.layout')} v={coklu ? `${t('exp.multi')} (${liste.length})` : t('exp.single')} />
-            <Alan
-              k={t('exp.wallLabel')}
-              v={summary.width && summary.height ? `${summary.width} × ${summary.height} ${unitLabel}` : bos}
-            />
-            <Alan k={t('exp.screenSize')} v={olcu(toplamWm, enYuksekHm)} />
-            <Alan k={t('exp.signal')} v={summary.resolution || bos} />
-            <Alan k={t('exp.pixels')} v={`${fmt(pikselW)} × ${fmt(pikselH)} px`} />
-          </div>
-
-          {/*
-            EKRAN TABLOSU — yalnızca çoklu düzende.
-            Tek ekranda tek satırlık bir tablo kurmak gereksiz gürültü; oradaki
-            bilgi zaten yukarıdaki alanlarda yazıyor.
-          */}
-          {coklu && (
-            <>
-              <Baslik>{t('exp.secScreens')}</Baslik>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
-                <thead>
-                  <tr style={{ background: ZEMIN }}>
-                    <th style={{ textAlign: 'left', color: SOLUK, fontWeight: 600, padding: '6px 8px', width: 44 }}>{t('exp.no')}</th>
-                    <th style={{ textAlign: 'left', color: SOLUK, fontWeight: 600, padding: '6px 8px' }}>{t('exp.type')}</th>
-                    <th style={{ textAlign: 'left', color: SOLUK, fontWeight: 600, padding: '6px 8px', width: 130 }}>{t('exp.grid')}</th>
-                    <th style={{ textAlign: 'left', color: SOLUK, fontWeight: 600, padding: '6px 8px', width: 130 }}>{t('exp.size')}</th>
-                    <th style={{ textAlign: 'right', color: SOLUK, fontWeight: 600, padding: '6px 8px', width: 80 }}>{t('sp.cabinetCount')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {olculu.map((s, i) => (
-                    <tr key={i} style={{ borderBottom: `1px solid ${CIZGI}` }}>
-                      <td style={{ padding: '6px 8px', color: MARKA, fontWeight: 700 }}>{String(i + 1).padStart(2, '0')}</td>
-                      <td style={{ padding: '6px 8px' }}>{tipAdi(s)}</td>
-                      <td style={{ padding: '6px 8px' }}>{gridAdi(s)}</td>
-                      <td style={{ padding: '6px 8px' }}>{olcu(s.wm, s.hm)}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right' }}>{fmt(s.adet)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          )}
-
-          {/*
-            TEKNİK ÖZET — asıl üreticiye bakan blok. Eskiden raporda hiç yoktu.
-            Ağırlık askı sistemini, güç elektrik altyapısını, ısı klimayı
-            belirliyor; bunlar teklif aşamasında sorulan ilk sorular.
-          */}
-          <Baslik not={t('exp.forProducer')}>{t('exp.secTech')}</Baslik>
-          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            <Kutu k={t('sp.totalCabinets')} v={fmt(toplamKabin)} birim={t('sp.unit')} />
-            <Kutu k={t('sp.area')} v={fmt(toplamAlan, 2)} birim="m²" />
-            <Kutu k={t('sp.weight')} v={fmt(agirlik, 1)} birim="kg" />
-            <Kutu k={t('sp.viewingDistance')} v={izleme ? fmt(izleme, 1) : '—'} birim="m" />
-            <Kutu k={`${t('sp.power')} · ${t('sp.max')}`} v={fmt(gucMax)} birim="W" />
-            <Kutu k={`${t('sp.power')} · ${t('sp.typical')}`} v={fmt(gucTip)} birim="W" />
-            <Kutu k={`${t('sp.heat')} · ${t('sp.max')}`} v={fmt(isi)} birim="BTU/h" />
-            <Kutu k={t('sp.resolution')} v={`${fmt(pikselW)}×${fmt(pikselH)}`} birim="px" />
-          </div>
-        </div>
-
-        {/* Alt bilgi — iki sayfada da aynı, sayfa numarası hariç */}
-        <div ref={altbilgi1Ref} style={{ background: '#ffffff' }}>
-          <Altbilgi t={t} sayfa={1} />
-        </div>
+        {/*
+          Eski 1. SAYFA (müşteri + yapılandırma + teknik özet) KALDIRILDI.
+          O içerik artık aşağıdaki SpecsPdf sayfasının kart düzeni içinde;
+          belge iki farklı tasarım dili taşımıyor.
+        */}
 
         {/* ---------------------------------------------------- 2. SAYFA */}
         <div ref={sayfa2Ref} style={{ background: '#ffffff' }}>
@@ -613,6 +512,53 @@ export default function ExportModal({ open, onClose, summary }) {
         <div ref={altbilgi2Ref} style={{ background: '#ffffff' }}>
           <Altbilgi t={t} sayfa={2} />
         </div>
+
+        {/*
+          ---------------------------------------------------- 3. SAYFA
+          TEKNİK ÖZELLİKLER
+
+          Eskiden ayrı indirilen teknik özellik belgesi artık bu raporun
+          içinde. Böylece müşteriye tek bir PDF gidiyor: 1) rapor özeti,
+          2) tasarımın çizimi, 3) tam teknik döküm.
+
+          SpecsPdf kendini ekran dışına konumlandırır; burada yalnızca
+          html2canvas okusun diye yer alıyor.
+        */}
+        {model && (
+          <SpecsPdf
+            innerRef={sayfa3Ref}
+            t={t}
+            model={model}
+            cols={summary.cols}
+            rows={summary.rows}
+            sboxRedundancy={summary.sboxRedundancy}
+            screenType={summary.screenType}
+            isVideoWall={summary.isVideoWall}
+            rapor={{
+              belgeNo,
+              tarih,
+              customer,
+              phone,
+              email,
+              address,
+              message,
+              modelCode: summary.modelCode,
+              layout: coklu ? `${t('exp.multi')} (${liste.length})` : t('exp.single'),
+              wall: summary.width && summary.height ? `${summary.width} × ${summary.height} m` : null,
+              screenSize: olcu(toplamWm, enYuksekHm),
+              signal: summary.resolution,
+              pixels: `${fmt(pikselW)} × ${fmt(pikselH)} px`,
+              screens: coklu
+                ? olculu.map((s) => ({
+                    tip: tipAdi(s),
+                    grid: gridAdi(s),
+                    olcu: olcu(s.wm, s.hm),
+                    adet: `${fmt(s.adet)} ${t('sp.unit')}`,
+                  }))
+                : null,
+            }}
+          />
+        )}
       </div>
     </div>
   )

@@ -39,8 +39,18 @@ export default function ChatHelp({ open, onClose }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  const answer = (text) => {
-    const topic = findTopic(text, lang)
+  /*
+   * `konu` verilirse eşleştirme HİÇ yapılmaz, doğrudan o konunun cevabı verilir.
+   *
+   * Önemli: örnek soru listesindeki ve "şunu mu demek istediniz?" önerisindeki
+   * düğmeler bu yolu kullanır. Eskiden düğme konunun metnini yazıp yeniden
+   * eşleştirmeye sokuyordu; anahtar kelimeleri kendi başlığıyla eşleşmeyen bir
+   * konu (ör. "Neler yapabilirsin?") sonsuz döngüye giriyordu: soru → "şunu mu
+   * demek istediniz: Neler yapabilirsin?" → tıkla → aynı soru. Ekran
+   * görüntüsündeki hata buydu.
+   */
+  const answer = (text, konu = null) => {
+    const topic = konu || findTopic(text, lang)
 
     /*
      * Cevap bulunamadıysa iki farklı yanıt veriyoruz:
@@ -53,15 +63,25 @@ export default function ChatHelp({ open, onClose }) {
      * Cevabı doğrudan vermiyoruz — "şunu mu demek istediniz?" diye soruyoruz,
      * kullanıcı onaylıyor. Yanlış tahmin böylece zararsız kalıyor.
      */
-    const oneri = topic ? null : enYakinKonu(text, lang)
-    const kutu = topic || oneri ? null : alanIlgili(text) ? FALLBACK.related : FALLBACK.offTopic
-    const reply = topic ? topic.a[lang] || topic.a.tr : oneri ? null : kutu[lang] || kutu.tr
+    const tahmin = topic ? null : enYakinKonu(text, lang)
+    /*
+     * Tahmin edilen konunun BAŞLIĞI kullanıcının yazdığının aynısıysa soru
+     * sormanın anlamı yok — kullanıcı zaten onu sordu. Böyle durumda doğrudan
+     * cevap verilir.
+     */
+    const ayniMi =
+      tahmin && (tahmin.topic.q[lang] || tahmin.topic.q.tr).trim().toLocaleLowerCase(lang) ===
+        text.trim().toLocaleLowerCase(lang)
+    const dogrudan = topic || (ayniMi ? tahmin.topic : null)
+    const oneri = dogrudan ? null : tahmin
+    const kutu = dogrudan || oneri ? null : alanIlgili(text) ? FALLBACK.related : FALLBACK.offTopic
+    const reply = dogrudan ? dogrudan.a[lang] || dogrudan.a.tr : oneri ? null : kutu[lang] || kutu.tr
     setMsgs((m) => [
       ...m,
       { who: 'me', text },
       oneri
         ? { who: 'bot', text: t('chat.didYouMean'), suggest: oneri.topic }
-        : { who: 'bot', text: reply, unknown: !topic && alanIlgili(text) },
+        : { who: 'bot', text: reply, unknown: !dogrudan && alanIlgili(text) },
     ])
     setShowTips(false) // yer açılsın; kullanıcı isterse başlığa tıklayıp geri açar
 
@@ -78,8 +98,8 @@ export default function ChatHelp({ open, onClose }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         question: text,
-        topicId: topic ? topic.id : null,
-        answered: !!topic,
+        topicId: dogrudan ? dogrudan.id : null,
+        answered: !!dogrudan,
         lang,
       }),
     }).catch(() => {}) // sessiz: kayıt tutmak sohbetten önemli değil
@@ -157,7 +177,7 @@ export default function ChatHelp({ open, onClose }) {
                     {m.suggest && (
                       <button
                         type="button"
-                        onClick={() => answer(m.suggest.q[lang] || m.suggest.q.tr)}
+                        onClick={() => answer(m.suggest.q[lang] || m.suggest.q.tr, m.suggest)}
                         className="mt-2 block w-full text-left text-[12.5px] font-medium text-brand dark:text-brand-light bg-brand-tint hover:bg-brand hover:text-white transition-colors rounded-lg px-3 py-2"
                       >
                         {m.suggest.q[lang] || m.suggest.q.tr}
@@ -202,7 +222,7 @@ export default function ChatHelp({ open, onClose }) {
                       <button
                         key={tp.id}
                         type="button"
-                        onClick={() => answer(tp.q[lang] || tp.q.tr)}
+                        onClick={() => answer(tp.q[lang] || tp.q.tr, tp)}
                         className="text-left text-[12.5px] text-brand dark:text-brand-light bg-brand-tint hover:bg-brand hover:text-white transition-colors rounded-lg px-3 py-2"
                       >
                         {tp.q[lang] || tp.q.tr}

@@ -38,12 +38,21 @@ services:
     ports:
       - "5007:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      # Yayına çıkarken .env'de Production yapın: o zaman ayrıntılı hata
+      # sayfaları kapanır, HTTPS yönlendirmesi açılır ve gizli anahtar
+      # tanımlanmamışsa API kasten başlamaz.
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=display_configurator_db;Username=postgres;Password=${POSTGRES_PASSWORD:-postgrespassword}
       Cors__Origins__0: http://localhost:5173
       Cors__Origins__1: http://localhost:5174
       Cors__Origins__2: http://localhost:5175
       Admin__Password: ${ADMIN_PASSWORD:-}
+      # Personel kayıt kodları — yalnızca .env'den. Boşsa personel kaydı kapalıdır.
+      Staff__TesterCode: ${STAFF_TESTER_CODE:-}
+      Staff__AdminCode: ${STAFF_ADMIN_CODE:-}
+      # Sırlar .env'den gelir; varsayılan verilmez. Boş bırakılırsa API
+      # Production ortamında kasten ayağa kalkmaz (bkz. Program.cs) — gizli
+      # anahtarı unutup herkesçe bilinen bir değerle yayına çıkmak imkânsız.
       Jwt__Secret: ${JWT_SECRET:-}
       Beta__Enabled: ${BETA_ENABLED:-false}
       Google__ClientId: ${GOOGLE_CLIENT_ID:-}

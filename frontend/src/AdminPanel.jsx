@@ -53,6 +53,7 @@ const TAB_GROUPS = [
     items: [
       { key: 'analytics', label: 'Analitik' },
       { key: 'chatlogs', label: 'Sohbet Kayıtları' },
+      { key: 'feedback', label: 'Geri Bildirimler' },
       { key: 'users', label: 'Kullanıcılar' },
       { key: 'invites', label: 'Davet Kodları' },
     ],
@@ -279,69 +280,30 @@ const oturumVarMi = () => !!(jwtOku() || parolaOku())
 
 /** Parola / JWT sorma ekranı — doğrulanmadan yönetim ekranı hiç çizilmiyor. */
 function GirisEkrani({ onGiris }) {
-  const [mode, setMode] = useState('jwt') // jwt | shared | bootstrap
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('Admin')
   const [parola, setParola] = useState('')
   const [hata, setHata] = useState(null)
-  const [bilgi, setBilgi] = useState(null)
   const [deneniyor, setDeneniyor] = useState(false)
 
-  const kaydetJwt = (data) => {
-    sessionStorage.setItem(JWT_ANAHTARI, data.accessToken)
-    sessionStorage.setItem(JWT_META, JSON.stringify({
-      email: data.email,
-      displayName: data.displayName,
-      role: data.role,
-    }))
-    sessionStorage.removeItem(PAROLA_ANAHTARI)
-    window.dispatchEvent(new Event('vds-admin-auth'))
-    onGiris({ type: 'jwt', ...data })
-  }
-
-  const gonderJwt = async (e) => {
-    e.preventDefault()
-    if (deneniyor) return
-    setDeneniyor(true)
-    setHata(null)
-    setBilgi(null)
-    try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setHata(body.message || 'Giriş başarısız.')
-        return
-      }
-      if (body.role !== 'Admin') {
-        setHata('Bu hesap Admin değil. Yönetim paneli yalnızca Admin rolüne açıktır.')
-        return
-      }
-      kaydetJwt(body)
-    } catch {
-      setHata('API\'ye bağlanılamadı. Backend (Docker API veya dotnet) çalışıyor mu kontrol edin.')
-    } finally {
-      setDeneniyor(false)
-    }
-  }
-
-  const gonderShared = async (e) => {
+  /*
+   * TEK ALAN: erişim kodu.
+   *
+   * Panele giriş artık e-posta/parola sormuyor. Yönetim paneli tek kişilik bir
+   * arka ofis; ayrı bir hesap açıp onu hatırlamak yerine tek bir kod yetiyor.
+   * Kod sunucuda doğrulanıyor (Admin:Password → X-Admin-Key başlığı), yani
+   * doğrulama tarayıcıda taklit edilemiyor.
+   */
+  const gonder = async (e) => {
     e.preventDefault()
     if (deneniyor || !parola) return
     setDeneniyor(true)
     setHata(null)
-    setBilgi(null)
     try {
       const res = await fetch(`${API_URL}/api/cabinets/admin/dogrula`, {
         method: 'POST',
         headers: { 'X-Admin-Key': parola },
       })
       if (res.status === 401) {
-        setHata('Parola yanlış.')
+        setHata('Erişim kodu geçersiz.')
         return
       }
       if (!res.ok) {
@@ -361,37 +323,6 @@ function GirisEkrani({ onGiris }) {
     }
   }
 
-  const gonderBootstrap = async (e) => {
-    e.preventDefault()
-    if (deneniyor) return
-    setDeneniyor(true)
-    setHata(null)
-    setBilgi(null)
-    try {
-      // Önce paylaşılan parola ile kimlik doğrula (AdminOnly), sonra ilk Admin'i oluştur
-      if (!parola) {
-        setHata('İlk Admin oluşturmak için .env içindeki ADMIN_PASSWORD gerekir.')
-        return
-      }
-      const res = await fetch(`${API_URL}/api/users/bootstrap-admin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': parola },
-        body: JSON.stringify({ email, password, displayName }),
-      })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setHata(body.message || 'Admin oluşturulamadı.')
-        return
-      }
-      setBilgi(`Admin oluşturuldu: ${body.email}. Şimdi e-posta ile giriş yapın.`)
-      setMode('jwt')
-      setPassword('')
-    } catch {
-      setHata('API\'ye bağlanılamadı.')
-    } finally {
-      setDeneniyor(false)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans flex items-center justify-center px-6">
@@ -401,86 +332,26 @@ function GirisEkrani({ onGiris }) {
           <BrandMark title="Yönetim Paneli" subtitle={BRAND.companyShort} showCompany={false} />
         </div>
         <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0 mb-4">
-          Admin hesabı ile giriş yapın. Beta için paylaşılan parola da kullanılabilir.
+          Panele girmek için erişim kodunu yazın.
         </p>
 
-        <div className="flex gap-1 mb-4 p-1 rounded-lg bg-neutral-100 dark:bg-[#1b2029]">
-          {[
-            { id: 'jwt', label: 'Admin hesap' },
-            { id: 'shared', label: 'Paylaşılan parola' },
-            { id: 'bootstrap', label: 'İlk Admin' },
-          ].map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => { setMode(m.id); setHata(null); setBilgi(null) }}
-              className={`flex-1 rounded-md py-1.5 text-[11px] font-semibold transition-colors ${
-                mode === m.id ? 'bg-white dark:bg-[#161a21] text-brand shadow-sm' : 'text-neutral-500'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-
-        {mode === 'jwt' && (
-          <form onSubmit={gonderJwt} className="flex flex-col gap-3">
-            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
-              E-posta
-              <input type="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
-            </label>
-            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
-              Parola
-              <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
-            </label>
-            {hata && <p className="text-[13px] text-red-600 m-0">{hata}</p>}
-            {bilgi && <p className="text-[13px] text-emerald-600 m-0">{bilgi}</p>}
-            <button type="submit" disabled={deneniyor} className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors">
-              {deneniyor ? 'Kontrol ediliyor…' : 'Giriş'}
-            </button>
-          </form>
-        )}
-
-        {mode === 'shared' && (
-          <form onSubmit={gonderShared} className="flex flex-col gap-3">
-            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
-              Yönetim parolası (.env ADMIN_PASSWORD)
-              <input type="password" autoFocus value={parola} onChange={(e) => setParola(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
-            </label>
-            {hata && <p className="text-[13px] text-red-600 m-0">{hata}</p>}
-            <button type="submit" disabled={deneniyor || !parola} className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors">
-              {deneniyor ? 'Kontrol ediliyor…' : 'Giriş'}
-            </button>
-          </form>
-        )}
-
-        {mode === 'bootstrap' && (
-          <form onSubmit={gonderBootstrap} className="flex flex-col gap-3">
-            <p className="text-[12px] text-neutral-500 dark:text-neutral-400 m-0">
-              Sistemde henüz Admin yoksa, paylaşılan parola ile ilk Admin hesabını oluşturun.
-            </p>
-            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
-              ADMIN_PASSWORD
-              <input type="password" required value={parola} onChange={(e) => setParola(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
-            </label>
-            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
-              Admin e-posta
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
-            </label>
-            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
-              Görünen ad
-              <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
-            </label>
-            <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
-              Yeni parola (min. 8)
-              <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand" />
-            </label>
-            {hata && <p className="text-[13px] text-red-600 m-0">{hata}</p>}
-            <button type="submit" disabled={deneniyor} className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors">
-              {deneniyor ? 'Oluşturuluyor…' : 'İlk Admin’i oluştur'}
-            </button>
-          </form>
-        )}
+        <form onSubmit={gonder} className="flex flex-col gap-3">
+          <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+            Erişim kodu
+            <input
+              type="password"
+              required
+              autoFocus
+              value={parola}
+              onChange={(e) => setParola(e.target.value)}
+              className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
+            />
+          </label>
+          {hata && <p className="text-[13px] text-red-600 m-0">{hata}</p>}
+          <button type="submit" disabled={deneniyor || !parola} className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors">
+            {deneniyor ? 'Kontrol ediliyor…' : 'Giriş'}
+          </button>
+        </form>
 
         <button
           type="button"
@@ -854,6 +725,64 @@ export default function AdminPanel() {
     }
   }, [])
 
+  /* ---- Geri Bildirimler (test kullanıcılarının hata notları) ---- */
+  const [feedback, setFeedback] = useState([])
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [feedbackError, setFeedbackError] = useState(null)
+  const [onlyOpenFeedback, setOnlyOpenFeedback] = useState(false)
+
+  const loadFeedback = useCallback(async (openOnly) => {
+    setFeedbackLoading(true)
+    setFeedbackError(null)
+    try {
+      const res = await fetch(`${API_URL}/api/feedback?limit=300&onlyOpen=${openOnly ? 'true' : 'false'}`, {
+        headers: yetkiBasligi(),
+      })
+      if (res.status === 401) { oturumDustu(); return }
+      if (!res.ok) throw new Error('Geri bildirimler alınamadı.')
+      setFeedback(await res.json())
+    } catch (e) {
+      setFeedbackError(e.message)
+    } finally {
+      setFeedbackLoading(false)
+    }
+  }, [])
+
+  const setFeedbackResolved = async (f, resolved) => {
+    try {
+      const res = await fetch(`${API_URL}/api/feedback/${f.id}/resolved`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
+        body: JSON.stringify({ resolved }),
+      })
+      if (res.status === 401) { oturumDustu(); return }
+      if (!res.ok && res.status !== 404) throw new Error('Güncellenemedi.')
+    } catch (e) {
+      setFeedbackError(e.message)
+    } finally {
+      await loadFeedback(onlyOpenFeedback)
+    }
+  }
+
+  const removeFeedback = (f) => {
+    askConfirm(
+      'Bildirimi sil',
+      'Bu geri bildirim kalıcı olarak silinecek.',
+      async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/feedback/${f.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          if (res.status === 401) { oturumDustu(); return }
+          // 404 = zaten silinmiş; hata sayılmaz (bkz. kullanıcı silme notu)
+          if (!res.ok && res.status !== 404) throw new Error('Silinemedi.')
+        } catch (e) {
+          setFeedbackError(e.message)
+        } finally {
+          await loadFeedback(onlyOpenFeedback)
+        }
+      },
+    )
+  }
+
   // ---- Kayıtlı Projeler (Configurations) ----
   const [configs, setConfigs] = useState([])
   const [configsLoading, setConfigsLoading] = useState(false)
@@ -1059,10 +988,24 @@ export default function AdminPanel() {
           const res = await fetch(`${API_URL}/api/users/${u.id}`, { method: 'DELETE', headers: yetkiBasligi() })
           const body = await res.json().catch(() => ({}))
           if (res.status === 401) { oturumDustu(); return }
-          if (!res.ok) throw new Error(body.message || 'Silinemedi.')
-          await loadUsers()
+          /*
+           * 404 = kayıt zaten yok (ör. düğmeye iki kez basıldı ya da başka bir
+           * sekmede silindi). Bu bir hata değil, istenen sonuç; hata sayılınca
+           * ekranda "Silinemedi." yazıyor ve satır listede kalmaya devam
+           * ediyordu — oysa kullanıcı gerçekten silinmişti.
+           */
+          if (!res.ok && res.status !== 404) throw new Error(body.message || 'Silinemedi.')
+          setUsersError(null)
         } catch (err) {
           setUsersError(err.message)
+        } finally {
+          /*
+           * Liste HER durumda yenilenir. Yenileme yalnızca başarı yolundaydı;
+           * hata mesajı gösterilen durumda ekran sunucudaki gerçeğe göre
+           * güncellenmiyor, silinmiş satır sayfa elle yenilenene kadar
+           * duruyordu.
+           */
+          await loadUsers()
         }
       },
     )
@@ -1092,6 +1035,7 @@ export default function AdminPanel() {
     if (tab === 'dashboard' || tab === 'analytics') loadDashboard()
     if (tab === 'quotes') loadQuotes(1, '')
     if (tab === 'chatlogs') loadChatLogs(onlyUnanswered)
+    if (tab === 'feedback') loadFeedback(onlyOpenFeedback)
     if (tab === 'configs') loadConfigs(1, '')
     if (tab === 'invites') loadInvites()
     if (tab === 'users') loadUsers()
@@ -1102,6 +1046,11 @@ export default function AdminPanel() {
     if (tab === 'chatlogs' && girisYapildi) loadChatLogs(onlyUnanswered)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlyUnanswered])
+
+  useEffect(() => {
+    if (tab === 'feedback' && girisYapildi) loadFeedback(onlyOpenFeedback)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlyOpenFeedback])
 
   if (!girisYapildi) {
     return (
@@ -1131,12 +1080,12 @@ export default function AdminPanel() {
       <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
         <BrandMark
           title="Yönetim Paneli"
+          /* Giriş tek yol (erişim kodu) olduğu için "Paylaşılan parola oturumu"
+             ayrımı anlamsız kaldı; sabit açıklama kullanılıyor. */
           subtitle={
             adminMeta?.email
               ? `${adminMeta.displayName || adminMeta.email}`
-              : jwtOku()
-                ? 'Ürün kataloğu, satış talepleri ve sistem izleme'
-                : 'Paylaşılan parola oturumu'
+              : 'Ürün kataloğu, satış talepleri ve sistem izleme'
           }
           size="lg"
         />
@@ -1771,6 +1720,74 @@ export default function AdminPanel() {
           </div>
         )}
 
+        {/* ================= GERİ BİLDİRİMLER ================= */}
+        {tab === 'feedback' && (
+          <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+              <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                {feedbackLoading ? 'Yükleniyor…' : `${feedback.length} bildirim`} — Kullanıcıların gönderdiği hata notları
+              </span>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 cursor-pointer">
+                  <input type="checkbox" checked={onlyOpenFeedback} onChange={(e) => setOnlyOpenFeedback(e.target.checked)} />
+                  Yalnızca açık olanlar
+                </label>
+                <button type="button" onClick={() => loadFeedback(onlyOpenFeedback)} className="text-sm text-brand dark:text-brand-light hover:underline">Yenile</button>
+              </div>
+            </div>
+            {feedbackError && <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{feedbackError}</div>}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
+                  <tr>
+                    {['ID', 'Bildirim', 'Rol', 'Sayfa / tarayıcı', 'Durum', 'Tarih', ''].map((h) => (
+                      <th key={h} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {feedback.map((f) => (
+                    <tr key={f.id} className="border-t border-neutral-100 dark:border-[#242b36] hover:bg-neutral-50 dark:hover:bg-[#1b2029] align-top">
+                      <td className="px-4 py-2.5 text-neutral-400 dark:text-neutral-500">{f.id}</td>
+                      <td className="px-4 py-2.5 max-w-md whitespace-pre-wrap">{f.note}</td>
+                      <td className="px-4 py-2.5 text-neutral-500 dark:text-neutral-400">{f.role || '—'}</td>
+                      {/* Ortam bilgisi: hatayı tekrar üretebilmek için */}
+                      <td className="px-4 py-2.5 max-w-xs text-xs text-neutral-500 dark:text-neutral-400 break-all">
+                        {f.pageUrl || '—'}
+                        {f.userAgent && <span className="block mt-1 opacity-70">{f.userAgent}</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setFeedbackResolved(f, !f.resolved)}
+                          title="Durumu değiştir"
+                          className={`rounded-full px-2 py-0.5 text-xs ${f.resolved
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-amber-50 text-amber-800 border border-amber-200'}`}
+                        >
+                          {f.resolved ? 'Çözüldü' : 'Açık'}
+                        </button>
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{dt(f.createdAt)}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <button type="button" onClick={() => removeFeedback(f)} className="text-red-600 hover:underline">Sil</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {!feedbackLoading && feedback.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">Henüz bildirim yok.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 px-5 py-3">
+              Bildirimler Kontrol Merkezi &gt; Test Araçları ekranından gönderilir. Ele aldığınız kaydı "Çözüldü" olarak işaretleyebilirsiniz.
+            </p>
+          </div>
+        )}
+
         {/* ================= KAYITLI PROJELER ================= */}
         {tab === 'configs' && (
           <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
@@ -1975,7 +1992,7 @@ export default function AdminPanel() {
                     {!usersLoading && users.length === 0 && (
                       <tr>
                         <td colSpan={6} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">
-                          Henüz kullanıcı yok. Giriş ekranından “İlk Admin” ile başlayın veya buradan ekleyin.
+                          Henüz kullanıcı yok. Yukarıdaki formdan ekleyebilirsiniz.
                         </td>
                       </tr>
                     )}

@@ -130,9 +130,12 @@ const SAMPLE_CABINETS = [
   },
 ]
 
-// API adresi. Yayına çıkarken .env dosyasındaki VITE_API_URL ile değiştirilir;
-// tanımlı değilse yerel geliştirme adresi kullanılır.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5007'
+/*
+ * NOT: API adresi burada tanımlıydı ama bu dosyada hiç kullanılmıyordu —
+ * ağ istekleri kendi bileşenlerinde (ControlCenter, ChatHelp, AdminPanel…)
+ * yapılıyor ve her biri kendi API_URL'ini okuyor. Kullanılmayan sabit
+ * kaldırıldı.
+ */
 
 const RESOLUTIONS = [
   {
@@ -163,7 +166,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [screenMode, setScreenMode] = useState('single') // single | multi
   const [screenType, setScreenType] = useState('flat') // flat | curved
   const [orientation, setOrientation] = useState('landscape') // landscape | portrait (video duvarı)
-  const [curveAmount, setCurveAmount] = useState(60) // 0..100 (kavis miktarı; UI slider ileride)
+  const [curveAmount, setCurveAmount] = useState(60) // 0..100 — panelde kaydırıcıyla ayarlanır
   const [cols, setCols] = useState(1)
   const [rows, setRows] = useState(1)
   const [multiModalOpen, setMultiModalOpen] = useState(false)
@@ -618,6 +621,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           {/* Model */}
           <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('model.heading')}</h2>
+
+          {/*
+            Hangi modeli seçeceğini bilmeyen kullanıcı için isteğe bağlı
+            sihirbaz. Yeri model panelinin ÜSTÜ: soru zaten "hangisini
+            seçeceğim" diye sorulurken, cevabı seçim kutusundan sonra sunmak
+            geç kalıyordu. Ana akış (tek ekran, sihirbazsız) değişmiyor —
+            burası yalnızca bir kısayol, o yüzden düğme değil satır: ince
+            kenarlık, tek satır metin ve önünde sade bir pusula ikonu.
+          */}
+          {!hasModel && !cabinetsLoading && (
+            <button
+              type="button"
+              onClick={() => setWizardOpen(true)}
+              className="w-full mb-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2 flex items-center gap-2 text-left text-brand hover:border-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors"
+            >
+              {/*
+                İkon dolu bir daire içinde: ince çizgili hâli panel küçültülünce
+                (bkz. Sigdir) silikleşip görünmez oluyordu.
+              */}
+              <span className="w-6 h-6 rounded-full bg-brand text-white shrink-0 inline-flex items-center justify-center">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9.2 9a3 3 0 1 1 4 2.8c-.8.3-1.2 1-1.2 1.8v.4" />
+                  <path d="M12 17.4h.01" />
+                </svg>
+              </span>
+              <span className="text-[13px] font-semibold leading-tight">{t('wiz.entry')}</span>
+            </button>
+          )}
           {hasModel ? (
             <div className="border border-neutral-200 dark:border-[#2c333f] rounded-lg p-3">
               <div className="flex items-start justify-between gap-3">
@@ -677,22 +708,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 </svg>
               </span>
               <span className="text-base">{t('model.select')}</span>
-            </button>
-          )}
-
-          {/* Hangi modeli seçeceğini bilmeyen kullanıcı için isteğe bağlı sihirbaz —
-              ana akışı (tek ekran, sihirbazsız) bozmadan yalnızca bir kısayol sunar. */}
-          {!hasModel && !cabinetsLoading && (
-            <button
-              type="button"
-              onClick={() => setWizardOpen(true)}
-              className="mt-2 mb-1 text-[13px] font-semibold text-brand hover:text-brand-dark inline-flex items-center gap-1.5 self-start"
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3l1.6 3.9L18 8.4l-3.9 1.6L12 14l-1.6-3.9L6 8.4l3.9-1.6z" />
-                <path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z" />
-              </svg>
-              {t('wiz.entry')}
             </button>
           )}
 
@@ -783,6 +798,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           { v: 'curvedIn', l: t('screen.curvedIn') },
                         ]}
                       />
+
+                      {/*
+                        KAVİS MİKTARI — yalnızca kavisli tiplerde görünür.
+                        Değer state'te vardı ama ayarlanacak bir denetim yoktu
+                        (kodda "UI slider ileride" notu duruyordu): herkes 60
+                        değerine mahkûmdu. Kavis 2D önizlemede, kamerada ve 3D
+                        sahnede aynı anda değişir.
+                      */}
+                      {(screenType === 'curved' || screenType === 'curvedIn') && (
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
+                              {t('screen.curveAmount')}
+                            </span>
+                            <span className="text-[16px] font-semibold text-brand">%{curveAmount}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={5}
+                            value={curveAmount}
+                            onChange={(e) => setCurveAmount(Number(e.target.value))}
+                            aria-label={t('screen.curveAmount')}
+                            className="w-full accent-[#2962ad] cursor-pointer"
+                          />
+                          <div className="flex justify-between text-[13px] text-neutral-400 dark:text-neutral-500">
+                            <span>{t('screen.curveFlat')}</span>
+                            <span>{t('screen.curveMax')}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1154,6 +1201,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             {t('pdf.export')}
           </button>
           </div>
+
+          {/*
+            Gizlilik ve Güvenlik Notu — sağ panelin en altında, iletişim/PDF
+            düğmelerinin hemen ardında. Önce sayfanın sol alt köşesinde
+            position:fixed duruyordu; orada tuvalin üstünde yüzen, hangi bölüme
+            ait olduğu belirsiz bir etiketti. Panelin sonu bilgi/onay
+            metinlerinin doğal yeri.
+          */}
+          <button
+            type="button"
+            onClick={() => setPrivacyOpen(true)}
+            className="mt-2 w-full text-center text-[12px] text-neutral-400 hover:text-brand dark:text-neutral-500 dark:hover:text-brand-light underline-offset-2 hover:underline transition-colors"
+          >
+            {t('privacy.footerLink')}
+          </button>
           </Sigdir>
         </aside>
       </div>
@@ -1227,7 +1289,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             model={previewModel}
             cols={cols}
             rows={rows}
+            content={content}
             contentUrl={contentUrl}
+            /*
+             * Ekran biçimi 3D'de de görünsün. Tek ekranda seçilen tip; çoklu
+             * ekran kuruluysa listenin tamamı geçilir ve her ekran kendi
+             * biçimiyle (düz / kavisli / iç L) yan yana çizilir.
+             */
+            screenType={screenType}
+            curveAmount={curveAmount}
+            screens={screenMode === 'multi' ? screens : null}
           />
         </Suspense>
       )}
@@ -1235,21 +1306,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
 
       <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
-
-      {/*
-        Gizlilik ve Güvenlik Notu — sayfanın her zaman görünür ama göze
-        batmayan bir köşesinde. Sabit yükseklikli (lg:h-screen) düzeni
-        bozmasın diye normal akışa değil, position:fixed ile ekleniyor;
-        z-index diğer tüm katmanların (modallar, AR, 3D sahne) altında
-        kalacak kadar düşük tutuluyor.
-      */}
-      <button
-        type="button"
-        onClick={() => setPrivacyOpen(true)}
-        className="fixed bottom-1.5 left-1.5 z-10 text-[10px] text-neutral-400/80 hover:text-brand dark:text-neutral-500 dark:hover:text-brand-light underline-offset-2 hover:underline transition-colors bg-white/80 dark:bg-[#121821]/80 backdrop-blur-sm rounded px-1.5 py-0.5 border border-neutral-200/60 dark:border-[#2a3342]"
-      >
-        {t('privacy.footerLink')}
-      </button>
 
       <ChatHelp open={chatOpen} onClose={() => setChatOpen(false)} />
 
@@ -1269,6 +1325,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           resolution,
           screenMode,
           screens,
+          // Teknik özellik sayfası da aynı PDF'in içine giriyor; o sayfanın
+          // ihtiyaç duyduğu iki alan yalnızca burada mevcut.
+          sboxRedundancy,
+          isVideoWall,
         }}
       />
 
@@ -1511,7 +1571,7 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
  * Alt sınır 0,5: oraya dayanırsa (çok kısa bir pencerede) kaydırma açılır;
  * içeriğin kırpılıp erişilemez kalmasındansa kaydırılabilir olması iyidir.
  */
-const EN_KUCUK_ORAN = 0.5
+const EN_KUCUK_ORAN = 0.3
 
 function Sigdir({ children, className = '' }) {
   const disRef = useRef(null)
@@ -1523,6 +1583,21 @@ function Sigdir({ children, className = '' }) {
     if (!dis || !ic) return
 
     const hesapla = () => {
+      /*
+       * Küçültme YALNIZCA masaüstünde (lg ve üstü) anlamlı: panel orada tek
+       * ekran boyuna sıkıştırılıyor. Dar pencerede panel sayfayla birlikte
+       * uzuyor; orada ölçekleme yapılırsa içerik kırpılıyor ve alttaki
+       * düğmelere hiç erişilemiyordu. Bu yüzden altında her şey sıfırlanıp
+       * doğal akışa bırakılıyor.
+       */
+      if (!window.matchMedia('(min-width: 1024px)').matches) {
+        ic.style.width = ''
+        ic.style.height = ''
+        ic.style.transform = ''
+        dis.style.overflowY = ''
+        return
+      }
+
       const disH = dis.clientHeight
       if (!disH) return
       /*
@@ -1532,11 +1607,20 @@ function Sigdir({ children, className = '' }) {
        * çalışmazdı.
        */
       ic.style.height = 'auto'
+      /*
+       * ÖLÇERKEN küçültme de kapalı. Ölçekli ölçüm alt kenarda kırpılmaya yol
+       * açıyordu; transform yerleşimi değiştirmediği için ölçüyü ölçeksiz alıp
+       * sonunda uygulamak hem daha doğru hem daha basit.
+       */
+      ic.style.transform = 'none'
       let oran = 1
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 12; i++) {
         ic.style.width = `${100 / oran}%`
-        ic.style.transform = `scale(${oran})`
-        const gerek = ic.scrollHeight
+        /*
+         * scrollHeight son çocuğun alt boşluğunu (margin) saymaz; bu yüzden
+         * birkaç piksel eksik ölçülüp içerik taşıyordu. Küçük bir pay ekleniyor.
+         */
+        const gerek = ic.scrollHeight + 6
         if (!gerek) break
         /*
          * scrollHeight ÖLÇEKSİZ yerleşim yüksekliğidir; ekranda kapladığı yer
@@ -1550,7 +1634,18 @@ function Sigdir({ children, className = '' }) {
         oran = yeni
         if (bitti) break
       }
+      /*
+       * SON KONTROL: döngü salınıp biraz büyük bir oranda bitmiş olabilir.
+       * Ölçeksiz gereken boy hâlâ panele sığmıyorsa oran doğrudan sığacak
+       * değere çekilir — kaydırma yerine her zaman sığdırma.
+       */
       ic.style.width = `${100 / oran}%`
+      const sonGerek = ic.scrollHeight + 6
+      if (sonGerek * oran > disH) {
+        oran = Math.max(EN_KUCUK_ORAN, disH / sonGerek)
+        ic.style.width = `${100 / oran}%`
+      }
+
       ic.style.transform = `scale(${oran})`
       /*
        * ÖLÇTÜKTEN SONRA kutu panelin tam boyuna uzatılır. Küçültme yerleşimi
@@ -1558,14 +1653,25 @@ function Sigdir({ children, className = '' }) {
        * Artan boşluğu justify-between bölümlerin arasına dağıtır.
        */
       ic.style.height = `${100 / oran}%`
-      // Küçültme yetmediyse (alt sınıra dayandıysa) kırpma yerine kaydırma
-      const yetmedi = oran <= EN_KUCUK_ORAN + 0.001 && ic.scrollHeight * oran > disH + 1
-      dis.style.overflowY = yetmedi ? 'auto' : 'hidden'
+      // Masaüstünde kaydırma yok: içerik her hâlükârda panele sığdırılıyor.
+      dis.style.overflowY = 'hidden'
     }
 
     hesapla()
-    const gozcu = new ResizeObserver(hesapla)
+    /*
+     * Yalnızca panelin boyu değil, içeriğin boyu da değişiyor (görsel yüklenmesi,
+     * yazı tipi, açılıp kapanan bölümler). İkisi de izleniyor; kendi yaptığımız
+     * ölçü değişikliği tekrar tetiklemesin diye basit bir kilit var.
+     */
+    let calisiyor = false
+    const gozcu = new ResizeObserver(() => {
+      if (calisiyor) return
+      calisiyor = true
+      hesapla()
+      requestAnimationFrame(() => { calisiyor = false })
+    })
     gozcu.observe(dis)
+    gozcu.observe(ic)
     return () => gozcu.disconnect()
   })
 

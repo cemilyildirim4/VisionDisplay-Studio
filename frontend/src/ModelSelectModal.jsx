@@ -304,6 +304,18 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
   const [compareIds, setCompareIds] = useState([])
   const [compareOpen, setCompareOpen] = useState(false)
 
+  /*
+   * Açık filtre listesi görünüm değişince kapanır.
+   *
+   * Filtre açıkken karşılaştırma tablosuna geçildiğinde (ya da sekme
+   * değiştiğinde) liste ekranda asılı kalıyordu: artık ait olmadığı bir
+   * görünümün üstünde, tıklanınca arkadaki listeyi filtreleyen hayalet bir
+   * kutu. Kapatmak için kullanıcının geri dönmesi gerekiyordu.
+   */
+  useEffect(() => {
+    setOpenFilter(null)
+  }, [compareOpen, tab, open])
+
   const toggleCompare = (id) => {
     setCompareIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id)

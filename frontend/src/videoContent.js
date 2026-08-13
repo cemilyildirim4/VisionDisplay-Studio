@@ -22,8 +22,15 @@ export function videoSrcFor(content, contentUrl) {
 /** Yüklemede kabul edilen video türleri */
 export const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/ogg']
 
-/** Yüklenen videonun üst sınırı (MB). Tarayıcı belleğinde tutulduğu için sınırlı. */
-export const VIDEO_MAX_MB = 100
+/**
+ * Yüklenen videonun üst sınırı (MB).
+ *
+ * Video sunucuya gitmiyor; tarayıcıda bir blob URL olarak tutulup doğrudan
+ * oynatılıyor, yani sınır ağ değil bellek kaynaklı. 100 MB fazla düşüktü —
+ * kısa bir 4K tanıtım filmi bile geçemiyordu. 250 MB masaüstü tarayıcılarda
+ * rahat taşınıyor; bunun üstü mobilde sekme çökmesi riskini artırıyor.
+ */
+export const VIDEO_MAX_MB = 250
 
 /**
  * Bir görsel VEYA video öğesinin kaynak ölçüsü.

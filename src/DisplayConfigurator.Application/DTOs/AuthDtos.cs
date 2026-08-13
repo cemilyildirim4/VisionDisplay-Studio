@@ -13,6 +13,15 @@ public class RegisterDto
 
     [StringLength(150)]
     public string? DisplayName { get; set; }
+
+    /// <summary>
+    /// Personel erişim kodu. Boş bırakılırsa hesap "Dealer" (bayi) olarak açılır —
+    /// kayıt herkese açıktır. Doğru kod girilirse hesap "Tester" veya "Admin"
+    /// rolüyle açılır; kodlar yapılandırmadan (Staff:TesterCode / Staff:AdminCode)
+    /// okunur, kod yanlışsa kayıt reddedilir.
+    /// </summary>
+    [StringLength(100)]
+    public string? StaffCode { get; set; }
 }
 
 public class LoginDto
@@ -22,6 +31,14 @@ public class LoginDto
 
     [Required]
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Tester/Admin hesapları için ikinci bir doğrulama. Bayi hesaplarında
+    /// kullanılmaz; personel hesaplarında parola doğru olsa bile kod yanlışsa
+    /// giriş reddedilir.
+    /// </summary>
+    [StringLength(100)]
+    public string? StaffCode { get; set; }
 }
 
 public class RefreshTokenDto

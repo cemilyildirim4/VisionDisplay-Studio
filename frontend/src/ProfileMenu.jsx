@@ -235,6 +235,8 @@ export default function ProfileMenu() {
                 {t('profile.logout')}
               </MenuItem>
             ) : (
+              /* Yalnızca "Giriş yap" — kayıt oradaki formun altından açılıyor.
+                 Menüde iki ayrı giriş noktası olması gereksizdi. */
               <MenuItem
                 href="#hesap?tab=session"
                 onClick={close}

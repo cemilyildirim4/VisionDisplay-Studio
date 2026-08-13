@@ -1,9 +1,10 @@
-import { Suspense, useMemo, useRef, useState, useCallback } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, Instances, Instance, ContactShadows } from '@react-three/drei'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import * as THREE from 'three'
 import { useLang } from './useLang.js'
+import { curveDepthFor, DEFAULT_CONTENT_SRC } from './content.js'
 
 /**
  * GERÇEK 3D GÖRÜNÜM (react-three-fiber) — mevcut 2D Canvas/SVG önizlemenin
@@ -33,35 +34,218 @@ import { useLang } from './useLang.js'
 
 const MAX_DETAILED_CABINETS = 200
 
-function CabinetGrid({ model, cols, rows, contentUrl, detailLevel }) {
-  const cabW = (model?.widthMm || 500) / 1000
-  const cabH = (model?.heightMm || 500) / 1000
-  const cabD = (model?.depthMm || 100) / 1000
+/** İç L tipinde iki kanadın arasındaki açı 90° — yani her kanat eksenden 45° döner. */
+const L_YARIM_ACI = Math.PI / 4
 
-  const texture = useMemo(() => {
-    if (!contentUrl) return null
-    const loader = new THREE.TextureLoader()
-    const tex = loader.load(contentUrl)
-    tex.colorSpace = THREE.SRGBColorSpace
-    tex.anisotropy = 4
-    return tex
-  }, [contentUrl])
+/**
+ * EKRAN BİÇİMİ 3D'de
+ *
+ * 2D önizleme (WallPreview/CurvedScreen) düz, dışa kavisli, içe kavisli ve iç L
+ * tipini çiziyordu; 3D sahne ise her yapılandırmayı düz duvar olarak gösteriyor,
+ * yani seçilen biçim burada kayboluyordu. Aşağıdaki üç bileşen o boşluğu kapatır.
+ *
+ * Kavis derinliği 2D ile AYNI kaynaktan (`curveDepthFor`) geliyor — iki görünüm
+ * arasında kavis miktarı tutarsız görünmesin diye.
+ */
 
+/**
+ * ESNEK KABİN GÖVDESİ
+ *
+ * Kabinler DÜZ kutu olarak çizildiğinde kavisli duvarın dikişleri açılıyor:
+ * kutu merkezleri R yarıçapındaki yayda dursa da kutunun ön yüzü konkavda
+ * yaydan içeride, konveksde dışarıda kalıyor. İçerideki/dışarıdaki kirişin
+ * boyu kabin genişliğinden farklı olduğu için komşu kutular ön kenarlarında
+ * ya birbirini deliyor ya da aralarında kama biçimli karanlık yarıklar
+ * bırakıyor — ekran görüntüsündeki dikey koyu bantlar buydu.
+ *
+ * Gerçek LED kabinleri esnek: kavis kabinin KENDİ içinde massediliyor, kabin
+ * yayı takip ediyor. Burada da her kabin düz kutu yerine yayın üstüne oturan
+ * bükülmüş bir dilim olarak üretiliyor; böylece ön yüzler her kavis
+ * miktarında uç uca geliyor ve dikişte kalınlık görünmüyor.
+ *
+ * Tüm kabinler tek bir BufferGeometry'de birleştiriliyor (Instances bir kutuyu
+ * paylaştığı için kabin başına farklı büküm veremezdi).
+ */
+function esnekKabinGovdesi({ cabH, cabD, cols, rows, R, aci, konkav, bosluk }) {
+  const totalH = rows * cabH
+  const adim = aci / cols
+  // Kenar boşluğu (bezel) açı cinsinden: yay boyunca sabit uzunluk kalsın
+  const acikPay = bosluk / R / 2
+  const yPay = bosluk / 2
+
+  const pos = []
+  const idx = []
+
+  for (let c = 0; c < cols; c++) {
+    const a0 = -aci / 2 + c * adim + acikPay
+    const a1 = -aci / 2 + (c + 1) * adim - acikPay
+    // Kabin ne kadar dönüyorsa o kadar dilim: düşük kavislerde tek dilim yeter
+    const dilim = Math.max(1, Math.ceil((a1 - a0) / 0.035))
+
+    for (let r = 0; r < rows; r++) {
+      const yAlt = r * cabH - totalH / 2 + yPay
+      const yUst = (r + 1) * cabH - totalH / 2 - yPay
+      const taban = pos.length / 3
+
+      for (let i = 0; i <= dilim; i++) {
+        const a = a0 + ((a1 - a0) * i) / dilim
+        const on = yayNoktasi(a, R, konkav, cabD / 2)
+        const arka = yayNoktasi(a, R, konkav, -cabD / 2)
+        // Halka başına 4 köşe: ön-alt, ön-üst, arka-üst, arka-alt
+        pos.push(on.x, yAlt, on.z)
+        pos.push(on.x, yUst, on.z)
+        pos.push(arka.x, yUst, arka.z)
+        pos.push(arka.x, yAlt, arka.z)
+      }
+
+      // Halkalar arası dört yüzey şeridi (ön, üst, arka, alt)
+      for (let i = 0; i < dilim; i++) {
+        const s = taban + i * 4
+        const n = s + 4
+        for (let k = 0; k < 4; k++) {
+          const a = s + k
+          const b = s + ((k + 1) % 4)
+          const c2 = n + ((k + 1) % 4)
+          const d = n + k
+          idx.push(a, b, c2, a, c2, d)
+        }
+      }
+
+      // İki uç kapak
+      const ilk = taban
+      const son = taban + dilim * 4
+      idx.push(ilk, ilk + 2, ilk + 1, ilk, ilk + 3, ilk + 2)
+      idx.push(son, son + 1, son + 2, son, son + 2, son + 3)
+    }
+  }
+
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  g.setIndex(idx)
+  g.computeVertexNormals()
+  return g
+}
+
+/** Kiriş genişliği ve sarkma derinliğinden yarıçap + toplam yay açısı. */
+function yayOlculeri(genislik, derinlik) {
+  const d = Math.max(0.0001, derinlik)
+  const R = (genislik * genislik) / (8 * d) + d / 2
+  const aci = 2 * Math.asin(Math.min(1, genislik / (2 * R)))
+  return { R, aci }
+}
+
+/**
+ * Bir sütunun yay üzerindeki konumu ve kendi ekseni etrafındaki dönüşü.
+ *
+ * `d` verilirse nokta yaydan d kadar DIŞARI (izleyiciye doğru, yani yüzey
+ * normali boyunca) kaydırılır. Bu, içerik yüzeyini kabinlerin önüne koymak için
+ * şart: kaydırma dünya-z'sinde yapılırsa kenarlarda panel eğildiği için kayma
+ * normal yönünde küçülüyor, yüzey kabinlerin içine gömülüyor ve ekran
+ * mavi/siyah şeritler halinde parçalanmış görünüyordu (z-fighting).
+ */
+function yayNoktasi(a, R, konkav, d = 0) {
+  /*
+   * İşaret: içe kavisli (konkav) ekranda kenarlar İZLEYİCİYE doğru gelir, orta
+   * geride kalır; dışa kavislide tersi. Panelin dönüşü de aynı işaretle ters
+   * yönde — böylece her kabin yayın teğetinde durur, kenarlar birbirine girmez.
+   */
+  const u = konkav ? -1 : 1 // yayın merkezi konkavda önde, konveksde arkada
+  const merkezZ = -u * R
+  const yaricap = R + u * d // konkavda dışarısı KÜÇÜK yarıçap tarafıdır
+  return {
+    x: yaricap * Math.sin(a),
+    z: merkezZ + u * yaricap * Math.cos(a),
+    rotY: u * a,
+  }
+}
+
+/** Kavisli bir duvarın yarıçapı ve toplam yay açısı (kabinden türetilmiş adımla). */
+function kavisOlculeri(cols, cabW, curveAmount, konkav) {
+  const totalW = cols * cabW
+  const derinlik = (Math.max(0, Math.min(100, curveAmount)) / 100) * totalW * curveDepthFor(konkav)
+  const { R } = yayOlculeri(totalW, derinlik)
+  const adim = 2 * Math.asin(Math.min(1, cabW / (2 * R)))
+  return { R, aci: adim * cols }
+}
+
+/**
+ * Bir ekranın UÇ NOKTALARI: sol ve sağ kenarının, ekranın kendi merkezine göre
+ * konumu (x, z) ve o kenardaki yüzey açısı.
+ *
+ * Çoklu ekranda ekranlar bu uçlardan birbirine EKLENİYOR. Yalnızca X'te genişlik
+ * toplamak yetmez: kavisli ekranın uçları merkezine göre ileri/geri kaçar, iç L
+ * tipinin uçları ise hem yana hem öne gider. Uçlar eşleştirilmezse yan yana
+ * duran farklı türler arasında hem yatay hem derinlik farkı kalıyor, ekranlar
+ * kopuk görünüyordu.
+ *
+ * Açı = o kenardaki panelin Y ekseni etrafındaki dönüşü; iki ekranın birleştiği
+ * yerde aradaki dönüş farkı dikiş payını belirler (bkz. dikisPayi).
+ */
+function ekranUclari(s, cabW, curveAmount) {
+  const cols = Math.max(1, s.cols || 1)
+  const tip = s.type || 'flat'
+
+  if (tip === 'lshape') {
+    const solCols = Math.max(1, s.leftCols || Math.ceil(cols / 2))
+    const sagCols = Math.max(1, s.rightCols || Math.max(1, cols - solCols))
+    const cos = Math.cos(L_YARIM_ACI)
+    const sin = Math.sin(L_YARIM_ACI)
+    return {
+      sol: { x: -solCols * cabW * cos, z: solCols * cabW * sin, aci: L_YARIM_ACI },
+      sag: { x: sagCols * cabW * cos, z: sagCols * cabW * sin, aci: -L_YARIM_ACI },
+    }
+  }
+
+  if (tip === 'curved' || tip === 'curvedIn') {
+    const konkav = tip === 'curvedIn'
+    const { R, aci } = kavisOlculeri(cols, cabW, curveAmount, konkav)
+    const uc = yayNoktasi(aci / 2, R, konkav)
+    return {
+      sol: { x: -uc.x, z: uc.z, aci: -uc.rotY },
+      sag: { x: uc.x, z: uc.z, aci: uc.rotY },
+    }
+  }
+
+  const yari = (cols * cabW) / 2
+  return { sol: { x: -yari, z: 0, aci: 0 }, sag: { x: yari, z: 0, aci: 0 } }
+}
+
+/**
+ * DİKİŞ PAYI
+ *
+ * İçerik yüzeyi kabinlerin ÖN yüzünde durur. İki ekran birbirine açılı
+ * birleştiğinde (iç L'nin dış ucu, komşu ekranın başlangıcı) bu iki ön yüz
+ * köşede birbirinden uzaklaşır ve aradan kabin kalınlığı görünür — ekran
+ * görüntüsündeki koyu şerit. Gerçekte köşe kabinleri gönyeli kesilir, kalınlık
+ * görünmez.
+ *
+ * Karşılığı: birleşen kenarda içerik yüzeyi, iki yüzey arasındaki DÖNÜŞ kadar
+ * uzatılır: pay = mesafe × tan(dönüş / 2). 90°'lik köşede bu tam olarak
+ * mesafeye eşit olur (tan45 = 1) ve iki yüzey köşede birebir buluşur; düz iki
+ * ekran arasında dönüş sıfır olduğu için pay da sıfırdır.
+ *
+ * Yalnızca DIŞA dönen (konveks) köşelerde gerek var; içe dönen köşelerde iki
+ * yüzey zaten örtüşür. Serbest (komşusuz) kenarlara da pay verilmez, oralarda
+ * panel havada uzamasın.
+ */
+const onYuzMesafesi = (cabD) => cabD / 2 + 0.002
+
+function dikisPayi(cabD, donus) {
+  if (!(donus > 0.0001)) return 0
+  // Dönüş 180°'ye yaklaşırsa tanjant patlar; makul bir tavanla sınırlanır
+  return onYuzMesafesi(cabD) * Math.min(4, Math.tan(Math.min(donus, Math.PI * 0.8) / 2))
+}
+
+/** Düz bir kabin duvarı + önüne gerilen içerik düzlemi. */
+function DuzDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, uvOffset = 0, uvRepeat = 1, payL = 0, payR = 0 }) {
   const totalW = cols * cabW
   const totalH = rows * cabH
-  const showBezels = detailLevel === 'high'
 
-  // Instanced geometri: N kabin için tek geometri/malzeme, N adet dönüşüm.
-  // GPU'ya N ayrı mesh yerine tek instanced draw call gönderilir.
   const positions = useMemo(() => {
     const arr = []
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        arr.push([
-          c * cabW - totalW / 2 + cabW / 2,
-          r * cabH - totalH / 2 + cabH / 2,
-          0,
-        ])
+        arr.push([c * cabW - totalW / 2 + cabW / 2, r * cabH - totalH / 2 + cabH / 2, 0])
       }
     }
     return arr
@@ -77,24 +261,340 @@ function CabinetGrid({ model, cols, rows, contentUrl, detailLevel }) {
         ))}
       </Instances>
 
-      {/* İçerik dokusu — tüm duvarın önüne gerilen tek bir düzlem (2D önizlemedeki
-          "spanW/spanH" mantığının 3D karşılığı). */}
-      <mesh position={[0, 0, cabD / 2 + 0.002]}>
-        <planeGeometry args={[totalW, totalH]} />
-        {texture ? (
-          <meshBasicMaterial map={texture} toneMapped={false} />
-        ) : (
-          <meshStandardMaterial color="#0a4f8c" emissive="#0a4f8c" emissiveIntensity={0.4} />
-        )}
+      <mesh position={[(payR - payL) / 2, 0, cabD / 2 + 0.002]}>
+        <planeGeometry args={[totalW + payL + payR, totalH]} />
+        <IcerikMalzemesi texture={texture} uvOffset={uvOffset} uvRepeat={uvRepeat} />
       </mesh>
     </group>
   )
 }
 
-function SceneContent({ model, cols, rows, contentUrl, onReady }) {
+/** Kavisli duvar: kabinler yay üzerine dizilir, içerik düzlemi de aynı yaya bükülür. */
+function KavisliDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, curveAmount, konkav, uvOffset = 0, uvRepeat = 1, payL = 0, payR = 0 }) {
+  const totalW = cols * cabW
+  const totalH = rows * cabH
+  /*
+   * KABİNLER ARASINDA BOŞLUK OLMAMALI
+   *
+   * Yarıçap toplam genişlikten (kiriş) hesaplanıyor, ama sütunlar yaya EŞİT AÇI
+   * ile bölünürse her kabinin kapladığı kiriş kabin genişliğinden bir tık uzun
+   * düşüyor; düz kutular yayda uç uca gelmiyor ve dikişlerde kama biçimli
+   * boşluklar açılıyordu (ekran görüntüsündeki yarıklar).
+   *
+   * Doğrusu açıyı kabinden türetmek: bir kabin yayda tam olarak kendi
+   * genişliği kadar KİRİŞ kaplasın, yani adım açısı 2·asin(cabW / 2R). Gerçek
+   * LED kabinleri de esnek olduğundan kavis kabinin kendi içinde massedilir —
+   * komşular birbirine değmeye devam eder. Toplam yay açısı da bu adımların
+   * toplamı; içerik yüzeyi aynı açıyı kullandığı için panelle birebir örtüşür.
+   */
+  const { R, aci } = useMemo(
+    () => kavisOlculeri(cols, cabW, curveAmount, konkav),
+    [cols, cabW, curveAmount, konkav],
+  )
+
+  // Kabin gövdeleri: düz kutu değil, yayı takip eden bükülmüş dilimler
+  const govde = useMemo(
+    () =>
+      esnekKabinGovdesi({
+        cabH,
+        cabD,
+        cols,
+        rows,
+        R,
+        aci,
+        konkav,
+        bosluk: showBezels ? 0.003 : 0,
+      }),
+    [cabH, cabD, cols, rows, R, aci, konkav, showBezels],
+  )
+
+  useEffect(() => () => govde.dispose(), [govde])
+
+  /*
+   * İçerik yüzeyi: düz bir düzlemin köşe noktaları yayın üstüne taşınıyor.
+   * (CylinderGeometry yerine bu yol seçildi; UV'ler düzlemdeki gibi kalıyor,
+   * yani içerik 2D önizlemedeki gibi kırpılmadan geriliyor.)
+   */
+  const geometri = useMemo(() => {
+    const seg = Math.max(24, Math.min(160, cols * 4))
+    const g = new THREE.PlaneGeometry(totalW + payL + payR, totalH, seg, 1)
+    const p = g.attributes.position
+    // Dikiş payı yaya AÇI olarak eklenir: pay uzunluğu / yarıçap
+    const acıPayL = payL / R
+    const acıPayR = payR / R
+    const genisAci = aci + acıPayL + acıPayR
+    const merkezKayma = (acıPayR - acıPayL) / 2
+    for (let i = 0; i < p.count; i++) {
+      const oran = p.getX(i) / (totalW + payL + payR) // -0.5 .. 0.5
+      const a = oran * genisAci + merkezKayma
+      // Yüzey, kabinlerin ön yüzünden 2 mm dışarıda — normal boyunca kaydırılır
+      const { x, z } = yayNoktasi(a, R, konkav, cabD / 2 + 0.002)
+      p.setX(i, x)
+      p.setZ(i, z)
+    }
+    p.needsUpdate = true
+    g.computeVertexNormals()
+    return g
+  }, [totalW, totalH, cols, aci, R, konkav, cabD, payL, payR])
+
+  // Geometri yeniden üretildiğinde eskisinin GPU belleği bırakılmalı
+  useEffect(() => () => geometri.dispose(), [geometri])
+
+  return (
+    <group>
+      <mesh geometry={govde}>
+        <meshStandardMaterial roughness={0.55} metalness={0.15} color="#12151c" />
+      </mesh>
+
+      <mesh geometry={geometri}>
+        <IcerikMalzemesi texture={texture} uvOffset={uvOffset} uvRepeat={uvRepeat} />
+      </mesh>
+    </group>
+  )
+}
+
+/** İç L tipi: iki düz kanat ortada 90°'lik bir köşe yapar. */
+function LDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, leftCols, rightCols, uvOffset = 0, uvRepeat = 1, payL = 0, payR = 0 }) {
+  const solCols = Math.max(1, leftCols || Math.ceil(cols / 2))
+  const sagCols = Math.max(1, rightCols || Math.max(1, cols - solCols))
+  const toplamCols = solCols + sagCols
+  const solW = solCols * cabW
+  const sagW = sagCols * cabW
+  const cos = Math.cos(L_YARIM_ACI)
+  const sin = Math.sin(L_YARIM_ACI)
+
+  /*
+   * Köşe (dikiş) orijinde; iki kanat oradan izleyiciye doğru açılıyor. Kanat
+   * merkezleri kendi uzunluklarının yarısı kadar dışarı kaydırılıyor, dönüşleri
+   * ±45° — aradaki açı 90°, dikişte boşluk kalmıyor.
+   *
+   * İçerik tek görsel: her kanat dokunun kendi sütun payına düşen dilimini
+   * gösteriyor (uvOffset/uvRepeat), 2D'deki bölme mantığıyla aynı.
+   *
+   * Dikiş payı kanatların DIŞ uçlarına verilir (sol kanadın local -x'i, sağ
+   * kanadın local +x'i): komşu ekranla birleşen kenarlar bunlar. Ortadaki köşe
+   * içbükey olduğu için iki yüzey orada zaten örtüşür, pay gerekmez.
+   */
+  return (
+    <group>
+      <group position={[-(solW / 2) * cos, 0, (solW / 2) * sin]} rotation={[0, L_YARIM_ACI, 0]}>
+        <DuzDuvar
+          cabW={cabW}
+          cabH={cabH}
+          cabD={cabD}
+          cols={solCols}
+          rows={rows}
+          texture={texture}
+          showBezels={showBezels}
+          uvOffset={uvOffset}
+          uvRepeat={uvRepeat * (solCols / toplamCols)}
+          payL={payL}
+        />
+      </group>
+      <group position={[(sagW / 2) * cos, 0, (sagW / 2) * sin]} rotation={[0, -L_YARIM_ACI, 0]}>
+        <DuzDuvar
+          cabW={cabW}
+          cabH={cabH}
+          cabD={cabD}
+          cols={sagCols}
+          rows={rows}
+          texture={texture}
+          showBezels={showBezels}
+          uvOffset={uvOffset + uvRepeat * (solCols / toplamCols)}
+          uvRepeat={uvRepeat * (sagCols / toplamCols)}
+          payR={payR}
+        />
+      </group>
+    </group>
+  )
+}
+
+/**
+ * İçerik yüzeyinin malzemesi. Doku yoksa 2D'deki "yayında panel" görünümüne
+ * denk düşen mavi ışıklı yüzey kullanılır.
+ *
+ * uvOffset/uvRepeat verilirse doku yatayda dilimlenir — L tipinde iki kanadın
+ * tek bir görseli paylaşması için gerekli. Doku paylaşıldığı için her dilim
+ * kendi klonunu kullanır (repeat/offset dokunun kendi özelliği).
+ */
+function IcerikMalzemesi({ texture, uvOffset = 0, uvRepeat = 1 }) {
+  const dilim = useMemo(() => {
+    if (!texture) return null
+    if (uvOffset === 0 && uvRepeat === 1) return texture
+    const t = texture.clone()
+    t.needsUpdate = true
+    t.offset.set(uvOffset, 0)
+    t.repeat.set(uvRepeat, 1)
+    return t
+  }, [texture, uvOffset, uvRepeat])
+
+  useEffect(() => {
+    if (dilim && dilim !== texture) return () => dilim.dispose()
+    return undefined
+  }, [dilim, texture])
+
+  if (dilim) return <meshBasicMaterial map={dilim} toneMapped={false} />
+  return <meshStandardMaterial color="#0a4f8c" emissive="#0a4f8c" emissiveIntensity={0.4} />
+}
+
+/** Tek bir ekranı, biçimine göre doğru duvar bileşeniyle çizer. */
+function Duvar({ ortak, screenType, curveAmount, leftCols, rightCols, uvOffset, uvRepeat, payL, payR }) {
+  const uv = { uvOffset, uvRepeat, payL, payR }
+  if (screenType === 'lshape') {
+    return <LDuvar {...ortak} {...uv} leftCols={leftCols} rightCols={rightCols} />
+  }
+  if (screenType === 'curved' || screenType === 'curvedIn') {
+    return <KavisliDuvar {...ortak} {...uv} curveAmount={curveAmount} konkav={screenType === 'curvedIn'} />
+  }
+  return <DuzDuvar {...ortak} {...uv} />
+}
+
+/**
+ * Sahnedeki ekran(lar).
+ *
+ * `screens` verilmişse çoklu ekran düzeni çizilir: 2D önizlemedeki gibi ekranlar
+ * yan yana, aralarında boşluk olmadan ve ALTTAN hizalı dizilir; tek içerik
+ * görseli şeridin tamamına yayılıp her ekranın genişlik payına düşen dilimi o
+ * ekrana verilir. Her ekran kendi biçimini (düz / kavisli / iç L) korur.
+ */
+function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, screenType, curveAmount, leftCols, rightCols, screens }) {
+  const cabW = (model?.widthMm || 500) / 1000
+  const cabH = (model?.heightMm || 500) / 1000
+  const cabD = (model?.depthMm || 100) / 1000
+
+  /*
+   * İÇERİK KAYNAĞI
+   *
+   * Eskiden yalnızca `contentUrl` kullanılıyordu; o da sadece kullanıcı kendi
+   * görselini YÜKLEDİĞİNDE doluyor. "Örnek görüntü" seçiliyken tasarımda resim
+   * görünüyor ama 3D'de görünmüyordu, çünkü onun kaynağı `contentUrl` değil
+   * varsayılan görsel. Kaynak artık 2D tarafla (CurvedScreen) aynı kuralla
+   * seçiliyor.
+   */
+  const src = useMemo(() => {
+    if (content === 'photo') return DEFAULT_CONTENT_SRC
+    if (content === 'upload' && contentUrl) return contentUrl
+    // Geriye dönük: içerik türü bilinmiyorsa elde bir URL varsa o kullanılır
+    if (!content && contentUrl) return contentUrl
+    return null
+  }, [content, contentUrl])
+
+  const texture = useMemo(() => {
+    if (!src) return null
+    const loader = new THREE.TextureLoader()
+    const tex = loader.load(src)
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.anisotropy = 4
+    return tex
+  }, [src])
+
+  const showBezels = detailLevel === 'high'
+
+  // Çoklu ekran: şerit üzerinde konumlar
+  const yerlesim = useMemo(() => {
+    if (!screens?.length) return null
+    const list = screens.map((s) => ({
+      ...s,
+      cols: Math.max(1, s.cols || 1),
+      rows: Math.max(1, s.rows || 1),
+    }))
+    /*
+     * ZİNCİRLEME
+     *
+     * Her ekran, SOL ucu bir öncekinin SAĞ ucuyla çakışacak şekilde konuluyor —
+     * hem x hem z'de. Böylece farklı boyutta ve farklı türde ekranlar (düz,
+     * kavisli, iç L) yan yana geldiğinde uçları birbirine değiyor; kavislinin
+     * uçlarının öne/arkaya kaçması ya da L'nin daralması boşluk yaratmıyor.
+     *
+     * Dikey hizalama alttan (2D önizlemedeki gibi): boyları farklı ekranlar
+     * tabanda buluşur.
+     */
+    const uclar = list.map((s) => ekranUclari(s, cabW, curveAmount))
+    const enYuksek = Math.max(...list.map((s) => s.rows * cabH))
+
+    let x = 0
+    let z = 0
+    const konum = list.map((s, i) => {
+      // Ekranın merkezi: sol ucu mevcut zincir ucuna denk gelecek şekilde
+      const p = { x: x - uclar[i].sol.x, z: z - uclar[i].sol.z }
+      x = p.x + uclar[i].sag.x
+      z = p.z + uclar[i].sag.z
+      return p
+    })
+
+    // Zinciri yatayda ortala (ilk sol uç ile son sağ uç arasının ortası orijine)
+    const ortala = (konum[0].x + uclar[0].sol.x + x) / 2
+    const genislikler = uclar.map((u) => u.sag.x - u.sol.x)
+    const toplamW = genislikler.reduce((acc, w) => acc + w, 0)
+
+    let uv = 0
+    return list.map((s, i) => {
+      const h = s.rows * cabH
+      /*
+       * Dikiş payı komşuyla arasındaki DÖNÜŞE göre: iki yüzey dışa dönerek
+       * birleşiyorsa (ör. iki iç L'nin sırt sırta gelen uçları) aradan kabin
+       * kalınlığı görünmesin diye yüzey uzatılır.
+       */
+      const oncekiDonus = i > 0 ? uclar[i].sol.aci - uclar[i - 1].sag.aci : 0
+      const sonrakiDonus = i < list.length - 1 ? uclar[i + 1].sol.aci - uclar[i].sag.aci : 0
+      const yer = {
+        key: i,
+        s,
+        x: konum[i].x - ortala,
+        y: (h - enYuksek) / 2,
+        z: konum[i].z,
+        uvOffset: uv,
+        uvRepeat: genislikler[i] / toplamW,
+        payL: dikisPayi(cabD, oncekiDonus),
+        payR: dikisPayi(cabD, sonrakiDonus),
+      }
+      uv += genislikler[i] / toplamW
+      return yer
+    })
+  }, [screens, cabW, cabH, cabD, curveAmount])
+
+  if (yerlesim) {
+    return (
+      <group>
+        {yerlesim.map((y) => (
+          <group key={y.key} position={[y.x, y.y, y.z]}>
+            <Duvar
+              ortak={{ cabW, cabH, cabD, cols: y.s.cols, rows: y.s.rows, texture, showBezels }}
+              screenType={y.s.type || 'flat'}
+              curveAmount={curveAmount}
+              leftCols={y.s.leftCols}
+              rightCols={y.s.rightCols}
+              uvOffset={y.uvOffset}
+              uvRepeat={y.uvRepeat}
+              payL={y.payL}
+              payR={y.payR}
+            />
+          </group>
+        ))}
+      </group>
+    )
+  }
+
+  return (
+    <Duvar
+      ortak={{ cabW, cabH, cabD, cols, rows, texture, showBezels }}
+      screenType={screenType}
+      curveAmount={curveAmount}
+      leftCols={leftCols}
+      rightCols={rightCols}
+    />
+  )
+}
+
+function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenType, curveAmount, leftCols, rightCols, screens }) {
   const { scene, camera } = useThree()
-  const cabinetCount = cols * rows
+  const cabinetCount = screens?.length
+    ? screens.reduce((acc, s) => acc + Math.max(1, s.cols || 1) * Math.max(1, s.rows || 1), 0)
+    : cols * rows
   const detailLevel = cabinetCount > MAX_DETAILED_CABINETS ? 'low' : 'high'
+  const enYuksekRows = screens?.length
+    ? Math.max(...screens.map((s) => Math.max(1, s.rows || 1)))
+    : rows
 
   useMemo(() => {
     onReady?.(scene, camera)
@@ -112,9 +612,22 @@ function SceneContent({ model, cols, rows, contentUrl, onReady }) {
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 4, 5]} intensity={1.1} castShadow />
 
-      <CabinetGrid model={model} cols={cols} rows={rows} contentUrl={contentUrl} detailLevel={detailLevel} />
+      <CabinetGrid
+        model={model}
+        cols={cols}
+        rows={rows}
+        content={content}
+        contentUrl={contentUrl}
+        detailLevel={detailLevel}
+        screenType={screenType}
+        curveAmount={curveAmount}
+        leftCols={leftCols}
+        rightCols={rightCols}
+        screens={screens}
+      />
 
-      <ContactShadows position={[0, -(rows * (model?.heightMm || 500)) / 2000 - 0.05, 0]} opacity={0.45} scale={10} blur={2} far={2} />
+      {/* Zemin gölgesi en yüksek ekranın altına oturur (çoklu ekranda boylar farklı) */}
+      <ContactShadows position={[0, -(enYuksekRows * (model?.heightMm || 500)) / 2000 - 0.05, 0]} opacity={0.45} scale={10} blur={2} far={2} />
     </>
   )
 }
@@ -168,13 +681,35 @@ function useGlbAr() {
   return { onReady, exportAndOpen, close, viewerUrl, busy }
 }
 
-export default function Scene3D({ open, onClose, model, cols, rows, contentUrl }) {
+export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens }) {
   const { t } = useLang()
   const { onReady, exportAndOpen, close, viewerUrl, busy } = useGlbAr()
 
   if (!open) return null
 
-  const cabinetCount = Math.max(1, cols) * Math.max(1, rows)
+  const cokluVar = !!screens?.length
+  const cabinetCount = cokluVar
+    ? screens.reduce((acc, s) => acc + Math.max(1, s.cols || 1) * Math.max(1, s.rows || 1), 0)
+    : Math.max(1, cols) * Math.max(1, rows)
+
+  /*
+   * Kamera uzaklığı yapılandırmaya göre: çoklu ekran şeridi tek duvardan çok
+   * daha geniş olabiliyor, sabit 3,2 m'de kadraja sığmıyordu. Kabaca genişlik
+   * ve yüksekliğe göre geri çekiliyor; kullanıcı yine de serbestçe yakınlaşıp
+   * uzaklaşabilir.
+   */
+  const cabW = (model?.widthMm || 500) / 1000
+  const cabH = (model?.heightMm || 500) / 1000
+  const toplamW = cokluVar
+    ? screens.reduce((acc, s) => {
+        const u = ekranUclari(s, cabW, curveAmount)
+        return acc + (u.sag.x - u.sol.x)
+      }, 0)
+    : Math.max(1, cols) * cabW
+  const toplamH = cokluVar
+    ? Math.max(...screens.map((s) => Math.max(1, s.rows || 1))) * cabH
+    : Math.max(1, rows) * cabH
+  const uzaklik = Math.max(1.2, toplamW * 0.95, toplamH * 1.7)
 
   return (
     <div className="fixed inset-0 z-[60] bg-[#0b0d12]">
@@ -200,9 +735,21 @@ export default function Scene3D({ open, onClose, model, cols, rows, contentUrl }
         </div>
       </div>
 
-      <Canvas shadows camera={{ position: [0, 0.4, 3.2], fov: 45 }} dpr={[1, 2]}>
-        <SceneContent model={model} cols={Math.max(1, cols)} rows={Math.max(1, rows)} contentUrl={contentUrl} onReady={onReady} />
-        <OrbitControls makeDefault enablePan={false} minDistance={0.8} maxDistance={12} />
+      <Canvas shadows camera={{ position: [0, toplamH * 0.12, uzaklik], fov: 45, far: Math.max(100, uzaklik * 10) }} dpr={[1, 2]}>
+        <SceneContent
+          model={model}
+          cols={Math.max(1, cols)}
+          rows={Math.max(1, rows)}
+          content={content}
+          contentUrl={contentUrl}
+          onReady={onReady}
+          screenType={screenType}
+          curveAmount={curveAmount}
+          leftCols={leftCols}
+          rightCols={rightCols}
+          screens={screens}
+        />
+        <OrbitControls makeDefault enablePan={false} minDistance={0.8} maxDistance={Math.max(12, uzaklik * 3)} />
       </Canvas>
 
       <p className="absolute bottom-4 inset-x-0 text-center text-[11px] text-white/50 px-8 m-0 pointer-events-none">

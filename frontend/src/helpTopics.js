@@ -26,9 +26,13 @@ export const TOPICS = [
   {
     id: 'greeting',
     keys: {
-      tr: ['merhaba', 'selam', 'iyi günler', 'iyi gunler', 'nasılsın', 'nasilsin', 'kimsin', 'ne yapabilirsin', 'yardım'],
+      /*
+       * "neler yapabilirsin" ayrıca yazılı: anahtar yalnızca "ne yapabilirsin"
+       * iken konunun KENDİ başlığı ("Neler yapabilirsin?") eşleşmiyordu.
+       */
+      tr: ['merhaba', 'selam', 'iyi günler', 'iyi gunler', 'nasılsın', 'nasilsin', 'kimsin', 'ne yapabilirsin', 'neler yapabilirsin', 'yardım'],
       en: ['hello', 'hi', 'who are you', 'what can you do', 'help'],
-      ar: ['مرحبا', 'من أنت'],
+      ar: ['مرحبا', 'من أنت', 'ماذا يمكنك'],
     },
     q: { tr: 'Neler yapabilirsin?', en: 'What can you do?', ar: 'ماذا يمكنك أن تفعل؟' },
     a: {
@@ -367,6 +371,25 @@ export const TOPICS = [
   },
 ]
 
+/*
+ * HER KONUNUN KENDİ BAŞLIĞI DA BİR ANAHTARDIR.
+ *
+ * Örnek soru listesindeki ve öneri kutusundaki metinler konuların başlıkları.
+ * Kullanıcı o metni aynen yazdığında (ya da kopyaladığında) konunun bulunması
+ * gerekir; oysa anahtar listeleri başlıklardan bağımsız yazıldığı için birçok
+ * konu kendi sorusuyla eşleşmiyordu — özellikle İngilizce ve Arapçada. Elle
+ * tek tek eklemek yerine burada bir kez ekleniyor, yeni konu eklendiğinde de
+ * kendiliğinden geçerli oluyor.
+ */
+for (const topic of TOPICS) {
+  for (const dil of ['tr', 'en', 'ar']) {
+    const baslik = topic.q[dil]
+    if (!baslik) continue
+    if (!topic.keys[dil]) topic.keys[dil] = []
+    if (!topic.keys[dil].includes(baslik)) topic.keys[dil].push(baslik)
+  }
+}
+
 /**
  * Sorunun bizim alanımızla ilgisi var mı?
  *
@@ -446,18 +469,36 @@ export const GREETING = {
  * yazımların hepsi aynı biçime gelir.
  */
 function sadelestir(s) {
-  return String(s)
-    .toLocaleLowerCase('tr')
-    .replace(/[şŞ]/g, 's')
-    .replace(/[ğĞ]/g, 'g')
-    .replace(/[ıİiI]/g, 'i')
-    .replace(/[öÖ]/g, 'o')
-    .replace(/[üÜ]/g, 'u')
-    .replace(/[çÇ]/g, 'c')
-    .replace(/[^a-z0-9\s.]/g, ' ')
-    .replace(/(.)\1+/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return (
+    String(s)
+      .toLocaleLowerCase('tr')
+      .replace(/[şŞ]/g, 's')
+      .replace(/[ğĞ]/g, 'g')
+      .replace(/[ıİiI]/g, 'i')
+      .replace(/[öÖ]/g, 'o')
+      .replace(/[üÜ]/g, 'u')
+      .replace(/[çÇ]/g, 'c')
+      /*
+       * ARAPÇA HARFLER KORUNUYOR (U+0600–U+06FF).
+       *
+       * Eskiden yalnızca a-z0-9 bırakılıyordu; Arapça bir soru sadeleştirmeden
+       * sonra BOŞ metne dönüyor, hiçbir konu eşleşmiyor ve asistan Arapçada
+       * her soruya "anlamadım" diyordu. Arapça sohbetin çalışmamasının sebebi
+       * buydu.
+       *
+       * Bu arada Arapçaya özgü yazım farkları da tek biçime indiriliyor:
+       * hareke işaretleri atılıyor, elif/te/ye türevleri sadeleştiriliyor.
+       */
+      .replace(/[ً-ْٰ]/g, '') // hareke
+      .replace(/[أإآٱ]/g, 'ا')
+      .replace(/ة/g, 'ه')
+      .replace(/[ىئ]/g, 'ي')
+      .replace(/ؤ/g, 'و')
+      .replace(/[^a-z0-9؀-ۿ\s.]/g, ' ')
+      .replace(/(.)\1+/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 /**

@@ -11,7 +11,15 @@
 export const LANGUAGES = [
   { code: 'tr', label: 'Türkçe', dir: 'ltr' },
   { code: 'en', label: 'English', dir: 'ltr' },
-  { code: 'ar', label: 'العربية', dir: 'rtl' },
+  /*
+   * Arapça METİN sağdan sola okunur ama SAYFA DÜZENİ diğer dillerdekiyle aynı
+   * kalıyor (dir: 'ltr'). Düzen ayna çevrilince paneller, araç çubuğu ve ölçü
+   * etiketleri karşı tarafa geçiyor; tasarım oraya göre kurulmadığı için
+   * hizalar bozuluyor ve kullanıcı aynı ürünün iki farklı yerleşimini
+   * öğrenmek zorunda kalıyordu. Metnin kendi yönü tarayıcı tarafından zaten
+   * doğru işleniyor.
+   */
+  { code: 'ar', label: 'العربية', dir: 'ltr' },
 ]
 
 export const DEFAULT_LANG = 'tr'
@@ -92,16 +100,39 @@ const dict = {
     en: 'Configurations you export as PDF appear here (for signed-in accounts).',
     ar: 'تظهر هنا التهيئات التي تصدّرها كـ PDF (للحسابات المسجّلة).',
   },
-  'cc.quotes.body': {
-    tr: 'Yeni bir teklif oluşturmak için konfigüratöre dönün, modeli seçin ve “Teklif Talebi” ile kaydedin. Geçmiş kayıtlar yönetim paneli ve /api/quotes/mine üzerinden takip edilir.',
-    en: 'Return to the configurator, pick a model and save via Quote Request. Past records are tracked via the admin panel and /api/quotes/mine.',
-    ar: 'عد إلى المُهيّئ، اختر طرازاً واحفظ عبر طلب عرض السعر. تُتتبّع السجلات عبر لوحة الإدارة و /api/quotes/mine.',
-  },
   'cc.quotes.new': { tr: 'Yeni yapılandırma', en: 'New configuration', ar: 'تهيئة جديدة' },
+  'cc.quotes.refresh': { tr: 'Yenile', en: 'Refresh', ar: 'تحديث' },
+  'cc.quotes.loading': { tr: 'Yükleniyor…', en: 'Loading…', ar: 'جارٍ التحميل…' },
+  'cc.quotes.empty': {
+    tr: 'Henüz kaydınız yok. Konfigüratörde bir tasarım hazırlayıp PDF olarak dışa aktardığınızda burada listelenir.',
+    en: 'No records yet. Build a design in the configurator and export it as PDF to see it here.',
+    ar: 'لا توجد سجلات بعد. أنشئ تصميماً في المُهيّئ وصدّره كـ PDF ليظهر هنا.',
+  },
+  'cc.quotes.loadFailed': {
+    tr: 'Kayıtlar yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.',
+    en: 'Could not load records. Check your connection and try again.',
+    ar: 'تعذّر تحميل السجلات. تحقق من الاتصال وحاول مجدداً.',
+  },
+  'cc.quotes.needLogin': {
+    tr: 'Oturumunuzun süresi dolmuş görünüyor. Lütfen tekrar giriş yapın.',
+    en: 'Your session seems to have expired. Please sign in again.',
+    ar: 'يبدو أن جلستك انتهت. يرجى تسجيل الدخول مجدداً.',
+  },
+  'cc.quotes.view': { tr: 'Görüntüle', en: 'View', ar: 'عرض' },
+  'cc.quotes.hide': { tr: 'Gizle', en: 'Hide', ar: 'إخفاء' },
+  'cc.quotes.noModel': { tr: 'Model belirtilmemiş', en: 'No model', ar: 'بدون طراز' },
+  'cc.quotes.f.model': { tr: 'Model', en: 'Model', ar: 'الطراز' },
+  'cc.quotes.f.wall': { tr: 'Duvar ölçüsü', en: 'Wall size', ar: 'مقاس الجدار' },
+  'cc.quotes.f.grid': { tr: 'Kabin düzeni', en: 'Cabinet grid', ar: 'شبكة الخزائن' },
+  'cc.quotes.f.type': { tr: 'Ekran tipi', en: 'Screen type', ar: 'نوع الشاشة' },
+  'cc.quotes.f.resolution': { tr: 'Çözünürlük', en: 'Resolution', ar: 'الدقة' },
+  'cc.quotes.f.screens': { tr: 'Ekranlar', en: 'Screens', ar: 'الشاشات' },
+  'cc.quotes.f.customer': { tr: 'Müşteri', en: 'Customer', ar: 'العميل' },
+  'cc.quotes.f.note': { tr: 'Yetkili notu', en: 'Staff note', ar: 'ملاحظة الموظف' },
   'cc.tester.title': { tr: 'Hata bildir', en: 'Report a bug', ar: 'الإبلاغ عن خطأ' },
   'cc.tester.hint': {
-    tr: 'Beta test sırasında gördüğünüz sorunu kısaca yazın. Kayıt konsola düşer; ileride merkezi loga bağlanacak.',
-    en: 'Briefly describe the issue you saw during beta. It is logged to the console; later it will feed central logs.',
+    tr: 'Gördüğünüz sorunu kısaca yazın. Bildiriminiz kaydedilir ve yönetim panelinden okunur.',
+    en: 'Briefly describe the issue you saw. Your report is stored and reviewed in the admin panel.',
     ar: 'صف بإيجاز المشكلة التي رأيتها أثناء البيتا. تُسجَّل في وحدة التحكم؛ لاحقاً ستُربط بالسجلات المركزية.',
   },
   'cc.tester.placeholder': {
@@ -110,6 +141,8 @@ const dict = {
     ar: 'مثال: مشهد 3D يتوقف على الجوال، Safari 17…',
   },
   'cc.tester.send': { tr: 'Bildirimi kaydet', en: 'Save report', ar: 'حفظ البلاغ' },
+  'cc.tester.sending': { tr: 'Gönderiliyor…', en: 'Sending…', ar: '…جارٍ الإرسال' },
+  'cc.tester.failed': { tr: 'Bildirim gönderilemedi', en: 'Could not send report', ar: 'تعذّر إرسال البلاغ' },
   'cc.tester.sent': { tr: 'Kaydedildi', en: 'Saved', ar: 'تم الحفظ' },
   'cc.tester.beta': { tr: 'Açık beta özellikler', en: 'Enabled beta features', ar: 'ميزات البيتا المفعّلة' },
   'cc.tester.betaHint': {
@@ -119,21 +152,31 @@ const dict = {
   },
   'cc.login.title': { tr: 'Bayi / müşteri girişi', en: 'Dealer / customer sign-in', ar: 'تسجيل دخول الوكيل / العميل' },
   'cc.login.hint': {
-    tr: 'Hesabınız varsa e-posta ve parola ile giriş yapın. Beta pilotunda rol simülasyonu da kullanılabilir.',
-    en: 'Sign in with email and password if you have an account. During beta you can also use role simulation.',
-    ar: 'سجّل الدخول بالبريد وكلمة المرور إن كان لديك حساب. أثناء البيتا يمكن أيضاً محاكاة الأدوار.',
+    /* Kaldırılan "rol simülasyonu" paneline yapılan atıf temizlendi. */
+    tr: 'Hesabınız varsa e-posta ve parola ile giriş yapın.',
+    en: 'Sign in with your email and password.',
+    ar: 'سجّل الدخول بالبريد الإلكتروني وكلمة المرور.',
   },
   'cc.login.password': { tr: 'Parola', en: 'Password', ar: 'كلمة المرور' },
   'cc.login.busy': { tr: 'Giriş yapılıyor…', en: 'Signing in…', ar: 'جارٍ تسجيل الدخول…' },
   'cc.login.failed': { tr: 'Giriş başarısız', en: 'Sign-in failed', ar: 'فشل تسجيل الدخول' },
   'cc.login.network': { tr: 'API’ye bağlanılamadı', en: 'Could not reach the API', ar: 'تعذّر الاتصال بالواجهة' },
-  'cc.session.active': { tr: 'Aktif oturum', en: 'Active session', ar: 'الجلسة النشطة' },
-  'cc.demo.title': { tr: 'Beta: rol simülasyonu', en: 'Beta: role simulation', ar: 'بيتا: محاكاة الدور' },
-  'cc.demo.hint': {
-    tr: 'Pilot test için menüyü farklı rollerle deneyin. Canlıya çıkmadan önce kaldırılabilir.',
-    en: 'Try the menu as different roles during pilot. Can be removed before production.',
-    ar: 'جرّب القائمة بأدوار مختلفة أثناء التجربة. يمكن إزالتها قبل الإنتاج.',
+  'cc.reg.title': { tr: 'Kayıt ol', en: 'Sign up', ar: 'إنشاء حساب' },
+  'cc.reg.hint': {
+    tr: 'Bayi hesabı oluşturmak ücretsizdir ve herkese açıktır.',
+    en: 'Creating a dealer account is free and open to everyone.',
+    ar: 'إنشاء حساب وكيل مجاني ومتاح للجميع.',
   },
+  'cc.reg.name': { tr: 'Ad / firma adı', en: 'Name / company', ar: 'الاسم / الشركة' },
+  'cc.reg.password2': { tr: 'Parola (tekrar)', en: 'Password (again)', ar: 'تأكيد كلمة المرور' },
+  'cc.reg.mismatch': { tr: 'Parolalar aynı değil.', en: 'Passwords do not match.', ar: 'كلمتا المرور غير متطابقتين.' },
+  'cc.role.pick': { tr: 'Hangi sıfatla devam edeceksiniz?', en: 'Continue as', ar: 'المتابعة بصفة' },
+  'cc.role.code': { tr: 'Erişim kodu', en: 'Access code', ar: 'رمز الوصول' },
+  'cc.reg.submit': { tr: 'Hesap oluştur', en: 'Create account', ar: 'إنشاء الحساب' },
+  'cc.reg.failed': { tr: 'Kayıt başarısız', en: 'Sign-up failed', ar: 'فشل إنشاء الحساب' },
+  'cc.reg.noAccount': { tr: 'Hesabınız yok mu?', en: "Don't have an account?", ar: 'ليس لديك حساب؟' },
+  'cc.reg.haveAccount': { tr: 'Zaten hesabınız var mı?', en: 'Already have an account?', ar: 'لديك حساب بالفعل؟' },
+  'cc.session.active': { tr: 'Aktif oturum', en: 'Active session', ar: 'الجلسة النشطة' },
   'cc.adminGate.title': { tr: 'Yönetim paneli', en: 'Admin panel', ar: 'لوحة الإدارة' },
   'cc.adminGate.hint': {
     tr: 'Modelleri, teklifleri ve logları yönetmek için parola korumalı panele gidin.',
@@ -174,6 +217,9 @@ const dict = {
   'screen.type': { tr: 'Ekran Türü', en: 'Screen Type', ar: 'نوع الشاشة' },
   'screen.flat': { tr: 'Düz', en: 'Flat', ar: 'مسطحة' },
   'screen.curved': { tr: 'Dışa Kavisli', en: 'Convex Curved', ar: 'محدبة' },
+  'screen.curveAmount': { tr: 'Kavis miktarı', en: 'Curve amount', ar: 'مقدار الانحناء' },
+  'screen.curveFlat': { tr: 'Düz', en: 'Flat', ar: 'مسطح' },
+  'screen.curveMax': { tr: 'En fazla', en: 'Max', ar: 'الأقصى' },
   'screen.curvedIn': { tr: 'İçe Kavisli', en: 'Concave Curved', ar: 'مقعرة' },
   'screen.lshape': { tr: 'İç L Tipi', en: 'Inner L-Type', ar: 'زاوية داخلية L' },
   'screen.orientation': { tr: 'Oryantasyon', en: 'Orientation', ar: 'الاتجاه' },
@@ -298,9 +344,9 @@ const dict = {
     ar: 'يمكنك رفع فيديو MP4 أو WebM أو OGG فقط.',
   },
   'content.errVideoSize': {
-    tr: 'Video en fazla 100 MB olabilir.',
-    en: 'Video can be at most 100 MB.',
-    ar: 'الحد الأقصى لحجم الفيديو 100 ميغابايت.',
+    tr: 'Video en fazla 250 MB olabilir.',
+    en: 'Video can be at most 250 MB.',
+    ar: 'الحد الأقصى لحجم الفيديو 250 ميغابايت.',
   },
   'content.none': { tr: 'Resim Yok', en: 'No Image', ar: 'بدون صورة' },
   'content.hint': {
@@ -373,7 +419,8 @@ const dict = {
   'scene3d.hint': { tr: 'Sürükleyerek döndürün, tekerlek/iki parmakla yakınlaştırın.', en: 'Drag to rotate, scroll/pinch to zoom.', ar: 'اسحب للتدوير، قرّب بالتمرير أو بإصبعين.' },
   'scene3d.arExportError': { tr: '3D model oluşturulamadı. Cihazınız veya tarayıcınız desteklemiyor olabilir.', en: 'Could not generate the 3D model. Your device or browser may not support this.', ar: 'تعذر إنشاء النموذج ثلاثي الأبعاد. قد لا يدعمه جهازك أو متصفحك.' },
   'scene3d.arReady': { tr: 'Model hazır — telefonda AR düğmesine dokunun', en: 'Model ready — tap the AR button on your phone', ar: 'النموذج جاهز — انقر على زر الواقع المعزز على هاتفك' },
-  'wiz.entry': { tr: 'Hangi modeli seçeceğinizi bilmiyor musunuz? Sihirbazı deneyin', en: "Not sure which model to pick? Try the wizard", ar: 'لا تعرف أي طراز تختار؟ جرّب المعالج' },
+  /* Kısa tutuldu: dar panelde üç satıra taşıp gereğinden çok yer kaplıyordu. */
+  'wiz.entry': { tr: 'Hangi modeli seçeceğinizi bilmiyor musunuz?', en: 'Not sure which model to pick?', ar: 'لا تعرف أي طراز تختار؟' },
   'wiz.title': { tr: 'Model Öneri Sihirbazı', en: 'Model Recommendation Wizard', ar: 'معالج اقتراح الطراز' },
   'wiz.step1Title': { tr: 'Ekranı ne için kullanacaksınız?', en: 'What will you use the screen for?', ar: 'لماذا ستستخدم الشاشة؟' },
   'wiz.step2Title': { tr: 'Ekran nerede duracak?', en: 'Where will the screen be placed?', ar: 'أين ستوضع الشاشة؟' },
@@ -500,6 +547,15 @@ const dict = {
   'sp.weightCabinets': { tr: 'Ağırlık (Sadece Dolaplar)', en: 'Weight (Cabinets Only)', ar: 'الوزن (الخزائن فقط)' },
   'sp.viewingDistance': { tr: 'En Uygun İzleme Mesafesi', en: 'Optimal Viewing Distance', ar: 'مسافة المشاهدة المثلى' },
   'sp.optical': { tr: 'Optik Parametre', en: 'Optical Parameter', ar: 'المعامل البصري' },
+  'sp.totalPixels': { tr: 'Toplam Piksel', en: 'Total Pixels', ar: 'إجمالي البكسل' },
+  'sp.aspectRatio': { tr: 'En-Boy Oranı', en: 'Aspect Ratio', ar: 'نسبة العرض إلى الارتفاع' },
+  'sp.resStandard': { tr: 'Çözünürlük Standardı', en: 'Resolution Standard', ar: 'معيار الدقة' },
+  'sp.control': { tr: 'Kontrol Sistemi', en: 'Control System', ar: 'نظام التحكم' },
+  'sp.rj45': { tr: 'Gerekli RJ45 Portu', en: 'Required RJ45 Ports', ar: 'منافذ RJ45 المطلوبة' },
+  'sp.port': { tr: 'Port', en: 'Port', ar: 'منفذ' },
+  'sp.mediaPlayer': { tr: 'Tavsiye Medya Oynatıcı', en: 'Recommended Media Player', ar: 'مشغّل الوسائط المقترح' },
+  'sp.processor': { tr: 'Tavsiye Pro-AV İşlemci', en: 'Recommended Pro-AV Processor', ar: 'معالج Pro-AV المقترح' },
+  'sp.estimatedPrice': { tr: 'Tahmini Toplam Fiyat', en: 'Estimated Total Price', ar: 'السعر الإجمالي التقديري' },
   'sp.resolution': { tr: 'Çözünürlük', en: 'Resolution', ar: 'الدقة' },
   'sp.power': { tr: 'Güç Gereksinimleri', en: 'Power Requirements', ar: 'متطلبات الطاقة' },
   'sp.max': { tr: 'Maksimum', en: 'Max', ar: 'الأقصى' },
@@ -533,6 +589,16 @@ const dict = {
     tr: '* Bu belgedeki yapılandırma bilgileri yalnızca simülasyon kurulumu içindir; gerçek fiziksel özellikler farklılık gösterebilir. Doğru bilgi için lütfen üretici veya kurulum ortağınızla iletişime geçin.',
     en: '* The configuration information in this document is for simulated installation only; actual physical specifications may vary. Please consult the manufacturer or your installation partner for accurate information.',
     ar: '* معلومات التهيئة في هذه الوثيقة مخصصة للتركيب المحاكى فقط؛ قد تختلف المواصفات الفعلية. يرجى استشارة الشركة المصنّعة أو شريك التركيب للحصول على معلومات دقيقة.',
+  },
+  'sp.footnote3': {
+    tr: '* RJ45 port ihtiyacı port başına maksimum 650.000 piksel sınırına göre hesaplanmıştır.',
+    en: '* RJ45 port requirement is calculated for a limit of 650,000 pixels per port.',
+    ar: '* حُسبت الحاجة لمنافذ RJ45 وفق حد أقصى 650,000 بكسل لكل منفذ.',
+  },
+  'sp.footnote4': {
+    tr: '* Isı yayılımı 1 W = 3,412142 BTU/saat dönüşüm oranıyla hesaplanmıştır. Fiyat tahminidir ve teklif yerine geçmez.',
+    en: '* Heat output uses the 1 W = 3.412142 BTU/hr conversion. The price is an estimate and is not a binding quote.',
+    ar: '* حُسب الانبعاث الحراري بمعامل 1 واط = 3.412142 وحدة حرارية/ساعة. السعر تقديري ولا يُعد عرضاً ملزماً.',
   },
 
   // ---------- Gizlilik ve Güvenlik Notu (KVKK Aydınlatma Metni) ----------

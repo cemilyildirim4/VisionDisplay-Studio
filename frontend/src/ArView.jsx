@@ -126,6 +126,12 @@ export default function ArView({
   const resimRef = useRef(null)
   const [arAcik, setArAcik] = useState(true)
   const [cekim, setCekim] = useState(null)
+  /*
+   * Ölçü etiketleri ve kenar boşluğu çizgileri açık/kapalı. Kamerada asıl amaç
+   * ekranın mekânda nasıl duracağını GÖRMEK; ölçüler yardımcıdır ve fotoğrafta
+   * çoğu zaman istenmez. Ana sayfadaki "ölçüleri gizle" düğmesinin karşılığı.
+   */
+  const [olculer, setOlculer] = useState(true)
   const [mesgul, setMesgul] = useState(false)
 
   // Tasarımın ekrandaki yeri (merkez, px) ve ölçeği (px/m)
@@ -565,24 +571,28 @@ export default function ArView({
         */}
         {!hata && arAcik && kutu.w > 0 && (
           <div ref={katmanRef} className="absolute inset-0 pointer-events-none">
-            {/* Kenar boşluğu çizgileri: tasarımdan görüntü kenarlarına */}
-            <div className={cizgi} style={{ left: 0, top: merkez.y, width: Math.max(0, sol), borderTopWidth: 1 }} />
-            <div className={cizgi} style={{ left: sag, top: merkez.y, width: Math.max(0, kutu.w - sag), borderTopWidth: 1 }} />
-            <div className={cizgi} style={{ left: merkez.x, top: 0, height: Math.max(0, ust), borderLeftWidth: 1 }} />
-            <div className={cizgi} style={{ left: merkez.x, top: alt, height: Math.max(0, kutu.h - alt), borderLeftWidth: 1 }} />
+            {olculer && (
+              <>
+                {/* Kenar boşluğu çizgileri: tasarımdan görüntü kenarlarına */}
+                <div className={cizgi} style={{ left: 0, top: merkez.y, width: Math.max(0, sol), borderTopWidth: 1 }} />
+                <div className={cizgi} style={{ left: sag, top: merkez.y, width: Math.max(0, kutu.w - sag), borderTopWidth: 1 }} />
+                <div className={cizgi} style={{ left: merkez.x, top: 0, height: Math.max(0, ust), borderLeftWidth: 1 }} />
+                <div className={cizgi} style={{ left: merkez.x, top: alt, height: Math.max(0, kutu.h - alt), borderLeftWidth: 1 }} />
 
-            <Etiket x={Math.max(28, sol / 2)} y={merkez.y}>{metre(bosluk.sol)}</Etiket>
-            <Etiket x={Math.min(kutu.w - 28, sag + (kutu.w - sag) / 2)} y={merkez.y}>{metre(bosluk.sag)}</Etiket>
-            <Etiket x={merkez.x} y={Math.max(20, ust / 2)}>{metre(bosluk.ust)}</Etiket>
-            <Etiket x={merkez.x} y={Math.min(kutu.h - 20, alt + (kutu.h - alt) / 2)}>{metre(bosluk.alt)}</Etiket>
+                <Etiket x={Math.max(28, sol / 2)} y={merkez.y}>{metre(bosluk.sol)}</Etiket>
+                <Etiket x={Math.min(kutu.w - 28, sag + (kutu.w - sag) / 2)} y={merkez.y}>{metre(bosluk.sag)}</Etiket>
+                <Etiket x={merkez.x} y={Math.max(20, ust / 2)}>{metre(bosluk.ust)}</Etiket>
+                <Etiket x={merkez.x} y={Math.min(kutu.h - 20, alt + (kutu.h - alt) / 2)}>{metre(bosluk.alt)}</Etiket>
 
-            {/*
-              Tasarımın kendi ölçüleri — vurgulu, çünkü bunlar KESİN.
-              Tasarımın İÇİNE, kenarlarına yapışık duruyorlar: dışarı
-              konduklarında kenar boşluğu etiketleriyle üst üste biniyorlardı.
-            */}
-            <Etiket x={merkez.x} y={ust + 14} vurgu>{metre(tasarimWm)}</Etiket>
-            <Etiket x={sag - 32} y={merkez.y} vurgu>{metre(tasarimHm)}</Etiket>
+                {/*
+                  Tasarımın kendi ölçüleri — vurgulu, çünkü bunlar KESİN.
+                  Tasarımın İÇİNE, kenarlarına yapışık duruyorlar: dışarı
+                  konduklarında kenar boşluğu etiketleriyle üst üste biniyorlardı.
+                */}
+                <Etiket x={merkez.x} y={ust + 14} vurgu>{metre(tasarimWm)}</Etiket>
+                <Etiket x={sag - 32} y={merkez.y} vurgu>{metre(tasarimHm)}</Etiket>
+              </>
+            )}
 
             {/* Tasarımın kendisi */}
             <div
@@ -622,7 +632,13 @@ export default function ArView({
                   )
                 })}
               </div>
-              <div className="absolute inset-0 border-2 border-brand pointer-events-none" />
+              {/*
+                Tasarımın etrafındaki mavi kenarlık KALDIRILDI. Bir seçim
+                çerçevesiydi; kamerada ekranın mekâna gerçekten oturup
+                oturmadığına bakılıyor ve bu çizgi hem görüntüyü bozuyor hem de
+                çekilen fotoğrafa giriyordu. Taşıma/ölçekleme yine aynı alandan
+                yapılıyor, sadece çizgi çizilmiyor.
+              */}
             </div>
           </div>
         )}
@@ -642,6 +658,27 @@ export default function ArView({
           <span className="text-white text-[13px] font-semibold">{t('ar.title')}</span>
 
           <div className="ml-auto flex items-center gap-2.5">
+            {/* Ölçüleri göster/gizle — fotoğraf çekmeden önce sadeleştirmek için */}
+            <button
+              type="button"
+              onClick={() => setOlculer((o) => !o)}
+              aria-label={olculer ? t('tool.hideMeasures') : t('tool.showMeasures')}
+              title={olculer ? t('tool.hideMeasures') : t('tool.showMeasures')}
+              className={`rounded-full px-3 py-1.5 text-[13px] font-semibold border transition-colors ${
+                olculer
+                  ? 'border-white/30 text-white/85 hover:border-white/70'
+                  : 'border-white/70 bg-white/15 text-white'
+              }`}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="4" width="16" height="16" rx="1.5" />
+                  <line x1="4" y1="14" x2="14" y2="14" />
+                  <line x1="14" y1="4" x2="14" y2="20" />
+                </svg>
+                {olculer ? t('tool.hideMeasures') : t('tool.showMeasures')}
+              </span>
+            </button>
             {cekim && (
               <img
                 src={cekim}

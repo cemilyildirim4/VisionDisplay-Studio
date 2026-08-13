@@ -36,6 +36,7 @@ builder.Services.AddScoped<ICabinRepository, CabinRepository>();
 builder.Services.AddScoped<ISeriesRepository, SeriesRepository>();
 builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
 builder.Services.AddScoped<IChatLogRepository, ChatLogRepository>();
+builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
 builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
