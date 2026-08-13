@@ -320,7 +320,8 @@ const dict = {
   },
 
   // ---------- PDF ----------
-  'pdf.export': { tr: 'PDF olarak dışa aktar', en: 'Export PDF', ar: 'تصدير PDF' },
+  'pdf.export': { tr: 'Profesyonel PDF Raporu İndir', en: 'Download professional PDF report', ar: 'تنزيل تقرير PDF احترافي' },
+  'pdf.professional': { tr: 'Profesyonel PDF Raporu İndir', en: 'Download professional PDF report', ar: 'تنزيل تقرير PDF احترافي' },
 
   // ---------- Sıfırlama onayı ----------
   'reset.title': { tr: 'Tasarımı sıfırla', en: 'Reset design', ar: 'إعادة تعيين التصميم' },

@@ -2,8 +2,6 @@ using DisplayConfigurator.Application.DTOs;
 using DisplayConfigurator.Application.Engine;
 using DisplayConfigurator.Application.Interfaces;
 using DisplayConfigurator.Domain.Entities;
-using DisplayConfigurator.Infrastructure.Pdf;
-using QuestPDF.Fluent;
 
 namespace DisplayConfigurator.Infrastructure.Services;
 
@@ -11,13 +9,16 @@ public class ConfigurationService : IConfigurationService
 {
     private readonly IConfigurationRepository _configurationRepository;
     private readonly ICabinRepository _cabinRepository;
+    private readonly IPdfReportService _pdfReportService;
 
     public ConfigurationService(
-        IConfigurationRepository configurationRepository, 
-        ICabinRepository cabinRepository)
+        IConfigurationRepository configurationRepository,
+        ICabinRepository cabinRepository,
+        IPdfReportService pdfReportService)
     {
         _configurationRepository = configurationRepository;
         _cabinRepository = cabinRepository;
+        _pdfReportService = pdfReportService;
     }
 
     public async Task<PagedResultDto<ConfigurationResponseDto>> GetPagedAsync(PagedQueryDto query)
@@ -111,20 +112,21 @@ public class ConfigurationService : IConfigurationService
         var configDto = await GetByIdAsync(id);
         if (configDto == null) return null;
 
-        var document = new SpecSheetDocument(configDto);
-        return document.GeneratePdf();
+        Cabin? cabin = configDto.CabinId > 0
+            ? await _cabinRepository.GetByIdAsync(configDto.CabinId)
+            : null;
+
+        return _pdfReportService.Generate(configDto, extras: null, cabin);
     }
 
-    public async Task<byte[]> GenerateSpecSheetPdfFromDtoAsync(CreateConfigurationDto dto)
+    public async Task<byte[]> GenerateSpecSheetPdfFromDtoAsync(CreateConfigurationDto dto, PdfReportExtras? extras = null)
     {
         var cabin = await _cabinRepository.GetByIdAsync(dto.CabinId);
         if (cabin == null)
             throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
 
         var configDto = CalculateConfigurationDto(dto, cabin);
-
-        var document = new SpecSheetDocument(configDto);
-        return document.GeneratePdf();
+        return _pdfReportService.Generate(configDto, extras, cabin);
     }
 
     // Gerçek hesaplama mantığı DisplayConfigurator.Application/Engine/ConfigurationCalculator.cs'e

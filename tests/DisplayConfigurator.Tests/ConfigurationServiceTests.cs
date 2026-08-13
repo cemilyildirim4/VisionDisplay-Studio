@@ -33,7 +33,15 @@ public class ConfigurationServiceTests
             PowerTypicalWatts = 200m,
             PowerMaxWatts = 600m,
         });
-        return new ConfigurationService(configRepo, cabinRepo);
+        return new ConfigurationService(configRepo, cabinRepo, new StubPdfReportService());
+    }
+
+    private sealed class StubPdfReportService : DisplayConfigurator.Application.Interfaces.IPdfReportService
+    {
+        public byte[] Generate(
+            ConfigurationResponseDto config,
+            PdfReportExtras? extras = null,
+            Cabin? cabin = null) => [0x25, 0x50, 0x44, 0x46]; // %PDF
     }
 
     [Fact]

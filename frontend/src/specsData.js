@@ -2,7 +2,7 @@
  * Teknik özellik hesapları ve biçimlendirme.
  *
  * Kendi dosyasında duruyor çünkü İKİ yer kullanıyor: ekrandaki pop-up
- * (SpecsSection.jsx) ve PDF çıktısı (SpecsPdf.jsx). Tek kaynak olsun ki
+ * (SpecsSection.jsx). Tek kaynak olsun ki
  * birinde değişip diğerinde unutulmasın.
  */
 

@@ -1146,7 +1146,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               {t('contact.heading')}
             </button>
 
-          {/* PDF dışa aktar */}
           <button
             type="button"
             disabled={!hasModel}
@@ -1157,7 +1156,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
           >
-            {t('pdf.export')}
+            {t('pdf.professional')}
           </button>
           </div>
           </Sigdir>
