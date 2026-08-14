@@ -587,7 +587,7 @@ function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, scre
 }
 
 function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenType, curveAmount, leftCols, rightCols, screens }) {
-  const { scene, camera } = useThree()
+  const { camera } = useThree()
   const cabinetCount = screens?.length
     ? screens.reduce((acc, s) => acc + Math.max(1, s.cols || 1) * Math.max(1, s.rows || 1), 0)
     : cols * rows
@@ -596,9 +596,23 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
     ? Math.max(...screens.map((s) => Math.max(1, s.rows || 1)))
     : rows
 
-  useMemo(() => {
-    onReady?.(scene, camera)
-  }, [scene, camera, onReady])
+  /*
+   * AR dışa aktarımı SAHNENİN TAMAMINI değil, yalnızca ÜRÜNÜ alır.
+   *
+   * Eskiden `scene` veriliyordu; içinde ContactShadows'un zemin gölgesi de
+   * vardı. O gölge bir render hedefine çiziliyor ve düzleme doku olarak
+   * bindiriliyor; GLTFExporter render hedefi dokusunu okuyamıyor ve
+   * "Invalid image type" diyerek tüm dışa aktarımı düşürüyordu. "AR'da Gör"
+   * her tıklamada bu yüzden hata veriyordu.
+   *
+   * Zaten yalnızca ürün gitmeli: gölge, ortam ışığı ve sahne lambaları
+   * AR görüntüleyicisinin kendi ortamında yeniden üretiliyor; onları modele
+   * gömmek yanlış sonuç verirdi.
+   */
+  const urunRef = useRef(null)
+  useEffect(() => {
+    if (urunRef.current) onReady?.(urunRef.current, camera)
+  }, [camera, onReady, screens, cols, rows, screenType, content, contentUrl])
 
   return (
     <>
@@ -612,19 +626,21 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 4, 5]} intensity={1.1} castShadow />
 
-      <CabinetGrid
-        model={model}
-        cols={cols}
-        rows={rows}
-        content={content}
-        contentUrl={contentUrl}
-        detailLevel={detailLevel}
-        screenType={screenType}
-        curveAmount={curveAmount}
-        leftCols={leftCols}
-        rightCols={rightCols}
-        screens={screens}
-      />
+      <group ref={urunRef}>
+        <CabinetGrid
+          model={model}
+          cols={cols}
+          rows={rows}
+          content={content}
+          contentUrl={contentUrl}
+          detailLevel={detailLevel}
+          screenType={screenType}
+          curveAmount={curveAmount}
+          leftCols={leftCols}
+          rightCols={rightCols}
+          screens={screens}
+        />
+      </group>
 
       {/* Zemin gölgesi en yüksek ekranın altına oturur (çoklu ekranda boylar farklı) */}
       <ContactShadows position={[0, -(enYuksekRows * (model?.heightMm || 500)) / 2000 - 0.05, 0]} opacity={0.45} scale={10} blur={2} far={2} />
@@ -652,6 +668,27 @@ function useGlbAr() {
       // model-viewer web component'i yalnızca ihtiyaç anında yükleniyor
       // (dynamic import) — kullanılmıyorsa ana paketin boyutunu şişirmez.
       await import('@google/model-viewer')
+
+      /*
+       * İçerik görseli TextureLoader ile ASENKRON yükleniyor. Görsel daha
+       * inmeden dışa aktarılırsa dokunun `image`'ı boş oluyor ve exporter
+       * "No valid image data found" diyerek düşüyor. Sahne açılır açılmaz
+       * düğmeye basıldığında olabilecek bir yarış; kısa ve sınırlı bekleme
+       * yeterli, süre dolarsa yine de dışa aktarılır (doku o zaman atlanır).
+       */
+      await new Promise((resolve) => {
+        const bitis = performance.now() + 3000
+        const bak = () => {
+          let bekleyen = false
+          sceneRef.current.traverse((o) => {
+            const harita = o.material?.map
+            if (harita && !harita.image) bekleyen = true
+          })
+          if (!bekleyen || performance.now() > bitis) resolve()
+          else requestAnimationFrame(bak)
+        }
+        bak()
+      })
 
       const exporter = new GLTFExporter()
       const glb = await new Promise((resolve, reject) => {
@@ -735,7 +772,17 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
         </div>
       </div>
 
-      <Canvas shadows camera={{ position: [0, toplamH * 0.12, uzaklik], fov: 45, far: Math.max(100, uzaklik * 10) }} dpr={[1, 2]}>
+      {/*
+        preserveDrawingBuffer: PDF'e giden tasarım görseli html2canvas ile
+        alınıyor; WebGL tuvali çizim sonrası temizlenirse ekran görüntüsü
+        bomboş çıkar. Bu bayrak tamponu tutar, görsel PDF'e sağlam gider.
+      */}
+      <Canvas
+        shadows
+        gl={{ preserveDrawingBuffer: true }}
+        camera={{ position: [0, toplamH * 0.12, uzaklik], fov: 45, far: Math.max(100, uzaklik * 10) }}
+        dpr={[1, 2]}
+      >
         <SceneContent
           model={model}
           cols={Math.max(1, cols)}

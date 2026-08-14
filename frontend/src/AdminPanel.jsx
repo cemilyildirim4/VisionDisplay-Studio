@@ -56,7 +56,16 @@ const TAB_GROUPS = [
       { key: 'chatlogs', label: 'Sohbet Kayıtları' },
       { key: 'feedback', label: 'Geri Bildirimler' },
       { key: 'users', label: 'Kullanıcılar' },
-      { key: 'invites', label: 'Davet Kodları' },
+      /*
+       * Davet Kodları sekmesi KALDIRILDI. Kodların tek işlevi beta döneminde
+       * herkese açık formları kısıtlamaktı; Beta:Enabled kapalı olduğu için
+       * kapı zaten açık ve kodu girecek bir arayüz de hiç yapılmamıştı — yani
+       * üretilen kod hiçbir yerde kullanılamıyordu.
+       *
+       * Sunucu tarafı (api/invite-codes, BetaGate filtresi, invite_codes
+       * tablosu) YERİNDE DURUYOR. Beta kısıtlaması ileride açılmak istenirse
+       * yalnızca bu sekme ve kodu girme ekranı yazılır, veri kaybı olmaz.
+       */
     ],
   },
 ]
@@ -873,59 +882,6 @@ export default function AdminPanel() {
     }
   }, [])
 
-  // ---- Davet Kodları (Beta) ----
-  const [invites, setInvites] = useState([])
-  const [invitesLoading, setInvitesLoading] = useState(false)
-  const [invitesError, setInvitesError] = useState(null)
-  const [newInviteMaxUses, setNewInviteMaxUses] = useState(1)
-
-  const loadInvites = useCallback(async () => {
-    setInvitesLoading(true)
-    setInvitesError(null)
-    try {
-      const res = await apiFetch(`${API_URL}/api/invite-codes`, { headers: yetkiBasligi() })
-      if (res.status === 401) { oturumDustu(); return }
-      if (!res.ok) throw new Error('Davet kodları alınamadı.')
-      setInvites(await res.json())
-    } catch (e) {
-      setInvitesError(e.message)
-    } finally {
-      setInvitesLoading(false)
-    }
-  }, [])
-
-  const createInvite = async () => {
-    try {
-      const res = await apiFetch(`${API_URL}/api/invite-codes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
-        body: JSON.stringify({ maxUses: Number(newInviteMaxUses) || 1 }),
-      })
-      if (res.status === 401) { oturumDustu(); return }
-      if (!res.ok) throw new Error('Davet kodu oluşturulamadı.')
-      await loadInvites()
-    } catch (e) {
-      setInvitesError(e.message)
-    }
-  }
-
-  const removeInvite = (inv) => {
-    askConfirm(
-      'Davet kodunu sil',
-      `"${inv.code}" kodu silinecek. Bu kodla yeni giriş yapılamaz.`,
-      async () => {
-        try {
-          const res = await apiFetch(`${API_URL}/api/invite-codes/${inv.id}`, { method: 'DELETE', headers: yetkiBasligi() })
-          if (res.status === 401) { oturumDustu(); return }
-          if (!res.ok) throw new Error('Silinemedi.')
-          await loadInvites()
-        } catch (e) {
-          setInvitesError(e.message)
-        }
-      },
-    )
-  }
-
   // ---- Kullanıcılar (Admin / Dealer / Tester) ----
   const [users, setUsers] = useState([])
   const [usersLoading, setUsersLoading] = useState(false)
@@ -1045,7 +1001,6 @@ export default function AdminPanel() {
     if (tab === 'chatlogs') loadChatLogs(onlyUnanswered)
     if (tab === 'feedback') loadFeedback(onlyOpenFeedback)
     if (tab === 'configs') loadConfigs(1, '')
-    if (tab === 'invites') loadInvites()
     if (tab === 'users') loadUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, girisYapildi])
@@ -1192,7 +1147,6 @@ export default function AdminPanel() {
                       <button type="button" onClick={() => setTab('cabins')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Modeller</button>
                       <button type="button" onClick={() => setTab('quotes')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Teklifler</button>
                       <button type="button" onClick={() => setTab('analytics')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Analitik</button>
-                      <button type="button" onClick={() => setTab('invites')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Davet Kodları</button>
                     </div>
                   </div>
                   <div className="border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 bg-white dark:bg-[#161a21]">
@@ -2057,59 +2011,6 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* ================= DAVET KODLARI (BETA) ================= */}
-        {tab === 'invites' && (
-          <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] gap-4">
-              <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                {invitesLoading ? 'Yükleniyor…' : `${invites.length} davet kodu`} — Beta:Enabled açıkken herkese açık formlar bu kodu ister
-              </span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="1"
-                  value={newInviteMaxUses}
-                  onChange={(e) => setNewInviteMaxUses(e.target.value)}
-                  className="w-20 border border-neutral-300 dark:border-[#39414f] rounded-lg px-2 py-1.5 text-sm bg-transparent"
-                  title="Maksimum kullanım sayısı"
-                />
-                <button type="button" onClick={createInvite} className="rounded-full bg-brand text-white text-sm font-semibold px-4 py-1.5 hover:bg-brand-dark">
-                  + Kod üret
-                </button>
-              </div>
-            </div>
-            {invitesError && <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{invitesError}</div>}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
-                  <tr>
-                    {['Kod', 'Kullanım', 'Son Kullanma', 'Oluşturulma', ''].map((h) => (
-                      <th key={h} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {invites.map((inv) => (
-                    <tr key={inv.id} className="border-t border-neutral-100 dark:border-[#242b36] hover:bg-neutral-50 dark:hover:bg-[#1b2029]">
-                      <td className="px-4 py-2.5 font-mono font-medium">{inv.code}</td>
-                      <td className="px-4 py-2.5">{inv.usedCount} / {inv.maxUses}</td>
-                      <td className="px-4 py-2.5 text-neutral-500 dark:text-neutral-400">{inv.expiresAt ? dt(inv.expiresAt) : 'Süresiz'}</td>
-                      <td className="px-4 py-2.5 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">{dt(inv.createdAt)}</td>
-                      <td className="px-4 py-2.5 text-right">
-                        <button type="button" onClick={() => removeInvite(inv)} className="text-red-600 hover:underline">Sil</button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!invitesLoading && invites.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">Henüz davet kodu yok.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

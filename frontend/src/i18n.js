@@ -367,7 +367,7 @@ const dict = {
 
   // ---------- PDF ----------
   'pdf.export': { tr: 'Profesyonel PDF Raporu İndir', en: 'Download professional PDF report', ar: 'تنزيل تقرير PDF احترافي' },
-  'pdf.professional': { tr: 'Profesyonel PDF Raporu İndir', en: 'Download professional PDF report', ar: 'تنزيل تقرير PDF احترافي' },
+  'pdf.professional': { tr: 'PDF Raporu Al', en: 'Get PDF report', ar: 'الحصول على تقرير PDF' },
 
   // ---------- Sıfırlama onayı ----------
   'reset.title': { tr: 'Tasarımı sıfırla', en: 'Reset design', ar: 'إعادة تعيين التصميم' },
@@ -503,7 +503,7 @@ const dict = {
   'exp.generating': { tr: 'PDF oluşturuluyor…', en: 'Generating PDF…', ar: 'جارٍ إنشاء PDF…' },
   'exp.error': { tr: 'PDF oluşturulurken bir sorun oluştu.', en: 'A problem occurred while generating the PDF.', ar: 'حدثت مشكلة أثناء إنشاء PDF.' },
   'exp.csv': { tr: 'CSV', en: 'CSV', ar: 'CSV' },
-  'exp.csvHint': { tr: 'Yapılandırma özetini Excel/ERP için CSV olarak indir', en: 'Download the configuration summary as CSV for Excel/ERP', ar: 'تنزيل ملخص التهيئة بصيغة CSV' },
+  'exp.csvHint': { tr: 'Teknik özellikleri Excel (.xlsx) olarak indir', en: 'Download the technical specifications as Excel (.xlsx)', ar: 'تنزيل المواصفات الفنية بصيغة Excel (.xlsx)' },
   'exp.reportTitle': { tr: 'Ekran Yapılandırma Raporu', en: 'Screen Configuration Report', ar: 'تقرير تهيئة الشاشة' },
   'exp.reportSub': { tr: 'Simülasyon çıktısı', en: 'Simulation output', ar: 'مخرجات المحاكاة' },
   'exp.secConfig': { tr: 'Yapılandırma', en: 'Configuration', ar: 'التهيئة' },

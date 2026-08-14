@@ -37,6 +37,108 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms))
 }
 
+/* --------------------------------------------------------------------------
+ * OTURUM KÖPRÜSÜ
+ *
+ * Erişim jetonu 15 dakikalık, yanında uzun ömürlü bir refresh token duruyor.
+ * Refresh uç noktası (POST /api/auth/refresh) baştan beri vardı ama ÇAĞIRAN
+ * yoktu: 15 dakika sonra her istek 401 dönüyor, arayüz de "oturumunuzun süresi
+ * dolmuş" diyordu. Oysa oturum geçerliydi, yalnızca jeton tazelenmiyordu.
+ *
+ * Bu köprü SessionProvider tarafından dolduruluyor. apiClient React ağacının
+ * dışında olduğu için bağlamı doğrudan okuyamaz; oturumu okuyup yazan iki
+ * fonksiyonu buraya bırakmak en az bağ kuran yol.
+ * -------------------------------------------------------------------------- */
+const SESSION_KEY = 'vds-session'
+
+/*
+ * Köprü kurulmamışsa oturum doğrudan localStorage'dan okunur/yazılır.
+ *
+ * Yalnız savunma amaçlı bir yedek değil, gereklilik: bu modül React ağacından
+ * bağımsız yükleniyor ve köprüyü SessionProvider bir effect içinde kuruyor.
+ * Modül sırası ya da geliştirmedeki sıcak yeniden yükleme (apiClient yeniden
+ * değerlendirilip SessionProvider'ın effect'i tekrar çalışmazsa) yüzünden
+ * köprü boş kalabiliyor; o durumda istekler sessizce imzasız gidiyor ve teklif
+ * kayıtları yine sahipsiz düşüyordu. localStorage her koşulda orada.
+ */
+const yedekKopru = {
+  oku: () => {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY)
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  },
+  yaz: (next) => {
+    try {
+      if (next) localStorage.setItem(SESSION_KEY, JSON.stringify(next))
+      else localStorage.removeItem(SESSION_KEY)
+    } catch {
+      /* ignore */
+    }
+  },
+}
+
+let oturumKopru = yedekKopru
+
+export function setSessionBridge({ oku, yaz }) {
+  // Köprü oturumu okuyamıyorsa (henüz kurulmamış/boş) yedeğe düşülür
+  oturumKopru = {
+    oku: () => oku() ?? yedekKopru.oku(),
+    yaz: (next) => {
+      yedekKopru.yaz(next)
+      yaz(next)
+    },
+  }
+}
+
+// Aynı anda birden çok istek 401 alırsa tek bir tazeleme yapılır; hepsi onu
+// bekler. Yoksa her istek ayrı refresh denerdi ve sunucu jetonu rotasyona
+// soktuğu için ilki hariç hepsi geçersiz jetonla başarısız olurdu.
+let tazelemeSozu = null
+
+async function jetonTazele() {
+  const oturum = oturumKopru.oku()
+  if (!oturum?.refreshToken) return null
+
+  tazelemeSozu ??= (async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: oturum.refreshToken }),
+      })
+      if (!res.ok) {
+        // Refresh de reddedildi: oturum gerçekten bitmiş. Kayıtlı jetonları
+        // temizliyoruz ki arayüz "giriş yapın" durumuna düşsün.
+        if (res.status === 401) oturumKopru.yaz(null)
+        return null
+      }
+      const data = await res.json()
+      const yeni = {
+        ...oturum,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        role: data.role || oturum.role,
+        email: data.email || oturum.email,
+        displayName: data.displayName || oturum.displayName,
+      }
+      oturumKopru.yaz(yeni)
+      return yeni.accessToken
+    } catch {
+      return null
+    } finally {
+      // Bir sonraki 401 yeniden denesin diye kilit bırakılıyor
+      setTimeout(() => {
+        tazelemeSozu = null
+      }, 0)
+    }
+  })()
+
+  return tazelemeSozu
+}
+
 function isSafeMethod(method) {
   const m = (method || 'GET').toUpperCase()
   return m === 'GET' || m === 'HEAD' || m === 'OPTIONS'
@@ -69,11 +171,18 @@ async function isNonRetriableAppError(response) {
 /**
  * fetch sarmalayıcısı. İmza fetch ile uyumlu: apiFetch(url, init).
  * init.retry ile deneme sayısı override edilebilir (varsayılan 3).
+ * init.auth true ise istek oturum jetonuyla imzalanır; jeton eskimişse
+ * (401) bir kez tazelenip istek tekrarlanır.
  */
 export async function apiFetch(input, init = {}) {
   const maxRetries = init.retry ?? DEFAULT_RETRIES
-  const { retry: _r, ...fetchInit } = init
+  const { retry: _r, auth = false, ...fetchInit } = init
   const method = fetchInit.method || 'GET'
+
+  if (auth) {
+    const jeton = oturumKopru.oku()?.accessToken
+    if (jeton) fetchInit.headers = { ...fetchInit.headers, Authorization: `Bearer ${jeton}` }
+  }
 
   // Göreli yol ise API_URL önekle (proxy kullanılıyorsa API_URL '' olabilir)
   let url = input
@@ -85,6 +194,7 @@ export async function apiFetch(input, init = {}) {
 
   let lastError = null
   let lastResponse = null
+  let tazelendiMi = false
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -100,7 +210,20 @@ export async function apiFetch(input, init = {}) {
       const timer = setTimeout(() => controller.abort(), timeoutMs)
 
       try {
-        const res = await fetch(url, { ...fetchInit, signal: controller.signal })
+        let res = await fetch(url, { ...fetchInit, signal: controller.signal })
+
+        // Jeton eskimişse bir kez tazeleyip aynı isteği tekrarla. Yalnızca
+        // imzalı isteklerde ve tek sefer: tazelemeden sonra da 401 geliyorsa
+        // sorun jeton değil, yetki demektir.
+        if (auth && res.status === 401 && !tazelendiMi) {
+          tazelendiMi = true
+          const yeniJeton = await jetonTazele()
+          if (yeniJeton) {
+            fetchInit.headers = { ...fetchInit.headers, Authorization: `Bearer ${yeniJeton}` }
+            res = await fetch(url, { ...fetchInit, signal: controller.signal })
+          }
+        }
+
         lastResponse = res
 
         if (await isNonRetriableAppError(res)) {

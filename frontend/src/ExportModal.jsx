@@ -5,6 +5,7 @@ import { fmt } from './specsData.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import PrivacyModal from './PrivacyModal.jsx'
 import { API_URL, apiFetch } from './apiClient.js'
+import { rowsToXlsxBlob } from './xlsx.js'
 
 async function captureScreenPreview() {
   const el = document.getElementById('pdf-onizleme')
@@ -102,18 +103,32 @@ export default function ExportModal({ open, onClose, summary }) {
         )
       : [`${summary.cols} ${t('screen.columns')} × ${summary.rows} ${t('screen.rows')} (${t(`screen.${summary.screenType}`)})`]
 
-  const handleCsvExport = () => {
+  // Ekran t\u00FCr\u00FC ve \u0131zgara: tabloda kendi sat\u0131rlar\u0131n\u0131 alacak bi\u00E7imde
+  const screenTypesText = coklu
+    ? summary.screens.map((s) => t(`screen.${s.type || 'flat'}`)).join(' \u00B7 ')
+    : t(`screen.${summary.screenType || 'flat'}`)
+  const gridText = liste.map((s) => `${s.cols} x ${s.rows}`).join(' \u00B7 ')
+
+  /*
+   * TEKN\u0130K \u00D6ZELL\u0130K TABLOSU \u2014 .xlsx.
+   *
+   * Eskiden CSV'ydi ve m\u00FC\u015Fteri bilgileriyle (ad, telefon, e-posta, adres)
+   * ba\u015Fl\u0131yordu. Bu dosya ERP'ye/teknik ekibe giden bir \u015Fartname; ki\u015Fisel
+   * veriyi oraya ta\u015F\u0131man\u0131n bir gere\u011Fi yok, teklif bilgileri zaten PDF'te.
+   * Art\u0131k yaln\u0131zca teknik sat\u0131rlar var ve dosya ger\u00E7ek bir Excel dosyas\u0131 \u2014
+   * Excel'in "bu bi\u00E7imde \u00F6zellikler kaybolabilir" uyar\u0131s\u0131 da b\u00F6ylece ge\u00E7ti.
+   */
+  const handleExcelExport = () => {
     const rows = [
-      [t('exp.customer'), customer || ''],
-      [t('exp.phone'), phone || ''],
-      [t('exp.email'), email || ''],
-      [t('exp.address'), address || ''],
+      [t('sp.title'), ''],
       [t('sp.model'), summary.modelCode || ''],
       [t('exp.layout'), coklu ? `${t('exp.multi')} (${liste.length})` : t('exp.single')],
+      [t('screen.type'), screenTypesText],
+      [t('sp.screenConfig'), gridText],
       [t('exp.screenSize'), `${fmt(toplamWm, 2)} x ${fmt(enYuksekHm, 2)} m`],
       [t('exp.signal'), summary.resolution || ''],
       [t('exp.pixels'), `${fmt(pikselW)} x ${fmt(pikselH)}`],
-      [t('sp.totalCabinets'), fmt(toplamKabin)],
+      [t('sp.totalCabinets'), toplamKabin],
       [t('sp.area'), `${fmt(toplamAlan, 2)} m2`],
       [t('sp.weight'), `${fmt(agirlik, 1)} kg`],
       [t('sp.viewingDistance'), izleme ? `${fmt(izleme, 1)} m` : ''],
@@ -123,12 +138,11 @@ export default function ExportModal({ open, onClose, summary }) {
       [t('exp.docNo'), belgeNo],
       [t('exp.date'), tarih],
     ]
-    const csv = '\uFEFF' + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const blob = rowsToXlsxBlob(rows, { sheetName: t('sp.title'), colWidths: [34, 42] })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `yapilandirma-raporu-${belgeNo}.csv`
+    a.download = `teknik-ozellikler-${belgeNo}.xlsx`
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -184,8 +198,15 @@ export default function ExportModal({ open, onClose, summary }) {
       a.remove()
       URL.revokeObjectURL(url)
 
+      /*
+       * auth: true — kaydın SAHİBİ olması için. Sunucu teklifi yazarken
+       * UserId'yi jetondaki kimlikten alıyor; bu istek imzasız gittiği için
+       * kayıtlar sahipsiz (UserId = null) düşüyor ve "Tekliflerim" listesi
+       * (GET /api/quotes/mine kullanıcıya göre süzüyor) hep boş kalıyordu.
+       */
       apiFetch(`${API_URL}/api/quotes`, {
         method: 'POST',
+        auth: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerName: customer || null,
@@ -208,6 +229,7 @@ export default function ExportModal({ open, onClose, summary }) {
       if (summary.screenMode !== 'multi' && model.id) {
         apiFetch(`${API_URL}/api/configurations`, {
           method: 'POST',
+          auth: true,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             projectName,
@@ -291,7 +313,7 @@ export default function ExportModal({ open, onClose, summary }) {
           <button
             type="button"
             disabled={!consent || busy}
-            onClick={handleCsvExport}
+            onClick={handleExcelExport}
             title={t('exp.csvHint')}
             className={`rounded-full px-4 py-3 text-sm font-semibold border transition-colors ${
               consent && !busy
