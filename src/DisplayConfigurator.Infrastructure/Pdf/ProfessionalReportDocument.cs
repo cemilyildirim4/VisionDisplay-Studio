@@ -62,13 +62,46 @@ public class ProfessionalReportDocument : IDocument
     {
         if (_extras.PreviewImage is { Length: > 0 })
         {
-            container.AlignCenter().AlignMiddle()
-                .Image(_extras.PreviewImage)
-                .FitArea();
+            container.Column(col =>
+            {
+                col.Item().AlignCenter().AlignMiddle()
+                    .Image(_extras.PreviewImage)
+                    .FitArea();
+                col.Item().Element(DrawScreenTypeLegend);
+            });
             return;
         }
 
-        container.AlignCenter().AlignMiddle().Element(DrawSchematic);
+        container.Column(col =>
+        {
+            col.Item().AlignCenter().AlignMiddle().Element(DrawSchematic);
+            col.Item().Element(DrawScreenTypeLegend);
+        });
+    }
+
+    /// <summary>
+    /// Görselin altındaki ekran türü künyesi. Çizimde L tipi ile düz ekranı
+    /// ayıran şey köşedeki kırılma; geniş ve alçak bir şeritte gözden kaçıyor.
+    /// Tür burada yazıyla da duruyor — çoklu ekranda her ekran ayrı ayrı.
+    /// </summary>
+    private void DrawScreenTypeLegend(IContainer container)
+    {
+        container.PaddingTop(10).Column(col =>
+        {
+            col.Item().Text("EKRAN TÜRÜ").FontSize(7).Bold().FontColor(Colors.Grey.Darken1);
+
+            if (!string.IsNullOrWhiteSpace(_extras.ScreensSummary))
+            {
+                // Çoklu ekran: "Ekran 01: 4 Sütun × 3 Satır (İç L Tipi) · Ekran 02: …"
+                foreach (var parca in _extras.ScreensSummary.Split('·', StringSplitOptions.RemoveEmptyEntries))
+                    col.Item().PaddingTop(2).Text(parca.Trim()).FontSize(9).Bold();
+                return;
+            }
+
+            col.Item().PaddingTop(2)
+                .Text($"{Math.Max(1, _config.Cols)} × {Math.Max(1, _config.Rows)} — {ScreenTypeLabel(_extras.ScreenType)}")
+                .FontSize(9).Bold();
+        });
     }
 
     private void DrawSchematic(IContainer container)
@@ -126,18 +159,25 @@ public class ProfessionalReportDocument : IDocument
         });
     }
 
+    /// <summary>
+    /// İç L tipi: iki kanat ortadaki dikişte köşe yapar. Şematikte kanatlar
+    /// yan yana, aralarında kalın köşe dikişi ve kanat adlarıyla çizilir.
+    /// </summary>
+    /// <remarks>
+    /// Eskiden sol kanat tek sütuna indiriliyor, sağ kanat yarım yükseklikte
+    /// çiziliyor ve araya <c>Extend()</c> konuyordu. Extend, sabit yükseklikli
+    /// satırın içinde sınırsız büyüyüp çizimi ikinci bir sayfaya taşırıyordu —
+    /// L tipi seçili her raporda fazladan boş sayfa çıkmasının sebebi buydu.
+    /// </remarks>
     private void DrawLShape(IContainer box, int cols, int rows)
     {
         int left = Math.Max(1, (int)Math.Ceiling(cols / 2.0));
         int right = Math.Max(1, cols - left);
         box.Row(row =>
         {
-            row.RelativeItem(left).Element(b => DrawGrid(b, 1, rows));
-            row.RelativeItem(right).Column(c =>
-            {
-                c.Item().Extend();
-                c.Item().Element(b => DrawGrid(b, Math.Max(1, right), Math.Max(1, rows / 2)));
-            });
+            row.RelativeItem(left).Element(b => DrawGrid(b, left, rows));
+            row.ConstantItem(4).Background(BrandOrange);
+            row.RelativeItem(right).Element(b => DrawGrid(b, right, rows));
         });
     }
 
@@ -268,13 +308,12 @@ public class ProfessionalReportDocument : IDocument
                 column.Item().Text(_extras.Message).FontSize(9);
             }
 
-            if (!string.IsNullOrWhiteSpace(_extras.ScreensSummary))
-            {
-                column.Item().PaddingTop(6).Text("Ekran düzeni").FontSize(8).FontColor(Colors.Grey.Darken1);
-                column.Item().Text(_extras.ScreensSummary).FontSize(9);
-            }
+            // Ekran düzeni dökümü ARTIK GÖRSEL SAYFASINDA (bkz.
+            // DrawScreenTypeLegend). Çizimin altında dururken okunuyor;
+            // burada ayrıca yazınca hem tekrar oluyor hem de teknik tabloyu
+            // üçüncü sayfaya itiyordu.
 
-            column.Item().PaddingTop(10).Background(Color.FromHex("#f5f7fb")).Border(1).BorderColor(Color.FromHex("#e2e8f0")).Padding(10).Row(row =>
+            column.Item().PaddingTop(8).Background(Color.FromHex("#f5f7fb")).Border(1).BorderColor(Color.FromHex("#e2e8f0")).Padding(8).Row(row =>
             {
                 Summary(row, "EKRAN DÜZENİ", $"{cols} Sütun × {rows} Satır", $"Toplam {total} ünite");
                 Summary(row, "KÖŞEGEN", $"{diag:F0}\"", Empty(_config.AspectRatio, "—"));
@@ -283,8 +322,8 @@ public class ProfessionalReportDocument : IDocument
             });
 
             // ---- 2. TEKNİK TABLO ----
-            column.Item().PaddingTop(16).Text("Teknik özellikler").FontSize(12).Bold().FontColor(BrandBlue);
-            column.Item().PaddingTop(6).Table(table =>
+            column.Item().PaddingTop(12).Text("Teknik özellikler").FontSize(12).Bold().FontColor(BrandBlue);
+            column.Item().PaddingTop(5).Table(table =>
             {
                 table.ColumnsDefinition(c =>
                 {
@@ -335,7 +374,7 @@ public class ProfessionalReportDocument : IDocument
                 }
             });
 
-            column.Item().PaddingTop(14).Row(row =>
+            column.Item().PaddingTop(10).Row(row =>
             {
                 row.RelativeItem().Column(c =>
                 {
@@ -387,16 +426,16 @@ public class ProfessionalReportDocument : IDocument
 
     private static void Kv(TableDescriptor table, string k, string v)
     {
-        table.Cell().PaddingVertical(3).PaddingRight(6).Text(k).FontSize(8).FontColor(Colors.Grey.Darken1);
-        table.Cell().PaddingVertical(3).Text(v).FontSize(9).Bold();
+        table.Cell().PaddingVertical(2).PaddingRight(6).Text(k).FontSize(8).FontColor(Colors.Grey.Darken1);
+        table.Cell().PaddingVertical(2).Text(v).FontSize(8.5f).Bold();
     }
 
     private static void AddRow(TableDescriptor table, string label, string value, ref bool isAlternate)
     {
         var bg = isAlternate ? Color.FromHex("#f8fafc") : Colors.White;
         isAlternate = !isAlternate;
-        table.Cell().Background(bg).BorderBottom(1).BorderColor(Color.FromHex("#e2e8f0")).Padding(5).Text(label).FontSize(9);
-        table.Cell().Background(bg).BorderBottom(1).BorderColor(Color.FromHex("#e2e8f0")).Padding(5).Text(value).Bold().FontSize(9);
+        table.Cell().Background(bg).BorderBottom(1).BorderColor(Color.FromHex("#e2e8f0")).PaddingVertical(2.6f).PaddingHorizontal(5).Text(label).FontSize(8.5f);
+        table.Cell().Background(bg).BorderBottom(1).BorderColor(Color.FromHex("#e2e8f0")).PaddingVertical(2.6f).PaddingHorizontal(5).Text(value).Bold().FontSize(8.5f);
     }
 
     private static long ParsePixels(string? resolution, out string mpxText)

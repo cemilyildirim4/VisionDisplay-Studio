@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { setSessionBridge } from './apiClient.js'
 
 /**
  * Oturum / rol bağlamı.
@@ -62,6 +63,29 @@ export function SessionProvider({ children }) {
       return false
     }
   })
+
+  /*
+   * API istemcisine oturumu okuyup yazma yolu ver. apiClient React ağacının
+   * dışında yaşıyor; jetonu buradan alıyor ve 401'de tazeleyip yenisini
+   * buraya geri yazıyor. Ref üzerinden okunuyor ki köprü her oturum
+   * değişiminde yeniden kurulmasın ve okuyan hep güncel değeri görsün.
+   */
+  const oturumRef = useRef(session)
+  oturumRef.current = session
+  useEffect(() => {
+    setSessionBridge({
+      oku: () => oturumRef.current,
+      yaz: (next) => {
+        setSession(next)
+        try {
+          if (next) localStorage.setItem(SESSION_KEY, JSON.stringify(next))
+          else localStorage.removeItem(SESSION_KEY)
+        } catch {
+          /* ignore */
+        }
+      },
+    })
+  }, [])
 
   // Yönetim paneli başka sekmede/oturumda parola veya JWT doğrularsa burayı güncelle.
   useEffect(() => {

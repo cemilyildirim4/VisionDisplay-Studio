@@ -135,9 +135,10 @@ export default function ControlCenter() {
     setTeklifYukleniyor(true)
     setTeklifHata(null)
     try {
-      const res = await fetch(`${API_URL}/api/quotes/mine`, {
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      })
+      // apiFetch + auth: jetonu kendisi ekler, eskimişse tazeleyip tekrarlar.
+      // Düz fetch kullanılırken 15 dakikalık jeton dolar dolmaz liste
+      // "oturumunuzun süresi dolmuş" hatasına düşüyordu.
+      const res = await apiFetch(`${API_URL}/api/quotes/mine`, { auth: true })
       if (!res.ok) {
         setTeklifHata(res.status === 401 ? t('cc.quotes.needLogin') : t('cc.quotes.loadFailed'))
         return

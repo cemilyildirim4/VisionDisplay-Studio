@@ -1,9 +1,10 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, cabinetGridStyle, bezelPxFor, bezelGapStyle } from './content.js'
 import { videoSrcFor } from './videoContent.js'
+import { useLang } from './useLang.js'
 
 /**
  * Çalışma alanı önizlemesi.
@@ -612,6 +613,8 @@ export default function WallPreview({
    * yerleştirilmiş görmek istiyor, kesitini değil. Sahne yokken hepsi eskisi
    * gibi görünür.
    */
+  const { t } = useLang()
+
   const VL = sahneVar ? () => null : VLine
   const HL = sahneVar ? () => null : HLine
 
@@ -627,13 +630,18 @@ export default function WallPreview({
    */
   const dar = size.w > 0 && size.w < 560
 
-  // Çoklu ekranda içerik katmanını ekran şekline kırpan maskenin kimliği.
-  // useId: aynı sayfada birden çok önizleme olursa maskeler karışmasın.
-  const clipId = `wp-clip-${useId().replace(/:/g, '')}`
   const olcekRef = useRef(null)
   useEffect(() => {
     if (olcekRef.current != null) onPxPerM?.(olcekRef.current)
   })
+
+  /*
+   * Ekran TÜRÜ etiketi. Çizimde L tipi ile düz ekranı ayıran tek şey köşedeki
+   * %10'luk kırılmaydı; geniş ve alçak bir şeritte bu eğim gözden kaçıyor,
+   * PDF'e giden görselde de ekran düz sanılıyordu. Tür artık adının altında
+   * yazıyla duruyor — çizim ne kadar ince olursa olsun okunuyor.
+   */
+  const turAdi = (tip) => t(`screen.${tip || 'flat'}`)
 
   const cw = (model.widthMm || 500) / 1000
   const ch = (model.heightMm || 500) / 1000
@@ -723,21 +731,44 @@ export default function WallPreview({
      * (kısa ekranın üstü, L tipinin köşe üçgenleri) duvar görünmeli. Eskiden
      * oralara beyaz kutu çiziliyordu; mekân seçiliyken duvarın üstüne beyaz
      * leke basıyordu. Kırpma hem doğru hem de mekânla uyumlu.
+     *
+     * MASKE NEDEN SVG DEĞİL DE polygon(): kırpma eskiden bir <clipPath> öğesine
+     * `clip-path: url(#...)` ile bağlanıyordu. Ekranda doğru görünüyordu ama
+     * PDF'e giden ekran görüntüsünü alan html2canvas url() biçimini tanımıyor;
+     * kırpmayı sessizce atlıyor ve L tipi ekranlar PDF'te DÜZ dikdörtgen
+     * çıkıyordu. html2canvas polygon() biçimini çiziyor — maske artık tek bir
+     * kapalı çokgen olarak, şeridin dış hattı boyunca üretiliyor.
+     *
+     * Dış hat: üst kenar boyunca soldan sağa (L tipinde köşe dikişinde aşağı
+     * kırılarak, komşu ekranlar farklı yükseklikteyse dikey basamak yaparak),
+     * sağ kenardan aşağı, alt kenar boyunca sağdan sola geri. Ekranlar bitişik
+     * ve alta hizalı olduğu için bu hat kesintisiz kapanır.
      */
-    const maskePath = placed
-      .map((s) => {
-        const y0 = maxHpx - s.hPx
-        const x0 = s.xStart
-        if ((s.type || 'flat') !== 'lshape') {
-          return `M${x0},${y0} H${x0 + s.wPx} V${y0 + s.hPx} H${x0} Z`
-        }
-        const lc = Math.max(1, s.leftCols || Math.ceil(Math.max(1, s.cols) / 2))
-        const rc = Math.max(1, s.rightCols || Math.max(1, Math.max(1, s.cols) - lc))
-        const lw = s.wPx * (lc / (lc + rc))
+    const kanatBolmesi = (s) => {
+      const lc = Math.max(1, s.leftCols || Math.ceil(Math.max(1, s.cols) / 2))
+      const rc = Math.max(1, s.rightCols || Math.max(1, Math.max(1, s.cols) - lc))
+      return s.wPx * (lc / (lc + rc))
+    }
+    const ust = []
+    const alt = []
+    placed.forEach((s) => {
+      const y0 = maxHpx - s.hPx
+      const x0 = s.xStart
+      const x1 = x0 + s.wPx
+      // Komşudan yükseklik farkı varsa bu iki nokta sınırda dikey basamağı yapar
+      ust.push([x0, y0])
+      if ((s.type || 'flat') === 'lshape') {
+        const lw = kanatBolmesi(s)
         const pY = (s.hPx * L_CORNER_PINCH_PCT) / 100
-        return `M${x0},${y0} L${x0 + lw},${y0 + pY} L${x0 + s.wPx},${y0} V${y0 + s.hPx} L${x0 + lw},${y0 + s.hPx - pY} L${x0},${y0 + s.hPx} Z`
-      })
-      .join(' ')
+        ust.push([x0 + lw, y0 + pY])
+        alt.push([x0 + lw, maxHpx - pY])
+      }
+      ust.push([x1, y0])
+      alt.push([x0, maxHpx], [x1, maxHpx])
+    })
+    // Alt kenar sağdan sola dönerken sıralama ters, L kırılmaları da yerinde kalsın
+    const altSirali = [...alt].sort((a, b) => b[0] - a[0])
+    const maskePolygon = `polygon(${[...ust, ...altSirali].map(([x, y]) => `${x.toFixed(2)}px ${y.toFixed(2)}px`).join(', ')})`
 
     return (
       <div ref={containerRef} className="relative w-full h-full flex items-center justify-center overflow-hidden">
@@ -752,30 +783,23 @@ export default function WallPreview({
               <div style={{ position: 'absolute', left: marginXpx, top: stripTop, width: totalWpx, height: maxHpx }}>
                 {/* z0: Tek içerik katmanı — tüm şeride yayılır, ekran şekline kırpılır */}
                 {useSingle && (
-                  <>
-                    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
-                      <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
-                        <path d={maskePath} />
-                      </clipPath>
-                    </svg>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        zIndex: 0,
-                        overflow: 'hidden',
-                        clipPath: `url(#${clipId})`,
-                        backgroundColor: '#0a0a0a',
-                        backgroundImage: spanImg || undefined,
-                        backgroundSize: `${totalWpx}px ${maxHpx}px`,
-                        backgroundRepeat: 'no-repeat',
-                      }}
-                    >
-                      {spanVideo && (
-                        <VideoLayer src={spanVideo} gw={totalWpx} gh={maxHpx} left={0} top={0} lit={spanLit} />
-                      )}
-                    </div>
-                  </>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      zIndex: 0,
+                      overflow: 'hidden',
+                      clipPath: maskePolygon,
+                      backgroundColor: '#0a0a0a',
+                      backgroundImage: spanImg || undefined,
+                      backgroundSize: `${totalWpx}px ${maxHpx}px`,
+                      backgroundRepeat: 'no-repeat',
+                    }}
+                  >
+                    {spanVideo && (
+                      <VideoLayer src={spanVideo} gw={totalWpx} gh={maxHpx} left={0} top={0} lit={spanLit} />
+                    )}
+                  </div>
                 )}
                 {/* z2: Ekranlar (tek görselde yalnız çerçeve; diğerinde kendi içerikleri) */}
                 <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'flex-end' }}>
@@ -833,7 +857,7 @@ export default function WallPreview({
                   const isTop = i % 2 === 0
                   const name = (
                     <span className="bg-brand text-white text-xs font-medium px-3 py-1 rounded-lg whitespace-nowrap">
-                      Ekran {String(i + 1).padStart(2, '0')}
+                      {t('screen.label')} {String(i + 1).padStart(2, '0')} · {turAdi(s.type)}
                     </span>
                   )
                   const meas = (
@@ -1035,6 +1059,16 @@ export default function WallPreview({
                 <SegH w={marginXpx} label={fmtU(marginXm)} muted />
                 <SegH w={screenW} label={fmtU(screenWm)} />
                 <SegH w={marginXpx} label={fmtU(marginXm)} muted />
+              </div>
+
+              {/* Ekran türü — çizimin altında, ölçülerle aynı hizada */}
+              <div
+                className="absolute flex justify-center"
+                style={{ left: marginXpx, top: marginYpx + screenH + 10, width: screenW }}
+              >
+                <span className="bg-brand text-white text-xs font-medium px-3 py-1 rounded-lg whitespace-nowrap">
+                  {turAdi(screenType)}
+                </span>
               </div>
 
               {/* Sağ ölçü etiketleri */}
