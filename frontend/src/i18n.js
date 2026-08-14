@@ -220,6 +220,7 @@ const dict = {
   'screen.curveAmount': { tr: 'Kavis miktarı', en: 'Curve amount', ar: 'مقدار الانحناء' },
   'screen.curveFlat': { tr: 'Düz', en: 'Flat', ar: 'مسطح' },
   'screen.curveMax': { tr: 'En fazla', en: 'Max', ar: 'الأقصى' },
+  'screen.curveArc': { tr: 'Yay açısı', en: 'Arc angle', ar: 'زاوية القوس' },
   'screen.curvedIn': { tr: 'İçe Kavisli', en: 'Concave Curved', ar: 'مقعرة' },
   'screen.lshape': { tr: 'İç L Tipi', en: 'Inner L-Type', ar: 'زاوية داخلية L' },
   'screen.orientation': { tr: 'Oryantasyon', en: 'Orientation', ar: 'الاتجاه' },

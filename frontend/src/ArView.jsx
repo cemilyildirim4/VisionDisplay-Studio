@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import html2canvas from 'html2canvas-pro'
 import { Screen } from './WallPreview.jsx'
 import { useLang } from './useLang.js'
+import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
 
 /**
  * AR / KAMERA SİMÜLASYON EKRANI
@@ -105,16 +106,8 @@ export default function ArView({
 
   const [ornekAcik, setOrnekAcik] = useState(false)
   const [hata, setHata] = useState(null)
-  /*
-   * ÖRNEK MEKÂNLAR — hazır arka planlar. Yeni bir tane eklemek için görseli
-   * public/ içine koyup buraya bir satır yazmak yeterli.
-   */
-  const ORNEKLER = [
-    { yol: '/ornek-toplanti.jpg', ad: 'ar.bgMeeting' },
-    { yol: '/ornek-toplanti-genis.jpg', ad: 'ar.bgMeetingWide' },
-    { yol: '/ornek-gri-oda.jpg', ad: 'ar.bgGreyRoom' },
-    { yol: '/ornek-koyu-oda.jpg', ad: 'ar.bgDarkRoom' },
-  ]
+  // Hazır arka planlar — 3D görünümüyle ortak liste (bkz. ornekMekanlar.js)
+  const ORNEKLER = ORNEK_MEKANLAR
   /*
    * Kamera açılamadığında ekran BOŞ KALMAZ: müşteri arka plana bir fotoğraf
    * koyup taşıma, boyutlandırma ve ölçüleri aynen kullanabilir. Kamerası

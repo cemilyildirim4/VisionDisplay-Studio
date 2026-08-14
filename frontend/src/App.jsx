@@ -23,7 +23,7 @@ import ArView from './ArView.jsx'
 // gömülürse ilk yükleme herkes için ağırlaşır. Bu yüzden "3D Görünüm" düğmesine
 // basılana kadar hiç indirilmez (kod bölme / code-splitting).
 const Scene3D = lazy(() => import('./Scene3D.jsx'))
-import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle } from './content.js'
+import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees } from './content.js'
 import { LANGUAGES } from './i18n.js'
 import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
 import { useLang } from './useLang.js'
@@ -835,6 +835,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           <div className="flex justify-between text-[13px] text-neutral-400 dark:text-neutral-500">
                             <span>{t('screen.curveFlat')}</span>
                             <span>{t('screen.curveMax')}</span>
+                          </div>
+                          {/*
+                            Yüzde tek başına anlamsız: "%60 kavis" kaç derece
+                            demek, kullanıcı bilemiyordu. Yüzde derinliği
+                            (sagitta) ölçer, açı ondan türer — karşılığını
+                            burada gösteriyoruz. Açı ekran boyutundan bağımsız,
+                            o yüzden kabin sayısı değişince de doğru kalır.
+                          */}
+                          <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
+                            {t('screen.curveArc')}: ≈{curveArcDegrees(curveAmount, screenType === 'curvedIn')}°
                           </div>
                         </div>
                       )}
