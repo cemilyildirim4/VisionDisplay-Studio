@@ -23,6 +23,26 @@ export const CONVEX_DEPTH_RATIO = 0.16 // dışa kavisli (konveks)
 export const curveDepthFor = (concave) => (concave ? CONCAVE_DEPTH_RATIO : CONVEX_DEPTH_RATIO)
 
 /**
+ * Kavis yüzdesinin karşılığı olan TOPLAM YAY AÇISI (derece).
+ *
+ * Yüzde doğrudan açı değildir: önce derinliğe (sagitta) çevrilir, açı ondan
+ * türer. Genişlik sadeleştiği için sonuç ekran boyutundan bağımsızdır —
+ * 3 kabinlik ve 12 kabinlik duvar aynı yüzdede aynı açıyı verir.
+ *
+ *   d = (%/100) × W × oran      R = W²/(8d) + d/2      açı = 2·asin(W/2R)
+ *
+ * Bu, Scene3D'deki `yayOlculeri` ile AYNI formül; burada yalnızca kullanıcıya
+ * gösterilecek sayıyı üretiyor (W = 1 alınmış hâli).
+ */
+export function curveArcDegrees(curveAmount, concave) {
+  const p = Math.max(0, Math.min(100, curveAmount)) / 100
+  const d = p * curveDepthFor(concave)
+  if (d <= 0) return 0
+  const R = 1 / (8 * d) + d / 2
+  return Math.round((2 * Math.asin(Math.min(1, 1 / (2 * R))) * 180) / Math.PI)
+}
+
+/**
  * LED panel görünümü — kapalı (görüntüsüz) gerçek panel gibi.
  * Neredeyse siyah yüzey; hafif degrade yalnızca panelin ışığa göre parlamasını taklit eder.
  */

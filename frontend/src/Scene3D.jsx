@@ -5,6 +5,7 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import * as THREE from 'three'
 import { useLang } from './useLang.js'
 import { curveDepthFor, DEFAULT_CONTENT_SRC } from './content.js'
+import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
 
 /**
  * GERÇEK 3D GÖRÜNÜM (react-three-fiber) — mevcut 2D Canvas/SVG önizlemenin
@@ -718,9 +719,62 @@ function useGlbAr() {
   return { onReady, exportAndOpen, close, viewerUrl, busy }
 }
 
+/** Alt bardaki arka plan düğmesi — kameradaki AracDugme ile aynı görünüm. */
+function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg min-w-[64px] transition-colors ${
+        aktif ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
+      }`}
+    >
+      <span className="text-[10px] uppercase tracking-wide">{etiket}</span>
+      <span className="text-[12px] font-semibold">{deger}</span>
+    </button>
+  )
+}
+
 export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens }) {
   const { t } = useLang()
   const { onReady, exportAndOpen, close, viewerUrl, busy } = useGlbAr()
+
+  /*
+   * ARKA PLAN — kameradaki (ArView) ile aynı mantık: sahnenin arkasına hazır
+   * bir mekân ya da kullanıcının kendi fotoğrafı konur. 3D tuvali saydam
+   * çizildiği için görsel doğrudan arkasından görünür; ekran gerçek bir odanın
+   * duvarında duruyormuş gibi değerlendirilebilir.
+   *
+   * Boşken arkada koyu stüdyo zemini kalır — eski davranış aynen korunuyor.
+   */
+  const [arkaFoto, setArkaFoto] = useState(null)
+  const [ornekAcik, setOrnekAcik] = useState(false)
+  const fotoRef = useRef(null)
+
+  /** Kendi fotoğrafını arka plan yap. */
+  const fotoSecildi = (e) => {
+    const f = e.target.files?.[0]
+    e.target.value = '' // aynı dosya tekrar seçilebilsin
+    if (!f) return
+    const okuyucu = new FileReader()
+    okuyucu.onload = () => {
+      setArkaFoto(okuyucu.result)
+      setOrnekAcik(false)
+    }
+    okuyucu.readAsDataURL(f)
+  }
+
+  /*
+   * Pencere kapanırken arka plan da temizlenir. Bileşen kapanınca sökülmüyor,
+   * yalnızca `open` false oluyor; temizlenmezse bir dahaki açılışta kullanıcı
+   * seçmediği hâlde eski fotoğrafla karşılaşıyor. (ArView'da da aynı durum
+   * yaşanmış ve orada da kapanışta temizlenmişti.)
+   */
+  const kapat = useCallback(() => {
+    setArkaFoto(null)
+    setOrnekAcik(false)
+    onClose?.()
+  }, [onClose])
 
   if (!open) return null
 
@@ -750,8 +804,14 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
 
   return (
     <div className="fixed inset-0 z-[60] bg-[#0b0d12]">
+      {/* Arka plan görseli — 3D tuvali saydam olduğu için sahnenin arkasında kalır */}
+      {arkaFoto && (
+        <img src={arkaFoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      )}
+      <input ref={fotoRef} type="file" accept="image/*" onChange={fotoSecildi} className="hidden" />
+
       <div className="absolute top-0 inset-x-0 z-10 flex items-center gap-3 px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
-        <button type="button" onClick={onClose} aria-label={t('ar.close')} className="text-white/90 hover:text-white p-1">
+        <button type="button" onClick={kapat} aria-label={t('ar.close')} className="text-white/90 hover:text-white p-1">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
@@ -799,9 +859,61 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
         <OrbitControls makeDefault enablePan={false} minDistance={0.8} maxDistance={Math.max(12, uzaklik * 3)} />
       </Canvas>
 
-      <p className="absolute bottom-4 inset-x-0 text-center text-[11px] text-white/50 px-8 m-0 pointer-events-none">
-        {t('scene3d.hint')}
-      </p>
+      {/*
+        ÖRNEK MEKÂN ŞERİDİ — alt barın üstünde açılıp kapanır; kameradaki
+        şeridin birebir karşılığı, aynı görselleri kullanır.
+      */}
+      {ornekAcik && (
+        <div className="absolute bottom-24 inset-x-0 px-4">
+          <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
+            {ORNEK_MEKANLAR.map((o) => (
+              <button
+                key={o.yol}
+                type="button"
+                onClick={() => {
+                  setArkaFoto(o.yol)
+                  setOrnekAcik(false)
+                }}
+                className={`shrink-0 w-24 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                  arkaFoto === o.yol ? 'border-brand' : 'border-white/40 hover:border-white/80'
+                }`}
+                title={t(o.ad)}
+              >
+                <img src={o.yol} alt={t(o.ad)} className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------------- ALT BAR */}
+      <div className="absolute bottom-0 inset-x-0 pb-4 pt-8 bg-gradient-to-t from-black/80 to-transparent">
+        <div className="flex items-center justify-center gap-3 px-4">
+          <ArkaPlanDugme
+            onClick={() => setOrnekAcik((a) => !a)}
+            etiket={t('ar.background')}
+            deger={t('ar.samples')}
+            aktif={ornekAcik}
+          />
+          <ArkaPlanDugme
+            onClick={() => fotoRef.current?.click()}
+            etiket={t('ar.background')}
+            deger={t('ar.photo')}
+            aktif={!!arkaFoto && !ORNEK_MEKANLAR.some((o) => o.yol === arkaFoto)}
+          />
+          {/* Vazgeçme yolu: arka planı kaldırıp koyu stüdyo zeminine döner */}
+          {arkaFoto && (
+            <ArkaPlanDugme
+              onClick={() => setArkaFoto(null)}
+              etiket={t('ar.background')}
+              deger={t('ar.removeBg')}
+            />
+          )}
+        </div>
+        <p className="mt-2 text-center text-[11px] text-white/50 px-8 m-0 pointer-events-none">
+          {t('scene3d.hint')}
+        </p>
+      </div>
 
       {/* model-viewer, gerçek cihazda dokunulduğunda Android'de Scene Viewer'ı,
           iOS'ta Quick Look'u açar (WebXR destekleyen tarayıcılarda doğrudan

@@ -132,6 +132,24 @@ export const TOPICS = [
     },
   },
   {
+    id: 'curveAmount',
+    keys: {
+      tr: ['kavis miktarı', 'kavis miktari', 'kavis yüzdesi', 'kavis yuzdesi', 'yüzde kaç kavis', 'kavis açısı', 'kavis acisi', 'yay açısı', 'yay acisi', 'kavis barı', 'kaç derece'],
+      en: ['curve amount', 'curve percentage', 'curve angle', 'arc angle', 'how many degrees'],
+      ar: ['مقدار الانحناء', 'زاوية القوس'],
+    },
+    q: {
+      tr: 'Kavis miktarındaki yüzde neyi ölçüyor?',
+      en: 'What does the curve amount percentage measure?',
+      ar: 'ماذا تقيس نسبة مقدار الانحناء؟',
+    },
+    a: {
+      tr: 'Yüzde açıyı değil, kavisin DERİNLİĞİNİ (şişkinliğini) ölçer; açı ondan hesaplanır.\n\n• Derinlik = yüzde × ekran genişliği × tip oranı (dışa kavisli 0,16 — içe kavisli 0,13)\n• Derinlik ekran genişliğine oranlı olduğu için 3 kabinlik ve 12 kabinlik duvar aynı yüzdede aynı eğrilikte görünür.\n• %100 yarım daire demek değildir: dışa kavislide toplam yay ≈71°, içe kavislide ≈58°.\n\nKarşılıkları (dışa kavisli): %25 ≈ 18°, %50 ≈ 36°, %60 ≈ 43°, %100 ≈ 71°. Güncel açı barın altında yazar.',
+      en: 'The percentage measures the DEPTH (bulge) of the curve, not the angle; the angle is derived from it.\n\n• Depth = percentage × screen width × type ratio (convex 0.16 — concave 0.13)\n• Because depth is proportional to screen width, a 3-cabinet and a 12-cabinet wall look equally curved at the same percentage.\n• 100% is not a half circle: the total arc is ≈71° for convex and ≈58° for concave.\n\nConvex equivalents: 25% ≈ 18°, 50% ≈ 36°, 60% ≈ 43°, 100% ≈ 71°. The current angle is shown under the slider.',
+      ar: 'النسبة تقيس عمق الانحناء وليس الزاوية؛ الزاوية تُشتق منه. عند 100% يكون القوس ≈71° للمحدب و≈58° للمقعر، وتظهر الزاوية الحالية أسفل الشريط.',
+    },
+  },
+  {
     id: 'lshape',
     keys: {
       tr: ['l tipi', 'l tip', 'köşe ekran', 'kose ekran', 'l şekli', 'köşe', 'köşeye', 'duvarın köşesi', 'iki duvar', 'monte'],
