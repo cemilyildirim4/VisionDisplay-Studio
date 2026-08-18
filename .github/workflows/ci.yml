@@ -1,0 +1,50 @@
+name: DisplayConfigurator CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  dotnet-build:
+    name: .NET API Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore Dependencies
+      run: dotnet restore
+
+    - name: Build Solution
+      run: dotnet build --no-restore -c Release
+
+  docker-build:
+    name: Docker Compose Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Test Docker Compose Build
+      env:
+        DB_PASSWORD: "DummyPassword123!"
+        JWT_SECRET: "DummySecretWithAtLeast32CharactersLongForJWT!"
+        CORS_ORIGINS: "https://example.com"
+        SSL_CERT_DIR: "./certs"
+        DOMAIN: "localhost"
+      run: |
+        mkdir -p certs
+        touch certs/fullchain.pem certs/privkey.pem
+        docker compose -f docker-compose.prod.yml build
