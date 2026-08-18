@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using DisplayConfigurator.Application.DTOs;
 using DisplayConfigurator.Application.Interfaces;
 using DisplayConfigurator.Application.Security;
@@ -45,19 +47,15 @@ public class AuthController : ControllerBase
         if (existing != null)
             return Conflict(new { message = "Bu e-posta adresiyle zaten bir hesap var." });
 
-        // Rol: kod yoksa bayi (kayıt herkese açık); doğru personel kodu varsa
-        // Tester/Admin. Yanlış kod sessizce bayi yapılmaz — kullanıcı kodu
-        // bilerek girmiştir, hatalı olduğu söylenmeli.
+        // Rol: kod yoksa bayi. Yalnızca Staff:TesterCode ile Tester açılır.
+        // Admin kaydı bu uçtan yapılamaz (Staff:AdminCode kaldırıldı).
         var role = "Dealer";
         if (!string.IsNullOrWhiteSpace(dto.StaffCode))
         {
             var kod = dto.StaffCode.Trim();
             var testerKod = _config["Staff:TesterCode"];
-            var adminKod = _config["Staff:AdminCode"];
 
-            if (!string.IsNullOrEmpty(adminKod) && FixedTimeEquals(kod, adminKod))
-                role = "Admin";
-            else if (!string.IsNullOrEmpty(testerKod) && FixedTimeEquals(kod, testerKod))
+            if (!string.IsNullOrEmpty(testerKod) && FixedTimeEquals(kod, testerKod))
                 role = "Tester";
             else
                 return BadRequest(new { message = "Erişim kodu geçersiz." });
@@ -82,12 +80,6 @@ public class AuthController : ControllerBase
         if (user == null || !PasswordHasher.Verify(dto.Password, user.PasswordHash))
             return Unauthorized(new { message = "E-posta veya parola hatalı." });
 
-        /*
-         * Girişte erişim kodu ARTIK SORULMUYOR. Konfigüratördeki oturum ekranı
-         * bayi/müşteri içindir ve kod alanı oradan kaldırıldı; şart burada
-         * kalsaydı personel hesapları hiç giriş yapamazdı. Yönetim paneli kendi
-         * erişim koduyla ayrıca korunuyor.
-         */
         return await IssueTokensAsync(user);
     }
 
@@ -132,14 +124,16 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Kod karşılaştırması sabit sürelidir: normal string eşitliği ilk farklı
-    /// karakterde çıktığı için yanıt süresinden kodun ne kadarının doğru
-    /// olduğu çıkarılabilir.
+    /// Kod karşılaştırması sabit sürelidir. SHA-256 özetleri karşılaştırılır ki
+    /// farklı uzunluktaki girdiler CryptographicOperations.FixedTimeEquals'ı
+    /// düşürmesin ve yanıt süresinden uzunluk sızmasın.
     /// </summary>
     private static bool FixedTimeEquals(string a, string b)
-        => System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
-            System.Text.Encoding.UTF8.GetBytes(a),
-            System.Text.Encoding.UTF8.GetBytes(b));
+    {
+        var ha = SHA256.HashData(Encoding.UTF8.GetBytes(a));
+        var hb = SHA256.HashData(Encoding.UTF8.GetBytes(b));
+        return CryptographicOperations.FixedTimeEquals(ha, hb);
+    }
 
     private async Task<ActionResult<AuthResponseDto>> IssueTokensAsync(User user)
     {

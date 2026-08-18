@@ -3,31 +3,50 @@ services:
     image: postgres:16-alpine
     container_name: display_config_db
     restart: always
+    # Resmi imaj baslangicta volume izinlerini duzeltmek icin kisa sure root
+    # olur, sonra postgres (uid 70) kullanicisina duser. Compose'da user:
+    # override ETMEYIN — ilk init basarisiz olur.
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-${POSTGRES_PASSWORD:?DB_PASSWORD veya POSTGRES_PASSWORD .env icinde tanimli olmali}}
       POSTGRES_DB: display_configurator_db
-    ports:
-      - "5432:5432"
+    # 5432 host'a yayimlanmaz; yalnizca app-network icinden (api/pgadmin) erisilir.
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database:/docker-entrypoint-initdb.d
     networks:
       - app-network
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d display_configurator_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   pgadmin:
     image: dpage/pgadmin4
     container_name: display_config_pgadmin
     restart: always
+    user: "5050:5050"
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin2@admin.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-adminpassword}
-    ports:
-      - "5050:80"
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?PGADMIN_PASSWORD .env icinde tanimli olmali}
+      # Non-root 80'e baglanamaz.
+      PGADMIN_LISTEN_PORT: 5050
+    # 5050 host'a yayimlanmaz; yalnizca Docker agindan erisilir
+    # (or. docker compose exec / ayni network'teki bir konteyner).
+    expose:
+      - "5050"
     depends_on:
       - postgres
     networks:
       - app-network
+    security_opt:
+      - no-new-privileges:true
 
   api:
     build:
@@ -35,6 +54,8 @@ services:
       dockerfile: DisplayConfigurator.Api/Dockerfile
     container_name: display_config_api
     restart: always
+    # mcr.microsoft.com/dotnet/aspnet:8.0 APP_UID
+    user: "1654:1654"
     ports:
       - "5007:8080"
     environment:
@@ -42,18 +63,20 @@ services:
       # sayfaları kapanır, HTTPS yönlendirmesi açılır ve gizli anahtar
       # tanımlanmamışsa API kasten başlamaz.
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=display_configurator_db;Username=postgres;Password=${POSTGRES_PASSWORD:-postgrespassword}
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=display_configurator_db;Username=postgres;Password=${DB_PASSWORD:-${POSTGRES_PASSWORD}}
+      DB_PASSWORD: ${DB_PASSWORD:-${POSTGRES_PASSWORD}}
+      DB_HOST: postgres
       Cors__Origins__0: http://localhost:5173
       Cors__Origins__1: http://localhost:5174
       Cors__Origins__2: http://localhost:5175
-      Admin__Password: ${ADMIN_PASSWORD:-}
-      # Personel kayıt kodları — yalnızca .env'den. Boşsa personel kaydı kapalıdır.
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:5174,http://localhost:5175}
+      # Personel kayıt kodu — yalnızca Tester. Boşsa personel kaydı kapalıdır.
       Staff__TesterCode: ${STAFF_TESTER_CODE:-}
-      Staff__AdminCode: ${STAFF_ADMIN_CODE:-}
       # Sırlar .env'den gelir; varsayılan verilmez. Boş bırakılırsa API
       # Production ortamında kasten ayağa kalkmaz (bkz. Program.cs) — gizli
       # anahtarı unutup herkesçe bilinen bir değerle yayına çıkmak imkânsız.
-      Jwt__Secret: ${JWT_SECRET:-}
+      Jwt__Secret: ${JWT_SECRET:?JWT_SECRET .env icinde tanimli olmali}
+      JWT_SECRET: ${JWT_SECRET}
       Beta__Enabled: ${BETA_ENABLED:-false}
       Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
@@ -64,9 +87,20 @@ services:
       Smtp__From: ${SMTP_FROM:-}
       Notifications__AdminEmail: ${NOTIFICATIONS_ADMIN_EMAIL:-}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - app-network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
   frontend:
     build:
@@ -75,12 +109,21 @@ services:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:5007}
     container_name: display_config_frontend
     restart: always
+    # nginx-unprivileged uid/gid 101; 8080 dinler.
+    user: "101:101"
     ports:
-      - "5173:80"
+      # 5173 ayni zamanda `npm run dev` portudur. Ikisini birden acmayin:
+      # tarayicidaki PWA service worker iki sunucuyu karistirip bos sayfa uretir.
+      - "5173:8080"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - app-network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 networks:
   app-network:

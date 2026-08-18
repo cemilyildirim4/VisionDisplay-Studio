@@ -15,7 +15,7 @@ public class SeriesRepository : ISeriesRepository
 
     public async Task<IEnumerable<Series>> GetAllAsync()
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             SELECT
                 id AS Id,
@@ -30,7 +30,7 @@ public class SeriesRepository : ISeriesRepository
 
     public async Task<bool> ExistsAsync(int id)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "SELECT COUNT(1) FROM series WHERE id = @Id";
         var count = await connection.ExecuteScalarAsync<int>(sql, new { Id = id });
         return count > 0;
@@ -38,7 +38,7 @@ public class SeriesRepository : ISeriesRepository
 
     public async Task<Series> CreateAsync(Series series)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             INSERT INTO series (name, description, created_at)
             VALUES (@Name, @Description, NOW())
@@ -51,7 +51,7 @@ public class SeriesRepository : ISeriesRepository
 
     public async Task<bool> UpdateAsync(Series series)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             UPDATE series SET
                 name = @Name,
@@ -64,7 +64,7 @@ public class SeriesRepository : ISeriesRepository
 
     public async Task<bool> DeleteAsync(int id)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "DELETE FROM series WHERE id = @Id";
         var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id });
         return rowsAffected > 0;
@@ -72,7 +72,7 @@ public class SeriesRepository : ISeriesRepository
 
     public async Task<int> CountCabinsAsync(int seriesId)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "SELECT COUNT(1) FROM cabins WHERE series_id = @SeriesId";
         return await connection.ExecuteScalarAsync<int>(sql, new { SeriesId = seriesId });
     }

@@ -20,28 +20,28 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> GetByEmailAsync(string email)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         var sql = $"SELECT {SelectColumns} FROM users WHERE lower(email) = lower(@Email)";
         return await connection.QueryFirstOrDefaultAsync<User>(sql, new { Email = email });
     }
 
     public async Task<User?> GetByIdAsync(int id)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         var sql = $"SELECT {SelectColumns} FROM users WHERE id = @Id";
         return await connection.QueryFirstOrDefaultAsync<User>(sql, new { Id = id });
     }
 
     public async Task<IEnumerable<User>> GetAllAsync()
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         var sql = $"SELECT {SelectColumns} FROM users ORDER BY created_at DESC";
         return await connection.QueryAsync<User>(sql);
     }
 
     public async Task<User> CreateAsync(User user)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             INSERT INTO users (email, password_hash, display_name, role, external_provider, external_id, created_at)
             VALUES (@Email, @PasswordHash, @DisplayName, @Role, @ExternalProvider, @ExternalId, NOW())
@@ -52,7 +52,7 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> UpdateRoleAsync(int id, string role)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "UPDATE users SET role = @Role WHERE id = @Id";
         var rows = await connection.ExecuteAsync(sql, new { Id = id, Role = role });
         return rows > 0;
@@ -60,7 +60,7 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> DeleteAsync(int id)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "DELETE FROM users WHERE id = @Id";
         var rows = await connection.ExecuteAsync(sql, new { Id = id });
         return rows > 0;
@@ -68,7 +68,7 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> AnyAdminExistsAsync()
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "SELECT EXISTS(SELECT 1 FROM users WHERE role = 'Admin')";
         return await connection.ExecuteScalarAsync<bool>(sql);
     }

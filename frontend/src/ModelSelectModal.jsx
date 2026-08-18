@@ -79,8 +79,8 @@ function buildFilters(tab) {
   }
   // attr: modeldeki hangi alana bakılacağı (veritabanından gelir, virgülle ayrılmış olabilir)
   return [
-    { label: 'Kategori', labelKey: 'f.category', attr: 'filterCategory', options: ['Kapalı', 'Duvar'] },
-    { label: 'Kullanım', labelKey: 'f.usage', attr: 'usage', options: ['Ticari İç Mekan', 'Pencereye bakan', 'Sanal Üretim', 'Sinema'] },
+    { label: 'Kategori', labelKey: 'f.category', attr: 'filterCategory', options: ['Kapalı', 'Duvar', 'Dış Mekan'] },
+    { label: 'Kullanım', labelKey: 'f.usage', attr: 'usage', options: ['Ticari İç Mekan', 'Pencereye bakan', 'Sanal Üretim', 'Sinema', 'Dış Mekan'] },
     {
       label: 'Kurulum',
       labelKey: 'f.installation',
@@ -283,7 +283,7 @@ function OptionRow({ filterLabel, option, selected, onToggle }) {
 // "Seç" (choose) akışından bağımsız — birden fazla model işaretlenebilir.
 const COMPARE_ROWS = [
   { key: 'compare.type', get: (c) => (normalizeProductType(c.productType) === PRODUCT_TYPES.MODULE ? 'Panel' : 'Kabin') },
-  { key: 'compare.price', get: (c) => (c.price ? `${Number(c.price).toLocaleString('tr-TR')} ₺` : '—') },
+  { key: 'compare.price', get: (c) => (c.price ? `$${Number(c.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : '—') },
   { key: 'compare.pitch', get: (c) => (c.pixelPitchMm ? `${c.pixelPitchMm} mm` : '—') },
   { key: 'compare.brightness', get: (c) => (c.brightnessNits ? `${c.brightnessNits} nit` : '—') },
   { key: 'compare.dimensions', get: (c) => `${c.widthMm} × ${c.heightMm} × ${c.depthMm} mm` },

@@ -52,6 +52,16 @@ public class QuotesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Quote>> CreateQuote([FromBody] QuoteInputDto input)
     {
+        // Beta kapalıyken (BETA_ENABLED=false) teklif gövdesinde KVKK/PII alanı kabul edilmez.
+        if (!_config.GetValue<bool>("Beta:Enabled") && HasCustomerPii(input))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Beta kapalıyken teklif isteğinde kişisel veri (ad, telefon, e-posta, adres, mesaj) kabul edilmez.",
+                code = "PII_DISABLED",
+            });
+        }
+
         var quote = new Quote
         {
             CustomerName = input.CustomerName,
@@ -117,4 +127,11 @@ public class QuotesController : ControllerBase
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(sub, out var id) && id > 0 ? id : null;
     }
+
+    private static bool HasCustomerPii(QuoteInputDto input) =>
+        !string.IsNullOrWhiteSpace(input.CustomerName)
+        || !string.IsNullOrWhiteSpace(input.Phone)
+        || !string.IsNullOrWhiteSpace(input.Email)
+        || !string.IsNullOrWhiteSpace(input.Address)
+        || !string.IsNullOrWhiteSpace(input.Message);
 }

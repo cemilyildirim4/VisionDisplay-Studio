@@ -34,8 +34,8 @@ public class UpdateUserRoleDto
 }
 
 /// <summary>
-/// İlk Admin hesabını oluşturmak için (hiç Admin yokken).
-/// Paylaşılan X-Admin-Key veya boş sistemde bootstrap ile korunur.
+/// İlk Admin hesabını oluşturmak için. Hiç Admin yokken herkese açık (rate-limit'li);
+/// bir Admin oluştuktan sonra 409 Conflict döner.
 /// </summary>
 public class BootstrapAdminDto
 {

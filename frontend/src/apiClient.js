@@ -162,7 +162,7 @@ async function isNonRetriableAppError(response) {
   try {
     const text = await response.clone().text()
     if (!text) return false
-    return /Yönetim erişimi|Admin:Password|yapılandırılmamış/i.test(text)
+    return /Yönetim erişimi|yapılandırılmamış/i.test(text)
   } catch {
     return false
   }

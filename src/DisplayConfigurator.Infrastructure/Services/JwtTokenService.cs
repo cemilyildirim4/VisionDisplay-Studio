@@ -11,8 +11,8 @@ namespace DisplayConfigurator.Infrastructure.Services;
 
 /// <summary>
 /// Kısa ömürlü (varsayılan 15 dk) HMAC-SHA256 imzalı JWT erişim jetonu üretir.
-/// Jwt:Secret en az 32 karakter olmalı (appsettings/ortam değişkeni) — kısa
-/// bir sırra karşı ASP.NET Core başlangıçta hata verir, bu bilinçli bir tercihtir.
+/// Jwt:Secret / JWT_SECRET en az 32 karakter olmalı — kısa bir sırra karşı
+/// uygulama başlangıçta durur (Program.cs). Sır appsettings'e yazılmaz.
 /// </summary>
 public class JwtTokenService : IJwtTokenService
 {
@@ -25,7 +25,9 @@ public class JwtTokenService : IJwtTokenService
 
     public (string token, DateTime expiresAt) GenerateAccessToken(User user)
     {
-        var secret = _config["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret tanımlı değil.");
+        var secret = Environment.GetEnvironmentVariable("JWT_SECRET")
+            ?? _config["Jwt:Secret"]
+            ?? throw new InvalidOperationException("JWT_SECRET ortam değişkeni tanımlı değil.");
         var minutes = int.TryParse(_config["Jwt:AccessTokenMinutes"], out var m) ? m : 15;
         var expiresAt = DateTime.UtcNow.AddMinutes(minutes);
 

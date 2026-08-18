@@ -43,6 +43,8 @@ public class CabinInputDto
     public string? Protection { get; set; }
     public string? Certification { get; set; }
     public string? Features { get; set; }
+    public int? IpRating { get; set; }
+    public bool Featured { get; set; }
     public string? ImageUrl { get; set; }
     public string? SboxCode { get; set; }
     public string? JigCode { get; set; }

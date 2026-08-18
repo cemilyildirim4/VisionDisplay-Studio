@@ -38,7 +38,7 @@ public class QuoteRepository : IQuoteRepository
 
     public async Task<PagedResultDto<Quote>> GetPagedAsync(PagedQueryDto query)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
 
         var hasSearch = !string.IsNullOrWhiteSpace(query.Search);
         var whereClause = hasSearch
@@ -74,14 +74,14 @@ public class QuoteRepository : IQuoteRepository
 
     public async Task<IEnumerable<Quote>> GetByUserIdAsync(int userId)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         var sql = $"SELECT {SelectColumns} FROM quotes WHERE user_id = @UserId ORDER BY created_at DESC";
         return await connection.QueryAsync<Quote>(sql, new { UserId = userId });
     }
 
     public async Task<Quote> CreateAsync(Quote quote)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             INSERT INTO quotes
             (
@@ -106,7 +106,7 @@ public class QuoteRepository : IQuoteRepository
 
     public async Task<bool> DeleteAsync(int id)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "DELETE FROM quotes WHERE id = @Id";
         var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id });
         return rowsAffected > 0;
@@ -114,7 +114,7 @@ public class QuoteRepository : IQuoteRepository
 
     public async Task<bool> UpdateStatusAsync(int id, string status, string? adminNote)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             UPDATE quotes
             SET status = @Status, admin_note = COALESCE(@AdminNote, admin_note), revision = revision + 1

@@ -8,7 +8,7 @@ using Npgsql;
 namespace DisplayConfigurator.Infrastructure.Data;
 
 /// <summary>
-/// Npgsql bağlantı fabrikası — geçici kopmalarda Open() birkaç kez yeniden dener.
+/// Npgsql bağlantı fabrikası — geçici kopmalarda OpenAsync birkaç kez yeniden dener.
 /// (EF Core EnableRetryOnFailure eşdeğeri; proje Dapper kullandığı için burada uygulanır.)
 /// </summary>
 public class NpgsqlDbConnectionFactory : IDbConnectionFactory
@@ -20,8 +20,10 @@ public class NpgsqlDbConnectionFactory : IDbConnectionFactory
     public NpgsqlDbConnectionFactory(IConfiguration configuration, ILogger<NpgsqlDbConnectionFactory>? logger = null)
     {
         _logger = logger;
-        var raw = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection tanımlı değil.");
+        var raw = Environment.GetEnvironmentVariable("CONNECTION_STRING")
+            ?? configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException(
+                "CONNECTION_STRING / ConnectionStrings:DefaultConnection tanımlı değil. DB_PASSWORD ortam değişkenini ayarlayın.");
 
         var builder = new NpgsqlConnectionStringBuilder(raw);
         if (builder.Timeout <= 0) builder.Timeout = 15;
@@ -30,13 +32,16 @@ public class NpgsqlDbConnectionFactory : IDbConnectionFactory
     }
 
     public IDbConnection CreateConnection()
+        => CreateConnectionAsync().GetAwaiter().GetResult();
+
+    public async Task<IDbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default)
     {
         var connection = new NpgsqlConnection(_connectionString);
-        OpenWithRetry(connection);
+        await OpenWithRetryAsync(connection, cancellationToken);
         return connection;
     }
 
-    private void OpenWithRetry(NpgsqlConnection connection)
+    private async Task OpenWithRetryAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
     {
         Exception? last = null;
         for (var attempt = 1; attempt <= MaxOpenAttempts; attempt++)
@@ -44,7 +49,7 @@ public class NpgsqlDbConnectionFactory : IDbConnectionFactory
             try
             {
                 if (connection.State != ConnectionState.Open)
-                    connection.Open();
+                    await connection.OpenAsync(cancellationToken);
                 return;
             }
             catch (Exception ex) when (ex is NpgsqlException or SocketException or TimeoutException)
@@ -56,7 +61,7 @@ public class NpgsqlDbConnectionFactory : IDbConnectionFactory
 
                 if (attempt < MaxOpenAttempts)
                 {
-                    Thread.Sleep(TimeSpan.FromMilliseconds(200 * attempt));
+                    await Task.Delay(TimeSpan.FromMilliseconds(200 * attempt), cancellationToken);
                     try { connection.Close(); } catch { /* ignore */ }
                 }
             }

@@ -8,6 +8,42 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    /*
+     * Geliştirmede leftover production SW'yi öldür.
+     *
+     * docker compose frontend de 5173'ü kullanıyor ve orada PWA service
+     * worker kaydı oluşuyor. Aynı origin'de `npm run dev` açılınca tarayıcı
+     * hâlâ o SW'yi çalıştırıyor; `/src/main.jsx` gibi Vite yollarını
+     * kesiyor ve sayfa boş kalıyor. Bu middleware /sw.js isteğine
+     * kendini silen bir SW verir — bir sonraki yüklemede kayıt düşer.
+     */
+    {
+      name: 'kill-production-sw-in-dev',
+      configureServer(server) {
+        const killSw = `
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    await self.registration.unregister();
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+    const clients = await self.clients.matchAll({ type: 'window' });
+    clients.forEach((c) => c.navigate(c.url));
+  })());
+});
+`
+        server.middlewares.use((req, res, next) => {
+          const url = req.url?.split('?')[0]
+          if (url === '/sw.js' || url === '/registerSW.js') {
+            res.setHeader('Content-Type', 'application/javascript')
+            res.setHeader('Cache-Control', 'no-store')
+            res.end(killSw)
+            return
+          }
+          next()
+        })
+      },
+    },
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['logo-192.png', 'logo-512.png', 'masaustu-logo-isaret.png'],

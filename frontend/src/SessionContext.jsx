@@ -8,8 +8,8 @@ import { setSessionBridge } from './apiClient.js'
  * Frontend beta için ek olarak "Tester" ve oturumsuz "Guest" desteklenir.
  *
  * Öncelik sırası:
- *  1. Yönetim parolası (sessionStorage) doğrulanmışsa → Admin
- *  2. Kaydedilmiş JWT oturumu (localStorage) varsa → o kullanıcının rolü
+ *  1. Kaydedilmiş JWT oturumu (localStorage) varsa → o kullanıcının rolü
+ *  2. Yönetim paneli JWT'si (sessionStorage) doğrulanmışsa → Admin
  *  3. Beta demo rol seçimi (localStorage) — yalnızca test/pilot için
  *  4. Aksi halde Guest
  */
@@ -21,7 +21,6 @@ export const ROLES = {
   ADMIN: 'Admin',
 }
 
-const ADMIN_KEY = 'yonetim-parolasi'
 const ADMIN_JWT = 'yonetim-jwt'
 const SESSION_KEY = 'vds-session'
 const DEMO_ROLE_KEY = 'vds-demo-role'
@@ -58,7 +57,7 @@ export function SessionProvider({ children }) {
   const [demoRole, setDemoRoleState] = useState(() => readDemoRole())
   const [adminUnlocked, setAdminUnlocked] = useState(() => {
     try {
-      return !!(sessionStorage.getItem(ADMIN_KEY) || sessionStorage.getItem(ADMIN_JWT))
+      return !!sessionStorage.getItem(ADMIN_JWT)
     } catch {
       return false
     }
@@ -91,7 +90,7 @@ export function SessionProvider({ children }) {
   useEffect(() => {
     const sync = () => {
       try {
-        setAdminUnlocked(!!(sessionStorage.getItem(ADMIN_KEY) || sessionStorage.getItem(ADMIN_JWT)))
+        setAdminUnlocked(!!sessionStorage.getItem(ADMIN_JWT))
       } catch {
         /* ignore */
       }
@@ -155,7 +154,6 @@ export function SessionProvider({ children }) {
       setSessionData(null)
       setDemoRole(null)
       try {
-        sessionStorage.removeItem(ADMIN_KEY)
         sessionStorage.removeItem(ADMIN_JWT)
         sessionStorage.removeItem('yonetim-jwt-meta')
         localStorage.removeItem(DEMO_ROLE_KEY)

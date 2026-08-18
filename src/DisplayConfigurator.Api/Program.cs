@@ -1,8 +1,12 @@
+using System.Net;
 using System.Text;
 using System.Threading.RateLimiting;
-using System.Net.Sockets;
 using Dapper;
-using Microsoft.AspNetCore.Diagnostics;
+using DisplayConfigurator.Api.Data;
+using DisplayConfigurator.Api.ExceptionHandling;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Configuration;
 using DisplayConfigurator.Application.Interfaces;
 using DisplayConfigurator.Infrastructure.Data;
 using DisplayConfigurator.Infrastructure.Repositories;
@@ -17,6 +21,28 @@ DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Sırlar appsettings / launchSettings içinde tutulmaz. JWT ve DB parolası
+// yalnızca ortam değişkeninden (Docker .env, JWT_SECRET, DB_PASSWORD) okunur.
+var jwtSecret = FirstNonEmpty(
+    Environment.GetEnvironmentVariable("JWT_SECRET"),
+    builder.Configuration["Jwt:Secret"]);
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    throw new InvalidOperationException(
+        "JWT_SECRET ortam değişkeni tanımlı değil. Kök dizindeki .env.example dosyasını .env olarak kopyalayıp doldurun.");
+}
+if (jwtSecret.Length < 32)
+{
+    throw new InvalidOperationException("JWT_SECRET en az 32 karakter olmalıdır.");
+}
+
+var connectionString = ResolveConnectionString(builder.Configuration);
+builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+{
+    ["Jwt:Secret"] = jwtSecret,
+    ["ConnectionStrings:DefaultConnection"] = connectionString,
+});
+
 // Kestrel'in yanıtlara "Server: Kestrel" başlığı eklemesini kapatıyoruz —
 // sunucu yazılımını/versiyonunu saldırgana ücretsiz bilgi olarak vermeyelim.
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
@@ -25,6 +51,8 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // 1. Controller servisleri
 builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<Rfc7807ExceptionHandler>();
 
 // 2. Swagger / OpenAPI konfigürasyonu
 builder.Services.AddEndpointsApiExplorer();
@@ -49,66 +77,27 @@ builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
-// 4. CORS ayarları (React Frontend ile sorunsuz haberleşmek için)
-// Origin listesi appsettings.json > Cors:Origins altından okunur; tanımlı değilse
-// yerel geliştirme adresleri (Vite varsayılan portları) kullanılır.
-var izinliAdresler = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
-if (izinliAdresler is null || izinliAdresler.Length == 0)
-{
-    izinliAdresler =
-    [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-    ];
-}
-
+// 4. CORS — CORS_ORIGINS (virgülle ayrılmış) öncelikli; yoksa Cors:Origins.
+// Production'da boş liste ve wildcard (*) reddedilir.
+var izinliAdresler = ResolveCorsOrigins(builder);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        // Eskiden AllowAnyMethod/AllowAnyHeader kullanılıyordu — çalışıyor
-        // olmasına rağmen gereğinden geniş bir yüzey açıyordu. Sadece
-        // kullanılan metod/header'lara izin veriyoruz (Authorization eklendi:
-        // JWT ile korunan "mine" uçları için gerekli).
         policy.WithOrigins(izinliAdresler)
               .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-              .WithHeaders("Content-Type", "Authorization", "X-Admin-Key", "X-Guest-Token")
-              .WithExposedHeaders("Content-Disposition") // PDF indirmede dosya adı için
-              .SetPreflightMaxAge(TimeSpan.FromMinutes(10)); // OPTIONS önbelleği — CORS dalgalanmasını azaltır
+              .WithHeaders("Content-Type", "Authorization", "X-Guest-Token")
+              .WithExposedHeaders("Content-Disposition")
+              .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
     });
 });
 
-// 5. Kimlik doğrulama (JWT) — bayi/müşteri girişi ve BetaGate için.
-// Jwt:Secret üretimde MUTLAKA appsettings.Development.json/.env yerine gerçek
-// bir sır yöneticisinden (Docker secret, KeyVault, env var) verilmeli; burada
-// yalnızca yerel geliştirme için 64 karakterlik bir varsayılan tanımlıdır.
-//
-// ÖNEMLİ: `??` yerine IsNullOrWhiteSpace kontrolü kullanılıyor. docker-compose.yml
-// `Jwt__Secret: ${JWT_SECRET:-}` şeklinde tanımlı olduğundan, .env'de JWT_SECRET
-// hiç ayarlanmamışsa IConfiguration bu değeri NULL değil BOŞ DİZE ("") olarak
-// döndürür — `??` operatörü boş dizeyi tetiklemez. Bu yüzden eskiden JWT_SECRET
-// ayarlanmadığında `SymmetricSecurityKey` sıfır uzunluklu anahtarla oluşturulmaya
-// çalışılıyor ve JWT doğrulaması gereken HER istek (hatta herkese açık uçlar da,
-// çünkü AuthenticationMiddleware her istekte devreye giriyor) 500 ile patlıyordu.
-var jwtSecret = builder.Configuration["Jwt:Secret"];
-if (string.IsNullOrWhiteSpace(jwtSecret))
-    jwtSecret = "GELISTIRME-ORTAMI-ICIN-VARSAYILAN-64-KARAKTERLIK-GIZLI-ANAHTAR-DEGISTIR";
-
+// 5. Kimlik doğrulama (JWT) — sır yalnızca JWT_SECRET ortam değişkeninden gelir.
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 if (string.IsNullOrWhiteSpace(jwtIssuer)) jwtIssuer = "display-configurator";
 
 var jwtAudience = builder.Configuration["Jwt:Audience"];
 if (string.IsNullOrWhiteSpace(jwtAudience)) jwtAudience = "display-configurator-client";
-
-if (!builder.Environment.IsDevelopment() &&
-    jwtSecret == "GELISTIRME-ORTAMI-ICIN-VARSAYILAN-64-KARAKTERLIK-GIZLI-ANAHTAR-DEGISTIR")
-{
-    // Production'da varsayılan (herkesçe bilinen) anahtarla asla ayağa kalkmasın —
-    // sessizce güvensiz çalışmak yerine başlangıçta net bir hata ile durur.
-    throw new InvalidOperationException(
-        "Jwt:Secret üretim ortamında ayarlanmalı (JWT_SECRET ortam değişkeni). Varsayılan geliştirme anahtarı kullanılamaz.");
-}
 
 var authBuilder = builder.Services.AddAuthentication(options =>
 {
@@ -146,6 +135,30 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
 }
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        connectionString,
+        name: "postgres",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["ready", "db"]);
+
+// Nginx / reverse proxy arkasında gerçek istemci IP'si X-Forwarded-For ile gelir.
+// Bu middleware UseRateLimiter'dan ÖNCE çalışmalı; aksi halde tüm istekler
+// proxy IP'sinde birleşir ve rate limit ya herkesi birlikte keser ya da işlemez.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    // Kestrel varsayılan olarak yalnızca loopback'e güvenir. Docker'da nginx
+    // ayrı bir container IP'sinden gelir; listeler boşaltılmazsa başlık yok sayılır.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+
+    var knownProxy = builder.Configuration["ForwardedHeaders:KnownProxy"];
+    if (!string.IsNullOrWhiteSpace(knownProxy) && IPAddress.TryParse(knownProxy, out var proxyAddr))
+        options.KnownProxies.Add(proxyAddr);
+});
 
 // 6. Rate limiting — API adresini bilen herkes sınırsız istek atamasın diye.
 // IP başına global bir pencere + yazma (POST/PUT/DELETE) uçları için daha sıkı
@@ -191,51 +204,13 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-// 0. Merkezi (global) hata yakalama — pipeline'daki EN İLK middleware.
-// Controller'larda try/catch atlanan veya beklenmedik (NullReference, DB
-// bağlantı hatası vb.) her istisna buraya düşer: ham .NET yığın izi/HTML
-// hata sayfası hiçbir zaman istemciye sızmaz, ILogger ile anlamlı bir log
-// (istek yolu + trace id) üretilir ve istemciye tek biçimli bir JSON
-// gövdesi döner. Development'ta ayrıca hata mesajı/istisna türü de eklenir.
-app.UseExceptionHandler(errorApp =>
-{
-    errorApp.Run(async context =>
-    {
-        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
-        var logger = context.RequestServices
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("GlobalExceptionHandler");
+// Reverse proxy (nginx) X-Forwarded-For / X-Forwarded-Proto başlıklarını
+// Connection.RemoteIpAddress ve şemaya yansıtır. Rate limiter ve loglar
+// gerçek istemci IP'sini görsün diye diğer middleware'lerden önce çalışır.
+app.UseForwardedHeaders();
 
-        logger.LogError(exception, "Yakalanmamış istisna. Yol: {Path}, TraceId: {TraceId}",
-            context.Request.Path, context.TraceIdentifier);
-
-        // Geçici DB / ağ hatalarında 503 — istemci retry yapabilsin, süreç ayakta kalsın
-        var isTransient =
-            exception is NpgsqlException
-            || exception is TimeoutException
-            || exception is SocketException
-            || exception?.InnerException is NpgsqlException
-            || exception?.InnerException is SocketException;
-
-        var status = isTransient
-            ? StatusCodes.Status503ServiceUnavailable
-            : StatusCodes.Status500InternalServerError;
-
-        context.Response.ContentType = "application/problem+json";
-        context.Response.StatusCode = status;
-
-        var isDevelopment = context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment();
-        await context.Response.WriteAsJsonAsync(new
-        {
-            title = isTransient
-                ? "Veritabanı veya ağ geçici olarak kullanılamıyor. Lütfen tekrar deneyin."
-                : "Sunucuda beklenmeyen bir hata oluştu.",
-            status,
-            traceId = context.TraceIdentifier,
-            detail = isDevelopment ? exception?.ToString() : null,
-        });
-    });
-});
+// RFC 7807 Problem Details — Production'da ex.Message / yığın izi istemciye gitmez.
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
@@ -287,24 +262,115 @@ app.UseAuthorization();
 // 9. Controller endpoint'lerini bağlıyoruz
 app.MapControllers();
 
-// Sağlık kontrolü — Docker / yük dengeleyici / frontend canlılık için
-app.MapGet("/api/health", async (IDbConnectionFactory dbFactory, ILoggerFactory loggerFactory) =>
-{
-    var log = loggerFactory.CreateLogger("Health");
-    try
-    {
-        await using var conn = (NpgsqlConnection)dbFactory.CreateConnection();
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT 1";
-        cmd.CommandTimeout = 5;
-        await cmd.ExecuteScalarAsync();
-        return Results.Ok(new { status = "healthy", time = DateTime.UtcNow });
-    }
-    catch (Exception ex)
-    {
-        log.LogWarning(ex, "Health check başarısız");
-        return Results.Json(new { status = "unhealthy", time = DateTime.UtcNow }, statusCode: StatusCodes.Status503ServiceUnavailable);
-    }
-});
+app.MapHealthChecks("/healthz").AllowAnonymous();
+app.MapHealthChecks("/health").AllowAnonymous();
+app.MapHealthChecks("/api/health").AllowAnonymous();
+
+// Dapper: EF Database.Migrate() yok. SQL betikleri schema_migrations ile izlenir.
+await SqlMigrationRunner.ApplyAsync(app);
 
 app.Run();
+
+static string? FirstNonEmpty(params string?[] values)
+{
+    foreach (var value in values)
+    {
+        if (!string.IsNullOrWhiteSpace(value)) return value;
+    }
+
+    return null;
+}
+
+static string ResolveConnectionString(IConfiguration config)
+{
+    var raw = FirstNonEmpty(
+        Environment.GetEnvironmentVariable("CONNECTION_STRING"),
+        config.GetConnectionString("DefaultConnection"));
+
+    var dbPassword = FirstNonEmpty(
+        Environment.GetEnvironmentVariable("DB_PASSWORD"),
+        Environment.GetEnvironmentVariable("POSTGRES_PASSWORD"));
+
+    if (string.IsNullOrWhiteSpace(raw))
+    {
+        if (string.IsNullOrWhiteSpace(dbPassword))
+        {
+            throw new InvalidOperationException(
+                "DB_PASSWORD (veya CONNECTION_STRING) ortam değişkeni tanımlı değil. .env.example dosyasını .env olarak kopyalayıp doldurun.");
+        }
+
+        var host = FirstNonEmpty(Environment.GetEnvironmentVariable("DB_HOST"), "localhost")!;
+        var port = FirstNonEmpty(Environment.GetEnvironmentVariable("DB_PORT"), "5432")!;
+        var database = FirstNonEmpty(Environment.GetEnvironmentVariable("DB_NAME"), "display_configurator_db")!;
+        var user = FirstNonEmpty(Environment.GetEnvironmentVariable("DB_USER"), "postgres")!;
+        raw = $"Host={host};Port={port};Database={database};Username={user};Password={dbPassword}";
+    }
+
+    var builder = new NpgsqlConnectionStringBuilder(raw);
+    if (string.IsNullOrWhiteSpace(builder.Password) && !string.IsNullOrWhiteSpace(dbPassword))
+        builder.Password = dbPassword;
+
+    if (string.IsNullOrWhiteSpace(builder.Password))
+    {
+        throw new InvalidOperationException(
+            "Veritabanı parolası eksik. DB_PASSWORD veya CONNECTION_STRING ortam değişkenini ayarlayın.");
+    }
+
+    return builder.ConnectionString;
+}
+
+static string[] ResolveCorsOrigins(WebApplicationBuilder builder)
+{
+    var fromEnv = Environment.GetEnvironmentVariable("CORS_ORIGINS")
+        ?? builder.Configuration["Cors:OriginsCsv"];
+    List<string> origins = [];
+
+    if (!string.IsNullOrWhiteSpace(fromEnv))
+    {
+        origins.AddRange(fromEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+    else
+    {
+        var fromSection = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
+        if (fromSection is { Length: > 0 })
+            origins.AddRange(fromSection);
+    }
+
+    origins = origins
+        .Select(o => o.Trim())
+        .Where(o => o.Length > 0)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    var hasWildcard = origins.Any(o => o == "*" || o.Contains('*', StringComparison.Ordinal));
+    if (builder.Environment.IsProduction())
+    {
+        if (origins.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "Production'da CORS_ORIGINS tanımlı olmalı (virgülle ayrılmış tam origin'ler, örn. https://app.example.com).");
+        }
+
+        if (hasWildcard)
+        {
+            throw new InvalidOperationException(
+                "Production'da CORS wildcard (*) kabul edilmez. CORS_ORIGINS içine açık domain yazın.");
+        }
+    }
+    else if (origins.Count == 0)
+    {
+        origins =
+        [
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+        ];
+    }
+    else if (hasWildcard)
+    {
+        throw new InvalidOperationException(
+            "CORS wildcard (*) kullanılamaz. CORS_ORIGINS içine açık origin listesi yazın.");
+    }
+
+    return [.. origins];
+}

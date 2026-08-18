@@ -49,6 +49,9 @@ const SAMPLE_CABINETS = [
     pixelWidth: 256, // 320 / 1,25
     pixelHeight: 128, // 160 / 1,25
     brightnessNits: 800,
+    usage: 'Ticari İç Mekan',
+    ipRating: 30,
+    featured: true,
     refreshRateHz: 3840,
     powerTypicalWatts: 11,
     powerMaxWatts: 32,
@@ -68,6 +71,8 @@ const SAMPLE_CABINETS = [
     pixelWidth: 200, // 320 / 1,6
     pixelHeight: 100, // 160 / 1,6
     brightnessNits: 700,
+    usage: 'Ticari İç Mekan',
+    ipRating: 30,
     refreshRateHz: 3840,
     powerTypicalWatts: 10,
     powerMaxWatts: 30,
@@ -86,7 +91,10 @@ const SAMPLE_CABINETS = [
     weightKg: 1.5,
     pixelWidth: 160, // 320 / 2,0
     pixelHeight: 80, // 160 / 2,0
-    brightnessNits: 600,
+    brightnessNits: 5500,
+    usage: 'Dış Mekan',
+    filterCategory: 'Dış Mekan',
+    ipRating: 65,
     refreshRateHz: 3840,
     powerTypicalWatts: 9,
     powerMaxWatts: 28,
@@ -108,6 +116,8 @@ const SAMPLE_CABINETS = [
     pixelWidth: 1920,
     pixelHeight: 1080,
     brightnessNits: 500,
+    usage: 'Ticari İç Mekan',
+    ipRating: 20,
     refreshRateHz: 3840,
     powerTypicalWatts: 120,
     powerMaxWatts: 180,
@@ -128,6 +138,8 @@ const SAMPLE_CABINETS = [
     pixelWidth: 1920,
     pixelHeight: 1080,
     brightnessNits: 700,
+    usage: 'Ticari İç Mekan',
+    ipRating: 20,
     refreshRateHz: 3840,
     powerTypicalWatts: 130,
     powerMaxWatts: 190,

@@ -203,28 +203,51 @@ export default function ExportModal({ open, onClose, summary }) {
        * UserId'yi jetondaki kimlikten alıyor; bu istek imzasız gittiği için
        * kayıtlar sahipsiz (UserId = null) düşüyor ve "Tekliflerim" listesi
        * (GET /api/quotes/mine kullanıcıya göre süzüyor) hep boş kalıyordu.
+       *
+       * BETA_ENABLED=false iken sunucu PII (ad/telefon/e-posta/adres/mesaj)
+       * kabul etmez (403 PII_DISABLED). O durumda teknik özet PII'siz tekrar gönderilir.
        */
-      apiFetch(`${API_URL}/api/quotes`, {
-        method: 'POST',
-        auth: true,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: customer || null,
-          phone: phone || null,
-          email: email || null,
-          address: address || null,
-          message: message || null,
-          modelCode: summary.modelCode || null,
-          wallWidthM: Number(summary.width) || null,
-          wallHeightM: Number(summary.height) || null,
-          screenMode: summary.screenMode || 'single',
-          columns: Number(summary.cols) || null,
-          rows: Number(summary.rows) || null,
-          screenType: summary.screenType || null,
-          resolution: summary.resolution || null,
-          screensSummary: screensText.join(' · '),
-        }),
-      }).catch((e) => console.error('Teklif kaydı gönderilemedi (PDF yine de indirildi):', e))
+      const quotePayload = {
+        customerName: customer || null,
+        phone: phone || null,
+        email: email || null,
+        address: address || null,
+        message: message || null,
+        modelCode: summary.modelCode || null,
+        wallWidthM: Number(summary.width) || null,
+        wallHeightM: Number(summary.height) || null,
+        screenMode: summary.screenMode || 'single',
+        columns: Number(summary.cols) || null,
+        rows: Number(summary.rows) || null,
+        screenType: summary.screenType || null,
+        resolution: summary.resolution || null,
+        screensSummary: screensText.join(' · '),
+      }
+      const sendQuote = (body) =>
+        apiFetch(`${API_URL}/api/quotes`, {
+          method: 'POST',
+          auth: true,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      sendQuote(quotePayload)
+        .then(async (quoteRes) => {
+          if (quoteRes.ok) return
+          const err = await quoteRes.json().catch(() => ({}))
+          if (quoteRes.status === 403 && err.code === 'PII_DISABLED') {
+            await sendQuote({
+              ...quotePayload,
+              customerName: null,
+              phone: null,
+              email: null,
+              address: null,
+              message: null,
+            })
+            return
+          }
+          console.error('Teklif kaydı gönderilemedi (PDF yine de indirildi):', err.message || quoteRes.status)
+        })
+        .catch((e) => console.error('Teklif kaydı gönderilemedi (PDF yine de indirildi):', e))
 
       if (summary.screenMode !== 'multi' && model.id) {
         apiFetch(`${API_URL}/api/configurations`, {

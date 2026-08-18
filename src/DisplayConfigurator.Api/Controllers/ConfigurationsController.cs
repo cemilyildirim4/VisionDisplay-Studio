@@ -13,10 +13,14 @@ namespace DisplayConfigurator.Api.Controllers;
 public class ConfigurationsController : ControllerBase
 {
     private readonly IConfigurationService _configurationService;
+    private readonly ILogger<ConfigurationsController> _logger;
 
-    public ConfigurationsController(IConfigurationService configurationService)
+    public ConfigurationsController(
+        IConfigurationService configurationService,
+        ILogger<ConfigurationsController> logger)
     {
         _configurationService = configurationService;
+        _logger = logger;
     }
 
     // GET: api/configurations — kayıtlı tüm projeleri listeler; yalnızca yönetim ekranı kullanır.
@@ -41,13 +45,17 @@ public class ConfigurationsController : ControllerBase
         return Ok(result);
     }
 
-    // GET: api/configurations/1
+    // GET: api/configurations/1 — sahibi veya Admin; aksi halde 403 (IDOR).
+    [Authorize]
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ConfigurationResponseDto>> GetById(int id)
     {
         var result = await _configurationService.GetByIdAsync(id);
         if (result == null)
             return NotFound(new { message = "Konfigürasyon bulunamadı." });
+
+        if (!CanAccessConfiguration(result.UserId))
+            return ForbidConfigAccess();
 
         return Ok(result);
     }
@@ -63,9 +71,12 @@ public class ConfigurationsController : ControllerBase
             var result = await _configurationService.CreateAsync(dto, GetUserId());
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
-        catch (ArgumentException ex)
+        catch (ArgumentException)
         {
-            return BadRequest(new { message = ex.Message });
+            return Problem(
+                title: "Geçersiz istek",
+                detail: "Gönderilen konfigürasyon verisi işlenemedi.",
+                statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -96,14 +107,21 @@ public class ConfigurationsController : ControllerBase
         return Ok(new { message = "Durum güncellendi." });
     }
 
-    // GET: api/configurations/1/pdf (KAYITLI PROJE PDF'İ)
-    [HttpGet("{id}/pdf")]
+    // GET: api/configurations/1/pdf — sahibi veya Admin; aksi halde 403 (IDOR).
+    [Authorize]
+    [HttpGet("{id:int}/pdf")]
     public async Task<IActionResult> DownloadSpecSheet(int id)
     {
+        var existing = await _configurationService.GetByIdAsync(id);
+        if (existing == null)
+            return NotFound(new { message = "Konfigürasyon bulunamadı." });
+
+        if (!CanAccessConfiguration(existing.UserId))
+            return ForbidConfigAccess();
+
         var pdfBytes = await _configurationService.GenerateSpecSheetPdfAsync(id);
-        
         if (pdfBytes == null)
-            return NotFound("Konfigürasyon bulunamadı.");
+            return NotFound(new { message = "Konfigürasyon bulunamadı." });
 
         string fileName = $"Profesyonel_Rapor_{id}.pdf";
         return File(pdfBytes, "application/pdf", fileName);
@@ -120,17 +138,28 @@ public class ConfigurationsController : ControllerBase
             var pdfBytes = await _configurationService.GenerateSpecSheetPdfFromDtoAsync(dto, dto.ToExtras());
 
             if (pdfBytes == null || pdfBytes.Length == 0)
-                return BadRequest(new { message = "PDF raporu oluşturulamadı." });
+            {
+                return Problem(
+                    title: "PDF raporu oluşturulamadı.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
 
             return File(pdfBytes, "application/pdf", "Profesyonel_Rapor.pdf");
         }
-        catch (ArgumentException ex)
+        catch (ArgumentException)
         {
-            return BadRequest(new { message = ex.Message });
+            return Problem(
+                title: "Geçersiz PDF isteği",
+                detail: "Gönderilen konfigürasyon verisi işlenemedi.",
+                statusCode: StatusCodes.Status400BadRequest);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "PDF oluşturulurken beklenmeyen bir hata oluştu.", error = ex.Message });
+            _logger.LogError(ex, "PDF oluşturulurken beklenmeyen hata.");
+            return Problem(
+                title: "PDF oluşturulamadı",
+                detail: null,
+                statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -139,4 +168,24 @@ public class ConfigurationsController : ControllerBase
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(sub, out var id) && id > 0 ? id : null;
     }
+
+    private bool IsAdmin()
+    {
+        if (User.Identity?.IsAuthenticated != true) return false;
+        var role = User.FindFirstValue(ClaimTypes.Role) ?? User.FindFirstValue("role");
+        return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Sahipsiz (UserId null) kayıtlar yalnızca Admin tarafından okunabilir.
+    /// </summary>
+    private bool CanAccessConfiguration(int? ownerUserId)
+    {
+        if (IsAdmin()) return true;
+        var userId = GetUserId();
+        return userId != null && ownerUserId != null && userId.Value == ownerUserId.Value;
+    }
+
+    private ObjectResult ForbidConfigAccess() =>
+        StatusCode(StatusCodes.Status403Forbidden, new { message = "Bu kayda erişim yetkiniz yok." });
 }

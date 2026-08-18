@@ -55,7 +55,7 @@ public class Cabin
     /// <summary>Kategori filtresi: "Kapalı", "Duvar" (birden fazla olabilir)</summary>
     public string? FilterCategory { get; set; }
 
-    /// <summary>Kullanım: "Ticari İç Mekan", "Pencereye bakan", "Sanal Üretim", "Sinema"</summary>
+    /// <summary>Kullanım: "Ticari İç Mekan", "Pencereye bakan", "Sanal Üretim", "Sinema", "Dış Mekan"</summary>
     public string? Usage { get; set; }
 
     /// <summary>Kurulum: "Düz", "Dışbükey", "İçbükey", "İç L Tipi", "Dış L Tipi", "Asılı", "İstifleme"</summary>
@@ -78,6 +78,12 @@ public class Cabin
 
     /// <summary>Vesaire (birden fazla): "LED HDR", "HDR 10/10+", "VXT", "SmartThings Pro", "Güç Yedekliliği"</summary>
     public string? Features { get; set; }
+
+    /// <summary>IP koruma sınıfı (20/30 iç mekan, 65+ dış mekan). Boşsa sihirbaz IP elemesi uygulamaz.</summary>
+    public int? IpRating { get; set; }
+
+    /// <summary>Sihirbaz hedef stok — geçen ürünler arasında %40 ekstra puan.</summary>
+    public bool Featured { get; set; }
 
     // ---------------------------------------------------------------
     // GÖRSEL VE BİLEŞEN KODLARI

@@ -107,13 +107,9 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Hiç Admin yoksa ilk Admin hesabını oluşturur.
-    /// Koruma: X-Admin-Key (paylaşılan parola) VEYA henüz hiç Admin yokken
-    /// ve Admin:Password tanımlı değilse yalnızca development'ta serbest bırakılmaz —
-    /// her zaman X-Admin-Key veya mevcut Admin JWT gerekir; Admin yokken
-    /// yalnızca X-Admin-Key ile açılır.
+    /// Hiç Admin yokken ilk Admin hesabını oluşturur. İlk Admin oluştuktan sonra
+    /// 409 döner; sonraki Admin'ler yalnızca mevcut Admin JWT ile POST /api/users üzerinden eklenir.
     /// </summary>
-    [AdminOnly]
     [EnableRateLimiting("auth")]
     [HttpPost("bootstrap-admin")]
     public async Task<ActionResult<UserListItemDto>> BootstrapAdmin([FromBody] BootstrapAdminDto dto)

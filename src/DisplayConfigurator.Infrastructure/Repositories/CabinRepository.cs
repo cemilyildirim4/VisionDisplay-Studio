@@ -39,6 +39,8 @@ public class CabinRepository : ICabinRepository
         c.protection AS Protection,
         c.certification AS Certification,
         c.features AS Features,
+        c.ip_rating AS IpRating,
+        c.featured AS Featured,
         c.image_url AS ImageUrl,
         c.sbox_code AS SboxCode,
         c.jig_code AS JigCode,
@@ -63,7 +65,7 @@ public class CabinRepository : ICabinRepository
 
     public async Task<IEnumerable<Cabin>> GetAllAsync(string? category = null, string? productType = null)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         string sql = $@"
             SELECT {SelectColumns}
             FROM cabins c
@@ -83,7 +85,7 @@ public class CabinRepository : ICabinRepository
 
     public async Task<Cabin?> GetByIdAsync(int id)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         string sql = $@"
             SELECT {SelectColumns}
             FROM cabins c
@@ -101,7 +103,7 @@ public class CabinRepository : ICabinRepository
 
     public async Task<IEnumerable<Cabin>> GetBySeriesIdAsync(int seriesId)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         string sql = $@"
             SELECT {SelectColumns}
             FROM cabins c
@@ -120,7 +122,7 @@ public class CabinRepository : ICabinRepository
 
     public async Task<Cabin> CreateAsync(Cabin cabin)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             INSERT INTO cabins
             (
@@ -130,6 +132,7 @@ public class CabinRepository : ICabinRepository
                 power_typical_watts, power_max_watts, viewing_distance_m, size_inch, bezel_mm,
                 filter_category, usage, installation, configurable, service,
                 led_type, protection, certification, features,
+                ip_rating, featured,
                 image_url, sbox_code, jig_code, power_cord_110_code, power_cord_220_code,
                 created_at
             )
@@ -141,6 +144,7 @@ public class CabinRepository : ICabinRepository
                 @PowerTypicalWatts, @PowerMaxWatts, @ViewingDistanceM, @SizeInch, @BezelMm,
                 @FilterCategory, @Usage, @Installation, @Configurable, @Service,
                 @LedType, @Protection, @Certification, @Features,
+                @IpRating, @Featured,
                 @ImageUrl, @SboxCode, @JigCode, @PowerCord110Code, @PowerCord220Code,
                 NOW()
             )
@@ -153,7 +157,7 @@ public class CabinRepository : ICabinRepository
 
     public async Task<bool> UpdateAsync(Cabin cabin)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             UPDATE cabins SET
                 series_id = @SeriesId,
@@ -185,6 +189,8 @@ public class CabinRepository : ICabinRepository
                 protection = @Protection,
                 certification = @Certification,
                 features = @Features,
+                ip_rating = @IpRating,
+                featured = @Featured,
                 image_url = @ImageUrl,
                 sbox_code = @SboxCode,
                 jig_code = @JigCode,
@@ -198,15 +204,22 @@ public class CabinRepository : ICabinRepository
 
     public async Task<bool> DeleteAsync(int id)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "DELETE FROM cabins WHERE id = @Id";
         var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id });
         return rowsAffected > 0;
     }
 
+    public async Task<int> CountConfigurationsAsync(int cabinId)
+    {
+        using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = "SELECT COUNT(1) FROM configurations WHERE cabin_id = @Id";
+        return await connection.ExecuteScalarAsync<int>(sql, new { Id = cabinId });
+    }
+
     public async Task<bool> ModelCodeExistsAsync(string modelCode, int? excludeId)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             SELECT COUNT(1) FROM cabins
             WHERE model_code = @ModelCode AND (@ExcludeId IS NULL OR id <> @ExcludeId)";

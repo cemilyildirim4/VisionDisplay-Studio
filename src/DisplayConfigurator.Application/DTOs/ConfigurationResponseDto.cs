@@ -5,6 +5,8 @@ public class ConfigurationResponseDto
     public int Id { get; set; }
     public string ProjectName { get; set; } = string.Empty;
     public string? CustomerName { get; set; }
+    /// <summary>Kaydeden kullanıcı; yoksa (eski/misafir kayıt) yalnızca Admin okuyabilir.</summary>
+    public int? UserId { get; set; }
     public int CabinId { get; set; }
     public string CabinModelName { get; set; } = string.Empty;
 

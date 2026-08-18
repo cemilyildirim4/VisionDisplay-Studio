@@ -15,7 +15,7 @@ public class AnalyticsRepository : IAnalyticsRepository
 
     public async Task<DashboardSummaryDto> GetDashboardSummaryAsync()
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
 
         var totalQuotes = await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM quotes");
         var pendingQuotes = await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM quotes WHERE status = 'Beklemede'");

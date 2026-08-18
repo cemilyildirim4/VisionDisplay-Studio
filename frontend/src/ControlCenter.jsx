@@ -119,7 +119,7 @@ export default function ControlCenter() {
   const [regStaffCode, setRegStaffCode] = useState('')
   // Formun en üstünde seçilen sıfat: bayi / tester / yönetici
   const [secilenRol, setSecilenRol] = useState(R.DEALER)
-  const personelMi = secilenRol === R.TESTER || secilenRol === R.ADMIN
+  const personelMi = secilenRol === R.TESTER
 
   useEffect(() => {
     const onHash = () => setTab(parseTabFromHash())
@@ -225,8 +225,7 @@ export default function ControlCenter() {
           email: loginEmail,
           password: loginPassword,
           displayName: regName || null,
-          // Kod yalnızca tester/yönetici seçilince gönderilir; bayi kaydında
-          // gönderilmez ve sunucu hesabı bayi olarak açar.
+          // Kod yalnızca Tester seçilince gönderilir; Admin kaydı bu uçtan açılamaz.
           staffCode: personelMi ? regStaffCode.trim() : null,
         }),
       })
@@ -481,14 +480,14 @@ export default function ControlCenter() {
                     ROL SEÇİMİ — formun en üstünde: önce hangi sıfatla devam
                     edileceği seçiliyor.
 
-                    KAYIT sırasında tester/yönetici seçilirse erişim kodu
-                    sorulur; kodsuz kalırsa herkes kendini yönetici yapabilirdi.
+                    KAYIT sırasında tester seçilirse erişim kodu sorulur.
+                    Yönetici hesabı kayıt ekranından açılamaz.
                     GİRİŞTE kod sorulmaz, rol zaten hesabın kendisinde yazılı.
                   */}
                   <div>
                     <span className="text-[12px] text-neutral-500">{t('cc.role.pick')}</span>
                     <div className="flex flex-wrap gap-2 mt-1.5">
-                      {[R.DEALER, R.TESTER, R.ADMIN].map((r) => (
+                    {[...(mod === 'register' ? [R.DEALER, R.TESTER] : [R.DEALER, R.TESTER, R.ADMIN])].map((r) => (
                         <button
                           key={r}
                           type="button"
@@ -556,7 +555,7 @@ export default function ControlCenter() {
                         />
                       </label>
 
-                      {/* Yalnızca tester/yönetici hesabı AÇARKEN sorulur */}
+                      {/* Yalnızca tester hesabı AÇARKEN sorulur */}
                       {personelMi && (
                         <label className="block">
                           <span className="text-[12px] text-neutral-500">{t('cc.role.code')}</span>
@@ -596,7 +595,9 @@ export default function ControlCenter() {
                     <button
                       type="button"
                       onClick={() => {
-                        setMod(mod === 'login' ? 'register' : 'login')
+                        const next = mod === 'login' ? 'register' : 'login'
+                        if (next === 'register' && secilenRol === R.ADMIN) setSecilenRol(R.DEALER)
+                        setMod(next)
                         setLoginError(null)
                       }}
                       className="font-semibold text-brand hover:underline underline-offset-2"

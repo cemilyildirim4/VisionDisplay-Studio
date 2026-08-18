@@ -16,8 +16,11 @@ public class InMemoryCabinRepository : ICabinRepository
 
     public void Seed(Cabin cabin) => _cabins[cabin.Id] = cabin;
 
-    public Task<IEnumerable<Cabin>> GetAllAsync(string? category = null) =>
-        Task.FromResult<IEnumerable<Cabin>>(_cabins.Values.Where(c => category == null || c.Category == category).ToList());
+    public Task<IEnumerable<Cabin>> GetAllAsync(string? category = null, string? productType = null) =>
+        Task.FromResult<IEnumerable<Cabin>>(_cabins.Values
+            .Where(c => category == null || c.Category == category)
+            .Where(c => productType == null || string.Equals(c.ProductType, productType, StringComparison.OrdinalIgnoreCase))
+            .ToList());
 
     public Task<Cabin?> GetByIdAsync(int id) =>
         Task.FromResult(_cabins.TryGetValue(id, out var c) ? c : null);
@@ -39,6 +42,8 @@ public class InMemoryCabinRepository : ICabinRepository
     }
 
     public Task<bool> DeleteAsync(int id) => Task.FromResult(_cabins.Remove(id));
+
+    public Task<int> CountConfigurationsAsync(int cabinId) => Task.FromResult(0);
 
     public Task<bool> ModelCodeExistsAsync(string modelCode, int? excludeId) =>
         Task.FromResult(_cabins.Values.Any(c => c.ModelCode == modelCode && c.Id != excludeId));
