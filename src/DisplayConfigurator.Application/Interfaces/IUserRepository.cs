@@ -9,6 +9,8 @@ public interface IUserRepository
     Task<IEnumerable<User>> GetAllAsync();
     Task<User> CreateAsync(User user);
     Task<bool> UpdateRoleAsync(int id, string role);
+    Task<bool> UpdatePasswordHashAsync(int id, string passwordHash);
     Task<bool> DeleteAsync(int id);
     Task<bool> AnyAdminExistsAsync();
+    Task<User?> GetFirstAdminAsync();
 }

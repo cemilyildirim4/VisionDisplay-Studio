@@ -34,8 +34,8 @@ public class UpdateUserRoleDto
 }
 
 /// <summary>
-/// İlk Admin hesabını oluşturmak için. Hiç Admin yokken herkese açık (rate-limit'li);
-/// bir Admin oluştuktan sonra 409 Conflict döner.
+/// İlk Admin hesabını oluşturmak veya (X-Admin-Key + ForceReset) mevcut
+/// Admin parolasını PBKDF2 ile sıfırlamak için.
 /// </summary>
 public class BootstrapAdminDto
 {
@@ -47,4 +47,10 @@ public class BootstrapAdminDto
 
     [StringLength(150)]
     public string? DisplayName { get; set; }
+
+    /// <summary>
+    /// true ise ve geçerli X-Admin-Key varsa, mevcut Admin'in parolası
+    /// verilen değerle yeniden hash'lenir (kilitli hesap kurtarma).
+    /// </summary>
+    public bool ForceReset { get; set; }
 }

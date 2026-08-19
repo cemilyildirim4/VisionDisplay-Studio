@@ -58,6 +58,14 @@ public class UserRepository : IUserRepository
         return rows > 0;
     }
 
+    public async Task<bool> UpdatePasswordHashAsync(int id, string passwordHash)
+    {
+        using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = "UPDATE users SET password_hash = @PasswordHash WHERE id = @Id";
+        var rows = await connection.ExecuteAsync(sql, new { Id = id, PasswordHash = passwordHash });
+        return rows > 0;
+    }
+
     public async Task<bool> DeleteAsync(int id)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
@@ -71,5 +79,12 @@ public class UserRepository : IUserRepository
         using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "SELECT EXISTS(SELECT 1 FROM users WHERE role = 'Admin')";
         return await connection.ExecuteScalarAsync<bool>(sql);
+    }
+
+    public async Task<User?> GetFirstAdminAsync()
+    {
+        using var connection = await _connectionFactory.CreateConnectionAsync();
+        var sql = $"SELECT {SelectColumns} FROM users WHERE role = 'Admin' ORDER BY id ASC LIMIT 1";
+        return await connection.QueryFirstOrDefaultAsync<User>(sql);
     }
 }

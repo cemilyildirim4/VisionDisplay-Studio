@@ -48,6 +48,7 @@ services:
       Staff__TesterCode: ${STAFF_TESTER_CODE:-}
       Jwt__Secret: ${JWT_SECRET:?JWT_SECRET tanimli olmali}
       JWT_SECRET: ${JWT_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       Beta__Enabled: ${BETA_ENABLED:-false}
       Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
