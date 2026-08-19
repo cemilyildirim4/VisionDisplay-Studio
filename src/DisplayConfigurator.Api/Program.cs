@@ -77,18 +77,29 @@ builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
-// 4. CORS — CORS_ORIGINS (virgülle ayrılmış) öncelikli; yoksa Cors:Origins.
-// Production'da boş liste ve wildcard (*) reddedilir.
-var izinliAdresler = ResolveCorsOrigins(builder);
+// 4. CORS — Render CORS_ORIGINS (virgülle ayrılmış, sondaki / temizlenir).
+// Boşsa geliştirme fallback: AllowAnyOrigin (AllowCredentials ile birlikte kullanılamaz).
+var corsOrigins = ParseCorsOrigins();
+var corsAllowAnyOrigin = corsOrigins.Length == 0;
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins(izinliAdresler)
-              .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-              .WithHeaders("Content-Type", "Authorization", "X-Guest-Token")
-              .WithExposedHeaders("Content-Disposition")
-              .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
+        if (corsAllowAnyOrigin)
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        }
+        else
+        {
+            policy.WithOrigins(corsOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials()
+                  .WithExposedHeaders("Content-Disposition");
+        }
     });
 });
 
@@ -241,17 +252,17 @@ app.Use(async (context, next) =>
     // aynı-origin izole edilerek Spectre benzeri yan-kanal sızıntıları
     // ve "tabnabbing" sınıfı saldırılara karşı ek bir katman eklenir.
     headers["Cross-Origin-Opener-Policy"] = "same-origin";
-    // Yanıtlar farklı origin'lerden <script>/<img> olarak gömülmeye
-    // çalışılırsa (örn. veri sızdırma amaçlı) reddedilir; frontend zaten
-    // API'yi doğrudan fetch ile çağırıyor, bu davranışı bozmaz.
-    headers["Cross-Origin-Resource-Policy"] = "same-site";
+    // API Vercel gibi başka origin'lerden fetch edilir; same-site CORS'u
+    // tarayıcıda "No Access-Control-Allow-Origin" gibi gösterir.
+    headers["Cross-Origin-Resource-Policy"] = "cross-origin";
     // API yanıtları (özellikle admin/teklif verileri) tarayıcı önbelleğinde
     // veya paylaşımlı proxy'lerde kalmasın.
     headers["Cache-Control"] = "no-store";
     await next();
 });
 
-// 8. CORS politikasını devreye alıyoruz
+// 8. CORS — UseRouting'den sonra, UseAuthorization ve MapControllers'dan önce.
+app.UseRouting();
 app.UseCors("AllowReactApp");
 
 app.UseRateLimiter();
@@ -319,58 +330,16 @@ static string ResolveConnectionString(IConfiguration config)
     return builder.ConnectionString;
 }
 
-static string[] ResolveCorsOrigins(WebApplicationBuilder builder)
+static string[] ParseCorsOrigins()
 {
-    var fromEnv = Environment.GetEnvironmentVariable("CORS_ORIGINS")
-        ?? builder.Configuration["Cors:OriginsCsv"];
-    List<string> origins = [];
+    var raw = Environment.GetEnvironmentVariable("CORS_ORIGINS");
+    if (string.IsNullOrWhiteSpace(raw))
+        return [];
 
-    if (!string.IsNullOrWhiteSpace(fromEnv))
-    {
-        origins.AddRange(fromEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-    }
-    else
-    {
-        var fromSection = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
-        if (fromSection is { Length: > 0 })
-            origins.AddRange(fromSection);
-    }
-
-    origins = origins
-        .Select(o => o.Trim())
-        .Where(o => o.Length > 0)
+    return raw
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(o => o.TrimEnd('/'))
+        .Where(o => o.Length > 0 && o != "*")
         .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    var hasWildcard = origins.Any(o => o == "*" || o.Contains('*', StringComparison.Ordinal));
-    if (builder.Environment.IsProduction())
-    {
-        if (origins.Count == 0)
-        {
-            throw new InvalidOperationException(
-                "Production'da CORS_ORIGINS tanımlı olmalı (virgülle ayrılmış tam origin'ler, örn. https://app.example.com).");
-        }
-
-        if (hasWildcard)
-        {
-            throw new InvalidOperationException(
-                "Production'da CORS wildcard (*) kabul edilmez. CORS_ORIGINS içine açık domain yazın.");
-        }
-    }
-    else if (origins.Count == 0)
-    {
-        origins =
-        [
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://localhost:5175",
-        ];
-    }
-    else if (hasWildcard)
-    {
-        throw new InvalidOperationException(
-            "CORS wildcard (*) kullanılamaz. CORS_ORIGINS içine açık origin listesi yazın.");
-    }
-
-    return [.. origins];
+        .ToArray();
 }
