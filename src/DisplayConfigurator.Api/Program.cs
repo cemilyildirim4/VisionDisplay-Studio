@@ -77,28 +77,28 @@ builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
-// 4. CORS — Render CORS_ORIGINS (virgülle ayrılmış, sondaki / temizlenir).
-// Boşsa geliştirme fallback: AllowAnyOrigin (AllowCredentials ile birlikte kullanılamaz).
-var corsOrigins = ParseCorsOrigins();
-var corsAllowAnyOrigin = corsOrigins.Length == 0;
+// 4. CORS — Render CORS_ORIGINS (virgülle ayrılmış). Origin eşleşmezse ASP.NET
+// Access-Control-Allow-Origin hiç yazmaz; tarayıcı bunu "Missing Header" gösterir.
+var corsOrigins = ParseCorsOrigins(builder.Configuration);
+var corsAllowAnyOrigin = corsOrigins.Count == 0;
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
+        policy.AllowAnyHeader()
+              .AllowAnyMethod()
+              .WithExposedHeaders("Content-Disposition")
+              .SetPreflightMaxAge(TimeSpan.FromHours(1));
+
         if (corsAllowAnyOrigin)
         {
-            policy.AllowAnyOrigin()
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
+            // AllowCredentials ile birlikte kullanılamaz.
+            policy.AllowAnyOrigin();
         }
         else
         {
-            policy.WithOrigins(corsOrigins)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials()
-                  .WithExposedHeaders("Content-Disposition");
+            policy.SetIsOriginAllowed(origin => IsAllowedCorsOrigin(origin, corsOrigins));
         }
     });
 });
@@ -215,6 +215,11 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+app.Logger.LogInformation(
+    "CORS: {Mode}; izinli origin'ler: {Origins}",
+    corsAllowAnyOrigin ? "AllowAnyOrigin" : "allow-list",
+    corsAllowAnyOrigin ? "*" : string.Join(", ", corsOrigins));
+
 // Reverse proxy (nginx) X-Forwarded-For / X-Forwarded-Proto başlıklarını
 // Connection.RemoteIpAddress ve şemaya yansıtır. Rate limiter ve loglar
 // gerçek istemci IP'sini görsün diye diğer middleware'lerden önce çalışır.
@@ -271,7 +276,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // 9. Controller endpoint'lerini bağlıyoruz
-app.MapControllers();
+app.MapControllers().RequireCors("AllowReactApp");
 
 app.MapHealthChecks("/healthz").AllowAnonymous();
 app.MapHealthChecks("/health").AllowAnonymous();
@@ -330,16 +335,60 @@ static string ResolveConnectionString(IConfiguration config)
     return builder.ConnectionString;
 }
 
-static string[] ParseCorsOrigins()
+static HashSet<string> ParseCorsOrigins(IConfiguration config)
 {
-    var raw = Environment.GetEnvironmentVariable("CORS_ORIGINS");
-    if (string.IsNullOrWhiteSpace(raw))
+    var raw = FirstNonEmpty(
+        Environment.GetEnvironmentVariable("CORS_ORIGINS"),
+        config["CORS_ORIGINS"],
+        config["Cors:OriginsCsv"]);
+
+    // Açık wildcard: her origin. Aksi halde liste her zaman Vercel üretim origin'ini içerir;
+    // Render'da CORS_ORIGINS=localhost kalsa bile tarayıcı ACAO alır.
+    if (string.Equals(raw?.Trim(), "*", StringComparison.Ordinal))
         return [];
 
-    return raw
-        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-        .Select(o => o.TrimEnd('/'))
-        .Where(o => o.Length > 0 && o != "*")
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToArray();
+    var origins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "https://vision-display-studio.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5173",
+    };
+
+    if (string.IsNullOrWhiteSpace(raw))
+        return origins;
+
+    foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    {
+        var origin = NormalizeCorsOrigin(part);
+        if (origin.Length > 0 && origin != "*")
+            origins.Add(origin);
+    }
+
+    return origins;
+}
+
+static string NormalizeCorsOrigin(string value)
+{
+    var origin = value.Trim().Trim('"', '\'').TrimEnd('/');
+    return origin;
+}
+
+static bool IsAllowedCorsOrigin(string origin, HashSet<string> allowed)
+{
+    if (string.IsNullOrWhiteSpace(origin))
+        return false;
+
+    origin = NormalizeCorsOrigin(origin);
+    if (allowed.Contains(origin))
+        return true;
+
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+        return false;
+
+    // Vercel preview: vision-display-studio-git-….vercel.app
+    return uri.Host.Equals("vision-display-studio.vercel.app", StringComparison.OrdinalIgnoreCase)
+        || (uri.Host.StartsWith("vision-display-studio", StringComparison.OrdinalIgnoreCase)
+            && uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase));
 }
