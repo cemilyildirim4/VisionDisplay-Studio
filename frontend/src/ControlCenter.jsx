@@ -74,6 +74,7 @@ export default function ControlCenter() {
     isDealer,
     canDealerTools,
     canTesterTools,
+    testerRoleEnabled,
     isAuthenticated,
     setDemoRole,
     setSessionData,
@@ -169,6 +170,17 @@ export default function ControlCenter() {
     list.push({ id: 'session', label: t('cc.tab.session') })
     return list
   }, [canDealerTools, canTesterTools, t])
+
+  const registerRoles = testerRoleEnabled ? [R.DEALER, R.TESTER] : [R.DEALER]
+  const loginRoles = testerRoleEnabled ? [R.DEALER, R.TESTER, R.ADMIN] : [R.DEALER, R.ADMIN]
+
+  useEffect(() => {
+    if (!testerRoleEnabled && secilenRol === R.TESTER) setSecilenRol(R.DEALER)
+  }, [testerRoleEnabled, secilenRol, R.TESTER, R.DEALER])
+
+  useEffect(() => {
+    if (tab === 'tester' && !canTesterTools) goTab('session')
+  }, [tab, canTesterTools])
 
   const roleLabel = t(`role.${role.toLowerCase()}`)
 
@@ -487,7 +499,7 @@ export default function ControlCenter() {
                   <div>
                     <span className="text-[12px] text-neutral-500">{t('cc.role.pick')}</span>
                     <div className="flex flex-wrap gap-2 mt-1.5">
-                    {[...(mod === 'register' ? [R.DEALER, R.TESTER] : [R.DEALER, R.TESTER, R.ADMIN])].map((r) => (
+                    {(mod === 'register' ? registerRoles : loginRoles).map((r) => (
                         <button
                           key={r}
                           type="button"
@@ -625,10 +637,12 @@ export default function ControlCenter() {
                   <span className="text-brand mt-0.5">●</span>
                   <span>{isAdmin ? t('cc.perm.adminYes') : t('cc.perm.adminNo')}</span>
                 </li>
+                {testerRoleEnabled && (
                 <li className="text-[13px] flex items-start gap-2">
                   <span className="text-brand mt-0.5">●</span>
                   <span>{isTester ? t('cc.perm.testerYes') : t('cc.perm.testerNo')}</span>
                 </li>
+                )}
                 <li className="text-[13px] flex items-start gap-2">
                   <span className="text-brand mt-0.5">●</span>
                   <span>{isDealer ? t('cc.perm.dealerYes') : t('cc.perm.dealerNo')}</span>

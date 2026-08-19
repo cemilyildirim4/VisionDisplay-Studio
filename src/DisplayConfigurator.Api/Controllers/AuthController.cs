@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using DisplayConfigurator.Api.Security;
 using DisplayConfigurator.Application.DTOs;
 using DisplayConfigurator.Application.Interfaces;
 using DisplayConfigurator.Application.Security;
@@ -25,19 +26,22 @@ public class AuthController : ControllerBase
     private readonly IInviteCodeRepository _inviteCodeRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IConfiguration _config;
+    private readonly IHostEnvironment _environment;
 
     public AuthController(
         IUserRepository userRepository,
         IRefreshTokenRepository refreshTokenRepository,
         IInviteCodeRepository inviteCodeRepository,
         IJwtTokenService jwtTokenService,
-        IConfiguration config)
+        IConfiguration config,
+        IHostEnvironment environment)
     {
         _userRepository = userRepository;
         _refreshTokenRepository = refreshTokenRepository;
         _inviteCodeRepository = inviteCodeRepository;
         _jwtTokenService = jwtTokenService;
         _config = config;
+        _environment = environment;
     }
 
     [HttpPost("register")]
@@ -47,11 +51,19 @@ public class AuthController : ControllerBase
         if (existing != null)
             return Conflict(new { message = "Bu e-posta adresiyle zaten bir hesap var." });
 
-        // Rol: kod yoksa bayi. Yalnızca Staff:TesterCode ile Tester açılır.
-        // Admin kaydı bu uçtan yapılamaz (Staff:AdminCode kaldırıldı).
+        // Rol: kod yoksa bayi. Tester yalnızca Development veya Beta:Enabled.
+        // Admin kaydı bu uçtan yapılamaz.
         var role = "Dealer";
         if (!string.IsNullOrWhiteSpace(dto.StaffCode))
         {
+            if (!RoleAvailability.TesterEnabled(_environment, _config))
+            {
+                return BadRequest(new
+                {
+                    message = "Tester kaydı yalnızca geliştirme veya beta ortamında açıktır.",
+                });
+            }
+
             var kod = dto.StaffCode.Trim();
             var testerKod = _config["Staff:TesterCode"];
 

@@ -16,9 +16,8 @@ public class RegisterDto
 
     /// <summary>
     /// Personel erişim kodu. Boş bırakılırsa hesap "Dealer" (bayi) olarak açılır.
-    /// Yalnızca Staff:TesterCode ile eşleşirse hesap "Tester" olur. Admin hesabı
-    /// bu uçtan açılamaz; ilk Admin bootstrap, sonrakiler yönetim panelindendir.
-    /// Kod yanlışsa kayıt reddedilir.
+    /// Tester kaydı yalnızca Development veya Beta:Enabled iken Staff:TesterCode ile açılır.
+    /// Canlıda bu alan gönderilirse kayıt reddedilir. Admin bu uçtan açılamaz.
     /// </summary>
     [StringLength(100)]
     public string? StaffCode { get; set; }

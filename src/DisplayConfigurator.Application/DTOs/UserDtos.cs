@@ -22,7 +22,7 @@ public class CreateUserDto
     [StringLength(150)]
     public string? DisplayName { get; set; }
 
-    /// <summary>Admin | Dealer | Tester</summary>
+    /// <summary>Admin | Dealer. Tester yalnızca Development veya Beta:Enabled.</summary>
     [Required, StringLength(20)]
     public string Role { get; set; } = "Dealer";
 }

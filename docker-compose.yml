@@ -70,7 +70,7 @@ services:
       Cors__Origins__1: http://localhost:5174
       Cors__Origins__2: http://localhost:5175
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:5174,http://localhost:5175}
-      # Personel kayıt kodu — yalnızca Tester. Boşsa personel kaydı kapalıdır.
+      # Tester kaydı: yalnızca Development veya BETA_ENABLED=true. Canlıda yok sayılır.
       Staff__TesterCode: ${STAFF_TESTER_CODE:-}
       # Sırlar .env'den gelir; varsayılan verilmez. Boş bırakılırsa API
       # Production ortamında kasten ayağa kalkmaz (bkz. Program.cs) — gizli

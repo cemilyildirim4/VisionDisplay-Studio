@@ -5,6 +5,7 @@ import ProductTypeBadge from './ProductTypeBadge.jsx'
 import { normalizeProductType } from './productType.js'
 import { API_URL, apiFetch } from './apiClient.js'
 import { queryClient } from './queryClient.js'
+import { TESTER_ROLE_ENABLED } from './featureFlags.js'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
@@ -1000,7 +1001,7 @@ export default function AdminPanel() {
     }
   }, [])
 
-  // ---- Kullanıcılar (Admin / Dealer / Tester) ----
+  // ---- Kullanıcılar (Admin / Dealer; Tester yalnızca beta/dev) ----
   const [users, setUsers] = useState([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersError, setUsersError] = useState(null)
@@ -2085,7 +2086,7 @@ export default function AdminPanel() {
               <Field label="Rol">
                 <select value={userForm.role} onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value }))} className={inputCls}>
                   <option value="Dealer">Bayi (Dealer)</option>
-                  <option value="Tester">Tester</option>
+                  {TESTER_ROLE_ENABLED && <option value="Tester">Tester</option>}
                   <option value="Admin">Admin</option>
                 </select>
               </Field>
@@ -2125,7 +2126,7 @@ export default function AdminPanel() {
                           >
                             <option value="Admin">Admin</option>
                             <option value="Dealer">Dealer</option>
-                            <option value="Tester">Tester</option>
+                            {(TESTER_ROLE_ENABLED || u.role === 'Tester') && <option value="Tester">Tester</option>}
                           </select>
                         </td>
                         <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{dt(u.createdAt)}</td>

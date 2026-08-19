@@ -1,11 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { setSessionBridge } from './apiClient.js'
+import { TESTER_ROLE_ENABLED } from './featureFlags.js'
 
 /**
  * Oturum / rol bağlamı.
  *
- * Backend'de roller: Admin | Dealer (User entity).
- * Frontend beta için ek olarak "Tester" ve oturumsuz "Guest" desteklenir.
+ * Canlıda roller: Admin | Dealer | oturumsuz Guest.
+ * Tester yalnızca geliştirme sunucusu veya VITE_BETA_ENABLED=true paketinde
+ * görünür; production JWT'si Tester olsa bile arayüz Dealer gibi davranır.
  *
  * Öncelik sırası:
  *  1. Kaydedilmiş JWT oturumu (localStorage) varsa → o kullanıcının rolü
@@ -104,26 +106,32 @@ export function SessionProvider({ children }) {
   }, [])
 
   const role = useMemo(() => {
+    let resolved = ROLES.GUEST
+
     // 1) Gerçek JWT oturumu her zaman baskın
     if (session?.accessToken && session?.role) {
-      if (session.role === ROLES.ADMIN) return ROLES.ADMIN
-      if (session.role === ROLES.TESTER) return ROLES.TESTER
-      if (session.role === ROLES.DEALER) return ROLES.DEALER
+      if (session.role === ROLES.ADMIN) resolved = ROLES.ADMIN
+      else if (session.role === ROLES.TESTER) resolved = ROLES.TESTER
+      else if (session.role === ROLES.DEALER) resolved = ROLES.DEALER
+    } else if (demoRole === ROLES.GUEST) {
+      resolved = ROLES.GUEST
+    } else if (demoRole === ROLES.ADMIN) {
+      resolved = ROLES.ADMIN
+    } else if (demoRole === ROLES.TESTER) {
+      resolved = ROLES.TESTER
+    } else if (demoRole === ROLES.DEALER) {
+      resolved = ROLES.DEALER
+    } else if (adminUnlocked) {
+      resolved = ROLES.ADMIN
+    } else if (session?.demo && session?.role) {
+      if (session.role === ROLES.ADMIN) resolved = ROLES.ADMIN
+      else if (session.role === ROLES.TESTER) resolved = ROLES.TESTER
+      else if (session.role === ROLES.DEALER) resolved = ROLES.DEALER
     }
-    // 2) Beta demo rolü — yönetim oturumunu UI'da ezer (rol simülasyonu)
-    if (demoRole === ROLES.GUEST) return ROLES.GUEST
-    if (demoRole === ROLES.ADMIN) return ROLES.ADMIN
-    if (demoRole === ROLES.TESTER) return ROLES.TESTER
-    if (demoRole === ROLES.DEALER) return ROLES.DEALER
-    // 3) Yönetim paneli doğrulaması (demo seçilmemişken)
-    if (adminUnlocked) return ROLES.ADMIN
-    // 4) Demo session kaydı
-    if (session?.demo && session?.role) {
-      if (session.role === ROLES.ADMIN) return ROLES.ADMIN
-      if (session.role === ROLES.TESTER) return ROLES.TESTER
-      if (session.role === ROLES.DEALER) return ROLES.DEALER
-    }
-    return ROLES.GUEST
+
+    // Canlıda Tester yok: eski JWT / demo seçimi Dealer'a düşer.
+    if (!TESTER_ROLE_ENABLED && resolved === ROLES.TESTER) return ROLES.DEALER
+    return resolved
   }, [adminUnlocked, session, demoRole])
 
   const displayName = session?.displayName || (role === ROLES.GUEST ? 'Misafir' : role)
@@ -179,9 +187,10 @@ export function SessionProvider({ children }) {
       isAdmin: role === ROLES.ADMIN,
       isTester: role === ROLES.TESTER,
       isDealer: role === ROLES.DEALER,
-      // Bazı ekranlar (Kontrol Merkezi sekmeleri) Admin'e de bayi/tester panelleri açabilir:
+      testerRoleEnabled: TESTER_ROLE_ENABLED,
+      // Bayi araçları Admin'e de açık. Tester araçları yalnızca beta/dev.
       canDealerTools: role === ROLES.DEALER || role === ROLES.ADMIN,
-      canTesterTools: role === ROLES.TESTER || role === ROLES.ADMIN,
+      canTesterTools: TESTER_ROLE_ENABLED && (role === ROLES.TESTER || role === ROLES.ADMIN),
       session,
       demoRole,
       setSessionData,

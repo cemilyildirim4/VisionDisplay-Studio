@@ -53,7 +53,7 @@ function MenuItem({ href, onClick, icon, children, danger }) {
  *
  *  Admin  → Yönetim Paneli, Kontrol Merkezi, Çıkış
  *  Dealer → Kontrol Merkezi, Tekliflerim, Çıkış
- *  Tester → Kontrol Merkezi, Test Araçları, Çıkış
+ *  Tester → (yalnızca beta/dev) Kontrol Merkezi, Test Araçları, Çıkış
  *  Guest  → Kontrol Merkezi, Giriş yap
  */
 export default function ProfileMenu() {

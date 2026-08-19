@@ -12,14 +12,18 @@ namespace DisplayConfigurator.Api.Controllers;
 [Route("api/users")]
 public class UsersController : ControllerBase
 {
-    private static readonly string[] AllowedRoles = ["Admin", "Dealer", "Tester"];
-
     private readonly IUserRepository _users;
+    private readonly IHostEnvironment _environment;
+    private readonly IConfiguration _config;
 
-    public UsersController(IUserRepository users)
+    public UsersController(IUserRepository users, IHostEnvironment environment, IConfiguration config)
     {
         _users = users;
+        _environment = environment;
+        _config = config;
     }
+
+    private string[] AllowedRoles => RoleAvailability.AssignableRoles(_environment, _config);
 
     [AdminOnly]
     [HttpGet]
@@ -139,6 +143,6 @@ public class UsersController : ControllerBase
         });
     }
 
-    private static string NormalizeRole(string role) =>
+    private string NormalizeRole(string role) =>
         AllowedRoles.First(r => r.Equals(role, StringComparison.OrdinalIgnoreCase));
 }
