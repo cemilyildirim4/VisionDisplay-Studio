@@ -76,7 +76,6 @@ export default function ControlCenter() {
     canTesterTools,
     testerRoleEnabled,
     isAuthenticated,
-    setDemoRole,
     setSessionData,
     logout,
     session,
@@ -93,16 +92,6 @@ export default function ControlCenter() {
   const [bugSending, setBugSending] = useState(false)
   const [bugError, setBugError] = useState(null)
   /*
-   * KAYIT
-   *
-   * Aynı panelde giriş ile kayıt arasında geçiş yapılıyor: oturum açmak için
-   * önce hesap gerekiyordu ama hesabı açacak bir yer yoktu.
-   *
-   * Kayıt HERKESE açık ve açılan hesap "bayi" rolünde. Personel erişim kodu
-   * alanı isteğe bağlı: doğru kod girilirse hesap tester/yönetici olarak
-   * açılır, kodu bilmeyen normal bayi hesabı almaya devam eder.
-   */
-  /*
    * TEKLİFLERİM
    *
    * PDF dışa aktarımı sırasında kaydedilen teklifler /api/quotes/mine ile
@@ -113,14 +102,6 @@ export default function ControlCenter() {
   const [teklifYukleniyor, setTeklifYukleniyor] = useState(false)
   const [teklifHata, setTeklifHata] = useState(null)
   const [acikTeklif, setAcikTeklif] = useState(null)
-
-  const [mod, setMod] = useState('login') // 'login' | 'register'
-  const [regName, setRegName] = useState('')
-  const [regPassword2, setRegPassword2] = useState('')
-  const [regStaffCode, setRegStaffCode] = useState('')
-  // Formun en üstünde seçilen sıfat: bayi / tester / yönetici
-  const [secilenRol, setSecilenRol] = useState(R.DEALER)
-  const personelMi = secilenRol === R.TESTER
 
   useEffect(() => {
     const onHash = () => setTab(parseTabFromHash())
@@ -171,13 +152,6 @@ export default function ControlCenter() {
     return list
   }, [canDealerTools, canTesterTools, t])
 
-  const registerRoles = testerRoleEnabled ? [R.DEALER, R.TESTER] : [R.DEALER]
-  const loginRoles = testerRoleEnabled ? [R.DEALER, R.TESTER, R.ADMIN] : [R.DEALER, R.ADMIN]
-
-  useEffect(() => {
-    if (!testerRoleEnabled && secilenRol === R.TESTER) setSecilenRol(R.DEALER)
-  }, [testerRoleEnabled, secilenRol, R.TESTER, R.DEALER])
-
   useEffect(() => {
     if (tab === 'tester' && !canTesterTools) goTab('session')
   }, [tab, canTesterTools])
@@ -211,50 +185,6 @@ export default function ControlCenter() {
         email: data.email || loginEmail,
         displayName: data.displayName || data.email || loginEmail,
       })
-      setDemoRole(null)
-      goTab('session')
-    } catch {
-      setLoginError(t('cc.login.network'))
-    } finally {
-      setLoginBusy(false)
-    }
-  }
-
-  const handleRegister = async (e) => {
-    e.preventDefault()
-    if (loginBusy) return
-    if (loginPassword !== regPassword2) {
-      setLoginError(t('cc.reg.mismatch'))
-      return
-    }
-    setLoginBusy(true)
-    setLoginError(null)
-    try {
-      const res = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: loginEmail,
-          password: loginPassword,
-          displayName: regName || null,
-          // Kod yalnızca Tester seçilince gönderilir; Admin kaydı bu uçtan açılamaz.
-          staffCode: personelMi ? regStaffCode.trim() : null,
-        }),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        setLoginError(body.message || t('cc.reg.failed'))
-        return
-      }
-      const data = await res.json()
-      setSessionData({
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-        role: data.role || R.DEALER,
-        email: data.email || loginEmail,
-        displayName: data.displayName || regName || data.email || loginEmail,
-      })
-      setDemoRole(null)
       goTab('session')
     } catch {
       setLoginError(t('cc.login.network'))
@@ -480,57 +410,8 @@ export default function ControlCenter() {
         {tab === 'session' && (
           <div className="flex flex-col gap-4">
             {!isAuthenticated ? (
-              <Panel
-                title={mod === 'login' ? t('cc.login.title') : t('cc.reg.title')}
-                hint={mod === 'login' ? t('cc.login.hint') : t('cc.reg.hint')}
-              >
-                <form
-                  onSubmit={mod === 'login' ? handleLogin : handleRegister}
-                  className="flex flex-col gap-3 max-w-sm"
-                >
-                  {/*
-                    ROL SEÇİMİ — formun en üstünde: önce hangi sıfatla devam
-                    edileceği seçiliyor.
-
-                    KAYIT sırasında tester seçilirse erişim kodu sorulur.
-                    Yönetici hesabı kayıt ekranından açılamaz.
-                    GİRİŞTE kod sorulmaz, rol zaten hesabın kendisinde yazılı.
-                  */}
-                  <div>
-                    <span className="text-[12px] text-neutral-500">{t('cc.role.pick')}</span>
-                    <div className="flex flex-wrap gap-2 mt-1.5">
-                    {(mod === 'register' ? registerRoles : loginRoles).map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => {
-                            setSecilenRol(r)
-                            setRegStaffCode('')
-                            setLoginError(null)
-                          }}
-                          className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold border transition-colors ${
-                            secilenRol === r
-                              ? 'btn-selected border'
-                              : 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-brand'
-                          }`}
-                        >
-                          {t(`role.${r.toLowerCase()}`)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {mod === 'register' && (
-                    <label className="block">
-                      <span className="text-[12px] text-neutral-500">{t('cc.reg.name')}</span>
-                      <input
-                        type="text"
-                        value={regName}
-                        onChange={(e) => setRegName(e.target.value)}
-                        className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
-                      />
-                    </label>
-                  )}
+              <Panel title={t('cc.login.title')} hint={t('cc.login.hint')}>
+                <form onSubmit={handleLogin} className="flex flex-col gap-3 max-w-sm">
                   <label className="block">
                     <span className="text-[12px] text-neutral-500">{t('exp.email')}</span>
                     <input
@@ -553,70 +434,14 @@ export default function ControlCenter() {
                     />
                   </label>
 
-                  {mod === 'register' && (
-                    <>
-                      <label className="block">
-                        <span className="text-[12px] text-neutral-500">{t('cc.reg.password2')}</span>
-                        <input
-                          type="password"
-                          required
-                          minLength={8}
-                          value={regPassword2}
-                          onChange={(e) => setRegPassword2(e.target.value)}
-                          className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
-                        />
-                      </label>
-
-                      {/* Yalnızca tester hesabı AÇARKEN sorulur */}
-                      {personelMi && (
-                        <label className="block">
-                          <span className="text-[12px] text-neutral-500">{t('cc.role.code')}</span>
-                          <input
-                            type="password"
-                            required
-                            autoComplete="off"
-                            value={regStaffCode}
-                            onChange={(e) => setRegStaffCode(e.target.value)}
-                            className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
-                          />
-                        </label>
-                      )}
-                    </>
-                  )}
-
                   {loginError && <p className="text-[13px] text-red-600 m-0">{loginError}</p>}
                   <button
                     type="submit"
                     disabled={loginBusy}
                     className="rounded-full bg-brand text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors"
                   >
-                    {loginBusy
-                      ? t('cc.login.busy')
-                      : mod === 'login'
-                        ? t('profile.signIn')
-                        : t('cc.reg.submit')}
+                    {loginBusy ? t('cc.login.busy') : t('profile.signIn')}
                   </button>
-
-                  {/*
-                    Kayıt buradan açılıyor: giriş yapmaya gelen ama hesabı
-                    olmayan kişi tam ihtiyaç duyduğu anda görüyor. Profil
-                    menüsünde ayrı bir "Kayıt ol" satırı yok.
-                  */}
-                  <p className="text-[13px] text-neutral-500 dark:text-neutral-400 m-0">
-                    {mod === 'login' ? t('cc.reg.noAccount') : t('cc.reg.haveAccount')}{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = mod === 'login' ? 'register' : 'login'
-                        if (next === 'register' && secilenRol === R.ADMIN) setSecilenRol(R.DEALER)
-                        setMod(next)
-                        setLoginError(null)
-                      }}
-                      className="font-semibold text-brand hover:underline underline-offset-2"
-                    >
-                      {mod === 'login' ? t('cc.reg.title') : t('profile.signIn')}
-                    </button>
-                  </p>
                 </form>
               </Panel>
             ) : (
@@ -649,14 +474,6 @@ export default function ControlCenter() {
                 </li>
               </ul>
             </Panel>
-
-            {/*
-              "Beta: rol simülasyonu" paneli KALDIRILDI. Rol seçimi artık
-              giriş/kayıt formunun en üstünde ve gerçek doğrulamaya bağlı:
-              tıklamayla rol değiştirmek yerine tester/yönetici erişim kodunu
-              girmek gerekiyor. İki ayrı yerde rol belirlemek hem kafa
-              karıştırıyor hem de yetkiyi kontrolsüz veriyordu.
-            */}
 
             {isAdmin && (
               <Panel title={t('cc.adminGate.title')} hint={t('cc.adminGate.hint')}>

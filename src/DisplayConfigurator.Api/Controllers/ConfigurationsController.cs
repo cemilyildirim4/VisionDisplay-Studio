@@ -60,7 +60,8 @@ public class ConfigurationsController : ControllerBase
         return Ok(result);
     }
 
-    // POST: api/configurations
+    // POST: api/configurations — giriş yapmış bayi/admin; sahipsiz yazma yok.
+    [Authorize]
     [BetaGate]
     [EnableRateLimiting("write")]
     [HttpPost]
@@ -128,6 +129,7 @@ public class ConfigurationsController : ControllerBase
     }
 
     // POST: api/configurations/export-pdf — teklif özeti + teknik şartname + ekran görseli
+    [Authorize]
     [EnableRateLimiting("write")]
     [RequestSizeLimit(20_000_000)]
     [HttpPost("export-pdf")]

@@ -26,7 +26,7 @@ public class ChatLogsController : ControllerBase
         return Ok(logs);
     }
 
-    [BetaGate]
+    [DevOrBetaWrite]
     [HttpPost]
     public async Task<ActionResult<ChatLog>> CreateLog([FromBody] ChatLog input)
     {

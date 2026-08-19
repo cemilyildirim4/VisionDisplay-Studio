@@ -77,6 +77,9 @@ self.addEventListener('activate', (event) => {
           '**/sample-video.mp4',
           '**/model-viewer-*.js',
           '**/Scene3D-*.js',
+          // Admin paneli müşteri SW kurulumunda indirilmesin.
+          '**/admin-*.js',
+          '**/AdminPanel-*.js',
         ],
         runtimeCaching: [
           {
@@ -106,10 +109,29 @@ self.addEventListener('activate', (event) => {
               expiration: { maxEntries: 20, maxAgeSeconds: 90 * 24 * 60 * 60 },
             },
           },
+          {
+            // Admin chunk yalnızca #yonetim açıldığında gelir; o zaman cache'lenir.
+            urlPattern: ({ url }) => /(^|\/)admin[-.]/.test(url.pathname) || /AdminPanel-/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'admin-chunk-cache',
+              expiration: { maxEntries: 10, maxAgeSeconds: 90 * 24 * 60 * 60 },
+            },
+          },
         ],
       },
     }),
   ],
+  build: {
+    // Admin async chunk'ını giriş HTML'ine modulepreload olarak ekleme.
+    modulePreload: {
+      resolveDependencies(_filename, deps) {
+        return deps.filter(
+          (dep) => !/(^|\/)admin[-.]/.test(dep) && !/AdminPanel-/.test(dep),
+        )
+      },
+    },
+  },
   server: {
     // Adres her zaman http://localhost:5173 olsun (yer imine eklenebilsin).
     // strictPort: port doluysa başka porta kaymak yerine hata versin —

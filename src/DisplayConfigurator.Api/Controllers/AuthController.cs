@@ -1,6 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-using DisplayConfigurator.Api.Security;
 using DisplayConfigurator.Application.DTOs;
 using DisplayConfigurator.Application.Interfaces;
 using DisplayConfigurator.Application.Security;
@@ -11,10 +8,8 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace DisplayConfigurator.Api.Controllers;
 
 /// <summary>
-/// Production kimlik doğrulama: e-posta/parola ile bayi/müşteri kaydı ve girişi,
-/// kısa ömürlü JWT + uzun ömürlü refresh token çifti üretir. Google/Microsoft
-/// OAuth girişleri (opsiyonel) appsettings'te Client Id tanımlıysa Program.cs
-/// içinde koşullu olarak eklenir — bkz. entegrasyon raporu.
+/// Production kimlik doğrulama: e-posta/parola ile giriş.
+/// Kayıt kapalıdır; bayi hesaplarını yalnızca Admin (POST /api/users) açar.
 /// </summary>
 [ApiController]
 [Route("api/auth")]
@@ -26,63 +21,29 @@ public class AuthController : ControllerBase
     private readonly IInviteCodeRepository _inviteCodeRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IConfiguration _config;
-    private readonly IHostEnvironment _environment;
 
     public AuthController(
         IUserRepository userRepository,
         IRefreshTokenRepository refreshTokenRepository,
         IInviteCodeRepository inviteCodeRepository,
         IJwtTokenService jwtTokenService,
-        IConfiguration config,
-        IHostEnvironment environment)
+        IConfiguration config)
     {
         _userRepository = userRepository;
         _refreshTokenRepository = refreshTokenRepository;
         _inviteCodeRepository = inviteCodeRepository;
         _jwtTokenService = jwtTokenService;
         _config = config;
-        _environment = environment;
     }
 
     [HttpPost("register")]
-    public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterDto dto)
+    public ActionResult Register()
     {
-        var existing = await _userRepository.GetByEmailAsync(dto.Email);
-        if (existing != null)
-            return Conflict(new { message = "Bu e-posta adresiyle zaten bir hesap var." });
-
-        // Rol: kod yoksa bayi. Tester yalnızca Development veya Beta:Enabled.
-        // Admin kaydı bu uçtan yapılamaz.
-        var role = "Dealer";
-        if (!string.IsNullOrWhiteSpace(dto.StaffCode))
+        return StatusCode(StatusCodes.Status403Forbidden, new
         {
-            if (!RoleAvailability.TesterEnabled(_environment, _config))
-            {
-                return BadRequest(new
-                {
-                    message = "Tester kaydı yalnızca geliştirme veya beta ortamında açıktır.",
-                });
-            }
-
-            var kod = dto.StaffCode.Trim();
-            var testerKod = _config["Staff:TesterCode"];
-
-            if (!string.IsNullOrEmpty(testerKod) && FixedTimeEquals(kod, testerKod))
-                role = "Tester";
-            else
-                return BadRequest(new { message = "Erişim kodu geçersiz." });
-        }
-
-        var user = new User
-        {
-            Email = dto.Email.Trim().ToLowerInvariant(),
-            PasswordHash = PasswordHasher.Hash(dto.Password),
-            DisplayName = dto.DisplayName,
-            Role = role,
-        };
-
-        var created = await _userRepository.CreateAsync(user);
-        return await IssueTokensAsync(created);
+            message = "Kayıt kapalı. Bayi hesabı yalnızca yönetim panelinden (Kullanıcılar) açılır.",
+            code = "REGISTRATION_CLOSED",
+        });
     }
 
     [HttpPost("login")]
@@ -133,18 +94,6 @@ public class AuthController : ControllerBase
             AccessTokenExpiresAt = expiresAt,
             Role = "Guest",
         });
-    }
-
-    /// <summary>
-    /// Kod karşılaştırması sabit sürelidir. SHA-256 özetleri karşılaştırılır ki
-    /// farklı uzunluktaki girdiler CryptographicOperations.FixedTimeEquals'ı
-    /// düşürmesin ve yanıt süresinden uzunluk sızmasın.
-    /// </summary>
-    private static bool FixedTimeEquals(string a, string b)
-    {
-        var ha = SHA256.HashData(Encoding.UTF8.GetBytes(a));
-        var hb = SHA256.HashData(Encoding.UTF8.GetBytes(b));
-        return CryptographicOperations.FixedTimeEquals(ha, hb);
     }
 
     private async Task<ActionResult<AuthResponseDto>> IssueTokensAsync(User user)

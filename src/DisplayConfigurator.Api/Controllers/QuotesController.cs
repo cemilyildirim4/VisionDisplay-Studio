@@ -47,6 +47,7 @@ public class QuotesController : ControllerBase
         return Ok(quotes);
     }
 
+    [Authorize]
     [BetaGate]
     [EnableRateLimiting("write")]
     [HttpPost]

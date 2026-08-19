@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DisplayConfigurator.Application.DTOs;
 
-/// <summary>Bayi/müşteri kendi hesabını açar — varsayılan rol "Dealer".</summary>
+/// <summary>Bayi/müşteri kendi hesabını açamaz — kayıt kapalı (REGISTRATION_CLOSED).</summary>
 public class RegisterDto
 {
     [Required, EmailAddress, StringLength(150)]

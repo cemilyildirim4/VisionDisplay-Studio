@@ -6,6 +6,7 @@ import { viewingDistanceFor } from './viewingDistance.js'
 import PrivacyModal from './PrivacyModal.jsx'
 import { API_URL, apiFetch } from './apiClient.js'
 import { rowsToXlsxBlob } from './xlsx.js'
+import { useSession } from './SessionContext.jsx'
 
 async function captureScreenPreview() {
   const el = document.getElementById('pdf-onizleme')
@@ -50,6 +51,7 @@ function clampGrid(n) {
 
 export default function ExportModal({ open, onClose, summary }) {
   const { t, lang } = useLang()
+  const { isAuthenticated } = useSession()
   const [customer, setCustomer] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -151,6 +153,11 @@ export default function ExportModal({ open, onClose, summary }) {
 
   const handleExport = async () => {
     if (busy) return
+    if (!isAuthenticated) {
+      alert(t('exp.needLogin'))
+      window.location.hash = '#hesap?tab=session'
+      return
+    }
     if (!model?.id) {
       alert(t('exp.error'))
       return
@@ -161,6 +168,7 @@ export default function ExportModal({ open, onClose, summary }) {
       const previewImageBase64 = await captureScreenPreview()
       const res = await apiFetch(`${API_URL}/api/configurations/export-pdf`, {
         method: 'POST',
+        auth: true,
         headers: { 'Content-Type': 'application/json' },
         timeoutMs: 45000,
         body: JSON.stringify({
@@ -185,8 +193,9 @@ export default function ExportModal({ open, onClose, summary }) {
         }),
       })
       if (!res.ok) {
+        if (res.status === 401) throw new Error(t('exp.needLogin'))
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.message || t('exp.error'))
+        throw new Error(err.message || err.title || t('exp.error'))
       }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -322,13 +331,22 @@ export default function ExportModal({ open, onClose, summary }) {
 
         <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
 
+        {!isAuthenticated && (
+          <p className="text-[13px] text-neutral-600 dark:text-neutral-300 mb-4 m-0 leading-relaxed">
+            {t('exp.needLogin')}{' '}
+            <a href="#hesap?tab=session" className="font-semibold text-brand hover:underline">
+              {t('profile.signIn')}
+            </a>
+          </p>
+        )}
+
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled={!consent || busy}
+            disabled={!consent || busy || !isAuthenticated}
             onClick={handleExport}
             className={`flex-1 rounded-full py-3 text-sm font-semibold transition-colors ${
-              consent && !busy ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
+              consent && !busy && isAuthenticated ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
           >
             {busy ? t('exp.generating') : t('pdf.professional')}

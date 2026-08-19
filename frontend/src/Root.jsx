@@ -7,8 +7,10 @@ import { useTheme } from './useTheme.js'
 import { queryClient } from './queryClient.js'
 import ConnectionBanner from './ConnectionBanner.jsx'
 
-// Yönetim / hesap ekranları müşteri ana paketinden ayrı tutulur (kod bölme).
-const AdminPanel = lazy(() => import('./AdminPanel.jsx'))
+// Yönetim UI'sı ana müşteri paketinde durmaz: React.lazy + dynamic import
+// ayrı bir chunk üretir; tarayıcı onu yalnızca #yonetim açılınca çeker.
+// PWA precache bu chunk'ı dahil etmez — bkz. vite.config.js globIgnores.
+const AdminPanel = lazy(() => import('./admin/AdminPanel.jsx'))
 const ControlCenter = lazy(() => import('./ControlCenter.jsx'))
 
 /**
