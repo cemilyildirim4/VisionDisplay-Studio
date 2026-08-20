@@ -125,8 +125,13 @@ export function VideoLayer({ src, gw, gh, left, top, lit }) {
       playsInline
       style={{
         position: 'absolute',
-        width: gw,
-        height: gh,
+        /*
+         * Yukarı yuvarlanıyor: kesirli ölçüde sağ kenarda alt-piksellik bir
+         * boşluk kalıp panelin siyah zemini ince bir şerit olarak sızıyordu
+         * (görsel içerikte de aynı sebep vardı — bkz. bgFor).
+         */
+        width: Math.ceil(gw),
+        height: Math.ceil(gh),
         /*
          * maxWidth/maxHeight SIFIRLANMALI. Tailwind'in preflight'ı
          * `video { max-width: 100% }` uyguluyor ve videoyu kapsayıcısına
@@ -182,10 +187,28 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
   const gw = spanW || wPx
   const gh = spanH || hPx
 
-  // İçeriğin global boyutta çizilip belirli bir yatay dilimini gösteren stil
+  /*
+   * İçeriğin global boyutta çizilip belirli bir yatay dilimini gösteren stil.
+   *
+   * ÖLÇÜLER YUKARI YUVARLANIYOR — sağ kenardaki ince siyah şerit bu yüzdendi.
+   * Ekranın piksel ölçüsü kesirli çıkıyor (ör. 462,37 px: metre ölçüsünden
+   * hesaplanıyor). Tarayıcı kutunun genişliğini ve arka plan görselinin
+   * genişliğini ayrı ayrı cihaz pikseline yuvarlıyor; ikisi farklı tarafa
+   * yuvarlandığında sağda görselin ulaşmadığı bir alt-piksel sütun kalıyor ve
+   * oradan panelin zemin rengi (#0a0a0a) sızıyor. Mekân arka planında açık
+   * renkli duvara karşı bu, ekranın kenarına çizilmiş siyah bir çizgi gibi
+   * görünüyordu.
+   *
+   * Görseli bir piksel büyütmek bu boşluğu kapatıyor; taşan kısım zaten
+   * `overflow-hidden` ile kırpılıyor. Esneme tüm genişlikte 1 px'den az,
+   * yani gözle görülmüyor. Çoklu ekranda dilimler ortak `gw/gh` kullandığı
+   * için hizalama da bozulmuyor.
+   */
+  const bgW = Math.ceil(gw)
+  const bgH = Math.ceil(gh)
   const bgFor = (leftGlobal) => ({
     backgroundImage: bgImage || undefined,
-    backgroundSize: `${gw}px ${gh}px`,
+    backgroundSize: `${bgW}px ${bgH}px`,
     backgroundPosition: `${-leftGlobal}px ${-offsetY}px`,
     backgroundRepeat: 'no-repeat',
   })
@@ -867,7 +890,8 @@ export default function WallPreview({
                       clipPath: maskePolygon,
                       backgroundColor: '#0a0a0a',
                       backgroundImage: spanImg || undefined,
-                      backgroundSize: `${totalWpx}px ${maxHpx}px`,
+                      // Yukarı yuvarlama: sağ kenarda siyah alt-piksel şeridi kalmasın (bkz. bgFor)
+                      backgroundSize: `${Math.ceil(totalWpx)}px ${Math.ceil(maxHpx)}px`,
                       backgroundRepeat: 'no-repeat',
                       /*
                        * Yayındaki panel filtresi — tek ekranda görsele zaten
