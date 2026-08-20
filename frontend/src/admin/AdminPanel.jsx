@@ -1046,23 +1046,40 @@ export default function AdminPanel() {
       </header>
       <BrandStripe />
 
-      {/* ---- Gruplu sekme çubuğu ---- */}
-      <div className="bg-white dark:bg-[#121821] border-b border-neutral-200 dark:border-[#2a3342] px-4 sm:px-8 overflow-x-auto">
-        <div className="flex items-end gap-4 sm:gap-6 min-w-max">
+      {/*
+        ---- Gruplu sekme çubuğu ----
+
+        MOBİLDE SEKMELER SATIR ATLAR, YATAYA TAŞMAZ.
+
+        Çubuk tek satıra zorlanıyordu (`min-w-max` + `overflow-x-auto`): sekiz
+        sekme hiçbir telefon genişliğine sığmadığı için son sekmeler ekranın
+        dışında kalıyor, kenarda yarım kesilmiş bir sekme görünüyordu. Yatay
+        kaydırma vardı ama görünürde bir işareti olmadığı için sekmelerin
+        devamı olduğu fark edilmiyordu — hem dik hem yan tutuşta aynı sorun.
+
+        Telefonda artık sekmeler sarmalanıyor: hepsi tek ekranda, birkaç satır
+        hâlinde. Yer kazanmak için grup başlıkları (GENEL / ÜRÜN / SATIŞ /
+        SİSTEM) ve gruplar arası ayraç yalnızca `sm` ve üstünde gösteriliyor;
+        zaten dar ekranda gruplama değil, sekmenin kendisi okunuyor.
+
+        `sm` ve üstünde düzen hiç değişmedi: tek satır, gruplu, ayraçlı.
+      */}
+      <div className="bg-white dark:bg-[#121821] border-b border-neutral-200 dark:border-[#2a3342] px-4 sm:px-8 sm:overflow-x-auto">
+        <div className="flex flex-wrap sm:flex-nowrap items-end gap-x-1 sm:gap-6 min-w-0 sm:min-w-max">
           {TAB_GROUPS.map((group, gi) => (
-            <div key={group.label} className="flex items-end gap-1">
-              {gi > 0 && <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 mb-2" />}
+            <div key={group.label} className="flex flex-wrap sm:flex-nowrap items-end sm:gap-1">
+              {gi > 0 && <span className="hidden sm:block w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 mb-2" />}
               <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-neutral-400 px-2 mb-0.5">
+                <span className="hidden sm:block text-[10px] font-bold uppercase tracking-[0.08em] text-neutral-400 px-2 mb-0.5">
                   {group.label}
                 </span>
-                <div className="flex">
+                <div className="flex flex-wrap sm:flex-nowrap">
                   {group.items.map((t) => (
                     <button
                       key={t.key}
                       type="button"
                       onClick={() => setTab(t.key)}
-                      className={`whitespace-nowrap px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                      className={`whitespace-nowrap px-2 sm:px-4 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium border-b-2 -mb-px transition-colors ${
                         tab === t.key
                           ? 'border-[#2962ad] text-[#2962ad] dark:text-[#9db9dc]'
                           : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
