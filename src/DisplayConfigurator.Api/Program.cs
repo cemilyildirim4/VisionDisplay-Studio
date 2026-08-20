@@ -50,7 +50,11 @@ builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // 1. Controller servisleri
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = ValidationProblemFactory.Create;
+    });
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<Rfc7807ExceptionHandler>();
 

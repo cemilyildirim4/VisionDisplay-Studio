@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using DisplayConfigurator.Application.Validation;
 
 namespace DisplayConfigurator.Application.DTOs;
 
@@ -10,7 +11,7 @@ public class PdfReportRequestDto : CreateConfigurationDto
     [StringLength(50)]
     public string? Phone { get; set; }
 
-    [EmailAddress, StringLength(150)]
+    [OptionalEmail, StringLength(150)]
     public string? Email { get; set; }
 
     [StringLength(500)]

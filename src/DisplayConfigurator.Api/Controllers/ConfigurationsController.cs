@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using DisplayConfigurator.Api.ExceptionHandling;
 using DisplayConfigurator.Api.Security;
 using DisplayConfigurator.Application.DTOs;
 using DisplayConfigurator.Application.Interfaces;
@@ -133,8 +134,13 @@ public class ConfigurationsController : ControllerBase
     [EnableRateLimiting("write")]
     [RequestSizeLimit(20_000_000)]
     [HttpPost("export-pdf")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ExportPdfDirect([FromBody] PdfReportRequestDto dto)
     {
+        if (!ModelState.IsValid)
+            return ValidationProblemFactory.Create(ControllerContext);
+
         try
         {
             var pdfBytes = await _configurationService.GenerateSpecSheetPdfFromDtoAsync(dto, dto.ToExtras());

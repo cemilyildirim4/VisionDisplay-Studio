@@ -32,17 +32,38 @@ async function captureScreenPreview() {
   }
 }
 
-function Field({ label, children }) {
+function Field({ label, error, children }) {
   return (
     <label className="block mb-4">
       <span className="text-xs text-neutral-500 dark:text-neutral-400">{label}</span>
       {children}
+      {error ? <span className="block mt-1.5 text-[12px] text-red-600 dark:text-red-400">{error}</span> : null}
     </label>
   )
 }
 
+function parseProblemErrors(body) {
+  const src = body?.errors
+  if (!src || typeof src !== 'object') return {}
+  const out = {}
+  for (const [rawKey, rawVal] of Object.entries(src)) {
+    const key = String(rawKey)
+      .replace(/^\$\.?/, '')
+      .split('.')
+      .pop()
+      .toLowerCase()
+    const list = Array.isArray(rawVal) ? rawVal : [rawVal]
+    const msg = list.filter(Boolean).join(' ')
+    if (key && msg) out[key] = msg
+  }
+  return out
+}
+
 const inputCls =
   'w-full mt-1 border-b border-neutral-300 dark:border-[#39414f] py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-neutral-800 dark:focus:border-brand placeholder:text-neutral-400'
+
+const inputErrorCls =
+  'w-full mt-1 border-b border-red-500 py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-red-600 placeholder:text-neutral-400'
 
 function clampGrid(n) {
   const v = Math.max(1, Number(n) || 1)
@@ -60,6 +81,8 @@ export default function ExportModal({ open, onClose, summary }) {
   const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
+  const [emailError, setEmailError] = useState(null)
+  const [formError, setFormError] = useState(null)
 
   if (!open) return null
 
@@ -163,6 +186,8 @@ export default function ExportModal({ open, onClose, summary }) {
       return
     }
     setBusy(true)
+    setEmailError(null)
+    setFormError(null)
     try {
       const projectName = (customer ? `${customer} - ${summary.modelCode || ''}` : `Taslak - ${belgeNo}`).slice(0, 100)
       const previewImageBase64 = await captureScreenPreview()
@@ -195,7 +220,19 @@ export default function ExportModal({ open, onClose, summary }) {
       if (!res.ok) {
         if (res.status === 401) throw new Error(t('exp.needLogin'))
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.message || err.title || t('exp.error'))
+        const fieldErrors = parseProblemErrors(err)
+        if (fieldErrors.email) {
+          setEmailError(fieldErrors.email || t('exp.emailInvalid'))
+          return
+        }
+        const otherFieldMsgs = Object.entries(fieldErrors)
+          .filter(([k]) => k !== 'email')
+          .map(([, msg]) => msg)
+        if (otherFieldMsgs.length > 0) {
+          setFormError(otherFieldMsgs.join(' '))
+          return
+        }
+        throw new Error(err.detail || (err.title && err.title !== 'Doğrulama Hatası' ? err.title : null) || t('exp.error'))
       }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -306,8 +343,18 @@ export default function ExportModal({ open, onClose, summary }) {
         <Field label={t('exp.phone')}>
           <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="0(5xx) xxx xx xx" className={inputCls} />
         </Field>
-        <Field label={t('exp.email')}>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={inputCls} />
+        <Field label={t('exp.email')} error={emailError}>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              if (emailError) setEmailError(null)
+            }}
+            autoComplete="email"
+            aria-invalid={emailError ? 'true' : 'false'}
+            className={emailError ? inputErrorCls : inputCls}
+          />
         </Field>
         <Field label={t('exp.address')}>
           <input value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" className={inputCls} />
@@ -330,6 +377,12 @@ export default function ExportModal({ open, onClose, summary }) {
         </button>
 
         <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
+
+        {formError && (
+          <p className="text-[13px] text-red-600 dark:text-red-400 mb-4 m-0 leading-relaxed" role="alert">
+            {formError}
+          </p>
+        )}
 
         {!isAuthenticated && (
           <p className="text-[13px] text-neutral-600 dark:text-neutral-300 mb-4 m-0 leading-relaxed">

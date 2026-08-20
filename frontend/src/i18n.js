@@ -496,6 +496,11 @@ const dict = {
   },
   'exp.generating': { tr: 'PDF oluşturuluyor…', en: 'Generating PDF…', ar: 'جارٍ إنشاء PDF…' },
   'exp.error': { tr: 'PDF oluşturulurken bir sorun oluştu.', en: 'A problem occurred while generating the PDF.', ar: 'حدثت مشكلة أثناء إنشاء PDF.' },
+  'exp.emailInvalid': {
+    tr: 'Lütfen geçerli bir e-posta adresi giriniz.',
+    en: 'Please enter a valid e-mail address.',
+    ar: 'يرجى إدخال عنوان بريد إلكتروني صالح.',
+  },
   'exp.needLogin': {
     tr: 'PDF, teklif ve proje kaydı için giriş yapmanız gerekir.',
     en: 'Sign in to generate a PDF and save the quote and project.',
