@@ -154,6 +154,7 @@ public class ConfigurationService : IConfigurationService
             Id = c.Id,
             ProjectName = string.IsNullOrWhiteSpace(c.ProjectName) ? "Taslak Proje" : c.ProjectName,
             CustomerName = string.IsNullOrWhiteSpace(c.CustomerName) ? "Müşteri Belirtilmedi" : c.CustomerName,
+            UserId = c.UserId,
             CabinId = c.CabinId,
             CabinModelName = cabin?.ModelCode ?? c.Cabin?.ModelCode ?? "Bilinmeyen Model",
             AssemblyType = c.AssemblyType,

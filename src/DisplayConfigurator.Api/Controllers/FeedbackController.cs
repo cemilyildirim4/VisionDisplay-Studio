@@ -7,9 +7,8 @@ namespace DisplayConfigurator.Api.Controllers;
 
 /// <summary>
 /// Test/beta kullanıcılarının hata ve geri bildirim notları.
-///
-/// Gönderme herkese açık (bildirimi kısıtlamak, hatayı öğrenememek demektir);
-/// okuma ve silme yalnızca yönetim panelinden yapılabilir.
+/// Yazma yalnızca Development veya beta ortamında açıktır; canlıda anonim
+/// gönderme kapalıdır. Okuma ve silme yönetim panelindendir.
 /// </summary>
 [ApiController]
 [Route("api/feedback")]
@@ -34,6 +33,7 @@ public class FeedbackController : ControllerBase
         return Ok(await _repository.GetAllAsync(take, onlyOpen));
     }
 
+    [DevOrBetaWrite]
     [HttpPost]
     public async Task<ActionResult<FeedbackReport>> Create([FromBody] FeedbackReport input)
     {

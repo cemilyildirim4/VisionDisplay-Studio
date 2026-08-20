@@ -8,8 +8,12 @@ import { useTheme } from './useTheme.js'
 import { queryClient } from './queryClient.js'
 import ConnectionBanner from './ConnectionBanner.jsx'
 
-// Yönetim / hesap ekranları müşteri ana paketinden ayrı tutulur (kod bölme).
-const AdminPanel = guvenliLazy(() => import('./AdminPanel.jsx'))
+// Yönetim UI'sı ana müşteri paketinde durmaz: kod bölme ile ayrı bir chunk
+// üretilir, tarayıcı onu yalnızca #yonetim/#hesap açılınca çeker.
+// PWA precache bu chunk'ı dahil etmez — bkz. vite.config.js globIgnores.
+// guvenliLazy: sürüm atlayan sekmelerde eskimiş chunk adı yüzünden hata
+// ekranına düşmesin diye yükleme başarısız olursa sayfa bir kez tazelenir.
+const AdminPanel = guvenliLazy(() => import('./admin/AdminPanel.jsx'))
 const ControlCenter = guvenliLazy(() => import('./ControlCenter.jsx'))
 
 /**

@@ -33,6 +33,11 @@ public class CabinsController : ControllerBase
     // model 60 saniye boyunca yönetim panelinde görünmüyordu.)
     private const string CabinsCacheKeyPrefix = "cabins:list:";
     private const string SeriesCacheKey = "cabins:series";
+    // GetCabins anahtarı "cabins:list:{category}:{productType}" biçiminde.
+    // InvalidateCache bu kombinasyonların hepsini silmeli; aksi halde admin
+    // model sildiğinde konfigüratör 60 sn boyunca eski listeyi görür.
+    private static readonly string[] CabinListCacheCategories = ["all", "led", "videowall"];
+    private static readonly string[] CabinListCacheTypes = ["all", "CABINET", "MODULE"];
 
     // Controller her istekte yeniden kurulduğu için jeton static tutuluyor.
     private static CancellationTokenSource _listeSifirlama = new();
@@ -182,12 +187,24 @@ public class CabinsController : ControllerBase
     }
 
     // DELETE: api/cabinets/5
+    // configurations.cabin_id → cabins(id) FK'si ON DELETE RESTRICT; kayıtlı
+    // projesi olan bir modeli silmek Postgres 23503 fırlatırdı ve global
+    // handler bunu yanlışlıkla 503 Service Unavailable olarak gösteriyordu.
     [AdminOnly]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteCabin(int id)
     {
         var existing = await _cabinRepository.GetByIdAsync(id);
         if (existing is null) return NotFound();
+
+        var configCount = await _cabinRepository.CountConfigurationsAsync(id);
+        if (configCount > 0)
+        {
+            return Conflict(new
+            {
+                message = $"Bu model {configCount} kayıtlı projede kullanılıyor. Silmek için önce ilgili projeleri silin.",
+            });
+        }
 
         await _cabinRepository.DeleteAsync(id);
         InvalidateCache();
@@ -202,12 +219,15 @@ public class CabinsController : ControllerBase
         eski.Cancel();
         eski.Dispose();
 
+        foreach (var category in CabinListCacheCategories)
+        {
+            foreach (var productType in CabinListCacheTypes)
+            {
+                _cache.Remove($"{CabinsCacheKeyPrefix}{category}:{productType}");
+            }
+        }
         _cache.Remove(SeriesCacheKey);
     }
-
-    [AdminOnly]
-    [HttpPost("admin/dogrula")]
-    public IActionResult ParolaDogrula() => Ok(new { ok = true });
 
     private async Task<string?> ValidateAsync(CabinInputDto input, int? currentId)
     {
@@ -231,6 +251,9 @@ public class CabinsController : ControllerBase
 
         if (input.DefaultModulesPerCard <= 0)
             return "Kart başına modül sayısı 0'dan büyük olmalı.";
+
+        if (input.IpRating is int ip && (ip < 10 || ip > 69))
+            return "IP sınıfı 10–69 aralığında olmalı (ör. 20, 30, 65).";
 
         if (!await _seriesRepository.ExistsAsync(input.SeriesId))
             return "Seçilen seri bulunamadı.";
@@ -272,6 +295,8 @@ public class CabinsController : ControllerBase
         cabin.Protection = input.Protection;
         cabin.Certification = input.Certification;
         cabin.Features = input.Features;
+        cabin.IpRating = input.IpRating;
+        cabin.Featured = input.Featured;
         cabin.ImageUrl = input.ImageUrl;
         cabin.SboxCode = input.SboxCode;
         cabin.JigCode = input.JigCode;

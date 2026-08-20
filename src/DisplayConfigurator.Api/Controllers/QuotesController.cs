@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using DisplayConfigurator.Api.ExceptionHandling;
 using DisplayConfigurator.Api.Security;
 using DisplayConfigurator.Application.DTOs;
 using DisplayConfigurator.Application.Interfaces;
@@ -47,11 +48,26 @@ public class QuotesController : ControllerBase
         return Ok(quotes);
     }
 
+    [Authorize]
     [BetaGate]
     [EnableRateLimiting("write")]
     [HttpPost]
-    public async Task<ActionResult<Quote>> CreateQuote([FromBody] QuoteInputDto input)
+    [ProducesResponseType(typeof(Quote), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateQuote([FromBody] QuoteInputDto input)
     {
+        if (!ModelState.IsValid)
+            return ValidationProblemFactory.Create(ControllerContext);
+        // Beta kapalıyken (BETA_ENABLED=false) teklif gövdesinde KVKK/PII alanı kabul edilmez.
+        if (!_config.GetValue<bool>("Beta:Enabled") && HasCustomerPii(input))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Beta kapalıyken teklif isteğinde kişisel veri (ad, telefon, e-posta, adres, mesaj) kabul edilmez.",
+                code = "PII_DISABLED",
+            });
+        }
+
         var quote = new Quote
         {
             CustomerName = input.CustomerName,
@@ -117,4 +133,11 @@ public class QuotesController : ControllerBase
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(sub, out var id) && id > 0 ? id : null;
     }
+
+    private static bool HasCustomerPii(QuoteInputDto input) =>
+        !string.IsNullOrWhiteSpace(input.CustomerName)
+        || !string.IsNullOrWhiteSpace(input.Phone)
+        || !string.IsNullOrWhiteSpace(input.Email)
+        || !string.IsNullOrWhiteSpace(input.Address)
+        || !string.IsNullOrWhiteSpace(input.Message);
 }

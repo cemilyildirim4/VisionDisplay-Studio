@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLang } from './useLang.js'
 import { TOPICS, FALLBACK, GREETING, findTopic, alanIlgili, enYakinKonu } from './helpTopics.js'
 import { API_URL, apiFetch } from './apiClient.js'
+import { OBSERVATION_WRITE_ENABLED } from './featureFlags.js'
 
 
 
@@ -87,23 +88,21 @@ export default function ChatHelp({ open, onClose }) {
     setShowTips(false) // yer açılsın; kullanıcı isterse başlığa tıklayıp geri açar
 
     /*
-     * Soruyu arka planda kaydet — hangi konuların sorulduğunu görebilmek için.
-     * Özellikle CEVAPLANAMAYAN sorular değerli: bilgi tabanına neyin eklenmesi
-     * gerektiğini gösteriyorlar.
-     *
-     * Kayıt BAŞARISIZ OLSA BİLE sohbet aksamaz — kullanıcıyı hiçbir şekilde
-     * bekletmiyor, hata da göstermiyoruz. Sunucu kapalıysa sohbet yine çalışır.
+     * Development/beta: soruyu arka planda kaydet (SSS adayları).
+     * Canlıda yazma kapalı; sohbet yine yerel bilgi tabanıyla çalışır.
      */
-    apiFetch(`${API_URL}/api/chatlogs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        question: text,
-        topicId: dogrudan ? dogrudan.id : null,
-        answered: !!dogrudan,
-        lang,
-      }),
-    }).catch(() => {}) // sessiz: kayıt tutmak sohbetten önemli değil
+    if (OBSERVATION_WRITE_ENABLED) {
+      apiFetch(`${API_URL}/api/chatlogs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: text,
+          topicId: dogrudan ? dogrudan.id : null,
+          answered: !!dogrudan,
+          lang,
+        }),
+      }).catch(() => {})
+    }
   }
 
   const send = (e) => {

@@ -2,37 +2,21 @@ import { useMemo, useState } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import { baseViewingDistance } from './viewingDistance.js'
+import { rankCabinets } from './recommendEngine.js'
 
 /**
- * ÖNERİ SİHİRBAZI — "Kullanım Amacı → Mekan → İzleme Mesafesi → Önerilen Modeller"
+ * ÖNERİ SİHİRBAZI — isteğe bağlı yardımcı katman.
+ * Ana akış tek ekranda kalır; sihirbaz listeyi 2 öneriye indirir.
  *
- * NEDEN AYRI BİR BİLEŞEN VE MEVCUT AKIŞIN YERİNE GEÇMİYOR:
- * Bu projede önceden dört adımlı bir sihirbaz (StepBar + Geri/İleri) vardı ve
- * kasıtlı olarak kaldırıldı (bkz. App.jsx'teki not): kullanıcı adım atlayıp
- * geri dönmek zorunda kalıyordu ve hiçbir an yapılandırmanın tamamını
- * göremiyordu. O kararı bozmadan, "hangi modeli seçeceğini bilmeyen" ilk kez
- * gelen bir kullanıcıya YARDIMCI, isteğe bağlı bir katman ekliyoruz: sihirbaz
- * sadece 2-3 soruyla ModelSelectModal'daki uzun listeyi 3 öneriye indiriyor,
- * ama son kararı yine kullanıcı --- ana akış tek ekranda kalmaya devam ediyor.
- *
- * PUANLAMA MANTIĞI (kod bazlı, keyfi değil):
- *   - Ana sürücü İZLEME MESAFESİdir: LED sektöründe piksel aralığı seçimi
- *     doğrudan izleme mesafesine bağlıdır (bkz. viewingDistance.js). Her
- *     kabin için `baseViewingDistance` hesaplanıp kullanıcının hedef
- *     mesafesine en yakın olanlar öne çıkar.
- *   - Dış mekân seçilirse parlaklığı (nits) yüksek modellere bonus verilir —
- *     güneş ışığında görünürlük gerçek bir kısıt.
- *   - Kullanım amacı, video duvarı / LED panel kategorisi arasında bir ön
- *     eğilim oluşturur (örn. "Sahne/Etkinlik" büyük LED panel, "Stüdyo/Sanal
- *     Üretim" ince pikseli video duvarını öne çıkarır).
+ * Adımlar: mekan (sert) → mesafe (sert) → amaç (puan) → sonuç + isteğe bağlı bütçe.
  */
 
 const PURPOSES = [
-  { id: 'signage', labelKey: 'wiz.purpose.signage', category: 'led', brightnessBias: 0.5 },
-  { id: 'meeting', labelKey: 'wiz.purpose.meeting', category: 'videowall', brightnessBias: 0 },
-  { id: 'event', labelKey: 'wiz.purpose.event', category: 'led', brightnessBias: 0.5 },
-  { id: 'retail', labelKey: 'wiz.purpose.retail', category: 'led', brightnessBias: 0.2 },
-  { id: 'studio', labelKey: 'wiz.purpose.studio', category: 'videowall', brightnessBias: -0.2 },
+  { id: 'signage', labelKey: 'wiz.purpose.signage', category: 'led' },
+  { id: 'meeting', labelKey: 'wiz.purpose.meeting', category: 'videowall' },
+  { id: 'event', labelKey: 'wiz.purpose.event', category: 'led' },
+  { id: 'retail', labelKey: 'wiz.purpose.retail', category: 'led' },
+  { id: 'studio', labelKey: 'wiz.purpose.studio', category: 'videowall' },
 ]
 
 const PLACES = [
@@ -46,23 +30,8 @@ const DISTANCES = [
   { id: 'far', labelKey: 'wiz.distance.far', meters: 12 },
 ]
 
-function scoreCabinet(cab, { purpose, place, distance }) {
-  const targetM = distance.meters
-  const actualM = baseViewingDistance(cab) || targetM
-  // Mesafe farkı ne kadar küçükse skor o kadar iyi (negatif ceza).
-  let score = -Math.abs(actualM - targetM) * 10
-
-  // Kategori eğilimi — tam eşleşme küçük bir bonus, zıt kategori küçük bir ceza.
-  if (purpose.category && cab.category === purpose.category) score += 8
-  else if (purpose.category) score -= 3
-
-  // Dış mekân + düşük parlaklık = kötü kombinasyon; parlaklık yüksekse ödüllendir.
-  const brightness = Number(cab.brightnessNits) || 0
-  if (place.outdoor) score += (brightness - 700) / 100
-  else score += (700 - Math.abs(brightness - 700)) / 200
-
-  score += purpose.brightnessBias * (brightness / 100)
-  return score
+function fill(template, vars) {
+  return String(template || '').replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '')
 }
 
 function StepDots({ step, total }) {
@@ -94,31 +63,68 @@ function ChoiceCard({ label, active, onClick }) {
   )
 }
 
+function RecCard({ rec, badge, why, pickLabel, onPick }) {
+  const cab = rec.cab
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(cab)}
+      className="w-full text-left rounded-xl border border-neutral-200 dark:border-[#2c333f] px-4 py-3 hover:border-brand transition-colors"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400 mb-0.5">{badge}</div>
+          <div className="font-bold text-brand">{cab.modelCode}</div>
+          {cab.series?.name ? (
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">{cab.series.name}</div>
+          ) : null}
+          <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+            {cab.pixelPitchMm ? `P${cab.pixelPitchMm} · ` : ''}
+            {cab.brightnessNits ? `${cab.brightnessNits} nits · ` : ''}
+            {cab.ipRating ? `IP${cab.ipRating} · ` : ''}
+            {baseViewingDistance(cab).toFixed(1)} m
+          </div>
+          <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 mb-0 leading-relaxed">{why}</p>
+        </div>
+        <span className="text-xs font-semibold text-brand shrink-0 mt-4">{pickLabel} →</span>
+      </div>
+    </button>
+  )
+}
+
 export default function RecommendationWizard({ open, onClose, cabinets, onChoose, onOpenFullList }) {
   const { t } = useLang()
   const [step, setStep] = useState(0)
-  const [purposeId, setPurposeId] = useState(null)
   const [placeId, setPlaceId] = useState(null)
   const [distanceId, setDistanceId] = useState(null)
+  const [purposeId, setPurposeId] = useState(null)
+  const [budgetText, setBudgetText] = useState('')
 
   const reset = () => {
     setStep(0)
-    setPurposeId(null)
     setPlaceId(null)
     setDistanceId(null)
+    setPurposeId(null)
+    setBudgetText('')
   }
 
-  const recommendations = useMemo(() => {
-    if (step < 3 || !purposeId || !placeId || !distanceId) return []
-    const purpose = PURPOSES.find((p) => p.id === purposeId)
-    const place = PLACES.find((p) => p.id === placeId)
-    const distance = DISTANCES.find((d) => d.id === distanceId)
-    return [...cabinets]
-      .map((cab) => ({ cab, score: scoreCabinet(cab, { purpose, place, distance }) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3)
-      .map((x) => x.cab)
-  }, [step, purposeId, placeId, distanceId, cabinets])
+  const place = PLACES.find((p) => p.id === placeId)
+  const distance = DISTANCES.find((d) => d.id === distanceId)
+  const purpose = PURPOSES.find((p) => p.id === purposeId)
+  const budget = Number(budgetText)
+  const budgetN = Number.isFinite(budget) && budget > 0 ? budget : null
+
+  const ranked = useMemo(() => {
+    if (!place || !distance || !purpose) {
+      return { passed: [], primary: null, alternative: null }
+    }
+    return rankCabinets(cabinets, {
+      outdoor: place.outdoor,
+      distanceM: distance.meters,
+      purpose,
+      budget: budgetN,
+    })
+  }, [cabinets, place, distance, purpose, budgetN])
 
   // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
   useGovdeKilidi(open)
@@ -130,13 +136,51 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
     onClose()
   }
 
+  const pick = (cab) => {
+    onChoose(cab)
+    close()
+  }
+
+  const primaryWhy = ranked.primary
+    ? fill(t('wiz.whyPrimary'), {
+        place: t(place.labelKey),
+        pitch: String(ranked.primary.cab.pixelPitchMm ?? '—'),
+        distance: String(distance.meters),
+        featured: ranked.primary.cab.featured ? t('wiz.featuredHint') : '',
+      })
+    : ''
+
+  const altWhy = ranked.primary && ranked.alternative
+    ? (() => {
+        const a = ranked.alternative.cab
+        const p = ranked.primary.cab
+        const aPrice = Number(a.price)
+        const pPrice = Number(p.price)
+        if (Number.isFinite(aPrice) && Number.isFinite(pPrice) && aPrice < pPrice) {
+          return fill(t('wiz.whyAltCheaper'), { code: a.modelCode })
+        }
+        if ((a.pixelPitchMm || 0) < (p.pixelPitchMm || 0)) {
+          return fill(t('wiz.whyAltFiner'), { code: a.modelCode })
+        }
+        return fill(t('wiz.whyAltOther'), { code: a.modelCode })
+      })()
+    : ''
+
   const steps = [
     {
       titleKey: 'wiz.step1Title',
       body: (
-        <div className="flex flex-col gap-2">
-          {PURPOSES.map((p) => (
-            <ChoiceCard key={p.id} label={t(p.labelKey)} active={purposeId === p.id} onClick={() => { setPurposeId(p.id); setStep(1) }} />
+        <div className="grid grid-cols-2 gap-2">
+          {PLACES.map((p) => (
+            <ChoiceCard
+              key={p.id}
+              label={t(p.labelKey)}
+              active={placeId === p.id}
+              onClick={() => {
+                setPlaceId(p.id)
+                setStep(1)
+              }}
+            />
           ))}
         </div>
       ),
@@ -144,9 +188,17 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
     {
       titleKey: 'wiz.step2Title',
       body: (
-        <div className="grid grid-cols-2 gap-2">
-          {PLACES.map((p) => (
-            <ChoiceCard key={p.id} label={t(p.labelKey)} active={placeId === p.id} onClick={() => { setPlaceId(p.id); setStep(2) }} />
+        <div className="flex flex-col gap-2">
+          {DISTANCES.map((d) => (
+            <ChoiceCard
+              key={d.id}
+              label={t(d.labelKey)}
+              active={distanceId === d.id}
+              onClick={() => {
+                setDistanceId(d.id)
+                setStep(2)
+              }}
+            />
           ))}
         </div>
       ),
@@ -155,8 +207,16 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
       titleKey: 'wiz.step3Title',
       body: (
         <div className="flex flex-col gap-2">
-          {DISTANCES.map((d) => (
-            <ChoiceCard key={d.id} label={t(d.labelKey)} active={distanceId === d.id} onClick={() => { setDistanceId(d.id); setStep(3) }} />
+          {PURPOSES.map((p) => (
+            <ChoiceCard
+              key={p.id}
+              label={t(p.labelKey)}
+              active={purposeId === p.id}
+              onClick={() => {
+                setPurposeId(p.id)
+                setStep(3)
+              }}
+            />
           ))}
         </div>
       ),
@@ -168,7 +228,7 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
   return (
     <div className="fixed inset-0 z-[70] bg-[#001334]/45 flex items-center justify-center p-4" onClick={close}>
       <div
-        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[480px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-[#12151c] text-white px-5 py-3.5 flex items-center justify-between gap-4">
@@ -197,29 +257,37 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
           ) : (
             <>
               <h3 className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mb-3 mt-1">{t('wiz.resultsTitle')}</h3>
+              <label className="block mb-3">
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">{t('wiz.budget')}</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={budgetText}
+                  onChange={(e) => setBudgetText(e.target.value)}
+                  placeholder={t('wiz.budgetPlaceholder')}
+                  className="mt-1 w-full rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#12151c] px-3 py-2 text-sm"
+                />
+              </label>
               <div className="flex flex-col gap-2.5">
-                {recommendations.map((cab) => (
-                  <button
-                    key={cab.id}
-                    type="button"
-                    onClick={() => {
-                      onChoose(cab)
-                      close()
-                    }}
-                    className="w-full text-left rounded-xl border border-neutral-200 dark:border-[#2c333f] px-4 py-3 hover:border-brand transition-colors flex items-center justify-between gap-3"
-                  >
-                    <div>
-                      <div className="font-bold text-brand">{cab.modelCode}</div>
-                      <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                        {cab.pixelPitchMm ? `P${cab.pixelPitchMm} · ` : ''}
-                        {cab.brightnessNits ? `${cab.brightnessNits} nits · ` : ''}
-                        {baseViewingDistance(cab).toFixed(1)} m {t('wiz.idealDistance')}
-                      </div>
-                    </div>
-                    <span className="text-xs font-semibold text-brand shrink-0">{t('wiz.pick')} →</span>
-                  </button>
-                ))}
-                {recommendations.length === 0 && (
+                {ranked.primary && (
+                  <RecCard
+                    rec={ranked.primary}
+                    badge={t('wiz.primary')}
+                    why={primaryWhy}
+                    pickLabel={t('wiz.pick')}
+                    onPick={pick}
+                  />
+                )}
+                {ranked.alternative && (
+                  <RecCard
+                    rec={ranked.alternative}
+                    badge={t('wiz.alternative')}
+                    why={altWhy}
+                    pickLabel={t('wiz.pick')}
+                    onPick={pick}
+                  />
+                )}
+                {!ranked.primary && (
                   <p className="text-sm text-neutral-400">{t('wiz.noResults')}</p>
                 )}
               </div>

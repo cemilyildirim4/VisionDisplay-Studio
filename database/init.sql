@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS public.cabins
     protection character varying(50) COLLATE pg_catalog."default",
     certification character varying(300) COLLATE pg_catalog."default",
     features character varying(300) COLLATE pg_catalog."default",
+    -- IP20/30 iç mekan, IP65+ dış mekan. featured: sihirbaz hedef stok puanı.
+    ip_rating integer,
+    featured boolean NOT NULL DEFAULT false,
     -- Görsel ve bileşen kodları
     image_url text COLLATE pg_catalog."default",
     sbox_code character varying(50) COLLATE pg_catalog."default",
@@ -235,6 +238,12 @@ TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS public.quotes
     OWNER to postgres;
+
+CREATE INDEX IF NOT EXISTS idx_quotes_user_id
+    ON public.quotes USING btree (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_configurations_cabin_id
+    ON public.configurations USING btree (cabin_id);
 
 
 -- Table: public.chat_logs

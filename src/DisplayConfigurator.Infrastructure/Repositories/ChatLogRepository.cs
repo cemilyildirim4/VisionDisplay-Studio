@@ -15,7 +15,7 @@ public class ChatLogRepository : IChatLogRepository
 
     public async Task<IEnumerable<ChatLog>> GetAllAsync(int limit, bool onlyUnanswered = false)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         string sql = $@"
             SELECT
                 id AS Id,
@@ -34,7 +34,7 @@ public class ChatLogRepository : IChatLogRepository
 
     public async Task<ChatLog> CreateAsync(ChatLog chatLog)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             INSERT INTO chat_logs (question, topic_id, answered, lang, created_at)
             VALUES (@Question, @TopicId, @Answered, @Lang, NOW())

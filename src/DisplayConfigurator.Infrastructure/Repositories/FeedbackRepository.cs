@@ -15,7 +15,7 @@ public class FeedbackRepository : IFeedbackRepository
 
     public async Task<IEnumerable<FeedbackReport>> GetAllAsync(int limit, bool onlyOpen = false)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         string sql = $@"
             SELECT
                 id AS Id,
@@ -35,7 +35,7 @@ public class FeedbackRepository : IFeedbackRepository
 
     public async Task<FeedbackReport> CreateAsync(FeedbackReport report)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
             INSERT INTO feedback_reports (note, role, page_url, user_agent, resolved, created_at)
             VALUES (@Note, @Role, @PageUrl, @UserAgent, false, NOW())
@@ -47,14 +47,14 @@ public class FeedbackRepository : IFeedbackRepository
 
     public async Task<bool> SetResolvedAsync(int id, bool resolved)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "UPDATE feedback_reports SET resolved = @Resolved WHERE id = @Id;";
         return await connection.ExecuteAsync(sql, new { Id = id, Resolved = resolved }) > 0;
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "DELETE FROM feedback_reports WHERE id = @Id;";
         return await connection.ExecuteAsync(sql, new { Id = id }) > 0;
     }

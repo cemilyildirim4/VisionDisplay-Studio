@@ -54,7 +54,7 @@ function MenuItem({ href, onClick, icon, children, danger }) {
  *
  *  Admin  → Yönetim Paneli, Kontrol Merkezi, Çıkış
  *  Dealer → Kontrol Merkezi, Tekliflerim, Çıkış
- *  Tester → Kontrol Merkezi, Test Araçları, Çıkış
+ *  Tester → (yalnızca beta/dev) Kontrol Merkezi, Test Araçları, Çıkış
  *  Guest  → Kontrol Merkezi, Giriş yap
  */
 export default function ProfileMenu() {
@@ -239,8 +239,7 @@ export default function ProfileMenu() {
                 {t('profile.logout')}
               </MenuItem>
             ) : (
-              /* Yalnızca "Giriş yap" — kayıt oradaki formun altından açılıyor.
-                 Menüde iki ayrı giriş noktası olması gereksizdi. */
+              /* Kapalı sistem: hesap yalnızca Admin panelinden açılır. */
               <MenuItem
                 href="#hesap?tab=session"
                 onClick={close}

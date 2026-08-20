@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using DisplayConfigurator.Application.Validation;
 
 namespace DisplayConfigurator.Application.DTOs;
 
@@ -13,10 +14,10 @@ public class QuoteInputDto
     [StringLength(150)]
     public string? CustomerName { get; set; }
 
-    [StringLength(50)]
+    [ContactPhone(AllowEmpty = true), StringLength(50)]
     public string? Phone { get; set; }
 
-    [EmailAddress, StringLength(150)]
+    [ContactEmail(AllowEmpty = true), StringLength(150)]
     public string? Email { get; set; }
 
     [StringLength(500)]

@@ -18,8 +18,10 @@ export function useCabinets() {
   return useQuery({
     queryKey: ['cabinets'],
     queryFn: fetchCabinets,
-    staleTime: 5 * 60 * 1000,
+    // Admin'de silinen model, konfigüratör sekmesinde dakikalarca kalmasın.
+    staleTime: 30 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: true,
     retry: 2, // React Query katmanı; apiFetch zaten geçici hataları dener
   })
 }

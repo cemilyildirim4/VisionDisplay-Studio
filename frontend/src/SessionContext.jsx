@@ -1,17 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { setSessionBridge } from './apiClient.js'
+import { TESTER_ROLE_ENABLED } from './featureFlags.js'
 
 /**
  * Oturum / rol bağlamı.
  *
- * Backend'de roller: Admin | Dealer (User entity).
- * Frontend beta için ek olarak "Tester" ve oturumsuz "Guest" desteklenir.
- *
- * Öncelik sırası:
- *  1. Yönetim parolası (sessionStorage) doğrulanmışsa → Admin
- *  2. Kaydedilmiş JWT oturumu (localStorage) varsa → o kullanıcının rolü
- *  3. Beta demo rol seçimi (localStorage) — yalnızca test/pilot için
- *  4. Aksi halde Guest
+ * Tek JWT: localStorage vds-session. Rol claim'i (Admin | Dealer | Tester)
+ * hem konfigüratör hem yönetim paneli yetkisini belirler.
  */
 
 export const ROLES = {
@@ -21,10 +16,10 @@ export const ROLES = {
   ADMIN: 'Admin',
 }
 
-const ADMIN_KEY = 'yonetim-parolasi'
-const ADMIN_JWT = 'yonetim-jwt'
 const SESSION_KEY = 'vds-session'
-const DEMO_ROLE_KEY = 'vds-demo-role'
+const LEGACY_DEMO_ROLE_KEY = 'vds-demo-role'
+const LEGACY_ADMIN_JWT = 'yonetim-jwt'
+const LEGACY_ADMIN_META = 'yonetim-jwt-meta'
 
 const SessionContext = createContext(null)
 
@@ -32,15 +27,10 @@ function readStoredSession() {
   try {
     const raw = localStorage.getItem(SESSION_KEY)
     if (!raw) return null
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
-}
-
-function readDemoRole() {
-  try {
-    return localStorage.getItem(DEMO_ROLE_KEY) || null
+    const parsed = JSON.parse(raw)
+    // Eski demo oturumları (JWT yok) yok sayılır.
+    if (!parsed?.accessToken) return null
+    return parsed
   } catch {
     return null
   }
@@ -55,14 +45,6 @@ function initialsOf(name, email) {
 
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(() => readStoredSession())
-  const [demoRole, setDemoRoleState] = useState(() => readDemoRole())
-  const [adminUnlocked, setAdminUnlocked] = useState(() => {
-    try {
-      return !!(sessionStorage.getItem(ADMIN_KEY) || sessionStorage.getItem(ADMIN_JWT))
-    } catch {
-      return false
-    }
-  })
 
   /*
    * API istemcisine oturumu okuyup yazma yolu ver. apiClient React ağacının
@@ -76,6 +58,7 @@ export function SessionProvider({ children }) {
     setSessionBridge({
       oku: () => oturumRef.current,
       yaz: (next) => {
+        oturumRef.current = next
         setSession(next)
         try {
           if (next) localStorage.setItem(SESSION_KEY, JSON.stringify(next))
@@ -87,51 +70,36 @@ export function SessionProvider({ children }) {
     })
   }, [])
 
-  // Yönetim paneli başka sekmede/oturumda parola veya JWT doğrularsa burayı güncelle.
+  // Eski çift oturum / demo anahtarlarını bir kez temizle.
   useEffect(() => {
-    const sync = () => {
-      try {
-        setAdminUnlocked(!!(sessionStorage.getItem(ADMIN_KEY) || sessionStorage.getItem(ADMIN_JWT)))
-      } catch {
-        /* ignore */
-      }
-    }
-    window.addEventListener('storage', sync)
-    window.addEventListener('vds-admin-auth', sync)
-    return () => {
-      window.removeEventListener('storage', sync)
-      window.removeEventListener('vds-admin-auth', sync)
+    try {
+      localStorage.removeItem(LEGACY_DEMO_ROLE_KEY)
+      sessionStorage.removeItem(LEGACY_ADMIN_JWT)
+      sessionStorage.removeItem(LEGACY_ADMIN_META)
+    } catch {
+      /* ignore */
     }
   }, [])
 
   const role = useMemo(() => {
-    // 1) Gerçek JWT oturumu her zaman baskın
+    let resolved = ROLES.GUEST
+
     if (session?.accessToken && session?.role) {
-      if (session.role === ROLES.ADMIN) return ROLES.ADMIN
-      if (session.role === ROLES.TESTER) return ROLES.TESTER
-      if (session.role === ROLES.DEALER) return ROLES.DEALER
+      if (session.role === ROLES.ADMIN) resolved = ROLES.ADMIN
+      else if (session.role === ROLES.TESTER) resolved = ROLES.TESTER
+      else if (session.role === ROLES.DEALER) resolved = ROLES.DEALER
     }
-    // 2) Beta demo rolü — yönetim oturumunu UI'da ezer (rol simülasyonu)
-    if (demoRole === ROLES.GUEST) return ROLES.GUEST
-    if (demoRole === ROLES.ADMIN) return ROLES.ADMIN
-    if (demoRole === ROLES.TESTER) return ROLES.TESTER
-    if (demoRole === ROLES.DEALER) return ROLES.DEALER
-    // 3) Yönetim paneli doğrulaması (demo seçilmemişken)
-    if (adminUnlocked) return ROLES.ADMIN
-    // 4) Demo session kaydı
-    if (session?.demo && session?.role) {
-      if (session.role === ROLES.ADMIN) return ROLES.ADMIN
-      if (session.role === ROLES.TESTER) return ROLES.TESTER
-      if (session.role === ROLES.DEALER) return ROLES.DEALER
-    }
-    return ROLES.GUEST
-  }, [adminUnlocked, session, demoRole])
+
+    if (!TESTER_ROLE_ENABLED && resolved === ROLES.TESTER) return ROLES.DEALER
+    return resolved
+  }, [session])
 
   const displayName = session?.displayName || (role === ROLES.GUEST ? 'Misafir' : role)
   const email = session?.email || null
 
   const value = useMemo(() => {
     const setSessionData = (next) => {
+      oturumRef.current = next
       setSession(next)
       try {
         if (next) localStorage.setItem(SESSION_KEY, JSON.stringify(next))
@@ -141,34 +109,15 @@ export function SessionProvider({ children }) {
       }
     }
 
-    const setDemoRole = (nextRole) => {
-      setDemoRoleState(nextRole)
-      try {
-        if (nextRole) localStorage.setItem(DEMO_ROLE_KEY, nextRole)
-        else localStorage.removeItem(DEMO_ROLE_KEY)
-      } catch {
-        /* ignore */
-      }
-    }
-
     const logout = () => {
       setSessionData(null)
-      setDemoRole(null)
       try {
-        sessionStorage.removeItem(ADMIN_KEY)
-        sessionStorage.removeItem(ADMIN_JWT)
-        sessionStorage.removeItem('yonetim-jwt-meta')
-        localStorage.removeItem(DEMO_ROLE_KEY)
+        localStorage.removeItem(LEGACY_DEMO_ROLE_KEY)
+        sessionStorage.removeItem(LEGACY_ADMIN_JWT)
+        sessionStorage.removeItem(LEGACY_ADMIN_META)
       } catch {
         /* ignore */
       }
-      setAdminUnlocked(false)
-      window.dispatchEvent(new Event('vds-admin-auth'))
-    }
-
-    const markAdminUnlocked = () => {
-      setAdminUnlocked(true)
-      window.dispatchEvent(new Event('vds-admin-auth'))
     }
 
     return {
@@ -176,23 +125,19 @@ export function SessionProvider({ children }) {
       displayName,
       email,
       initials: initialsOf(displayName, email),
-      isAuthenticated: !!(session?.accessToken || session?.email) && role !== ROLES.GUEST,
-      // Menü / yetki: tam rol eşleşmesi (cascade yok — Admin Dealer menüsünü görmez)
+      isAuthenticated: !!(session?.accessToken) && role !== ROLES.GUEST,
       isAdmin: role === ROLES.ADMIN,
       isTester: role === ROLES.TESTER,
       isDealer: role === ROLES.DEALER,
-      // Bazı ekranlar (Kontrol Merkezi sekmeleri) Admin'e de bayi/tester panelleri açabilir:
+      testerRoleEnabled: TESTER_ROLE_ENABLED,
       canDealerTools: role === ROLES.DEALER || role === ROLES.ADMIN,
-      canTesterTools: role === ROLES.TESTER || role === ROLES.ADMIN,
+      canTesterTools: TESTER_ROLE_ENABLED && (role === ROLES.TESTER || role === ROLES.ADMIN),
       session,
-      demoRole,
       setSessionData,
-      setDemoRole,
       logout,
-      markAdminUnlocked,
       ROLES,
     }
-  }, [role, displayName, email, session, demoRole])
+  }, [role, displayName, email, session])
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

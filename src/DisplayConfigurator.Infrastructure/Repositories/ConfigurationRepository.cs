@@ -47,7 +47,7 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task<PagedResultDto<Configuration>> GetPagedAsync(PagedQueryDto query)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
 
         var hasSearch = !string.IsNullOrWhiteSpace(query.Search);
         var whereClause = hasSearch
@@ -92,7 +92,7 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task<IEnumerable<Configuration>> GetByUserIdAsync(int userId)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         var sql = $@"
             SELECT {SelectColumns}, cab.id AS Id, cab.model_code AS ModelCode, cab.price AS Price
             FROM configurations cfg
@@ -109,7 +109,7 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task<Configuration?> GetByIdAsync(int id)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         var sql = $@"
             SELECT {SelectColumns}, cab.id AS Id, cab.model_code AS ModelCode, cab.price AS Price
             FROM configurations cfg
@@ -128,7 +128,7 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task<int> CreateAsync(Configuration config)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
 
         const string sql = @"
             INSERT INTO configurations 
@@ -192,7 +192,7 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task<bool> DeleteAsync(int id)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
 
         const string sql = @"
             DELETE FROM configurations 
@@ -208,7 +208,7 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task<bool> UpdateStatusAsync(int id, string status)
     {
-        using var connection = _connectionFactory.CreateConnection();
+        using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "UPDATE configurations SET status = @Status, revision = revision + 1 WHERE id = @Id";
         var rows = await connection.ExecuteAsync(sql, new { Id = id, Status = status });
         return rows > 0;

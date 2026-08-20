@@ -82,7 +82,7 @@ public static class ConfigurationCalculator
         string aspectRatio = CalculateAspectRatio(totalWidthMm, totalHeightMm);
         bool isFullHd = totalResW >= 1920 && totalResH >= 1080;
         bool is4K = totalResW >= 3840 && totalResH >= 2160;
-        // 2 ondalığa yuvarlanmazsa PDF/arayüzde "1234.5600000001 ₺" gibi kuruş
+        // 2 ondalığa yuvarlanmazsa PDF/arayüzde "1234.5600000001 $" gibi kuruş
         // hataları birikip görünürdü — parasal her alan burada normalize edilir.
         decimal calculatedPrice = Math.Round(totalUnits * cabin.Price, 2);
 

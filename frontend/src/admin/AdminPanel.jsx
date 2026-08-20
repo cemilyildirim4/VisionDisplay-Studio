@@ -1,19 +1,22 @@
 import { useEffect, useState, useCallback } from 'react'
-import { BrandMark, BrandStripe } from './BrandChrome.jsx'
-import { BRAND } from './brand.js'
-import ProductTypeBadge from './ProductTypeBadge.jsx'
-import { normalizeProductType } from './productType.js'
-import { API_URL, apiFetch } from './apiClient.js'
+import { BrandMark, BrandStripe } from '../BrandChrome.jsx'
+import { BRAND } from '../brand.js'
+import ProductTypeBadge from '../ProductTypeBadge.jsx'
+import { normalizeProductType } from '../productType.js'
+import { API_URL, apiFetch } from '../apiClient.js'
+import { queryClient } from '../queryClient.js'
+import { TESTER_ROLE_ENABLED } from '../featureFlags.js'
+import { useSession } from '../SessionContext.jsx'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
  * Adres: http://localhost:5173/#yonetim
  *
  * Gruplar:
- *  - Genel:   Dashboard (özet)
+ *  - Genel:   Dashboard (özet + analitik)
  *  - Ürün:    Modeller, Seriler
  *  - Satış:   Teklifler, Kayıtlı Projeler
- *  - Sistem:  Analitik, Sohbet Kayıtları, Davet Kodları
+ *  - Sistem:  Sohbet Kayıtları, Geri Bildirimler, Kullanıcılar
  *
  * Veriler doğrudan API üzerinden okunur/yazılır; API kapalıysa ekran uyarı gösterir
  * (ana sayfadaki gibi demo veriye düşmez, çünkü burada gerçek kayıt yapılıyor).
@@ -52,20 +55,9 @@ const TAB_GROUPS = [
   {
     label: 'Sistem',
     items: [
-      { key: 'analytics', label: 'Analitik' },
       { key: 'chatlogs', label: 'Sohbet Kayıtları' },
       { key: 'feedback', label: 'Geri Bildirimler' },
       { key: 'users', label: 'Kullanıcılar' },
-      /*
-       * Davet Kodları sekmesi KALDIRILDI. Kodların tek işlevi beta döneminde
-       * herkese açık formları kısıtlamaktı; Beta:Enabled kapalı olduğu için
-       * kapı zaten açık ve kodu girecek bir arayüz de hiç yapılmamıştı — yani
-       * üretilen kod hiçbir yerde kullanılamıyordu.
-       *
-       * Sunucu tarafı (api/invite-codes, BetaGate filtresi, invite_codes
-       * tablosu) YERİNDE DURUYOR. Beta kısıtlaması ileride açılmak istenirse
-       * yalnızca bu sekme ve kodu girme ekranı yazılır, veri kaybı olmaz.
-       */
     ],
   },
 ]
@@ -140,8 +132,8 @@ function ConfirmDialog({ open, title, body, confirmLabel = 'Sil', onConfirm, onC
  * Değerler veritabanında virgülle ayrılmış tek metin olarak tutulur.
  */
 const FILTER_FIELDS = [
-  { key: 'filterCategory', label: 'Kategori', options: ['Kapalı', 'Duvar'] },
-  { key: 'usage', label: 'Kullanım', options: ['Ticari İç Mekan', 'Pencereye bakan', 'Sanal Üretim', 'Sinema'] },
+  { key: 'filterCategory', label: 'Kategori', options: ['Kapalı', 'Duvar', 'Dış Mekan'] },
+  { key: 'usage', label: 'Kullanım', options: ['Ticari İç Mekan', 'Pencereye bakan', 'Sanal Üretim', 'Sinema', 'Dış Mekan'] },
   { key: 'installation', label: 'Kurulum', options: ['Düz', 'Dışbükey', 'İçbükey', 'İç L Tipi', 'Dış L Tipi', 'Asılı', 'İstifleme'] },
   { key: 'configurable', label: 'Yapılandırılabilir', options: ['Hepsi Bir Arada', 'Dolap'] },
   { key: 'service', label: 'Hizmet', options: ['Ön', 'Arka', 'Kısmen Ön ve Kısmen Arka'] },
@@ -220,6 +212,8 @@ const BLANK = {
   protection: '',
   certification: '',
   features: '',
+  ipRating: '',
+  featured: false,
   // Görsel ve bileşen kodları
   imageUrl: '',
   sboxCode: '',
@@ -229,7 +223,10 @@ const BLANK = {
 }
 
 const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v))
-const money = (v) => (v === null || v === undefined ? '—' : `${Number(v).toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺`)
+const money = (v) =>
+  v === null || v === undefined
+    ? '—'
+    : `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
 const dt = (v) => (v ? new Date(v).toLocaleString('tr-TR') : '—')
 
 function Field({ label, hint, children }) {
@@ -260,79 +257,50 @@ function Banner({ message }) {
   )
 }
 
-/*
- * YÖNETİM OTURUMU
- *
- * Tercih edilen yol: Admin rolündeki hesapla JWT (e-posta/parola).
- * Yedek yol: paylaşılan X-Admin-Key (ADMIN_PASSWORD) — beta / acil durum.
- *
- * sessionStorage: sekme kapanınca silinir.
- * Asıl koruma SUNUCUDA (AdminOnlyAttribute): JWT Role=Admin VEYA X-Admin-Key.
- */
-const PAROLA_ANAHTARI = 'yonetim-parolasi'
-const JWT_ANAHTARI = 'yonetim-jwt'
-const JWT_META = 'yonetim-jwt-meta'
-
-const parolaOku = () => sessionStorage.getItem(PAROLA_ANAHTARI) || ''
-const jwtOku = () => sessionStorage.getItem(JWT_ANAHTARI) || ''
-
-/** Yazma isteklerine JWT ve/veya paylaşılan parola başlığını ekler. */
-const yetkiBasligi = () => {
-  const h = {}
-  const jwt = jwtOku()
-  const key = parolaOku()
-  if (jwt) h.Authorization = `Bearer ${jwt}`
-  if (key) h['X-Admin-Key'] = key
-  return h
-}
-
-const oturumVarMi = () => !!(jwtOku() || parolaOku())
-
-/** Parola / JWT sorma ekranı — doğrulanmadan yönetim ekranı hiç çizilmiyor. */
-function GirisEkrani({ onGiris }) {
+/** JWT sorma ekranı — Role=Admin oturumu yoksa yönetim ekranı çizilmez. */
+function GirisEkrani() {
+  const { setSessionData } = useSession()
+  const [email, setEmail] = useState('')
   const [parola, setParola] = useState('')
   const [hata, setHata] = useState(null)
   const [deneniyor, setDeneniyor] = useState(false)
 
-  /*
-   * TEK ALAN: erişim kodu.
-   *
-   * Panele giriş artık e-posta/parola sormuyor. Yönetim paneli tek kişilik bir
-   * arka ofis; ayrı bir hesap açıp onu hatırlamak yerine tek bir kod yetiyor.
-   * Kod sunucuda doğrulanıyor (Admin:Password → X-Admin-Key başlığı), yani
-   * doğrulama tarayıcıda taklit edilemiyor.
-   */
-  const gonder = async (e) => {
+  const girisYap = async (e) => {
     e.preventDefault()
-    if (deneniyor || !parola) return
+    if (deneniyor || !email || !parola) return
     setDeneniyor(true)
     setHata(null)
     try {
-      const res = await apiFetch(`${API_URL}/api/cabinets/admin/dogrula`, {
+      const res = await apiFetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
-        headers: { 'X-Admin-Key': parola },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: parola }),
       })
-      if (res.status === 401) {
-        setHata('Erişim kodu geçersiz.')
-        return
-      }
+      const body = await res.json().catch(() => ({}))
       if (!res.ok) {
-        const g = await res.json().catch(() => ({}))
-        setHata(g.message || 'Doğrulama başarısız.')
+        setHata(body.message || 'E-posta veya parola hatalı.')
         return
       }
-      sessionStorage.setItem(PAROLA_ANAHTARI, parola)
-      sessionStorage.removeItem(JWT_ANAHTARI)
-      sessionStorage.removeItem(JWT_META)
-      window.dispatchEvent(new Event('vds-admin-auth'))
-      onGiris({ type: 'shared' })
+      if (body.role !== 'Admin') {
+        setHata('Bu hesap yönetim paneline giremez. Admin hesabı gerekli.')
+        return
+      }
+      setSessionData({
+        accessToken: body.accessToken,
+        refreshToken: body.refreshToken,
+        role: body.role,
+        email: body.email,
+        displayName: body.displayName || body.email,
+      })
     } catch {
-      setHata('API\'ye bağlanılamadı. Backend (Docker API veya dotnet) çalışıyor mu kontrol edin.')
+      setHata("API'ye bağlanılamadı. Backend (Docker API veya dotnet) çalışıyor mu kontrol edin.")
     } finally {
       setDeneniyor(false)
     }
   }
 
+  const inputClass =
+    'w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand'
 
   return (
     <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans flex items-center justify-center px-6">
@@ -342,23 +310,38 @@ function GirisEkrani({ onGiris }) {
           <BrandMark title="Yönetim Paneli" subtitle={BRAND.companyShort} showCompany={false} />
         </div>
         <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0 mb-4">
-          Panele girmek için erişim kodunu yazın.
+          Admin hesabınızla e-posta ve parola girin.
         </p>
 
-        <form onSubmit={gonder} className="flex flex-col gap-3">
+        <form onSubmit={girisYap} className="flex flex-col gap-3">
           <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
-            Erişim kodu
+            E-posta
+            <input
+              type="email"
+              required
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+            Parola
             <input
               type="password"
               required
-              autoFocus
+              minLength={8}
               value={parola}
               onChange={(e) => setParola(e.target.value)}
-              className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
+              className={inputClass}
             />
           </label>
           {hata && <p className="text-[13px] text-red-600 m-0">{hata}</p>}
-          <button type="submit" disabled={deneniyor || !parola} className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors">
+          <button
+            type="submit"
+            disabled={deneniyor || !email || !parola}
+            className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors"
+          >
             {deneniyor ? 'Kontrol ediliyor…' : 'Giriş'}
           </button>
         </form>
@@ -369,7 +352,7 @@ function GirisEkrani({ onGiris }) {
             window.history.replaceState(null, '', window.location.pathname + window.location.search)
             window.dispatchEvent(new Event('hashchange'))
           }}
-          className="w-full mt-4 text-[13px] text-brand dark:text-brand-light hover:underline"
+          className="w-full mt-3 text-[13px] text-brand dark:text-brand-light hover:underline"
         >
           ← Konfigüratöre dön
         </button>
@@ -379,14 +362,8 @@ function GirisEkrani({ onGiris }) {
 }
 
 export default function AdminPanel() {
-  const [girisYapildi, setGirisYapildi] = useState(() => oturumVarMi())
-  const [adminMeta, setAdminMeta] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem(JWT_META) || 'null')
-    } catch {
-      return null
-    }
-  })
+  const { isAdmin, session, logout, displayName, email } = useSession()
+  const girisYapildi = isAdmin && !!session?.accessToken
   const [tab, setTab] = useState('dashboard')
   const [formSection, setFormSection] = useState('basic') // basic | tech | parts
   const [confirm, setConfirm] = useState(null) // { title, body, onConfirm }
@@ -403,12 +380,7 @@ export default function AdminPanel() {
   const [productTypeFilter, setProductTypeFilter] = useState('all') // all | CABINET | MODULE
 
   const oturumDustu = () => {
-    sessionStorage.removeItem(PAROLA_ANAHTARI)
-    sessionStorage.removeItem(JWT_ANAHTARI)
-    sessionStorage.removeItem(JWT_META)
-    window.dispatchEvent(new Event('vds-admin-auth'))
-    setAdminMeta(null)
-    setGirisYapildi(false)
+    logout()
   }
 
   const askConfirm = (title, body, onConfirm) => {
@@ -433,6 +405,7 @@ export default function AdminPanel() {
       if (!cRes.ok || !sRes.ok) throw new Error('API yanıt vermedi')
       setCabinets(await cRes.json())
       setSeriesList(await sRes.json())
+      await queryClient.invalidateQueries({ queryKey: ['cabinets'] })
     } catch {
       setApiError(
         'API\'ye bağlanılamadı. Docker API konteynerinin (port 5007) çalıştığından ve veritabanının açık olduğundan emin olun. Yerel dotnet run ile Docker aynı portta çakışmasın.',
@@ -486,6 +459,8 @@ export default function AdminPanel() {
       protection: c.protection ?? '',
       certification: c.certification ?? '',
       features: c.features ?? '',
+      ipRating: c.ipRating ?? '',
+      featured: Boolean(c.featured),
       imageUrl: c.imageUrl ?? '',
       sboxCode: c.sboxCode ?? '',
       jigCode: c.jigCode ?? '',
@@ -541,6 +516,8 @@ export default function AdminPanel() {
         protection: form.protection || null,
         certification: form.certification || null,
         features: form.features || null,
+        ipRating: num(form.ipRating),
+        featured: Boolean(form.featured),
         imageUrl: form.imageUrl || null,
         sboxCode: form.sboxCode || null,
         jigCode: form.jigCode || null,
@@ -551,7 +528,8 @@ export default function AdminPanel() {
         editingId ? `${API_URL}/api/cabinets/${editingId}` : `${API_URL}/api/cabinets`,
         {
           method: editingId ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
+          auth: true,
+        headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         },
       )
@@ -583,9 +561,13 @@ export default function AdminPanel() {
         try {
           const res = await apiFetch(`${API_URL}/api/cabinets/${c.id}`, {
             method: 'DELETE',
-            headers: yetkiBasligi(),
+            auth: true,
           })
-          if (!res.ok) throw new Error('Silinemedi.')
+          if (res.status === 401) { oturumDustu(); return }
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            throw new Error(err.message || err.title || 'Silinemedi.')
+          }
           setMessage({ type: 'ok', text: `"${c.modelCode}" silindi.` })
           await load()
         } catch (e) {
@@ -612,7 +594,8 @@ export default function AdminPanel() {
         seriesForm.id ? `${API_URL}/api/cabinets/series/${seriesForm.id}` : `${API_URL}/api/cabinets/series`,
         {
           method: seriesForm.id ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
+          auth: true,
+        headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         },
       )
@@ -636,7 +619,7 @@ export default function AdminPanel() {
       `"${s.name}" serisi silinecek. Bağlı modeller etkilenebilir.`,
       async () => {
         try {
-          const res = await apiFetch(`${API_URL}/api/cabinets/series/${s.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const res = await apiFetch(`${API_URL}/api/cabinets/series/${s.id}`, { method: 'DELETE', auth: true })
           if (res.status === 401) { oturumDustu(); return }
           if (!res.ok) {
             const err = await res.json().catch(() => ({}))
@@ -666,7 +649,7 @@ export default function AdminPanel() {
     try {
       const qs = new URLSearchParams({ page: String(page), pageSize: '20' })
       if (search) qs.set('search', search)
-      const res = await apiFetch(`${API_URL}/api/quotes?${qs}`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/quotes?${qs}`, { auth: true })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Teklifler alınamadı.')
       const data = await res.json()
@@ -687,7 +670,7 @@ export default function AdminPanel() {
       `"${q.customerName || 'İsimsiz'}" teklifi kalıcı olarak silinecek.`,
       async () => {
         try {
-          const res = await apiFetch(`${API_URL}/api/quotes/${q.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const res = await apiFetch(`${API_URL}/api/quotes/${q.id}`, { method: 'DELETE', auth: true })
           if (res.status === 401) { oturumDustu(); return }
           if (!res.ok) throw new Error('Silinemedi.')
           await loadQuotes(quotesPage, quotesSearch)
@@ -702,7 +685,8 @@ export default function AdminPanel() {
     try {
       const res = await apiFetch(`${API_URL}/api/quotes/${q.id}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
+        auth: true,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       })
       if (res.status === 401) { oturumDustu(); return }
@@ -724,7 +708,7 @@ export default function AdminPanel() {
     setChatError(null)
     try {
       const res = await apiFetch(`${API_URL}/api/chatlogs?limit=300&onlyUnanswered=${unansweredOnly ? 'true' : 'false'}`, {
-        headers: yetkiBasligi(),
+        auth: true,
       })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Sohbet kayıtları alınamadı.')
@@ -746,8 +730,8 @@ export default function AdminPanel() {
     setFeedbackLoading(true)
     setFeedbackError(null)
     try {
-      const res = await fetch(`${API_URL}/api/feedback?limit=300&onlyOpen=${openOnly ? 'true' : 'false'}`, {
-        headers: yetkiBasligi(),
+      const res = await apiFetch(`${API_URL}/api/feedback?limit=300&onlyOpen=${openOnly ? 'true' : 'false'}`, {
+        auth: true,
       })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Geri bildirimler alınamadı.')
@@ -761,9 +745,10 @@ export default function AdminPanel() {
 
   const setFeedbackResolved = async (f, resolved) => {
     try {
-      const res = await fetch(`${API_URL}/api/feedback/${f.id}/resolved`, {
+      const res = await apiFetch(`${API_URL}/api/feedback/${f.id}/resolved`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
+        auth: true,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resolved }),
       })
       if (res.status === 401) { oturumDustu(); return }
@@ -781,7 +766,7 @@ export default function AdminPanel() {
       'Bu geri bildirim kalıcı olarak silinecek.',
       async () => {
         try {
-          const res = await fetch(`${API_URL}/api/feedback/${f.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const res = await apiFetch(`${API_URL}/api/feedback/${f.id}`, { method: 'DELETE', auth: true })
           if (res.status === 401) { oturumDustu(); return }
           // 404 = zaten silinmiş; hata sayılmaz (bkz. kullanıcı silme notu)
           if (!res.ok && res.status !== 404) throw new Error('Silinemedi.')
@@ -809,7 +794,7 @@ export default function AdminPanel() {
     try {
       const qs = new URLSearchParams({ page: String(page), pageSize: '20' })
       if (search) qs.set('search', search)
-      const res = await apiFetch(`${API_URL}/api/configurations?${qs}`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/configurations?${qs}`, { auth: true })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Kayıtlı projeler alınamadı.')
       const data = await res.json()
@@ -830,7 +815,7 @@ export default function AdminPanel() {
       `"${c.projectName}" projesi kalıcı olarak silinecek.`,
       async () => {
         try {
-          const res = await apiFetch(`${API_URL}/api/configurations/${c.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const res = await apiFetch(`${API_URL}/api/configurations/${c.id}`, { method: 'DELETE', auth: true })
           if (res.status === 401) { oturumDustu(); return }
           if (!res.ok) throw new Error('Silinemedi.')
           await loadConfigs(configsPage, configsSearch)
@@ -845,7 +830,8 @@ export default function AdminPanel() {
     try {
       const res = await apiFetch(`${API_URL}/api/configurations/${c.id}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
+        auth: true,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       })
       if (res.status === 401) { oturumDustu(); return }
@@ -865,13 +851,10 @@ export default function AdminPanel() {
     setDashboardLoading(true)
     setDashboardError(null)
     try {
-      const res = await apiFetch(`${API_URL}/api/analytics/dashboard`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/analytics/dashboard`, { auth: true })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        if (res.status === 503 && /Admin:Password|yapılandırılmamış/i.test(body.message || '')) {
-          throw new Error(body.message || 'Yönetim erişimi yapılandırılmamış. API\'yi Admin__Password ile yeniden başlatın.')
-        }
         throw new Error(body.message || 'Analitik veriler alınamadı.')
       }
       setDashboard(await res.json())
@@ -882,7 +865,7 @@ export default function AdminPanel() {
     }
   }, [])
 
-  // ---- Kullanıcılar (Admin / Dealer / Tester) ----
+  // ---- Kullanıcılar (Admin / Dealer; Tester yalnızca beta/dev) ----
   const [users, setUsers] = useState([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersError, setUsersError] = useState(null)
@@ -893,7 +876,7 @@ export default function AdminPanel() {
     setUsersLoading(true)
     setUsersError(null)
     try {
-      const res = await apiFetch(`${API_URL}/api/users`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/users`, { auth: true })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Kullanıcı listesi alınamadı.')
       setUsers(await res.json())
@@ -912,7 +895,8 @@ export default function AdminPanel() {
     try {
       const res = await apiFetch(`${API_URL}/api/users`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
+        auth: true,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userForm),
       })
       const body = await res.json().catch(() => ({}))
@@ -931,7 +915,8 @@ export default function AdminPanel() {
     try {
       const res = await apiFetch(`${API_URL}/api/users/${u.id}/role`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...yetkiBasligi() },
+        auth: true,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role }),
       })
       const body = await res.json().catch(() => ({}))
@@ -949,7 +934,7 @@ export default function AdminPanel() {
       `"${u.email}" hesabı silinecek.`,
       async () => {
         try {
-          const res = await apiFetch(`${API_URL}/api/users/${u.id}`, { method: 'DELETE', headers: yetkiBasligi() })
+          const res = await apiFetch(`${API_URL}/api/users/${u.id}`, { method: 'DELETE', auth: true })
           const body = await res.json().catch(() => ({}))
           if (res.status === 401) { oturumDustu(); return }
           /*
@@ -977,7 +962,7 @@ export default function AdminPanel() {
 
   const downloadConfigPdf = async (c) => {
     try {
-      const res = await apiFetch(`${API_URL}/api/configurations/${c.id}/pdf`, { headers: yetkiBasligi() })
+      const res = await apiFetch(`${API_URL}/api/configurations/${c.id}/pdf`, { auth: true })
       if (!res.ok) throw new Error('PDF indirilemedi.')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -996,7 +981,7 @@ export default function AdminPanel() {
   // Sekme değişince ilgili veriyi getir
   useEffect(() => {
     if (!girisYapildi) return
-    if (tab === 'dashboard' || tab === 'analytics') loadDashboard()
+    if (tab === 'dashboard') loadDashboard()
     if (tab === 'quotes') loadQuotes(1, '')
     if (tab === 'chatlogs') loadChatLogs(onlyUnanswered)
     if (tab === 'feedback') loadFeedback(onlyOpenFeedback)
@@ -1016,18 +1001,7 @@ export default function AdminPanel() {
   }, [onlyOpenFeedback])
 
   if (!girisYapildi) {
-    return (
-      <GirisEkrani
-        onGiris={(info) => {
-          if (info?.type === 'jwt') {
-            setAdminMeta({ email: info.email, displayName: info.displayName, role: info.role })
-          } else {
-            setAdminMeta(null)
-          }
-          setGirisYapildi(true)
-        }}
-      />
-    )
+    return <GirisEkrani />
   }
 
   return (
@@ -1043,11 +1017,9 @@ export default function AdminPanel() {
       <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
         <BrandMark
           title="Yönetim Paneli"
-          /* Giriş tek yol (erişim kodu) olduğu için "Paylaşılan parola oturumu"
-             ayrımı anlamsız kaldı; sabit açıklama kullanılıyor. */
           subtitle={
-            adminMeta?.email
-              ? `${adminMeta.displayName || adminMeta.email}`
+            email
+              ? `${displayName || email}`
               : 'Ürün kataloğu, satış talepleri ve sistem izleme'
           }
           size="lg"
@@ -1146,7 +1118,7 @@ export default function AdminPanel() {
                     <div className="flex flex-wrap gap-2">
                       <button type="button" onClick={() => setTab('cabins')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Modeller</button>
                       <button type="button" onClick={() => setTab('quotes')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Teklifler</button>
-                      <button type="button" onClick={() => setTab('analytics')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Analitik</button>
+                      <button type="button" onClick={() => setTab('users')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Kullanıcılar</button>
                     </div>
                   </div>
                   <div className="border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 bg-white dark:bg-[#161a21]">
@@ -1159,13 +1131,12 @@ export default function AdminPanel() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-                    <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] flex items-center justify-between">
-                      <h3 className="text-sm font-bold m-0">Popüler modeller</h3>
-                      <button type="button" onClick={() => setTab('analytics')} className="text-xs text-brand hover:underline">Tümü</button>
+                    <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+                      <h3 className="text-sm font-bold m-0">En çok konfigüre edilen modeller</h3>
                     </div>
                     <table className="w-full text-sm">
                       <tbody>
-                        {(dashboard.topModels || []).slice(0, 5).map((m) => (
+                        {(dashboard.topModels || []).map((m) => (
                           <tr key={m.cabinId} className="border-t border-neutral-100 dark:border-[#242b36]">
                             <td className="px-4 py-2.5 font-medium">{m.modelCode}</td>
                             <td className="px-4 py-2.5 text-right text-neutral-500 dark:text-neutral-400">{m.configurationCount} proje</td>
@@ -1179,12 +1150,12 @@ export default function AdminPanel() {
                   </div>
                   <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
                     <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] flex items-center justify-between">
-                      <h3 className="text-sm font-bold m-0">SSS adayları</h3>
+                      <h3 className="text-sm font-bold m-0">SSS önerisi (cevaplanamayan sorular)</h3>
                       <button type="button" onClick={() => setTab('chatlogs')} className="text-xs text-brand hover:underline">Loglar</button>
                     </div>
                     <table className="w-full text-sm">
                       <tbody>
-                        {(dashboard.faqSuggestions || []).slice(0, 5).map((f, i) => (
+                        {(dashboard.faqSuggestions || []).map((f, i) => (
                           <tr key={i} className="border-t border-neutral-100 dark:border-[#242b36] align-top">
                             <td className="px-4 py-2.5">{f.question}</td>
                             <td className="px-4 py-2.5 text-right text-neutral-500 dark:text-neutral-400 whitespace-nowrap">{f.askedCount}×</td>
@@ -1287,8 +1258,12 @@ export default function AdminPanel() {
 
                 {/* --- Fiyat ve panel kartı (Configurations hesap motoruna girdi) --- */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <Field label="Fiyat (₺)" hint="Kayıtlı proje toplam fiyat hesabında kullanılır">
-                    <input type="number" step="0.01" min="0" value={form.price} onChange={(e) => set('price', e.target.value)} className={inputCls} />
+                  <Field label="Fiyat (USD)" hint="Birim fiyat ABD doları cinsinden. Kayıtlı proje toplamı bu değerle hesaplanır.">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 shrink-0">$</span>
+                      <input type="number" step="0.01" min="0" value={form.price} onChange={(e) => set('price', e.target.value)} className={inputCls} />
+                      <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 shrink-0">USD</span>
+                    </div>
                   </Field>
                   <Field label="Kart Başına Modül" hint="Yalnızca Tekli Panel seçiliyken anlamlı">
                     <input
@@ -1384,6 +1359,21 @@ export default function AdminPanel() {
                       />
                     ))}
                   </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5">
+                    <Field label="IP sınıfı" hint="İç 20/30 · dış 65. Boş = sihirbaz IP elemez">
+                      <input type="number" min="10" max="69" value={form.ipRating} onChange={(e) => set('ipRating', e.target.value)} className={inputCls} placeholder="30" />
+                    </Field>
+                    <div className="flex items-end pb-1">
+                      <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(form.featured)}
+                          onChange={(e) => set('featured', e.target.checked)}
+                        />
+                        Öne çıkar (sihirbaz hedef stok)
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 {/* --- Görsel ve bileşen kodları --- */}
@@ -1477,7 +1467,7 @@ export default function AdminPanel() {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                     <tr>
-                      {['ID', 'Model Kodu', 'Tür', 'Kategori', 'Seri', 'Pitch', 'Ölçü (mm)', 'Piksel', 'Ağırlık', 'Fiyat', ''].map((h) => (
+                      {['ID', 'Model Kodu', 'Tür', 'Kategori', 'Seri', 'Pitch', 'Ölçü (mm)', 'Piksel', 'Ağırlık', 'Fiyat (USD)', ''].map((h) => (
                         <th key={h} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -1818,7 +1808,7 @@ export default function AdminPanel() {
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                   <tr>
-                    {['ID', 'Proje', 'Müşteri', 'Model', 'Sütun×Satır', 'Çözünürlük', 'Alıcı Kart', 'RJ45', 'İşlemci', 'Fiyat', 'Durum', 'Tarih', ''].map((h) => (
+                    {['ID', 'Proje', 'Müşteri', 'Model', 'Sütun×Satır', 'Çözünürlük', 'Alıcı Kart', 'RJ45', 'İşlemci', 'Fiyat (USD)', 'Durum', 'Tarih', ''].map((h) => (
                       <th key={h} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -1867,71 +1857,6 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* ================= ANALİTİK ================= */}
-        {tab === 'analytics' && (
-          <div>
-            {dashboardError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{dashboardError}</div>}
-            {dashboardLoading && !dashboard && <p className="text-sm text-neutral-500 dark:text-neutral-400">Yükleniyor…</p>}
-            {dashboard && (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  {[
-                    { label: 'Toplam Teklif', value: dashboard.totalQuotes },
-                    { label: 'Beklemede', value: dashboard.pendingQuotes },
-                    { label: 'Kayıtlı Proje', value: dashboard.totalConfigurations },
-                    { label: 'Cevaplanamayan Soru', value: dashboard.unansweredChatLogs },
-                  ].map((s) => (
-                    <div key={s.label} className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-4">
-                      <div className="text-2xl font-bold">{s.value}</div>
-                      <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-                    <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
-                      <h3 className="text-sm font-bold m-0">En Çok Konfigüre Edilen Modeller</h3>
-                    </div>
-                    <table className="w-full text-sm">
-                      <tbody>
-                        {dashboard.topModels.map((m) => (
-                          <tr key={m.cabinId} className="border-t border-neutral-100 dark:border-[#242b36]">
-                            <td className="px-4 py-2.5 font-medium">{m.modelCode}</td>
-                            <td className="px-4 py-2.5 text-right text-neutral-500 dark:text-neutral-400">{m.configurationCount} proje</td>
-                          </tr>
-                        ))}
-                        {dashboard.topModels.length === 0 && (
-                          <tr><td className="px-4 py-6 text-center text-neutral-400 dark:text-neutral-500">Henüz veri yok.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-                    <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
-                      <h3 className="text-sm font-bold m-0">SSS Önerisi (cevaplanamayan en sık sorular)</h3>
-                    </div>
-                    <table className="w-full text-sm">
-                      <tbody>
-                        {dashboard.faqSuggestions.map((f, i) => (
-                          <tr key={i} className="border-t border-neutral-100 dark:border-[#242b36] align-top">
-                            <td className="px-4 py-2.5">{f.question}</td>
-                            <td className="px-4 py-2.5 text-right text-neutral-500 dark:text-neutral-400 whitespace-nowrap">{f.askedCount}× soruldu</td>
-                          </tr>
-                        ))}
-                        {dashboard.faqSuggestions.length === 0 && (
-                          <tr><td className="px-4 py-6 text-center text-neutral-400 dark:text-neutral-500">Cevaplanamayan soru yok.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
         {/* ================= KULLANICILAR ================= */}
         {tab === 'users' && (
           <div className="flex flex-col gap-5">
@@ -1948,7 +1873,7 @@ export default function AdminPanel() {
               <Field label="Rol">
                 <select value={userForm.role} onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value }))} className={inputCls}>
                   <option value="Dealer">Bayi (Dealer)</option>
-                  <option value="Tester">Tester</option>
+                  {TESTER_ROLE_ENABLED && <option value="Tester">Tester</option>}
                   <option value="Admin">Admin</option>
                 </select>
               </Field>
@@ -1988,7 +1913,7 @@ export default function AdminPanel() {
                           >
                             <option value="Admin">Admin</option>
                             <option value="Dealer">Dealer</option>
-                            <option value="Tester">Tester</option>
+                            {(TESTER_ROLE_ENABLED || u.role === 'Tester') && <option value="Tester">Tester</option>}
                           </select>
                         </td>
                         <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{dt(u.createdAt)}</td>

@@ -13,7 +13,7 @@ namespace DisplayConfigurator.Tests;
 public class ConfigurationCalculatorTests
 {
     /// <summary>
-    /// Örnek P2.5 kabin: 500x500 mm gövde, 200x200 piksel (P2.5), 1000 ₺/adet,
+    /// Örnek P2.5 kabin: 500x500 mm gövde, 200x200 piksel (P2.5), 1000 $/adet,
     /// 6,5 kg, tipik 200 W / maksimum 600 W. Sayılar kolay doğrulanabilsin diye
     /// bilerek yuvarlak seçildi (bkz. ADIM 6 uçtan uca simülasyon raporu).
     /// </summary>
@@ -62,7 +62,7 @@ public class ConfigurationCalculatorTests
         Assert.Equal(7.2m, result.TotalMaxPowerKw);
         Assert.Equal(2.4m, result.TotalAvgPowerKw);
 
-        // Ağırlık: 12 x 6,5 kg = 78 kg. Fiyat: 12 x 1000 ₺ = 12.000 ₺.
+        // Ağırlık: 12 x 6,5 kg = 78 kg. Fiyat: 12 x 1000 $ = 12.000 $.
         Assert.Equal(78m, result.TotalWeightKg);
         Assert.Equal(12000m, result.TotalPrice);
 

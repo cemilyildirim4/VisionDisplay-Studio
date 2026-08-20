@@ -10,5 +10,6 @@ public interface ICabinRepository
     Task<Cabin> CreateAsync(Cabin cabin);
     Task<bool> UpdateAsync(Cabin cabin);
     Task<bool> DeleteAsync(int id);
+    Task<int> CountConfigurationsAsync(int cabinId);
     Task<bool> ModelCodeExistsAsync(string modelCode, int? excludeId);
 }

@@ -7,6 +7,13 @@ import { viewingDistanceFor } from './viewingDistance.js'
 import PrivacyModal from './PrivacyModal.jsx'
 import { API_URL, apiFetch } from './apiClient.js'
 import { rowsToXlsxBlob } from './xlsx.js'
+import { useSession } from './SessionContext.jsx'
+import {
+  compactPhone,
+  parseProblemErrors,
+  validateContactForm,
+  validateContactValue,
+} from './contactFormValidation.js'
 
 async function captureScreenPreview() {
   const el = document.getElementById('pdf-onizleme')
@@ -32,17 +39,27 @@ async function captureScreenPreview() {
   }
 }
 
-function Field({ label, children }) {
+function Field({ label, error, children }) {
   return (
     <label className="block mb-4">
       <span className="text-xs text-neutral-500 dark:text-neutral-400">{label}</span>
       {children}
+      {error ? <span className="text-red-500 text-xs mt-1 block">{error}</span> : null}
     </label>
   )
 }
 
 const inputCls =
   'w-full mt-1 border-b border-neutral-300 dark:border-[#39414f] py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-neutral-800 dark:focus:border-brand placeholder:text-neutral-400'
+
+const inputErrorCls =
+  'w-full mt-1 border-b border-red-500 py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-red-500 placeholder:text-neutral-400'
+
+const textareaCls =
+  'w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg p-2 text-sm text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-neutral-800 resize-none'
+
+const textareaErrorCls =
+  'w-full mt-1 border border-red-500 rounded-lg p-2 text-sm text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-red-500 resize-none'
 
 function clampGrid(n) {
   const v = Math.max(1, Number(n) || 1)
@@ -51,6 +68,7 @@ function clampGrid(n) {
 
 export default function ExportModal({ open, onClose, summary }) {
   const { t, lang } = useLang()
+  const { isAuthenticated } = useSession()
   const [customer, setCustomer] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -61,6 +79,35 @@ export default function ExportModal({ open, onClose, summary }) {
   const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [formError, setFormError] = useState(null)
+
+  const setContactField = (field, value) => {
+    const setters = {
+      customer: setCustomer,
+      phone: setPhone,
+      email: setEmail,
+      address: setAddress,
+      message: setMessage,
+    }
+    setters[field]?.(value)
+    setErrors((prev) => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+  }
+
+  const blurContactField = (field, value) => {
+    const msg = validateContactValue(field, value)
+    setErrors((prev) => {
+      const next = { ...prev }
+      if (msg) next[field] = msg
+      else delete next[field]
+      return next
+    })
+  }
 
   // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
   useGovdeKilidi(open)
@@ -129,9 +176,9 @@ export default function ExportModal({ open, onClose, summary }) {
    * Müşterinin kendi mesajı varsa altında, olduğu gibi korunur.
    */
   const onayNotu = modelOnay ? `${t('exp.modelSureNote')}: ${modelOnay === 'yes' ? t('common.yes') : t('common.no')}` : ''
-  const mesajNotlu = [onayNotu, message].filter(Boolean).join('\n')
-  // PDF/Excel yalnızca onay verildiğinde VE model seçimi cevaplandığında
-  const hazir = consent && !!modelOnay
+  const mesajNotlu = [onayNotu, message.trim()].filter(Boolean).join('\n')
+  // PDF/Excel: KVKK onayı + model sorusu + oturum, üçü birden
+  const hazir = consent && !!modelOnay && isAuthenticated
 
   const handleExcelExport = () => {
     const rows = [
@@ -171,29 +218,43 @@ export default function ExportModal({ open, onClose, summary }) {
       alert(t('exp.modelSureMissing'))
       return
     }
+    if (!isAuthenticated) {
+      alert(t('exp.needLogin'))
+      window.location.hash = '#hesap?tab=session'
+      return
+    }
     if (!model?.id) {
       alert(t('exp.error'))
       return
     }
+    const fieldErrors = validateContactForm({ customer, phone, email, address, message })
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors)
+      return
+    }
+
     setBusy(true)
+    setErrors({})
+    setFormError(null)
     try {
       const projectName = (customer ? `${customer} - ${summary.modelCode || ''}` : `Taslak - ${belgeNo}`).slice(0, 100)
       const previewImageBase64 = await captureScreenPreview()
       const res = await apiFetch(`${API_URL}/api/configurations/export-pdf`, {
         method: 'POST',
+        auth: true,
         headers: { 'Content-Type': 'application/json' },
         timeoutMs: 45000,
         body: JSON.stringify({
           projectName,
-          customerName: customer || null,
+          customerName: customer.trim() || null,
           cabinId: model.id,
           cols: clampGrid(summary.cols),
           rows: clampGrid(summary.rows),
           assemblyType: model.productType || 'CABINET',
           modulesPerCard: 0,
-          phone: phone || null,
-          email: email || null,
-          address: address || null,
+          phone: compactPhone(phone) || null,
+          email: email.trim() || null,
+          address: address.trim() || null,
           message: mesajNotlu || null,
           screenType: summary.screenType || null,
           resolution: summary.resolution || null,
@@ -205,8 +266,14 @@ export default function ExportModal({ open, onClose, summary }) {
         }),
       })
       if (!res.ok) {
+        if (res.status === 401) throw new Error(t('exp.needLogin'))
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.message || t('exp.error'))
+        const fieldErrors = parseProblemErrors(err)
+        if (Object.keys(fieldErrors).length > 0) {
+          setErrors(fieldErrors)
+          return
+        }
+        throw new Error(err.detail || (err.title && err.title !== 'Doğrulama Hatası' ? err.title : null) || t('exp.error'))
       }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -223,28 +290,51 @@ export default function ExportModal({ open, onClose, summary }) {
        * UserId'yi jetondaki kimlikten alıyor; bu istek imzasız gittiği için
        * kayıtlar sahipsiz (UserId = null) düşüyor ve "Tekliflerim" listesi
        * (GET /api/quotes/mine kullanıcıya göre süzüyor) hep boş kalıyordu.
+       *
+       * BETA_ENABLED=false iken sunucu PII (ad/telefon/e-posta/adres/mesaj)
+       * kabul etmez (403 PII_DISABLED). O durumda teknik özet PII'siz tekrar gönderilir.
        */
-      apiFetch(`${API_URL}/api/quotes`, {
-        method: 'POST',
-        auth: true,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: customer || null,
-          phone: phone || null,
-          email: email || null,
-          address: address || null,
-          message: mesajNotlu || null,
-          modelCode: summary.modelCode || null,
-          wallWidthM: Number(summary.width) || null,
-          wallHeightM: Number(summary.height) || null,
-          screenMode: summary.screenMode || 'single',
-          columns: Number(summary.cols) || null,
-          rows: Number(summary.rows) || null,
-          screenType: summary.screenType || null,
-          resolution: summary.resolution || null,
-          screensSummary: screensText.join(' · '),
-        }),
-      }).catch((e) => console.error('Teklif kaydı gönderilemedi (PDF yine de indirildi):', e))
+      const quotePayload = {
+        customerName: customer.trim() || null,
+        phone: compactPhone(phone) || null,
+        email: email.trim() || null,
+        address: address.trim() || null,
+        message: mesajNotlu || null,
+        modelCode: summary.modelCode || null,
+        wallWidthM: Number(summary.width) || null,
+        wallHeightM: Number(summary.height) || null,
+        screenMode: summary.screenMode || 'single',
+        columns: Number(summary.cols) || null,
+        rows: Number(summary.rows) || null,
+        screenType: summary.screenType || null,
+        resolution: summary.resolution || null,
+        screensSummary: screensText.join(' · '),
+      }
+      const sendQuote = (body) =>
+        apiFetch(`${API_URL}/api/quotes`, {
+          method: 'POST',
+          auth: true,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      sendQuote(quotePayload)
+        .then(async (quoteRes) => {
+          if (quoteRes.ok) return
+          const err = await quoteRes.json().catch(() => ({}))
+          if (quoteRes.status === 403 && err.code === 'PII_DISABLED') {
+            await sendQuote({
+              ...quotePayload,
+              customerName: null,
+              phone: null,
+              email: null,
+              address: null,
+              message: null,
+            })
+            return
+          }
+          console.error('Teklif kaydı gönderilemedi (PDF yine de indirildi):', err.message || quoteRes.status)
+        })
+        .catch((e) => console.error('Teklif kaydı gönderilemedi (PDF yine de indirildi):', e))
 
       if (summary.screenMode !== 'multi' && model.id) {
         apiFetch(`${API_URL}/api/configurations`, {
@@ -288,17 +378,56 @@ export default function ExportModal({ open, onClose, summary }) {
           </button>
         </div>
 
-        <Field label={t('exp.customer')}>
-          <input value={customer} onChange={(e) => setCustomer(e.target.value)} autoComplete="name" className={inputCls} />
+        <form
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleExport()
+          }}
+        >
+        <Field label={t('exp.customer')} error={errors.customer}>
+          <input
+            value={customer}
+            onChange={(e) => setContactField('customer', e.target.value)}
+            onBlur={(e) => blurContactField('customer', e.target.value)}
+            autoComplete="name"
+            aria-invalid={errors.customer ? 'true' : 'false'}
+            className={errors.customer ? inputErrorCls : inputCls}
+          />
         </Field>
-        <Field label={t('exp.phone')}>
-          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="0(5xx) xxx xx xx" className={inputCls} />
+        <Field label={t('exp.phone')} error={errors.phone}>
+          <input
+            type="tel"
+            inputMode="numeric"
+            value={phone}
+            onChange={(e) => setContactField('phone', e.target.value)}
+            onBlur={(e) => blurContactField('phone', e.target.value)}
+            autoComplete="tel"
+            placeholder="05xxxxxxxxx"
+            aria-invalid={errors.phone ? 'true' : 'false'}
+            className={errors.phone ? inputErrorCls : inputCls}
+          />
         </Field>
-        <Field label={t('exp.email')}>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={inputCls} />
+        <Field label={t('exp.email')} error={errors.email}>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setContactField('email', e.target.value)}
+            onBlur={(e) => blurContactField('email', e.target.value)}
+            autoComplete="email"
+            aria-invalid={errors.email ? 'true' : 'false'}
+            className={errors.email ? inputErrorCls : inputCls}
+          />
         </Field>
-        <Field label={t('exp.address')}>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" className={inputCls} />
+        <Field label={t('exp.address')} error={errors.address}>
+          <input
+            value={address}
+            onChange={(e) => setContactField('address', e.target.value)}
+            onBlur={(e) => blurContactField('address', e.target.value)}
+            autoComplete="street-address"
+            aria-invalid={errors.address ? 'true' : 'false'}
+            className={errors.address ? inputErrorCls : inputCls}
+          />
         </Field>
         {/*
           MODEL SEÇİMİ ONAYI — zorunlu.
@@ -335,13 +464,14 @@ export default function ExportModal({ open, onClose, summary }) {
             ))}
           </div>
         </div>
-
-        <Field label={t('exp.message')}>
+        <Field label={t('exp.message')} error={errors.message}>
           <textarea
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => setContactField('message', e.target.value)}
+            onBlur={(e) => blurContactField('message', e.target.value)}
             rows={3}
-            className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg p-2 text-sm text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-neutral-800 resize-none"
+            aria-invalid={errors.message ? 'true' : 'false'}
+            className={errors.message ? textareaErrorCls : textareaCls}
           />
         </Field>
 
@@ -355,11 +485,25 @@ export default function ExportModal({ open, onClose, summary }) {
 
         <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
 
+        {formError && (
+          <p className="text-[13px] text-red-600 dark:text-red-400 mb-4 m-0 leading-relaxed" role="alert">
+            {formError}
+          </p>
+        )}
+
+        {!isAuthenticated && (
+          <p className="text-[13px] text-neutral-600 dark:text-neutral-300 mb-4 m-0 leading-relaxed">
+            {t('exp.needLogin')}{' '}
+            <a href="#hesap?tab=session" className="font-semibold text-brand hover:underline">
+              {t('profile.signIn')}
+            </a>
+          </p>
+        )}
+
         <div className="flex items-center gap-2">
           <button
-            type="button"
+            type="submit"
             disabled={!hazir || busy}
-            onClick={handleExport}
             className={`flex-1 rounded-full py-3 text-sm font-semibold transition-colors ${
               hazir && !busy ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
@@ -380,6 +524,7 @@ export default function ExportModal({ open, onClose, summary }) {
             {t('exp.csv')}
           </button>
         </div>
+        </form>
       </div>
     </div>
   )
