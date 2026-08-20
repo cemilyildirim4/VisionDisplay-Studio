@@ -8,16 +8,19 @@ namespace DisplayConfigurator.Application.DTOs;
 /// </summary>
 public class PdfReportRequestDto : CreateConfigurationDto
 {
-    [StringLength(50)]
+    [RequiredFilled, StringLength(150, ErrorMessage = "Müşteri adı en fazla 150 karakter olabilir.")]
+    public new string? CustomerName { get; set; }
+
+    [ContactPhone, StringLength(50)]
     public string? Phone { get; set; }
 
-    [OptionalEmail, StringLength(150)]
+    [ContactEmail, StringLength(150)]
     public string? Email { get; set; }
 
-    [StringLength(500)]
+    [RequiredFilled, StringLength(500)]
     public string? Address { get; set; }
 
-    [StringLength(2000)]
+    [RequiredFilled, StringLength(2000)]
     public string? Message { get; set; }
 
     [StringLength(20)]

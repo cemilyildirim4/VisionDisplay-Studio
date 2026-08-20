@@ -501,6 +501,16 @@ const dict = {
     en: 'Please enter a valid e-mail address.',
     ar: 'يرجى إدخال عنوان بريد إلكتروني صالح.',
   },
+  'exp.validation.required': {
+    tr: 'Lütfen bu alanı doldurunuz.',
+    en: 'Please fill in this field.',
+    ar: 'يرجى تعبئة هذا الحقل.',
+  },
+  'exp.validation.phone': {
+    tr: 'Lütfen geçerli bir telefon numarası giriniz (Örn: 05xxxxxxxxxx).',
+    en: 'Please enter a valid phone number (e.g. 05xxxxxxxxxx).',
+    ar: 'يرجى إدخال رقم هاتف صالح (مثال: 05xxxxxxxxxx).',
+  },
   'exp.needLogin': {
     tr: 'PDF, teklif ve proje kaydı için giriş yapmanız gerekir.',
     en: 'Sign in to generate a PDF and save the quote and project.',

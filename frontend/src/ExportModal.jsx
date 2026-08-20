@@ -7,6 +7,12 @@ import PrivacyModal from './PrivacyModal.jsx'
 import { API_URL, apiFetch } from './apiClient.js'
 import { rowsToXlsxBlob } from './xlsx.js'
 import { useSession } from './SessionContext.jsx'
+import {
+  compactPhone,
+  parseProblemErrors,
+  validateContactForm,
+  validateContactValue,
+} from './contactFormValidation.js'
 
 async function captureScreenPreview() {
   const el = document.getElementById('pdf-onizleme')
@@ -37,33 +43,22 @@ function Field({ label, error, children }) {
     <label className="block mb-4">
       <span className="text-xs text-neutral-500 dark:text-neutral-400">{label}</span>
       {children}
-      {error ? <span className="block mt-1.5 text-[12px] text-red-600 dark:text-red-400">{error}</span> : null}
+      {error ? <span className="text-red-500 text-xs mt-1 block">{error}</span> : null}
     </label>
   )
-}
-
-function parseProblemErrors(body) {
-  const src = body?.errors
-  if (!src || typeof src !== 'object') return {}
-  const out = {}
-  for (const [rawKey, rawVal] of Object.entries(src)) {
-    const key = String(rawKey)
-      .replace(/^\$\.?/, '')
-      .split('.')
-      .pop()
-      .toLowerCase()
-    const list = Array.isArray(rawVal) ? rawVal : [rawVal]
-    const msg = list.filter(Boolean).join(' ')
-    if (key && msg) out[key] = msg
-  }
-  return out
 }
 
 const inputCls =
   'w-full mt-1 border-b border-neutral-300 dark:border-[#39414f] py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-neutral-800 dark:focus:border-brand placeholder:text-neutral-400'
 
 const inputErrorCls =
-  'w-full mt-1 border-b border-red-500 py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-red-600 placeholder:text-neutral-400'
+  'w-full mt-1 border-b border-red-500 py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-red-500 placeholder:text-neutral-400'
+
+const textareaCls =
+  'w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg p-2 text-sm text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-neutral-800 resize-none'
+
+const textareaErrorCls =
+  'w-full mt-1 border border-red-500 rounded-lg p-2 text-sm text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-red-500 resize-none'
 
 function clampGrid(n) {
   const v = Math.max(1, Number(n) || 1)
@@ -81,8 +76,35 @@ export default function ExportModal({ open, onClose, summary }) {
   const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
-  const [emailError, setEmailError] = useState(null)
+  const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(null)
+
+  const setContactField = (field, value) => {
+    const setters = {
+      customer: setCustomer,
+      phone: setPhone,
+      email: setEmail,
+      address: setAddress,
+      message: setMessage,
+    }
+    setters[field]?.(value)
+    setErrors((prev) => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+  }
+
+  const blurContactField = (field, value) => {
+    const msg = validateContactValue(field, value)
+    setErrors((prev) => {
+      const next = { ...prev }
+      if (msg) next[field] = msg
+      else delete next[field]
+      return next
+    })
+  }
 
   if (!open) return null
 
@@ -185,8 +207,14 @@ export default function ExportModal({ open, onClose, summary }) {
       alert(t('exp.error'))
       return
     }
+    const fieldErrors = validateContactForm({ customer, phone, email, address, message })
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors)
+      return
+    }
+
     setBusy(true)
-    setEmailError(null)
+    setErrors({})
     setFormError(null)
     try {
       const projectName = (customer ? `${customer} - ${summary.modelCode || ''}` : `Taslak - ${belgeNo}`).slice(0, 100)
@@ -198,16 +226,16 @@ export default function ExportModal({ open, onClose, summary }) {
         timeoutMs: 45000,
         body: JSON.stringify({
           projectName,
-          customerName: customer || null,
+          customerName: customer.trim() || null,
           cabinId: model.id,
           cols: clampGrid(summary.cols),
           rows: clampGrid(summary.rows),
           assemblyType: model.productType || 'CABINET',
           modulesPerCard: 0,
-          phone: phone || null,
-          email: email || null,
-          address: address || null,
-          message: message || null,
+          phone: compactPhone(phone) || null,
+          email: email.trim() || null,
+          address: address.trim() || null,
+          message: message.trim() || null,
           screenType: summary.screenType || null,
           resolution: summary.resolution || null,
           screensSummary: screensText.join(' · '),
@@ -221,15 +249,8 @@ export default function ExportModal({ open, onClose, summary }) {
         if (res.status === 401) throw new Error(t('exp.needLogin'))
         const err = await res.json().catch(() => ({}))
         const fieldErrors = parseProblemErrors(err)
-        if (fieldErrors.email) {
-          setEmailError(fieldErrors.email || t('exp.emailInvalid'))
-          return
-        }
-        const otherFieldMsgs = Object.entries(fieldErrors)
-          .filter(([k]) => k !== 'email')
-          .map(([, msg]) => msg)
-        if (otherFieldMsgs.length > 0) {
-          setFormError(otherFieldMsgs.join(' '))
+        if (Object.keys(fieldErrors).length > 0) {
+          setErrors(fieldErrors)
           return
         }
         throw new Error(err.detail || (err.title && err.title !== 'Doğrulama Hatası' ? err.title : null) || t('exp.error'))
@@ -254,11 +275,11 @@ export default function ExportModal({ open, onClose, summary }) {
        * kabul etmez (403 PII_DISABLED). O durumda teknik özet PII'siz tekrar gönderilir.
        */
       const quotePayload = {
-        customerName: customer || null,
-        phone: phone || null,
-        email: email || null,
-        address: address || null,
-        message: message || null,
+        customerName: customer.trim() || null,
+        phone: compactPhone(phone) || null,
+        email: email.trim() || null,
+        address: address.trim() || null,
+        message: message.trim() || null,
         modelCode: summary.modelCode || null,
         wallWidthM: Number(summary.width) || null,
         wallHeightM: Number(summary.height) || null,
@@ -337,34 +358,65 @@ export default function ExportModal({ open, onClose, summary }) {
           </button>
         </div>
 
-        <Field label={t('exp.customer')}>
-          <input value={customer} onChange={(e) => setCustomer(e.target.value)} autoComplete="name" className={inputCls} />
+        <form
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleExport()
+          }}
+        >
+        <Field label={t('exp.customer')} error={errors.customer}>
+          <input
+            value={customer}
+            onChange={(e) => setContactField('customer', e.target.value)}
+            onBlur={(e) => blurContactField('customer', e.target.value)}
+            autoComplete="name"
+            aria-invalid={errors.customer ? 'true' : 'false'}
+            className={errors.customer ? inputErrorCls : inputCls}
+          />
         </Field>
-        <Field label={t('exp.phone')}>
-          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="0(5xx) xxx xx xx" className={inputCls} />
+        <Field label={t('exp.phone')} error={errors.phone}>
+          <input
+            type="tel"
+            inputMode="numeric"
+            value={phone}
+            onChange={(e) => setContactField('phone', e.target.value)}
+            onBlur={(e) => blurContactField('phone', e.target.value)}
+            autoComplete="tel"
+            placeholder="05xxxxxxxxx"
+            aria-invalid={errors.phone ? 'true' : 'false'}
+            className={errors.phone ? inputErrorCls : inputCls}
+          />
         </Field>
-        <Field label={t('exp.email')} error={emailError}>
+        <Field label={t('exp.email')} error={errors.email}>
           <input
             type="email"
             value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              if (emailError) setEmailError(null)
-            }}
+            onChange={(e) => setContactField('email', e.target.value)}
+            onBlur={(e) => blurContactField('email', e.target.value)}
             autoComplete="email"
-            aria-invalid={emailError ? 'true' : 'false'}
-            className={emailError ? inputErrorCls : inputCls}
+            aria-invalid={errors.email ? 'true' : 'false'}
+            className={errors.email ? inputErrorCls : inputCls}
           />
         </Field>
-        <Field label={t('exp.address')}>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" className={inputCls} />
+        <Field label={t('exp.address')} error={errors.address}>
+          <input
+            value={address}
+            onChange={(e) => setContactField('address', e.target.value)}
+            onBlur={(e) => blurContactField('address', e.target.value)}
+            autoComplete="street-address"
+            aria-invalid={errors.address ? 'true' : 'false'}
+            className={errors.address ? inputErrorCls : inputCls}
+          />
         </Field>
-        <Field label={t('exp.message')}>
+        <Field label={t('exp.message')} error={errors.message}>
           <textarea
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => setContactField('message', e.target.value)}
+            onBlur={(e) => blurContactField('message', e.target.value)}
             rows={3}
-            className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg p-2 text-sm text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-neutral-800 resize-none"
+            aria-invalid={errors.message ? 'true' : 'false'}
+            className={errors.message ? textareaErrorCls : textareaCls}
           />
         </Field>
 
@@ -395,9 +447,8 @@ export default function ExportModal({ open, onClose, summary }) {
 
         <div className="flex items-center gap-2">
           <button
-            type="button"
+            type="submit"
             disabled={!consent || busy || !isAuthenticated}
-            onClick={handleExport}
             className={`flex-1 rounded-full py-3 text-sm font-semibold transition-colors ${
               consent && !busy && isAuthenticated ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
@@ -418,6 +469,7 @@ export default function ExportModal({ open, onClose, summary }) {
             {t('exp.csv')}
           </button>
         </div>
+        </form>
       </div>
     </div>
   )
