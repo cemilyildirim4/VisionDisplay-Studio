@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
-import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, cabinetGridStyle, bezelPxFor, bezelGapStyle } from './content.js'
+import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, cabinetGridStyle, bezelPxFor, bezelGapStyle, L_KIRILMA_PCT } from './content.js'
 import { videoSrcFor } from './videoContent.js'
 import { useLang } from './useLang.js'
 
@@ -21,11 +21,12 @@ const HUMAN_MIN_WALL_M = 2
 // İç L Tipi: dikiş (köşe) kenarının üstten ve alttan içeri girme oranı (%).
 // Kanatlar trapez olur → köşenin geriye kaçtığı hissi. 0 = düz, büyüdükçe köşe
 // daha keskin (90°'ye yakın) görünür.
-const L_CORNER_PINCH_PCT = 10
+// Tek kaynak: mekân çizimindeki kasa da aynı oranı kullanıyor (bkz. content.js)
+const L_CORNER_PINCH_PCT = L_KIRILMA_PCT
 
 // Video içerikler ('sample' ve 'video') burada null döner —
 // onlar CSS arka planıyla değil, <video> öğesiyle çizilir (VideoLayer).
-function contentImage(content, contentUrl) {
+export function contentImage(content, contentUrl) {
   if (content === 'led') return LED_GRADIENT
   if (content === 'photo') return `url("${DEFAULT_CONTENT_SRC}")`
   if (content === 'upload' && contentUrl) return `url("${contentUrl}")`
@@ -40,9 +41,83 @@ function contentImage(content, contentUrl) {
  * negatif konumla bu ekranın dilimi görünür. Çoklu ekranda tek videonun
  * bölünmesi böyle çalışır.
  */
-function VideoLayer({ src, gw, gh, left, top, lit }) {
+/**
+ * ŞERİDİN DIŞ HATTI — yan yana dizili ekranların KAPLADIĞI alanın çokgeni.
+ *
+ * Tek içerik katmanı (görsel/video) tüm şeride yayılıp bu çokgene kırpılıyor:
+ * ekranın olmadığı yerlerde (kısa ekranın üstü, L tipinin köşe üçgenleri)
+ * arka plan görünür. Hem çalışma alanı önizlemesi hem de kamera (AR) aynı
+ * hattı kullanıyor ki tasarım iki yerde birebir aynı görünsün.
+ *
+ * `yerlesim`: { wPx, hPx, xStart, type, cols, leftCols, rightCols } listesi.
+ */
+export function seritMaskePolygon(yerlesim, maxHpx) {
+  const kanatBolmesi = (s) => {
+    const lc = Math.max(1, s.leftCols || Math.ceil(Math.max(1, s.cols) / 2))
+    const rc = Math.max(1, s.rightCols || Math.max(1, Math.max(1, s.cols) - lc))
+    return s.wPx * (lc / (lc + rc))
+  }
+  const ust = []
+  const alt = []
+  yerlesim.forEach((s) => {
+    const y0 = maxHpx - s.hPx
+    const x0 = s.xStart
+    const x1 = x0 + s.wPx
+    // Komşudan yükseklik farkı varsa bu iki nokta sınırda dikey basamağı yapar
+    ust.push([x0, y0])
+    if ((s.type || 'flat') === 'lshape') {
+      const lw = kanatBolmesi(s)
+      const pY = (s.hPx * L_CORNER_PINCH_PCT) / 100
+      ust.push([x0 + lw, y0 + pY])
+      alt.push([x0 + lw, maxHpx - pY])
+    }
+    ust.push([x1, y0])
+    alt.push([x0, maxHpx], [x1, maxHpx])
+  })
+  // Alt kenar sağdan sola dönerken sıralama ters, L kırılmaları yerinde kalsın
+  const altSirali = [...alt].sort((a, b) => b[0] - a[0])
+  return `polygon(${[...ust, ...altSirali].map(([x, y]) => `${x.toFixed(2)}px ${y.toFixed(2)}px`).join(', ')})`
+}
+
+export function VideoLayer({ src, gw, gh, left, top, lit }) {
+  const videoRef = useRef(null)
+
+  /*
+   * TELEFONDA OYNATMAYI GARANTİYE AL.
+   *
+   * Belirti: kamerada (AR) panel simsiyah kalıyordu, oysa aynı tasarım
+   * yapılandırıcıda oynuyordu. İki sebebi var, ikisi de telefonda çıkıyor:
+   *
+   * 1) React "muted" değerini bazı durumlarda ETİKETE yazmıyor, yalnızca
+   *    özelliğe atıyor. iOS/Android otomatik oynatma iznini etikete bakarak
+   *    veriyor; sessiz sayılmayan video hiç başlamıyor, tek kare bile
+   *    çizilmediği için panel siyah kalıyor. Bu yüzden doğrudan öğeye yazılır.
+   * 2) Kamera (getUserMedia) açıldığında iOS oynayan videoları duraklatıyor.
+   *    Duraklama olayında yeniden başlatıyoruz; ayrıca saniyede bir kontrol
+   *    ediyoruz, çünkü kesinti bazen olay üretmeden geliyor.
+   */
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    v.muted = true
+    v.defaultMuted = true
+    const oynat = () => { if (v.paused) v.play().catch(() => {}) }
+    oynat()
+    v.addEventListener('loadeddata', oynat)
+    v.addEventListener('pause', oynat)
+    document.addEventListener('visibilitychange', oynat)
+    const sayac = setInterval(oynat, 1000)
+    return () => {
+      clearInterval(sayac)
+      v.removeEventListener('loadeddata', oynat)
+      v.removeEventListener('pause', oynat)
+      document.removeEventListener('visibilitychange', oynat)
+    }
+  }, [src])
+
   return (
     <video
+      ref={videoRef}
       src={src}
       autoPlay
       loop
@@ -82,7 +157,7 @@ function VideoLayer({ src, gw, gh, left, top, lit }) {
  */
 // AR/kamera ekranı da AYNI bileşeni kullanır: tasarım orada da birebir aynı
 // çizilsin, iki ayrı kod yolu birbirinden ayrı düşmesin diye dışa açıldı.
-export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols }) {
+export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols, cozunurlukRozeti = false }) {
   const nCols = Math.max(1, cols)
   const nRows = Math.max(1, rows)
   const isNone = content === 'none'
@@ -124,6 +199,7 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         cols={nCols}
         rows={nRows}
         resolution={resolution}
+        cozunurlukRozeti={cozunurlukRozeti}
         content={content}
         contentUrl={contentUrl}
         curveAmount={curveAmount}
@@ -175,8 +251,37 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         />
       )
 
+    // İki kanadın birleşiminin dış hattı — alttaki dolgu katmanı bu şekle kırpılır
+    const lYuzde = (leftW / wPx) * 100
+    const birlesikClip = `polygon(0% 0%, ${lYuzde}% ${p}%, 100% 0%, 100% 100%, ${lYuzde}% ${100 - p}%, 0% 100%)`
+
     return (
       <div className="relative shrink-0" style={{ width: wPx, height: hPx }}>
+        {/*
+          DİKİŞ DOLGUSU. İki kanat komşu kutular ve kırpma kenarları
+          yumuşatıldığında tam örtüşmüyor; dikişin alt ucunda birkaç piksellik
+          bir çentik kalıyordu. Beyaz zeminde fark edilmiyordu, kamera
+          görünümünde arkadaki görüntü oradan sızıp "iki ekran arasında boşluk
+          var" izlenimi veriyordu.
+
+          Kanatların ALTINA, aynı içeriği taşıyan tek parça bir katman konuyor;
+          L biçimine kırpıldığı için dışarı taşmıyor. Kanatlar üstünü örtüyor,
+          yalnızca dikişteki saç teli kadar açıklıktan bu katman görünüyor —
+          yani arka plan değil, ekranın kendi görüntüsü.
+        */}
+        {!frameOnly && !isNone && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              clipPath: birlesikClip,
+              backgroundColor: '#0a0a0a',
+              filter: isLit ? LED_LIT_FILTER : undefined,
+              pointerEvents: 'none',
+              ...bgFor(offsetX),
+            }}
+          />
+        )}
         <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
           {/*
             İKİ YÜZ FARKLI AYDINLIKTA — köşeyi asıl anlatan şey bu.
@@ -210,8 +315,9 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
             {videoSrc && <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX} top={offsetY} lit={isLit} />}
             {leftDots && <LedDotsCanvas wPx={leftW} hPx={hPx} dotW={leftDots.dotW} dotH={leftDots.dotH} />}
             <Grid cols_={lCols} wingW={leftW} />
-            {/* Dikişe doğru hafif koyulaşma — yüzeyin köşeye doğru döndüğü hissi */}
-            {!isNone && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0) 82%, rgba(0,0,0,0.10) 100%)', pointerEvents: 'none' }} />}
+            {/* Gölge katmanı kaldırıldı: görüntü düz ekrandakiyle aynı canlılıkta
+                kalmalı. Köşeyi zaten iki kanadın trapez kırpımı ve dikiş çizgisi
+                anlatıyor. */}
           </div>
           {/* Sağ kanat — gölgede kalan yüz (bkz. yukarıdaki not) */}
           <div
@@ -228,22 +334,7 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
             {videoSrc && <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX + leftW} top={offsetY} lit={isLit} />}
             {rightDots && <LedDotsCanvas wPx={rightW} hPx={hPx} dotW={rightDots.dotW} dotH={rightDots.dotH} />}
             <Grid cols_={rCols} wingW={rightW} />
-            {/*
-              Yüzün TAMAMINI kaplayan gölge: köşeden uzakta da koyu kalmalı,
-              yoksa iki yüz yine eşitlenir ve kenar kaybolur. Dikişe yakın
-              biraz daha koyu — ışık oradan uzaklaşıyor.
-            */}
-            {!isNone && (
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background:
-                    'linear-gradient(90deg, rgba(0,0,0,0.34) 0%, rgba(0,0,0,0.22) 35%, rgba(0,0,0,0.18) 100%)',
-                  pointerEvents: 'none',
-                }}
-              />
-            )}
+            {/* Gölge katmanı kaldırıldı — bkz. sol kanattaki not. */}
           </div>
         </div>
         {/*
@@ -391,10 +482,16 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: LED_SHEEN }} />
       )}
 
-      {/* Çözünürlük rozeti — sol üstte tek. Sinyal bölgelerini çerçeveyle bölmüyoruz:
-          gerçek bir panelde öyle çizgiler yok ve ekranın bütünlüğünü bozuyordu. */}
-      {!isNone && !hideRegions && groups.length > 0 && (
-        <span className="absolute top-0.5 left-0.5 bg-brand text-white text-[9px] leading-none px-1 py-0.5 rounded-lg">
+      {/* Çözünürlük rozeti — yalnızca yapılandırma önizlemesinde.
+          Bu rozet bir AYAR GÖSTERGESİ, ürünün parçası değil: tasarım yaparken
+          hangi çözünürlükte çalışıldığını hatırlatır. Kamera görünümünde,
+          3D sahnede ve PDF karesinde ekranın üstüne yapışmış bir etiket gibi
+          durduğu için oralarda çizilmiyor (cozunurlukRozeti varsayılan false;
+          data-pdf-gizle ile de PDF çekiminden düşüyor).
+          "Ölçüleri gizle" de bu rozeti kapatır: o düğme tasarımın üstündeki
+          bilgi katmanını temizlemek için var, rozet de o katmanın parçası. */}
+      {cozunurlukRozeti && !isNone && !hideRegions && groups.length > 0 && (
+        <span data-pdf-gizle className="absolute top-0.5 left-0.5 bg-brand text-white text-[9px] leading-none px-1 py-0.5 rounded-lg">
           {resolution}
         </span>
       )}
@@ -641,7 +738,6 @@ export default function WallPreview({
    * PDF'e giden görselde de ekran düz sanılıyordu. Tür artık adının altında
    * yazıyla duruyor — çizim ne kadar ince olursa olsun okunuyor.
    */
-  const turAdi = (tip) => t(`screen.${tip || 'flat'}`)
 
   const cw = (model.widthMm || 500) / 1000
   const ch = (model.heightMm || 500) / 1000
@@ -666,7 +762,10 @@ export default function WallPreview({
     const showHumanM = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M
     const humanWmM = showHumanM ? HUMAN_HEIGHT_M * HUMAN_FIG_W_RATIO : 0
     const sahnePayM = showMeasurements ? 150 : 48
-    const availW = Math.max(dar ? 120 : 180, size.w - (sahneVar ? sahnePayM : dar ? 88 : 180) - (showHumanM ? 24 : 0))
+    // Dar ekranda yan pay en az 152 (76 + 76): satır artır/azalt düğmesi ve ölçü
+    // etiketleri telefonun dışına düşmesin — bkz. tek ekran dalındaki aynı hesap.
+    const yanPay = sahneVar ? (dar ? Math.max(sahnePayM, 152) : sahnePayM) : dar ? 152 : 180
+    const availW = Math.max(dar ? 120 : 180, size.w - yanPay - (showHumanM ? 24 : 0))
     const availH = Math.max(dar ? 110 : 140, size.h - (sahneVar ? sahnePayM : dar ? 92 : 190))
     /*
      * Sahne varsa ölçek mekânın duvarına sabitlenir (sahneOlcek). Ekran mekândan
@@ -744,31 +843,7 @@ export default function WallPreview({
      * sağ kenardan aşağı, alt kenar boyunca sağdan sola geri. Ekranlar bitişik
      * ve alta hizalı olduğu için bu hat kesintisiz kapanır.
      */
-    const kanatBolmesi = (s) => {
-      const lc = Math.max(1, s.leftCols || Math.ceil(Math.max(1, s.cols) / 2))
-      const rc = Math.max(1, s.rightCols || Math.max(1, Math.max(1, s.cols) - lc))
-      return s.wPx * (lc / (lc + rc))
-    }
-    const ust = []
-    const alt = []
-    placed.forEach((s) => {
-      const y0 = maxHpx - s.hPx
-      const x0 = s.xStart
-      const x1 = x0 + s.wPx
-      // Komşudan yükseklik farkı varsa bu iki nokta sınırda dikey basamağı yapar
-      ust.push([x0, y0])
-      if ((s.type || 'flat') === 'lshape') {
-        const lw = kanatBolmesi(s)
-        const pY = (s.hPx * L_CORNER_PINCH_PCT) / 100
-        ust.push([x0 + lw, y0 + pY])
-        alt.push([x0 + lw, maxHpx - pY])
-      }
-      ust.push([x1, y0])
-      alt.push([x0, maxHpx], [x1, maxHpx])
-    })
-    // Alt kenar sağdan sola dönerken sıralama ters, L kırılmaları da yerinde kalsın
-    const altSirali = [...alt].sort((a, b) => b[0] - a[0])
-    const maskePolygon = `polygon(${[...ust, ...altSirali].map(([x, y]) => `${x.toFixed(2)}px ${y.toFixed(2)}px`).join(', ')})`
+    const maskePolygon = seritMaskePolygon(placed, maxHpx)
 
     return (
       <div ref={containerRef} className="relative w-full h-full flex items-center justify-center overflow-hidden">
@@ -794,6 +869,15 @@ export default function WallPreview({
                       backgroundImage: spanImg || undefined,
                       backgroundSize: `${totalWpx}px ${maxHpx}px`,
                       backgroundRepeat: 'no-repeat',
+                      /*
+                       * Yayındaki panel filtresi — tek ekranda görsele zaten
+                       * uygulanıyor (bkz. Screen). Çoklu ekranda içerik bu tek
+                       * şeritte çizildiği için filtre buraya da gerekiyordu;
+                       * yoksa aynı görsel çoklu ekranda soluk kalıyordu.
+                       * Videoya VideoLayer kendi içinde uyguluyor, o yüzden
+                       * filtre yalnızca görsel katmanında.
+                       */
+                      filter: spanImg && spanLit ? LED_LIT_FILTER : undefined,
                     }}
                   >
                     {spanVideo && (
@@ -805,6 +889,7 @@ export default function WallPreview({
                 <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'flex-end' }}>
                   {placed.map((s, i) => (
                     <Screen
+                      cozunurlukRozeti={showMeasurements}
                       key={i}
                       wPx={s.wPx}
                       hPx={s.hPx}
@@ -852,40 +937,25 @@ export default function WallPreview({
                   </>
                 )}
 
-                {/* Ekran adı + genişlik (dönüşümlü üst/alt) */}
+                {/* Ekran genişlikleri (dönüşümlü üst/alt).
+                    "Ekran 01 · İç L Tipi" adı rozeti kaldırıldı: hangi ekranın
+                    hangisi olduğu sol paneldeki listede zaten yazıyor, çizimin
+                    üstünde ürünün parçasıymış gibi duruyordu. */}
                 {placed.map((s, i) => {
                   const isTop = i % 2 === 0
-                  const name = (
-                    <span className="bg-brand text-white text-xs font-medium px-3 py-1 rounded-lg whitespace-nowrap">
-                      {t('screen.label')} {String(i + 1).padStart(2, '0')} · {turAdi(s.type)}
-                    </span>
-                  )
-                  const meas = (
-                    <span className="bg-neutral-800 text-white text-[11px] px-2 py-1 rounded-lg whitespace-nowrap">{fmtU(s.wm)}</span>
-                  )
                   return (
                     <div
                       key={`lbl${i}`}
                       className="absolute flex flex-col items-center gap-1"
-                      style={{ left: marginXpx + s.center, transform: 'translateX(-50%)', top: isTop ? -54 : wallH + 26 }}
+                      style={{ left: marginXpx + s.center, transform: 'translateX(-50%)', top: isTop ? -34 : wallH + 26 }}
                     >
-                      {isTop ? (
-                        <>
-                          {name}
-                          {meas}
-                        </>
-                      ) : (
-                        <>
-                          {meas}
-                          {name}
-                        </>
-                      )}
+                      <span className="bg-neutral-800 text-white text-[11px] px-2 py-1 rounded-lg whitespace-nowrap">{fmtU(s.wm)}</span>
                     </div>
                   )
                 })}
 
                 {/* Sağ kenar: üst boşluk | ekran yüksekliği | alt boşluk */}
-                <div style={{ position: 'absolute', left: wallW + 10 + sahnePayPx, top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'absolute', left: Math.min(wallW + 10 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
                   <SegV h={stripTop} label={fmtU(marginYm)} muted />
                   <SegV h={maxHpx} label={fmtU(maxHm)} />
                   <SegV h={wallH - stripTop - maxHpx} label={fmtU(marginYm)} muted />
@@ -931,7 +1001,18 @@ export default function WallPreview({
    * kırpılıyordu. Ölçüler açıkken onlara da yer ayrılıyor.
    */
   const sahnePay = showMeasurements ? 150 : 48
-  const SIDE_UI_PX = sahneVar ? sahnePay : dar ? 88 : 180 // sol + sağ
+  /*
+   * Dar ekran payı 88 iken (44 sol + 44 sağ) SAĞ taraf yetmiyordu: ölçü
+   * etiketi + boşluk + satır artır/azalt düğmesi yaklaşık 76 px istiyor.
+   * Telefonda düğmeler ekranın dışında kalıp tıklanamıyordu. 152 = 76 + 76.
+   */
+  /*
+   * Sahne varken pay küçük tutuluyor (mekân tuvali doldursun) ve taşan düğmeler
+   * mekânın üzerine binebiliyor — geniş ekranda sorun değil. TELEFONDA ise
+   * düğme kutunun değil EKRANIN dışına düşüyor ve tıklanamıyordu; o yüzden dar
+   * ekranda sahneyle birlikte de en az 152 px (76 + 76) ayrılıyor.
+   */
+  const SIDE_UI_PX = sahneVar ? (dar ? Math.max(sahnePay, 152) : sahnePay) : dar ? 152 : 180 // sol + sağ
   const VERT_UI_PX = sahneVar ? sahnePay : dar ? 92 : 190 // üst + alt
   const showHuman = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M
   const HUMAN_GAP_PX = 24 // flex gap-6
@@ -1028,6 +1109,7 @@ export default function WallPreview({
         <div className="relative">
           <div style={{ width: wallW, height: wallH }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} flex items-center justify-center`}>
             <Screen
+              cozunurlukRozeti={showMeasurements}
               wPx={screenW}
               hPx={screenH}
               cols={nCols}
@@ -1061,18 +1143,8 @@ export default function WallPreview({
                 <SegH w={marginXpx} label={fmtU(marginXm)} muted />
               </div>
 
-              {/* Ekran türü — çizimin altında, ölçülerle aynı hizada */}
-              <div
-                className="absolute flex justify-center"
-                style={{ left: marginXpx, top: marginYpx + screenH + 10, width: screenW }}
-              >
-                <span className="bg-brand text-white text-xs font-medium px-3 py-1 rounded-lg whitespace-nowrap">
-                  {turAdi(screenType)}
-                </span>
-              </div>
-
               {/* Sağ ölçü etiketleri */}
-              <div style={{ position: 'absolute', left: wallW + 10 + sahnePayPx, top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ position: 'absolute', left: Math.min(wallW + 10 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
                 <SegV h={marginYpx} label={fmtU(marginYm)} muted />
                 <SegV h={screenH} label={fmtU(screenHm)} />
                 <SegV h={marginYpx} label={fmtU(marginYm)} muted />
@@ -1091,7 +1163,9 @@ export default function WallPreview({
               {/* Sağdaki +/- : Satır (ekran yüksekliği) */}
               <div
                 data-pdf-gizle className="absolute flex flex-col rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm"
-                style={{ left: wallW + 44 + sahnePayPx, top: marginYpx + screenH / 2, transform: 'translateY(-50%)' }}
+                /* Telefonda kabın dışına düşüp tıklanamaz hale geliyordu: sağ
+                   kenarın içinde kalacak şekilde sınırlanıyor. */
+                style={{ left: Math.min(wallW + 44 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 34)), top: marginYpx + screenH / 2, transform: 'translateY(-50%)' }}
               >
                 <StepBtn dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
                 <div className="h-px bg-neutral-200 dark:bg-[#2c333f]" />

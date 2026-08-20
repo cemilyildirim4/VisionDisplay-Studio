@@ -122,7 +122,7 @@ function roundRectPath(ctx, x, y, w, h, r) {
 export function drawCurvedScreen(ctx, o) {
   const {
     w, h, maxD, curve, contentType, img, imgSX, imgSY, imgSW, imgSH,
-    showGrid, cols, rows, hideRegions, resolution,
+    showGrid, cols, rows, hideRegions, resolution, rozet = false,
     concave = false,
   } = o
 
@@ -243,7 +243,7 @@ export function drawCurvedScreen(ctx, o) {
   // 3) Çözünürlük rozeti — sol üstte tek.
   // Sinyal bölgelerini çerçeveyle bölmüyoruz: gerçek bir panelde öyle çizgiler
   // yok ve ekranın bütünlüğünü bozuyordu.
-  if (!hideRegions) {
+  if (!hideRegions && rozet) {
     const bx = 3
     const by = E(0).top + 3
     ctx.font = '600 9px Poppins, system-ui, sans-serif'

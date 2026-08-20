@@ -1,6 +1,7 @@
-import { useEffect, useState, Suspense, lazy } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import App from './App.jsx'
+import { guvenliLazy } from './guvenliLazy.js'
 import { LanguageProvider } from './LanguageContext.jsx'
 import { SessionProvider } from './SessionContext.jsx'
 import { useTheme } from './useTheme.js'
@@ -8,8 +9,8 @@ import { queryClient } from './queryClient.js'
 import ConnectionBanner from './ConnectionBanner.jsx'
 
 // Yönetim / hesap ekranları müşteri ana paketinden ayrı tutulur (kod bölme).
-const AdminPanel = lazy(() => import('./AdminPanel.jsx'))
-const ControlCenter = lazy(() => import('./ControlCenter.jsx'))
+const AdminPanel = guvenliLazy(() => import('./AdminPanel.jsx'))
+const ControlCenter = guvenliLazy(() => import('./ControlCenter.jsx'))
 
 /**
  * Basit adres yönlendirmesi (ek kütüphane gerektirmez):

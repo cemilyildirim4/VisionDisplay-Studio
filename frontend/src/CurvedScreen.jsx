@@ -36,6 +36,8 @@ export default function CurvedScreen({
   cols,
   rows,
   resolution = 'FHD',
+  // Çözünürlük rozeti yalnızca tasarım ekranında çizilir; kamerada/AR'de değil.
+  cozunurlukRozeti = false,
   content = 'led',
   contentUrl = null,
   curveAmount = 60,
@@ -108,9 +110,10 @@ export default function CurvedScreen({
       rows: nRows,
       hideRegions,
       resolution,
+      rozet: cozunurlukRozeti,
       concave,
     })
-  }, [wPx, hPx, maxD, offsetX, offsetY, gw, gh, type, nCols, nRows, hideRegions, resolution, concave])
+  }, [wPx, hPx, maxD, offsetX, offsetY, gw, gh, type, nCols, nRows, hideRegions, resolution, cozunurlukRozeti, concave])
 
   // Tween içinden en güncel paint'e erişim
   const paintRef = useRef(paint)

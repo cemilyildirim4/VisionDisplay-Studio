@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import { baseViewingDistance } from './viewingDistance.js'
 
@@ -118,6 +119,9 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
       .slice(0, 3)
       .map((x) => x.cab)
   }, [step, purposeId, placeId, distanceId, cabinets])
+
+  // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
+  useGovdeKilidi(open)
 
   if (!open) return null
 

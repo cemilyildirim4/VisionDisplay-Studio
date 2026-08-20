@@ -19,11 +19,11 @@ export function BrandMark({
         className={`${logoH} w-auto shrink-0 brand-logo-enter`}
       />
       <span
-        className={`hidden sm:block w-px shrink-0 ${
+        className={`yatay-gizle hidden sm:block w-px shrink-0 ${
           darkOnDark ? 'bg-white/20 h-9' : 'bg-neutral-200 dark:bg-[#2c333f] h-8'
         }`}
       />
-      <div className="min-w-0">
+      <div className="yatay-gizle min-w-0">
         {showCompany && (
           <p
             className={`m-0 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] truncate ${

@@ -1,11 +1,13 @@
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
+import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Instances, Instance, ContactShadows } from '@react-three/drei'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import * as THREE from 'three'
 import { useLang } from './useLang.js'
 import { curveDepthFor, DEFAULT_CONTENT_SRC } from './content.js'
 import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
+import { videoSrcFor, createVideoElement } from './videoContent.js'
 
 /**
  * GERÇEK 3D GÖRÜNÜM (react-three-fiber) — mevcut 2D Canvas/SVG önizlemenin
@@ -480,14 +482,67 @@ function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, scre
     return null
   }, [content, contentUrl])
 
+  // VİDEO içerik ('Örnek video' ve yüklenen video) — 2D tarafla aynı kural
+  const videoSrc = useMemo(() => videoSrcFor(content, contentUrl), [content, contentUrl])
+
+  /*
+   * VİDEO DA 3D'DE VE AR'DE GÖRÜNÜR.
+   *
+   * Belirti: tasarımda video seçiliyken 3D görünümde ve oradan açılan AR'de
+   * panel simsiyah bir kutu olarak duruyordu — çünkü doku yalnızca GÖRSEL
+   * kaynaklardan üretiliyor, video hiç okunmuyordu.
+   *
+   * Video doğrudan THREE.VideoTexture ile de verilebilirdi, ama AR için sahne
+   * GLB dosyasına aktarılıyor ve GLTFExporter video dokusunu yazamıyor: AR'de
+   * panel yine boş kalırdı. Bunun yerine videonun kareleri bir tuvale
+   * çiziliyor ve tuval dokusu kullanılıyor. Tuval hem 3D'de canlı akar hem de
+   * dışa aktarımda o anki kare gömülü görsel olarak GLB'ye girer.
+   */
   const texture = useMemo(() => {
+    if (videoSrc) {
+      const tuval = document.createElement('canvas')
+      tuval.width = 1280
+      tuval.height = 720
+      const ctx = tuval.getContext('2d')
+      ctx.fillStyle = '#0a0a0a'
+      ctx.fillRect(0, 0, tuval.width, tuval.height)
+      const tex = new THREE.CanvasTexture(tuval)
+      tex.colorSpace = THREE.SRGBColorSpace
+      tex.anisotropy = 4
+      // Video öğesi dokunun yanında taşınır ki her karede ondan okunabilsin
+      tex.userData.video = createVideoElement(videoSrc)
+      return tex
+    }
     if (!src) return null
     const loader = new THREE.TextureLoader()
     const tex = loader.load(src)
     tex.colorSpace = THREE.SRGBColorSpace
     tex.anisotropy = 4
     return tex
-  }, [src])
+  }, [src, videoSrc])
+
+  // Doku değişince/sahne kapanınca video ve doku bırakılır
+  useEffect(() => {
+    return () => {
+      const v = texture?.userData?.video
+      if (v) {
+        v.pause()
+        v.removeAttribute('src')
+        v.load()
+      }
+      texture?.dispose?.()
+    }
+  }, [texture])
+
+  // Her karede videonun o anki görüntüsü tuvale çizilir
+  useFrame(() => {
+    const v = texture?.userData?.video
+    if (!v || v.readyState < 2) return
+    const tuval = texture.image
+    const ctx = tuval.getContext('2d')
+    ctx.drawImage(v, 0, 0, tuval.width, tuval.height)
+    texture.needsUpdate = true
+  })
 
   const showBezels = detailLevel === 'high'
 
@@ -775,6 +830,9 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     setOrnekAcik(false)
     onClose?.()
   }, [onClose])
+
+  // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
+  useGovdeKilidi(open)
 
   if (!open) return null
 

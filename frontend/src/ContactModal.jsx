@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import { CONTACT } from './contactInfo.js'
 
@@ -45,6 +46,9 @@ export default function ContactModal({ open, onClose }) {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
+
+  // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
+  useGovdeKilidi(open)
 
   if (!open) return null
 

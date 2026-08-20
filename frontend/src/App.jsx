@@ -1,4 +1,5 @@
-import { useState, useEffect, useLayoutEffect, useRef, Suspense, lazy } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, Suspense } from 'react'
+import { guvenliLazy } from './guvenliLazy.js'
 import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
 import MultiScreenModal from './MultiScreenModal.jsx'
@@ -22,9 +23,10 @@ import ArView from './ArView.jsx'
 // three.js/react-three-fiber/drei/model-viewer tek başına ~1.8 MB — ana pakete
 // gömülürse ilk yükleme herkes için ağırlaşır. Bu yüzden "3D Görünüm" düğmesine
 // basılana kadar hiç indirilmez (kod bölme / code-splitting).
-const Scene3D = lazy(() => import('./Scene3D.jsx'))
-import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees } from './content.js'
+const Scene3D = guvenliLazy(() => import('./Scene3D.jsx'))
+import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, L_KIRILMA_PCT, curveDepthFor } from './content.js'
 import { LANGUAGES } from './i18n.js'
+import { useAcilirKonum } from './hooks/useAcilirKonum.js'
 import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { useCabinets } from './hooks/useCabinets.js'
@@ -384,6 +386,83 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const tasarimHm = cokluAktif
     ? Math.max(...screens.map((s) => Math.max(1, s.rows) * chM))
     : ekranHm
+  /*
+   * EKRANIN DIŞ HATTI (0..1 arası oranlarla, sol üst köşe 0,0).
+   *
+   * Mekân çizimindeki kasa şimdiye kadar DİKDÖRTGENDİ; iç L tipi ekranın
+   * arkasında çerçeve ekranı takip etmiyor, köşesi kırık ekranın çevresinde
+   * düz bir dikdörtgen duruyordu. Hat buradan üretilip mekâna veriliyor.
+   *
+   * L yoksa null döner ve mekân eskisi gibi dikdörtgen kasa çizer.
+   */
+  const ekranSekli = useMemo(() => {
+    if (!(tasarimWm > 0) || !(tasarimHm > 0)) return null
+    // Tek ekranda da tür bilgisi var; çoklu ekranda her ekranın kendi türü
+    const parcalar = cokluAktif
+      ? screens.map((s) => ({ cols: Math.max(1, s.cols), rows: Math.max(1, s.rows), type: s.type || "flat", leftCols: s.leftCols, rightCols: s.rightCols }))
+      : [{ cols: Math.max(1, cols), rows: Math.max(1, rows), type: screenType || "flat" }]
+    // Hepsi düzse mekân eskisi gibi dikdörtgen kasa çizsin
+    if (!parcalar.some((p) => p.type === "lshape" || p.type === "curved" || p.type === "curvedIn")) return null
+
+    const oranX = tasarimWm / tasarimHm
+    const p = L_KIRILMA_PCT / 100
+    const ADIM = 28 // yay örnekleme çözünürlüğü
+
+    const ust = []
+    const altParcalar = []   // her parça kendi alt kenarını sırayla verir
+    let x = 0
+    parcalar.forEach((s) => {
+      const w = (s.cols * cwM) / tasarimWm       // genişlik oranı
+      const h = (s.rows * chM) / tasarimHm       // yükseklik oranı
+      const taban = 1 - h                        // ekranlar ALTA hizalı
+      const x0 = x
+      const x1 = x + w
+      const altBu = []
+
+      if (s.type === "curved" || s.type === "curvedIn") {
+        /*
+         * Kavisli ekranın dış hattı bir yay. Kavis derinliği ekranın kendi
+         * GENİŞLİĞİNİN oranı olarak veriliyor (curveDepthFor); burada yükseklik
+         * birimine çevriliyor ki hat kutuya oturabilsin. Formül CurvedScreen /
+         * curvedRenderer ile aynı: d = amp·(1 − t²)/2, t = -1..+1.
+         */
+        const icbukey = s.type === "curvedIn"
+        const amp = (Math.max(0, Math.min(100, curveAmount)) / 100) * curveDepthFor(icbukey) * w * oranX
+        /*
+         * Tuval kutunun `maxD/2` üstüne yerleşiyor ve çizim içeride aynı kadar
+         * aşağı kaydırılıyor (bkz. CurvedScreen + curvedRenderer). İki kayma
+         * sadeleşiyor: kutu koordinatında kenar yalnızca ±d kadar oynuyor.
+         */
+        for (let i = 0; i <= ADIM; i++) {
+          const u = i / ADIM
+          const t = 2 * u - 1
+          const d = (amp * Math.max(0, 1 - t * t)) / 2
+          const nx = x0 + w * u
+          ust.push([nx, taban + (icbukey ? d : -d)])
+          altBu.push([nx, taban + h + (icbukey ? -d : d)])
+        }
+      } else if (s.type === "lshape") {
+        const lc = Math.max(1, s.leftCols || Math.ceil(s.cols / 2))
+        const rc = Math.max(1, s.rightCols || Math.max(1, s.cols - lc))
+        const kirilma = x0 + w * (lc / (lc + rc))
+        ust.push([x0, taban], [kirilma, taban + h * p], [x1, taban])
+        altBu.push([x0, 1], [kirilma, 1 - h * p], [x1, 1])
+      } else {
+        ust.push([x0, taban], [x1, taban])
+        altBu.push([x0, 1], [x1, 1])
+      }
+
+      altParcalar.push(altBu)
+      x = x1
+    })
+
+    // Alt kenar sağdan sola dönerken: parçaların sırası ve her parçanın kendi
+    // noktaları ters çevrilir (sıralamayla değil — yay noktaları x eşit olsa da
+    // sırası bozulmamalı).
+    const alt = altParcalar.reverse().flatMap((noktalar) => [...noktalar].reverse())
+    return [...ust, ...alt]
+  }, [cokluAktif, screens, cols, rows, screenType, curveAmount, tasarimWm, tasarimHm, cwM, chM])
+
   const mekanDuvarWm = Math.max(Number(width) || 0, tasarimWm)
   const mekanDuvarHm = Math.max(Number(height) || 0, tasarimHm)
   const panoOlcek =
@@ -473,7 +552,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     <div className="bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans">
       {/* Konfigüratör — tek ekran yüksekliği */}
       {/* Masaüstü: tek ekran yüksekliği. Mobil: içerik alt alta dizilip sayfa kayar. */}
-      <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
+      <div className="yatay-sayfa min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
       {/* Başlık çubuğu — kurumsal logo + sayfa adı */}
       <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-10 py-3 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <BrandMark title={t('app.title')} subtitle={t('app.tagline')} />
@@ -482,7 +561,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           Araç düğmeleri başlık çubuğunda. Önce solda dikey bir şeritteydi ama
           duvar büyüdükçe çizimin üstüne biniyordu; burada hiçbir zaman çakışmaz.
         */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 w-full sm:w-auto justify-between sm:justify-end">
+        {/*
+          Telefonda dokuz denetim tek satıra sığmıyordu: son ikisi (dil ve profil)
+          ekranın dışında kalıyor ve tıklanamıyordu. Dar ekranda satır SARIYOR,
+          sm ve üzerinde eski tek satır düzeni sürüyor.
+        */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 w-full sm:w-auto justify-start sm:flex-nowrap sm:justify-end">
 <IconButton active={hasModel} label={t('tool.reset')} onClick={() => hasModel && setResetConfirmOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />
@@ -571,7 +655,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <BrandStripe />
 
       {/* Gövde */}
-      <div className="flex flex-col lg:flex-row flex-1 min-h-0 min-w-0 brand-page-enter">
+      {/* yatay-kap: telefon yatayken iki sütun — bkz. index.css */}
+      <div className="yatay-kap flex flex-col lg:flex-row flex-1 min-h-0 min-w-0 brand-page-enter">
         {/* SOL: Çalışma Alanı */}
         {/*
           Mobilde önizlemeye KESİN bir yükseklik verilir (min-h değil, h).
@@ -590,7 +675,90 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           Artik hepsi tek ekranda; alanlar iki panele bolunerek kaydirma
           gerekmeden sigiyor.
         */}
-        <aside className="w-full min-w-0 lg:w-[340px] shrink-0 order-2 lg:order-none border-t lg:border-t-0 lg:border-r border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
+        <main ref={tuvalRef} id="pdf-onizleme" className="yatay-onizleme order-1 lg:order-2 grow-0 shrink-0 basis-auto h-[62vh] min-w-0 relative overflow-hidden bg-[#f4f4f4] dark:bg-[#232830] lg:flex-1 lg:h-auto lg:min-h-0">
+
+          {/*
+            Mekân sahnesi — her şeyin arkasında (z-0). Ortası kasıtlı boştur,
+            ekran oraya oturur. Yalnızca model seçildikten sonra çizilir;
+            boş durum kartının arkasında anlamı olmaz.
+          */}
+          {hasModel && (
+            <Scene
+              id={scene}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+              /* Pano ekranın ölçüsüne göre çizildiği için piksel karşılığı gerekiyor */
+              pxPerM={cizimOlcek}
+              /* Toplantı salonunda arka duvar bu ölçülerden çiziliyor */
+              duvarWm={mekanDuvarWm}
+              duvarHm={mekanDuvarHm}
+              ekranWpx={tasarimWm * (cizimOlcek || 0)}
+              ekranHpx={tasarimHm * (cizimOlcek || 0)}
+              /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
+              ekranSekli={ekranSekli}
+            />
+          )}
+
+          {hasModel ? (
+            <WallPreview
+              model={previewModel}
+              width={width}
+              height={height}
+              screenMode={screenMode}
+              screens={screens}
+              cols={cols}
+              rows={rows}
+              content={content}
+              contentUrl={contentUrl}
+              screenType={screenType}
+              resolution={resolution}
+              curveAmount={curveAmount}
+              showMeasurements={showMeasurements}
+              onColsChange={setCols}
+              onRowsChange={setRows}
+              colsMax={colsMax}
+              rowsMax={rowsMax}
+              hideRegions={isVideoWall}
+              sahneVar={scene !== 'none'}
+              sahnePayPx={sahnePayPx}
+              sahneOlcekVarsayilan={sahneOlcekVarsayilan}
+              onPxPerM={setCizimOlcek}
+            />
+          ) : (
+            /* Boş durum tuvali */
+            <div className="h-full flex items-center justify-center">
+              <div className="w-[min(560px,100%)] aspect-square bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-2xl flex flex-col items-center justify-center gap-6 px-8">
+                <svg viewBox="0 0 48 48" width="52" height="52" fill="none" stroke="#1c1c2b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="6" y="12" width="36" height="24" rx="1.5" />
+                  <path d="M24 18v12M18 24h12" />
+                  <path d="M24 16l-2.5 2.5M24 16l2.5 2.5" />
+                  <path d="M24 32l-2.5-2.5M24 32l2.5-2.5" />
+                  <path d="M16 24l2.5-2.5M16 24l2.5 2.5" />
+                  <path d="M32 24l-2.5-2.5M32 24l-2.5 2.5" />
+                </svg>
+                <p className="text-center text-neutral-600 dark:text-neutral-400 text-lg leading-snug m-0">
+                  {t('empty.prompt')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(true)}
+                  className="bg-brand text-white text-sm font-semibold rounded-full px-6 py-2.5 hover:bg-brand-dark transition-colors"
+                >
+                  {t('empty.start')}
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/*
+          yatay-sag: telefon yatayken iki panel TEK kaydırma sütunu olur; normalde
+          (dikey telefon / masaüstü) display:contents ile görünmez, yerleşimi
+          değiştirmez. Ayrı ayrı kaydırılan iki kutu olduğunda alttaki İletişim /
+          PDF bloğu sabit duruyor, panelle birlikte kaymıyordu.
+        */}
+        <div className="yatay-sag">
+        <aside className="yatay-panel yatay-panel-model w-full min-w-0 lg:w-[340px] shrink-0 order-2 lg:order-1 border-t lg:border-t-0 lg:border-r border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
           <Sigdir className="flex flex-col gap-2">
           {/* Tek/Çoklu Ekran sekmeleri (yalnızca model seçilince) */}
           {hasModel && (
@@ -885,82 +1053,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           </Sigdir>
         </aside>
 
-        <main ref={tuvalRef} id="pdf-onizleme" className="grow-0 shrink-0 basis-auto h-[62vh] min-w-0 relative overflow-hidden bg-[#f4f4f4] dark:bg-[#232830] lg:flex-1 lg:h-auto lg:min-h-0">
-
-          {/*
-            Mekân sahnesi — her şeyin arkasında (z-0). Ortası kasıtlı boştur,
-            ekran oraya oturur. Yalnızca model seçildikten sonra çizilir;
-            boş durum kartının arkasında anlamı olmaz.
-          */}
-          {hasModel && (
-            <Scene
-              id={scene}
-              tuvalW={tuvalBoyut.w}
-              tuvalH={tuvalBoyut.h}
-              /* Pano ekranın ölçüsüne göre çizildiği için piksel karşılığı gerekiyor */
-              pxPerM={cizimOlcek}
-              /* Toplantı salonunda arka duvar bu ölçülerden çiziliyor */
-              duvarWm={mekanDuvarWm}
-              duvarHm={mekanDuvarHm}
-              ekranWpx={tasarimWm * (cizimOlcek || 0)}
-              ekranHpx={tasarimHm * (cizimOlcek || 0)}
-            />
-          )}
-
-          {hasModel ? (
-            <WallPreview
-              model={previewModel}
-              width={width}
-              height={height}
-              screenMode={screenMode}
-              screens={screens}
-              cols={cols}
-              rows={rows}
-              content={content}
-              contentUrl={contentUrl}
-              screenType={screenType}
-              resolution={resolution}
-              curveAmount={curveAmount}
-              showMeasurements={showMeasurements}
-              onColsChange={setCols}
-              onRowsChange={setRows}
-              colsMax={colsMax}
-              rowsMax={rowsMax}
-              hideRegions={isVideoWall}
-              sahneVar={scene !== 'none'}
-              sahnePayPx={sahnePayPx}
-              sahneOlcekVarsayilan={sahneOlcekVarsayilan}
-              onPxPerM={setCizimOlcek}
-            />
-          ) : (
-            /* Boş durum tuvali */
-            <div className="h-full flex items-center justify-center">
-              <div className="w-[min(560px,100%)] aspect-square bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-2xl flex flex-col items-center justify-center gap-6 px-8">
-                <svg viewBox="0 0 48 48" width="52" height="52" fill="none" stroke="#1c1c2b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="6" y="12" width="36" height="24" rx="1.5" />
-                  <path d="M24 18v12M18 24h12" />
-                  <path d="M24 16l-2.5 2.5M24 16l2.5 2.5" />
-                  <path d="M24 32l-2.5-2.5M24 32l2.5-2.5" />
-                  <path d="M16 24l2.5-2.5M16 24l2.5 2.5" />
-                  <path d="M32 24l-2.5-2.5M32 24l-2.5 2.5" />
-                </svg>
-                <p className="text-center text-neutral-600 dark:text-neutral-400 text-lg leading-snug m-0">
-                  {t('empty.prompt')}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(true)}
-                  className="bg-brand text-white text-sm font-semibold rounded-full px-6 py-2.5 hover:bg-brand-dark transition-colors"
-                >
-                  {t('empty.start')}
-                </button>
-              </div>
-            </div>
-          )}
-        </main>
 
         {/* SAĞ: Panel */}
-        <aside className="w-full min-w-0 lg:w-[340px] shrink-0 order-3 lg:order-none border-t lg:border-t-0 lg:border-l border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
+        <aside className="yatay-panel yatay-panel-ayar w-full min-w-0 lg:w-[340px] shrink-0 order-3 lg:order-3 border-t lg:border-t-0 lg:border-l border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
           <Sigdir className="flex flex-col gap-2">
 
           {/* ---- ADIM 4: İçerik ---- */}
@@ -1235,6 +1330,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           </button>
           </Sigdir>
         </aside>
+        </div>
       </div>
       </div>
 
@@ -1398,7 +1494,22 @@ function ScreenThumb({ content, contentUrl, type }) {
         <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("${DEFAULT_CONTENT_SRC}")`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
       )}
       {content === 'upload' && contentUrl && <img src={contentUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
-      {content === 'sample' && <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(150deg,#14532d,#3f8f3f,#2d5a27)' }} />}
+      {/*
+        Video içerikte küçük önizleme VİDEONUN KENDİSİ — içerik seçicideki
+        "Örnek video" karesiyle aynı davranış. Eskiden burada yeşil bir degrade
+        duruyordu; ekranda video oynarken listede alakasız yeşil bir kare
+        görünüyordu. Sessiz ve döngülü; ses ya da denetim yok.
+      */}
+      {(content === 'sample' || (content === 'video' && contentUrl)) && (
+        <video
+          src={content === 'sample' ? SAMPLE_VIDEO_SRC : contentUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
       {content === 'none' && <div className="absolute inset-0 bg-white dark:bg-[#161a21]" />}
       {content === 'led' && <div className="absolute inset-0" style={ledDotsStyle(3)} />}
       {type === 'lshape' && (
@@ -1458,6 +1569,8 @@ function LanguageSelect({ value, onChange }) {
   const { t } = useLang()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  // Panel ekran dışına taşmasın diye konum düğmeye göre kıstırılarak hesaplanır
+  const panelKonum = useAcilirKonum(ref, open, 170)
   const current = LANGUAGES.find((l) => l.code === value) || LANGUAGES[0]
   const CurrentFlag = FLAGS[current.code] || FlagTR
 
@@ -1499,7 +1612,7 @@ function LanguageSelect({ value, onChange }) {
       </button>
 
       {open && (
-        <div className="absolute end-0 top-11 bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-lg shadow-lg py-1 z-20 min-w-[150px]">
+        <div style={panelKonum || undefined} className="absolute end-0 top-11 bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-lg shadow-lg py-1 z-50 min-w-[150px]">
           {LANGUAGES.map((l) => {
             const F = FLAGS[l.code] || FlagTR
             return (

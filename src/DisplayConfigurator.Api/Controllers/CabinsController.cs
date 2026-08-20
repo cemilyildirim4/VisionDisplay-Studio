@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Primitives;
 using DisplayConfigurator.Api.Security;
 using DisplayConfigurator.Application.DTOs;
 using DisplayConfigurator.Application.Interfaces;
@@ -20,10 +21,21 @@ public class CabinsController : ControllerBase
     // Model listesi konfigüratörün en sık çağırdığı uç nokta ama admin dışında
     // dakikada birkaç kez değişir; 60 sn'lik bellek içi önbellek DB yükünü
     // gözle görülür şekilde azaltır. Yazma uçları (Create/Update/Delete) bu
-    // anahtarları temizler, böylece admin bir model kaydettiğinde 60 sn
+    // kayıtları temizler, böylece admin bir model kaydettiğinde 60 sn
     // beklemeden görünür.
+    //
+    // Anahtarlar tek tek SİLİNMİYOR: liste anahtarı category ve productType ile
+    // üretiliyor (ör. "cabins:list:led:CABINET") ve category serbest metin olduğu
+    // için kaç anahtar oluştuğu önceden bilinemez. Onun yerine bütün liste
+    // kayıtları ortak bir iptal jetonuna bağlanıyor; yazma işleminde jeton iptal
+    // edilince hepsi birden düşüyor. (Eskiden yalnızca "cabins:list:all" gibi iki
+    // parçalı anahtarlar siliniyordu; bu anahtarlar hiç var olmadığı için yeni
+    // model 60 saniye boyunca yönetim panelinde görünmüyordu.)
     private const string CabinsCacheKeyPrefix = "cabins:list:";
     private const string SeriesCacheKey = "cabins:series";
+
+    // Controller her istekte yeniden kurulduğu için jeton static tutuluyor.
+    private static CancellationTokenSource _listeSifirlama = new();
 
     public CabinsController(ICabinRepository cabinRepository, ISeriesRepository seriesRepository, IMemoryCache cache)
     {
@@ -51,6 +63,7 @@ public class CabinsController : ControllerBase
         var cabins = await _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
+            entry.AddExpirationToken(new CancellationChangeToken(_listeSifirlama.Token));
             return await _cabinRepository.GetAllAsync(category, normalizedType);
         });
 
@@ -72,6 +85,7 @@ public class CabinsController : ControllerBase
         var series = await _cache.GetOrCreateAsync(SeriesCacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
+            entry.AddExpirationToken(new CancellationChangeToken(_listeSifirlama.Token));
             return await _seriesRepository.GetAllAsync();
         });
 
@@ -182,9 +196,12 @@ public class CabinsController : ControllerBase
 
     private void InvalidateCache()
     {
-        _cache.Remove(CabinsCacheKeyPrefix + "all");
-        _cache.Remove(CabinsCacheKeyPrefix + "led");
-        _cache.Remove(CabinsCacheKeyPrefix + "videowall");
+        // Jetonu iptal et: ona bağlı bütün liste kayıtları (hangi category /
+        // productType kombinasyonuyla üretilmiş olursa olsun) anında düşer.
+        var eski = Interlocked.Exchange(ref _listeSifirlama, new CancellationTokenSource());
+        eski.Cancel();
+        eski.Dispose();
+
         _cache.Remove(SeriesCacheKey);
     }
 

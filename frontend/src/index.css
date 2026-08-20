@@ -216,3 +216,79 @@ button:disabled {
 .btn-accent:hover {
   background: var(--color-accent-dark);
 }
+
+/* ---------------------------------------------------------------------------
+   TELEFON YATAYKEN İKİ SÜTUN
+
+   Telefon yan tutulduğunda ekran geniş ama çok alçak oluyor (ör. 844 × 390).
+   Dikeydeki "önizleme üstte, paneller altta" düzeni burada işe yaramıyor:
+   önizleme ekranın yarısını yiyor, panellere bakmak için sürekli kaydırmak
+   gerekiyor.
+
+   Bu blokta düzen İKİ SÜTUNA geçiyor: solda önizleme tam yükseklikte, sağda
+   Model ve Ekran Ayarları panelleri alt alta, her biri kendi içinde kayan
+   birer kutu olarak.
+
+   Yalnızca YATAY ve ALÇAK ekranlarda çalışır; dikey telefon ve lg üstü
+   masaüstü düzeni etkilenmez. Geri almak için bu bloğu ve App.jsx'teki üç
+   sınıf adını (yatay-kap / yatay-onizleme / yatay-panel) silmek yeterli.
+   --------------------------------------------------------------------------- */
+/* Sarmalayıcı normalde yok sayılır; iki panel yine doğrudan ana ızgaranın
+   çocuğu gibi davranır (dikey telefon ve masaüstü düzeni değişmez). */
+.yatay-sag {
+  display: contents;
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  /* Sayfa ekran yüksekliğine sabitlenir; kaydırma panellerin İÇİNDE olur,
+     yoksa ızgara satırları içeriğe göre uzayıp sayfayı uzatıyor. */
+  .yatay-sayfa {
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .yatay-kap {
+    display: grid;
+    grid-template-columns: 1fr minmax(240px, 300px);
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .yatay-onizleme {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    height: auto;
+    min-height: 0;
+    flex-basis: auto;
+  }
+  /* Sağ sütun TEK kaydırma alanı: iki panel alt alta, birlikte kayar. */
+  .yatay-sag {
+    display: flex;
+    flex-direction: column;
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .yatay-panel {
+    width: auto;
+    flex: 0 0 auto;
+    overflow: visible;      /* kaydırma sütunun kendisinde */
+    border-top: 0;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+  .yatay-panel-model {
+    border-bottom: 1px solid var(--color-neutral-200, #e5e7eb);
+  }
+}
+
+/*
+ * TELEFON YAN TUTULDUĞUNDA: başlıkta yalnızca logo kalsın.
+ *
+ * Yatayda üst şerit çok alçalıyor; "Masaüstü Bilişim / Ekran Konfigüratörü /
+ * LED Ekran ve Video Duvarı Çözümleri" satırları oraya sığmayıp yarım
+ * görünüyordu. Yarım okunan bir başlık hiç olmamasından kötü — logo zaten
+ * kimliği taşıyor, metin bloğu ve yanındaki ayraç bu boyda gizleniyor.
+ */
+@media (orientation: landscape) and (max-height: 600px) {
+  .yatay-gizle { display: none; }
+}

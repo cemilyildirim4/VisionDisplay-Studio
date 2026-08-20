@@ -38,6 +38,7 @@ export default function Scene({
   pxPerM,
   duvarWm,
   duvarHm,
+  ekranSekli,
 }) {
   // Fotoğraflı mekânlar sahneler.js'te tanımlı; yeni eklemek için orası yeterli
   const sahne = sahneBul(id)
@@ -54,6 +55,7 @@ export default function Scene({
         pxPerM={pxPerM}
         duvarWm={duvarWm}
         duvarHm={duvarHm}
+        ekranSekli={ekranSekli}
       />
     )
   }
@@ -67,6 +69,7 @@ export default function Scene({
         pxPerM={pxPerM}
         duvarWm={duvarWm}
         duvarHm={duvarHm}
+        ekranSekli={ekranSekli}
       />
     )
   }
