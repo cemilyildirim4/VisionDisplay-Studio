@@ -15,9 +15,6 @@
  * ekranımızla iç içe iki dikdörtgen oluşturuyordu.
  */
 
-const KASA = 0.05 // kasa kalınlığı, metre
-
-const sinirla = (v, alt, ust) => Math.min(Math.max(v, alt), ust)
 
 /**
  * Cephenin tuvale sığması için ölçek (px/m) — DUVAR ölçüsünden hesaplanır.
@@ -54,7 +51,6 @@ export default function Cephe({
   const eUst = cy - hPx / 2
 
   // Kasa gerçek ölçüde (5 cm) ama ekrana göre sınırlı — bkz. Salon.jsx
-  const kasa = sinirla(KASA * m, 1.5, wPx * 0.02)
 
   // CEPHE — doğrudan duvar ölçüsünden, ekranla aynı ölçekte
   const duvarW = duvarWm * m
@@ -282,48 +278,18 @@ export default function Cephe({
         <ellipse cx={cx} cy={cy} rx={wPx * 1.35} ry={hPx * 1.9} fill="url(#cephe-isik)" />
 
         {/*
-          KASA — ekranın çevresinde ince çerçeve. İçi BOŞ, gerçek ekran oraya
-          oturuyor.
-        */}
-        {ekranSekli && ekranSekli.length > 2 ? (
-          /*
-            KASA, EKRANIN DIŞ HATTINI İZLER. İç L tipi ekranın arkasında
-            dikdörtgen bir çerçeve duruyordu; köşesi kırık ekranla çerçeve
-            birbirini tutmuyordu.
+          KASA (ekranın çevresindeki koyu çerçeve) KALDIRILDI.
 
-            Şekil bir yol olarak çiziliyor ve kalınlığı 2×kasa olan bir konturla
-            genişletiliyor: konturun dış yarısı çerçeveyi yapar, iç yarısı zaten
-            ekranın altında kalır. Böylece köşe kırılmasında da kalınlık sabit
-            kalıyor.
-          */
-          <path
-            d={
-              ekranSekli
-                .map(([nx, ny], i) => `${i ? "L" : "M"}${(eSol + nx * wPx).toFixed(2)},${(eUst + ny * hPx).toFixed(2)}`)
-                .join(" ") + " Z"
-            }
-            fill="#13161a"
-            stroke="#13161a"
-            strokeWidth={kasa * 2}
-            strokeLinejoin="miter"
-          />
-        ) : (
-          <rect
-            x={eSol - kasa}
-            y={eUst - kasa}
-            width={wPx + kasa * 2}
-            height={hPx + kasa * 2}
-            fill="#13161a"
-          />
-        )}
-        <rect
-          x={eSol - kasa}
-          y={eUst - kasa}
-          width={wPx + kasa * 2}
-          height={Math.max(0.5, kasa * 0.3)}
-          fill="#5b636c"
-          opacity="0.65"
-        />
+          Mekân arka planı seçilince ekranın dört yanında siyah bir bant
+          çıkıyordu. Gerçek bir kurulumda kabinler duvara yüzeyi yüzeyine
+          oturur, çevresinde ayrı bir kasa görünmez; buradaki çerçeve ekranı
+          mekândan koparıp televizyon gibi gösteriyordu. Düz ve kavisli
+          ekranda aynı sorun vardı — kavislide dikdörtgen çerçeve eğrinin
+          dışına da taşıyordu.
+
+          NOT: ekranSekli prop'u (App.jsx → Scene.jsx) yalnızca bu çerçeveyi
+          ekranın dış hattına oturtmak için vardı; artık kullanılmıyor.
+        */}
       </svg>
     </div>
   )

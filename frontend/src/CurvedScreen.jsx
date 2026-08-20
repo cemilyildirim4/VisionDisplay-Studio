@@ -30,6 +30,12 @@ function contentTypeOf(content) {
 
 const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
 
+/** Dokunmatik (telefon/tablet) cihaz mı? Kare bütçesi orada çok daha dar. */
+const KABA_CIHAZ =
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(pointer: coarse)').matches
+
 export default function CurvedScreen({
   wPx,
   hPx,
@@ -70,7 +76,15 @@ export default function CurvedScreen({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const dpr = window.devicePixelRatio || 1
+    /*
+     * DPR TAVANI 2.
+     *
+     * Telefonlarda devicePixelRatio 3 (hatta 3.5) olabiliyor; tuvalin piksel
+     * sayısı 3× yerine 2× tutulunca doldurulacak alan yarıya iniyor ve panel
+     * gözle ayırt edilemeyecek kadar az yumuşuyor. Kavis animasyonunun ve
+     * video karelerinin mobilde takılmasının bir sebebi buydu.
+     */
+    const dpr = Math.min(2, window.devicePixelRatio || 1)
     const totalH = hPx + maxD
     const pw = Math.max(1, Math.round(wPx * dpr))
     const ph = Math.max(1, Math.round(totalH * dpr))
@@ -111,6 +125,8 @@ export default function CurvedScreen({
       hideRegions,
       resolution,
       rozet: cozunurlukRozeti,
+      // Ara tuval ekranla aynı piksel yoğunluğunda hazırlanır (bkz. dpr tavanı)
+      bufferScale: dpr,
       concave,
     })
   }, [wPx, hPx, maxD, offsetX, offsetY, gw, gh, type, nCols, nRows, hideRegions, resolution, cozunurlukRozeti, concave])
@@ -133,9 +149,27 @@ export default function CurvedScreen({
     const v = createVideoElement(src)
     videoRef.current = v
 
-    const tick = () => {
-      paintRef.current()
+    /*
+     * KARE SINIRI
+     *
+     * Kavisli ekranda her video karesi tuvale yeniden warp ediliyor. 60 Hz'de
+     * bu, mobilde bütün kare bütçesini yiyor ve arayüz (kaydırma, düğmeler)
+     * takılıyordu — "örnek video aşırı kasıyor" şikâyeti buydu. Dokunmatik
+     * cihazda saniyede 24, masaüstünde 30 kare fazlasıyla yeterli: kaynak
+     * videolar zaten 24–30 fps ve panel küçük görünüyor.
+     *
+     * Sekme/uygulama arka plandayken hiç çizilmiyor: görünmeyen bir tuval için
+     * pil harcamanın anlamı yok.
+     */
+    const araKare = 1000 / (KABA_CIHAZ ? 24 : 30)
+    let sonKare = 0
+
+    const tick = (now) => {
       videoRafRef.current = requestAnimationFrame(tick)
+      if (document.hidden) return
+      if (now - sonKare < araKare) return
+      sonKare = now
+      paintRef.current()
     }
     videoRafRef.current = requestAnimationFrame(tick)
 

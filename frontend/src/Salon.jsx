@@ -14,23 +14,12 @@
  * İNSAN gerçek metre ölçüsündedir (1,70 m, pxPerM ile). Ekranın ne kadar büyük
  * olduğunu anlatan tek şey o: ekran büyüdükçe insan küçülür.
  *
- * Bir de emniyet sınırı var (`sinirla`). Demo modellerde ekran 30 cm olabiliyor
- * ve gerçek boyutlu insan ekranın beş katı çıkıp sahneyi kaplıyordu; anlamlı
- * bir ölçü hissi değil, saçmalık oluyordu. Onun için insan ekrana göre bir alt
- * ve bir üst sınırda tutuluyor. Gerçekçi ölçülerde (2-6 m) bu sınırlar hiç
- * devreye girmiyor, ölçü hissi bozulmuyor.
- *
  * PERSPEKTİF:
  * Tek kaçış noktalı. Arka duvar tam karşıda bir dikdörtgen; yan duvarlar,
  * tavan ve zemin oradan tuvalin kenarlarına açılan yamuklar. Ekran arka
  * duvarın üzerinde, tam karşıdan görünür — o yüzden ekranın kendisi hiç
  * eğrilmez, ölçüleri okunaklı kalır.
  */
-
-// Salonun ekrana oranları
-const KASA = 0.05 // kasa kalınlığı, metre
-
-const sinirla = (v, alt, ust) => Math.min(Math.max(v, alt), ust)
 
 /**
  * Salonun tuvale sığması için ölçek (px/m) — DUVAR ölçüsünden hesaplanır.
@@ -69,12 +58,6 @@ export default function Salon({
   const eSol = cx - wPx / 2
   const eUst = cy - hPx / 2
 
-  /*
-   * Kasa gerçek ölçüde (5 cm) ama ekrana göre de sınırlı: küçük demo
-   * ekranlarda px/m çok büyüyor ve 5 cm, ekranın çeyreği kadar bir çerçeve
-   * çıkarıyordu.
-   */
-  const kasa = sinirla(KASA * m, 1.5, wPx * 0.02)
 
   /*
    * ARKA DUVAR — doğrudan duvar ölçüsünden, gerçek metre olarak. Ekranla aynı
@@ -181,48 +164,18 @@ export default function Salon({
         />
 
         {/*
-          KASA — ekranın çevresinde ince bir çerçeve. İçi BOŞ bırakılıyor,
-          gerçek ekran oraya oturuyor.
-        */}
-        {ekranSekli && ekranSekli.length > 2 ? (
-          /*
-            KASA, EKRANIN DIŞ HATTINI İZLER. İç L tipi ekranın arkasında
-            dikdörtgen bir çerçeve duruyordu; köşesi kırık ekranla çerçeve
-            birbirini tutmuyordu.
+          KASA (ekranın çevresindeki koyu çerçeve) KALDIRILDI.
 
-            Şekil bir yol olarak çiziliyor ve kalınlığı 2×kasa olan bir konturla
-            genişletiliyor: konturun dış yarısı çerçeveyi yapar, iç yarısı zaten
-            ekranın altında kalır. Böylece köşe kırılmasında da kalınlık sabit
-            kalıyor.
-          */
-          <path
-            d={
-              ekranSekli
-                .map(([nx, ny], i) => `${i ? "L" : "M"}${(eSol + nx * wPx).toFixed(2)},${(eUst + ny * hPx).toFixed(2)}`)
-                .join(" ") + " Z"
-            }
-            fill="#13161a"
-            stroke="#13161a"
-            strokeWidth={kasa * 2}
-            strokeLinejoin="miter"
-          />
-        ) : (
-          <rect
-            x={eSol - kasa}
-            y={eUst - kasa}
-            width={wPx + kasa * 2}
-            height={hPx + kasa * 2}
-            fill="#13161a"
-          />
-        )}
-        <rect
-          x={eSol - kasa}
-          y={eUst - kasa}
-          width={wPx + kasa * 2}
-          height={Math.max(0.5, kasa * 0.3)}
-          fill="#5b636c"
-          opacity="0.65"
-        />
+          Mekân arka planı seçilince ekranın dört yanında siyah bir bant
+          çıkıyordu. Gerçek bir kurulumda kabinler duvara yüzeyi yüzeyine
+          oturur, çevresinde ayrı bir kasa görünmez; buradaki çerçeve ekranı
+          mekândan koparıp televizyon gibi gösteriyordu. Düz ve kavisli
+          ekranda aynı sorun vardı — kavislide dikdörtgen çerçeve eğrinin
+          dışına da taşıyordu.
+
+          NOT: ekranSekli prop'u (App.jsx → Scene.jsx) yalnızca bu çerçeveyi
+          ekranın dış hattına oturtmak için vardı; artık kullanılmıyor.
+        */}
 
         {/*
           İNSAN SİLUETİ KALDIRILDI. Ölçü hissi versin diye 1,70 m'lik bir figür

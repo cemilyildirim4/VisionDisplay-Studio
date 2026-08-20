@@ -8,6 +8,23 @@
  *  - İçerik (görsel/gradient) dikey dilimler halinde yaya oturtulur (clipping/warp).
  *
  * Fiziksel ölçüler burada kullanılmaz; yalnızca görsel temsil üretilir.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * NEDEN ARA TUVAL (BUFFER) VAR — mobil donmasının asıl sebebi buydu
+ *
+ * Panel eskiden doğrudan hedef tuvale, 2 px'lik dilimler hâlinde çiziliyordu:
+ * genişliği 600 px olan bir ekran için kare başına ~300 `drawImage`, üstelik
+ * `ctx.filter` AÇIKKEN. Canvas filtresi her çağrıda ayrı bir ara yüzey
+ * kurar; mobil Safari'de bu yüzlerce yüzey saniyede 60 kez oluşturulunca
+ * arayüz kilitleniyor, GPU belleği dolduğunda da tuval SİYAH kalıyordu —
+ * AR ekran görüntüsündeki simsiyah panelin sebebi buydu.
+ *
+ * Artık içerik önce DÜZ bir ara tuvale bir kez çiziliyor (filtre, diyot dokusu
+ * ve satır çizgileri orada, tek seferde uygulanıyor); hedefe yalnızca o hazır
+ * tuvalin dilimleri kopyalanıyor. Kare başına filtre sayısı 300'den 1'e indi.
+ * Satır çizgileri de düz çizilip dilimlerle birlikte büküldüğü için kavisi
+ * kendiliğinden takip ediyor.
+ * ─────────────────────────────────────────────────────────────────────────
  */
 
 import { LEDS_PER_CABINET_X, LEDS_PER_CABINET_Y, LED_LIT_FILTER } from '../content.js'
@@ -18,36 +35,46 @@ const SAMPLE_STOPS = ['#14532d', '#3f8f3f', '#7bb661', '#2d5a27']
 // LED panel görünümü (kapalı panel) — content.js'teki LED_GRADIENT ile aynı renkler
 const LED_STOPS = ['#1a1a1e', '#101013', '#17171b', '#0d0d10']
 
-function hexToRgb(hex) {
-  const n = parseInt(hex.slice(1), 16)
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-}
-
-function lerp(a, b, t) {
-  return a + (b - a) * t
-}
-
-// Degrade rengini yatay konuma (0..1) göre örnekler
-function sampleColor(t, stops = SAMPLE_STOPS) {
-  const segs = stops.length - 1
-  const p = Math.max(0, Math.min(1, t)) * segs
-  const i = Math.min(segs - 1, Math.floor(p))
-  const f = p - i
-  const c0 = hexToRgb(stops[i])
-  const c1 = hexToRgb(stops[i + 1])
-  return `rgb(${Math.round(lerp(c0[0], c1[0], f))},${Math.round(lerp(c0[1], c1[1], f))},${Math.round(lerp(c0[2], c1[2], f))})`
-}
-
-/**
- * LED diyot dokusu — ortak boyacıyı (ledDots.js) panel alanıyla sınırlı çizer.
- * source-atop: yalnızca panelin ÇİZİLİ olduğu yere basar. Kavis yüzünden panelin
- * bulunmadığı üst/alt bölgeler boş kalır — aksi halde beyaz duvara gri şerit basıyordu.
+/*
+ * Dilim genişliği. Dokunmatik cihazda daha kaba: dilim sayısı yarıya iner,
+ * kavisin dış hattı zaten kırpma yoluyla yumuşatıldığı için görsel fark yok.
  */
-function drawLedDots(ctx, w, totalH, dotW, dotH) {
-  ctx.save()
-  ctx.globalCompositeOperation = 'source-atop'
-  paintLedDots(ctx, w, totalH, dotW, dotH)
-  ctx.restore()
+const KABA_CIHAZ =
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(pointer: coarse)').matches
+const STEP = KABA_CIHAZ ? 4 : 2
+
+/*
+ * Ara tuval tüm kavisli ekranlarca PAYLAŞILIR: her çizimde baştan boyanıyor,
+ * bu yüzden tek bir örnek yeter ve kavis animasyonu boyunca yeniden tuval
+ * ayırma maliyeti oluşmaz.
+ */
+const ara = { canvas: null, ctx: null }
+
+function araTuval(w, h) {
+  if (!ara.canvas) {
+    ara.canvas = document.createElement('canvas')
+    ara.ctx = ara.canvas.getContext('2d')
+  }
+  const pw = Math.max(1, Math.ceil(w))
+  const ph = Math.max(1, Math.ceil(h))
+  if (ara.canvas.width !== pw || ara.canvas.height !== ph) {
+    ara.canvas.width = pw // boyut değişimi tuvali zaten temizler
+    ara.canvas.height = ph
+  } else {
+    ara.ctx.clearRect(0, 0, pw, ph)
+  }
+  ara.ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ara.ctx.filter = 'none'
+  return ara
+}
+
+/** Degrade — dilim dilim renk örneklemek yerine tek gradient nesnesi. */
+function gradient(ctx, w, stops) {
+  const g = ctx.createLinearGradient(0, 0, w, 0)
+  stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s))
+  return g
 }
 
 /**
@@ -55,9 +82,7 @@ function drawLedDots(ctx, w, totalH, dotW, dotH) {
  *
  * Kavis, dilimin görünen yüksekliğiyle temsil edilir (perspektif kısalması):
  *  - DIŞA kavisli (konveks): merkez izleyiciye YAKIN → ortada daha UZUN görünür.
- *    Üst kenar ortada yukarı, alt kenar ortada aşağı kavislenir.
  *  - İÇE kavisli (konkav): merkez izleyiciden UZAK → ortada daha KISA görünür.
- *    Üst kenar ortada aşağı, alt kenar ortada yukarı kavislenir.
  *
  * yOff = maxD/2 taban kaydırması sayesinde iki yön de aynı tuvale sığar.
  */
@@ -72,13 +97,16 @@ function edgeAt(x, w, h, amp, concave, yOff) {
 /**
  * Panelin dış hattını yol olarak kurar (üst kenar → sağ → alt kenar → sol).
  *
- * NEDEN GEREKLİ: İçerik 2 px'lik dikey dilimlerle çiziliyor ve her dilimin üstü
- * düz. Bu, kavisin kenarında merdiven basamağı gibi tırtıklanmaya yol açıyordu.
- * Bu yolu kırpma (clip) olarak kullanınca kenarı tarayıcı kendisi yumuşatıyor
- * (kenar yumuşatma), dilimler ne kadar kaba olursa olsun dış hat pürüzsüz çıkıyor.
+ * NEDEN GEREKLİ: içerik dilimler hâlinde çiziliyor ve her dilimin üstü düz.
+ * Bu, kavisin kenarında merdiven basamağı gibi tırtıklanmaya yol açıyordu.
+ * Bu yolu kırpma (clip) olarak kullanınca kenarı tarayıcı kendisi yumuşatıyor.
+ *
+ * Yol çözünürlüğü dilim genişliğinin yarısı: eğri 1 px'lik adımlarla
+ * kurulduğunda kare başına binlerce `lineTo` birikiyor ve bu yol karede iki
+ * kez kuruluyordu (kırpma + boş çerçeve dış hattı). Yarım dilim, kenarın
+ * pürüzsüzlüğü için fazlasıyla yeterli.
  */
-function panelPath(ctx, w, E) {
-  const s = 1 // yol çözünürlüğü (px) — 1 px'te eğri düz görünür
+function panelPath(ctx, w, E, s = Math.max(1, STEP / 2)) {
   ctx.beginPath()
   ctx.moveTo(0, E(0).top)
   for (let x = s; x < w; x += s) ctx.lineTo(x, E(x).top)
@@ -105,131 +133,141 @@ function roundRectPath(ctx, x, y, w, h, r) {
 }
 
 /**
+ * DÜZ panel yüzeyini ara tuvale çizer: içerik + (kapalıysa) diyot dokusu +
+ * satır çizgileri. Buradan çıkan tuval, hedefe dilimlenerek bükülür.
+ */
+function yuzeyiCiz(w, h, o) {
+  const { contentType, img, imgSX, imgSY, imgSW, imgSH, showGrid, cols, rows } = o
+  const { canvas, ctx } = araTuval(w, h)
+  const isLit = contentType === 'image' || contentType === 'gradient'
+  const gorselHazir = contentType === 'image' && isDrawable(img) && imgSW > 0 && imgSH > 0
+
+  /*
+   * Filtre TEK seferde, tüm yüzeye. (Eskiden dilim başına kuruluyordu; mobil
+   * donmasının ve siyah kalan panelin sebebi buydu — bkz. dosya başı.)
+   */
+  if (isLit) ctx.filter = LED_LIT_FILTER
+
+  if (gorselHazir) {
+    ctx.drawImage(img, imgSX, imgSY, imgSW, imgSH, 0, 0, w, h)
+  } else if (contentType === 'gradient' || contentType === 'led') {
+    ctx.fillStyle = gradient(ctx, w, contentType === 'led' ? LED_STOPS : SAMPLE_STOPS)
+    ctx.fillRect(0, 0, w, h)
+  } else if (contentType === 'none') {
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, w, h)
+  } else {
+    /*
+     * İçerik GÖRSEL ama henüz inmedi (ya da videonun ilk karesi hazır değil).
+     * Yüzey boş bırakılırsa panel kamerada tamamen kaybolur; kapalı panel
+     * görünümü konuyor — görsel gelince üstüne çizilecek.
+     */
+    ctx.filter = 'none'
+    ctx.fillStyle = gradient(ctx, w, LED_STOPS)
+    ctx.fillRect(0, 0, w, h)
+  }
+
+  ctx.filter = 'none'
+
+  // Diyot dokusu — yalnız panel kapalıyken; yayın varken görüntü izlenir.
+  if (contentType === 'led') {
+    paintLedDots(ctx, w, h, w / cols / LEDS_PER_CABINET_X, h / rows / LEDS_PER_CABINET_Y)
+  }
+
+  /*
+   * SATIR çizgileri düz tuvalde yatay doğru; dilimlerle birlikte büküldükleri
+   * için hedefte kavisi kendiliğinden takip ederler. (Eskiden hedefte, her
+   * satır için genişlik boyunca nokta nokta eğri çiziliyordu.)
+   */
+  if (showGrid && rows > 1) {
+    ctx.strokeStyle = contentType === 'none' ? 'rgba(100,116,139,0.28)' : 'rgba(255,255,255,0.13)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    for (let r = 1; r < rows; r++) {
+      const y = Math.round((r / rows) * h) + 0.5
+      ctx.moveTo(0, y)
+      ctx.lineTo(w, y)
+    }
+    ctx.stroke()
+  }
+
+  return canvas
+}
+
+/**
  * @param {CanvasRenderingContext2D} ctx  (zaten dpr ölçekli, CSS piksel koordinatları)
  * @param {object} o
  *   w, h        : ekranın CSS piksel ölçüsü
  *   maxD        : tam kavistaki en fazla sarkma (px)
  *   curve       : 0..1 (o anki animasyonlu kavis oranı)
- *   contentType : 'image' | 'gradient' | 'none'
- *   img         : HTMLImageElement | null
+ *   contentType : 'image' | 'gradient' | 'led' | 'none'
+ *   img         : HTMLImageElement | HTMLVideoElement | null
  *   imgSX,imgSY,imgSW,imgSH : kaynak görselden kullanılacak dikdörtgen (çoklu ekran dilimi)
  *   showGrid    : boolean
  *   cols, rows  : kabin sayıları
  *   hideRegions : FHD/UHD rozetlerini gizle
  *   resolution  : 'FHD' | 'UHD'
+ *   rozet       : çözünürlük rozeti çizilsin mi (tasarım ekranı: evet, AR: hayır)
  *   concave     : true = içe kavisli (konkav), false = dışa kavisli (konveks)
+ *   bufferScale : ara tuvalin piksel yoğunluğu (varsayılan 1)
  */
 export function drawCurvedScreen(ctx, o) {
-  const {
-    w, h, maxD, curve, contentType, img, imgSX, imgSY, imgSW, imgSH,
-    showGrid, cols, rows, hideRegions, resolution, rozet = false,
-    concave = false,
-  } = o
+  const { w, h, maxD, curve, contentType, showGrid, cols, rows, hideRegions, resolution, rozet = false, concave = false, bufferScale = 1 } = o
+
+  if (!(w > 0) || !(h > 0)) return
 
   const amp = curve * maxD
   const yOff = maxD / 2
   const totalH = h + maxD
-  const step = 2 // dilim genişliği (px)
+  const step = STEP
   const E = (x) => edgeAt(x, w, h, amp, concave, yOff)
-
-  /**
-   * Bir dilimin çizileceği dikey aralık.
-   * Dilimin İKİ ucundaki kavis değerinin dışını alır (min üst / maks alt) ve
-   * yarım piksel pay ekler. Böylece dilim, kırpma yolunun dışına TAŞAR; fazlası
-   * kırpılır. Eksik kalsaydı kenarda saydam çentikler oluşurdu.
-   */
-  const sliceBox = (x, sw) => {
-    const a = E(x)
-    const b = E(x + sw)
-    const top = Math.min(a.top, b.top) - 0.5
-    const bottom = Math.max(a.top + a.height, b.top + b.height) + 0.5
-    return { top, height: bottom - top }
-  }
 
   ctx.clearRect(0, 0, w, totalH)
 
-  // Panel görüntü YAYINDA mı? Kapalı panel (led) ve boş çerçeve ışık saçmaz.
-  const isLit = contentType === 'image' || contentType === 'gradient'
+  // Düz yüzey bir kez hazırlanır; hedefe yalnızca dilimleri kopyalanır.
+  const bs = Math.max(1, bufferScale)
+  const yuzey = yuzeyiCiz(Math.ceil(w * bs), Math.ceil(h * bs), o)
+  const yuzeyH = yuzey.height
 
   // Kenarların pürüzsüz çıkması için tüm panel çizimi dış hatla kırpılır.
   ctx.save()
   panelPath(ctx, w, E)
   ctx.clip()
 
-  // 1) İçerik — her dikey dilim kendi kavis yüksekliğine göre çizilir.
-  // Yayındayken renkler doygunlaşır ve parlar (ledDots'un söndürmesini de telafi eder).
-  if (isLit) ctx.filter = LED_LIT_FILTER
-  if (contentType === 'image' && isDrawable(img)) {
-    for (let x = 0; x < w; x += step) {
-      const sw = Math.min(step, w - x)
-      const sx = imgSX + (x / w) * imgSW
-      const ssw = Math.max(0.5, (sw / w) * imgSW)
-      const e = sliceBox(x, sw)
-      ctx.drawImage(img, sx, imgSY, ssw, imgSH, x, e.top, sw + 0.6, e.height)
-    }
-  } else if (contentType === 'gradient' || contentType === 'led') {
-    const stops = contentType === 'led' ? LED_STOPS : SAMPLE_STOPS
-    for (let x = 0; x < w; x += step) {
-      const sw = Math.min(step, w - x)
-      const e = sliceBox(x, sw)
-      ctx.fillStyle = sampleColor(x / w, stops)
-      ctx.fillRect(x, e.top, sw + 0.6, e.height)
-    }
-  } else if (contentType === 'none') {
-    ctx.fillStyle = '#ffffff'
-    for (let x = 0; x < w; x += step) {
-      const sw = Math.min(step, w - x)
-      const e = sliceBox(x, sw)
-      ctx.fillRect(x, e.top, sw + 0.6, e.height)
-    }
+  /*
+   * Dilimin çizileceği dikey aralık: iki ucundaki kavis değerinin DIŞINI alır
+   * ve yarım piksel pay ekler. Böylece dilim kırpma yolunun dışına taşar,
+   * fazlası kırpılır; eksik kalsaydı kenarda saydam çentikler oluşurdu.
+   */
+  for (let x = 0; x < w; x += step) {
+    const sw = Math.min(step, w - x)
+    const a = E(x)
+    const b = E(x + sw)
+    const top = Math.min(a.top, b.top) - 0.5
+    const bottom = Math.max(a.top + a.height, b.top + b.height) + 0.5
+    ctx.drawImage(yuzey, x * bs, 0, Math.max(1, sw * bs), yuzeyH, x, top, sw + 0.6, bottom - top)
   }
 
-  if (isLit) ctx.filter = 'none' // filtre yalnızca içerik katmanına uygulanır
-
-  // 1b) LED diyot dokusu — YALNIZCA panel kapalıyken. Yayın varken diyotlar
-  // görünmez; hücre ölçüsü kabinden türer (kabin başına sabit diyot sayısı).
-  if (contentType === 'led') {
-    drawLedDots(ctx, w, totalH, w / cols / LEDS_PER_CABINET_X, h / rows / LEDS_PER_CABINET_Y)
-  }
-
-  // 2) Kabin grid — kolonlar dik, satırlar kavisi takip eder
-  if (showGrid) {
-    ctx.save()
-    // Diyot dokusuyla aynı koruma: çizgiler panel dışına taşmasın
-    ctx.globalCompositeOperation = 'source-atop'
-    // Kabin birleşimi: panelde çok soluk ışık teli (siyah çizgi "kesik" gibi duruyordu)
+  // KOLON çizgileri dik: yüzeyle birlikte bükülemezler, hedefe çizilir.
+  if (showGrid && cols > 1) {
     ctx.strokeStyle = contentType === 'none' ? 'rgba(100,116,139,0.28)' : 'rgba(255,255,255,0.13)'
     ctx.lineWidth = 1
-    for (let c = 0; c <= cols; c++) {
-      const x = (c / cols) * w
+    ctx.beginPath()
+    for (let c = 1; c < cols; c++) {
+      const x = Math.round((c / cols) * w) + 0.5
       const e = E(x)
-      ctx.beginPath()
       ctx.moveTo(x, e.top)
       ctx.lineTo(x, e.top + e.height)
-      ctx.stroke()
     }
-    for (let r = 0; r <= rows; r++) {
-      const f = r / rows
-      ctx.beginPath()
-      for (let x = 0; x <= w; x += step) {
-        const e = E(x)
-        const y = e.top + f * e.height
-        if (x === 0) ctx.moveTo(0, y)
-        else ctx.lineTo(x, y)
-      }
-      ctx.stroke()
-    }
-    ctx.restore()
+    ctx.stroke()
   }
 
   ctx.restore() // panel kırpması biter — rozet tam görünsün
 
   /*
    * BOŞ ÇERÇEVE ("Resim Yok") DIŞ HATTI.
-   * Beyaz dolgu, açık renkli duvarın üstünde görünmüyordu: ekran tamamen
-   * kaybolup yerinde hiçbir şey yokmuş gibi duruyordu. Düz ekranda bu işi CSS
-   * `border` görüyor; tuvalde karşılığı yok, o yüzden dış hat burada
-   * çiziliyor. Kavis de böylece okunuyor — kenarlar eğrinin kendisini izliyor.
+   * Beyaz dolgu açık renkli duvarın üstünde görünmüyordu; düz ekranda bu işi
+   * CSS `border` görüyor, tuvalde karşılığı yok.
    */
   if (contentType === 'none') {
     ctx.save()
@@ -240,9 +278,7 @@ export function drawCurvedScreen(ctx, o) {
     ctx.restore()
   }
 
-  // 3) Çözünürlük rozeti — sol üstte tek.
-  // Sinyal bölgelerini çerçeveyle bölmüyoruz: gerçek bir panelde öyle çizgiler
-  // yok ve ekranın bütünlüğünü bozuyordu.
+  // Çözünürlük rozeti — sol üstte tek; yalnız tasarım ekranında (kamerada değil).
   if (!hideRegions && rozet) {
     const bx = 3
     const by = E(0).top + 3
