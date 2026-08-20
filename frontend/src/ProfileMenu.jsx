@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLang } from './useLang.js'
 import { ROLES, useSession } from './SessionContext.jsx'
+import { useAcilirKonum } from './hooks/useAcilirKonum.js'
 
 const ROLE_STYLE = {
   [ROLES.ADMIN]: {
@@ -61,6 +62,8 @@ export default function ProfileMenu() {
   const { role, displayName, email, initials, isAdmin, isTester, isDealer, isAuthenticated, logout } = useSession()
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
+  // Panel ekran dışına taşmasın diye konum düğmeye göre kıstırılarak hesaplanır
+  const panelKonum = useAcilirKonum(rootRef, open, 280)
   const style = ROLE_STYLE[role] || ROLE_STYLE[ROLES.GUEST]
 
   useEffect(() => {
@@ -124,6 +127,7 @@ export default function ProfileMenu() {
       {open && (
         <div
           role="menu"
+          style={panelKonum || undefined}
           className="absolute right-0 mt-2 w-[280px] z-50 rounded-xl border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#161a21] shadow-xl overflow-hidden"
         >
           <div className="px-3.5 py-3 border-b border-neutral-100 dark:border-[#2c333f]">

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import { translateOption } from './i18n.js'
 import { baseViewingDistance } from './viewingDistance.js'
@@ -299,6 +300,28 @@ const MAX_COMPARE = 4
 export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) {
   const { t, lang } = useLang()
   const [tab, setTab] = useState('led')
+  /*
+   * Dar telefonlarda on bir filtre düğmesi alt alta sarıp modalın tamamını
+   * kaplıyor, model listesi alt çubuğun arkasında kalıyordu. Telefonda şerit
+   * KAPALI başlar, "Filtre" düğmesiyle açılır; sm ve üzerinde eskisi gibi hep
+   * açık (aşağıdaki sm:flex).
+   */
+  const [filtreAcik, setFiltreAcik] = useState(false)
+  /*
+   * Şeridin katlanması yalnızca GENİŞLİĞE bağlanamaz: telefon yan çevrildiğinde
+   * ekran 844 px geniş ama 390 px alçak oluyor, filtreler açık kalıp modalın
+   * tamamını yiyor ve model listesi görünüm dışında kalıyordu. Ölçüt "dar VEYA
+   * alçak".
+   */
+  const [kucukEkran, setKucukEkran] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return
+    const mq = window.matchMedia("(max-width: 639px), (max-height: 640px)")
+    const uygula = () => setKucukEkran(mq.matches)
+    uygula()
+    mq.addEventListener("change", uygula)
+    return () => mq.removeEventListener("change", uygula)
+  }, [])
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState(null)
   const [filters, setFilters] = useState({}) // { [label]: string[] }
@@ -336,6 +359,9 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
   }, [open, onClose])
 
   const filterList = useMemo(() => buildFilters(tab), [tab])
+
+  // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
+  useGovdeKilidi(open)
 
   if (!open) return null
 
@@ -470,7 +496,13 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
         </div>
 
         {/* Gövde */}
-        <div className="flex-1 flex flex-col min-h-0 px-4 sm:px-6 pt-4">
+        {/*
+          Dar telefonlarda filtre şeridi çok satıra yayılıyor ve geriye kalan
+          yükseklik model listesine yetmiyordu: satırlar alt çubuğun ARKASINA
+          düşüyor, dokunulamıyordu. Gövde artık kendi içinde dikey kayıyor
+          (overflow-y-auto), böylece filtre de liste de erişilebilir kalıyor.
+        */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto px-4 sm:px-6 pt-4">
           {/* Dar ekranda sekmeler başlığa sığmaz, buraya düşer */}
           <div className="sm:hidden grid grid-cols-2 gap-2 mb-3 shrink-0">
             {Object.entries(TAB_META).map(([key, meta]) => (
@@ -532,12 +564,25 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
           */}
           <div className="shrink-0 mb-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="flex items-center gap-1.5 text-sm font-medium text-neutral-900 dark:text-neutral-100 mr-1">
+              <button
+                type="button"
+                onClick={() => setFiltreAcik((a) => !a)}
+                aria-expanded={filtreAcik}
+                className="flex items-center gap-1.5 text-sm font-medium text-neutral-900 dark:text-neutral-100 mr-1 sm:cursor-default"
+              >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                 </svg>
                 {t('msm.filter')}
-              </span>
+                {filterCount > 0 && <span className="text-brand">({filterCount})</span>}
+                {/* Ok yalnızca telefonda: orada açılıp kapanıyor */}
+                {kucukEkran && (
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${filtreAcik ? "rotate-180" : ""}`}>
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                )}
+              </button>
+              <span className={!kucukEkran || filtreAcik ? "contents" : "hidden"}>
               {filterList.map((f) => (
                 <FilterDropdown
                   key={f.label}
@@ -548,6 +593,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                   onOpen={() => setOpenFilter((p) => (p === f.label ? null : f.label))}
                 />
               ))}
+              </span>
             </div>
 
             {/* Seçili filtreler rozet olarak — tek tek kaldırılabilir */}
@@ -585,8 +631,15 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
             Dar ekranda sütunlar sıkışıp okunmaz hale geliyordu. Başlık ve gövde
             birlikte YATAY kaydırılır; min-w sayesinde sütunlar ezilmez.
           */}
-          <div className="flex-1 flex flex-col min-h-0 overflow-x-auto">
-          <div className="min-w-[680px] flex-1 flex flex-col min-h-0">
+          {/*
+            min-h-[220px]: tablo bloğu esneyip sıfıra inmesin. Alçak ekranda
+            (telefon yatay) üstteki arama + filtre bloğu bütün yüksekliği
+            yiyor, liste birkaç piksele düşüyor ve hiçbir model görünmüyordu.
+            Taban yükseklik verilince gövde taşıyor ve DİKEY KAYIYOR — liste
+            kaydırarak erişilebilir hale geliyor.
+          */}
+          <div className="flex-1 flex flex-col min-h-[220px] overflow-x-auto">
+          <div className="min-w-[680px] flex-1 flex flex-col min-h-[220px]">
           {/* Tablo başlığı — sıralanabilir sütunlar */}
           <div
             className="grid items-center text-[11px] font-bold tracking-[0.04em] uppercase text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-[#1b2029] border-y border-neutral-200 dark:border-[#2c333f] py-2 px-2 shrink-0"

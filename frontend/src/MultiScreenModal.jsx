@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 
 /**
@@ -90,6 +91,9 @@ export default function MultiScreenModal({ open, onClose, modelCode, category, i
       setScreens(initialScreens && initialScreens.length ? initialScreens.map((s) => ({ ...s })) : [{ type: 'flat', cols: 6, rows: 6 }])
     }
   }, [open, initialScreens])
+
+  // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
+  useGovdeKilidi(open)
 
   if (!open) return null
 

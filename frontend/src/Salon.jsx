@@ -56,6 +56,7 @@ export default function Salon({
   pxPerM,
   duvarWm,
   duvarHm,
+  ekranSekli,
 }) {
   if (!wPx || !hPx || !tuvalW || !tuvalH || !pxPerM) return null
   if (!(duvarWm > 0) || !(duvarHm > 0)) return null
@@ -183,13 +184,37 @@ export default function Salon({
           KASA — ekranın çevresinde ince bir çerçeve. İçi BOŞ bırakılıyor,
           gerçek ekran oraya oturuyor.
         */}
-        <rect
-          x={eSol - kasa}
-          y={eUst - kasa}
-          width={wPx + kasa * 2}
-          height={hPx + kasa * 2}
-          fill="#13161a"
-        />
+        {ekranSekli && ekranSekli.length > 2 ? (
+          /*
+            KASA, EKRANIN DIŞ HATTINI İZLER. İç L tipi ekranın arkasında
+            dikdörtgen bir çerçeve duruyordu; köşesi kırık ekranla çerçeve
+            birbirini tutmuyordu.
+
+            Şekil bir yol olarak çiziliyor ve kalınlığı 2×kasa olan bir konturla
+            genişletiliyor: konturun dış yarısı çerçeveyi yapar, iç yarısı zaten
+            ekranın altında kalır. Böylece köşe kırılmasında da kalınlık sabit
+            kalıyor.
+          */
+          <path
+            d={
+              ekranSekli
+                .map(([nx, ny], i) => `${i ? "L" : "M"}${(eSol + nx * wPx).toFixed(2)},${(eUst + ny * hPx).toFixed(2)}`)
+                .join(" ") + " Z"
+            }
+            fill="#13161a"
+            stroke="#13161a"
+            strokeWidth={kasa * 2}
+            strokeLinejoin="miter"
+          />
+        ) : (
+          <rect
+            x={eSol - kasa}
+            y={eUst - kasa}
+            width={wPx + kasa * 2}
+            height={hPx + kasa * 2}
+            fill="#13161a"
+          />
+        )}
         <rect
           x={eSol - kasa}
           y={eUst - kasa}

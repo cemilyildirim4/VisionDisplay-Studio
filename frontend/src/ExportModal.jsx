@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import html2canvas from 'html2canvas-pro'
 import { useLang } from './useLang.js'
 import { fmt } from './specsData.js'
@@ -73,6 +74,8 @@ export default function ExportModal({ open, onClose, summary }) {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const [address, setAddress] = useState('')
+  // Model seçimi onayı — zorunlu, yalnızca PDF'e not olarak geçer ('yes' | 'no')
+  const [modelOnay, setModelOnay] = useState('')
   const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
@@ -105,6 +108,9 @@ export default function ExportModal({ open, onClose, summary }) {
       return next
     })
   }
+
+  // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
+  useGovdeKilidi(open)
 
   if (!open) return null
 
@@ -165,6 +171,15 @@ export default function ExportModal({ open, onClose, summary }) {
    * Art\u0131k yaln\u0131zca teknik sat\u0131rlar var ve dosya ger\u00E7ek bir Excel dosyas\u0131 \u2014
    * Excel'in "bu bi\u00E7imde \u00F6zellikler kaybolabilir" uyar\u0131s\u0131 da b\u00F6ylece ge\u00E7ti.
    */
+  /*
+   * Not metni PDF'in mesaj alanına eklenir: "Model seçimi onayı: Evet/Hayır".
+   * Müşterinin kendi mesajı varsa altında, olduğu gibi korunur.
+   */
+  const onayNotu = modelOnay ? `${t('exp.modelSureNote')}: ${modelOnay === 'yes' ? t('common.yes') : t('common.no')}` : ''
+  const mesajNotlu = [onayNotu, message.trim()].filter(Boolean).join('\n')
+  // PDF/Excel: KVKK onayı + model sorusu + oturum, üçü birden
+  const hazir = consent && !!modelOnay && isAuthenticated
+
   const handleExcelExport = () => {
     const rows = [
       [t('sp.title'), ''],
@@ -198,6 +213,11 @@ export default function ExportModal({ open, onClose, summary }) {
 
   const handleExport = async () => {
     if (busy) return
+    // Zorunlu alan: düğme zaten kilitli, bu ikinci koruma (klavye/otomasyon)
+    if (!modelOnay) {
+      alert(t('exp.modelSureMissing'))
+      return
+    }
     if (!isAuthenticated) {
       alert(t('exp.needLogin'))
       window.location.hash = '#hesap?tab=session'
@@ -235,7 +255,7 @@ export default function ExportModal({ open, onClose, summary }) {
           phone: compactPhone(phone) || null,
           email: email.trim() || null,
           address: address.trim() || null,
-          message: message.trim() || null,
+          message: mesajNotlu || null,
           screenType: summary.screenType || null,
           resolution: summary.resolution || null,
           screensSummary: screensText.join(' · '),
@@ -279,7 +299,7 @@ export default function ExportModal({ open, onClose, summary }) {
         phone: compactPhone(phone) || null,
         email: email.trim() || null,
         address: address.trim() || null,
-        message: message.trim() || null,
+        message: mesajNotlu || null,
         modelCode: summary.modelCode || null,
         wallWidthM: Number(summary.width) || null,
         wallHeightM: Number(summary.height) || null,
@@ -409,6 +429,41 @@ export default function ExportModal({ open, onClose, summary }) {
             className={errors.address ? inputErrorCls : inputCls}
           />
         </Field>
+        {/*
+          MODEL SEÇİMİ ONAYI — zorunlu.
+
+          Rapor, müşterinin seçtiği modele göre üretiliyor; satış tarafında
+          "müşteri modelden emin miydi?" sorusunun cevabı sonradan
+          bilinemiyordu. Bu yüzden Evet/Hayır zorunlu: boş bırakılamaz,
+          seçilmeden PDF/Excel düğmeleri açılmaz. Cevap yalnızca PDF'e NOT
+          olarak yazılır — tasarımı, ölçüleri veya fiyatı etkilemez.
+        */}
+        <div className="mb-5">
+          <span className="text-xs text-neutral-500 dark:text-neutral-400">
+            {t('exp.modelSure')} <span className="text-brand">*</span>
+          </span>
+          <div className="mt-2 flex gap-2" role="radiogroup" aria-label={t('exp.modelSure')}>
+            {[
+              ['yes', t('common.yes')],
+              ['no', t('common.no')],
+            ].map(([deger, etiket]) => (
+              <button
+                key={deger}
+                type="button"
+                role="radio"
+                aria-checked={modelOnay === deger}
+                onClick={() => setModelOnay(deger)}
+                className={`flex-1 rounded-full py-2 text-sm font-semibold border transition-colors ${
+                  modelOnay === deger
+                    ? 'bg-brand text-white border-brand'
+                    : 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-brand hover:text-brand'
+                }`}
+              >
+                {etiket}
+              </button>
+            ))}
+          </div>
+        </div>
         <Field label={t('exp.message')} error={errors.message}>
           <textarea
             value={message}
@@ -448,20 +503,20 @@ export default function ExportModal({ open, onClose, summary }) {
         <div className="flex items-center gap-2">
           <button
             type="submit"
-            disabled={!consent || busy || !isAuthenticated}
+            disabled={!hazir || busy}
             className={`flex-1 rounded-full py-3 text-sm font-semibold transition-colors ${
-              consent && !busy && isAuthenticated ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
+              hazir && !busy ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
           >
             {busy ? t('exp.generating') : t('pdf.professional')}
           </button>
           <button
             type="button"
-            disabled={!consent || busy}
+            disabled={!hazir || busy}
             onClick={handleExcelExport}
             title={t('exp.csvHint')}
             className={`rounded-full px-4 py-3 text-sm font-semibold border transition-colors ${
-              consent && !busy
+              hazir && !busy
                 ? 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-brand hover:text-brand'
                 : 'border-neutral-200 dark:border-[#242b36] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}

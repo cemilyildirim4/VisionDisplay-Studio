@@ -1,17 +1,20 @@
-import { useEffect, useState, Suspense, lazy } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import App from './App.jsx'
+import { guvenliLazy } from './guvenliLazy.js'
 import { LanguageProvider } from './LanguageContext.jsx'
 import { SessionProvider } from './SessionContext.jsx'
 import { useTheme } from './useTheme.js'
 import { queryClient } from './queryClient.js'
 import ConnectionBanner from './ConnectionBanner.jsx'
 
-// Yönetim UI'sı ana müşteri paketinde durmaz: React.lazy + dynamic import
-// ayrı bir chunk üretir; tarayıcı onu yalnızca #yonetim açılınca çeker.
+// Yönetim UI'sı ana müşteri paketinde durmaz: kod bölme ile ayrı bir chunk
+// üretilir, tarayıcı onu yalnızca #yonetim/#hesap açılınca çeker.
 // PWA precache bu chunk'ı dahil etmez — bkz. vite.config.js globIgnores.
-const AdminPanel = lazy(() => import('./admin/AdminPanel.jsx'))
-const ControlCenter = lazy(() => import('./ControlCenter.jsx'))
+// guvenliLazy: sürüm atlayan sekmelerde eskimiş chunk adı yüzünden hata
+// ekranına düşmesin diye yükleme başarısız olursa sayfa bir kez tazelenir.
+const AdminPanel = guvenliLazy(() => import('./admin/AdminPanel.jsx'))
+const ControlCenter = guvenliLazy(() => import('./ControlCenter.jsx'))
 
 /**
  * Basit adres yönlendirmesi (ek kütüphane gerektirmez):

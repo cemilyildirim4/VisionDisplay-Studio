@@ -487,6 +487,10 @@ const dict = {
   'exp.customer': { tr: 'Ad Soyad', en: 'Full Name', ar: 'الاسم الكامل' },
   'exp.phone': { tr: 'Telefon', en: 'Phone', ar: 'الهاتف' },
   'exp.email': { tr: 'E-posta', en: 'E-mail', ar: 'البريد الإلكتروني' },
+  'exp.modelSure': { tr: 'Model seçiminden emin misiniz?', en: 'Are you sure about the model selection?', ar: 'هل أنت متأكد من اختيار الطراز؟' },
+  'exp.modelSureNote': { tr: 'Model seçimi onayı', en: 'Model selection confirmation', ar: 'تأكيد اختيار الطراز' },
+  'exp.required': { tr: 'zorunlu', en: 'required', ar: 'مطلوب' },
+  'exp.modelSureMissing': { tr: 'Devam etmek için model seçiminden emin olup olmadığınızı belirtin.', en: 'Please state whether you are sure about the model selection.', ar: 'يرجى تحديد ما إذا كنت متأكداً من اختيار الطراز.' },
   'exp.message': { tr: 'Mesaj', en: 'Message', ar: 'رسالة' },
   'exp.address': { tr: 'Adres', en: 'Address', ar: 'العنوان' },
   'exp.consent': {

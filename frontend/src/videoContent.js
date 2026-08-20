@@ -64,8 +64,23 @@ export function createVideoElement(src) {
   v.src = src
   v.loop = true
   v.muted = true // sessiz olmadan tarayıcı otomatik oynatmaya izin vermez
+  v.defaultMuted = true
   v.playsInline = true
+  v.autoplay = true
   v.preload = 'auto'
+  /*
+   * Öğe DOM'a eklenmediği için React değil, ETİKETLERİ elle yazıyoruz:
+   * iOS otomatik oynatma iznini "muted" ve "playsinline" etiketlerine
+   * bakarak veriyor, yalnızca JavaScript özelliğine bakmıyor.
+   */
+  v.setAttribute('muted', '')
+  v.setAttribute('playsinline', '')
   v.play().catch(() => {}) // sekme arka plandaysa reddedilebilir, sorun değil
+  /*
+   * Kamera açıldığında iOS oynayan videoları duraklatıyor; kavisli ekran
+   * o anda tuvale çizecek kare bulamayıp siyah kalıyordu. Duraklarsa
+   * yeniden başlat.
+   */
+  v.addEventListener('pause', () => { v.play().catch(() => {}) })
   return v
 }

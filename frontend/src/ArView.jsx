@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import html2canvas from 'html2canvas-pro'
-import { Screen } from './WallPreview.jsx'
+import { Screen, VideoLayer, contentImage, seritMaskePolygon } from './WallPreview.jsx'
+import { videoSrcFor } from './videoContent.js'
+import { LED_LIT_FILTER } from './content.js'
 import { useLang } from './useLang.js'
 import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
 
@@ -102,6 +105,8 @@ export default function ArView({
   const videoRef = useRef(null)
   const akisRef = useRef(null)
   const kapRef = useRef(null)
+  // Son bilinen görünüm alanı ölçüsü — döndürmede oranlı taşıma için
+  const oncekiKutuRef = useRef(null)
   const katmanRef = useRef(null)
 
   const [ornekAcik, setOrnekAcik] = useState(false)
@@ -251,6 +256,25 @@ export default function ArView({
     const el = kapRef.current
     const oku = () => {
       const r = el.getBoundingClientRect()
+      /*
+       * TELEFON DÖNDÜRÜLDÜĞÜNDE tasarım ekranda kalmalı. Eskiden yalnızca kutu
+       * ölçüsü güncelleniyordu; merkez ve ölçek dikeydeki piksel değerlerinde
+       * kaldığı için yatay çevrildiğinde tasarım kenara kayıyor, çoğu zaman
+       * görünüm alanının dışına çıkıyordu.
+       *
+       * Çözüm: yeni ölçüye ORANLA taşı. Merkez bağıl konumunu, ölçek de bağıl
+       * büyüklüğünü korur — kullanıcı neyi nereye koyduysa döndürdükten sonra
+       * da orada bulur.
+       */
+      const onceki = oncekiKutuRef.current
+      if (onceki && onceki.w > 1 && onceki.h > 1 && (Math.abs(onceki.w - r.width) > 1 || Math.abs(onceki.h - r.height) > 1)) {
+        const kx = r.width / onceki.w
+        const ky = r.height / onceki.h
+        const k = Math.min(kx, ky)
+        setMerkez((e) => ({ x: e.x * kx, y: e.y * ky }))
+        setPxPerM((e) => kis(e * k, EN_KUCUK_OLCEK, EN_BUYUK_OLCEK))
+      }
+      oncekiKutuRef.current = { w: r.width, h: r.height }
       setKutu({ w: r.width, h: r.height })
       setMerkez((e) => (e.x === 0 && e.y === 0 ? { x: r.width / 2, y: r.height / 2 } : e))
       // İlk ölçek: tasarım genişliğin yarısı kadar görünsün — hem tamamı
@@ -487,6 +511,9 @@ export default function ArView({
     a.click()
   }
 
+  // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
+  useGovdeKilidi(open)
+
   if (!open) return null
 
   /* ------------------------------------------------------------- geometri */
@@ -497,6 +524,38 @@ export default function ArView({
   const sag = merkez.x + w / 2
   const ust = merkez.y - h / 2
   const alt = merkez.y + h / 2
+
+  /*
+   * TASARIMDAKİYLE BİREBİR AYNI ÇİZİM.
+   *
+   * Çalışma alanı önizlemesinde (WallPreview) bütün ekranlar düz/L tipiyse ve
+   * hepsi ortak içeriği kullanıyorsa içerik TEK katman olarak şeridin tamamına
+   * yayılıyor, ekranlar onun üstüne yalnızca çerçeve olarak çiziliyor. Kamerada
+   * ise her ekran kendi içeriğini ayrı ayrı çiziyordu; bu iki farka yol
+   * açıyordu:
+   *   - Video içerikte her ekran (L tipinde her KANAT) ayrı bir <video>
+   *     demekti; telefon hepsini birden oynatamayınca aradaki panel siyah
+   *     kalıyor, tasarımın ortasında kopma görünüyordu.
+   *   - Ekranlar arası içerik dizilimi önizlemedekiyle tam örtüşmüyordu.
+   * Artık kamera da aynı tek katmanı ve aynı dış hat maskesini kullanıyor.
+   */
+  const yerlesim = parcalar.map((s) => ({
+    ...s,
+    wPx: s.wm * pxPerM,
+    hPx: s.hm * pxPerM,
+    xStart: s.xm * pxPerM,
+  }))
+  const sekilUygun = yerlesim.every((s) => {
+    const t = s.type || 'flat'
+    return t === 'flat' || t === 'lshape'
+  })
+  const ortakIcerik = yerlesim.every((s) => !s.content)
+  const seritGorsel = content !== 'none' ? contentImage(content, contentUrl) : null
+  const seritVideo = content !== 'none' ? videoSrcFor(content, contentUrl) : null
+  const tekKatman = sekilUygun && ortakIcerik && !!(seritGorsel || seritVideo)
+  // Yayın var mı (kapalı panel ve boş çerçeve ışık saçmaz)
+  const seritYayin = content !== 'none' && content !== 'led'
+  const maskePolygon = tekKatman ? seritMaskePolygon(yerlesim, h) : undefined
 
   // Kenar boşlukları — görüntü çerçevesine olan uzaklık, o anki ölçekle metreye
   const bosluk = {
@@ -598,14 +657,33 @@ export default function ArView({
               onWheel={tekerlek}
             >
               {/* Ekranlar şeridi — alta hizalı, WallPreview ile aynı yerleşim */}
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end' }}>
-                {parcalar.map((s, i) => {
-                  const sh = s.hm * pxPerM
-                  return (
+              <div style={{ position: 'absolute', inset: 0 }}>
+                {/* z0: Tek içerik katmanı — tüm şeride yayılır, ekran şekline kırpılır */}
+                {tekKatman && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      zIndex: 0,
+                      overflow: 'hidden',
+                      clipPath: maskePolygon,
+                      backgroundColor: '#0a0a0a',
+                      backgroundImage: seritGorsel || undefined,
+                      backgroundSize: `${w}px ${h}px`,
+                      backgroundRepeat: 'no-repeat',
+                      filter: seritGorsel && seritYayin ? LED_LIT_FILTER : undefined,
+                    }}
+                  >
+                    {seritVideo && <VideoLayer src={seritVideo} gw={w} gh={h} left={0} top={0} lit={seritYayin} />}
+                  </div>
+                )}
+                {/* z2: Ekranlar (tek katman varsa yalnız çerçeve) */}
+                <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'flex-end' }}>
+                {yerlesim.map((s, i) => (
                     <Screen
                       key={i}
-                      wPx={s.wm * pxPerM}
-                      hPx={sh}
+                      wPx={s.wPx}
+                      hPx={s.hPx}
                       cols={s.cols}
                       rows={s.rows}
                       type={s.type || 'flat'}
@@ -614,16 +692,17 @@ export default function ArView({
                       content={s.content || content}
                       contentUrl={s.content ? null : contentUrl}
                       hideRegions={hideRegions}
+                      frameOnly={tekKatman}
                       curveAmount={curveAmount}
                       leftCols={s.leftCols}
                       rightCols={s.rightCols}
                       spanW={w}
                       spanH={h}
-                      offsetX={s.xm * pxPerM}
-                      offsetY={h - sh}
+                      offsetX={s.xStart}
+                      offsetY={h - s.hPx}
                     />
-                  )
-                })}
+                ))}
+                </div>
               </div>
               {/*
                 Tasarımın etrafındaki mavi kenarlık KALDIRILDI. Bir seçim
@@ -741,7 +820,12 @@ export default function ArView({
 
         {/* ---------------------------------------------------------- ALT BAR */}
         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-8 pb-5">
-          <div className="flex items-center justify-center gap-4 px-4">
+          {/*
+            Dar telefonlarda beş denetim 390 pikselin dışına taşıyordu (soldaki
+            LENS ve sağdaki AR düğmesi ekranın dışında kalıyor, tıklanamıyordu).
+            Şerit artık YATAY KAYDIRILIYOR; sığdığında ortalanmış duruyor.
+          */}
+          <div className="flex items-center justify-center sm:justify-center gap-4 px-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {/* Fotoğraf arka plandayken lens/flaş anlamsız — yerine fotoğrafı değiştir */}
             {arkaFoto ? (
               /* Fotoğraftayken: fotoğrafı değiştir, ya da kameraya geri dön */

@@ -142,3 +142,10 @@ export const bezelGapStyle = (cellW, cellH, gapPx, color = BEZEL_COLOR) => ({
   backgroundImage: `linear-gradient(to right, ${color} ${gapPx}px, transparent ${gapPx}px), linear-gradient(to bottom, ${color} ${gapPx}px, transparent ${gapPx}px)`,
   backgroundSize: `${cellW}px ${cellH}px`,
 })
+
+/**
+ * İç L tipi ekranda dikişe doğru kanadın içeri girme oranı (%).
+ * Hem ekranın kırpımı (WallPreview) hem mekândaki kasa (Salon/Cephe) bu
+ * değeri kullanır; ikisi ayrışırsa çerçeve ekranı tutmaz.
+ */
+export const L_KIRILMA_PCT = 10
