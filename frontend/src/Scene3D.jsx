@@ -3,6 +3,7 @@ import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Instances, Instance, ContactShadows } from '@react-three/drei'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
+import { USDZExporter } from 'three/examples/jsm/exporters/USDZExporter.js'
 import * as THREE from 'three'
 import { useLang } from './useLang.js'
 import { curveDepthFor, DEFAULT_CONTENT_SRC } from './content.js'
@@ -704,11 +705,58 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
   )
 }
 
-/** GLB dışa aktarma + `<model-viewer>` ile gerçek WebXR / Scene Viewer / Quick Look AR. */
+/**
+ * USDZ, YALNIZCA MeshStandardMaterial ANLAR.
+ *
+ * Ekran yüzeyi sahnede `meshBasicMaterial` kullanıyor (ışıktan etkilenmesin,
+ * görüntü olduğu gibi görünsün diye). USDZExporter bu türü tanımıyor ve
+ * "Unsupported material type" deyip atlıyor: iPhone'da Quick Look'ta panelin
+ * içeriği kayboluyor, geriye kapkara kabin gövdeleri kalıyordu.
+ *
+ * Dışa aktarma sırasında bu malzemeler geçici olarak MeshStandardMaterial'e
+ * çevriliyor. Doku hem `map` hem `emissiveMap` olarak veriliyor: LED paneli
+ * ışık YAYAR, o yüzden AR'de odanın aydınlatmasından bağımsız olarak parlak
+ * görünmeli — aksi halde karanlık bir odada ekran da sönük çıkardı. Aynı
+ * malzeme GLB'ye de gidiyor, yani Android tarafı da bundan kazanıyor.
+ *
+ * Değiştirilen malzemeler geri konmak üzere döndürülüyor; sahnedeki canlı
+ * görüntü hiç bozulmuyor.
+ */
+function disaAktarmaMalzemeleri(scene) {
+  const geriAl = []
+  scene.traverse((o) => {
+    const m = o.material
+    if (!m || !m.isMeshBasicMaterial) return
+    const std = new THREE.MeshStandardMaterial({
+      map: m.map || null,
+      color: m.color ? m.color.clone() : new THREE.Color(0xffffff),
+      emissive: new THREE.Color(0xffffff),
+      emissiveMap: m.map || null,
+      emissiveIntensity: 1,
+      roughness: 0.35,
+      metalness: 0,
+      toneMapped: false,
+    })
+    geriAl.push({ nesne: o, eski: m, yeni: std })
+    o.material = std
+  })
+  return {
+    geriYukle() {
+      for (const k of geriAl) {
+        k.nesne.material = k.eski
+        k.yeni.dispose()
+      }
+    },
+  }
+}
+
+/** GLB + USDZ dışa aktarma ve `<model-viewer>` ile gerçek Scene Viewer / Quick Look AR. */
 function useGlbAr() {
   const { t } = useLang()
   const [busy, setBusy] = useState(false)
   const [viewerUrl, setViewerUrl] = useState(null)
+  // iOS Quick Look yalnızca USDZ açar; GLB'yi hiç tanımaz (bkz. model-viewer)
+  const [iosUrl, setIosUrl] = useState(null)
   const sceneRef = useRef(null)
   const cameraRef = useRef(null)
 
@@ -746,18 +794,48 @@ function useGlbAr() {
         bak()
       })
 
-      const exporter = new GLTFExporter()
-      const glb = await new Promise((resolve, reject) => {
-        exporter.parse(
-          sceneRef.current,
-          (result) => resolve(result),
-          (err) => reject(err),
-          { binary: true },
-        )
-      })
-      const blob = new Blob([glb], { type: 'model/gltf-binary' })
-      const url = URL.createObjectURL(blob)
-      setViewerUrl(url)
+      /*
+       * İKİ FORMAT birden üretiliyor — platformlar farklı dosya istiyor:
+       *   Android (Scene Viewer) + WebXR → .glb
+       *   iOS (Quick Look)               → .usdz
+       * Eskiden yalnızca GLB vardı; iPhone'da `quick-look` kipi açılacak dosya
+       * bulamadığı için "AR'da Gör" hiçbir şey yapmıyordu.
+       */
+      const kilit = disaAktarmaMalzemeleri(sceneRef.current)
+      let glb
+      let usdz = null
+      try {
+        glb = await new Promise((resolve, reject) => {
+          new GLTFExporter().parse(
+            sceneRef.current,
+            (result) => resolve(result),
+            (err) => reject(err),
+            { binary: true },
+          )
+        })
+        /*
+         * USDZ üretimi başarısız olsa bile GLB ile devam edilir: Android ve
+         * WebXR yine çalışsın, tek bir platformun sorunu hepsini düşürmesin.
+         *
+         * anchoring/planeAnchoring: modelin YATAY bir düzleme (zemin/masa)
+         * oturacağını söyler — Quick Look açılır açılmaz yüzey arar ve
+         * kullanıcı ekranı parmağıyla istediği yere sürükler.
+         */
+        try {
+          usdz = await new USDZExporter().parseAsync(sceneRef.current, {
+            ar: { anchoring: { type: 'plane' }, planeAnchoring: { alignment: 'horizontal' } },
+            includeAnchoringProperties: true,
+            maxTextureSize: 2048,
+          })
+        } catch (e) {
+          console.warn('USDZ üretilemedi, iOS AR devre dışı:', e)
+        }
+      } finally {
+        kilit.geriYukle()
+      }
+
+      setViewerUrl(URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' })))
+      setIosUrl(usdz ? URL.createObjectURL(new Blob([usdz], { type: 'model/vnd.usdz+zip' })) : null)
     } catch (e) {
       console.error('AR modeli oluşturulamadı:', e)
       alert(t('scene3d.arExportError'))
@@ -768,10 +846,12 @@ function useGlbAr() {
 
   const close = useCallback(() => {
     if (viewerUrl) URL.revokeObjectURL(viewerUrl)
+    if (iosUrl) URL.revokeObjectURL(iosUrl)
     setViewerUrl(null)
-  }, [viewerUrl])
+    setIosUrl(null)
+  }, [viewerUrl, iosUrl])
 
-  return { onReady, exportAndOpen, close, viewerUrl, busy }
+  return { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy }
 }
 
 /** Alt bardaki arka plan düğmesi — kameradaki AracDugme ile aynı görünüm. */
@@ -792,7 +872,34 @@ function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
 
 export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens }) {
   const { t } = useLang()
-  const { onReady, exportAndOpen, close, viewerUrl, busy } = useGlbAr()
+  const { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy } = useGlbAr()
+
+  /*
+   * AR GERÇEKTEN AÇILABİLİYOR MU?
+   *
+   * Bunu tarayıcı adından tahmin etmiyoruz; model-viewer modeli yükleyip
+   * platformu yokladıktan sonra `canActivateAR` ile kendisi söylüyor. Cevap
+   * `ar-status` olayıyla geliyor, o yüzden hem olaya abone oluyoruz hem de
+   * (olay biz dinlemeye başlamadan önce geçmiş olabileceği için) bir kez
+   * doğrudan okuyoruz.
+   */
+  const mvRef = useRef(null)
+  const [arDestekli, setArDestekli] = useState(false)
+  useEffect(() => {
+    const mv = mvRef.current
+    if (!viewerUrl || !mv) {
+      setArDestekli(false)
+      return
+    }
+    const bak = () => setArDestekli(!!mv.canActivateAR)
+    bak()
+    mv.addEventListener('ar-status', bak)
+    mv.addEventListener('load', bak)
+    return () => {
+      mv.removeEventListener('ar-status', bak)
+      mv.removeEventListener('load', bak)
+    }
+  }, [viewerUrl, iosUrl])
 
   /*
    * ARKA PLAN — kameradaki (ArView) ile aynı mantık: sahnenin arkasına hazır
@@ -989,13 +1096,54 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
             {/* model-viewer standart bir HTML özel elemanıdır; React JSX'te
                 doğrudan kullanılabilir, ekstra sarmalayıcıya gerek yoktur. */}
             <model-viewer
+              ref={mvRef}
               src={viewerUrl}
+              /* iOS Quick Look USDZ ister; bu olmadan iPhone'da AR hiç açılmaz */
+              ios-src={iosUrl || undefined}
               ar
               ar-modes="webxr scene-viewer quick-look"
+              /*
+               * Model zemine oturur (Amazon'un mobilya yerleştirmesiyle aynı):
+               * kullanıcı yüzeyi tarar, ekranı parmağıyla istediği yere
+               * sürükler, iki parmakla döndürür.
+               */
+              ar-placement="floor"
+              /*
+               * "auto": kullanıcı AR'de modeli iki parmakla BÜYÜTÜP küçültebilir.
+               * "fixed" olsaydı model gerçek ölçüsüne kilitlenir, boyutlandırma
+               * kapanırdı — istenen, ölçüyü de düzenleyebilmek.
+               */
+              ar-scale="auto"
               camera-controls
               shadow-intensity="1"
               style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
             />
+          </div>
+
+          {/*
+            TEK DOKUNUŞLA AR — Amazon'daki "Odanızda görüntüleyin" düğmesinin
+            karşılığı. model-viewer'ın kendi küçük AR rozeti köşede duruyor ve
+            telefonda çoğu kullanıcı onu fark etmiyordu; buradaki büyük düğme
+            doğrudan `activateAR()` çağırıyor, yani Android'de Scene Viewer,
+            iPhone'da Quick Look tek dokunuşta açılıyor.
+
+            AR desteklenmeyen cihazda (masaüstü tarayıcı, USDZ üretilememiş
+            iPhone) düğme yerine sebebini söyleyen bir satır gösteriliyor —
+            eskiden düğmeye basılıyor ve hiçbir şey olmuyordu.
+          */}
+          <div className="px-4 pb-4 pt-1 shrink-0">
+            {arDestekli ? (
+              <button
+                type="button"
+                onClick={() => mvRef.current?.activateAR?.()}
+                className="w-full rounded-full py-3 text-[15px] font-semibold bg-brand text-white hover:bg-brand-dark transition-colors"
+              >
+                {t('scene3d.arPlace')}
+              </button>
+            ) : (
+              <p className="text-center text-[12px] text-white/55 m-0">{t('scene3d.arUnsupported')}</p>
+            )}
+            <p className="mt-2 text-center text-[11px] text-white/45 m-0">{t('scene3d.arHint')}</p>
           </div>
         </div>
       )}

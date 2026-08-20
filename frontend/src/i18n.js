@@ -411,6 +411,9 @@ const dict = {
   'scene3d.viewInAr': { tr: "AR'da Gör", en: 'View in AR', ar: 'عرض بالواقع المعزز' },
   'scene3d.hint': { tr: 'Sürükleyerek döndürün, tekerlek/iki parmakla yakınlaştırın.', en: 'Drag to rotate, scroll/pinch to zoom.', ar: 'اسحب للتدوير، قرّب بالتمرير أو بإصبعين.' },
   'scene3d.arExportError': { tr: '3D model oluşturulamadı. Cihazınız veya tarayıcınız desteklemiyor olabilir.', en: 'Could not generate the 3D model. Your device or browser may not support this.', ar: 'تعذر إنشاء النموذج ثلاثي الأبعاد. قد لا يدعمه جهازك أو متصفحك.' },
+  'scene3d.arPlace': { tr: 'Odanızda görüntüleyin', en: 'View in your room', ar: 'اعرضه في غرفتك' },
+  'scene3d.arHint': { tr: 'Kamerayı zemine doğrultun, ekranı sürükleyerek yerleştirin; iki parmakla döndürün ve boyutlandırın.', en: 'Point the camera at the floor, drag to place the screen; pinch to rotate and resize.', ar: 'وجّه الكاميرا نحو الأرض، اسحب لوضع الشاشة؛ استخدم إصبعين للتدوير وتغيير الحجم.' },
+  'scene3d.arUnsupported': { tr: 'Bu cihazda AR açılamıyor. Telefonunuzun kamerasıyla denemek için sayfayı telefondan açın.', en: 'AR is not available on this device. Open the page on your phone to try it with the camera.', ar: 'الواقع المعزز غير متاح على هذا الجهاز. افتح الصفحة على هاتفك لتجربته بالكاميرا.' },
   'scene3d.arReady': { tr: 'Model hazır — telefonda AR düğmesine dokunun', en: 'Model ready — tap the AR button on your phone', ar: 'النموذج جاهز — انقر على زر الواقع المعزز على هاتفك' },
   /* Kısa tutuldu: dar panelde üç satıra taşıp gereğinden çok yer kaplıyordu. */
   'wiz.entry': { tr: 'Hangi modeli seçeceğinizi bilmiyor musunuz?', en: 'Not sure which model to pick?', ar: 'لا تعرف أي طراز تختار؟' },
