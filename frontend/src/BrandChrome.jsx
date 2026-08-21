@@ -9,6 +9,18 @@ export function BrandMark({
   size = 'md',
   showCompany = true,
   darkOnDark = false,
+  /*
+   * Dar ekranda metin bloğunu tamamen gizler, geriye yalnızca logo kalır.
+   *
+   * Antedin sağında başka öğeler varken (yönetim panelinde "Çıkış" ve
+   * "← Konfigüratöre dön") metne düşen genişlik telefonda o kadar azalıyor ki
+   * başlık "MASAÜSTÜ Bİ…" / "Yönetim P…" diye kırpılıyor. Yarım okunan bir
+   * başlık hiç olmamasından kötü; logo kimliği zaten taşıyor.
+   *
+   * Yatay tutuşta aynı gizleme `yatay-gizle` ile CSS tarafında zaten yapılıyor
+   * (bkz. index.css); bu seçenek onun DİK tutuştaki karşılığı.
+   */
+  hideTextOnMobile = false,
 }) {
   const logoH = size === 'lg' ? 'h-11 sm:h-12' : size === 'sm' ? 'h-7' : 'h-8 sm:h-9'
   return (
@@ -23,7 +35,7 @@ export function BrandMark({
           darkOnDark ? 'bg-white/20 h-9' : 'bg-neutral-200 dark:bg-[#2c333f] h-8'
         }`}
       />
-      <div className="yatay-gizle min-w-0">
+      <div className={`yatay-gizle min-w-0 ${hideTextOnMobile ? 'hidden sm:block' : ''}`}>
         {showCompany && (
           <p
             className={`m-0 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] truncate ${

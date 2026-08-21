@@ -1023,6 +1023,10 @@ export default function AdminPanel() {
               : 'Ürün kataloğu, satış talepleri ve sistem izleme'
           }
           size="lg"
+          /* Telefonda sağdaki "Çıkış / Konfigüratöre dön" ile yarışıp
+             "MASAÜSTÜ Bİ… / Yönetim P…" diye kırpılıyordu; dar ekranda
+             yalnızca logo kalıyor (bkz. BrandMark → hideTextOnMobile). */
+          hideTextOnMobile
         />
         <div className="flex items-center gap-4 shrink-0">
           <button
