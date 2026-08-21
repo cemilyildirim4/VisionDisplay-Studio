@@ -51,7 +51,7 @@ function ChoiceCard({ label, active, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left rounded-xl border-2 px-4 py-3.5 transition-colors ${
+      className={`w-full text-left rounded-xl border-2 p-4 md:p-6 min-h-[44px] text-sm md:text-base transition-colors ${
         active
           ? 'btn-selected'
           : 'border-neutral-200 dark:border-[#2c333f] hover:border-neutral-300 dark:hover:border-[#39414f]'
@@ -68,12 +68,12 @@ function RecCard({ rec, badge, why, pickLabel, onPick }) {
     <button
       type="button"
       onClick={() => onPick(cab)}
-      className="w-full text-left rounded-xl border border-neutral-200 dark:border-[#2c333f] px-4 py-3 hover:border-brand transition-colors"
+      className="w-full md:flex-1 text-left rounded-xl border border-neutral-200 dark:border-[#2c333f] p-4 md:p-6 hover:border-brand transition-colors max-w-full min-w-0"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex flex-col md:flex-row items-start justify-between gap-3">
+        <div className="min-w-0 w-full md:w-auto max-w-full">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400 mb-0.5">{badge}</div>
-          <div className="font-bold text-brand">{cab.modelCode}</div>
+          <div className="font-bold text-brand text-sm md:text-base">{cab.modelCode}</div>
           {cab.series?.name ? (
             <div className="text-xs text-neutral-500 dark:text-neutral-400">{cab.series.name}</div>
           ) : null}
@@ -85,7 +85,7 @@ function RecCard({ rec, badge, why, pickLabel, onPick }) {
           </div>
           <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 mb-0 leading-relaxed">{why}</p>
         </div>
-        <span className="text-xs font-semibold text-brand shrink-0 mt-4">{pickLabel} →</span>
+        <span className="text-xs font-semibold text-brand shrink-0 mt-1 md:mt-4 inline-flex items-center min-h-[44px]">{pickLabel} →</span>
       </div>
     </button>
   )
@@ -166,7 +166,7 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
     {
       titleKey: 'wiz.step1Title',
       body: (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {PLACES.map((p) => (
             <ChoiceCard
               key={p.id}
@@ -222,14 +222,14 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
   const current = steps[step]
 
   return (
-    <div className="fixed inset-0 z-[70] bg-[#001334]/45 flex items-center justify-center p-4" onClick={close}>
+    <div className="fixed inset-0 z-[70] bg-[#001334]/45 flex items-center justify-center p-0 sm:p-4" onClick={close}>
       <div
-        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[calc(100%-2rem)] mx-4 md:mx-auto md:max-w-[520px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-[#12151c] text-white px-5 py-3.5 flex items-center justify-between gap-4">
-          <h2 className="text-base font-bold m-0">{t('wiz.title')}</h2>
-          <button type="button" onClick={close} aria-label={t('exp.close')} className="text-white/70 hover:text-white transition-colors">
+        <div className="bg-[#12151c] text-white px-4 md:px-5 py-3.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4">
+          <h2 className="text-sm md:text-base font-bold m-0">{t('wiz.title')}</h2>
+          <button type="button" onClick={close} aria-label={t('exp.close')} className="text-white/70 hover:text-white transition-colors inline-flex items-center justify-center min-h-[44px] min-w-[44px]">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <line x1="6" y1="6" x2="18" y2="18" />
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -239,20 +239,20 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
 
         <StepDots step={Math.min(step, 3)} total={4} />
 
-        <div className="flex-1 overflow-auto px-5 pb-5">
+        <div className="flex-1 overflow-auto px-4 md:px-6 pb-4 md:pb-6">
           {step < 3 ? (
             <>
-              <h3 className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mb-3 mt-1">{t(current.titleKey)}</h3>
+              <h3 className="text-sm md:text-base font-semibold text-neutral-500 dark:text-neutral-400 mb-3 mt-1">{t(current.titleKey)}</h3>
               {current.body}
               {step > 0 && (
-                <button type="button" onClick={() => setStep((s) => s - 1)} className="mt-4 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200">
+                <button type="button" onClick={() => setStep((s) => s - 1)} className="mt-4 text-xs md:text-sm text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 min-h-[44px] inline-flex items-center">
                   ← {t('wiz.back')}
                 </button>
               )}
             </>
           ) : (
             <>
-              <h3 className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mb-3 mt-1">{t('wiz.resultsTitle')}</h3>
+              <h3 className="text-sm md:text-base font-semibold text-neutral-500 dark:text-neutral-400 mb-3 mt-1">{t('wiz.resultsTitle')}</h3>
               <label className="block mb-3">
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">{t('wiz.budget')}</span>
                 <input
@@ -261,10 +261,10 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
                   value={budgetText}
                   onChange={(e) => setBudgetText(e.target.value)}
                   placeholder={t('wiz.budgetPlaceholder')}
-                  className="mt-1 w-full rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#12151c] px-3 py-2 text-sm"
+                  className="mt-1 w-full max-w-full rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#12151c] px-3 py-2 min-h-[44px] text-sm md:text-base"
                 />
               </label>
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col md:flex-row flex-wrap gap-2.5">
                 {ranked.primary && (
                   <RecCard
                     rec={ranked.primary}
@@ -287,8 +287,8 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
                   <p className="text-sm text-neutral-400">{t('wiz.noResults')}</p>
                 )}
               </div>
-              <div className="flex items-center justify-between mt-4">
-                <button type="button" onClick={() => setStep(2)} className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 mt-4">
+                <button type="button" onClick={() => setStep(2)} className="text-xs md:text-sm text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 min-h-[44px] inline-flex items-center">
                   ← {t('wiz.back')}
                 </button>
                 <button
@@ -297,7 +297,7 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
                     onOpenFullList?.()
                     close()
                   }}
-                  className="text-xs font-semibold text-brand hover:underline"
+                  className="text-xs md:text-sm font-semibold text-brand hover:underline min-h-[44px] inline-flex items-center"
                 >
                   {t('wiz.seeAll')}
                 </button>
