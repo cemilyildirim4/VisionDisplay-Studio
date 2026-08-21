@@ -87,6 +87,46 @@ function AracDugme({ onClick, etiket, deger, aktif = false }) {
   )
 }
 
+/**
+ * Kamera üstündeki yuvarlak araç düğmesi — Amazon'un AR ekranında sağ üstte
+ * duran koyu daireli düğmelerin karşılığı (sıfırla / paylaş / konumlandır).
+ * İçerik olarak yalnızca SVG yolu (`path`) alır; çerçeve burada tek yerde.
+ */
+function YuvarlakDugme({ onClick, etiket, aktif = false, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={etiket}
+      title={etiket}
+      className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+        aktif ? 'bg-white text-neutral-900' : 'bg-black/55 text-white hover:bg-black/70'
+      }`}
+    >
+      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        {children}
+      </svg>
+    </button>
+  )
+}
+
+/** Hassas ayar tuşu — yön okları ve döndürme için kare, küçük düğme. */
+function TusDugme({ onClick, etiket, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={etiket}
+      title={etiket}
+      className="w-11 h-11 rounded-lg bg-black/55 text-white hover:bg-black/75 flex items-center justify-center transition-colors"
+    >
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        {children}
+      </svg>
+    </button>
+  )
+}
+
 export default function ArView({
   open,
   onClose,
@@ -131,6 +171,34 @@ export default function ArView({
    */
   const [olculer, setOlculer] = useState(true)
   const [mesgul, setMesgul] = useState(false)
+
+  /*
+   * ────────────────────────────────────────────────────────────────────────
+   * YERLEŞTİRME AKIŞI — referans: Amazon "Odanızda görüntüleyin"
+   *
+   * Orada iş üç adımda yürüyor ve her adım ne yapılacağını kendisi söylüyor:
+   *   1) 'ipucu'     — "Sürükle ve döndür" kartı, tek düğmeyle geçiliyor
+   *   2) 'yerlestir' — "Yerleştirmek için dokunun", ekranda bir nişangâh var
+   *   3) 'yerlesti'  — ürün duruyor; taşınıyor, döndürülüyor, ölçekleniyor
+   *
+   * Bizde eskiden bu adımlar yoktu: pencere açılır açılmaz tasarım ortada
+   * beliriyordu, ne yapılacağını anlatan hiçbir şey yoktu. Müşteri ekranı
+   * sürükleyebileceğini ya da iki parmakla büyütebileceğini ancak tesadüfen
+   * keşfediyordu.
+   *
+   * NOT — GERÇEK YÜZEY ALGILAMA YOK, OLAMAZ.
+   * Amazon bunu kendi uygulamasında ARKit ile yapıyor: zemini tanıyor,
+   * noktalarla gösteriyor ve sen yürüsen bile ürün yerinde kalıyor. Tarayıcıda
+   * bunun karşılığı WebXR ve iOS Safari WebXR'ı desteklemiyor. Burada kamera
+   * görüntüsünün ÜSTÜNE çiziyoruz: yerleştirme, taşıma, döndürme ve ölçekleme
+   * aynı şekilde çalışıyor; eksik olan tek şey dünya takibi.
+   * ────────────────────────────────────────────────────────────────────────
+   */
+  const [asama, setAsama] = useState('ipucu')
+  // Y ekseni dönüşü (derece) — iki parmakla çevirerek ya da tuş takımıyla
+  const [donus, setDonus] = useState(0)
+  // Hassas ayar tuş takımı (ok tuşları + döndürme) açık mı
+  const [tusTakimi, setTusTakimi] = useState(false)
 
   // Tasarımın ekrandaki yeri (merkez, px) ve ölçeği (px/m)
   const [merkez, setMerkez] = useState({ x: 0, y: 0 })
@@ -239,6 +307,16 @@ export default function ArView({
     akisRef.current = null
     setCekim(null)
     setArkaFoto(null)
+    /*
+     * Yerleştirme akışı da başa alınır. Bileşen kapanınca DOM'dan kalkmıyor
+     * (yalnızca `open` false oluyor), dolayısıyla sıfırlanmasaydı pencere
+     * yeniden açıldığında ürün bir önceki oturumun konumunda ve dönüşünde
+     * hazır beliriyor, "dokunarak yerleştirme" adımı hiç görünmüyordu.
+     */
+    setAsama('ipucu')
+    setDonus(0)
+    setTusTakimi(false)
+    setMerkez({ x: 0, y: 0 }) // {0,0} = "henüz konmadı"; ölçüm etkisi ortalar
   }, [open])
 
   useEffect(() => () => akisRef.current?.getTracks().forEach((iz) => iz.stop()), [])
@@ -299,8 +377,19 @@ export default function ArView({
   const baslangicRef = useRef(null)
   const merkezRef = useRef(merkez)
   const olcekRef = useRef(pxPerM)
+  const donusRef = useRef(donus)
   merkezRef.current = merkez
   olcekRef.current = pxPerM
+  donusRef.current = donus
+
+  /*
+   * İki parmağın YATAYLA yaptığı açı (derece). Parmaklar çevrildikçe bu açı
+   * değişiyor ve farkı doğrudan ürünün dönüşüne yazılıyor — Amazon'daki
+   * "Sürükle ve döndür" jestinin karşılığı. Ölçekleme (parmak arası mesafe)
+   * ve döndürme (parmak arası açı) aynı hareketten aynı anda okunuyor, tıpkı
+   * orada olduğu gibi.
+   */
+  const aci = (a, b) => (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI
 
   const anlikKaydet = () => {
     const n = [...isaretRef.current.values()]
@@ -308,8 +397,10 @@ export default function ArView({
     baslangicRef.current = {
       merkez: merkezRef.current,
       pxPerM: olcekRef.current,
+      donus: donusRef.current,
       orta: ortaNokta(n),
       uzaklik: n.length > 1 ? uzaklik(n[0], n[1]) : 0,
+      aci: n.length > 1 ? aci(n[0], n[1]) : 0,
     }
   }
 
@@ -329,6 +420,12 @@ export default function ArView({
 
     if (n.length > 1 && b.uzaklik > 0) {
       setPxPerM(kis(b.pxPerM * (uzaklik(n[0], n[1]) / b.uzaklik), EN_KUCUK_OLCEK, EN_BUYUK_OLCEK))
+      // Parmakların çevrilmesi ürünü Y ekseninde döndürür (bkz. `aci`)
+      let fark = aci(n[0], n[1]) - b.aci
+      // -180/+180 sınırından atlarken dönüşün sıçramaması için sarma
+      if (fark > 180) fark -= 360
+      if (fark < -180) fark += 360
+      setDonus(b.donus + fark)
     }
     setMerkez({ x: b.merkez.x + (orta.x - b.orta.x), y: b.merkez.y + (orta.y - b.orta.y) })
   }
@@ -511,6 +608,44 @@ export default function ArView({
     a.click()
   }
 
+  /*
+   * PAYLAŞ — Amazon'un AR ekranındaki paylaşma düğmesinin karşılığı.
+   * Telefonda işletim sisteminin kendi paylaşma sayfası açılır (WhatsApp,
+   * e-posta…); desteklemeyen tarayıcıda dosya indirmeye düşer, yani düğme
+   * hiçbir cihazda ölü kalmaz.
+   */
+  const paylas = async () => {
+    const veri = cekim || (await yakala())
+    if (!veri) return
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const dosya = new File([blob], `ar-${model?.name || 'tasarim'}.jpg`, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+        return
+      }
+    } catch {
+      /* kullanıcı vazgeçti ya da tarayıcı desteklemiyor — indirmeye düşülür */
+    }
+    kaydet()
+  }
+
+  /*
+   * SIFIRLA — ürünü ortaya, dönüşü sıfıra, ölçeği başlangıca alır ve
+   * yerleştirme adımına döner. Amazon'daki ↻ düğmesi de aynı işi yapıyor:
+   * ürün kaybolduğunda ya da ölçek iyice bozulduğunda çıkış yolu.
+   */
+  const sifirla = () => {
+    setDonus(0)
+    setTusTakimi(false)
+    setMerkez({ x: kutu.w / 2, y: kutu.h / 2 })
+    setAsama('yerlestir')
+  }
+
+  /* Tuş takımı adımları: dokunmatikte parmakla tutturulamayan ince ayar için */
+  const kaydir = (dx, dy) => setMerkez((m) => ({ x: m.x + dx, y: m.y + dy }))
+  const cevir = (d) => setDonus((a) => a + d)
+
   // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
   useGovdeKilidi(open)
 
@@ -621,7 +756,8 @@ export default function ArView({
           hiç göremiyordu. Tasarımın görünmesi kameraya bağlı olmamalı: kamera
           yalnızca arka plandır, gecikirse arkası siyah kalır, tasarım durur.
         */}
-        {!hata && arAcik && kutu.w > 0 && (
+        {/* Tasarım YALNIZCA yerleştirildikten sonra çizilir (bkz. `asama`) */}
+        {!hata && arAcik && kutu.w > 0 && asama === 'yerlesti' && (
           <div ref={katmanRef} className="absolute inset-0 pointer-events-none">
             {olculer && (
               <>
@@ -649,13 +785,53 @@ export default function ArView({
             {/* Tasarımın kendisi */}
             <div
               className="absolute pointer-events-auto"
-              style={{ left: sol, top: ust, width: w, height: h, cursor: 'move', touchAction: 'none' }}
+              style={{
+                left: sol,
+                top: ust,
+                width: w,
+                height: h,
+                cursor: 'move',
+                touchAction: 'none',
+                /*
+                 * DÖNDÜRME — iki parmakla çevirince ya da tuş takımından.
+                 * Ekranlar 2B çiziliyor, dolayısıyla dönüş bir perspektif
+                 * dönüşümüyle veriliyor: ürün yana döndükçe kenarı daralıyor
+                 * ve mekâna açılı oturduğu hissi çıkıyor. Amazon'da bu gerçek
+                 * 3B model dönüşü; buradaki yaklaşık karşılığı.
+                 */
+                transform: `perspective(1400px) rotateY(${donus}deg)`,
+                transformStyle: 'preserve-3d',
+              }}
               onPointerDown={parmakIndi}
               onPointerMove={parmakHareket}
               onPointerUp={parmakKalkti}
               onPointerCancel={parmakKalkti}
               onWheel={tekerlek}
             >
+              {/*
+                SEÇİM DIŞ HATTI — Amazon'da ürünün çevresindeki camgöbeği
+                çizgi. İşlevi süs değil: ürünün SEÇİLİ olduğunu, yani
+                sürükleme/döndürme jestlerinin ona işleyeceğini gösteriyor.
+
+                Dış hat, silüeti değil ürünün sınır kutusunu izliyor. Silüeti
+                izlemek için tüm katmana `drop-shadow` yığmak gerekirdi; onu
+                mobilde her karede ödemek pahalı (bkz. kavisli ekranda aynı
+                sebeple filtre tek bir ara tuvale indirilmişti).
+              */}
+              {/* Çekim sırasında gizlenir: seçim çizgisi fotoğrafa girmemeli */}
+              {!mesgul && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    inset: -2,
+                    border: '2px solid #22d3ee',
+                    borderRadius: 3,
+                    pointerEvents: 'none',
+                    zIndex: 3,
+                  }}
+                />
+              )}
               {/* Ekranlar şeridi — alta hizalı, WallPreview ile aynı yerleşim */}
               <div style={{ position: 'absolute', inset: 0 }}>
                 {/* z0: Tek içerik katmanı — tüm şeride yayılır, ekran şekline kırpılır */}
@@ -715,8 +891,119 @@ export default function ArView({
           </div>
         )}
 
+        {/* ══════════════════ YERLEŞTİRME AKIŞI (bkz. `asama`) ══════════════════ */}
+
+        {/*
+          1) KARŞILAMA KARTI — ne yapılacağını baştan söyler.
+          Amazon'da da AR açılır açılmaz bu kart geliyor ve tek düğmeyle
+          geçiliyor; jestleri tesadüfen keşfetmek gerekmiyor.
+        */}
+        {!hata && arAcik && asama === 'ipucu' && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-8 bg-black/45">
+            <div className="w-full max-w-[320px] rounded-2xl bg-white/12 backdrop-blur-sm p-5 flex flex-col items-center">
+              {/* İki parmakla sürükle/döndür çizimi */}
+              <svg viewBox="0 0 120 78" width="150" height="98" fill="none" aria-hidden="true">
+                <rect x="6" y="8" width="108" height="52" rx="3" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
+                <rect x="34" y="26" width="34" height="20" rx="2" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" />
+                <rect x="70" y="22" width="26" height="24" rx="2" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" />
+                <circle cx="44" cy="52" r="7" fill="#f59e0b" opacity="0.9" />
+                <circle cx="60" cy="48" r="7" fill="#f59e0b" opacity="0.9" />
+                <path d="M44 52c-4 10-6 16-6 22M60 48c2 12 3 18 3 24" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <p className="m-0 mt-3 text-white text-[16px] font-semibold text-center">{t('ar.onboardTitle')}</p>
+              <p className="m-0 mt-1 text-white/70 text-[13px] text-center leading-snug">{t('ar.onboardBody')}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAsama('yerlestir')}
+              className="mt-6 w-full max-w-[320px] rounded-lg py-3 text-[15px] font-semibold bg-[#0ea5b7] text-white"
+            >
+              {t('ar.onboardNext')}
+            </button>
+          </div>
+        )}
+
+        {/*
+          2) YERLEŞTİRME — "Yerleştirmek için dokunun".
+          Ekranın herhangi bir yerine dokunulunca ürün TAM ORAYA konur. Amazon
+          gerçek zeminde bir nişangâh gösteriyor; bizde yüzey algılama olmadığı
+          için nişangâh parmağın gideceği yeri değil, ekranın ortasını işaret
+          eden sabit bir hedef — dokunulan nokta yine de yerleştirme noktası.
+        */}
+        {!hata && arAcik && asama === 'yerlestir' && (
+          <div
+            className="absolute inset-0 z-30 flex flex-col items-center justify-center"
+            onPointerDown={(e) => {
+              const r = e.currentTarget.getBoundingClientRect()
+              setMerkez({ x: e.clientX - r.left, y: e.clientY - r.top })
+              setAsama('yerlesti')
+            }}
+          >
+            <div className="rounded-full bg-white px-6 py-3 shadow-lg">
+              <p className="m-0 text-[19px] font-bold text-neutral-900 text-center leading-tight">
+                {t('ar.tapToPlace')}
+              </p>
+            </div>
+            {/* Nişangâh — yere oturmuş bir çerçeve izlenimi */}
+            <svg viewBox="0 0 160 90" width="200" height="112" fill="none" className="mt-3" aria-hidden="true">
+              <path d="M12 30h20M128 30h20M12 30v34M148 30v34M12 64h20M128 64h20" stroke="#fff" strokeWidth="6" strokeLinecap="round" />
+              <ellipse cx="80" cy="47" rx="26" ry="12" stroke="#fff" strokeWidth="5" />
+              <ellipse cx="80" cy="47" rx="9" ry="4.5" fill="#fff" />
+            </svg>
+          </div>
+        )}
+
+        {/*
+          3) YERLEŞTİKTEN SONRAKİ ARAÇLAR — sağ üstte, Amazon'daki sırayla:
+          sıfırla, paylaş, hassas konumlandırma.
+        */}
+        {!hata && arAcik && asama === 'yerlesti' && (
+          <div className="absolute right-3 top-24 z-20 flex flex-col gap-3">
+            <YuvarlakDugme onClick={sifirla} etiket={t('ar.reset')}>
+              <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
+            </YuvarlakDugme>
+            <YuvarlakDugme onClick={paylas} etiket={t('ar.share')}>
+              <path d="M12 16V4M8 8l4-4 4 4M5 14v5a1 1 0 001 1h12a1 1 0 001-1v-5" />
+            </YuvarlakDugme>
+            <YuvarlakDugme
+              onClick={() => setTusTakimi((a) => !a)}
+              etiket={t('ar.nudge')}
+              aktif={tusTakimi}
+            >
+              <path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" />
+            </YuvarlakDugme>
+          </div>
+        )}
+
+        {/*
+          HASSAS AYAR TUŞ TAKIMI — parmakla tutturulamayan ince kaymalar için.
+          Amazon'da da yön okları ve iki döndürme tuşu var; jest yerine tek
+          dokunuşla adım adım ilerletmeye yarıyor.
+        */}
+        {!hata && arAcik && asama === 'yerlesti' && tusTakimi && (
+          /*
+            Tuş takımı SOLA toplandı ve yukarı alındı: sağ kenarda kameranın
+            yakınlaştırma (+/−) sütunu duruyor, döndürme tuşları önce onun
+            üstüne biniyordu.
+          */
+          <div className="absolute inset-x-0 bottom-36 z-20 flex items-end justify-start gap-4 px-5 pointer-events-none">
+            <div className="grid grid-cols-3 gap-1.5 pointer-events-auto">
+              <span />
+              <TusDugme onClick={() => kaydir(0, -12)} etiket={t('ar.up')}><path d="M12 19V5M5 12l7-7 7 7" /></TusDugme>
+              <span />
+              <TusDugme onClick={() => kaydir(-12, 0)} etiket={t('ar.left')}><path d="M19 12H5M12 19l-7-7 7-7" /></TusDugme>
+              <TusDugme onClick={() => kaydir(0, 12)} etiket={t('ar.down')}><path d="M12 5v14M19 12l-7 7-7-7" /></TusDugme>
+              <TusDugme onClick={() => kaydir(12, 0)} etiket={t('ar.right')}><path d="M5 12h14M12 5l7 7-7 7" /></TusDugme>
+            </div>
+            <div className="flex gap-1.5 pointer-events-auto">
+              <TusDugme onClick={() => cevir(-15)} etiket={t('ar.rotateLeft')}><path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" /></TusDugme>
+              <TusDugme onClick={() => cevir(15)} etiket={t('ar.rotateRight')}><path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" /></TusDugme>
+            </div>
+          </div>
+        )}
+
         {/* ---------------------------------------------------------- ÜST BAR */}
-        <div className="absolute top-0 inset-x-0 flex items-center gap-3 px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
+        <div className="absolute top-0 inset-x-0 z-40 flex items-center gap-3 px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
           <button
             type="button"
             onClick={onClose}
@@ -819,7 +1106,7 @@ export default function ArView({
         )}
 
         {/* ---------------------------------------------------------- ALT BAR */}
-        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-8 pb-5">
+        <div className="absolute bottom-0 inset-x-0 z-40 bg-gradient-to-t from-black/80 to-transparent pt-8 pb-5">
           {/*
             Dar telefonlarda beş denetim 390 pikselin dışına taşıyordu (soldaki
             LENS ve sağdaki AR düğmesi ekranın dışında kalıyor, tıklanamıyordu).
