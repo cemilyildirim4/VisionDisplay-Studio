@@ -725,7 +725,7 @@ function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg min-w-[64px] transition-colors ${
+      className={`flex flex-col items-center justify-center gap-0.5 px-3 py-3 min-h-[44px] min-w-[64px] rounded-lg transition-colors ${
         aktif ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
       }`}
     >
@@ -810,22 +810,22 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
       )}
       <input ref={fotoRef} type="file" accept="image/*" onChange={fotoSecildi} className="hidden" />
 
-      <div className="absolute top-0 inset-x-0 z-10 flex items-center gap-3 px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
-        <button type="button" onClick={kapat} aria-label={t('ar.close')} className="text-white/90 hover:text-white p-1">
+      <div className="absolute top-0 inset-x-0 z-10 flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-b from-black/70 to-transparent">
+        <button type="button" onClick={kapat} aria-label={t('ar.close')} className="text-white/90 hover:text-white p-3 min-h-[44px] min-w-[44px] inline-flex items-center justify-center">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
-        <span className="text-white text-[13px] font-semibold">{t('scene3d.title')}</span>
-        <span className="text-white/50 text-[11px]">
+        <span className="text-white text-[13px] font-semibold min-w-0 truncate">{t('scene3d.title')}</span>
+        <span className="text-white/50 text-[11px] min-w-0 max-w-full">
           {cabinetCount > MAX_DETAILED_CABINETS ? t('scene3d.lodLow') : t('scene3d.lodHigh')}
         </span>
-        <div className="ml-auto">
+        <div className="ml-auto w-full sm:w-auto flex justify-end">
           <button
             type="button"
             onClick={exportAndOpen}
             disabled={busy}
-            className="rounded-full px-4 py-1.5 text-[13px] font-semibold bg-brand text-white hover:bg-brand-dark disabled:opacity-50 transition-colors"
+            className="rounded-full px-4 py-3 min-h-[44px] text-[13px] font-semibold bg-brand text-white hover:bg-brand-dark disabled:opacity-50 transition-colors w-full sm:w-auto"
           >
             {busy ? t('scene3d.exporting') : t('scene3d.viewInAr')}
           </button>
@@ -864,8 +864,8 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
         şeridin birebir karşılığı, aynı görselleri kullanır.
       */}
       {ornekAcik && (
-        <div className="absolute bottom-24 inset-x-0 px-4">
-          <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
+        <div className="absolute bottom-24 left-2 right-2 sm:bottom-24 sm:inset-x-0 px-2 sm:px-4">
+          <div className="flex gap-2 overflow-x-auto pb-1 justify-start sm:justify-center max-w-full">
             {ORNEK_MEKANLAR.map((o) => (
               <button
                 key={o.yol}
@@ -887,8 +887,8 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
       )}
 
       {/* ---------------------------------------------------------- ALT BAR */}
-      <div className="absolute bottom-0 inset-x-0 pb-4 pt-8 bg-gradient-to-t from-black/80 to-transparent">
-        <div className="flex items-center justify-center gap-3 px-4">
+      <div className="absolute bottom-2 left-2 right-2 sm:bottom-0 sm:inset-x-0 pb-3 sm:pb-4 pt-6 sm:pt-8 bg-gradient-to-t from-black/80 to-transparent">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-2 sm:px-4">
           <ArkaPlanDugme
             onClick={() => setOrnekAcik((a) => !a)}
             etiket={t('ar.background')}
@@ -910,7 +910,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
             />
           )}
         </div>
-        <p className="mt-2 text-center text-[11px] text-white/50 px-8 m-0 pointer-events-none">
+        <p className="mt-2 text-center text-[11px] text-white/50 px-4 sm:px-8 m-0 pointer-events-none max-w-full">
           {t('scene3d.hint')}
         </p>
       </div>
@@ -921,9 +921,9 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           gerek kalmadan platformun kendi AR motorunu kullanır. */}
       {viewerUrl && (
         <div className="absolute inset-0 z-20 bg-black/90 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-white text-sm font-semibold">{t('scene3d.arReady')}</span>
-            <button type="button" onClick={close} className="text-white/80 hover:text-white text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+            <span className="text-white text-sm font-semibold min-w-0">{t('scene3d.arReady')}</span>
+            <button type="button" onClick={close} className="text-white/80 hover:text-white text-sm p-3 min-h-[44px] inline-flex items-center">
               {t('ar.close')}
             </button>
           </div>
