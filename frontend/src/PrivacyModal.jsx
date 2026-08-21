@@ -30,9 +30,9 @@ export default function PrivacyModal({ open, onClose }) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-[80] bg-[#001334]/45 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] bg-[#001334]/45 flex items-center justify-center p-0 sm:p-4" onClick={onClose}>
       <div
-        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[520px] max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[calc(100%-2rem)] mx-4 md:mx-auto md:max-w-xl max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-brand text-white px-5 py-4 flex items-start justify-between gap-3 shrink-0 relative">
@@ -49,7 +49,7 @@ export default function PrivacyModal({ open, onClose }) {
             type="button"
             onClick={onClose}
             aria-label={t('privacy.close')}
-            className="text-white/70 hover:text-white transition-colors shrink-0"
+            className="text-white/70 hover:text-white transition-colors shrink-0 inline-flex items-center justify-center min-h-[44px] min-w-[44px]"
           >
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M6 6l12 12M18 6L6 18" />
