@@ -12,18 +12,18 @@ export function BrandMark({
 }) {
   const logoH = size === 'lg' ? 'h-11 sm:h-12' : size === 'sm' ? 'h-7' : 'h-8 sm:h-9'
   return (
-    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+    <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-4 min-w-0 w-full max-w-full">
       <img
         src={BRAND.logoSrc}
         alt={BRAND.company}
-        className={`${logoH} w-auto shrink-0 brand-logo-enter`}
+        className={`${logoH} w-auto max-w-full shrink-0 brand-logo-enter`}
       />
       <span
         className={`hidden sm:block w-px shrink-0 ${
           darkOnDark ? 'bg-white/20 h-9' : 'bg-neutral-200 dark:bg-[#2c333f] h-8'
         }`}
       />
-      <div className="min-w-0">
+      <div className="min-w-0 w-full sm:w-auto max-w-full">
         {showCompany && (
           <p
             className={`m-0 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] truncate ${

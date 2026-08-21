@@ -216,3 +216,8 @@ button:disabled {
 .btn-accent:hover {
   background: var(--color-accent-dark);
 }
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
