@@ -798,7 +798,32 @@ export default function WallPreview({
     const sahneOlcek = sahneOlcekVarsayilan || Infinity
     // Ust sinir yalnizca sahne YOKKEN: sahne varsa olcegi sahne belirler,
     // sabit bir tavan mekani tuvalin ortasinda kucucuk birakiyordu.
-    const pxPerM = Math.min(availW / (wallWm + humanWmM), availH / wallHm, sahneVar ? Infinity : 280, sahneOlcek)
+    /*
+     * KAVİS PAYI (çoklu ekran).
+     *
+     * Kavisli ekranın tuvali kendi kutusundan `maxD` kadar uzun: kavis üstte
+     * ve altta eşit taşıyor (bkz. CurvedScreen). Tek ekran dalında bu taşma
+     * ölçek hesabına katılıyordu, çoklu dalda katılmıyordu — tasarım kabın
+     * kenarına dayandığında kavis kırpılıyor ve ekran DÜZ görünüyordu.
+     *
+     * Pay, düzendeki EN DERİN kavisten hesaplanıyor: her ekranın derinliği
+     * kendi genişliğine oranlı, yani en geniş kavisli ekran belirleyici.
+     */
+    const kavisPayiM = list.reduce((enBuyuk, s) => {
+      if (s.type !== 'curved' && s.type !== 'curvedIn') return enBuyuk
+      const derinlik =
+        (Math.max(0, Math.min(100, curveAmount)) / 100) *
+        curveDepthFor(s.type === 'curvedIn') *
+        s.wm
+      return Math.max(enBuyuk, derinlik)
+    }, 0)
+
+    const pxPerM = Math.min(
+      availW / (wallWm + humanWmM),
+      availH / (wallHm + kavisPayiM),
+      sahneVar ? Infinity : 280,
+      sahneOlcek,
+    )
     olcekRef.current = pxPerM
     const wallW = wallWm * pxPerM
     const wallH = wallHm * pxPerM
@@ -876,7 +901,16 @@ export default function WallPreview({
 )}
           <div className="relative">
             {/* Sınırlayıcı duvar */}
-            <div style={{ width: wallW, height: wallH }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative overflow-hidden`}>
+            {/*
+              Kavis VARSA kutu kırpmaz. Kavisli ekranın tuvali kendi şeridinden
+              taşıyor; duvar kutusu `overflow-hidden` olduğu için taşan kısım
+              kesiliyor ve panel düz bir dikdörtgen olarak çıkıyordu. Tek ekran
+              dalında ekran bu kutunun içinde olmadığı için sorun görülmüyordu.
+            */}
+            <div
+              style={{ width: wallW, height: wallH }}
+              className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative ${kavisPayiM > 0 ? 'overflow-visible' : 'overflow-hidden'}`}
+            >
               {/* Ekranlar şeridi (ortalanmış, alta hizalı) */}
               <div style={{ position: 'absolute', left: marginXpx, top: stripTop, width: totalWpx, height: maxHpx }}>
                 {/* z0: Tek içerik katmanı — tüm şeride yayılır, ekran şekline kırpılır */}
