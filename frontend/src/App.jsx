@@ -210,7 +210,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * "Mekânda Görünüm" sayfası olarak girsin. Yapılandırma değişse bile kare
    * durur — müşteri o kareyi bilerek çekti, sessizce silmek yanlış olur.
    */
-  const [arFoto, setArFoto] = useState(null)
+  const [arFotolar, setArFotolar] = useState([])
+
+  /*
+   * Kaydedilen kare listeye EKLENİR, üstüne yazılmaz: müşteri hem kamerada
+   * hem AR'de kare kaydedebiliyor ve ikisi de rapora girmeli. Sunucu da en
+   * çok 6 kare basıyor; burada da aynı sınır tutuluyor ki gereksiz büyük
+   * istek gönderilmesin. Aynı kare iki kez eklenmez (aynı düğmeye iki kez
+   * basmak raporu çoğaltmasın).
+   */
+  const kareKaydedildi = (veri) => {
+    if (!veri) return
+    setArFotolar((l) => (l.includes(veri) ? l : [...l, veri].slice(-6)))
+  }
   const [resolution, setResolution] = useState('FHD') // FHD | UHD
   const [sboxRedundancy, setSboxRedundancy] = useState('no') // no | yes
   /*
@@ -1495,8 +1507,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         resolution={resolution}
         curveAmount={curveAmount}
         hideRegions={isVideoWall}
-        /* Kamerada "Kaydet" denen kare rapora da girsin (bkz. arFoto) */
-        onSaved={setArFoto}
+        /* Kamerada "Kaydet" denen kare rapora da girsin (bkz. kareKaydedildi) */
+        onSaved={kareKaydedildi}
       />
 
       <RecommendationWizard
@@ -1533,6 +1545,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               setScene3dOpen(false)
               setArAcik(true)
             }}
+            /* AR'de "Kaydet" denen kare de rapora girsin */
+            onSaved={kareKaydedildi}
           />
         </Suspense>
       )}
@@ -1563,8 +1577,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           // ihtiyaç duyduğu iki alan yalnızca burada mevcut.
           sboxRedundancy,
           isVideoWall,
-          /* Kamerada kaydedilen mekân fotoğrafı — varsa PDF'e ek sayfa olur */
-          arFoto,
+          /* Kamerada ve AR'de kaydedilen kareler — her biri PDF'e ek sayfa olur */
+          arFotolar,
           /*
            * Tasarımın TAMAMI teklifle birlikte saklansın diye. Teklif kaydında
            * yalnızca özet vardı (model kodu, toplam sütun/satır, okunur bir

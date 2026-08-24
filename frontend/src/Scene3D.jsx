@@ -970,7 +970,7 @@ function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
   )
 }
 
-export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens, onOpenCamera }) {
+export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens, onOpenCamera, onSaved }) {
   const { t } = useLang()
   const { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy } = useGlbAr()
 
@@ -1013,7 +1013,9 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
    * görünümde çalışır: jestler burada öğrenilir, ölçü ve açı burada
    * ayarlanır, sonra tek dokunuşla odaya taşınır.
    */
-  const [asama, setAsama] = useState('ipucu')
+  const [asama, setAsama] = useState('ipucu')
+  /* Kaydetme/paylaşma sonrası kısa onay yazısı — kameradakiyle aynı */
+  const [arBildirim, setArBildirim] = useState(null)
   const [tusTakimi, setTusTakimi] = useState(false)
 
   /* Pencere her açılışında akış başa alınır — bileşen DOM'da kaldığı için
@@ -1069,6 +1071,13 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
    * bağlı: uzaktayken aynı sürükleme daha çok metre eder, yakınken daha az.
    * Sabit bir katsayı yakınlaştırmanın her kademesinde yanlış hissettiriyordu.
    */
+  // Onay yazısı birkaç saniye sonra kendiliğinden kalkar
+  useEffect(() => {
+    if (!arBildirim) return undefined
+    const z = setTimeout(() => setArBildirim(null), 4000)
+    return () => clearTimeout(z)
+  }, [arBildirim])
+
   const jestRef = useRef({ isaretciler: new Map(), uzaklik: 0, aci: 0 })
 
   const jestOlcegi = useCallback(() => {
@@ -1168,6 +1177,38 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
   }, [])
 
   /*
+   * KAYDET — kameradaki "Kaydet" düğmesinin AR'deki karşılığı.
+   *
+   * Kare iki yere birden gider: cihaza iner ve rapora verilir; PDF alındığında
+   * "Mekânda Görünüm" sayfası olarak basılır. Eskiden AR'den rapora hiçbir şey
+   * gitmiyordu — yalnızca kamera ekranı besliyordu.
+   *
+   * İndirme blob adresiyle yapılıyor, data: URL ile değil: iOS Safari büyük
+   * data: URL'lerini indiremeyip sessizce düşüyor (kamerada da aynı sebeple
+   * blob'a geçilmişti).
+   */
+  const kaydetAr = useCallback(async () => {
+    const mv = mvRef.current
+    if (!mv?.toDataURL) return
+    const veri = mv.toDataURL('image/jpeg', 0.92)
+    onSaved?.(veri)
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'ar-' + (model?.name || 'tasarim') + '.jpg'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch {
+      /* indirme engellendiyse kare yine rapora girmiş olur */
+    }
+    setArBildirim(t('ar.savedNote'))
+  }, [model, onSaved, t])
+
+  /*
    * PAYLAŞ — o anki görüntüyü işletim sisteminin paylaşma sayfasına verir
    * (WhatsApp, e-posta…). Desteklemeyen tarayıcıda dosya indirmeye düşer,
    * yani düğme hiçbir cihazda ölü kalmaz. Kameradaki paylaş düğmesiyle aynı.
@@ -1176,6 +1217,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     const mv = mvRef.current
     if (!mv?.toDataURL) return
     const veri = mv.toDataURL('image/jpeg', 0.92)
+    onSaved?.(veri) // paylaşılan kare de rapora girsin
     const ad = `ar-${model?.name || 'tasarim'}.jpg`
     try {
       const blob = await (await fetch(veri)).blob()
@@ -1378,12 +1420,36 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           gerek kalmadan platformun kendi AR motorunu kullanır. */}
       {viewerUrl && (
         <div className="absolute inset-0 z-20 bg-black/90 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-white text-sm font-semibold">{t('scene3d.arReady')}</span>
-            <button type="button" onClick={close} className="text-white/80 hover:text-white text-sm">
-              {t('ar.close')}
-            </button>
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <span className="text-white text-sm font-semibold truncate">{t('scene3d.arReady')}</span>
+            <div className="flex items-center gap-2.5 shrink-0">
+              {/*
+                KAYDET — kameradaki düğmenin karşılığı. Kare cihaza iner ve
+                rapora girer; yalnızca ürün yerleştikten sonra anlamlı.
+              */}
+              {asama === 'yerlesti' && (
+                <button
+                  type="button"
+                  onClick={kaydetAr}
+                  className="rounded-full px-4 py-1.5 text-[13px] font-semibold bg-white text-[#10141b] hover:bg-white/85 transition-colors"
+                >
+                  {t('ar.save')}
+                </button>
+              )}
+              <button type="button" onClick={close} className="text-white/80 hover:text-white text-sm">
+                {t('ar.close')}
+              </button>
+            </div>
           </div>
+
+          {/* Kaydetme onayı — kameradakiyle aynı yazı ve aynı davranış */}
+          {arBildirim && (
+            <div className="absolute top-14 inset-x-0 z-30 flex justify-center px-6 pointer-events-none">
+              <p className="m-0 rounded-full bg-black/85 text-white text-[12.5px] font-semibold px-4 py-2 text-center shadow-lg">
+                {arBildirim}
+              </p>
+            </div>
+          )}
 
           {/* model-viewer'ın kendisi ve akışın katmanları aynı kutuda; katmanlar
               onun ÜSTÜNE biniyor, o yüzden burası `relative`. */}

@@ -266,7 +266,12 @@ export default function ExportModal({ open, onClose, summary }) {
            * Kamerada "Kaydet" denen kare. Yoksa alan boş gider ve rapora o
            * sayfa hiç eklenmez — akış değişmez.
            */
-          arImageBase64: summary.arFoto || null,
+          /*
+           * Kamerada ve AR'de kaydedilen kareler. Her biri raporda ayrı bir
+           * "Mekânda Görünüm" sayfası olur. Liste boşsa o sayfalar hiç
+           * basılmaz; yapılandırma görseli sayfası ise HER ZAMAN basılır.
+           */
+          arImagesBase64: summary.arFotolar || [],
         }),
       })
       if (!res.ok) {
