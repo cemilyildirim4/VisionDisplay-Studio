@@ -757,6 +757,71 @@ function disaAktarmaMalzemeleri(scene) {
   }
 }
 
+/**
+ * INSTANCE'LAR DIŞA AKTARIMDA GERÇEK NESNEYE ÇEVRİLİR.
+ *
+ * Kabin gövdeleri sahnede tek bir InstancedMesh olarak çiziliyor (yüzlerce
+ * kabin tek çizim çağrısına iniyor, bkz. `Instances`). Ama:
+ *   • USDZExporter instance matrislerini hiç yazmıyor — ürettiği dosyada
+ *     kabinlerin yalnızca BİRİ geometri taşıyor, kalanlar boş birer düğüm
+ *     olarak çıkıyor.
+ *   • Sonuç: iPhone'da Quick Look'ta duvarın arkasına dönüldüğünde koca bir
+ *     LED duvar yerine tek, ince bir plaka görünüyordu.
+ *
+ * Dışa aktarma sırasında instance'lar geçici olarak sıradan mesh'lere
+ * açılıyor: geometri ve malzeme PAYLAŞILIYOR, yalnızca konum/dönüş/ölçek
+ * kopyalanıyor — bellek maliyeti yok denecek kadar az. Sahne dosyaya
+ * yazıldıktan sonra her şey aynen geri konuyor, canlı görünüm instance'lı
+ * hızlı hâline dönüyor.
+ */
+function disaAktarmaGeometrileri(scene) {
+  const geriAl = []
+  const hedefler = []
+  scene.traverse((o) => { if (o.isInstancedMesh) hedefler.push(o) })
+
+  for (const im of hedefler) {
+    const ebeveyn = im.parent
+    if (!ebeveyn) continue
+
+    const grup = new THREE.Group()
+    grup.name = im.name || 'Kabinler'
+    // InstancedMesh'in KENDİ dönüşümü (kavisli duvarda grup döndürülüyor)
+    grup.position.copy(im.position)
+    grup.quaternion.copy(im.quaternion)
+    grup.scale.copy(im.scale)
+
+    const m = new THREE.Matrix4()
+    const adet = Math.min(im.count, im.instanceMatrix?.count ?? im.count)
+    for (let i = 0; i < adet; i++) {
+      im.getMatrixAt(i, m)
+      const mesh = new THREE.Mesh(im.geometry, im.material)
+      m.decompose(mesh.position, mesh.quaternion, mesh.scale)
+      grup.add(mesh)
+    }
+
+    const sira = ebeveyn.children.indexOf(im)
+    ebeveyn.remove(im)
+    ebeveyn.add(grup)
+    geriAl.push({ ebeveyn, im, grup, sira })
+  }
+
+  return {
+    geriYukle() {
+      for (const k of geriAl) {
+        k.ebeveyn.remove(k.grup)
+        k.grup.clear() // geometri/malzeme paylaşıldığı için dispose EDİLMEZ
+        k.ebeveyn.add(k.im)
+        // Kardeş sırası korunur: çizim sırası sahnedeki yerleşimi etkiliyor
+        const su = k.ebeveyn.children.indexOf(k.im)
+        if (k.sira >= 0 && su !== k.sira) {
+          k.ebeveyn.children.splice(su, 1)
+          k.ebeveyn.children.splice(k.sira, 0, k.im)
+        }
+      }
+    },
+  }
+}
+
 /** GLB + USDZ dışa aktarma ve `<model-viewer>` ile gerçek Scene Viewer / Quick Look AR. */
 function useGlbAr() {
   const { t } = useLang()
@@ -834,6 +899,7 @@ function useGlbAr() {
        * Eskiden yalnızca GLB vardı; iPhone'da `quick-look` kipi açılacak dosya
        * bulamadığı için "AR'da Gör" hiçbir şey yapmıyordu.
        */
+      const acilmis = disaAktarmaGeometrileri(sceneRef.current)
       const kilit = disaAktarmaMalzemeleri(sceneRef.current)
       let glb
       let usdz = null
@@ -865,6 +931,7 @@ function useGlbAr() {
         }
       } finally {
         kilit.geriYukle()
+        acilmis.geriYukle()
       }
 
       setViewerUrl(URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' })))
