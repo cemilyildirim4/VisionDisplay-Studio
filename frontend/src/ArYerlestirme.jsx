@@ -6,7 +6,7 @@
  *   • AR ekranı (Scene3D → model-viewer) — gerçek 3B model, Scene Viewer /
  *     Quick Look / WebXR.
  *
- * Karşılama kartı, "yerleştirmek için dokunun" nişangâhı, sağ üstteki araç
+ * "Yerleştirmek için dokunun" nişangâhı, sağ üstteki araç
  * sütunu ve hassas ayar tuş takımı ikisinde de BİREBİR aynı görünmeli;
  * bu yüzden yalnızca görünümden ibaret bu parçalar burada tek yerde duruyor.
  * Ne yapacakları (neyi kaydırdıkları, neyi döndürdükleri) çağıran ekrana ait
@@ -50,48 +50,7 @@ export function TusDugme({ onClick, etiket, children }) {
 }
 
 /**
- * 1) KARŞILAMA KARTI — ne yapılacağını baştan söyler.
- * Amazon'da da AR açılır açılmaz bu kart geliyor ve tek düğmeyle geçiliyor;
- * jestleri tesadüfen keşfetmek gerekmiyor.
- */
-export function KarsilamaKarti({ t, onDevam }) {
-  return (
-    /*
-     * z-50: üst ve alt araç çubukları z-40'ta. Kart onların ALTINDA kalınca
-     * telefon yan çevrildiğinde "Devam Et" düğmesi alt çubuğun altında kalıyor
-     * ve tıklanamıyordu. Karşılama kapatılana kadar her şeyin üstünde durmalı.
-     *
-     * py-6 + overflow-y-auto + esneyen çizim: yatay tutuşta ekran alçalıyor ve
-     * sabit yükseklikli çizim kartı taşırıyordu. Çizim önce küçülür, yine de
-     * sığmazsa katman kaydırılabilir kalır — düğme her hâlükârda erişilebilir.
-     */
-    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center px-8 py-6 overflow-y-auto bg-black/45">
-      <div className="w-full max-w-[320px] shrink-0 rounded-2xl bg-white/12 backdrop-blur-sm p-4 flex flex-col items-center">
-        {/* İki parmakla sürükle/döndür çizimi */}
-        <svg viewBox="0 0 120 78" className="w-[150px] max-w-full h-auto max-h-[22vh]" fill="none" aria-hidden="true">
-          <rect x="6" y="8" width="108" height="52" rx="3" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
-          <rect x="34" y="26" width="34" height="20" rx="2" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" />
-          <rect x="70" y="22" width="26" height="24" rx="2" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" />
-          <circle cx="44" cy="52" r="7" fill="#f59e0b" opacity="0.9" />
-          <circle cx="60" cy="48" r="7" fill="#f59e0b" opacity="0.9" />
-          <path d="M44 52c-4 10-6 16-6 22M60 48c2 12 3 18 3 24" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        <p className="m-0 mt-3 text-white text-[16px] font-semibold text-center">{t('ar.onboardTitle')}</p>
-        <p className="m-0 mt-1 text-white/70 text-[13px] text-center leading-snug">{t('ar.onboardBody')}</p>
-      </div>
-      <button
-        type="button"
-        onClick={onDevam}
-        className="mt-4 w-full max-w-[320px] shrink-0 rounded-lg py-3 text-[15px] font-semibold bg-[#0ea5b7] text-white"
-      >
-        {t('ar.onboardNext')}
-      </button>
-    </div>
-  )
-}
-
-/**
- * 2) YERLEŞTİRME — "Yerleştirmek için dokunun" + nişangâh.
+ * 1) YERLEŞTİRME — "Yerleştirmek için dokunun" + nişangâh.
  * `onYerlestir` dokunulan noktayı katmanın SOL ÜSTÜNE göre piksel olarak alır;
  * gerçek 3B tarafta koordinat kullanılmıyor, yalnızca dokunuş olayı önemli.
  */
@@ -120,7 +79,7 @@ export function YerlestirKatmani({ t, onYerlestir }) {
 }
 
 /**
- * 3) YERLEŞTİKTEN SONRAKİ ARAÇLAR — sağ üstte, Amazon'daki sırayla:
+ * 2) YERLEŞTİKTEN SONRAKİ ARAÇLAR — sağ üstte, Amazon'daki sırayla:
  * sıfırla, paylaş, hassas konumlandırma.
  */
 export function AraclarSutunu({ t, onSifirla, onPaylas, onTusTakimi, tusTakimi }) {

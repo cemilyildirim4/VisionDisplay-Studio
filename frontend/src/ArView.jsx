@@ -8,7 +8,6 @@ import { useLang } from './useLang.js'
 import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
 /* Yerleştirme akışının görünen parçaları AR ekranıyla ortak — bkz. ArYerlestirme.jsx */
 import {
-  KarsilamaKarti,
   YerlestirKatmani,
   AraclarSutunu,
   TusTakimi,
@@ -151,9 +150,11 @@ export default function ArView({
    * YERLEŞTİRME AKIŞI — referans: Amazon "Odanızda görüntüleyin"
    *
    * Orada iş üç adımda yürüyor ve her adım ne yapılacağını kendisi söylüyor:
-   *   1) 'ipucu'     — "Sürükle ve döndür" kartı, tek düğmeyle geçiliyor
-   *   2) 'yerlestir' — "Yerleştirmek için dokunun", ekranda bir nişangâh var
-   *   3) 'yerlesti'  — ürün duruyor; taşınıyor, döndürülüyor, ölçekleniyor
+   *   1) 'yerlestir' — "Yerleştirmek için dokunun", ekranda bir nişangâh var
+   *   2) 'yerlesti'  — ürün duruyor; taşınıyor, döndürülüyor, ölçekleniyor
+   *
+   * Önce bir de "Sürükle ve döndür" karşılama kartı vardı; kaldırıldı.
+   * Akış doğrudan yerleştirmeyle başlıyor.
    *
    * Bizde eskiden bu adımlar yoktu: pencere açılır açılmaz tasarım ortada
    * beliriyordu, ne yapılacağını anlatan hiçbir şey yoktu. Müşteri ekranı
@@ -168,7 +169,7 @@ export default function ArView({
    * aynı şekilde çalışıyor; eksik olan tek şey dünya takibi.
    * ────────────────────────────────────────────────────────────────────────
    */
-  const [asama, setAsama] = useState('ipucu')
+  const [asama, setAsama] = useState('yerlestir')
   // Y ekseni dönüşü (derece) — iki parmakla çevirerek ya da tuş takımıyla
   const [donus, setDonus] = useState(0)
   // Hassas ayar tuş takımı (ok tuşları + döndürme) açık mı
@@ -287,7 +288,7 @@ export default function ArView({
      * yeniden açıldığında ürün bir önceki oturumun konumunda ve dönüşünde
      * hazır beliriyor, "dokunarak yerleştirme" adımı hiç görünmüyordu.
      */
-    setAsama('ipucu')
+    setAsama('yerlestir')
     setDonus(0)
     setTusTakimi(false)
     setMerkez({ x: 0, y: 0 }) // {0,0} = "henüz konmadı"; ölçüm etkisi ortalar
@@ -959,10 +960,6 @@ export default function ArView({
         {/* ══════════════════ YERLEŞTİRME AKIŞI (bkz. `asama`) ══════════════════ */}
         {/* Karşılama → yerleştirme → araçlar sırası AR ekranıyla ortak parçalardan
             geliyor (ArYerlestirme.jsx); ikisi de birebir aynı görünsün diye. */}
-
-        {!hata && arAcik && asama === 'ipucu' && (
-          <KarsilamaKarti t={t} onDevam={() => setAsama('yerlestir')} />
-        )}
 
         {/*
           Ekranın herhangi bir yerine dokunulunca ürün TAM ORAYA konur. Amazon

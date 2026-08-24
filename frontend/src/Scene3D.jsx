@@ -11,7 +11,6 @@ import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
 import { videoSrcFor, createVideoElement } from './videoContent.js'
 /* AR yerleştirme akışının görünen parçaları kamera ekranıyla ORTAK — bkz. ArYerlestirme.jsx */
 import {
-  KarsilamaKarti,
   YerlestirKatmani,
   AraclarSutunu,
   TusTakimi,
@@ -1013,7 +1012,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
    * görünümde çalışır: jestler burada öğrenilir, ölçü ve açı burada
    * ayarlanır, sonra tek dokunuşla odaya taşınır.
    */
-  const [asama, setAsama] = useState('ipucu')
+  const [asama, setAsama] = useState('yerlestir')
   /* Kaydetme/paylaşma sonrası kısa onay yazısı — kameradakiyle aynı */
   const [arBildirim, setArBildirim] = useState(null)
 
@@ -1035,7 +1034,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
   /* Pencere her açılışında akış başa alınır — bileşen DOM'da kaldığı için
      aksi hâlde önceki oturumun adımı hazır beliriyor. */
   useEffect(() => {
-    setAsama('ipucu')
+    setAsama('yerlestir')
     setTusTakimi(false)
     setIpucuAcik(true)
   }, [viewerUrl])
@@ -1535,10 +1534,6 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
 
             {/* ═════════════ YERLEŞTİRME AKIŞI (bkz. `asama`) ═════════════
                 Kameradakiyle birebir aynı parçalar — ArYerlestirme.jsx. */}
-
-            {asama === 'ipucu' && (
-              <KarsilamaKarti t={t} onDevam={() => setAsama('yerlestir')} />
-            )}
 
             {/*
               "Yerleştirmek için dokunun" — ürün yerleşir ve ARAÇLAR AÇILIR.
