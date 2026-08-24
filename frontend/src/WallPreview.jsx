@@ -831,6 +831,17 @@ export default function WallPreview({
     const maxHpx = maxHm * pxPerM
     const marginXpx = (wallW - totalWpx) / 2
     const stripTop = (wallH - maxHpx) / 2
+    /*
+     * Kavis payının piksel karşılığı. Kavisli ekran şeridin üstüne ve altına
+     * eşit taşıyor (yarısı üstte, yarısı altta). Ölçü etiketleri duvara göre
+     * konumlanıyordu; bombe duvarın üstüne çıkınca genişlik etiketinin ÜSTÜNE
+     * biniyor ve etiket görünmez oluyordu. Etiketler ve kılavuz çizgileri
+     * bombenin dışına itiliyor — tek ekran dalında da ölçüler bombenin
+     * dışında duruyor.
+     */
+    const kavisPayiPx = kavisPayiM * pxPerM
+    const bombePx = kavisPayiPx / 2
+
     const marginXm = (wallWm - totalWm) / 2
     const marginYm = (wallHm - maxHm) / 2
     const humanH = HUMAN_HEIGHT_M * pxPerM
@@ -976,20 +987,20 @@ export default function WallPreview({
             {showMeasurements && (
               <>
                 {/* Dikey kılavuz çizgileri: duvar kenarları + ekran sınırları */}
-                <VL left={0} top={-56} height={wallH + 140} />
-                <VL left={wallW} top={-56} height={wallH + 140} />
+                <VL left={0} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
+                <VL left={wallW} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 {placed.map((s, i) => (
-                  <VL key={`v${i}`} left={marginXpx + s.xStart} top={-56} height={wallH + 140} />
+                  <VL key={`v${i}`} left={marginXpx + s.xStart} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 ))}
-                <VL left={marginXpx + totalWpx} top={-56} height={wallH + 140} />
+                <VL left={marginXpx + totalWpx} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
 
                 {/* Sol/sağ kenar payı (üstte, gri) */}
                 {marginXpx > 34 && (
                   <>
-                    <div className="absolute" style={{ left: marginXpx / 2, top: -40, transform: 'translateX(-50%)' }}>
+                    <div className="absolute" style={{ left: marginXpx / 2, top: -40 - bombePx, transform: 'translateX(-50%)' }}>
                       <span className="bg-neutral-400 text-white text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap">{fmtU(marginXm)}</span>
                     </div>
-                    <div className="absolute" style={{ left: wallW - marginXpx / 2, top: -40, transform: 'translateX(-50%)' }}>
+                    <div className="absolute" style={{ left: wallW - marginXpx / 2, top: -40 - bombePx, transform: 'translateX(-50%)' }}>
                       <span className="bg-neutral-400 text-white text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap">{fmtU(marginXm)}</span>
                     </div>
                   </>
@@ -1005,7 +1016,7 @@ export default function WallPreview({
                     <div
                       key={`lbl${i}`}
                       className="absolute flex flex-col items-center gap-1"
-                      style={{ left: marginXpx + s.center, transform: 'translateX(-50%)', top: isTop ? -34 : wallH + 26 }}
+                      style={{ left: marginXpx + s.center, transform: 'translateX(-50%)', top: isTop ? -34 - bombePx : wallH + 26 + bombePx }}
                     >
                       <span className="bg-neutral-800 text-white text-[11px] px-2 py-1 rounded-lg whitespace-nowrap">{fmtU(s.wm)}</span>
                     </div>
