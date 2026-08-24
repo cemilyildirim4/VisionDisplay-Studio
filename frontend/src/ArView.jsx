@@ -6,6 +6,13 @@ import { videoSrcFor } from './videoContent.js'
 import { LED_LIT_FILTER } from './content.js'
 import { useLang } from './useLang.js'
 import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
+/* Yerleştirme akışının görünen parçaları AR ekranıyla ortak — bkz. ArYerlestirme.jsx */
+import {
+  KarsilamaKarti,
+  YerlestirKatmani,
+  AraclarSutunu,
+  TusTakimi,
+} from './ArYerlestirme.jsx'
 
 /**
  * AR / KAMERA SİMÜLASYON EKRANI
@@ -62,9 +69,12 @@ function Etiket({ x, y, children, vurgu = false }) {
       className={`absolute -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap shadow-lg ${
         vurgu ? 'bg-brand text-white' : 'bg-black/70 text-white'
       }`}
-      /* Tasarımın üstünde kalmalı: kenarlara yapışan ölçüler aksi hâlde
-         tasarımın altında kalıp görünmüyor. */
-      style={{ left: x, top: y, zIndex: 2 }}
+      /*
+       * Tasarımın ÜSTÜNDE kalmalı. Tasarım katmanı `transform` taşıdığı için
+       * kendi yığın bağlamını kuruyor; etiketin ondan yüksek bir z değeri
+       * olmazsa tasarımın kenarına denk gelen etiket yarım görünüyordu.
+       */
+      style={{ left: x, top: y, zIndex: 5 }}
     >
       {children}
     </div>
@@ -87,46 +97,6 @@ function AracDugme({ onClick, etiket, deger, aktif = false }) {
   )
 }
 
-/**
- * Kamera üstündeki yuvarlak araç düğmesi — Amazon'un AR ekranında sağ üstte
- * duran koyu daireli düğmelerin karşılığı (sıfırla / paylaş / konumlandır).
- * İçerik olarak yalnızca SVG yolu (`path`) alır; çerçeve burada tek yerde.
- */
-function YuvarlakDugme({ onClick, etiket, aktif = false, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={etiket}
-      title={etiket}
-      className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-        aktif ? 'bg-white text-neutral-900' : 'bg-black/55 text-white hover:bg-black/70'
-      }`}
-    >
-      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        {children}
-      </svg>
-    </button>
-  )
-}
-
-/** Hassas ayar tuşu — yön okları ve döndürme için kare, küçük düğme. */
-function TusDugme({ onClick, etiket, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={etiket}
-      title={etiket}
-      className="w-11 h-11 rounded-lg bg-black/55 text-white hover:bg-black/75 flex items-center justify-center transition-colors"
-    >
-      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-        {children}
-      </svg>
-    </button>
-  )
-}
-
 export default function ArView({
   open,
   onClose,
@@ -140,6 +110,8 @@ export default function ArView({
   resolution,
   curveAmount,
   hideRegions,
+  /** Kaydedilen kare — rapora (PDF) girsin diye üst bileşene bildirilir. */
+  onSaved,
 }) {
   const { t } = useLang()
   const videoRef = useRef(null)
@@ -599,13 +571,29 @@ export default function ArView({
     }
   }
 
+  /*
+   * KAYDET — çekilen görüntü İKİ yere birden gider:
+   *   1) Cihaza iner (telefonda tarayıcının indirme akışı).
+   *   2) Rapora verilir: PDF alındığında "Mekânda Görünüm" sayfası olarak
+   *      basılır. Eskiden yalnızca indiriliyordu; müşteriye giden raporda
+   *      ekranın gerçek mekândaki hâli hiç görünmüyordu.
+   *
+   * İndirme <a download> ile yapılıyor. iOS Safari bunu doğrudan Fotoğraflar'a
+   * atmaz, "indirmek istiyor musunuz?" diye sorar ve Dosyalar'a kaydeder —
+   * bu tarayıcının kendi davranışı, sayfadan değiştirilemiyor. Fotoğraflar'a
+   * atmak isteyen için PAYLAŞ düğmesi duruyor: iOS'un paylaşma sayfasından
+   * "Görüntüyü Kaydet" Fotoğraflar'a koyar.
+   */
   const kaydet = async () => {
     const veri = cekim || (await yakala())
     if (!veri) return
+    onSaved?.(veri)
     const a = document.createElement('a')
     a.href = veri
     a.download = `ar-${model?.name || 'tasarim'}-${cols}x${rows}.jpg`
+    document.body.appendChild(a)
     a.click()
+    a.remove()
   }
 
   /*
@@ -622,6 +610,7 @@ export default function ArView({
       const dosya = new File([blob], `ar-${model?.name || 'tasarim'}.jpg`, { type: 'image/jpeg' })
       if (navigator.canShare?.({ files: [dosya] })) {
         await navigator.share({ files: [dosya], title: t('ar.title') })
+        onSaved?.(veri) // paylaşılan kare de rapora girsin
         return
       }
     } catch {
@@ -700,6 +689,49 @@ export default function ArView({
     alt: Math.max(0, kutu.h - alt) / pxPerM,
   }
 
+
+  /*
+   * ÖLÇÜ ETİKETLERİNİN YERİ
+   *
+   * İki takım etiket var ve ikisi de aynı iki eksen üzerinde duruyor:
+   *   • tasarımın KENDİ ölçüleri (vurgulu) — tasarımın hemen dışında,
+   *   • kenar BOŞLUKLARI — tasarımla görüntü kenarı arasındaki orta nokta.
+   *
+   * Tasarım küçüldükçe boşluklar büyüyor ve boşluk etiketi orta noktada
+   * kaldığı için tasarımın üstüne biniyordu; tasarım büyüdükçe de ikisi
+   * birbirine değiyordu. Bu yüzden ölçü etiketleri tasarımın DIŞINA alındı ve
+   * boşluk etiketleri onlardan en az AYRIK kadar uzağa itiliyor. Her ikisi de
+   * görüntü çerçevesinin içinde kalacak şekilde kırpılıyor.
+   */
+  const olcu = (() => {
+    /* Açıklık etiketlerin MERKEZLERİ arasında ölçülüyor; yatayda etiketin
+       kendi genişliği (~55 px) de araya girdiği için orası daha büyük. */
+    const AYRIK_X = 68
+    const AYRIK_Y = 26
+    const KENAR_X = 30 // etiketin görüntü kenarına en yakın durabileceği yer
+    const KENAR_Y = 22
+
+    // Tasarımın kendi ölçüleri: üst kenarın ÜSTÜ, sağ kenarın SAĞI
+    const genislikY = kis(ust - 14, KENAR_Y, kutu.h - KENAR_Y)
+    const yukseklikX = kis(sag + 34, KENAR_X, kutu.w - KENAR_X)
+
+    return {
+      genislikY,
+      yukseklikX,
+      /* Boşluk etiketleri boşluğun ortasında durur, ama tasarımın kendi
+         etiketine AYRIK kadar bile yaklaşamaz. */
+      boslukSolX: kis(sol / 2, KENAR_X, kutu.w - KENAR_X),
+      boslukSagX: kis(Math.max(sag + (kutu.w - sag) / 2, yukseklikX + AYRIK_X), KENAR_X, kutu.w - KENAR_X),
+      boslukUstY: kis(Math.min(ust / 2, genislikY - AYRIK_Y), KENAR_Y, kutu.h - KENAR_Y),
+      boslukAltY: kis(alt + (kutu.h - alt) / 2, KENAR_Y, kutu.h - KENAR_Y),
+      /* Kenar kadrajın dışındaysa o boşluk ölçülemez — etiketi hiç çizilmez */
+      solVar: sol > KENAR_X,
+      sagVar: sag < kutu.w - KENAR_X,
+      ustVar: ust > KENAR_Y,
+      altVar: alt < kutu.h - KENAR_Y,
+    }
+  })()
+
   const cizgi = 'absolute border-dashed border-white/60 pointer-events-none'
 
   return (
@@ -767,18 +799,26 @@ export default function ArView({
                 <div className={cizgi} style={{ left: merkez.x, top: 0, height: Math.max(0, ust), borderLeftWidth: 1 }} />
                 <div className={cizgi} style={{ left: merkez.x, top: alt, height: Math.max(0, kutu.h - alt), borderLeftWidth: 1 }} />
 
-                <Etiket x={Math.max(28, sol / 2)} y={merkez.y}>{metre(bosluk.sol)}</Etiket>
-                <Etiket x={Math.min(kutu.w - 28, sag + (kutu.w - sag) / 2)} y={merkez.y}>{metre(bosluk.sag)}</Etiket>
-                <Etiket x={merkez.x} y={Math.max(20, ust / 2)}>{metre(bosluk.ust)}</Etiket>
-                <Etiket x={merkez.x} y={Math.min(kutu.h - 20, alt + (kutu.h - alt) / 2)}>{metre(bosluk.alt)}</Etiket>
+                {/*
+                  Boşluk etiketi yalnızca o kenar GÖRÜNTÜNÜN İÇİNDEyken çizilir.
+                  Tasarım kadraja sığmayacak kadar büyütüldüğünde boşluk yok
+                  demektir; "0 cm" yazmak bilgi taşımadığı gibi tasarımın kendi
+                  ölçü etiketiyle aynı kenara sıkışıp üst üste biniyordu.
+                */}
+                {olcu.solVar && <Etiket x={olcu.boslukSolX} y={merkez.y}>{metre(bosluk.sol)}</Etiket>}
+                {olcu.sagVar && <Etiket x={olcu.boslukSagX} y={merkez.y}>{metre(bosluk.sag)}</Etiket>}
+                {olcu.ustVar && <Etiket x={merkez.x} y={olcu.boslukUstY}>{metre(bosluk.ust)}</Etiket>}
+                {olcu.altVar && <Etiket x={merkez.x} y={olcu.boslukAltY}>{metre(bosluk.alt)}</Etiket>}
 
                 {/*
                   Tasarımın kendi ölçüleri — vurgulu, çünkü bunlar KESİN.
-                  Tasarımın İÇİNE, kenarlarına yapışık duruyorlar: dışarı
-                  konduklarında kenar boşluğu etiketleriyle üst üste biniyorlardı.
+                  Tasarımın DIŞINDA: genişlik üst kenarın üstünde, yükseklik sağ
+                  kenarın sağında. Önceden içeride, kenarlara yapışıktılar;
+                  tasarım küçültüldüğünde etiketler ekranın neredeyse tamamını
+                  kaplayıp altındaki tasarımı görünmez ediyordu (bkz. olcuYerlesimi).
                 */}
-                <Etiket x={merkez.x} y={ust + 14} vurgu>{metre(tasarimWm)}</Etiket>
-                <Etiket x={sag - 32} y={merkez.y} vurgu>{metre(tasarimHm)}</Etiket>
+                <Etiket x={merkez.x} y={olcu.genislikY} vurgu>{metre(tasarimWm)}</Etiket>
+                <Etiket x={olcu.yukseklikX} y={merkez.y} vurgu>{metre(tasarimHm)}</Etiket>
               </>
             )}
 
@@ -892,114 +932,42 @@ export default function ArView({
         )}
 
         {/* ══════════════════ YERLEŞTİRME AKIŞI (bkz. `asama`) ══════════════════ */}
+        {/* Karşılama → yerleştirme → araçlar sırası AR ekranıyla ortak parçalardan
+            geliyor (ArYerlestirme.jsx); ikisi de birebir aynı görünsün diye. */}
 
-        {/*
-          1) KARŞILAMA KARTI — ne yapılacağını baştan söyler.
-          Amazon'da da AR açılır açılmaz bu kart geliyor ve tek düğmeyle
-          geçiliyor; jestleri tesadüfen keşfetmek gerekmiyor.
-        */}
         {!hata && arAcik && asama === 'ipucu' && (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-8 bg-black/45">
-            <div className="w-full max-w-[320px] rounded-2xl bg-white/12 backdrop-blur-sm p-5 flex flex-col items-center">
-              {/* İki parmakla sürükle/döndür çizimi */}
-              <svg viewBox="0 0 120 78" width="150" height="98" fill="none" aria-hidden="true">
-                <rect x="6" y="8" width="108" height="52" rx="3" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
-                <rect x="34" y="26" width="34" height="20" rx="2" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" />
-                <rect x="70" y="22" width="26" height="24" rx="2" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" />
-                <circle cx="44" cy="52" r="7" fill="#f59e0b" opacity="0.9" />
-                <circle cx="60" cy="48" r="7" fill="#f59e0b" opacity="0.9" />
-                <path d="M44 52c-4 10-6 16-6 22M60 48c2 12 3 18 3 24" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <p className="m-0 mt-3 text-white text-[16px] font-semibold text-center">{t('ar.onboardTitle')}</p>
-              <p className="m-0 mt-1 text-white/70 text-[13px] text-center leading-snug">{t('ar.onboardBody')}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAsama('yerlestir')}
-              className="mt-6 w-full max-w-[320px] rounded-lg py-3 text-[15px] font-semibold bg-[#0ea5b7] text-white"
-            >
-              {t('ar.onboardNext')}
-            </button>
-          </div>
+          <KarsilamaKarti t={t} onDevam={() => setAsama('yerlestir')} />
         )}
 
         {/*
-          2) YERLEŞTİRME — "Yerleştirmek için dokunun".
           Ekranın herhangi bir yerine dokunulunca ürün TAM ORAYA konur. Amazon
           gerçek zeminde bir nişangâh gösteriyor; bizde yüzey algılama olmadığı
-          için nişangâh parmağın gideceği yeri değil, ekranın ortasını işaret
-          eden sabit bir hedef — dokunulan nokta yine de yerleştirme noktası.
+          için nişangâh sabit bir hedef — dokunulan nokta yine de yerleştirme
+          noktası.
         */}
         {!hata && arAcik && asama === 'yerlestir' && (
-          <div
-            className="absolute inset-0 z-30 flex flex-col items-center justify-center"
-            onPointerDown={(e) => {
-              const r = e.currentTarget.getBoundingClientRect()
-              setMerkez({ x: e.clientX - r.left, y: e.clientY - r.top })
+          <YerlestirKatmani
+            t={t}
+            onYerlestir={(n) => {
+              setMerkez(n)
               setAsama('yerlesti')
             }}
-          >
-            <div className="rounded-full bg-white px-6 py-3 shadow-lg">
-              <p className="m-0 text-[19px] font-bold text-neutral-900 text-center leading-tight">
-                {t('ar.tapToPlace')}
-              </p>
-            </div>
-            {/* Nişangâh — yere oturmuş bir çerçeve izlenimi */}
-            <svg viewBox="0 0 160 90" width="200" height="112" fill="none" className="mt-3" aria-hidden="true">
-              <path d="M12 30h20M128 30h20M12 30v34M148 30v34M12 64h20M128 64h20" stroke="#fff" strokeWidth="6" strokeLinecap="round" />
-              <ellipse cx="80" cy="47" rx="26" ry="12" stroke="#fff" strokeWidth="5" />
-              <ellipse cx="80" cy="47" rx="9" ry="4.5" fill="#fff" />
-            </svg>
-          </div>
+          />
         )}
 
-        {/*
-          3) YERLEŞTİKTEN SONRAKİ ARAÇLAR — sağ üstte, Amazon'daki sırayla:
-          sıfırla, paylaş, hassas konumlandırma.
-        */}
         {!hata && arAcik && asama === 'yerlesti' && (
-          <div className="absolute right-3 top-24 z-20 flex flex-col gap-3">
-            <YuvarlakDugme onClick={sifirla} etiket={t('ar.reset')}>
-              <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
-            </YuvarlakDugme>
-            <YuvarlakDugme onClick={paylas} etiket={t('ar.share')}>
-              <path d="M12 16V4M8 8l4-4 4 4M5 14v5a1 1 0 001 1h12a1 1 0 001-1v-5" />
-            </YuvarlakDugme>
-            <YuvarlakDugme
-              onClick={() => setTusTakimi((a) => !a)}
-              etiket={t('ar.nudge')}
-              aktif={tusTakimi}
-            >
-              <path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" />
-            </YuvarlakDugme>
-          </div>
+          <AraclarSutunu
+            t={t}
+            onSifirla={sifirla}
+            onPaylas={paylas}
+            onTusTakimi={() => setTusTakimi((a) => !a)}
+            tusTakimi={tusTakimi}
+          />
         )}
 
-        {/*
-          HASSAS AYAR TUŞ TAKIMI — parmakla tutturulamayan ince kaymalar için.
-          Amazon'da da yön okları ve iki döndürme tuşu var; jest yerine tek
-          dokunuşla adım adım ilerletmeye yarıyor.
-        */}
         {!hata && arAcik && asama === 'yerlesti' && tusTakimi && (
-          /*
-            Tuş takımı SOLA toplandı ve yukarı alındı: sağ kenarda kameranın
-            yakınlaştırma (+/−) sütunu duruyor, döndürme tuşları önce onun
-            üstüne biniyordu.
-          */
-          <div className="absolute inset-x-0 bottom-36 z-20 flex items-end justify-start gap-4 px-5 pointer-events-none">
-            <div className="grid grid-cols-3 gap-1.5 pointer-events-auto">
-              <span />
-              <TusDugme onClick={() => kaydir(0, -12)} etiket={t('ar.up')}><path d="M12 19V5M5 12l7-7 7 7" /></TusDugme>
-              <span />
-              <TusDugme onClick={() => kaydir(-12, 0)} etiket={t('ar.left')}><path d="M19 12H5M12 19l-7-7 7-7" /></TusDugme>
-              <TusDugme onClick={() => kaydir(0, 12)} etiket={t('ar.down')}><path d="M12 5v14M19 12l-7 7-7-7" /></TusDugme>
-              <TusDugme onClick={() => kaydir(12, 0)} etiket={t('ar.right')}><path d="M5 12h14M12 5l7 7-7 7" /></TusDugme>
-            </div>
-            <div className="flex gap-1.5 pointer-events-auto">
-              <TusDugme onClick={() => cevir(-15)} etiket={t('ar.rotateLeft')}><path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" /></TusDugme>
-              <TusDugme onClick={() => cevir(15)} etiket={t('ar.rotateRight')}><path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" /></TusDugme>
-            </div>
-          </div>
+          /* Adım büyüklüğü kameraya ait: burada piksel, AR ekranında metre. */
+          <TusTakimi t={t} onKaydir={(dx, dy) => kaydir(dx * 12, dy * 12)} onCevir={(d) => cevir(d * 15)} />
         )}
 
         {/* ---------------------------------------------------------- ÜST BAR */}

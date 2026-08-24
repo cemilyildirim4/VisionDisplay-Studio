@@ -56,6 +56,62 @@ public class ProfessionalReportDocument : IDocument
             page.Content().Element(ComposeScreenVisual);
             page.Footer().Element(ComposeFooter);
         });
+
+        /*
+         * MEKÂNDA GÖRÜNÜM — yalnızca müşteri kamerada bir kare KAYDETTİYSE.
+         * Yapılandırma görseli ekranı teknik olarak gösteriyor; bu sayfa aynı
+         * ekranın müşterinin kendi mekânındaki hâlini gösteriyor. Kare yoksa
+         * sayfa hiç açılmaz, rapor eskisi gibi kalır.
+         */
+        if (_extras.ArImage is { Length: > 0 })
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(1.4f, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(9.5f).FontFamily("Arial").FontColor(Ink));
+
+                page.Header().Element(ComposeArHeader);
+                page.Content().Element(ComposeArVisual);
+                page.Footer().Element(ComposeFooter);
+            });
+        }
+    }
+
+    private void ComposeArHeader(IContainer container)
+    {
+        var size = $"{_config.TotalWidthM:F2} × {_config.TotalHeightM:F2} m";
+        container.Column(col =>
+        {
+            col.Item().Row(row =>
+            {
+                row.RelativeItem().Text("MEKÂNDA GÖRÜNÜM")
+                    .FontSize(11).Bold().FontColor(BrandBlue);
+                row.AutoItem().Text($"{Empty(_config.CabinModelName, "")} · {size}")
+                    .FontSize(9).FontColor(Colors.Grey.Darken1);
+            });
+            col.Item().PaddingTop(6).Height(3).Background(BrandBlue);
+            col.Item().Height(2).Background(BrandOrange);
+        });
+    }
+
+    private void ComposeArVisual(IContainer container)
+    {
+        container.Column(col =>
+        {
+            col.Item().AlignCenter().AlignMiddle()
+                .Image(_extras.ArImage!)
+                .FitArea();
+            /*
+             * Kenar boşlukları TAHMİN — kamerada derinlik algılama yok, ölçek
+             * müşterinin tasarımı duvara oturtmasından geliyor. Yanlış
+             * anlaşılmasın diye rapor bunu açıkça yazıyor.
+             */
+            col.Item().PaddingTop(10)
+                .Text("Kamera görüntüsü üzerine yerleştirilmiş temsilî görünüm. Ekranın kendi ölçüleri yapılandırmadan gelir ve kesindir; kenar boşlukları tahminîdir.")
+                .FontSize(7.5f).FontColor(Colors.Grey.Darken1);
+        });
     }
 
     private void ComposeScreenVisual(IContainer container)

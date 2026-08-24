@@ -9,6 +9,13 @@ import { useLang } from './useLang.js'
 import { curveDepthFor, DEFAULT_CONTENT_SRC } from './content.js'
 import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
 import { videoSrcFor, createVideoElement } from './videoContent.js'
+/* AR yerleştirme akışının görünen parçaları kamera ekranıyla ORTAK — bkz. ArYerlestirme.jsx */
+import {
+  KarsilamaKarti,
+  YerlestirKatmani,
+  AraclarSutunu,
+  TusTakimi,
+} from './ArYerlestirme.jsx'
 
 /**
  * GERÇEK 3D GÖRÜNÜM (react-three-fiber) — mevcut 2D Canvas/SVG önizlemenin
@@ -774,19 +781,45 @@ function useGlbAr() {
       await import('@google/model-viewer')
 
       /*
-       * İçerik görseli TextureLoader ile ASENKRON yükleniyor. Görsel daha
-       * inmeden dışa aktarılırsa dokunun `image`'ı boş oluyor ve exporter
-       * "No valid image data found" diyerek düşüyor. Sahne açılır açılmaz
-       * düğmeye basıldığında olabilecek bir yarış; kısa ve sınırlı bekleme
-       * yeterli, süre dolarsa yine de dışa aktarılır (doku o zaman atlanır).
+       * İÇERİK DOKUSU GERÇEKTEN HAZIR MI?
+       *
+       * Belirti: AR'de (Quick Look / Scene Viewer) panel kapkara çıkıyordu —
+       * ne görsel ne video görünüyordu. Sebep iki ayrı yarış:
+       *
+       *   GÖRSEL: TextureLoader asenkron yüklüyor. Eskiden yalnızca dokunun
+       *     `image` alanı DOLU MU diye bakılıyordu; oysa `image` daha ilk
+       *     karede atanmış olabiliyor ve içi boş oluyor. Artık gerçekten
+       *     çözülmüş mü (`complete` + genişlik) diye bakılıyor.
+       *
+       *   VİDEO: dokusu bir TUVAL. Tuval en baştan var, yani eski kontrol
+       *     anında geçiyordu — ama üzerine henüz tek bir kare çizilmemişti.
+       *     Dışa aktarılan şey o boş, siyah tuvaldi. Artık videonun ilk
+       *     karesi beklenip tuvale ELLE çiziliyor; hazır kare GLB/USDZ'ye
+       *     gömülüyor.
+       *
+       * Bekleme süresi 3 sn'den 10 sn'ye çıkarıldı: telefonda hücresel ağda
+       * örnek video/görsel bu sürede inmiyordu ve boş doku aktarılıyordu.
        */
       await new Promise((resolve) => {
-        const bitis = performance.now() + 3000
+        const bitis = performance.now() + 10000
         const bak = () => {
           let bekleyen = false
           sceneRef.current.traverse((o) => {
             const harita = o.material?.map
-            if (harita && !harita.image) bekleyen = true
+            if (!harita) return
+            const video = harita.userData?.video
+            if (video) {
+              // Videonun ilk karesi gelmeden tuval boş; kareyi burada da çiz
+              if (video.readyState < 2) { bekleyen = true; return }
+              try {
+                harita.image.getContext('2d').drawImage(video, 0, 0, harita.image.width, harita.image.height)
+                harita.needsUpdate = true
+              } catch { /* kare henüz çizilemiyor — bir sonraki turda yeniden */ }
+              return
+            }
+            const g = harita.image
+            const hazir = g && (g.complete === undefined || g.complete) && (g.naturalWidth ?? g.width ?? 0) > 0
+            if (!hazir) bekleyen = true
           })
           if (!bekleyen || performance.now() > bitis) resolve()
           else requestAnimationFrame(bak)
@@ -900,6 +933,99 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
       mv.removeEventListener('load', bak)
     }
   }, [viewerUrl, iosUrl])
+
+  /*
+   * YERLEŞTİRME AKIŞI — kameradakinin (ArView) AR ekranındaki karşılığı.
+   * Amazon'da AR üç adımda yürüyor ve her adım ne yapılacağını kendisi
+   * söylüyor: karşılama kartı → "yerleştirmek için dokunun" → yerleşmiş
+   * ürünün araçları. Burası model-viewer üstünde aynı sırayı kuruyor.
+   *
+   * NOT: Ürün gerçekten odaya oturtulduğunda (Scene Viewer / Quick Look /
+   * WebXR) yerleştirmeyi ARTIK İŞLETİM SİSTEMİ yönetir; oradaki arayüzü
+   * tarayıcıdan değiştiremeyiz. Bu akış AR'a girmeden önceki sayfa-içi
+   * görünümde çalışır: jestler burada öğrenilir, ölçü ve açı burada
+   * ayarlanır, sonra tek dokunuşla odaya taşınır.
+   */
+  const [asama, setAsama] = useState('ipucu')
+  const [tusTakimi, setTusTakimi] = useState(false)
+
+  /* Pencere her açılışında akış başa alınır — bileşen DOM'da kaldığı için
+     aksi hâlde önceki oturumun adımı hazır beliriyor. */
+  useEffect(() => {
+    setAsama('ipucu')
+    setTusTakimi(false)
+  }, [viewerUrl])
+
+  /** Kamera hedefini (bakılan nokta) kaydırır — ürün ekranda o yöne kayar. */
+  const ADIM_M = 0.08
+  const kaydirAr = useCallback((dx, dy) => {
+    const mv = mvRef.current
+    if (!mv?.getCameraTarget) return
+    const h = mv.getCameraTarget()
+    /* Hedef ürünün TERSİNE kayar: hedefi sağa almak ürünü sola götürür. */
+    mv.cameraTarget = `${h.x - dx * ADIM_M}m ${h.y + dy * ADIM_M}m ${h.z}m`
+  }, [])
+
+  /** Ürünü yatayda döndürür (kamerayı çevirerek — model-viewer'ın yolu bu). */
+  const cevirAr = useCallback((yon) => {
+    const mv = mvRef.current
+    if (!mv?.getCameraOrbit) return
+    const o = mv.getCameraOrbit()
+    const derece = (o.theta * 180) / Math.PI + yon * 15
+    mv.cameraOrbit = `${derece}deg ${(o.phi * 180) / Math.PI}deg ${o.radius}m`
+  }, [])
+
+  /** Yakınlaştırma — yörünge yarıçapı; iki parmakla yapılanın tuşlu karşılığı. */
+  const olcekAr = useCallback((kat) => {
+    const mv = mvRef.current
+    if (!mv?.getCameraOrbit) return
+    const o = mv.getCameraOrbit()
+    mv.cameraOrbit = `${(o.theta * 180) / Math.PI}deg ${(o.phi * 180) / Math.PI}deg ${o.radius * kat}m`
+  }, [])
+
+  /*
+   * SIFIRLA — açıyı, yakınlaştırmayı ve kaydırmayı başlangıca alıp yerleştirme
+   * adımına döner. Amazon'daki ↻ düğmesi de aynı işi yapıyor: ürün kadrajdan
+   * çıktığında ya da açı iyice bozulduğunda çıkış yolu.
+   */
+  const sifirlaAr = useCallback(() => {
+    const mv = mvRef.current
+    if (mv) {
+      mv.cameraOrbit = 'auto auto auto'
+      mv.cameraTarget = 'auto auto auto'
+      mv.fieldOfView = 'auto'
+      mv.resetTurntableRotation?.()
+      mv.jumpCameraToGoal?.()
+    }
+    setTusTakimi(false)
+    setAsama('yerlestir')
+  }, [])
+
+  /*
+   * PAYLAŞ — o anki görüntüyü işletim sisteminin paylaşma sayfasına verir
+   * (WhatsApp, e-posta…). Desteklemeyen tarayıcıda dosya indirmeye düşer,
+   * yani düğme hiçbir cihazda ölü kalmaz. Kameradaki paylaş düğmesiyle aynı.
+   */
+  const paylasAr = useCallback(async () => {
+    const mv = mvRef.current
+    if (!mv?.toDataURL) return
+    const veri = mv.toDataURL('image/jpeg', 0.92)
+    const ad = `ar-${model?.name || 'tasarim'}.jpg`
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const dosya = new File([blob], ad, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+        return
+      }
+    } catch {
+      /* kullanıcı vazgeçti ya da tarayıcı desteklemiyor — indirmeye düşülür */
+    }
+    const a = document.createElement('a')
+    a.href = veri
+    a.download = ad
+    a.click()
+  }, [model, t])
 
   /*
    * ARKA PLAN — kameradaki (ArView) ile aynı mantık: sahnenin arkasına hazır
@@ -1092,7 +1218,10 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
               {t('ar.close')}
             </button>
           </div>
-          <div className="flex-1">
+
+          {/* model-viewer'ın kendisi ve akışın katmanları aynı kutuda; katmanlar
+              onun ÜSTÜNE biniyor, o yüzden burası `relative`. */}
+          <div className="flex-1 relative">
             {/* model-viewer standart bir HTML özel elemanıdır; React JSX'te
                 doğrudan kullanılabilir, ekstra sarmalayıcıya gerek yoktur. */}
             <model-viewer
@@ -1118,6 +1247,57 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
               shadow-intensity="1"
               style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
             />
+
+            {/* ═════════════ YERLEŞTİRME AKIŞI (bkz. `asama`) ═════════════
+                Kameradakiyle birebir aynı parçalar — ArYerlestirme.jsx. */}
+
+            {asama === 'ipucu' && (
+              <KarsilamaKarti t={t} onDevam={() => setAsama('yerlestir')} />
+            )}
+
+            {/*
+              "Yerleştirmek için dokunun". Cihaz AR açabiliyorsa dokunuş
+              doğrudan Scene Viewer / Quick Look / WebXR oturumunu başlatır —
+              ürün gerçekten odaya konur. Açamıyorsa (masaüstü tarayıcı) akış
+              sayfa-içi 3B görünümde devam eder, araçlar yine çalışır.
+            */}
+            {asama === 'yerlestir' && (
+              <YerlestirKatmani
+                t={t}
+                onYerlestir={() => {
+                  if (arDestekli) mvRef.current?.activateAR?.()
+                  setAsama('yerlesti')
+                }}
+              />
+            )}
+
+            {asama === 'yerlesti' && (
+              <AraclarSutunu
+                t={t}
+                onSifirla={sifirlaAr}
+                onPaylas={paylasAr}
+                onTusTakimi={() => setTusTakimi((a) => !a)}
+                tusTakimi={tusTakimi}
+              />
+            )}
+
+            {/* Yakınlaştırma sütunu — kameradaki +/− ile aynı yerde, sağ altta */}
+            {asama === 'yerlesti' && (
+              <div className="absolute right-3 bottom-32 z-20 flex flex-col rounded-full bg-black/55 backdrop-blur-sm overflow-hidden">
+                <button type="button" onClick={() => olcekAr(1 / 1.12)} aria-label={t('ar.bigger')} className="w-10 h-10 text-white text-xl leading-none hover:bg-white/15">
+                  +
+                </button>
+                <div className="h-px bg-white/25" />
+                <button type="button" onClick={() => olcekAr(1.12)} aria-label={t('ar.smaller')} className="w-10 h-10 text-white text-xl leading-none hover:bg-white/15">
+                  −
+                </button>
+              </div>
+            )}
+
+            {asama === 'yerlesti' && tusTakimi && (
+              /* Adım büyüklüğü AR ekranına ait: burada metre, kamerada piksel. */
+              <TusTakimi t={t} onKaydir={kaydirAr} onCevir={cevirAr} className="bottom-6" />
+            )}
           </div>
 
           {/*

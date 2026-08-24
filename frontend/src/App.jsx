@@ -195,6 +195,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [specsOpen, setSpecsOpen] = useState(false)
   const [showMeasurements, setShowMeasurements] = useState(true)
   const [exportOpen, setExportOpen] = useState(false)
+  /*
+   * KAMERADA KAYDEDİLEN KARE.
+   *
+   * "Kaydet" cihaza indiriyor; aynı kare burada da tutuluyor ki PDF raporuna
+   * "Mekânda Görünüm" sayfası olarak girsin. Yapılandırma değişse bile kare
+   * durur — müşteri o kareyi bilerek çekti, sessizce silmek yanlış olur.
+   */
+  const [arFoto, setArFoto] = useState(null)
   const [resolution, setResolution] = useState('FHD') // FHD | UHD
   const [sboxRedundancy, setSboxRedundancy] = useState('no') // no | yes
   /*
@@ -1394,6 +1402,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         resolution={resolution}
         curveAmount={curveAmount}
         hideRegions={isVideoWall}
+        /* Kamerada "Kaydet" denen kare rapora da girsin (bkz. arFoto) */
+        onSaved={setArFoto}
       />
 
       <RecommendationWizard
@@ -1454,6 +1464,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           // ihtiyaç duyduğu iki alan yalnızca burada mevcut.
           sboxRedundancy,
           isVideoWall,
+          /* Kamerada kaydedilen mekân fotoğrafı — varsa PDF'e ek sayfa olur */
+          arFoto,
         }}
       />
 

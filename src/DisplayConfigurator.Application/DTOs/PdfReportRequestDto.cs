@@ -44,6 +44,13 @@ public class PdfReportRequestDto : CreateConfigurationDto
     /// <summary>data:image/...;base64,... veya ham base64. En fazla ~6 MB çözülür.</summary>
     public string? PreviewImageBase64 { get; set; }
 
+    /// <summary>
+    /// Kamerada ("Nasıl Görüneceğini Gör") çekilip KAYDEDİLEN kare. Varsa
+    /// rapora "Mekânda Görünüm" sayfası olarak eklenir; yoksa o sayfa hiç
+    /// basılmaz. Önizleme görseliyle aynı biçim ve aynı boyut sınırı.
+    /// </summary>
+    public string? ArImageBase64 { get; set; }
+
     public PdfReportExtras ToExtras() => new()
     {
         Phone = Phone,
@@ -57,6 +64,7 @@ public class PdfReportRequestDto : CreateConfigurationDto
         WallHeightM = WallHeightM,
         ScreenMode = ScreenMode,
         PreviewImage = DecodePreview(PreviewImageBase64),
+        ArImage = DecodePreview(ArImageBase64),
     };
 
     private const int MaxPreviewBytes = 6 * 1024 * 1024;

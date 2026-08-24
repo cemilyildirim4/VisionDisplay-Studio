@@ -263,6 +263,11 @@ export default function ExportModal({ open, onClose, summary }) {
           wallHeightM: Number(summary.height) || null,
           screenMode: summary.screenMode || 'single',
           previewImageBase64,
+          /*
+           * Kamerada "Kaydet" denen kare. Yoksa alan boş gider ve rapora o
+           * sayfa hiç eklenmez — akış değişmez.
+           */
+          arImageBase64: summary.arFoto || null,
         }),
       })
       if (!res.ok) {
