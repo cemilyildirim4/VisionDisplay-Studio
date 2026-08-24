@@ -56,10 +56,19 @@ export function TusDugme({ onClick, etiket, children }) {
  */
 export function KarsilamaKarti({ t, onDevam }) {
   return (
-    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-8 bg-black/45">
-      <div className="w-full max-w-[320px] rounded-2xl bg-white/12 backdrop-blur-sm p-5 flex flex-col items-center">
+    /*
+     * z-50: üst ve alt araç çubukları z-40'ta. Kart onların ALTINDA kalınca
+     * telefon yan çevrildiğinde "Devam Et" düğmesi alt çubuğun altında kalıyor
+     * ve tıklanamıyordu. Karşılama kapatılana kadar her şeyin üstünde durmalı.
+     *
+     * py-6 + overflow-y-auto + esneyen çizim: yatay tutuşta ekran alçalıyor ve
+     * sabit yükseklikli çizim kartı taşırıyordu. Çizim önce küçülür, yine de
+     * sığmazsa katman kaydırılabilir kalır — düğme her hâlükârda erişilebilir.
+     */
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center px-8 py-6 overflow-y-auto bg-black/45">
+      <div className="w-full max-w-[320px] shrink-0 rounded-2xl bg-white/12 backdrop-blur-sm p-4 flex flex-col items-center">
         {/* İki parmakla sürükle/döndür çizimi */}
-        <svg viewBox="0 0 120 78" width="150" height="98" fill="none" aria-hidden="true">
+        <svg viewBox="0 0 120 78" className="w-[150px] max-w-full h-auto max-h-[22vh]" fill="none" aria-hidden="true">
           <rect x="6" y="8" width="108" height="52" rx="3" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
           <rect x="34" y="26" width="34" height="20" rx="2" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" />
           <rect x="70" y="22" width="26" height="24" rx="2" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" />
@@ -73,7 +82,7 @@ export function KarsilamaKarti({ t, onDevam }) {
       <button
         type="button"
         onClick={onDevam}
-        className="mt-6 w-full max-w-[320px] rounded-lg py-3 text-[15px] font-semibold bg-[#0ea5b7] text-white"
+        className="mt-4 w-full max-w-[320px] shrink-0 rounded-lg py-3 text-[15px] font-semibold bg-[#0ea5b7] text-white"
       >
         {t('ar.onboardNext')}
       </button>
