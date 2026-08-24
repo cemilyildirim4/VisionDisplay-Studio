@@ -1323,19 +1323,22 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
             )}
 
             {/*
-              "Yerleştirmek için dokunun". Cihaz AR açabiliyorsa dokunuş
-              doğrudan Scene Viewer / Quick Look / WebXR oturumunu başlatır —
-              ürün gerçekten odaya konur. Açamıyorsa (masaüstü tarayıcı) akış
-              sayfa-içi 3B görünümde devam eder, araçlar yine çalışır.
+              "Yerleştirmek için dokunun" — ürün yerleşir ve ARAÇLAR AÇILIR.
+              Dokunuş İŞLETİM SİSTEMİNİN AR'INI AÇMAZ.
+
+              Önce açıyordu ve bütün mesele buydu: telefonda dokunulur
+              dokunulmaz Quick Look/Scene Viewer devreye giriyor, ekranı
+              tamamen işletim sistemi devralıyordu. Bizim yön tuşlarımız,
+              sıfırlama düğmemiz ve parmak jestlerimiz hiç görünmüyordu —
+              kullanıcı AR'de kamera ekranındaki araçların hiçbirini
+              bulamıyordu.
+
+              Artık akış kameradakiyle aynı: yerleştir → araçlarla oynat.
+              Odaya gerçekten koymak isteyen alttaki "Odanızda görüntüleyin"
+              düğmesine basar; orası zaten işletim sisteminin işi.
             */}
             {asama === 'yerlestir' && (
-              <YerlestirKatmani
-                t={t}
-                onYerlestir={() => {
-                  if (arDestekli) mvRef.current?.activateAR?.()
-                  setAsama('yerlesti')
-                }}
-              />
+              <YerlestirKatmani t={t} onYerlestir={() => setAsama('yerlesti')} />
             )}
 
             {asama === 'yerlesti' && (
