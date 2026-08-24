@@ -883,29 +883,20 @@ export default function ArView({
               onWheel={tekerlek}
             >
               {/*
-                SEÇİM DIŞ HATTI — Amazon'da ürünün çevresindeki camgöbeği
-                çizgi. İşlevi süs değil: ürünün SEÇİLİ olduğunu, yani
-                sürükleme/döndürme jestlerinin ona işleyeceğini gösteriyor.
+                SEÇİM DIŞ HATTI KALDIRILDI.
 
-                Dış hat, silüeti değil ürünün sınır kutusunu izliyor. Silüeti
-                izlemek için tüm katmana `drop-shadow` yığmak gerekirdi; onu
-                mobilde her karede ödemek pahalı (bkz. kavisli ekranda aynı
-                sebeple filtre tek bir ara tuvale indirilmişti).
+                Ürünün çevresinde camgöbeği bir çerçeve vardı; jestlerin ona
+                işlediğini göstermesi içindi. Ama çerçeve silüeti değil SINIR
+                KUTUSUNU izliyordu: kavisli ekranda ürün yaya bükülüyor,
+                dikdörtgen çizgi ise düz kalıyor ve ekranın kenarlarıyla hiç
+                örtüşmüyordu — mekâna oturup oturmadığına bakılan bir ekranda
+                göze batan, yanıltıcı bir çizgi. Silüeti izletmek her karede
+                filtre maliyeti demek, mobilde pahalı.
+
+                Seçili olduğu zaten anlaşılıyor: ölçü etiketleri ürünle
+                birlikte gidiyor, sağdaki araç sütunu ve tuş takımı yalnızca
+                ürün yerleştikten sonra çıkıyor.
               */}
-              {/* Çekim sırasında gizlenir: seçim çizgisi fotoğrafa girmemeli */}
-              {!mesgul && (
-                <div
-                  aria-hidden="true"
-                  style={{
-                    position: 'absolute',
-                    inset: -2,
-                    border: '2px solid #22d3ee',
-                    borderRadius: 3,
-                    pointerEvents: 'none',
-                    zIndex: 3,
-                  }}
-                />
-              )}
               {/* Ekranlar şeridi — alta hizalı, WallPreview ile aynı yerleşim */}
               <div style={{ position: 'absolute', inset: 0 }}>
                 {/* z0: Tek içerik katmanı — tüm şeride yayılır, ekran şekline kırpılır */}
