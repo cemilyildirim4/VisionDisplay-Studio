@@ -8,8 +8,9 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace DisplayConfigurator.Api.Controllers;
 
 /// <summary>
-/// Production kimlik doğrulama: e-posta/parola ile giriş.
-/// Kayıt kapalıdır; bayi hesaplarını yalnızca Admin (POST /api/users) açar.
+/// Production kimlik doğrulama: e-posta/parola ile kayıt ve giriş.
+/// Kayıt AÇIKTIR ve her zaman "Dealer" (bayi) rolü verir. Yönetici ve tester
+/// rolleri buradan alınamaz; onları yalnızca Admin (POST /api/users) verir.
 /// </summary>
 [ApiController]
 [Route("api/auth")]
@@ -36,14 +37,41 @@ public class AuthController : ControllerBase
         _config = config;
     }
 
+    /// <summary>
+    /// Bayi/müşteri kendi hesabını açar. Rol HER ZAMAN "Dealer"; istek ne
+    /// gönderirse göndersin yükseltme yapılamaz — yetki yükseltme yolu
+    /// yalnızca Admin'in kullanıcı yönetiminden geçer.
+    ///
+    /// Açılan hesap kendi kaydettiği yapılandırma ve teklifleri görür
+    /// (GET /api/configurations/mine, /api/quotes/mine); başkasınınkine
+    /// erişemez. Hepsini yalnızca Admin görür.
+    /// </summary>
     [HttpPost("register")]
-    public ActionResult Register()
+    public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterDto dto)
     {
-        return StatusCode(StatusCodes.Status403Forbidden, new
+        var email = dto.Email.Trim().ToLowerInvariant();
+
+        /*
+         * Var olan e-postayı 409 ile söylüyoruz. Bu, kayıtlı e-postaları
+         * dışarıya sızdırır; ama alternatifi (sessizce başarılı gibi
+         * davranmak) kullanıcıyı parolasını hatırlamadığı bir hesapla baş
+         * başa bırakıyor. Kayıt zaten herkese açık olduğu için aynı bilgi
+         * denemeyle de öğrenilebilir; net hata mesajı tercih edildi.
+         */
+        var existing = await _userRepository.GetByEmailAsync(email);
+        if (existing != null)
+            return Conflict(new { message = "Bu e-posta adresiyle zaten bir hesap var. Giriş yapmayı deneyin." });
+
+        var user = await _userRepository.CreateAsync(new User
         {
-            message = "Kayıt kapalı. Bayi hesabı yalnızca yönetim panelinden (Kullanıcılar) açılır.",
-            code = "REGISTRATION_CLOSED",
+            Email = email,
+            PasswordHash = PasswordHasher.Hash(dto.Password),
+            DisplayName = string.IsNullOrWhiteSpace(dto.DisplayName) ? null : dto.DisplayName.Trim(),
+            // DTO'daki StaffCode bilerek OKUNMUYOR: rol buradan yükseltilemez.
+            Role = "Dealer",
         });
+
+        return await IssueTokensAsync(user);
     }
 
     [HttpPost("login")]

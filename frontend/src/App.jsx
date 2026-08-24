@@ -1434,6 +1434,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             screenType={screenType}
             curveAmount={curveAmount}
             screens={screenMode === 'multi' ? screens : null}
+            /* AR'da deklanşör işletim sistemine ait; fotoğraf için kamera
+               ekranına geçiriyoruz (bkz. Scene3D → onOpenCamera) */
+            onOpenCamera={() => {
+              setScene3dOpen(false)
+              setArAcik(true)
+            }}
           />
         </Suspense>
       )}

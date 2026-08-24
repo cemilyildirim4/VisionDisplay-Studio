@@ -2,7 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DisplayConfigurator.Application.DTOs;
 
-/// <summary>Bayi/müşteri kendi hesabını açamaz — kayıt kapalı (REGISTRATION_CLOSED).</summary>
+/// <summary>
+/// Bayi/müşteri kendi hesabını açar. Rol her zaman "Dealer" olur; bu DTO'dan
+/// rol yükseltilemez (bkz. AuthController.Register).
+/// </summary>
 public class RegisterDto
 {
     [Required, EmailAddress, StringLength(150)]
@@ -15,9 +18,9 @@ public class RegisterDto
     public string? DisplayName { get; set; }
 
     /// <summary>
-    /// Personel erişim kodu. Boş bırakılırsa hesap "Dealer" (bayi) olarak açılır.
-    /// Tester kaydı yalnızca Development veya Beta:Enabled iken Staff:TesterCode ile açılır.
-    /// Canlıda bu alan gönderilirse kayıt reddedilir. Admin bu uçtan açılamaz.
+    /// KULLANILMIYOR. Eski istemcilerle uyum için duruyor; Register bu alanı
+    /// okumuyor, açılan hesap her hâlükârda "Dealer" oluyor. Tester/Admin
+    /// rolünü yalnızca Admin, kullanıcı yönetiminden verir.
     /// </summary>
     [StringLength(100)]
     public string? StaffCode { get; set; }

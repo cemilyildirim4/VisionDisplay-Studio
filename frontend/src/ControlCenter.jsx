@@ -87,6 +87,14 @@ export default function ControlCenter() {
   const [loginPassword, setLoginPassword] = useState('')
   const [loginBusy, setLoginBusy] = useState(false)
   const [loginError, setLoginError] = useState(null)
+  /*
+   * GİRİŞ / YENİ KAYIT aynı panelde. Kayıt açık ve her zaman "Bayi" rolü
+   * veriyor; yönetici veya tester rolü buradan alınamaz (bkz. AuthController).
+   * Açılan hesap yalnızca KENDİ tekliflerini görür ("Tekliflerim" sekmesi
+   * /api/quotes/mine'a bakıyor); hepsini yalnızca Admin görür.
+   */
+  const [authMod, setAuthMod] = useState('login') // 'login' | 'register'
+  const [regName, setRegName] = useState('')
   const [bugNote, setBugNote] = useState('')
   const [bugSent, setBugSent] = useState(false)
   const [bugSending, setBugSending] = useState(false)
@@ -191,6 +199,49 @@ export default function ControlCenter() {
     } finally {
       setLoginBusy(false)
     }
+  }
+
+  /** Yeni bayi hesabı açar ve doğrudan oturumu başlatır. */
+  const handleRegister = async (e) => {
+    e.preventDefault()
+    if (loginBusy) return
+    setLoginBusy(true)
+    setLoginError(null)
+    try {
+      const res = await apiFetch(`${API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: loginEmail,
+          password: loginPassword,
+          displayName: regName.trim() || null,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setLoginError(body.message || t('cc.register.failed'))
+        return
+      }
+      const data = await res.json()
+      setSessionData({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        role: data.role || R.DEALER,
+        email: data.email || loginEmail,
+        displayName: data.displayName || data.email || loginEmail,
+      })
+      goTab('session')
+    } catch {
+      setLoginError(t('cc.login.network'))
+    } finally {
+      setLoginBusy(false)
+    }
+  }
+
+  /** Giriş ↔ kayıt geçişi; yazılanlar durur, yalnızca hata temizlenir. */
+  const authModDegistir = (m) => {
+    setAuthMod(m)
+    setLoginError(null)
   }
 
   /*
@@ -410,13 +461,53 @@ export default function ControlCenter() {
         {tab === 'session' && (
           <div className="flex flex-col gap-4">
             {!isAuthenticated ? (
-              <Panel title={t('cc.login.title')} hint={t('cc.login.hint')}>
-                <form onSubmit={handleLogin} className="flex flex-col gap-3 max-w-sm">
+              <Panel
+                title={authMod === 'login' ? t('cc.login.title') : t('cc.register.title')}
+                hint={authMod === 'login' ? t('cc.login.hint') : t('cc.register.hint')}
+              >
+                {/* Giriş ↔ Yeni kayıt anahtarı */}
+                <div className="inline-flex rounded-full border border-neutral-300 dark:border-[#39414f] p-0.5 mb-4">
+                  {[
+                    { id: 'login', label: t('profile.signIn') },
+                    { id: 'register', label: t('cc.register.tab') },
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => authModDegistir(m.id)}
+                      className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${
+                        authMod === m.id
+                          ? 'bg-brand text-white'
+                          : 'text-neutral-600 dark:text-neutral-300 hover:text-brand'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+
+                <form
+                  onSubmit={authMod === 'login' ? handleLogin : handleRegister}
+                  className="flex flex-col gap-3 max-w-sm"
+                >
+                  {authMod === 'register' && (
+                    <label className="block">
+                      <span className="text-[12px] text-neutral-500">{t('cc.register.name')}</span>
+                      <input
+                        type="text"
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
+                        placeholder={t('cc.register.namePlaceholder')}
+                        className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
+                      />
+                    </label>
+                  )}
                   <label className="block">
                     <span className="text-[12px] text-neutral-500">{t('exp.email')}</span>
                     <input
                       type="email"
                       required
+                      autoComplete="email"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
@@ -428,10 +519,16 @@ export default function ControlCenter() {
                       type="password"
                       required
                       minLength={8}
+                      autoComplete={authMod === 'login' ? 'current-password' : 'new-password'}
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
                     />
+                    {authMod === 'register' && (
+                      <span className="text-[11.5px] text-neutral-500 dark:text-neutral-400 mt-1 block">
+                        {t('cc.register.passwordRule')}
+                      </span>
+                    )}
                   </label>
 
                   {loginError && <p className="text-[13px] text-red-600 m-0">{loginError}</p>}
@@ -440,7 +537,9 @@ export default function ControlCenter() {
                     disabled={loginBusy}
                     className="rounded-full bg-brand text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors"
                   >
-                    {loginBusy ? t('cc.login.busy') : t('profile.signIn')}
+                    {loginBusy
+                      ? t(authMod === 'login' ? 'cc.login.busy' : 'cc.register.busy')
+                      : t(authMod === 'login' ? 'profile.signIn' : 'cc.register.submit')}
                   </button>
                 </form>
               </Panel>

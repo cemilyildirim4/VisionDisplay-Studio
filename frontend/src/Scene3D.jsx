@@ -970,7 +970,7 @@ function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
   )
 }
 
-export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens }) {
+export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens, onOpenCamera }) {
   const { t } = useLang()
   const { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy } = useGlbAr()
 
@@ -1389,6 +1389,27 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
               </button>
             ) : (
               <p className="text-center text-[12px] text-white/55 m-0">{t('scene3d.arUnsupported')}</p>
+            )}
+            {/*
+              FOTOĞRAF — AR'a girildiğinde ekranı işletim sistemi devralıyor
+              (Quick Look / Scene Viewer). Oradaki beyaz deklanşör Apple'ın
+              kendi düğmesi; ne davranışına ne de görünümüne sayfadan
+              müdahale edebiliyoruz ve her cihazda çalışmıyor. Bizim kamera
+              ekranımızda deklanşör çalışıyor, üstelik kare hem cihaza iniyor
+              hem PDF raporuna giriyor — kısayol oraya götürüyor.
+            */}
+            {onOpenCamera && (
+              <button
+                type="button"
+                onClick={onOpenCamera}
+                className="mt-2 w-full rounded-full py-2.5 text-[13.5px] font-semibold border border-white/30 text-white/85 hover:border-white/70 transition-colors inline-flex items-center justify-center gap-2"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 8.5A1.5 1.5 0 014.5 7h2l1.2-2h8.6L17.5 7h2A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5v-9z" />
+                  <circle cx="12" cy="13" r="3.5" />
+                </svg>
+                {t('scene3d.takePhoto')}
+              </button>
             )}
             <p className="mt-2 text-center text-[11px] text-white/45 m-0">{t('scene3d.arHint')}</p>
           </div>

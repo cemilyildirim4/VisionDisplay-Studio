@@ -122,6 +122,8 @@ export default function ArView({
   const katmanRef = useRef(null)
 
   const [ornekAcik, setOrnekAcik] = useState(false)
+  /* Kaydetme/paylaşma sonrası kısa onay yazısı (bkz. kaydet) */
+  const [bildirim, setBildirim] = useState(null)
   const [hata, setHata] = useState(null)
   // Hazır arka planlar — 3D görünümüyle ortak liste (bkz. ornekMekanlar.js)
   const ORNEKLER = ORNEK_MEKANLAR
@@ -588,12 +590,36 @@ export default function ArView({
     const veri = cekim || (await yakala())
     if (!veri) return
     onSaved?.(veri)
+
+    /*
+     * BLOB URL — data: URL DEĞİL.
+     *
+     * Belirti: iPhone'da "Kaydet"e basınca Safari "…dosyasını indirmek
+     * istiyor musunuz?" diye soruyor, ama "İndir"e de "Görüntüle"ye de
+     * basınca hiçbir şey olmuyordu. Sebep indirilen adresin dev bir
+     * `data:image/jpeg;base64,…` dizesi olması: iOS Safari birkaç yüz KB'ı
+     * aşan data: URL'lerini indiremiyor ve sessizce düşüyor.
+     *
+     * Aynı bayt dizisi bir Blob'a konup `blob:` adresiyle veriliyor; bu yol
+     * boyut sınırına takılmıyor ve indirme gerçekten tamamlanıyor.
+     */
+    const blob = await (await fetch(veri)).blob()
+    const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = veri
+    a.href = url
     a.download = `ar-${model?.name || 'tasarim'}-${cols}x${rows}.jpg`
     document.body.appendChild(a)
     a.click()
     a.remove()
+    // Sekme adresi bırakmadan serbest bırak; indirme çoktan başlamış olur
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+
+    /*
+     * Kullanıcı ne olduğunu görsün: kare hem indi hem de PDF raporuna
+     * eklenecek. Eskiden hiçbir geri bildirim yoktu; iOS'ta indirme sessizce
+     * düştüğü için "kaydet çalışmıyor" izlenimi doğuyordu.
+     */
+    setBildirim(t('ar.savedNote'))
   }
 
   /*
@@ -611,6 +637,7 @@ export default function ArView({
       if (navigator.canShare?.({ files: [dosya] })) {
         await navigator.share({ files: [dosya], title: t('ar.title') })
         onSaved?.(veri) // paylaşılan kare de rapora girsin
+        setBildirim(t('ar.savedNote'))
         return
       }
     } catch {
@@ -634,6 +661,13 @@ export default function ArView({
   /* Tuş takımı adımları: dokunmatikte parmakla tutturulamayan ince ayar için */
   const kaydir = (dx, dy) => setMerkez((m) => ({ x: m.x + dx, y: m.y + dy }))
   const cevir = (d) => setDonus((a) => a + d)
+
+  // Onay yazısı birkaç saniye sonra kendiliğinden kalkar
+  useEffect(() => {
+    if (!bildirim) return undefined
+    const z = setTimeout(() => setBildirim(null), 4000)
+    return () => clearTimeout(z)
+  }, [bildirim])
 
   // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
   useGovdeKilidi(open)
@@ -968,6 +1002,18 @@ export default function ArView({
         {!hata && arAcik && asama === 'yerlesti' && tusTakimi && (
           /* Adım büyüklüğü kameraya ait: burada piksel, AR ekranında metre. */
           <TusTakimi t={t} onKaydir={(dx, dy) => kaydir(dx * 12, dy * 12)} onCevir={(d) => cevir(d * 15)} />
+        )}
+
+        {/*
+          KAYDETME ONAYI — üst barın altında, kısa süre görünür.
+          z-50: araç çubukları z-40'ta; onay onların da üstünde durmalı.
+        */}
+        {bildirim && (
+          <div className="absolute top-16 inset-x-0 z-50 flex justify-center px-6 pointer-events-none">
+            <p className="m-0 rounded-full bg-black/80 text-white text-[12.5px] font-semibold px-4 py-2 text-center shadow-lg">
+              {bildirim}
+            </p>
+          </div>
         )}
 
         {/* ---------------------------------------------------------- ÜST BAR */}
