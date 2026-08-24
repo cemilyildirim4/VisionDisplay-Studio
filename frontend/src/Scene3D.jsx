@@ -1051,6 +1051,105 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
   }, [])
 
   /*
+   * ═══════════════ PARMAK / FARE İLE TAŞI, DÖNDÜR, BOYUTLANDIR ═══════════════
+   *
+   * Tuş takımı ince ayar için; asıl kullanım parmakla olmalı — kamera
+   * ekranında da öyle. model-viewer'ın kendi denetimlerinde sürükleme
+   * DÖNDÜRÜYOR, taşımak için iki parmak (ya da farede sağ tuş) gerekiyor;
+   * kimse bunu kendiliğinden bulmuyordu.
+   *
+   * Bu yüzden ürün yerleştikten sonra model-viewer'ın üstüne kendi jest
+   * katmanımız geliyor ve kameradakiyle AYNI kuralı uyguluyor:
+   *   • tek parmak / fare sürükleme → ürünü TAŞI,
+   *   • iki parmak aç-kapa         → büyüt / küçült,
+   *   • iki parmak çevir           → döndür,
+   *   • fare tekerleği             → büyüt / küçült.
+   *
+   * Piksel → metre çevrimi görüntü yüksekliğine ve kameranın uzaklığına
+   * bağlı: uzaktayken aynı sürükleme daha çok metre eder, yakınken daha az.
+   * Sabit bir katsayı yakınlaştırmanın her kademesinde yanlış hissettiriyordu.
+   */
+  const jestRef = useRef({ isaretciler: new Map(), uzaklik: 0, aci: 0 })
+
+  const jestOlcegi = useCallback(() => {
+    const mv = mvRef.current
+    if (!mv?.getCameraOrbit) return 0
+    const kutu = mv.getBoundingClientRect()
+    if (!kutu.height) return 0
+    // Görüntünün yüksekliği kabaca kamera uzaklığı kadar dünya yüksekliği gösterir
+    return mv.getCameraOrbit().radius / kutu.height
+  }, [])
+
+  const jestBasla = useCallback((e) => {
+    const d = jestRef.current
+    // Parmak ÖNCE kaydedilir: setPointerCapture atarsa (bazı tarayıcılar ve
+    // otomatik testler atıyor) ikinci parmak hiç kaydolmuyor, iki parmaklı
+    // jestler sessizce tek parmak sanılıp taşımaya dönüşüyordu.
+    d.isaretciler.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId)
+    } catch {
+      /* yakalama olmasa da olur: olaylar zaten bu katmana geliyor */
+    }
+    if (d.isaretciler.size === 2) {
+      const [a, b] = [...d.isaretciler.values()]
+      d.uzaklik = Math.hypot(a.x - b.x, a.y - b.y)
+      d.aci = Math.atan2(b.y - a.y, b.x - a.x)
+    }
+  }, [])
+
+  const jestHareket = useCallback((e) => {
+    const d = jestRef.current
+    const onceki = d.isaretciler.get(e.pointerId)
+    if (!onceki) return
+    const simdi = { x: e.clientX, y: e.clientY }
+    d.isaretciler.set(e.pointerId, simdi)
+    const mv = mvRef.current
+    if (!mv?.getCameraOrbit) return
+
+    if (d.isaretciler.size === 1) {
+      // TAŞI — hedefi ürünün TERSİNE kaydırınca ürün parmağı takip eder
+      const m = jestOlcegi()
+      if (!m) return
+      const h = mv.getCameraTarget()
+      mv.cameraTarget =
+        String(h.x - (simdi.x - onceki.x) * m) + 'm ' +
+        String(h.y + (simdi.y - onceki.y) * m) + 'm ' +
+        String(h.z) + 'm'
+      return
+    }
+
+    if (d.isaretciler.size === 2) {
+      const [a, b] = [...d.isaretciler.values()]
+      const uzaklik = Math.hypot(a.x - b.x, a.y - b.y)
+      const aci = Math.atan2(b.y - a.y, b.x - a.x)
+      const o = mv.getCameraOrbit()
+      // Parmaklar açıldıkça yarıçap küçülür, yani ürün büyür
+      const kat = d.uzaklik > 0 ? d.uzaklik / uzaklik : 1
+      const derece = (o.theta * 180) / Math.PI + ((aci - d.aci) * 180) / Math.PI
+      mv.cameraOrbit =
+        String(derece) + 'deg ' +
+        String((o.phi * 180) / Math.PI) + 'deg ' +
+        String(o.radius * kat) + 'm'
+      d.uzaklik = uzaklik
+      d.aci = aci
+    }
+  }, [jestOlcegi])
+
+  const jestBitir = useCallback((e) => {
+    const d = jestRef.current
+    d.isaretciler.delete(e.pointerId)
+    if (d.isaretciler.size < 2) {
+      d.uzaklik = 0
+      d.aci = 0
+    }
+  }, [])
+
+  const jestTekerlek = useCallback((e) => {
+    olcekAr(e.deltaY > 0 ? 1.08 : 1 / 1.08)
+  }, [olcekAr])
+
+  /*
    * SIFIRLA — açıyı, yakınlaştırmayı ve kaydırmayı başlangıca alıp yerleştirme
    * adımına döner. Amazon'daki ↻ düğmesi de aynı işi yapıyor: ürün kadrajdan
    * çıktığında ya da açı iyice bozulduğunda çıkış yolu.
@@ -1314,6 +1413,27 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
               shadow-intensity="1"
               style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
             />
+
+            {/*
+              JEST KATMANI — parmak/fare ile taşı, döndür, boyutlandır.
+              Yalnızca ürün yerleştikten sonra ve model-viewer'ın ÜSTÜNDE.
+              model-viewer'ın kendi denetiminde sürükleme döndürüyor, taşımak
+              iki parmak istiyordu; burada kural kameradakiyle aynı:
+              tek parmak taşır, iki parmak döndürüp boyutlandırır.
+              z-10: araç düğmeleri (z-20) bunun üstünde kalmalı.
+              touchAction 'none': tarayıcı sayfayı kaydırmaya kalkmasın.
+            */}
+            {asama === 'yerlesti' && (
+              <div
+                className="absolute inset-0 z-10"
+                style={{ touchAction: 'none' }}
+                onPointerDown={jestBasla}
+                onPointerMove={jestHareket}
+                onPointerUp={jestBitir}
+                onPointerCancel={jestBitir}
+                onWheel={jestTekerlek}
+              />
+            )}
 
             {/* ═════════════ YERLEŞTİRME AKIŞI (bkz. `asama`) ═════════════
                 Kameradakiyle birebir aynı parçalar — ArYerlestirme.jsx. */}
