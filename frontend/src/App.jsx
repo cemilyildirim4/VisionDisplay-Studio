@@ -30,6 +30,14 @@ import { useAcilirKonum } from './hooks/useAcilirKonum.js'
 import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { useCabinets } from './hooks/useCabinets.js'
+import {
+  taslakOlustur,
+  taslagiYaz,
+  taslagiOku,
+  taslagiSil,
+  sayfaYenilendi,
+  duzenlemeyiAl,
+} from './tasarimTaslagi.js'
 
 // API kapalıyken de akış çalışsın diye örnek (generic) demo veri.
 // Kullanıcı kendi ürünleriyle değiştirecek.
@@ -249,6 +257,88 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   // API verisi varsa onu, yoksa örnek veriyi kullan
   const displayCabinets = cabinets.length > 0 ? cabinets : SAMPLE_CABINETS
 
+  /*
+   * ══════════════ TASARIM TASLAĞI: GERİ TUŞU ve "DÜZENLE" ══════════════
+   *
+   * İki ayrı ihtiyaç, tek mekanizma (bkz. tasarimTaslagi.js):
+   *
+   *   • GERİ TUŞU. Telefonda geri tuşuna basıp dönünce sayfa baştan
+   *     kuruluyor ve kurulan tasarım kayboluyordu. Taslak her değişiklikte
+   *     sessionStorage'a yazılıyor, açılışta geri okunuyor.
+   *     SAYFA YENİLENDİĞİNDE ise bilerek sıfırlanıyor — istenen davranış bu.
+   *
+   *   • "TEKLİFLERİM → DÜZENLE". Kontrol Merkezi teklifin tasarımını bir
+   *     kutuya bırakıp konfigüratöre yönlendiriyor; burada alınıp yükleniyor.
+   *     Bu, geri tuşu taslağından ÖNCE gelir: kullanıcı açıkça o teklifi
+   *     açmak istemiştir.
+   */
+  const bekleyenTaslakRef = useRef(undefined)
+  if (bekleyenTaslakRef.current === undefined) {
+    const duzenle = duzenlemeyiAl()
+    if (duzenle) {
+      bekleyenTaslakRef.current = duzenle
+    } else if (sayfaYenilendi()) {
+      taslagiSil()
+      bekleyenTaslakRef.current = null
+    } else {
+      bekleyenTaslakRef.current = taslagiOku()
+    }
+  }
+  const [taslakUyari, setTaslakUyari] = useState(null)
+
+  /*
+   * Model NESNESİ taslakta durmuyor, yalnızca kodu duruyor: kabin listesi
+   * sunucudan geliyor ve fiyat/ölçü gibi alanları değişebilir. Bu yüzden
+   * yükleme, liste hazır olana kadar bekler ve modeli GÜNCEL listeden çözer.
+   */
+  useEffect(() => {
+    const t = bekleyenTaslakRef.current
+    if (!t) return
+    const model =
+      displayCabinets.find((m) => m.modelCode && m.modelCode === t.modelCode) ||
+      displayCabinets.find((m) => m.id === t.modelId)
+    if (!model) {
+      // Liste henüz gelmemiş olabilir; gelmiş ve model yoksa taslak ölüdür.
+      if (cabinetsLoading) return
+      bekleyenTaslakRef.current = null
+      taslagiSil()
+      setTaslakUyari(t.modelCode ? `${t.modelCode} artık listede yok.` : null)
+      return
+    }
+    bekleyenTaslakRef.current = null
+
+    setSelectedModel(model)
+    setWidth(t.width ?? 0)
+    setHeight(t.height ?? 0)
+    setCols(t.cols ?? 1)
+    setRows(t.rows ?? 1)
+    setScreenMode(t.screenMode ?? 'single')
+    setScreenType(t.screenType ?? 'flat')
+    setOrientation(t.orientation ?? 'landscape')
+    setCurveAmount(t.curveAmount ?? 60)
+    setResolution(t.resolution ?? 'FHD')
+    setSboxRedundancy(t.sboxRedundancy ?? 'no')
+    setScene(t.scene ?? 'none')
+    setScreens(Array.isArray(t.screens) ? t.screens : [])
+    setContent(t.content ?? 'led')
+    // Yüklenen görsel/video geri gelemez (blob adresi ölmüştür) — söyle.
+    if (t.icerikDustu) setTaslakUyari('Yüklediğiniz görsel/video geri yüklenemedi; içerik LED yüzeye alındı.')
+  }, [displayCabinets, cabinetsLoading])
+
+  /* Tasarım her değiştiğinde taslak tazelenir. */
+  useEffect(() => {
+    // Geri yükleme sırası gelmemişken yazmak, bekleyen taslağın üstüne boş
+    // durum yazıp onu silerdi.
+    if (bekleyenTaslakRef.current) return
+    taslagiYaz(
+      taslakOlustur({
+        selectedModel, width, height, cols, rows, screenMode, screenType,
+        orientation, curveAmount, resolution, sboxRedundancy, scene, screens, content,
+      }),
+    )
+  }, [selectedModel, width, height, cols, rows, screenMode, screenType,
+      orientation, curveAmount, resolution, sboxRedundancy, scene, screens, content])
+
   const handleChoose = (model) => {
     setSelectedModel(model)
     setWidth((w) => w || 1)
@@ -324,6 +414,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setScreens([])
     setShowMeasurements(true)
     setResetConfirmOpen(false)
+    setScene('none')
+    // Sıfırlama kalıcı olmalı: taslak durursa geri tuşuyla eski tasarım döner.
+    taslagiSil()
   }
 
   // Duvara sığdır: her tıklamada ekranı o anki duvara tam sığan maksimuma çeker.
@@ -1472,8 +1565,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           isVideoWall,
           /* Kamerada kaydedilen mekân fotoğrafı — varsa PDF'e ek sayfa olur */
           arFoto,
+          /*
+           * Tasarımın TAMAMI teklifle birlikte saklansın diye. Teklif kaydında
+           * yalnızca özet vardı (model kodu, toplam sütun/satır, okunur bir
+           * çoklu ekran cümlesi) ve tasarım geri açılamıyordu. Bu alan
+           * "Tekliflerim → Düzenle"nin birebir çalışmasını sağlıyor.
+           */
+          tasarim: taslakOlustur({
+            selectedModel, width, height, cols, rows, screenMode, screenType,
+            orientation, curveAmount, resolution, sboxRedundancy, scene, screens, content,
+          }),
         }}
       />
+
+      {/*
+        TASLAK UYARISI — geri yüklemede tam olarak eski hâline dönülemediyse
+        kullanıcı bunu bilmeli (model listeden kalkmış ya da yüklediği
+        görsel/video geri gelememiş olabilir).
+      */}
+      {taslakUyari && (
+        <div className="fixed bottom-4 inset-x-0 z-[70] flex justify-center px-4 pointer-events-none">
+          <div className="pointer-events-auto max-w-md rounded-xl bg-neutral-900 text-white text-[13px] px-4 py-3 shadow-2xl flex items-start gap-3">
+            <span className="flex-1">{taslakUyari}</span>
+            <button
+              type="button"
+              onClick={() => setTaslakUyari(null)}
+              className="text-white/60 hover:text-white font-semibold shrink-0"
+            >
+              {t('ar.close')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sıfırlama onayı */}
       {resetConfirmOpen && (

@@ -39,6 +39,15 @@ public class Quote
     /// <summary>Çoklu ekran ayrıntısı, okunabilir metin olarak</summary>
     public string? ScreensSummary { get; set; }
 
+    /// <summary>
+    /// Teklif anındaki tasarımın TAMAMI (JSON). Yukarıdaki özet alanları
+    /// tasarımı ekranda göstermeye yetiyor ama geri AÇMAYA yetmiyor: çoklu
+    /// ekran düzeni <see cref="ScreensSummary"/> içinde yalnızca insan okusun
+    /// diye yazılmış bir cümle. "Tekliflerim → Düzenle" bu alanı okuyup
+    /// tasarımı birebir geri yükler. Sütun eklenmeden önceki tekliflerde null.
+    /// </summary>
+    public string? ConfigJson { get; set; }
+
     /// <summary>"Beklemede" | "Onaylandı" | "Reddedildi" — teklif yaşam döngüsü.</summary>
     public string Status { get; set; } = "Beklemede";
 

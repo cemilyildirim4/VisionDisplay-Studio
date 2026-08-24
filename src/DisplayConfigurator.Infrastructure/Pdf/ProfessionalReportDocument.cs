@@ -63,8 +63,17 @@ public class ProfessionalReportDocument : IDocument
          * ekranın müşterinin kendi mekânındaki hâlini gösteriyor. Kare yoksa
          * sayfa hiç açılmaz, rapor eskisi gibi kalır.
          */
-        if (_extras.ArImage is { Length: > 0 })
+        /*
+         * Her mekân karesi ayrı bir sayfa. Kareler iki yoldan geliyor:
+         * kamerada "Kaydet" denen kare ve kullanıcının rapora eklediği
+         * fotoğraflar (iPhone'da Quick Look'un çektiği kareyi rapora sokmanın
+         * tek yolu bu — o kare Fotoğraflar'a gidiyor, sayfa göremiyor).
+         * Liste boşsa hiç sayfa açılmaz, rapor eskisi gibi kalır.
+         */
+        foreach (var kare in _extras.ArImages)
         {
+            if (kare is not { Length: > 0 }) continue;
+            var gorsel = kare;
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
@@ -73,7 +82,7 @@ public class ProfessionalReportDocument : IDocument
                 page.DefaultTextStyle(x => x.FontSize(9.5f).FontFamily("Arial").FontColor(Ink));
 
                 page.Header().Element(ComposeArHeader);
-                page.Content().Element(ComposeArVisual);
+                page.Content().Element(c => ComposeArVisual(c, gorsel));
                 page.Footer().Element(ComposeFooter);
             });
         }
@@ -96,12 +105,12 @@ public class ProfessionalReportDocument : IDocument
         });
     }
 
-    private void ComposeArVisual(IContainer container)
+    private void ComposeArVisual(IContainer container, byte[] gorsel)
     {
         container.Column(col =>
         {
             col.Item().AlignCenter().AlignMiddle()
-                .Image(_extras.ArImage!)
+                .Image(gorsel)
                 .FitArea();
             /*
              * Kenar boşlukları TAHMİN — kamerada derinlik algılama yok, ölçek

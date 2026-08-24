@@ -3,6 +3,7 @@ import { useLang } from './useLang.js'
 import { useSession } from './SessionContext.jsx'
 import { BrandMark, BrandStripe } from './BrandChrome.jsx'
 import { API_URL, apiFetch } from './apiClient.js'
+import { duzenlemeyeGonder, taslakDolu } from './tasarimTaslagi.js'
 
 
 
@@ -238,6 +239,61 @@ export default function ControlCenter() {
     }
   }
 
+  /*
+   * TEKLİFİ DÜZENLE — tasarımı konfigüratörde geri açar.
+   *
+   * Teklif kaydında artık tasarımın tamamı JSON olarak duruyor
+   * (quotes.config_json). Onu taslak kutusuna bırakıp konfigüratöre
+   * geçiyoruz; App açılışta kutuyu okuyup tasarımı kuruyor.
+   *
+   * Sütun eklenmeden ÖNCE oluşturulmuş tekliflerde bu alan boş: o kayıtlar
+   * yalnızca özet alanlarından, eksik biçimde açılabilir — kullanıcıya bunu
+   * söylüyoruz, sessizce yarım bir tasarım açmaktansa.
+   */
+  const teklifiDuzenle = (q) => {
+    let taslak = null
+    if (q.configJson) {
+      try {
+        taslak = JSON.parse(q.configJson)
+      } catch {
+        taslak = null
+      }
+    }
+    if (!taslakDolu(taslak)) {
+      // Eski kayıt: elde ne varsa ondan kur, eksiği söyle.
+      taslak = {
+        surum: 1,
+        modelCode: q.modelCode || null,
+        modelId: null,
+        width: Number(q.wallWidthM) || 0,
+        height: Number(q.wallHeightM) || 0,
+        cols: q.columns || 1,
+        rows: q.rows || 1,
+        screenMode: 'single', // çoklu düzen eski kayıtta yalnızca okunur metin
+        screenType: q.screenType || 'flat',
+        orientation: 'landscape',
+        curveAmount: 60,
+        resolution: q.resolution || 'FHD',
+        sboxRedundancy: 'no',
+        scene: 'none',
+        screens: [],
+        content: 'led',
+        icerikDustu: false,
+      }
+      if (!taslakDolu(taslak)) {
+        setTeklifHata(t('cc.quotes.editUnavailable'))
+        return
+      }
+      if (q.screenMode === 'multi') window.alert(t('cc.quotes.editPartial'))
+    }
+    if (!duzenlemeyeGonder(taslak)) {
+      setTeklifHata(t('cc.quotes.editUnavailable'))
+      return
+    }
+    // Konfigüratöre dön (Root hash'e bakıyor)
+    window.location.hash = ''
+  }
+
   /** Giriş ↔ kayıt geçişi; yazılanlar durur, yalnızca hata temizlenir. */
   const authModDegistir = (m) => {
     setAuthMod(m)
@@ -367,13 +423,23 @@ export default function ControlCenter() {
                           {tarihMetni(q.createdAt)} · {q.status}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setAcikTeklif(acikTeklif === q.id ? null : q.id)}
-                        className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[12px] font-semibold hover:border-brand transition-colors whitespace-nowrap"
-                      >
-                        {acikTeklif === q.id ? t('cc.quotes.hide') : t('cc.quotes.view')}
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setAcikTeklif(acikTeklif === q.id ? null : q.id)}
+                          className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[12px] font-semibold hover:border-brand transition-colors whitespace-nowrap"
+                        >
+                          {acikTeklif === q.id ? t('cc.quotes.hide') : t('cc.quotes.view')}
+                        </button>
+                        {/* Tasarımı konfigüratörde geri açar — bkz. teklifiDuzenle */}
+                        <button
+                          type="button"
+                          onClick={() => teklifiDuzenle(q)}
+                          className="rounded-full bg-brand text-white px-3.5 py-1.5 text-[12px] font-semibold hover:bg-brand-dark transition-colors whitespace-nowrap"
+                        >
+                          {t('cc.quotes.edit')}
+                        </button>
+                      </div>
                     </div>
 
                     {acikTeklif === q.id && (

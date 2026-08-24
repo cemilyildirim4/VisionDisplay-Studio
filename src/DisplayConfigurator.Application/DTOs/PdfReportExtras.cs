@@ -19,6 +19,10 @@ public class PdfReportExtras
     /// <summary>Canlı tuval önizlemesi (jpeg/png baytları). Yoksa görsel sayfası basılmaz.</summary>
     public byte[]? PreviewImage { get; set; }
 
-    /// <summary>Kamerada kaydedilen mekân karesi. Yoksa "Mekânda Görünüm" sayfası basılmaz.</summary>
-    public byte[]? ArImage { get; set; }
+    /// <summary>
+    /// Mekân kareleri: kamerada kaydedilen kare ve kullanıcının rapora eklediği
+    /// fotoğraflar. Her biri ayrı bir "Mekânda Görünüm" sayfası olur; liste
+    /// boşsa o sayfalar hiç basılmaz.
+    /// </summary>
+    public List<byte[]> ArImages { get; set; } = new();
 }

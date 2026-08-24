@@ -25,6 +25,7 @@ public class QuoteRepository : IQuoteRepository
         screen_type AS ScreenType,
         resolution AS Resolution,
         screens_summary AS ScreensSummary,
+        config_json AS ConfigJson,
         status AS Status,
         revision AS Revision,
         admin_note AS AdminNote,
@@ -88,14 +89,14 @@ public class QuoteRepository : IQuoteRepository
                 customer_name, phone, email, address, message,
                 model_code, wall_width_m, wall_height_m, screen_mode,
                 ""columns"", ""rows"", screen_type, resolution, screens_summary,
-                status, revision, user_id, created_at
+                config_json, status, revision, user_id, created_at
             )
             VALUES
             (
                 @CustomerName, @Phone, @Email, @Address, @Message,
                 @ModelCode, @WallWidthM, @WallHeightM, @ScreenMode,
                 @Columns, @Rows, @ScreenType, @Resolution, @ScreensSummary,
-                @Status, @Revision, @UserId, NOW()
+                @ConfigJson, @Status, @Revision, @UserId, NOW()
             )
             RETURNING id;";
 

@@ -52,4 +52,12 @@ public class QuoteInputDto
 
     [StringLength(4000)]
     public string? ScreensSummary { get; set; }
+
+    /// <summary>
+    /// Teklif anındaki tasarımın TAMAMI (JSON). Özet alanları tasarımı
+    /// göstermeye yetiyor ama geri AÇMAYA yetmiyor; "Tekliflerim → Düzenle"
+    /// bu alanı okur. Boş bırakılabilir (eski istemciler, misafir akışı).
+    /// </summary>
+    [StringLength(20000)]
+    public string? ConfigJson { get; set; }
 }
