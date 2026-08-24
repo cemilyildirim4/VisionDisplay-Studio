@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import html2canvas from 'html2canvas-pro'
 import { useLang } from './useLang.js'
@@ -39,40 +39,6 @@ async function captureScreenPreview() {
   }
 }
 
-/**
- * RAPORA EKLENEN FOTOĞRAFI KÜÇÜLT.
- *
- * Telefondan seçilen kare 4–8 MB olabiliyor; birkaç tanesi isteği sunucunun
- * 20 MB sınırının üstüne çıkarıyor ve rapor hiç üretilemiyor. Uzun kenar
- * 1600 px'e indirilip JPEG'e çevriliyor — A4 sayfada basılacak bir görsel
- * için fazlasıyla yeterli, dosya birkaç yüz KB'a düşüyor.
- */
-async function fotografiKucult(file, enBuyukKenar = 1600) {
-  const veri = await new Promise((resolve, reject) => {
-    const r = new FileReader()
-    r.onload = () => resolve(r.result)
-    r.onerror = () => reject(new Error('okunamadı'))
-    r.readAsDataURL(file)
-  })
-  const img = await new Promise((resolve, reject) => {
-    const i = new Image()
-    i.onload = () => resolve(i)
-    i.onerror = () => reject(new Error('çözülemedi'))
-    i.src = veri
-  })
-  const oran = Math.min(1, enBuyukKenar / Math.max(img.width, img.height))
-  // Zaten küçükse yeniden kodlamaya gerek yok
-  if (oran >= 1 && veri.length < 1_500_000) return veri
-  const c = document.createElement('canvas')
-  c.width = Math.max(1, Math.round(img.width * oran))
-  c.height = Math.max(1, Math.round(img.height * oran))
-  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height)
-  return c.toDataURL('image/jpeg', 0.85)
-}
-
-/** Rapora en çok bu kadar mekân fotoğrafı eklenebilir (sunucu da sınırlıyor). */
-const EN_COK_FOTOGRAF = 5
-
 function Field({ label, error, children }) {
   return (
     <label className="block mb-4">
@@ -111,44 +77,10 @@ export default function ExportModal({ open, onClose, summary }) {
   // Model seçimi onayı — zorunlu, yalnızca PDF'e not olarak geçer ('yes' | 'no')
   const [modelOnay, setModelOnay] = useState('')
   const [consent, setConsent] = useState(false)
-  /*
-   * MEKÂN FOTOĞRAFLARI — kullanıcının rapora eklediği kareler.
-   *
-   * iPhone'da AR (Quick Look) içindeki beyaz deklanşör Apple'ın kendi
-   * düğmesi: çektiği kare doğrudan Fotoğraflar'a gidiyor ve sayfa onu hiç
-   * göremiyor. Bu alan o kareyi (ya da herhangi bir mekân fotoğrafını)
-   * rapora sokmanın yolu; her biri ayrı bir "Mekânda Görünüm" sayfası olur.
-   */
-  const [fotograflar, setFotograflar] = useState([])
-  const [fotoHata, setFotoHata] = useState(null)
-  const fotoRef = useRef(null)
-
-  const fotografEkle = async (e) => {
-    const secilen = Array.from(e.target.files || [])
-    e.target.value = '' // aynı dosya tekrar seçilebilsin
-    if (secilen.length === 0) return
-    setFotoHata(null)
-    const yer = EN_COK_FOTOGRAF - fotograflar.length
-    if (yer <= 0) {
-      setFotoHata(t('exp.photoLimit'))
-      return
-    }
-    const eklenecek = []
-    for (const f of secilen.slice(0, yer)) {
-      try {
-        eklenecek.push(await fotografiKucult(f))
-      } catch {
-        setFotoHata(t('exp.photoFailed'))
-      }
-    }
-    if (eklenecek.length) setFotograflar((l) => [...l, ...eklenecek])
-    if (secilen.length > yer) setFotoHata(t('exp.photoLimit'))
-  }
   const [busy, setBusy] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(null)
-
   const setContactField = (field, value) => {
     const setters = {
       customer: setCustomer,
@@ -335,8 +267,6 @@ export default function ExportModal({ open, onClose, summary }) {
            * sayfa hiç eklenmez — akış değişmez.
            */
           arImageBase64: summary.arFoto || null,
-          /* Kullanıcının eliyle eklediği mekân fotoğrafları — her biri ayrı sayfa */
-          arImagesBase64: fotograflar,
         }),
       })
       if (!res.ok) {
@@ -554,56 +484,6 @@ export default function ExportModal({ open, onClose, summary }) {
             className={errors.message ? textareaErrorCls : textareaCls}
           />
         </Field>
-
-        {/* ───────────────────────── MEKÂN FOTOĞRAFLARI ───────────────────────── */}
-        <div className="mb-4">
-          <span className="text-xs text-neutral-500 dark:text-neutral-400">{t('exp.photos')}</span>
-          <p className="text-[11.5px] text-neutral-500 dark:text-neutral-400 m-0 mt-1 leading-relaxed">
-            {t('exp.photosHint')}
-          </p>
-
-          <input
-            ref={fotoRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={fotografEkle}
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => fotoRef.current?.click()}
-            disabled={fotograflar.length >= EN_COK_FOTOGRAF}
-            className="mt-2 rounded-full border border-neutral-300 dark:border-[#39414f] px-4 py-2 text-[13px] font-semibold hover:border-brand disabled:opacity-50 transition-colors inline-flex items-center gap-2"
-          >
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 8.5A1.5 1.5 0 014.5 7h2l1.2-2h8.6L17.5 7h2A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5v-9z" />
-              <circle cx="12" cy="13" r="3.5" />
-            </svg>
-            {t('exp.photosAdd')}
-          </button>
-
-          {fotoHata && <p className="text-[12px] text-red-600 m-0 mt-2">{fotoHata}</p>}
-
-          {fotograflar.length > 0 && (
-            <ul className="flex flex-wrap gap-2 mt-3 m-0 p-0 list-none">
-              {fotograflar.map((f, i) => (
-                <li key={i} className="relative">
-                  <img src={f} alt="" className="w-20 h-16 object-cover rounded-lg border border-neutral-300 dark:border-[#39414f]" />
-                  <button
-                    type="button"
-                    onClick={() => setFotograflar((l) => l.filter((_, j) => j !== i))}
-                    aria-label={t('exp.photosRemove')}
-                    title={t('exp.photosRemove')}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-neutral-900 text-white text-[11px] leading-none flex items-center justify-center hover:bg-red-600 transition-colors"
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
 
         <label className="flex items-start gap-2 text-xs text-neutral-600 dark:text-neutral-400 mb-1.5 cursor-pointer">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 accent-brand" />

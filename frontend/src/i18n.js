@@ -539,16 +539,6 @@ const dict = {
   'exp.modelSureMissing': { tr: 'Devam etmek için model seçiminden emin olup olmadığınızı belirtin.', en: 'Please state whether you are sure about the model selection.', ar: 'يرجى تحديد ما إذا كنت متأكداً من اختيار الطراز.' },
   'exp.message': { tr: 'Mesaj', en: 'Message', ar: 'رسالة' },
   'exp.address': { tr: 'Adres', en: 'Address', ar: 'العنوان' },
-  'exp.photos': { tr: 'Mekân fotoğrafları (isteğe bağlı)', en: 'Room photos (optional)', ar: 'صور المكان (اختياري)' },
-  'exp.photosHint': {
-    tr: 'AR veya kamerayla çektiğiniz kareleri rapora ekleyin; her biri raporda ayrı bir sayfa olur. AR ekranındaki deklanşörle çektiğiniz fotoğraf telefonun Fotoğraflar uygulamasına kaydedilir, buradan seçebilirsiniz.',
-    en: 'Add photos you took in AR or with the camera; each becomes its own page in the report. A photo taken with the AR shutter is saved to your phone’s Photos app — pick it from there.',
-    ar: 'أضف الصور التي التقطتها بالواقع المعزز أو بالكاميرا؛ تصبح كل صورة صفحة مستقلة في التقرير. الصورة الملتقطة بزر الواقع المعزز تُحفظ في تطبيق الصور بهاتفك — اخترها من هناك.',
-  },
-  'exp.photosAdd': { tr: 'Fotoğraf ekle', en: 'Add photo', ar: 'إضافة صورة' },
-  'exp.photosRemove': { tr: 'Kaldır', en: 'Remove', ar: 'إزالة' },
-  'exp.photoLimit': { tr: 'Rapora en çok 5 fotoğraf eklenebilir.', en: 'At most 5 photos can be added.', ar: 'يمكن إضافة ٥ صور كحد أقصى.' },
-  'exp.photoFailed': { tr: 'Bir fotoğraf okunamadı, atlandı.', en: 'A photo could not be read and was skipped.', ar: 'تعذّرت قراءة إحدى الصور فتم تخطيها.' },
   'exp.consent': {
     tr: 'Verilerin işlenmesini ve bu bilgilerle rapor oluşturulmasını kabul ediyorum.',
     en: 'I agree to the processing of data and creation of a report with this information.',
