@@ -1067,6 +1067,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <polyline points="9 6 15 12 9 18" />
                     </svg>
                   </button>
+
+                  {/*
+                    Listede kavisli ekran varsa kavis burada da ayarlanabilir.
+                    Denetim yalnızca tek ekran dalındaydı; çoklu düzende
+                    kavisli ekran seçilince kavisi değiştirmenin hiçbir yolu
+                    yoktu, tasarım %60'a mahkûm kalıyordu.
+                  */}
+                  {screens.some((s) => s.type === 'curved' || s.type === 'curvedIn') && (
+                    <KavisAyari
+                      t={t}
+                      deger={curveAmount}
+                      onChange={setCurveAmount}
+                      /* Listede iç bükey varsa açı ona göre okunur */
+                      icbukey={screens.some((s) => s.type === 'curvedIn')}
+                      coklu
+                    />
+                  )}
                 </div>
               ) : (
                 <>
@@ -1108,38 +1125,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         sahnede aynı anda değişir.
                       */}
                       {(screenType === 'curved' || screenType === 'curvedIn') && (
-                        <div className="mt-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
-                              {t('screen.curveAmount')}
-                            </span>
-                            <span className="text-[16px] font-semibold text-brand">%{curveAmount}</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            step={5}
-                            value={curveAmount}
-                            onChange={(e) => setCurveAmount(Number(e.target.value))}
-                            aria-label={t('screen.curveAmount')}
-                            className="w-full accent-[#2962ad] cursor-pointer"
-                          />
-                          <div className="flex justify-between text-[13px] text-neutral-400 dark:text-neutral-500">
-                            <span>{t('screen.curveFlat')}</span>
-                            <span>{t('screen.curveMax')}</span>
-                          </div>
-                          {/*
-                            Yüzde tek başına anlamsız: "%60 kavis" kaç derece
-                            demek, kullanıcı bilemiyordu. Yüzde derinliği
-                            (sagitta) ölçer, açı ondan türer — karşılığını
-                            burada gösteriyoruz. Açı ekran boyutundan bağımsız,
-                            o yüzden kabin sayısı değişince de doğru kalır.
-                          */}
-                          <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
-                            {t('screen.curveArc')}: ≈{curveArcDegrees(curveAmount, screenType === 'curvedIn')}°
-                          </div>
-                        </div>
+                        <KavisAyari
+                          t={t}
+                          deger={curveAmount}
+                          onChange={setCurveAmount}
+                          icbukey={screenType === 'curvedIn'}
+                        />
                       )}
                     </div>
                   )}
@@ -1647,6 +1638,58 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * KAVİS MİKTARI DENETİMİ.
+ *
+ * Hem tek ekranda hem ÇOKLU ekranda kullanılıyor. Önce yalnızca tek ekran
+ * dalında duruyordu: çoklu düzende kavisli bir ekran seçildiğinde kavisi
+ * ayarlayacak hiçbir denetim yoktu ve tasarım %60'a mahkûm kalıyordu.
+ *
+ * Değer TASARIMIN TAMAMI için tek: kavisli ekranların hepsi aynı kavisle
+ * çiziliyor (2D önizleme, kamera ve 3D sahne aynı değeri okuyor). Çoklu
+ * düzende bunu kullanıcıya da söylüyoruz.
+ */
+function KavisAyari({ t, deger, onChange, icbukey, coklu = false }) {
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
+          {t('screen.curveAmount')}
+        </span>
+        <span className="text-[16px] font-semibold text-brand">%{deger}</span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={deger}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={t('screen.curveAmount')}
+        className="w-full accent-[#2962ad] cursor-pointer"
+      />
+      <div className="flex justify-between text-[13px] text-neutral-400 dark:text-neutral-500">
+        <span>{t('screen.curveFlat')}</span>
+        <span>{t('screen.curveMax')}</span>
+      </div>
+      {/*
+        Yüzde tek başına anlamsız: "%60 kavis" kaç derece demek, kullanıcı
+        bilemiyordu. Yüzde derinliği (sagitta) ölçer, açı ondan türer —
+        karşılığını burada gösteriyoruz. Açı ekran boyutundan bağımsız, o
+        yüzden kabin sayısı değişince de doğru kalır.
+      */}
+      <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
+        {t('screen.curveArc')}: ≈{curveArcDegrees(deger, icbukey)}°
+      </div>
+      {coklu && (
+        <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
+          {t('screen.curveAllScreens')}
         </div>
       )}
     </div>

@@ -228,6 +228,11 @@ const dict = {
   'screen.curveAmount': { tr: 'Kavis miktarı', en: 'Curve amount', ar: 'مقدار الانحناء' },
   'screen.curveFlat': { tr: 'Düz', en: 'Flat', ar: 'مسطح' },
   'screen.curveMax': { tr: 'En fazla', en: 'Max', ar: 'الأقصى' },
+  'screen.curveAllScreens': {
+    tr: 'Bu kavis, düzendeki tüm kavisli ekranlara uygulanır.',
+    en: 'This curve applies to every curved screen in the layout.',
+    ar: 'ينطبق هذا الانحناء على كل شاشة منحنية في التخطيط.',
+  },
   'screen.curveArc': { tr: 'Yay açısı', en: 'Arc angle', ar: 'زاوية القوس' },
   'screen.curvedIn': { tr: 'İçe Kavisli', en: 'Concave Curved', ar: 'مقعرة' },
   'screen.lshape': { tr: 'İç L Tipi', en: 'Inner L-Type', ar: 'زاوية داخلية L' },
