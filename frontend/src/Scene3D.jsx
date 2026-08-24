@@ -1016,6 +1016,20 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
   const [asama, setAsama] = useState('ipucu')
   /* Kaydetme/paylaşma sonrası kısa onay yazısı — kameradakiyle aynı */
   const [arBildirim, setArBildirim] = useState(null)
+
+  /*
+   * EL ANİMASYONU (model-viewer'ın etkileşim ipucu) SÜREKLİ DÖNÜYORDU.
+   *
+   * Sebep: ipucu "kullanıcı bir süredir hiç dokunmadı" diye gösteriliyor;
+   * bizim jest katmanımız model-viewer'ın ÜSTÜNDE durup dokunuşları kendisi
+   * yuttuğu için model-viewer hiçbir zaman etkileşim görmüyor ve ipucunu
+   * tekrar tekrar açıyordu.
+   *
+   * İstenen: yalnızca ilk açılışta bir kez görünsün, sonra gitsin. Açılışta
+   * hemen gösteriliyor (eşik 0) ve ilk dokunuşta — dokunulmasa bile birkaç
+   * saniye sonra — kalıcı olarak kapatılıyor.
+   */
+  const [ipucuAcik, setIpucuAcik] = useState(true)
   const [tusTakimi, setTusTakimi] = useState(false)
 
   /* Pencere her açılışında akış başa alınır — bileşen DOM'da kaldığı için
@@ -1023,7 +1037,21 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
   useEffect(() => {
     setAsama('ipucu')
     setTusTakimi(false)
+    setIpucuAcik(true)
   }, [viewerUrl])
+
+  /*
+   * Sayaç, ürün YERLEŞTİKTEN sonra başlar; panel açılır açılmaz değil.
+   * Açılışta karşılama kartı ekranı kaplıyor, altındaki ipucu görülmüyor:
+   * sayacı orada başlatmak, el hiç görünmeden kapanması demekti.
+   * Ekran gerçekten kullanılabilir hâle geldiğinde bir kez gösterilip
+   * dokunulmasa bile birkaç saniye sonra kalıcı olarak kapanıyor.
+   */
+  useEffect(() => {
+    if (!ipucuAcik || asama !== 'yerlesti') return undefined
+    const z = setTimeout(() => setIpucuAcik(false), 4000)
+    return () => clearTimeout(z)
+  }, [ipucuAcik, asama])
 
   /** Kamera hedefini (bakılan nokta) kaydırır — ürün ekranda o yöne kayar. */
   const ADIM_M = 0.08
@@ -1090,6 +1118,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
   }, [])
 
   const jestBasla = useCallback((e) => {
+    setIpucuAcik(false) // ilk dokunuşta ipucu kalkar, bir daha gelmez
     const d = jestRef.current
     // Parmak ÖNCE kaydedilir: setPointerCapture atarsa (bazı tarayıcılar ve
     // otomatik testler atıyor) ikinci parmak hiç kaydolmuyor, iki parmaklı
@@ -1476,6 +1505,9 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
                */
               ar-scale="auto"
               camera-controls
+              /* El animasyonu bir kez görünsün, sonra sussun — bkz. ipucuAcik */
+              interaction-prompt={ipucuAcik && asama === 'yerlesti' ? 'auto' : 'none'}
+              interaction-prompt-threshold="0"
               shadow-intensity="1"
               style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
             />
