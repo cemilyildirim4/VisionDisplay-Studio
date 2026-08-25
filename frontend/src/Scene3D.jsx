@@ -1229,27 +1229,18 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
      * (Kameradaki Kaydet ile aynı sıra — bkz. ArView/cihazaKaydet.)
      */
     const ad = 'ar-' + (model?.name || 'tasarim') + '.jpg'
-    // iPhone/iPad'de Fotoğraflar'a ulaşmanın tek yolu paylaşma sayfası;
-    // masaüstü ve Android'de doğrudan indirme. (bkz. ArView/cihazaKaydet)
-    const ios =
-      typeof navigator !== 'undefined' &&
-      (/iPhone|iPad|iPod/.test(navigator.platform || '') ||
-        (/Mac/.test(navigator.platform || '') && navigator.maxTouchPoints > 1))
+    // Paylaşma sayfası AÇILMAZ — her cihazda doğrudan indirme.
+    // (Kameradaki Kaydet ile aynı davranış; bkz. ArView/cihazaKaydet.)
     try {
       const blob = await (await fetch(veri)).blob()
-      const dosya = new File([blob], ad, { type: 'image/jpeg' })
-      if (ios && navigator.canShare?.({ files: [dosya] })) {
-        await navigator.share({ files: [dosya], title: t('ar.title') })
-      } else {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = ad
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        setTimeout(() => URL.revokeObjectURL(url), 60000)
-      }
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = ad
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
     } catch {
       /* kullanıcı vazgeçti ya da indirme engellendi — kare yine rapora girdi */
     }
@@ -1543,6 +1534,18 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
                 Viewer devreye giriyor; onlar işletim sistemine ait ayrı
                 ekranlar ve içlerine düğme/ipucu eklenemiyor.
               */}
+              {/*
+                model-viewer'IN KENDİ AR ROZETİ GİZLENDİ.
+
+                Köşede duran küçük yuvarlak küp düğmesi model-viewer'ın
+                varsayılan AR düğmesiydi. Bizim büyük "Odanızda görüntüleyin"
+                düğmemiz aynı işi yapıyor (activateAR); ikisi yan yana durunca
+                küçük olan hem gereksiz hem de dokunulduğunda bazı cihazlarda
+                sessiz kalıyordu. Slot'a boş bir düğme koymak varsayılanı
+                değiştiriyor; activateAR() bundan etkilenmiyor.
+              */}
+              <button slot="ar-button" aria-hidden="true" tabIndex={-1} style={{ display: 'none' }} />
+
               <div slot="ar-prompt" style={{ pointerEvents: 'none' }}>
                 <p
                   style={{

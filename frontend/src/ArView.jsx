@@ -691,31 +691,17 @@ export default function ArView({
     }
 
     /*
-     * PAYLAŞMA SAYFASI YALNIZCA iPHONE/iPAD'DE.
+     * KAYDET HİÇBİR CİHAZDA PAYLAŞMA SAYFASI AÇMAZ.
      *
-     * Orada <a download> dosyayı Fotoğraflar'a değil Dosyalar'a koyuyor ya da
-     * hiç indirmiyor; Fotoğraflar'a ulaşmanın tek yolu paylaşma sayfasındaki
-     * "Görüntüyü Kaydet".
+     * Bir ara iPhone'da paylaşma sayfası açılıyordu; oradaki "Görüntüyü
+     * Kaydet" kareyi Fotoğraflar'a koyuyor diye. Ama kullanıcı "Kaydet"
+     * dediğinde ek bir sayfayla uğraşmak istemiyor: dosya doğrudan insin,
+     * kare rapora girsin, o kadar. Paylaşmak isteyen için ayrı PAYLAŞ
+     * düğmesi zaten var.
      *
-     * Masaüstünde ve Android'de ise indirme zaten sorunsuz çalışıyor. Orada
-     * paylaşma sayfasını açmak yanlıştı: kullanıcı "Kaydet" diyor, karşısına
-     * Windows'un "Paylaş" penceresi (Paint, Outlook, Teams…) çıkıyordu.
-     * Paylaşmak isteyen için zaten ayrı bir PAYLAŞ düğmesi var.
+     * Sonuç: her cihazda <a download>. iPhone'da dosya Safari'nin
+     * İndirilenler klasörüne (Dosyalar uygulaması) iner.
      */
-    if (iosCihaz()) {
-      try {
-        const dosya = new File([blob], ad, { type: 'image/jpeg' })
-        if (navigator.canShare?.({ files: [dosya] })) {
-          await navigator.share({ files: [dosya], title: t('ar.title') })
-          return true
-        }
-      } catch {
-        /* kullanıcı vazgeçti ya da desteklenmiyor — kare ekranda açılır */
-      }
-      return false
-    }
-
-    // Masaüstü ve Android: doğrudan indir.
     const a = document.createElement('a')
     if (!('download' in a)) return false
     const url = URL.createObjectURL(blob)
@@ -738,6 +724,26 @@ export default function ArView({
     const veri = kareTaze() ? cekim : await yakala()
     if (!veri) return
     const raporaGirdi = onSaved?.(veri, 'kamera') // paylaşılan kare de rapora girsin
+    /*
+     * PAYLAŞMA SAYFASI YALNIZCA BU DÜĞMEDE.
+     *
+     * Kaydet hiçbir cihazda paylaşma sayfası açmıyor (dosya doğrudan iniyor).
+     * Paylaşmak isteyen buraya basıyor: telefonda işletim sisteminin paylaşma
+     * sayfası açılıyor — iPhone'da oradaki "Görüntüyü Kaydet" kareyi
+     * Fotoğraflar'a da koyar. Desteklenmeyen tarayıcıda indirmeye düşüyor,
+     * yani düğme hiçbir cihazda ölü kalmıyor.
+     */
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const dosya = new File([blob], `ar-${model?.name || 'tasarim'}.jpg`, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+        setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+        return
+      }
+    } catch {
+      /* kullanıcı vazgeçti ya da desteklenmiyor — indirmeye düşülür */
+    }
     const indi = await cihazaKaydet(veri)
     if (indi) setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
     else await kareSayfasiAc(veri, raporaGirdi)
