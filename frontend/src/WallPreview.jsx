@@ -464,12 +464,17 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
    * kalın siyah haç — ekranın kendisinden çok derzler göze çarpıyor, tasarım
    * bölünmüş gibi duruyordu (hem manzarada hem portrede).
    *
-   * Derz KALDIRILMADI, saç teli inceliğindeki soluk çizgiye indirildi: panel
-   * birleşimleri hâlâ seziliyor ama görüntüyü kesmiyor. LED kabinlerdeki
-   * birleşim çizgileriyle aynı çizim — video duvarında da tek yüzey hissi
-   * korunuyor. Derzin gerçek ölçüsü Teknik Özellikler'de (bezelMm) yazıyor.
+   * Derz KALDIRILMADI, 1 piksellik soluk çizgiye indirildi: panel birleşimi
+   * seziliyor ama görüntüyü kesmiyor. Derzin gerçek ölçüsü Teknik
+   * Özellikler'de (bezelMm) yazıyor.
+   *
+   * ÇİZGİNİN RENGİ AYRI: LED kabinlerde birleşim beyaza çalan çok soluk bir
+   * çizgi (rgba(255,255,255,.13)); parlak bir görselin üzerinde bu hiç
+   * görünmüyor. Video duvarında derz gerçekte KOYU bir çerçeve olduğu için
+   * koyu ve biraz daha belirgin çiziliyor — açık görselde de seçilebiliyor.
    */
-  const bezelPx = null
+  const videoDuvari = !!model?.bezelMm
+  const derzRengi = videoDuvari ? 'rgba(10,12,16,0.42)' : lineColor
 
   return (
     <div
@@ -505,7 +510,7 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
             position: 'absolute',
             inset: 0,
             pointerEvents: 'none',
-            ...cabinetGridStyle(wPx / nCols, hPx / nRows, lineColor),
+            ...cabinetGridStyle(wPx / nCols, hPx / nRows, derzRengi),
           }}
         />
       )}
