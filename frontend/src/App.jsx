@@ -227,16 +227,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [kareSorusu, setKareSorusu] = useState(null)
 
-  /* Dönen değer: kare rapora GİRDİ mi. Kamera/AR ekranı bildirimini buna
-     göre seçiyor — karar sorulduysa henüz söz verecek bir şey yok. */
-  const kareKaydedildi = (veri) => {
+  /*
+   * KAMERA VE AR KARELERİ AYRI DEĞERLENDİRİLİR.
+   *
+   * İkisi aynı torbadaydı: kamerada kare varken AR'de kaydedince "yalnızca
+   * bu kalsın" demek kamera karesini de siliyordu. Oysa bunlar birbirinin
+   * alternatifi değil — biri mekânın fotoğrafı, öbürü odaya yerleştirilmiş
+   * gerçek boyutlu model; rapora ikisi birden girebilmeli.
+   *
+   * Bu yüzden her kare kaynağıyla saklanıyor ve soru YALNIZCA aynı kaynaktan
+   * kare varsa çıkıyor; "yalnızca bu kalsın" da yalnızca aynı kaynağı temizler.
+   *
+   * Dönen değer: kare rapora GİRDİ mi. Kamera/AR ekranı bildirimini buna
+   * göre seçiyor — karar sorulduysa henüz söz verecek bir şey yok.
+   */
+  const kareKaydedildi = (veri, kaynak = 'kamera') => {
     if (!veri) return false
-    if (arFotolar.includes(veri)) return true
-    if (arFotolar.length === 0) {
-      setArFotolar([veri])
+    if (arFotolar.some((k) => k.veri === veri)) return true
+    if (!arFotolar.some((k) => k.kaynak === kaynak)) {
+      setArFotolar((l) => [...l, { veri, kaynak }].slice(-6))
       return true
     }
-    setKareSorusu(veri)
+    setKareSorusu({ veri, kaynak })
     return false
   }
 
@@ -247,12 +259,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setKareSorusu(null)
   }
 
+  /* Soru sorulan kareyle AYNI kaynaktan olanlar — pencere yalnızca bunları
+     gösterir ve "yalnızca bu kalsın" yalnızca bunları düşürür. */
+  const ayniTurKareler = kareSorusu
+    ? arFotolar.filter((k) => k.kaynak === kareSorusu.kaynak)
+    : []
+
   const kareKarariVer = (karar) => {
-    const veri = kareSorusu
+    const yeni = kareSorusu
     setKareSorusu(null)
-    if (!veri) return
-    if (karar === 'hepsi') setArFotolar((l) => [...l, veri].slice(-6))
-    else if (karar === 'yalniz') setArFotolar([veri])
+    if (!yeni) return
+    if (karar === 'hepsi') setArFotolar((l) => [...l, yeni].slice(-6))
+    else if (karar === 'yalniz')
+      // Yalnızca AYNI kaynaktakiler düşer; öbür türdeki kareler yerinde kalır.
+      setArFotolar((l) => [...l.filter((k) => k.kaynak !== yeni.kaynak), yeni].slice(-6))
     // 'ekleme' → rapor olduğu gibi kalır
   }
   const [resolution, setResolution] = useState('FHD') // FHD | UHD
@@ -1615,8 +1635,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           // ihtiyaç duyduğu iki alan yalnızca burada mevcut.
           sboxRedundancy,
           isVideoWall,
-          /* Kamerada ve AR'de kaydedilen kareler — her biri PDF'e ek sayfa olur */
-          arFotolar,
+          /* Kamerada ve AR'de kaydedilen kareler — her biri PDF'e ek sayfa olur.
+             Rapora yalnızca görüntü gider; kaynak (kamera/AR) arayüzde,
+             hangi karenin hangisinin yerine geçeceğini bilmek için tutuluyor. */
+          arFotolar: arFotolar.map((k) => k.veri),
           /*
            * Tasarımın TAMAMI teklifle birlikte saklansın diye. Teklif kaydında
            * yalnızca özet vardı (model kodu, toplam sütun/satır, okunur bir
@@ -1662,7 +1684,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               {t('frame.title')}
             </h3>
             <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center mt-2">
-              {t('frame.body').replace('{n}', String(arFotolar.length))}
+              {t('frame.body')
+                .replace('{n}', String(ayniTurKareler.length))
+                .replace('{k}', t(kareSorusu.kaynak === 'ar' ? 'frame.kindAr' : 'frame.kindCamera'))}
             </p>
 
             {/*
@@ -1675,10 +1699,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 {t('frame.existing')}
               </p>
               <div className="mt-2 flex flex-wrap justify-center gap-2">
-                {arFotolar.map((k, i) => (
+                {ayniTurKareler.map((k, i) => (
                   <img
                     key={i}
-                    src={k}
+                    src={k.veri}
                     alt=""
                     className="w-20 h-14 object-cover rounded-lg border border-neutral-200 dark:border-[#2c333f]"
                   />
@@ -1690,7 +1714,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             <div className="mt-5 flex justify-center">
               <figure className="w-40">
                 <img
-                  src={kareSorusu}
+                  src={kareSorusu.veri}
                   alt=""
                   className="w-40 h-28 object-cover rounded-xl border border-neutral-200 dark:border-[#2c333f]"
                 />
@@ -1726,6 +1750,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 <span className="block text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">{t('frame.discardNote')}</span>
               </button>
             </div>
+
+            {arFotolar.length > ayniTurKareler.length && (
+              <p className="text-[12px] text-neutral-500 dark:text-neutral-400 text-center mt-4">
+                {t('frame.otherKept')}
+              </p>
+            )}
 
             {arFotolar.length >= 6 && (
               <p className="text-[12px] text-neutral-500 dark:text-neutral-400 text-center mt-4">

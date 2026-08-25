@@ -1219,7 +1219,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     const mv = mvRef.current
     if (!mv?.toDataURL) return
     const veri = mv.toDataURL('image/jpeg', 0.92)
-    const raporaGirdi = onSaved?.(veri)
+    const raporaGirdi = onSaved?.(veri, 'ar')
     /*
      * ÖNCE PAYLAŞMA SAYFASI, SONRA İNDİRME.
      *
@@ -1259,7 +1259,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     const mv = mvRef.current
     if (!mv?.toDataURL) return
     const veri = mv.toDataURL('image/jpeg', 0.92)
-    onSaved?.(veri) // paylaşılan kare de rapora girsin
+    onSaved?.(veri, 'ar') // paylaşılan kare de rapora girsin
     const ad = `ar-${model?.name || 'tasarim'}.jpg`
     try {
       const blob = await (await fetch(veri)).blob()

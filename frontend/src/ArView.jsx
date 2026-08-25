@@ -623,7 +623,7 @@ export default function ArView({
     // Elde TAZE kare varsa onu kullan (bkz. cekim): beklemesiz indirme.
     const veri = kareTaze() ? cekim : await yakala()
     if (!veri) return
-    const raporaGirdi = onSaved?.(veri)
+    const raporaGirdi = onSaved?.(veri, 'kamera')
 
     /*
      * BLOB URL — data: URL DEĞİL.
@@ -732,7 +732,7 @@ export default function ArView({
   const paylas = async () => {
     const veri = kareTaze() ? cekim : await yakala()
     if (!veri) return
-    const raporaGirdi = onSaved?.(veri) // paylaşılan kare de rapora girsin
+    const raporaGirdi = onSaved?.(veri, 'kamera') // paylaşılan kare de rapora girsin
     const indi = await cihazaKaydet(veri)
     if (indi) setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
     else await kareSayfasiAc(veri, raporaGirdi)

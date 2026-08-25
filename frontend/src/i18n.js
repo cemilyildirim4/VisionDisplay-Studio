@@ -324,10 +324,13 @@ const dict = {
   // ---------- Yeni kare geldiğinde çıkan seçim ----------
   'frame.title': { tr: 'Bu kareyi rapora ekleyelim mi?', en: 'Add this frame to the report?', ar: 'هل نضيف هذه اللقطة إلى التقرير؟' },
   'frame.body': {
-    tr: 'Raporda zaten {n} kare var. Ne yapmak istersiniz?',
-    en: 'The report already has {n} frame(s). What would you like to do?',
-    ar: 'يحتوي التقرير بالفعل على {n} لقطة. ماذا تريد أن تفعل؟',
+    tr: 'Raporda zaten {n} {k} var. Ne yapmak istersiniz?',
+    en: 'The report already has {n} {k}. What would you like to do?',
+    ar: 'يحتوي التقرير بالفعل على {n} {k}. ماذا تريد أن تفعل؟',
   },
+  /* Kamera ve AR kareleri AYRI değerlendiriliyor: biri diğerini düşürmüyor. */
+  'frame.kindCamera': { tr: 'kamera karesi', en: 'camera frame(s)', ar: 'لقطة كاميرا' },
+  'frame.kindAr': { tr: 'AR karesi', en: 'AR frame(s)', ar: 'لقطة واقع معزز' },
   'frame.keepAll': { tr: 'Hepsi kalsın', en: 'Keep all of them', ar: 'الاحتفاظ بها جميعًا' },
   'frame.keepAllNote': {
     tr: 'Yeni kare diğerlerinin yanına eklenir; her biri rapora ayrı sayfa olur.',
@@ -336,9 +339,9 @@ const dict = {
   },
   'frame.replace': { tr: 'Yalnızca bu kalsın', en: 'Keep only this one', ar: 'الاحتفاظ بهذه فقط' },
   'frame.replaceNote': {
-    tr: 'Önceki kareler rapordan çıkarılır, yalnızca bu kare kalır.',
-    en: 'The earlier frames are removed and only this one remains.',
-    ar: 'تُزال اللقطات السابقة ولا تبقى سوى هذه.',
+    tr: 'Aynı türdeki önceki kareler çıkarılır; diğer türdeki kareler kalır.',
+    en: 'Earlier frames of the same kind are removed; frames of the other kind stay.',
+    ar: 'تُزال اللقطات السابقة من النوع نفسه، وتبقى لقطات النوع الآخر.',
   },
   'frame.discard': { tr: 'Bunu ekleme', en: 'Do not add this one', ar: 'لا تُضف هذه' },
   'frame.discardNote': {
@@ -352,6 +355,11 @@ const dict = {
     ar: 'يتسع التقرير لـ 6 لقطات كحد أقصى، وسيسقط الأقدم عند الاحتفاظ بالجميع.',
   },
   'frame.existing': { tr: 'Raporda şu an bunlar var', en: 'Currently in the report', ar: 'الموجود حاليًا في التقرير' },
+  'frame.otherKept': {
+    tr: 'Diğer türdeki kareler bu karardan etkilenmez.',
+    en: 'Frames of the other kind are not affected by this choice.',
+    ar: 'لا تتأثر لقطات النوع الآخر بهذا الاختيار.',
+  },
   'frame.newLabel': { tr: 'Yeni kare', en: 'New frame', ar: 'اللقطة الجديدة' },
 
   'ar.save': { tr: 'Kaydet', en: 'Save', ar: 'حفظ' },

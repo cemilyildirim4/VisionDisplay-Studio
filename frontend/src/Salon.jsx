@@ -75,6 +75,18 @@ export default function Salon({
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       <svg className="absolute inset-0" width={tuvalW} height={tuvalH}>
         <defs>
+          {/*
+            Şeritler yalnızca tavanın içinde kalsın.
+
+            En dıştaki iki şerit tuvalin kenarından çıkıp yan duvarların
+            üzerine biniyordu: tavana ait bir çizginin yan duvarda devam
+            etmesi perspektifi bozuyor, oda kutu gibi değil yamuk gibi
+            görünüyordu. Şeritler artık tavan dörtgenine kırpılıyor ve
+            kaçış noktasına daha dar bir açıyla yaklaşıyor.
+          */}
+          <clipPath id="salon-tavan-kirp">
+            <polygon points={`0,0 ${tuvalW},0 ${duvarSag},${tavanY} ${duvarSol},${tavanY}`} />
+          </clipPath>
           <linearGradient id="salon-tavan" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#f2f4f7" />
             <stop offset="100%" stopColor="#dfe3ea" />
@@ -136,19 +148,21 @@ export default function Salon({
           gösteriyordu. Kalın ve parlak olunca dikkati ekrandan çaldıkları için
           ince ve sönük tutuldular.
         */}
-        {[-0.66, -0.4, -0.14, 0.14, 0.4, 0.66].map((o, i) => {
-          const onX = cx + o * tuvalW
-          const arkaX = cx + o * (duvarSag - duvarSol) * 0.55
-          const yari = tuvalW * 0.012
-          return (
-            <polygon
-              key={i}
-              points={`${onX - yari},0 ${onX + yari},0 ${arkaX + 1},${tavanY} ${arkaX - 1},${tavanY}`}
-              fill="#8ea0b8"
-              opacity="0.30"
-            />
-          )
-        })}
+        <g clipPath="url(#salon-tavan-kirp)">
+          {[-0.46, -0.28, -0.1, 0.1, 0.28, 0.46].map((o, i) => {
+            const onX = cx + o * tuvalW
+            const arkaX = cx + o * (duvarSag - duvarSol) * 0.55
+            const yari = tuvalW * 0.012
+            return (
+              <polygon
+                key={i}
+                points={`${onX - yari},0 ${onX + yari},0 ${arkaX + 1},${tavanY} ${arkaX - 1},${tavanY}`}
+                fill="#8ea0b8"
+                opacity="0.30"
+              />
+            )
+          })}
+        </g>
 
         {/* Ekranın duvara vuran soğuk ışığı */}
         <ellipse cx={cx} cy={cy} rx={wPx * 1.35} ry={hPx * 1.9} fill="url(#salon-isik)" />
