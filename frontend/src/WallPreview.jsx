@@ -15,9 +15,10 @@ import { useLang } from './useLang.js'
  */
 
 const HUMAN_HEIGHT_M = 1.8
-// Duvar YÜKSEKLİĞİ bundan azsa silüet gösterilmez.
-// 2 m'de figür duvarın %90'ını kaplar — hâlâ okunur bir ölçek referansıdır.
-const HUMAN_MIN_WALL_M = 2
+// Duvar YÜKSEKLİĞİ bundan azsa silüet gösterilmez. Eşik figürün kendi boyu:
+// duvar 1,80 m ise figür tam duvar kadardır, hâlâ doğru bir ölçek referansıdır.
+// (Eşik 2 m iken duvarı 1,80'e indirince silüet ortadan kayboluyordu.)
+const HUMAN_MIN_WALL_M = HUMAN_HEIGHT_M
 // İç L Tipi: dikiş (köşe) kenarının üstten ve alttan içeri girme oranı (%).
 // Kanatlar trapez olur → köşenin geriye kaçtığı hissi. 0 = düz, büyüdükçe köşe
 // daha keskin (90°'ye yakın) görünür.
@@ -782,7 +783,7 @@ export default function WallPreview({
     // Duvarın çevresindeki mutlak konumlu öğeler için sabit pay (tek ekran
     // dalındaki hesapla aynı mantık): kırpılmasınlar diye yer ayrılır.
     // Silüet duvarla aynı satırda olduğu için genişliği de hesaba katılır.
-    const showHumanM = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M
+    const showHumanM = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005
     const humanWmM = showHumanM ? HUMAN_HEIGHT_M * HUMAN_FIG_W_RATIO : 0
     const sahnePayM = showMeasurements ? 150 : 48
     // Dar ekranda yan pay en az 152 (76 + 76): satır artır/azalt düğmesi ve ölçü
@@ -1083,7 +1084,7 @@ export default function WallPreview({
    */
   const SIDE_UI_PX = sahneVar ? (dar ? Math.max(sahnePay, 152) : sahnePay) : dar ? 152 : 180 // sol + sağ
   const VERT_UI_PX = sahneVar ? sahnePay : dar ? 92 : 190 // üst + alt
-  const showHuman = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M
+  const showHuman = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005
   const HUMAN_GAP_PX = 24 // flex gap-6
   const humanWm = showHuman ? HUMAN_HEIGHT_M * HUMAN_FIG_W_RATIO : 0
 
@@ -1171,7 +1172,7 @@ export default function WallPreview({
   return (
     <div ref={containerRef} className="relative w-full h-full flex items-center justify-center overflow-hidden">
       <div dir="ltr" className="flex items-end gap-6">
-        {!sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M && (
+        {!sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005 && (
             <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
           )}
 
