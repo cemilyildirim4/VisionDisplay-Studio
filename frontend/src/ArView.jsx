@@ -690,29 +690,34 @@ export default function ArView({
       return false
     }
 
-    // 1) Paylaşma sayfası — iOS'ta "Görüntüyü Kaydet" Fotoğraflar'a koyar.
-    try {
-      const dosya = new File([blob], ad, { type: 'image/jpeg' })
-      if (navigator.canShare?.({ files: [dosya] })) {
-        await navigator.share({ files: [dosya], title: t('ar.title') })
-        return true
+    /*
+     * PAYLAŞMA SAYFASI YALNIZCA iPHONE/iPAD'DE.
+     *
+     * Orada <a download> dosyayı Fotoğraflar'a değil Dosyalar'a koyuyor ya da
+     * hiç indirmiyor; Fotoğraflar'a ulaşmanın tek yolu paylaşma sayfasındaki
+     * "Görüntüyü Kaydet".
+     *
+     * Masaüstünde ve Android'de ise indirme zaten sorunsuz çalışıyor. Orada
+     * paylaşma sayfasını açmak yanlıştı: kullanıcı "Kaydet" diyor, karşısına
+     * Windows'un "Paylaş" penceresi (Paint, Outlook, Teams…) çıkıyordu.
+     * Paylaşmak isteyen için zaten ayrı bir PAYLAŞ düğmesi var.
+     */
+    if (iosCihaz()) {
+      try {
+        const dosya = new File([blob], ad, { type: 'image/jpeg' })
+        if (navigator.canShare?.({ files: [dosya] })) {
+          await navigator.share({ files: [dosya], title: t('ar.title') })
+          return true
+        }
+      } catch {
+        /* kullanıcı vazgeçti ya da desteklenmiyor — kare ekranda açılır */
       }
-    } catch {
-      /* kullanıcı vazgeçtiyse ya da desteklenmiyorsa indirmeyi dene */
+      return false
     }
 
-    /*
-     * 2) Klasik indirme — MASAÜSTÜ VE ANDROID İÇİN.
-     *
-     * iPhone/iPad'de denemiyoruz: orada <a download> dosyayı Fotoğraflar'a
-     * değil Dosyalar'a koyuyor (kullanıcının aradığı yer orası değil) ve
-     * çoğu zaman hiç inmiyor — üstelik indi mi anlamanın bir yolu yok, yani
-     * "kaydedildi" demek yalan olurdu. iOS'ta tek doğru yol paylaşma
-     * sayfasındaki "Görüntüyü Kaydet"; o da olmadıysa kareyi ekranda açıp
-     * kullanıcıya bırakıyoruz.
-     */
+    // Masaüstü ve Android: doğrudan indir.
     const a = document.createElement('a')
-    if (iosCihaz() || !('download' in a)) return false
+    if (!('download' in a)) return false
     const url = URL.createObjectURL(blob)
     a.href = url
     a.download = ad

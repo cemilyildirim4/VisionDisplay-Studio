@@ -1229,10 +1229,16 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
      * (Kameradaki Kaydet ile aynı sıra — bkz. ArView/cihazaKaydet.)
      */
     const ad = 'ar-' + (model?.name || 'tasarim') + '.jpg'
+    // iPhone/iPad'de Fotoğraflar'a ulaşmanın tek yolu paylaşma sayfası;
+    // masaüstü ve Android'de doğrudan indirme. (bkz. ArView/cihazaKaydet)
+    const ios =
+      typeof navigator !== 'undefined' &&
+      (/iPhone|iPad|iPod/.test(navigator.platform || '') ||
+        (/Mac/.test(navigator.platform || '') && navigator.maxTouchPoints > 1))
     try {
       const blob = await (await fetch(veri)).blob()
       const dosya = new File([blob], ad, { type: 'image/jpeg' })
-      if (navigator.canShare?.({ files: [dosya] })) {
+      if (ios && navigator.canShare?.({ files: [dosya] })) {
         await navigator.share({ files: [dosya], title: t('ar.title') })
       } else {
         const url = URL.createObjectURL(blob)
