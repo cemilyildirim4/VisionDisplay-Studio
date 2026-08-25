@@ -165,6 +165,13 @@ export default function ArView({
   const [mesgul, setMesgul] = useState(false)
   /* Cihaza kaydetme sayfası: kare + "Fotoğraflara kaydet" / "İndir" */
   const [kareSayfasi, setKareSayfasi] = useState(null)
+  /*
+   * iPhone'da indirilen dosya GALERİYE düşmüyor (Dosyalar › İndirilenler).
+   * Galeriye koymanın tek yolu paylaşma sayfasındaki "Görüntüyü Kaydet" —
+   * ama onu kendiliğinden açmak istemiyoruz. Bu yüzden kaydetme bildiriminin
+   * yanında, yalnızca iOS'ta, tek dokunuşluk bir kısayol duruyor.
+   */
+  const [galeriKare, setGaleriKare] = useState(null)
 
   /*
    * ────────────────────────────────────────────────────────────────────────
@@ -649,8 +656,24 @@ export default function ArView({
      * paylaşma sayfasıyla Fotoğraflar'a atılabiliyor ya da görsele basılı
      * tutup kaydedilebiliyor.
      */
-    if (indi) setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
-    else await kareSayfasiAc(veri, raporaGirdi)
+    if (indi) {
+      setBildirim(t(iosCihaz() ? 'shot.savedFiles' : raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+      setGaleriKare(iosCihaz() ? veri : null)
+    } else await kareSayfasiAc(veri, raporaGirdi)
+  }
+
+  /** Kareyi işletim sisteminin paylaşma sayfasına verir (iOS: Fotoğraflar). */
+  const galeriyeEkle = async (veri) => {
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const dosya = new File([blob], `ar-${model?.name || 'tasarim'}.jpg`, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+      }
+    } catch {
+      /* kullanıcı vazgeçti — dosya zaten inmişti */
+    }
+    setGaleriKare(null)
   }
 
   /** Kareyi ekranda açar; indirme bağlantısı için blob adresi hazırlar. */
@@ -1153,9 +1176,18 @@ export default function ArView({
 
         {bildirim && (
           <div className="absolute top-16 inset-x-0 z-50 flex justify-center px-6 pointer-events-none">
-            <p className="m-0 rounded-full bg-black/80 text-white text-[12.5px] font-semibold px-4 py-2 text-center shadow-lg">
-              {bildirim}
-            </p>
+            <div className="flex items-center gap-2 rounded-full bg-black/80 px-4 py-2 shadow-lg pointer-events-auto">
+              <p className="m-0 text-white text-[12.5px] font-semibold text-center">{bildirim}</p>
+              {galeriKare && (
+                <button
+                  type="button"
+                  onClick={() => galeriyeEkle(galeriKare)}
+                  className="shrink-0 rounded-full bg-white text-[#10141b] text-[12px] font-semibold px-3 py-1"
+                >
+                  {t('shot.toGallery')}
+                </button>
+              )}
+            </div>
           </div>
         )}
 

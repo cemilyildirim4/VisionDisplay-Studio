@@ -305,6 +305,16 @@ const dict = {
     ar: 'إذا لم يبدأ التنزيل: اضغط مطولًا على الصورة ثم اختر «حفظ الصورة».',
   },
   'shot.inReport': { tr: 'Bu kare PDF raporuna eklendi.', en: 'This frame was added to the PDF report.', ar: 'أُضيفت هذه اللقطة إلى تقرير PDF.' },
+  /* iOS'ta indirilen dosya Fotoğraflar'a değil Dosyalar'a iner; galeriye
+     koymanın tek yolu paylaşma sayfasındaki "Görüntüyü Kaydet". Bu yüzden
+     kaydetme bildiriminin yanında tek dokunuşluk bir kısayol duruyor. */
+  'shot.toGallery': { tr: 'Galeriye ekle', en: 'Add to gallery', ar: 'إضافة إلى المعرض' },
+  'shot.savedFiles': {
+    tr: 'Kaydedildi — Dosyalar › İndirilenler. Galeri için:',
+    en: 'Saved to Files › Downloads. For the gallery:',
+    ar: 'حُفظت في الملفات › التنزيلات. للمعرض:',
+  },
+
   'shot.iosNote': {
     tr: 'iPhone/iPad: "Fotoğraflara kaydet" → açılan sayfadan "Görüntüyü Kaydet".',
     en: 'iPhone/iPad: "Save to Photos" → then choose "Save Image" in the share sheet.',

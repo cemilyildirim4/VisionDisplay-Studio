@@ -1015,6 +1015,9 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
   const [asama, setAsama] = useState('yerlestir')
   /* Kaydetme/paylaşma sonrası kısa onay yazısı — kameradakiyle aynı */
   const [arBildirim, setArBildirim] = useState(null)
+  /* iOS'ta indirilen dosya galeriye düşmüyor; bildirimin yanındaki kısayolun
+     paylaşacağı kare (bkz. galeriyeEkleAr). */
+  const [galeriKareAr, setGaleriKareAr] = useState(null)
 
   /*
    * EL ANİMASYONU (model-viewer'ın etkileşim ipucu) SÜREKLİ DÖNÜYORDU.
@@ -1244,8 +1247,29 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     } catch {
       /* kullanıcı vazgeçti ya da indirme engellendi — kare yine rapora girdi */
     }
-    setArBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+    // iOS'ta dosya galeriye değil Dosyalar'a iner; tek dokunuşluk kısayol
+    // bildirimin yanında duruyor (kamera ekranındakiyle aynı).
+    const ios =
+      typeof navigator !== 'undefined' &&
+      (/iPhone|iPad|iPod/.test(navigator.platform || '') ||
+        (/Mac/.test(navigator.platform || '') && navigator.maxTouchPoints > 1))
+    setArBildirim(t(ios ? 'shot.savedFiles' : raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+    setGaleriKareAr(ios ? veri : null)
   }, [model, onSaved, t])
+
+  /** Kareyi paylaşma sayfasına verir — iOS'ta "Görüntüyü Kaydet" galeriye koyar. */
+  const galeriyeEkleAr = useCallback(async (veri) => {
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const dosya = new File([blob], 'ar-' + (model?.name || 'tasarim') + '.jpg', { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+      }
+    } catch {
+      /* kullanıcı vazgeçti — dosya zaten inmişti */
+    }
+    setGaleriKareAr(null)
+  }, [model, t])
 
   /*
    * PAYLAŞ — o anki görüntüyü işletim sisteminin paylaşma sayfasına verir
@@ -1484,9 +1508,18 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           {/* Kaydetme onayı — kameradakiyle aynı yazı ve aynı davranış */}
           {arBildirim && (
             <div className="absolute top-14 inset-x-0 z-30 flex justify-center px-6 pointer-events-none">
-              <p className="m-0 rounded-full bg-black/85 text-white text-[12.5px] font-semibold px-4 py-2 text-center shadow-lg">
-                {arBildirim}
-              </p>
+              <div className="flex items-center gap-2 rounded-full bg-black/85 px-4 py-2 shadow-lg pointer-events-auto">
+                <p className="m-0 text-white text-[12.5px] font-semibold text-center">{arBildirim}</p>
+                {galeriKareAr && (
+                  <button
+                    type="button"
+                    onClick={() => galeriyeEkleAr(galeriKareAr)}
+                    className="shrink-0 rounded-full bg-white text-[#10141b] text-[12px] font-semibold px-3 py-1"
+                  >
+                    {t('shot.toGallery')}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
