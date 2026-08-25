@@ -295,6 +295,18 @@ const dict = {
   },
   /* Karar kullanıcıya sorulduğunda rapor sözü VERİLMEZ; "eklenecek" demek
      sonra "Bunu ekleme" seçen kullanıcıya yalan olurdu. */
+  // ---------- Kare hazır sayfası (cihaza kaydetme) ----------
+  'shot.title': { tr: 'Kare hazır', en: 'Frame ready', ar: 'اللقطة جاهزة' },
+  'shot.savePhotos': { tr: 'Fotoğraflara kaydet', en: 'Save to Photos', ar: 'الحفظ في الصور' },
+  'shot.download': { tr: 'Cihaza indir', en: 'Download to device', ar: 'التنزيل إلى الجهاز' },
+  'shot.hint': {
+    tr: 'İnmezse: görsele basılı tutup "Görseli Kaydet" deyin.',
+    en: 'If nothing downloads: press and hold the image, then choose "Save Image".',
+    ar: 'إذا لم يبدأ التنزيل: اضغط مطولًا على الصورة ثم اختر «حفظ الصورة».',
+  },
+  'shot.inReport': { tr: 'Bu kare PDF raporuna eklendi.', en: 'This frame was added to the PDF report.', ar: 'أُضيفت هذه اللقطة إلى تقرير PDF.' },
+  'shot.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
+
   'ar.savedOnlyNote': {
     tr: 'Kaydedildi — cihazınıza indirildi.',
     en: 'Saved — downloaded to your device.',

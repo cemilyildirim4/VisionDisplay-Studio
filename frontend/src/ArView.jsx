@@ -136,7 +136,26 @@ export default function ArView({
   const fotoRef = useRef(null)
   const resimRef = useRef(null)
   const [arAcik, setArAcik] = useState(true)
+  /*
+   * Deklanşörle yakalanan son kare. Kaydet bunu KULLANIR, yeniden yakalamaz —
+   * yeniden yakalamak (html2canvas) beklemek demek ve bekleme sırasında
+   * tarayıcının "kullanıcı bastı" izni düşüyor; iOS Safari o izin olmadan
+   * indirmeyi sessizce iptal ediyor, ekranda "kaydedildi" yazsa bile dosya
+   * hiçbir yere inmiyordu.
+   *
+   * Bayatlamasın diye: tasarım kımıldadığı anda (taşıma, ölçek, dönüş, ölçü
+   * gizleme, arka plan değişimi) kare atılır. Böylece hem eski kare tekrar
+   * kaydedilmez hem de deklanşöre basılmışsa indirme beklemesiz olur.
+   */
   const [cekim, setCekim] = useState(null)
+  /*
+   * Karenin yakalandığı an. Kamera CANLI: tasarım kımıldamasa bile telefonu
+   * çevirince görüntü değişir, yani eldeki kare saniyeler içinde eskir.
+   * Bu yüzden kare yalnızca çok tazeyken (deklanşöre basıp hemen Kaydet
+   * demek gibi) yeniden kullanılır; ötesinde yeniden yakalanır.
+   */
+  const cekimZamanRef = useRef(0)
+  const KARE_TAZELIK_MS = 2000
   /*
    * Ölçü etiketleri ve kenar boşluğu çizgileri açık/kapalı. Kamerada asıl amaç
    * ekranın mekânda nasıl duracağını GÖRMEK; ölçüler yardımcıdır ve fotoğrafta
@@ -144,6 +163,8 @@ export default function ArView({
    */
   const [olculer, setOlculer] = useState(true)
   const [mesgul, setMesgul] = useState(false)
+  /* Cihaza kaydetme sayfası: kare + "Fotoğraflara kaydet" / "İndir" */
+  const [kareSayfasi, setKareSayfasi] = useState(null)
 
   /*
    * ────────────────────────────────────────────────────────────────────────
@@ -520,6 +541,14 @@ export default function ArView({
     }
   }
 
+  /*
+   * Tasarım kımıldadıysa eldeki kare artık o görüntüyü göstermiyor.
+   * (Kaydet'in eski kareyi tekrar rapora sokması bu yüzden mümkündü.)
+   */
+  useEffect(() => {
+    setCekim(null)
+  }, [merkez, pxPerM, donus, olculer, arAcik, arkaFoto, asama])
+
   const yakala = async () => {
     const v = arkaFoto ? resimRef.current : videoRef.current
     const kap = kapRef.current
@@ -565,6 +594,7 @@ export default function ArView({
       }
       const veri = c.toDataURL('image/jpeg', 0.92)
       setCekim(veri)
+      cekimZamanRef.current = Date.now()
       return veri
     } catch {
       setHata(t('ar.errCapture'))
@@ -587,9 +617,11 @@ export default function ArView({
    * atmak isteyen için PAYLAŞ düğmesi duruyor: iOS'un paylaşma sayfasından
    * "Görüntüyü Kaydet" Fotoğraflar'a koyar.
    */
+  const kareTaze = () => cekim && Date.now() - cekimZamanRef.current < KARE_TAZELIK_MS
+
   const kaydet = async () => {
-    // Her seferinde YENİDEN yakala: eski kareyi tekrar kaydetmeyelim.
-    const veri = await yakala()
+    // Elde TAZE kare varsa onu kullan (bkz. cekim): beklemesiz indirme.
+    const veri = kareTaze() ? cekim : await yakala()
     if (!veri) return
     const raporaGirdi = onSaved?.(veri)
 
@@ -605,23 +637,74 @@ export default function ArView({
      * Aynı bayt dizisi bir Blob'a konup `blob:` adresiyle veriliyor; bu yol
      * boyut sınırına takılmıyor ve indirme gerçekten tamamlanıyor.
      */
-    const blob = await (await fetch(veri)).blob()
-    const url = URL.createObjectURL(blob)
+    const indi = await cihazaKaydet(veri)
+
+    /*
+     * TELEFONDA "İNDİ" DEMEK YETMİYOR.
+     *
+     * <a download> masaüstünde çalışıyor ama iOS Safari'de dosya çoğu zaman
+     * Fotoğraflar'a değil Dosyalar'a gidiyor ya da hiç inmiyor; kullanıcı
+     * "kaydedildi" yazısını görüp telefonunda hiçbir şey bulamıyordu.
+     * Bu yüzden indirme kesin değilse kare EKRANDA açılıyor: oradan
+     * paylaşma sayfasıyla Fotoğraflar'a atılabiliyor ya da görsele basılı
+     * tutup kaydedilebiliyor.
+     */
+    if (indi) setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+    else await kareSayfasiAc(veri, raporaGirdi)
+  }
+
+  /** Kareyi ekranda açar; indirme bağlantısı için blob adresi hazırlar. */
+  const kareSayfasiAc = async (veri, raporaGirdi) => {
+    let indirmeUrl = null
+    try {
+      indirmeUrl = URL.createObjectURL(await (await fetch(veri)).blob())
+    } catch {
+      /* blob kurulamazsa görsele basılı tutma yolu yine açık */
+    }
+    setKareSayfasi((eski) => {
+      if (eski?.indirmeUrl) URL.revokeObjectURL(eski.indirmeUrl)
+      return { veri, raporaGirdi, indirmeUrl }
+    })
+  }
+
+  /**
+   * Kareyi cihaza kaydetmeye çalışır. Döner: kesin kaydedildi mi.
+   *
+   * Sıra: paylaşma sayfası (telefonda Fotoğraflar'a atmanın tek güvenilir
+   * yolu) → <a download> (masaüstü ve Android). Hiçbiri kesin değilse false
+   * döner ve çağıran taraf kareyi ekranda açar.
+   */
+  const cihazaKaydet = async (veri) => {
+    const ad = `ar-${model?.name || 'tasarim'}-${cols}x${rows}.jpg`
+    let blob
+    try {
+      blob = await (await fetch(veri)).blob()
+    } catch {
+      return false
+    }
+
+    // 1) Paylaşma sayfası — iOS'ta "Görüntüyü Kaydet" Fotoğraflar'a koyar.
+    try {
+      const dosya = new File([blob], ad, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+        return true
+      }
+    } catch {
+      /* kullanıcı vazgeçtiyse ya da desteklenmiyorsa indirmeyi dene */
+    }
+
+    // 2) Klasik indirme — download özniteliği desteklenmiyorsa denemeyelim.
     const a = document.createElement('a')
+    if (!('download' in a)) return false
+    const url = URL.createObjectURL(blob)
     a.href = url
-    a.download = `ar-${model?.name || 'tasarim'}-${cols}x${rows}.jpg`
+    a.download = ad
     document.body.appendChild(a)
     a.click()
     a.remove()
-    // Sekme adresi bırakmadan serbest bırak; indirme çoktan başlamış olur
     setTimeout(() => URL.revokeObjectURL(url), 60000)
-
-    /*
-     * Kullanıcı ne olduğunu görsün: kare hem indi hem de PDF raporuna
-     * eklenecek. Eskiden hiçbir geri bildirim yoktu; iOS'ta indirme sessizce
-     * düştüğü için "kaydet çalışmıyor" izlenimi doğuyordu.
-     */
-    setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+    return true
   }
 
   /*
@@ -631,21 +714,12 @@ export default function ArView({
    * hiçbir cihazda ölü kalmaz.
    */
   const paylas = async () => {
-    const veri = await yakala() // paylaşımda da o anki görüntü
+    const veri = kareTaze() ? cekim : await yakala()
     if (!veri) return
-    try {
-      const blob = await (await fetch(veri)).blob()
-      const dosya = new File([blob], `ar-${model?.name || 'tasarim'}.jpg`, { type: 'image/jpeg' })
-      if (navigator.canShare?.({ files: [dosya] })) {
-        await navigator.share({ files: [dosya], title: t('ar.title') })
-        onSaved?.(veri) // paylaşılan kare de rapora girsin
-        setBildirim(t('ar.savedNote'))
-        return
-      }
-    } catch {
-      /* kullanıcı vazgeçti ya da tarayıcı desteklemiyor — indirmeye düşülür */
-    }
-    kaydet()
+    const raporaGirdi = onSaved?.(veri) // paylaşılan kare de rapora girsin
+    const indi = await cihazaKaydet(veri)
+    if (indi) setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+    else await kareSayfasiAc(veri, raporaGirdi)
   }
 
   /*
@@ -997,6 +1071,57 @@ export default function ArView({
           KAYDETME ONAYI — üst barın altında, kısa süre görünür.
           z-50: araç çubukları z-40'ta; onay onların da üstünde durmalı.
         */}
+        {/*
+          KARE HAZIR — indirme kesin olmadığında açılır (çoğunlukla iOS).
+          Kullanıcı buradan paylaşma sayfasıyla Fotoğraflar'a atabilir,
+          indirmeyi tekrar deneyebilir ya da görsele basılı tutup kaydedebilir.
+          Kamera araçlarının üstünde durmalı, bu yüzden z-[70].
+        */}
+        {kareSayfasi && (
+          <div className="absolute inset-0 z-[70] bg-black/85 flex items-center justify-center p-4">
+            <div className="w-full max-w-sm max-h-full overflow-y-auto bg-[#161a21] rounded-3xl p-5 text-center">
+              <h3 className="m-0 text-white text-base font-semibold">{t('shot.title')}</h3>
+              <img
+                src={kareSayfasi.veri}
+                alt=""
+                className="mt-4 w-full rounded-2xl border border-white/15"
+              />
+              <p className="mt-3 mb-0 text-[12px] text-white/60">{t('shot.hint')}</p>
+              {kareSayfasi.raporaGirdi && (
+                <p className="mt-1 mb-0 text-[12px] text-white/60">{t('shot.inReport')}</p>
+              )}
+              <div className="mt-4 flex flex-col gap-2">
+                {typeof navigator !== 'undefined' && navigator.canShare && (
+                  <button
+                    type="button"
+                    onClick={() => cihazaKaydet(kareSayfasi.veri)}
+                    className="rounded-full bg-white text-[#10141b] font-semibold py-3 hover:bg-white/85"
+                  >
+                    {t('shot.savePhotos')}
+                  </button>
+                )}
+                <a
+                  href={kareSayfasi.indirmeUrl || kareSayfasi.veri}
+                  download={`ar-${model?.name || 'tasarim'}-${cols}x${rows}.jpg`}
+                  className="rounded-full border border-white/25 text-white font-semibold py-3 no-underline"
+                >
+                  {t('shot.download')}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (kareSayfasi.indirmeUrl) URL.revokeObjectURL(kareSayfasi.indirmeUrl)
+                    setKareSayfasi(null)
+                  }}
+                  className="rounded-full text-white/60 text-[13px] py-2 hover:text-white"
+                >
+                  {t('shot.close')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {bildirim && (
           <div className="absolute top-16 inset-x-0 z-50 flex justify-center px-6 pointer-events-none">
             <p className="m-0 rounded-full bg-black/80 text-white text-[12.5px] font-semibold px-4 py-2 text-center shadow-lg">
