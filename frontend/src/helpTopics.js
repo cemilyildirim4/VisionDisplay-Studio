@@ -242,8 +242,8 @@ export const TOPICS = [
   {
     id: 'refresh',
     keys: {
-      tr: ['yenileme hızı', 'yenileme hizi', 'yenileme', 'hz', 'hertz', 'kamera', 'titreme', 'çekim', 'video çek', 'yayın', 'stüdyo', 'banding', 'titre'],
-      en: ['refresh rate', 'hz', 'camera', 'flicker'],
+      tr: ['yenileme hızı', 'yenileme hizi', 'yenileme', 'hz', 'hertz', 'kamerayla çek', 'kamerayla cek', 'kameraya çek', 'kamerada titre', 'titreme', 'çekim', 'video çek', 'yayın', 'stüdyo', 'banding', 'titre'],
+      en: ['refresh rate', 'hz', 'filming', 'on camera', 'flicker'],
       ar: ['معدل التحديث', 'هرتز'],
     },
     q: {
@@ -354,8 +354,8 @@ export const TOPICS = [
     },
     q: { tr: 'PDF çıktılarını nereden alırım?', en: 'Where do I get the PDF outputs?', ar: 'من أين أحصل على ملفات PDF؟' },
     a: {
-      tr: 'Sağ panelin altındaki "Profesyonel PDF Raporu İndir" düğmesini kullanın. Tek belge: üstte teklif/özet, altta teknik özellikler tablosu (güç, ağırlık, RJ45, işlemci).',
-      en: 'Use "Download professional PDF report" at the bottom of the right panel. One document: quote/summary on top, detailed specifications table below.',
+      tr: 'Sağ panelin altındaki "PDF Raporu Al" düğmesini kullanın. Raporda teklif/özet, teknik özellikler tablosu (güç, ağırlık, RJ45, işlemci) ve ölçülü yapılandırma görseli yer alır; kamerada veya AR\u2019da kaydettiğiniz kareler de eklenir.',
+      en: 'Use "Get PDF report" at the bottom of the right panel. It contains the quote/summary, the specifications table (power, weight, RJ45, processor) and a dimensioned configuration drawing; frames you saved in camera or AR mode are appended too.',
       ar: 'استخدم زر تنزيل تقرير PDF الاحترافي أسفل اللوحة اليمنى. مستند واحد: الملخص أعلى والجدول التقني أسفل.',
     },
   },
@@ -371,6 +371,264 @@ export const TOPICS = [
       tr: `Kurulum, servis ve garanti şartları projeye göre belirlenir. Bu konular için lütfen bizimle iletişime geçin:\n\n${ILETISIM_TR}\n\nBir not: modelin "Hizmet" bilgisi (ön/arka erişim) bakımın hangi yönden yapılacağını belirtir; dar alanlarda ön erişimli modeller tercih edilir.`,
       en: `Installation, service and warranty terms are set per project. Please get in touch with us for these:\n\n${ILETISIM_EN}\n\nOne note: the "Service" attribute (front/rear access) indicates from which side maintenance is done; front-service models suit tight spaces.`,
       ar: `تُحدَّد شروط التركيب والصيانة والضمان حسب المشروع. يُرجى التواصل معنا:\n\n${ILETISIM_EN}`,
+    },
+  },
+  /* ------------------------------------------------------------------
+   * UYGULAMAYI KULLANMA
+   * Aşağıdaki konular ürünü değil, bu ekranı anlatır: hangi düğme ne yapar.
+   * Gelen soruların çoğu "şu özelliği nasıl kullanırım" oluyordu ve yardımcı
+   * bunların hiçbirini bilmiyordu.
+   * ------------------------------------------------------------------ */
+  {
+    id: 'camera',
+    keys: {
+      tr: ['kamera', 'kameray', 'kamera özelliği', 'kamera ozelligi', 'nasıl görüneceğini gör', 'nasil gorunecegini gor', 'duvarımda gör', 'duvarimda gor', 'odamda gör', 'odamda gor', 'fotoğrafta gör', 'fotografta gor', 'canlı önizleme', 'canli onizleme', 'gerçek mekân', 'gercek mekan', 'telefonun kamerası'],
+      en: ['camera', 'see how it will look', 'see it on my wall', 'in my room', 'live preview'],
+      ar: ['الكاميرا', 'في غرفتي', 'على جداري'],
+    },
+    q: { tr: 'Ekranı kendi duvarımda nasıl görürüm?', en: 'How do I see the screen on my own wall?', ar: 'كيف أرى الشاشة على جداري؟' },
+    a: {
+      tr: '"Nasıl görüneceğini gör" düğmesi telefonunuzun/bilgisayarınızın kamerasını açar ve ekranı gerçek görüntünün üzerine yerleştirir.\n\nNasıl kullanılır:\n1) Kamerayı duvara doğrultun.\n2) Ekranın durmasını istediğiniz yere dokunun — tasarım oraya yerleşir.\n3) Parmakla sürükleyerek taşıyın, iki parmakla büyütüp küçültün. İsterseniz "Konumlandır" tuş takımıyla ok tuşlarını kullanın.\n4) "Sıfırla" ilk hâline döndürür.\n5) "Kaydet" o kareyi telefonunuza indirir VE PDF raporuna ekler.\n\nÖlçü etiketleri tasarımın dışında durur, böylece ekranı kapatmaz.',
+      en: '"See how it will look" opens your camera and places the screen over the live image.\n\nHow to use it:\n1) Point the camera at the wall.\n2) Tap where you want the screen — the design lands there.\n3) Drag with one finger to move it, pinch with two to resize. Or use the "Position" keypad arrows.\n4) "Reset" returns to the starting state.\n5) "Save" downloads that frame to your phone AND adds it to the PDF report.\n\nMeasurement labels sit outside the design so they never cover the screen.',
+      ar: 'زر «شاهد كيف سيبدو» يفتح الكاميرا ويضع الشاشة فوق الصورة الحية: انقر لتحديد المكان، اسحب بإصبع للتحريك، وبإصبعين للتكبير. «حفظ» ينزّل اللقطة ويضيفها إلى تقرير PDF.',
+    },
+  },
+  {
+    id: 'ar',
+    keys: {
+      tr: ['ar modu', 'ar görünümü', 'ar nasıl', 'ar nasil', 'artırılmış gerçeklik', 'artirilmis gerceklik', "ar'da gör", 'arda gor', 'ar özelliği', 'ar ozelligi', 'odama koy', 'gerçek boyutta gör', 'gercek boyutta gor', 'quick look', 'scene viewer'],
+      en: ['augmented reality', 'view in ar', 'ar mode', 'place in my room', 'real size'],
+      ar: ['الواقع المعزز', 'ضعها في غرفتي'],
+    },
+    q: { tr: 'AR (artırılmış gerçeklik) nasıl çalışır?', en: 'How does AR work?', ar: 'كيف يعمل الواقع المعزز؟' },
+    a: {
+      tr: '"3D Görünüm" penceresindeki "AR\u2019da Gör" düğmesi ekranı GERÇEK BOYUTUNDA odanıza yerleştirir. Kameradan farkı: ekran mekâna sabitlenir, siz etrafında dolaşabilir, yanından ve arkasından bakabilirsiniz.\n\nNasıl kullanılır:\n1) Ekranın duracağı yere dokunun.\n2) Parmakla sürükleyin, iki parmakla döndürüp yakınlaştırın; ok tuşları ve "Sıfırla" da vardır.\n3) "Kaydet" o kareyi indirir ve PDF raporuna ekler.\n\nTelefonunuz AR desteklemiyorsa 3D görünüm yine çalışır; ekranı döndürerek her yönden inceleyebilirsiniz.\n\nEn iyi sonuç için: aydınlık bir ortam ve düz bir zemin/duvar.',
+      en: 'The "View in AR" button inside "3D View" places the screen in your room AT REAL SIZE. Unlike the camera view, it is anchored to the room — you can walk around it and look from the side or behind.\n\nHow to use it:\n1) Tap where the screen should stand.\n2) Drag with one finger, use two fingers to rotate and zoom; arrow keys and "Reset" are there too.\n3) "Save" downloads the frame and adds it to the PDF report.\n\nIf your phone has no AR support the 3D view still works and can be rotated freely.\n\nFor best results: good lighting and a flat floor or wall.',
+      ar: 'زر «عرض بالواقع المعزز» داخل «العرض ثلاثي الأبعاد» يضع الشاشة بحجمها الحقيقي في غرفتك: انقر لتحديد المكان، اسحب للتحريك، وبإصبعين للتدوير والتقريب. «حفظ» يضيف اللقطة إلى تقرير PDF.',
+    },
+  },
+  {
+    id: 'view3d',
+    keys: {
+      tr: ['3d', '3 boyut', 'üç boyut', 'uc boyut', '3d görünüm', '3d gorunum', 'döndürerek bak', 'dondurerek bak', 'yandan bak', 'arkadan bak'],
+      en: ['3d', '3d view', 'rotate', 'look from the side'],
+      ar: ['ثلاثي الأبعاد', 'تدوير'],
+    },
+    q: { tr: '3D Görünüm ne işe yarar?', en: 'What is the 3D View for?', ar: 'ما فائدة العرض ثلاثي الأبعاد؟' },
+    a: {
+      tr: 'Tasarımınızı üç boyutlu, döndürülebilir bir model olarak gösterir. Fare veya parmakla çevirip yakınlaştırabilirsiniz.\n\nÖzellikle kavisli ekranlarda işe yarar: kavisin gerçekte ne kadar büküldüğü düz önizlemede tam anlaşılmaz.\n\nAynı pencereden "AR\u2019da Gör" ile ekranı gerçek boyutunda odanıza taşıyabilirsiniz.',
+      en: 'It shows your design as a rotatable 3D model — spin and zoom it with the mouse or your fingers.\n\nIt is most useful for curved screens: the flat preview cannot fully convey how much the screen actually bends.\n\nFrom the same window "View in AR" places the screen in your room at real size.',
+      ar: 'يعرض التصميم كنموذج ثلاثي الأبعاد قابل للتدوير، وهو مفيد خصوصًا للشاشات المنحنية. ومن النافذة نفسها يمكن فتح الواقع المعزز.',
+    },
+  },
+  {
+    id: 'content',
+    keys: {
+      tr: ['içerik', 'icerik', 'kendi görselim', 'kendi gorselim', 'resim ekle', 'fotoğraf ekle', 'fotograf ekle', 'video ekle', 'görsel yükle', 'gorsel yukle', 'logo koy', 'örnek görüntü', 'ornek goruntu', 'örnek video', 'ornek video', 'ne gösterir', 'ekranda ne'],
+      en: ['content', 'add image', 'add video', 'upload image', 'my own image', 'sample image', 'sample video', 'logo'],
+      ar: ['المحتوى', 'إضافة صورة', 'إضافة فيديو', 'رفع صورة'],
+    },
+    q: { tr: 'Ekranda kendi görselimi gösterebilir miyim?', en: 'Can I show my own image on the screen?', ar: 'هل يمكنني عرض صورتي على الشاشة؟' },
+    a: {
+      tr: 'Evet. Sağ paneldeki "İçerik" bölümünden seçersiniz:\n\n• LED EKRAN — boş panel dokusu (ekranın kendisi görünsün diye)\n• ÖRNEK GÖRÜNTÜ / ÖRNEK VİDEO — hazır içerik\n• Resim Ekle / Video Ekle — kendi dosyanız\n• Resim Yok — boş çerçeve\n\nGörsel için JPG veya PNG, en fazla 3 MB.\n\nSeçtiğiniz içerik önizlemede, 3D görünümde ve AR\u2019da da görünür — çoklu ekranda tek görsel tüm duvara yayılır.',
+      en: 'Yes. Use the "Content" section in the right panel:\n\n• LED SCREEN — bare panel texture (to show the screen itself)\n• SAMPLE IMAGE / SAMPLE VIDEO — ready-made content\n• Add Image / Add Video — your own file\n• No Image — empty frame\n\nImages: JPG or PNG, up to 3 MB.\n\nWhatever you pick also appears in the 3D view and in AR — in multi-screen mode one image spreads across the whole wall.',
+      ar: 'نعم. من قسم «المحتوى» في اللوحة اليمنى: نسيج LED، صورة/فيديو تجريبي، أو ملفك الخاص (JPG/PNG حتى 3 ميغابايت). يظهر المحتوى أيضًا في العرض ثلاثي الأبعاد والواقع المعزز.',
+    },
+  },
+  {
+    id: 'venue',
+    keys: {
+      tr: ['mekân', 'mekan', 'iç mekân', 'ic mekan', 'dış mekân', 'dis mekan', 'arka plan', 'salon görünümü', 'salon gorunumu', 'ortam', 'sahne arkası'],
+      en: ['venue', 'indoor', 'outdoor', 'background', 'environment', 'scene'],
+      ar: ['المكان', 'داخلي', 'خارجي', 'الخلفية'],
+    },
+    q: { tr: '"Mekân" seçeneği ne yapar?', en: 'What does the "Venue" option do?', ar: 'ماذا يفعل خيار «المكان»؟' },
+    a: {
+      tr: 'Ekranı beyaz duvar yerine örnek bir ortamın içinde gösterir: "İç mekân" (salon/lobi) veya "Dış mekân". "Kapalı" seçilirse sade beyaz duvara döner.\n\nAmacı ölçek hissi vermektir — ekranın gerçek bir mekânda ne kadar yer kapladığını görürsünüz. Ölçüler her iki durumda da doğrudur.\n\nKendi mekânınızda görmek isterseniz kamera veya AR özelliğini kullanın.',
+      en: 'It shows the screen inside a sample environment — "Indoor" (hall/lobby) or "Outdoor" — instead of a plain white wall. "Off" returns to the white wall.\n\nThe point is a sense of scale: you see how much room the screen takes up in a real space. Dimensions stay accurate either way.\n\nTo see it in your OWN space, use the camera or AR feature.',
+      ar: 'يعرض الشاشة داخل بيئة نموذجية (داخلية أو خارجية) بدل الجدار الأبيض، لإعطاء إحساس بالحجم. ولرؤيتها في مكانك الفعلي استخدم الكاميرا أو الواقع المعزز.',
+    },
+  },
+  {
+    id: 'human',
+    keys: {
+      tr: ['insan', 'siluet', 'silüet', 'adam', 'figür', 'figur', 'yanındaki kişi', 'yanindaki kisi', 'boy', 'insan neden', 'insan kayboldu', 'insan görünmüyor', 'insan gorunmuyor'],
+      en: ['human', 'silhouette', 'figure', 'person', 'scale reference'],
+      ar: ['الشخص', 'الظل البشري', 'مرجع الحجم'],
+    },
+    q: { tr: 'Ekranın yanındaki insan figürü nedir?', en: 'What is the human figure next to the screen?', ar: 'ما هو الشكل البشري بجانب الشاشة؟' },
+    a: {
+      tr: 'Ölçek referansıdır: 1,80 m boyunda bir kişiyi temsil eder ve duvarla aynı ölçekte çizilir. Ekranın gerçekte ne kadar büyük olduğunu tek bakışta anlamanızı sağlar.\n\nDuvar yüksekliği 1,80 m\u2019nin altındaysa figür gizlenir — duvara sığmadığı için ölçüyü yanıltıcı gösterirdi.\n\nPDF raporundaki yapılandırma görselinde de aynı figür, aynı ölçekte yer alır.',
+      en: 'It is a scale reference: a 1.80 m tall person, drawn at the same scale as the wall, so you can judge the real size of the screen at a glance.\n\nIf the wall is shorter than 1.80 m the figure is hidden — it would no longer fit and would misrepresent the scale.\n\nThe same figure, at the same scale, appears on the configuration page of the PDF report.',
+      ar: 'مرجع للحجم: شخص بطول 1.80 م مرسوم بنفس مقياس الجدار. يُخفى إذا كان ارتفاع الجدار أقل من 1.80 م. ويظهر أيضًا في تقرير PDF.',
+    },
+  },
+  {
+    id: 'measures',
+    keys: {
+      tr: ['ölçüleri gizle', 'olculeri gizle', 'ölçüleri göster', 'olculeri goster', 'ölçü çizgileri', 'olcu cizgileri', 'kotalar', 'etiketler', 'metreler görünmesin'],
+      en: ['hide measurements', 'show measurements', 'dimension lines', 'labels'],
+      ar: ['إخفاء القياسات', 'إظهار القياسات'],
+    },
+    q: { tr: 'Ölçü etiketlerini kapatabilir miyim?', en: 'Can I turn the measurement labels off?', ar: 'هل يمكن إخفاء القياسات؟' },
+    a: {
+      tr: 'Evet. Üst çubuktaki "Ölçüleri gizle" düğmesi tüm ölçü etiketlerini ve kılavuz çizgilerini kaldırır; aynı düğme "Ölçüleri göster" olarak geri açar.\n\nSunum yaparken ya da ekran görüntüsü alırken sade bir görüntü için kullanışlıdır. Ölçüler gizliyken de tasarım aynı kalır, hiçbir değer değişmez.',
+      en: 'Yes. "Hide measurements" in the top bar removes every dimension label and guide line; the same button then reads "Show measurements".\n\nHandy for a clean look when presenting or taking a screenshot. Hiding them changes nothing in the design itself.',
+      ar: 'نعم، زر «إخفاء القياسات» في الشريط العلوي يزيل جميع الأبعاد وخطوط الاسترشاد، والزر نفسه يعيدها. لا يتغير التصميم.',
+    },
+  },
+  {
+    id: 'reset',
+    keys: {
+      tr: ['sıfırla', 'sifirla', 'baştan başla', 'bastan basla', 'temizle', 'yeni tasarım', 'yeni tasarim', 'her şeyi sil'],
+      en: ['reset', 'start over', 'clear', 'new design'],
+      ar: ['إعادة تعيين', 'البدء من جديد'],
+    },
+    q: { tr: 'Tasarımı nasıl sıfırlarım?', en: 'How do I reset the design?', ar: 'كيف أعيد ضبط التصميم؟' },
+    a: {
+      tr: 'Üst çubuktaki "Sıfırla" düğmesi her şeyi başlangıç hâline döndürür; yanlışlıkla basmayasınız diye onay ister.\n\nSayfayı YENİLEMEK de tasarımı sıfırlar. Buna karşılık tarayıcının geri tuşuna basmak çalışmanızı silmez — geri dönüp tekrar geldiğinizde tasarımınız yerinde durur.',
+      en: 'The "Reset" button in the top bar returns everything to its starting state and asks for confirmation first.\n\nRELOADING the page also resets the design. Pressing the browser back button, however, does not wipe your work — come back and your design is still there.',
+      ar: 'زر «إعادة تعيين» في الشريط العلوي يعيد كل شيء إلى البداية بعد تأكيد. تحديث الصفحة يعيد الضبط أيضًا، أما زر الرجوع في المتصفح فلا يمسح عملك.',
+    },
+  },
+  {
+    id: 'account',
+    keys: {
+      tr: ['hesap', 'kayıt ol', 'kayit ol', 'üye ol', 'uye ol', 'giriş yap', 'giris yap', 'oturum', 'şifre', 'sifre', 'parola', 'bayi', 'yeni kayıt', 'hesap aç'],
+      en: ['account', 'sign up', 'register', 'log in', 'login', 'password', 'dealer'],
+      ar: ['حساب', 'تسجيل', 'دخول', 'كلمة المرور'],
+    },
+    q: { tr: 'Hesap açmam gerekir mi?', en: 'Do I need an account?', ar: 'هل أحتاج إلى حساب؟' },
+    a: {
+      tr: 'Tasarım yapmak, PDF almak ve AR/kamera özelliklerini kullanmak için hesap GEREKMEZ; misafir olarak her şeyi kullanabilirsiniz.\n\nHesap açarsanız projeleriniz ve teklifleriniz kaydedilir; sonra tekrar açıp kaldığınız yerden devam edebilirsiniz.\n\nAçmak için: profil menüsü → "Yeni kayıt" → e-posta ve parola → "Hesap aç". Bayi hesabı olarak açılır ve kayıtlarınızı yalnızca siz görürsünüz.',
+      en: 'You do NOT need an account to design, get a PDF or use the camera/AR features — everything works as a guest.\n\nWith an account your projects and quotes are saved, so you can reopen them and carry on where you left off.\n\nTo create one: profile menu → "Sign up" → e-mail and password → "Create account". It is created as a dealer account and only you can see your own records.',
+      ar: 'لا حاجة لحساب للتصميم أو تنزيل PDF أو استخدام الكاميرا والواقع المعزز. لكن الحساب يحفظ مشاريعك وعروضك: من قائمة الملف الشخصي ← «حساب جديد» ← البريد وكلمة المرور.',
+    },
+  },
+  {
+    id: 'myquotes',
+    keys: {
+      tr: ['tekliflerim', 'kayıtlı proje', 'kayitli proje', 'eski tasarım', 'eski tasarim', 'eski proje', 'projeme devam', 'devam ed', 'devam et', 'düzenle', 'duzenle', 'geçmiş', 'gecmis', 'projelerim'],
+      en: ['my quotes', 'saved project', 'previous design', 'continue', 'edit', 'history'],
+      ar: ['عروض أسعاري', 'مشروع محفوظ', 'متابعة', 'تعديل'],
+    },
+    q: { tr: 'Eski bir tasarıma nasıl devam ederim?', en: 'How do I continue an earlier design?', ar: 'كيف أتابع تصميمًا سابقًا؟' },
+    a: {
+      tr: 'Profil menüsünden "Tekliflerim"i açın. Her kaydın yanında iki seçenek vardır:\n\n• Görüntüle — teklifin detaylarını okur.\n• Düzenle — tasarımı OLDUĞU GİBİ geri yükler ve yapılandırma ekranına döner; kaldığınız yerden devam edersiniz.\n\nModel, duvar ölçüleri, ekran türü, kavis, çoklu ekran düzeni — hepsi birebir geri gelir. Yalnızca kendi yüklediğiniz görsel/video geri gelmez, onu yeniden eklemeniz gerekir.',
+      en: 'Open "My quotes" from the profile menu. Each record has two options:\n\n• View — read the quote details.\n• Edit — restores the design EXACTLY as it was and returns to the configurator, so you can carry on.\n\nModel, wall size, screen type, curve, multi-screen layout — all come back identically. Only your own uploaded image/video is not restored; add it again.',
+      ar: 'من قائمة الملف الشخصي افتح «عروض أسعاري»: زر «عرض» لقراءة التفاصيل، وزر «تعديل» يستعيد التصميم كما كان لمتابعة العمل. الصورة أو الفيديو الذي رفعته يحتاج إلى إعادة إضافة.',
+    },
+  },
+  {
+    id: 'pdfcontent',
+    keys: {
+      tr: ['raporda ne var', 'pdf raporunda', 'rapor ne içerir', 'pdf içinde ne', 'pdf icinde ne', 'rapor içeriği', 'rapor icerigi', 'kaç sayfa', 'kac sayfa', 'pdfte görsel', 'pdfte gorsel', 'rapora fotoğraf'],
+      en: ['what is in the report', 'pdf contents', 'how many pages', 'photo in pdf'],
+      ar: ['محتوى التقرير', 'كم صفحة'],
+    },
+    q: { tr: 'PDF raporunun içinde ne var?', en: 'What is inside the PDF report?', ar: 'ماذا يحتوي تقرير PDF؟' },
+    a: {
+      tr: 'Rapor en az iki sayfadır:\n\n1) Teklif/özet + teknik özellikler tablosu (güç, ağırlık, RJ45, işlemci).\n2) Yapılandırma görseli — ekranın şeması, ölçüleri ve yanında 1,80 m\u2019lik insan figürü.\n\nBunlara ek olarak: kamerada veya AR\u2019da "Kaydet" dediğiniz her kare, rapora ayrı bir "Mekânda Görünüm" sayfası olarak eklenir (en fazla 6 kare).\n\nRaporu "PDF Raporu Al" düğmesiyle alırsınız.',
+      en: 'The report is at least two pages:\n\n1) Quote/summary + specifications table (power, weight, RJ45, processor).\n2) Configuration drawing — the screen layout, its dimensions and a 1.80 m human figure beside it.\n\nOn top of that, every frame you "Save" in camera or AR mode is added as its own "In your space" page (up to 6 frames).\n\nGet it with the "Get PDF report" button.',
+      ar: 'التقرير صفحتان على الأقل: الملخص وجدول المواصفات، ثم رسم التكوين مع القياسات وشخص بطول 1.80 م. وتُضاف كل لقطة حفظتها في الكاميرا أو الواقع المعزز كصفحة مستقلة (حتى 6 لقطات).',
+    },
+  },
+  {
+    id: 'lang',
+    keys: {
+      tr: ['dil', 'ingilizce', 'arapça', 'arapca', 'türkçe', 'turkce', 'language', 'dili değiştir', 'dili degistir'],
+      en: ['language', 'english', 'arabic', 'turkish', 'change language'],
+      ar: ['اللغة', 'العربية', 'الإنجليزية', 'تغيير اللغة'],
+    },
+    q: { tr: 'Dili değiştirebilir miyim?', en: 'Can I change the language?', ar: 'هل يمكنني تغيير اللغة؟' },
+    a: {
+      tr: 'Evet. Üst çubuktaki bayrak/dil düğmesinden Türkçe, İngilizce ve Arapça arasında geçiş yapabilirsiniz. Arapçada arayüz sağdan sola döner.\n\nDil seçiminiz hatırlanır ve bu yardımcı da seçtiğiniz dilde cevap verir.',
+      en: 'Yes. Use the flag/language button in the top bar to switch between Turkish, English and Arabic. In Arabic the interface flips to right-to-left.\n\nYour choice is remembered, and this assistant answers in the language you picked.',
+      ar: 'نعم، من زر اللغة في الشريط العلوي: التركية والإنجليزية والعربية. في العربية تنقلب الواجهة من اليمين إلى اليسار، ويُحفظ اختيارك.',
+    },
+  },
+  {
+    id: 'theme',
+    keys: {
+      tr: ['koyu tema', 'karanlık mod', 'karanlik mod', 'gece modu', 'açık tema', 'acik tema', 'tema'],
+      en: ['dark mode', 'dark theme', 'light mode', 'theme'],
+      ar: ['الوضع الداكن', 'السمة'],
+    },
+    q: { tr: 'Koyu tema var mı?', en: 'Is there a dark theme?', ar: 'هل يوجد وضع داكن؟' },
+    a: {
+      tr: 'Evet. Üst çubuktaki ay/güneş düğmesi açık ve koyu tema arasında geçiş yapar; seçiminiz hatırlanır.\n\nKoyu tema loş ortamlarda ve sunumlarda göz yormaz. Ekran önizlemesi ve ölçüler her iki temada da aynı doğrulukta görünür.',
+      en: 'Yes. The moon/sun button in the top bar switches between light and dark, and your choice is remembered.\n\nDark mode is easier on the eyes in dim rooms and during presentations. The preview and its dimensions read equally well in both.',
+      ar: 'نعم، زر القمر/الشمس في الشريط العلوي يبدّل بين الوضع الفاتح والداكن، ويُحفظ اختيارك.',
+    },
+  },
+  {
+    id: 'wizard',
+    keys: {
+      tr: ['sihirbaz', 'bilmiyorum', 'hangi modeli seçeceğimi', 'hangi modeli secegimi', 'yardım et seç', 'karar veremiyorum', 'nereden başlamalı', 'nereden baslamali', 'filtre', 'karşılaştır', 'karsilastir'],
+      en: ['wizard', 'i do not know which model', 'help me choose', 'where do i start', 'filter', 'compare'],
+      ar: ['المعالج', 'ساعدني في الاختيار', 'من أين أبدأ', 'مقارنة'],
+    },
+    q: { tr: 'Hangi modeli seçeceğimi bilmiyorum, nereden başlamalıyım?', en: 'I do not know which model to pick — where do I start?', ar: 'لا أعرف أي طراز أختار، من أين أبدأ؟' },
+    a: {
+      tr: 'Açılış ekranındaki "Hangi modeli seçeceğinizi bilmiyor musunuz?" sihirbazı birkaç soruyla (kullanım yeri, izleme mesafesi) size uygun modelleri daraltır.\n\nKatalogda ayrıca filtreler vardır: piksel aralığı, parlaklık, kullanım (iç/dış), kurulum, koruma sınıfı, izleme mesafesi. İki modeli karşılaştırma düğmesiyle yan yana da görebilirsiniz.\n\nSeçtikten sonra "Duvara sığdır" düğmesi, duvar ölçünüze en uygun sütun/satır sayısını kendisi hesaplar.',
+      en: 'The "Not sure which model to choose?" wizard on the opening screen narrows the list with a few questions (where it will be used, viewing distance).\n\nThe catalogue also has filters: pixel pitch, brightness, indoor/outdoor use, installation, protection rating, viewing distance. The compare button puts two models side by side.\n\nOnce chosen, "Fit to wall" works out the best column/row count for your wall size automatically.',
+      ar: 'معالج «لا تعرف أي طراز تختار؟» في الشاشة الأولى يضيّق الخيارات بأسئلة قليلة. وفي الكتالوج مرشحات (كثافة البكسل، السطوع، الاستخدام، الحماية) وإمكانية المقارنة. وبعد الاختيار يحسب زر «ملاءمة الجدار» عدد الأعمدة والصفوف المناسب.',
+    },
+  },
+  {
+    id: 'ledtype',
+    keys: {
+      tr: ['smd', 'cob', 'gob', 'dip', 'led tipi', 'led türü', 'led turu', 'paketleme', 'diyot tipi'],
+      en: ['smd', 'cob', 'gob', 'led type', 'packaging', 'diode type'],
+      ar: ['نوع الليد', 'اس ام دي'],
+    },
+    q: { tr: 'SMD, COB, GOB ne demek?', en: 'What do SMD, COB and GOB mean?', ar: 'ماذا تعني SMD وCOB وGOB؟' },
+    a: {
+      tr: 'LED diyotların panele yerleştirilme biçimidir; modelin "LED Tipi" bilgisinde yazar.\n\n• SMD — en yaygın yöntem. Diyotlar tek tek yüzeye lehimlenir. Ekonomik ve bakımı kolaydır.\n• COB — diyotlar doğrudan devre kartına gömülür, üzeri kaplanır. Daha dayanıklı, darbeye ve toza karşı korumalı, çok küçük piksel aralıklarında tercih edilir.\n• GOB — SMD panelin üzerine şeffaf koruyucu reçine dökülür. SMD\u2019nin maliyeti ile COB\u2019a yakın dayanıklılık sağlar.\n\nEle temas edilebilecek yerlerde (mağaza, fuar, geçiş noktaları) COB/GOB önerilir.',
+      en: 'It is how the LED diodes are mounted on the panel; you will find it under the model\u2019s "LED Type".\n\n• SMD — the common method: diodes soldered individually to the surface. Economical, easy to service.\n• COB — diodes embedded directly into the board and coated. Tougher, protected against knocks and dust, preferred at very fine pitches.\n• GOB — a clear resin poured over an SMD panel: SMD cost with near-COB durability.\n\nWhere people can touch the screen (retail, exhibitions, walkways) COB or GOB is recommended.',
+      ar: 'طريقة تثبيت الديودات على اللوحة: SMD شائع واقتصادي، COB مدمج ومغلّف وأكثر متانة ومناسب للكثافات العالية، وGOB طبقة راتنج شفافة فوق SMD تجمع بين التكلفة والمتانة. يُنصح بـ COB/GOB في الأماكن التي تُلمس فيها الشاشة.',
+    },
+  },
+  {
+    id: 'ip',
+    keys: {
+      tr: ['ip', 'ip65', 'ip54', 'koruma sınıfı', 'koruma sinifi', 'su geçirmez', 'su gecirmez', 'yağmur', 'yagmur', 'toz', 'dışarıda kalır mı', 'disarida kalir mi'],
+      en: ['ip rating', 'ip65', 'waterproof', 'rain', 'dust', 'outdoor protection'],
+      ar: ['درجة الحماية', 'مقاوم للماء', 'المطر', 'الغبار'],
+    },
+    q: { tr: 'IP koruma sınıfı nedir?', en: 'What is the IP protection rating?', ar: 'ما هي درجة الحماية IP؟' },
+    a: {
+      tr: 'Panelin toza ve suya karşı korumasını gösterir. İlk rakam toz, ikinci rakam sudur; büyüdükçe koruma artar.\n\n• IP54 — iç mekân, tozdan kısmen korunmuş\n• IP65 — toz sızdırmaz, her yönden gelen suya dayanıklı → dış mekân\n\nDış mekân ekranlarında ön ve arka yüz için ayrı değer verilebilir (ör. ön IP65, arka IP54).\n\nModelin değeri "Koruma" alanında yazar; katalogda buna göre filtreleyebilirsiniz.',
+      en: 'It states how well the panel is protected against dust and water. The first digit is dust, the second water; higher is better.\n\n• IP54 — indoor, partly dust-protected\n• IP65 — dust-tight and resistant to water from any direction → outdoor\n\nOutdoor screens may quote separate ratings for the front and rear faces (e.g. front IP65, rear IP54).\n\nEach model shows this under "Protection", and you can filter the catalogue by it.',
+      ar: 'تبيّن حماية اللوحة من الغبار والماء: الرقم الأول للغبار والثاني للماء. IP54 للداخل، وIP65 مانع للغبار ومقاوم للماء ومناسب للخارج. تظهر القيمة في خانة «الحماية».',
+    },
+  },
+  {
+    id: 'control',
+    keys: {
+      tr: ['kontrol', 'neye bağlan', 'neye baglan', 'nasıl bağlan', 'nasil baglan', 'işlemci', 'islemci', 'gönderici', 'gonderici', 'alıcı kart', 'alici kart', 'kablo', 'rj45', 'bağlantı', 'baglanti', 'nasıl bağlanır', 'nasil baglanir', 'bilgisayara bağla'],
+      en: ['controller', 'processor', 'sending card', 'receiving card', 'cable', 'rj45', 'how to connect'],
+      ar: ['وحدة التحكم', 'المعالج', 'الكابل', 'التوصيل'],
+    },
+    q: { tr: 'Ekran neye bağlanır, nasıl kontrol edilir?', en: 'What is the screen connected to and how is it controlled?', ar: 'بماذا تُوصل الشاشة وكيف يتم التحكم بها؟' },
+    a: {
+      tr: 'Zincir şöyledir: içerik kaynağı (bilgisayar/oynatıcı) → video işlemci veya gönderici kart → RJ45 (CAT6) kablolarla kabinlerdeki alıcı kartlar.\n\nHer RJ45 hattı belirli sayıda piksel taşır; ekran büyüdükçe hat sayısı ve dolayısıyla işlemci ihtiyacı artar. Teknik Özellikler tablosunda gereken RJ45 hattı ve işlemci sayısı hesaplanmış olarak yazar.\n\nHangi işlemcinin projeye uygun olduğu ve yedeklilik (S-Kutu) tercihi için satış ekibiyle görüşün.',
+      en: 'The chain is: content source (PC/player) → video processor or sending card → RJ45 (CAT6) cabling → receiving cards inside the cabinets.\n\nEach RJ45 run carries a fixed number of pixels, so a bigger screen needs more runs and more processing. The Specifications table already works out the required RJ45 count and processors.\n\nFor the right processor and redundancy (S-Box) choice, talk to the sales team.',
+      ar: 'المسار: مصدر المحتوى ← معالج فيديو أو بطاقة إرسال ← كابلات RJ45 ← بطاقات الاستقبال داخل الخزانات. يحسب جدول المواصفات عدد خطوط RJ45 والمعالجات المطلوبة.',
+    },
+  },
+  {
+    id: 'lifetime',
+    keys: {
+      tr: ['ömür', 'omur', 'ömrü', 'omru', 'kaç yıl', 'kac yil', 'ne kadar dayanır', 'ne kadar dayanir', 'saat', 'sürekli açık', 'surekli acik', '7/24', 'dayanıklılık'],
+      en: ['lifetime', 'lifespan', 'how many years', 'how long does it last', 'hours', '24/7'],
+      ar: ['العمر الافتراضي', 'كم سنة', 'كم يدوم'],
+    },
+    q: { tr: 'LED ekranın ömrü ne kadar?', en: 'How long does an LED screen last?', ar: 'كم يدوم عمر شاشة LED؟' },
+    a: {
+      tr: 'LED diyotların ömrü genel olarak 100.000 saat mertebesinde anılır; bu, parlaklığın başlangıç değerinin yarısına düştüğü süredir — ekran o an sönmez.\n\nGünde 12 saat çalışan bir ekran için kabaca 20 yıldan uzun bir süreye karşılık gelir. Gerçek ömrü etkileyenler: sürekli tam parlaklıkta çalıştırmak, yüksek sıcaklık, nem ve tozdur.\n\nParlaklığı ortama göre düşürmek hem ömrü uzatır hem enerji tüketimini azaltır.\n\nProjenize özel garanti ve bakım şartları için satış ekibiyle görüşün.',
+      en: 'LED diode life is generally quoted around 100,000 hours — the point at which brightness has fallen to half its original value, not the point where the screen dies.\n\nAt 12 hours a day that is well over 20 years. What really shortens it: running at full brightness constantly, high temperature, humidity and dust.\n\nDimming to suit the room extends life and cuts energy use at the same time.\n\nFor warranty and maintenance terms on your project, talk to the sales team.',
+      ar: 'يُذكر عمر الديودات عادةً بنحو 100000 ساعة، وهي النقطة التي ينخفض فيها السطوع إلى النصف وليس التوقف. تشغيلها بأقصى سطوع دائمًا والحرارة والرطوبة والغبار تقصّر العمر.',
     },
   },
   {
@@ -429,6 +687,11 @@ const ALAN_KELIMELERI = [
   'adres', 'mail', 'eposta',
   // araç
   'konfigurator', 'pdf', 'sigdir', 'model', 'yapilandir',
+  // uygulamanın kendi özellikleri
+  'kamera', 'artirilmis gerceklik', '3d', 'siluet', 'tema', 'hesap',
+  'kayit', 'giris', 'parola', 'sifre', 'tekliflerim', 'duzenle', 'sifirla',
+  'mekan', 'rapor', 'smd', 'cob', 'gob', 'ip65', 'omur', 'islemci',
+  'rj45', 'kablo',
 ]
 
 /** Metinde alanımıza ait bir kelime geçiyor mu? */
