@@ -1529,7 +1529,39 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
               interaction-prompt-threshold="0"
               shadow-intensity="1"
               style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
-            />
+            >
+              {/*
+                YERLEŞTİRME İPUCU (WebXR).
+
+                model-viewer, yüzey aranırken "cihazı çevirin" anlamına gelen
+                bir el animasyonu gösteriyor. Ne demek istediği anlaşılmıyor ve
+                kullanıcı ekranda ne yapacağını bilmiyordu. Bu slot o ipucunun
+                yerine geçiyor: ne yapılacağını düz cümleyle söylüyor.
+
+                NOT: Bu yalnızca AR oturumu SAYFANIN İÇİNDE çalıştığında (WebXR,
+                Android) geçerli. iPhone'da Quick Look, bazı Android'lerde Scene
+                Viewer devreye giriyor; onlar işletim sistemine ait ayrı
+                ekranlar ve içlerine düğme/ipucu eklenemiyor.
+              */}
+              <div slot="ar-prompt" style={{ pointerEvents: 'none' }}>
+                <p
+                  style={{
+                    margin: 0,
+                    maxWidth: 300,
+                    padding: '10px 16px',
+                    borderRadius: 999,
+                    background: 'rgba(0,0,0,.72)',
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textAlign: 'center',
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {t('scene3d.arScan')}
+                </p>
+              </div>
+            </model-viewer>
 
             {/*
               JEST KATMANI — parmak/fare ile taşı, döndür, boyutlandır.

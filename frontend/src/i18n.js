@@ -521,6 +521,23 @@ const dict = {
   'scene3d.viewInAr': { tr: "AR'da Gör", en: 'View in AR', ar: 'عرض بالواقع المعزز' },
   'scene3d.hint': { tr: 'Sürükleyerek döndürün, tekerlek/iki parmakla yakınlaştırın.', en: 'Drag to rotate, scroll/pinch to zoom.', ar: 'اسحب للتدوير، قرّب بالتمرير أو بإصبعين.' },
   'scene3d.arExportError': { tr: '3D model oluşturulamadı. Cihazınız veya tarayıcınız desteklemiyor olabilir.', en: 'Could not generate the 3D model. Your device or browser may not support this.', ar: 'تعذر إنشاء النموذج ثلاثي الأبعاد. قد لا يدعمه جهازك أو متصفحك.' },
+  /* WebXR oturumunda model-viewer'ın "cihazı çevirin" ipucunun yerine geçer */
+  'scene3d.arScan': {
+    tr: 'Kamerayı zemine doğrultun, sonra yerleştirmek için ekrana dokunun.',
+    en: 'Point the camera at the floor, then tap the screen to place it.',
+    ar: 'وجّه الكاميرا نحو الأرض ثم انقر على الشاشة لوضعها.',
+  },
+  'scene3d.arInSession': {
+    tr: 'Yerleştirmek için dokunun · taşımak için sürükleyin · iki parmakla döndürüp boyutlandırın',
+    en: 'Tap to place · drag to move · two fingers to rotate and resize',
+    ar: 'انقر للوضع · اسحب للتحريك · بإصبعين للتدوير وتغيير الحجم',
+  },
+  'scene3d.arKeysNote': {
+    tr: 'Yön tuşlarıyla ince ayar bu ekranda; telefonun AR ekranı Apple/Google’a ait, oraya düğme eklenemiyor.',
+    en: 'Arrow-key fine tuning lives on this screen; the phone’s AR view belongs to Apple/Google and cannot take our buttons.',
+    ar: 'الضبط الدقيق بالأسهم موجود في هذه الشاشة؛ شاشة الواقع المعزز في الهاتف تخص Apple/Google ولا يمكن إضافة أزرارنا إليها.',
+  },
+
   'scene3d.arPlace': { tr: 'Odanızda görüntüleyin', en: 'View in your room', ar: 'اعرضه في غرفتك' },
   'scene3d.takePhoto': { tr: 'Fotoğraf çek', en: 'Take a photo', ar: 'التقاط صورة' },
   'scene3d.arHint': { tr: 'Kamerayı zemine doğrultun, ekranı sürükleyerek yerleştirin; iki parmakla döndürün ve boyutlandırın.', en: 'Point the camera at the floor, drag to place the screen; pinch to rotate and resize.', ar: 'وجّه الكاميرا نحو الأرض، اسحب لوضع الشاشة؛ استخدم إصبعين للتدوير وتغيير الحجم.' },
