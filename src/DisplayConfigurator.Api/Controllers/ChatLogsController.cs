@@ -26,7 +26,8 @@ public class ChatLogsController : ControllerBase
         return Ok(logs);
     }
 
-    [DevOrBetaWrite]
+    // Canlıda da açık: cevaplanamayan soruları toplamanın tek yolu bu.
+    [ChatLogWrite]
     [HttpPost]
     public async Task<ActionResult<ChatLog>> CreateLog([FromBody] ChatLog input)
     {

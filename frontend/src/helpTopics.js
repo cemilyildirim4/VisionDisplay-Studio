@@ -44,7 +44,7 @@ export const TOPICS = [
   {
     id: 'pitch',
     keys: {
-      tr: ['piksel aralığı', 'piksel araligi', 'piksell', 'pixell', 'pixel araligi', 'pixel aralığı', 'pitch', 'p1.25', 'p1.6', 'p2.0', 'piksel', 'mm ne demek', 'hangi pitch', 'ne kadar sık', 'netlik', 'keskinlik'],
+      tr: ['piksel aralığı', 'piksel araligi', 'piksell', 'pixell', 'pixel araligi', 'pixel aralığı', 'pitch', 'p1.25', 'p1.6', 'p2.0', 'piksel', 'mm ne demek', 'hangi pitch', 'ne kadar sık', 'netlik', 'keskinlik', 'net olacak', 'yazılar okunur', 'yazı okunur', 'ne kadar net', 'görüntü kalitesi', 'p3', 'p4', 'p5', 'p6', 'p8', 'p10', 'p2.5'],
       en: ['pixel pitch', 'pitch', 'pixel'],
       ar: ['المسافة بين البكسل', 'بكسل'],
     },
@@ -170,7 +170,7 @@ export const TOPICS = [
   {
     id: 'ledvswall',
     keys: {
-      tr: ['video duvarı', 'video duvari', 'led mi video mu', 'fark ne', 'hangisi', 'çerçeve', 'cerceve', 'bezel', 'lcd', 'panel arası çizgi', 'çizgi görünüyor', 'birleşim', 'hangisi daha iyi'],
+      tr: ['video duvarı', 'video duvari', 'led mi video mu', 'fark ne', 'hangisi', 'çerçeve', 'cerceve', 'bezel', 'lcd', 'panel arası çizgi', 'çizgi görünüyor', 'birleşim', 'hangisi daha iyi', 'yanyana', 'yan yana', 'arada boşluk', 'televizyon birleştir', 'tv birleştir', 'monitör birleştir', 'ekleme yeri belli', 'televizyon', 'televizyonlar', 'birleştirsek', 'birleştirerek'],
       en: ['video wall', 'led vs', 'difference', 'bezel'],
       ar: ['جدار الفيديو', 'الفرق'],
     },
@@ -206,7 +206,7 @@ export const TOPICS = [
   {
     id: 'brightness',
     keys: {
-      tr: ['parlaklık', 'parlaklik', 'nit', 'ne kadar parlak', 'güneş', 'gunes', 'aydınlık', 'dışarıda', 'dış mekan', 'dis mekan', 'vitrin', 'karanlık', 'iç mekan'],
+      tr: ['parlaklık', 'parlaklik', 'nit', 'ne kadar parlak', 'güneş', 'gunes', 'aydınlık', 'dışarıda', 'dis mekan', 'vitrin', 'karanlık', 'iç mekan', 'güneş vurunca', 'güneş altında', 'gündüz görünür', 'okunur mu', 'soluk görünür', 'parlaklığı yeter mi'],
       en: ['brightness', 'nit', 'nits', 'sunlight'],
       ar: ['السطوع', 'نيت'],
     },
@@ -224,7 +224,7 @@ export const TOPICS = [
   {
     id: 'sbox',
     keys: {
-      tr: ['s-kutu', 's kutu', 'sbox', 'yedeklilik', 'yedekli', 'kontrolcü', 'denetleyici', 'arıza', 'bozulursa'],
+      tr: ['s-kutu', 's kutu', 'sbox', 'yedeklilik', 'yedekli', 'kontrolcü', 'denetleyici', 'yedek kontrolcü', 'kesintisiz', 'devreye girer', 'sistem çöker mi'],
       en: ['s-box', 'sbox', 'redundancy'],
       ar: ['صندوق', 'التكرار'],
     },
@@ -260,7 +260,7 @@ export const TOPICS = [
   {
     id: 'power',
     keys: {
-      tr: ['amper', 'sigorta', 'elektrik hattı', 'elektrik hatti', 'güç', 'guc', 'watt', 'elektrik', 'tüketim', 'tuketim', 'devre', 'ısı üretimi', 'ısınma', 'btu', 'kaç watt', 'sigorta', 'klima', 'soğutma', 'fatura'],
+      tr: ['amper', 'sigorta', 'elektrik hattı', 'elektrik hatti', 'güç', 'guc', 'watt', 'elektrik', 'tüketim', 'tuketim', 'devre', 'btu', 'kaç watt', 'sigorta', 'elektrik faturası', 'elektrik yakar', 'ne kadar elektrik', 'enerji tüketimi', 'kaç kw', 'kilovat', 'trafo', 'jeneratör', 'elektrik gideri'],
       en: ['power', 'watt', 'consumption', 'circuit', 'heat', 'btu'],
       ar: ['الطاقة', 'واط', 'استهلاك'],
     },
@@ -278,7 +278,7 @@ export const TOPICS = [
   {
     id: 'model',
     keys: {
-      tr: ['hangi model', 'ne önerirsin', 'ne onerirsin', 'hangisini seç', 'hangisini sec', 'hangisini almalı', 'tavsiye', 'öneri', 'toplantı odası', 'toplanti odasi', 'mağaza', 'magaza', 'lobi', 'salon', 'hangi modeli'],
+      tr: ['hangi model', 'ne önerirsin', 'ne onerirsin', 'hangisini seç', 'hangisini sec', 'hangisini almalı', 'tavsiye', 'öneri', 'toplantı odası', 'toplanti odasi', 'mağaza', 'magaza', 'lobi', 'salon', 'hangi modeli', 'ne önerirsiniz', 'ne tavsiye edersiniz', 'hangisi olur', 'bize ne uyar', 'mağaza vitrini için', 'restoran için', 'uygun model'],
       en: ['which model', 'recommend', 'suggestion', 'meeting room', 'which one'],
       ar: ['أي طراز', 'توصية'],
     },
@@ -292,7 +292,7 @@ export const TOPICS = [
   {
     id: 'weight',
     keys: {
-      tr: ['ağırlık', 'agirlik', 'kaç kilo', 'kac kilo', 'ne kadar ağır', 'duvar taşır', 'duvar tasir', 'ağırlığı'],
+      tr: ['ağırlık', 'agirlik', 'kaç kilo', 'kac kilo', 'ne kadar ağır', 'duvar taşır', 'duvar tasir', 'ağırlığı', 'alçıpan', 'kaldırır mı', 'taşır mı', 'duvar dayanır', 'kaç kilo gelir', 'statik'],
       en: ['weight', 'how heavy', 'load bearing'],
       ar: ['الوزن', 'كم كيلو'],
     },
@@ -306,7 +306,7 @@ export const TOPICS = [
   {
     id: 'quote',
     keys: {
-      tr: ['teklif', 'fiyat', 'kaç para', 'kac para', 'maliyet', 'ücret', 'ucret', 'satın al', 'satin al', 'sipariş', 'siparis'],
+      tr: ['teklif', 'fiyat', 'kaç para', 'kac para', 'maliyet', 'ücret', 'ucret', 'satın al', 'satin al', 'sipariş', 'siparis', 'bütçe', 'bütçem', 'kaça patlar', 'kaça mal olur', 'ne kadara', 'ne alabilirim', 'kaç liraya', 'kaç lira tutar', 'kaç tl tutar', 'fiyat listesi', 'bize kaça'],
       en: ['quote', 'price', 'cost', 'how much', 'buy', 'order'],
       ar: ['عرض سعر', 'السعر', 'التكلفة'],
     },
@@ -320,7 +320,7 @@ export const TOPICS = [
   {
     id: 'contact',
     keys: {
-      tr: ['iletişim', 'iletisim', 'telefon', 'numara', 'arayabilir', 'mail', 'eposta', 'e-posta', 'mail adresi', 'adres', 'adresiniz', 'nerdesiniz', 'neredesiniz', 'ofis', 'ulaş', 'ulas', 'bize ulaş'],
+      tr: ['iletişim', 'iletisim', 'telefon', 'numara', 'arayabilir', 'mail', 'eposta', 'e-posta', 'mail adresi', 'adres', 'adresiniz', 'nerdesiniz', 'neredesiniz', 'ofis', 'ulaş', 'ulas', 'bize ulaş', 'kime ulaşacağım', 'görüşmek istiyorum', 'sizi arayabilir', 'randevu', 'yetkili'],
       en: ['contact', 'phone', 'email', 'address', 'where are you', 'office', 'reach you'],
       ar: ['اتصال', 'هاتف', 'بريد', 'عنوان'],
     },
@@ -334,7 +334,7 @@ export const TOPICS = [
   {
     id: 'company',
     keys: {
-      tr: ['kiosk', 'dijital tabela', 'signage', 'menü panosu', 'menu panosu', 'menu board', 'tabela', 'masaüstü', 'masaustu', 'firma', 'şirket', 'sirket', 'hakkınızda', 'hakkinizda', 'kimsiniz', 'ne iş yapıyorsunuz', 'ne is yapiyorsunuz', 'hizmetler', 'ürünler', 'urunler', 'neler satıyorsunuz'],
+      tr: ['kiosk', 'dijital tabela', 'signage', 'menü panosu', 'menu panosu', 'menu board', 'tabela', 'masaüstü', 'masaustu', 'firma', 'şirket', 'sirket', 'hakkınızda', 'hakkinizda', 'kimsiniz', 'ne iş yapıyorsunuz', 'ne is yapiyorsunuz', 'hizmetler', 'ürünler', 'urunler', 'neler satıyorsunuz', 'neler yapıyorsunuz', 'ne iş yaparsınız', 'referanslarınız'],
       en: ['about', 'company', 'who are you company', 'services', 'products', 'what do you sell'],
       ar: ['الشركة', 'عن الشركة', 'الخدمات', 'المنتجات'],
     },
@@ -348,7 +348,7 @@ export const TOPICS = [
   {
     id: 'usage',
     keys: {
-      tr: ['teknik özellik', 'teknik ozellik', 'özellikler nerede', 'ozellikler nerede', 'pdf', 'nereden iner', 'nasıl indiririm', 'nasil indiririm', 'çıktı', 'cikti', 'dışa aktar', 'disa aktar', 'kaydet', 'nereden bakarım'],
+      tr: ['teknik özellik', 'teknik ozellik', 'özellikler nerede', 'ozellikler nerede', 'pdf', 'nereden iner', 'nasıl indiririm', 'nasil indiririm', 'çıktı', 'cikti', 'dışa aktar', 'disa aktar', 'kaydet', 'nereden bakarım', 'müşteriye gönder', 'pdf indir', 'çıktı al', 'rapor indir', 'tasarımı gönder', 'sunmak istiyorum'],
       en: ['pdf', 'download', 'export', 'where is'],
       ar: ['بي دي اف', 'تنزيل', 'تصدير'],
     },
@@ -362,7 +362,7 @@ export const TOPICS = [
   {
     id: 'install',
     keys: {
-      tr: ['kurulum', 'montaj', 'nasıl monte', 'nasil monte', 'kim kurar', 'servis', 'bakım', 'bakim', 'garanti'],
+      tr: ['kurulum', 'montaj', 'nasıl monte', 'nasil monte', 'kim kurar', 'servis', 'bakım', 'bakim', 'garanti', 'garanti kaç yıl', 'garanti süresi', 'kaç yıl garanti', 'garantisi var mı', 'ne kadar sürede kurar', 'kurulum süresi', 'kaç kişi kurar', 'işimizi aksatır', 'arkanızda', 'satış sonrası'],
       en: ['installation', 'mounting', 'who installs', 'service', 'warranty', 'maintenance'],
       ar: ['التركيب', 'الضمان', 'الصيانة'],
     },
@@ -382,7 +382,7 @@ export const TOPICS = [
   {
     id: 'camera',
     keys: {
-      tr: ['galeri', 'galeriye', 'fotoğraflara kaydet', 'fotograflara kaydet', 'kamera', 'kameray', 'kamera özelliği', 'kamera ozelligi', 'nasıl görüneceğini gör', 'nasil gorunecegini gor', 'duvarımda gör', 'duvarimda gor', 'odamda gör', 'odamda gor', 'fotoğrafta gör', 'fotografta gor', 'canlı önizleme', 'canli onizleme', 'gerçek mekân', 'gercek mekan', 'telefonun kamerası'],
+      tr: ['galeri', 'galeriye', 'fotoğraflara kaydet', 'fotograflara kaydet', 'kamera', 'kameray', 'kamera özelliği', 'kamera ozelligi', 'nasıl görüneceğini gör', 'nasil gorunecegini gor', 'duvarımda gör', 'duvarimda gor', 'fotoğrafta gör', 'fotografta gor', 'canlı önizleme', 'canli onizleme', 'gerçek mekân', 'gercek mekan', 'telefonun kamerası', 'telefonun kamerasıyla', 'kamerayla bak', 'odada nasıl görünür', 'çekip bakabilir'],
       en: ['camera', 'see how it will look', 'see it on my wall', 'in my room', 'live preview'],
       ar: ['الكاميرا', 'في غرفتي', 'على جداري'],
     },
@@ -396,7 +396,7 @@ export const TOPICS = [
   {
     id: 'ar',
     keys: {
-      tr: ['ar modu', 'ar görünümü', 'ar nasıl', 'ar nasil', 'ar nasl', 'ar calis', 'ar çalış', 'artırılmış gerçeklik', 'artirilmis gerceklik', "ar'da gör", 'arda gor', 'ar özelliği', 'ar ozelligi', 'odama koy', 'gerçek boyutta gör', 'gercek boyutta gor', 'quick look', 'scene viewer'],
+      tr: ['ar modu', 'ar görünümü', 'ar nasıl', 'ar nasil', 'ar nasl', 'ar calis', 'ar çalış', 'artırılmış gerçeklik', 'artirilmis gerceklik', '"ar\'da gör"', 'arda gor', 'ar özelliği', 'ar ozelligi', 'odama koy', 'gerçek boyutta gör', 'gercek boyutta gor', 'quick look', 'scene viewer', 'gerçek boyutuyla', 'gerçek ölçüsüyle', 'odamda gör', 'odaya yerleştir', 'birebir ölçek'],
       en: ['augmented reality', 'view in ar', 'ar mode', 'place in my room', 'real size'],
       ar: ['الواقع المعزز', 'ضعها في غرفتي'],
     },
@@ -424,7 +424,7 @@ export const TOPICS = [
   {
     id: 'content',
     keys: {
-      tr: ['içerik', 'icerik', 'kendi görselim', 'kendi gorselim', 'resim ekle', 'fotoğraf ekle', 'fotograf ekle', 'video ekle', 'görsel yükle', 'gorsel yukle', 'logo koy', 'örnek görüntü', 'ornek goruntu', 'örnek video', 'ornek video', 'ne gösterir', 'ekranda ne'],
+      tr: ['içerik', 'icerik', 'kendi görselim', 'kendi gorselim', 'resim ekle', 'fotoğraf ekle', 'fotograf ekle', 'video ekle', 'görsel yükle', 'gorsel yukle', 'logo koy', 'örnek görüntü', 'ornek goruntu', 'örnek video', 'ornek video', 'ne gösterir', 'ekranda ne', 'kendi logom', 'logomu', 'görselimi', 'videomu', 'kendi içeriğim', 'kendi resmim', 'markamı'],
       en: ['content', 'add image', 'add video', 'upload image', 'my own image', 'sample image', 'sample video', 'logo'],
       ar: ['المحتوى', 'إضافة صورة', 'إضافة فيديو', 'رفع صورة'],
     },
@@ -452,7 +452,7 @@ export const TOPICS = [
   {
     id: 'human',
     keys: {
-      tr: ['insan', 'siluet', 'silüet', 'adam', 'figür', 'figur', 'yanındaki kişi', 'yanindaki kisi', 'boy', 'insan neden', 'insan kayboldu', 'insan görünmüyor', 'insan gorunmuyor'],
+      tr: ['insan', 'siluet', 'silüet', 'adam', 'figür', 'figur', 'yanındaki kişi', 'yanindaki kisi', 'boy', 'insan neden', 'insan kayboldu', 'insan görünmüyor', 'insan gorunmuyor', 'yanındaki adam', 'insan figürü', 'yanındaki insan', 'adam neden', 'boy karşılaştırma'],
       en: ['human', 'silhouette', 'figure', 'person', 'scale reference'],
       ar: ['الشخص', 'الظل البشري', 'مرجع الحجم'],
     },
@@ -480,7 +480,7 @@ export const TOPICS = [
   {
     id: 'reset',
     keys: {
-      tr: ['sıfırla', 'sifirla', 'baştan başla', 'bastan basla', 'temizle', 'yeni tasarım', 'yeni tasarim', 'her şeyi sil'],
+      tr: ['sıfırla', 'sifirla', 'baştan başla', 'bastan basla', 'temizle', 'yeni tasarım', 'yeni tasarim', 'her şeyi sil', 'yeniden başla', 'sıfırdan'],
       en: ['reset', 'start over', 'clear', 'new design'],
       ar: ['إعادة تعيين', 'البدء من جديد'],
     },
@@ -494,7 +494,7 @@ export const TOPICS = [
   {
     id: 'account',
     keys: {
-      tr: ['hesap', 'kayıt ol', 'kayit ol', 'üye ol', 'uye ol', 'giriş yap', 'giris yap', 'oturum', 'şifre', 'sifre', 'parola', 'bayi', 'yeni kayıt', 'hesap aç'],
+      tr: ['hesap', 'kayıt ol', 'kayit ol', 'üye ol', 'uye ol', 'giriş yap', 'giris yap', 'oturum', 'şifre', 'sifre', 'parola', 'bayi', 'yeni kayıt', 'hesap aç', 'giriş yapmadan', 'üye olmadan', 'kayıt olmadan', 'hesap şart mı', 'zorunlu mu'],
       en: ['account', 'sign up', 'register', 'log in', 'login', 'password', 'dealer'],
       ar: ['حساب', 'تسجيل', 'دخول', 'كلمة المرور'],
     },
@@ -508,7 +508,7 @@ export const TOPICS = [
   {
     id: 'myquotes',
     keys: {
-      tr: ['tekliflerim', 'kayıtlı proje', 'kayitli proje', 'eski tasarım', 'eski tasarim', 'eski proje', 'projeme devam', 'devam ed', 'devam et', 'düzenle', 'duzenle', 'geçmiş', 'gecmis', 'projelerim'],
+      tr: ['tekliflerim', 'kayıtlı proje', 'kayitli proje', 'eski tasarım', 'eski tasarim', 'eski proje', 'projeme devam', 'devam ed', 'devam et', 'düzenle', 'duzenle', 'geçmiş', 'gecmis', 'projelerim', 'kayboldu', 'geri gelir mi', 'kaydettiğim', 'önceki tasarım', 'eski çalışmam', 'devam etmek istiyorum'],
       en: ['my quotes', 'saved project', 'previous design', 'continue', 'edit', 'history'],
       ar: ['عروض أسعاري', 'مشروع محفوظ', 'متابعة', 'تعديل'],
     },
@@ -522,7 +522,7 @@ export const TOPICS = [
   {
     id: 'pdfcontent',
     keys: {
-      tr: ['raporda ne var', 'pdf raporunda', 'rapor ne içerir', 'pdf içinde ne', 'pdf icinde ne', 'rapor içeriği', 'rapor icerigi', 'kaç sayfa', 'kac sayfa', 'pdfte görsel', 'pdfte gorsel', 'rapora fotoğraf'],
+      tr: ['raporda ne var', 'pdf raporunda', 'rapor ne içerir', 'pdf içinde ne', 'pdf icinde ne', 'rapor içeriği', 'rapor icerigi', 'kaç sayfa', 'kac sayfa', 'pdfte görsel', 'pdfte gorsel', 'rapora fotoğraf', 'çıktıda ne var', 'raporda neler', 'teknik bilgi yer alıyor', 'pdfte neler var'],
       en: ['what is in the report', 'pdf contents', 'how many pages', 'photo in pdf'],
       ar: ['محتوى التقرير', 'كم صفحة'],
     },
@@ -536,7 +536,7 @@ export const TOPICS = [
   {
     id: 'lang',
     keys: {
-      tr: ['dil', 'ingilizce', 'arapça', 'arapca', 'türkçe', 'turkce', 'language', 'dili değiştir', 'dili degistir'],
+      tr: ['dil', 'ingilizce', 'arapça', 'arapca', 'türkçe', 'turkce', 'language', 'dili değiştir', 'dili degistir', 'ingilizceye çevir', 'türkçeye çevir', 'başka dil'],
       en: ['language', 'english', 'arabic', 'turkish', 'change language'],
       ar: ['اللغة', 'العربية', 'الإنجليزية', 'تغيير اللغة'],
     },
@@ -550,7 +550,7 @@ export const TOPICS = [
   {
     id: 'theme',
     keys: {
-      tr: ['koyu tema', 'karanlık mod', 'karanlik mod', 'gece modu', 'açık tema', 'acik tema', 'tema'],
+      tr: ['koyu tema', 'karanlık mod', 'karanlik mod', 'gece modu', 'açık tema', 'acik tema', 'tema', 'göz yormasın', 'karanlık görünüm', 'beyaz ekran yoruyor', 'siyah tema'],
       en: ['dark mode', 'dark theme', 'light mode', 'theme'],
       ar: ['الوضع الداكن', 'السمة'],
     },
@@ -564,7 +564,7 @@ export const TOPICS = [
   {
     id: 'wizard',
     keys: {
-      tr: ['sihirbaz', 'bilmiyorum', 'hangi modeli seçeceğimi', 'hangi modeli secegimi', 'yardım et seç', 'karar veremiyorum', 'nereden başlamalı', 'nereden baslamali', 'filtre', 'karşılaştır', 'karsilastir'],
+      tr: ['sihirbaz', 'bilmiyorum', 'hangi modeli seçeceğimi', 'hangi modeli secegimi', 'yardım et seç', 'karar veremiyorum', 'nereden başlamalı', 'nereden baslamali', 'filtre', 'karşılaştır', 'karsilastir', 'karar veremedim', 'seçmeme yardım'],
       en: ['wizard', 'i do not know which model', 'help me choose', 'where do i start', 'filter', 'compare'],
       ar: ['المعالج', 'ساعدني في الاختيار', 'من أين أبدأ', 'مقارنة'],
     },
@@ -592,7 +592,7 @@ export const TOPICS = [
   {
     id: 'ip',
     keys: {
-      tr: ['ip', 'ip65', 'ip54', 'koruma sınıfı', 'koruma sinifi', 'su geçirmez', 'su gecirmez', 'yağmur', 'yagmur', 'toz', 'dışarıda kalır mı', 'disarida kalir mi'],
+      tr: ['ip', 'ip65', 'ip54', 'koruma sınıfı', 'koruma sinifi', 'su geçirmez', 'su gecirmez', 'yağmur', 'yagmur', 'toz', 'dışarıda kalır mı', 'disarida kalir mi', 'yağmurda', 'su geçir', 'suya dayanıklı', 'ıslanır', 'nem', 'dışarıda durur', 'hava şartları', 'kar yağarsa'],
       en: ['ip rating', 'ip65', 'waterproof', 'rain', 'dust', 'outdoor protection'],
       ar: ['درجة الحماية', 'مقاوم للماء', 'المطر', 'الغبار'],
     },
@@ -606,7 +606,7 @@ export const TOPICS = [
   {
     id: 'control',
     keys: {
-      tr: ['kontrol', 'neye bağlan', 'neye baglan', 'nasıl bağlan', 'nasil baglan', 'bilgisayara', 'bilgisayardan', 'hdmi', 'dvi', 'display port', 'giriş', 'kaynak cihaz', 'işlemci', 'islemci', 'gönderici', 'gonderici', 'alıcı kart', 'alici kart', 'kablo', 'rj45', 'bağlantı', 'baglanti', 'nasıl bağlanır', 'nasil baglanir', 'bilgisayara bağla'],
+      tr: ['kontrol', 'neye bağlan', 'neye baglan', 'nasıl bağlan', 'nasil baglan', 'bilgisayara', 'bilgisayardan', 'hdmi', 'dvi', 'display port', 'giriş', 'kaynak cihaz', 'işlemci', 'islemci', 'gönderici', 'gonderici', 'alıcı kart', 'alici kart', 'kablo', 'rj45', 'bağlantı', 'baglanti', 'nasıl bağlanır', 'nasil baglanir', 'bilgisayara bağla', 'uydu alıcısı', 'laptop', 'görüntü aktar', 'medya oynatıcı', 'kablo bağlantısı', 'ne ile oynatılır'],
       en: ['controller', 'processor', 'sending card', 'receiving card', 'cable', 'rj45', 'how to connect'],
       ar: ['وحدة التحكم', 'المعالج', 'الكابل', 'التوصيل'],
     },
@@ -620,7 +620,7 @@ export const TOPICS = [
   {
     id: 'lifetime',
     keys: {
-      tr: ['ömür', 'omur', 'ömrü', 'omru', 'kaç yıl', 'kac yil', 'ne kadar dayanır', 'ne kadar dayanir', 'bin saat', 'kaç saat', 'kac saat', 'sürekli açık', 'surekli acik', '7/24', 'dayanıklılık'],
+      tr: ['ömür', 'omur', 'ömrü', 'omru', 'kaç yıl', 'kac yil', 'ne kadar dayanır', 'ne kadar dayanir', 'bin saat', 'kaç saat', 'kac saat', 'sürekli açık', 'surekli acik', '7/24', 'dayanıklılık', 'ne kadar süre çalışır', 'sorunsuz çalışır', 'kaç yıl kullanılır', 'on yıl', 'kullanım ömrü', 'eskir mi'],
       en: ['lifetime', 'lifespan', 'how many years', 'how long does it last', 'hours', '24/7'],
       ar: ['العمر الافتراضي', 'كم سنة', 'كم يدوم'],
     },
@@ -639,7 +639,7 @@ export const TOPICS = [
   {
     id: 'heat',
     keys: {
-      tr: ['ısı', 'isi yapar', 'ısınır', 'isinir', 'sıcaklık', 'sicaklik', 'klima', 'havalandırma', 'havalandirma', 'soğutma', 'sogutma', 'fan', 'ısı üretimi'],
+      tr: ['ısı', 'isi yapar', 'ısınır', 'isinir', 'sıcaklık', 'sicaklik', 'klima', 'havalandırma', 'havalandirma', 'soğutma', 'sogutma', 'fan', 'ısı üretimi', 'sıcak olur', 'yazın', 'aşırı ısın', 'yanar mı', 'ısıdan bozulur', 'sürekli çalışınca', 'serin tutmak', 'havasız'],
       en: ['heat', 'temperature', 'cooling', 'air conditioning', 'ventilation', 'fan'],
       ar: ['الحرارة', 'التبريد', 'التكييف'],
     },
@@ -653,7 +653,7 @@ export const TOPICS = [
   {
     id: 'audio',
     keys: {
-      tr: ['ses', 'hoparlör', 'hoparlor', 'ses sistemi', 'anfi', 'amfi', 'mikrofon', 'sesli'],
+      tr: ['ses', 'hoparlör', 'hoparlor', 'ses sistemi', 'anfi', 'amfi', 'mikrofon', 'sesli', 'müzik', 'sesi nereden', 'ses çıkışı', 'sesli yayın', 'hoparlör ekle'],
       en: ['sound', 'speaker', 'audio', 'amplifier'],
       ar: ['الصوت', 'السماعات', 'مكبر الصوت'],
     },
@@ -667,7 +667,7 @@ export const TOPICS = [
   {
     id: 'cms',
     keys: {
-      tr: ['kumanda', 'uzaktan', 'içerik değiştir', 'icerik degistir', 'internet', 'wifi', 'usb', 'yazılım', 'yazilim', 'içerik yönetim', 'icerik yonetim', 'cms', 'program', 'playlist', 'zamanla', 'planla'],
+      tr: ['kumanda', 'uzaktan', 'içerik değiştir', 'icerik degistir', 'internet', 'wifi', 'usb', 'yazılım', 'yazilim', 'içerik yönetim', 'icerik yonetim', 'cms', 'program', 'playlist', 'zamanla', 'planla', 'uzaktan değiştir', 'uzaktan yönet', 'ofisten', 'içeriği güncelle', 'içerik güncelle', 'reklam değiştir', 'usb takmak', 'yanına gitmeden', 'ağ üzerinden'],
       en: ['remote', 'content management', 'cms', 'software', 'internet', 'wifi', 'usb', 'schedule', 'playlist'],
       ar: ['التحكم عن بعد', 'إدارة المحتوى', 'برنامج', 'إنترنت'],
     },
@@ -681,7 +681,7 @@ export const TOPICS = [
   {
     id: 'repair',
     keys: {
-      tr: ['bozulursa', 'arıza', 'ariza', 'kırılırsa', 'kirilirsa', 'yedek parça', 'yedek parca', 'modül değiş', 'modul degis', 'tamir', 'onarım', 'onarim', 'temizlik', 'temizleme', 'nasıl temizlenir'],
+      tr: ['bozulursa', 'arıza', 'ariza', 'kırılırsa', 'kirilirsa', 'yedek parça', 'yedek parca', 'modül değiş', 'modul degis', 'tamir', 'onarım', 'onarim', 'temizlik', 'temizleme', 'nasıl temizlenir', 'tamiri', 'servise geliyor', 'siyah kare', 'ölü piksel', 'yanmayan', 'çalışmayan modül', 'bir kısmı bozuk', 'parça değişimi', 'sönük kalıyor', 'siyah bir kare', 'ortasında siyah', 'kare oluştu', 'leke oluştu'],
       en: ['broken', 'fault', 'spare part', 'replace module', 'repair', 'cleaning'],
       ar: ['عطل', 'قطع غيار', 'إصلاح', 'تنظيف'],
     },
@@ -695,7 +695,7 @@ export const TOPICS = [
   {
     id: 'mounting',
     keys: {
-      tr: ['vinç', 'vinc', 'kaç kişi', 'kac kisi', 'asma tavan', 'tavana as', 'zemine mi', 'ayaklı', 'ayakli', 'stand', 'askı', 'aski', 'nasıl asılır', 'nasil asilir', 'taşınabilir', 'tasinabilir', 'sökülüp takıl'],
+      tr: ['vinç', 'vinc', 'kaç kişi', 'kac kisi', 'asma tavan', 'tavana as', 'zemine mi', 'ayaklı', 'ayakli', 'stand', 'askı', 'aski', 'nasıl asılır', 'nasil asilir', 'taşınabilir', 'tasinabilir', 'sökülüp takıl', 'vidala', 'duvara sabitle', 'ayak', 'sehpa', 'tavandan sarkıt', 'sarkıt', 'zemine koy', 'nasıl tutturulur', 'nereye monte'],
       en: ['crane', 'how many people', 'suspended ceiling', 'hanging', 'stand', 'floor mount', 'portable'],
       ar: ['رافعة', 'التعليق', 'حامل', 'قابل للنقل'],
     },
@@ -709,7 +709,7 @@ export const TOPICS = [
   {
     id: 'delivery',
     keys: {
-      tr: ['teslim', 'stok', 'ne zaman gelir', 'kaç günde', 'kac gunde', 'kiralık', 'kiralik', 'kiralama', 'ikinci el', 'ihracat', 'yurt dışı', 'yurt disi', 'kargo', 'nakliye'],
+      tr: ['teslim', 'stok', 'ne zaman gelir', 'kaç günde', 'kac gunde', 'kiralık ekran', 'kiralik ekran', 'ekran kiralama', 'ekran kiralar', 'ikinci el', 'ihracat', 'yurt dışı', 'yurt disi', 'kargo', 'nakliye', 'ne zaman elimize', 'ne zaman teslim', 'sipariş verirsek', 'temin süresi', 'üretim süresi', 'acele', 'acelemiz var', 'hemen lazım', 'kaç haftada', 'ne kadar sürede gelir'],
       en: ['delivery', 'lead time', 'stock', 'rental', 'second hand', 'export', 'shipping'],
       ar: ['التسليم', 'المخزون', 'الإيجار', 'التصدير', 'الشحن'],
     },
@@ -723,7 +723,7 @@ export const TOPICS = [
   {
     id: 'payment',
     keys: {
-      tr: ['kdv', 'vergi', 'taksit', 'ödeme', 'odeme', 'fatura', 'peşin', 'pesin', 'havale', 'kredi kartı', 'kredi karti', 'döviz', 'doviz', 'kur'],
+      tr: ['kdv', 'vergi', 'taksit', 'ödeme', 'odeme', 'fatura', 'peşin', 'pesin', 'havale', 'kredi kartı', 'kredi karti', 'döviz', 'doviz', 'döviz kuru', 'fatura kes', 'faturayı', 'fatura keser', 'şirkete fatura', 'kurumsal fatura', 'nasıl ödeyeceğiz', 'ödeme koşulları', 'kaç taksit', 'senet', 'kapora', 'avans'],
       en: ['vat', 'tax', 'instalment', 'payment', 'invoice', 'credit card', 'currency'],
       ar: ['ضريبة', 'تقسيط', 'الدفع', 'فاتورة'],
     },
@@ -737,7 +737,7 @@ export const TOPICS = [
   {
     id: 'specialled',
     keys: {
-      tr: ['şeffaf', 'seffaf', 'esnek', 'bükülebilir', 'bukulebilir', 'zemin led', 'yer ledi', 'küp ekran', 'kup ekran', 'tünel', 'tunel', 'silindir', 'poster led', 'özel şekil', 'ozel sekil'],
+      tr: ['şeffaf', 'seffaf', 'esnek', 'bükülebilir', 'bukulebilir', 'zemin led', 'yer ledi', 'küp ekran', 'kup ekran', 'tünel', 'tunel', 'silindir', 'poster led', 'özel şekil', 'ozel sekil', 'cam gibi', 'vitrine yapıştır', 'saydam', 'kolona sar', 'yuvarlak yüzey', 'sarılabilir'],
       en: ['transparent', 'flexible', 'floor led', 'cube', 'tunnel', 'cylinder', 'custom shape'],
       ar: ['شفافة', 'مرنة', 'أرضية', 'مكعب', 'نفق'],
     },
@@ -751,7 +751,7 @@ export const TOPICS = [
   {
     id: 'autobright',
     keys: {
-      tr: ['gece parlaklık', 'otomatik parlaklık', 'otomatik parlaklik', 'parlaklık ayarlan', 'parlaklik ayarlan', 'kısılır mı', 'kisilir mi', 'ışık sensörü', 'isik sensoru', 'göz alır', 'goz alir'],
+      tr: ['gece parlaklık', 'otomatik parlaklık', 'otomatik parlaklik', 'parlaklık ayarlan', 'parlaklik ayarlan', 'kısılır mı', 'kisilir mi', 'ışık sensörü', 'isik sensoru', 'göz alır', 'goz alir', 'geceleri', 'göz alıyor', 'rahatsız ediyor', 'parlaklığı kıs', 'parlaklığı düşür', 'gündüz gece'],
       en: ['auto brightness', 'dimming', 'night brightness', 'light sensor', 'too bright'],
       ar: ['السطوع التلقائي', 'خفض السطوع', 'حساس الضوء'],
     },
@@ -765,7 +765,7 @@ export const TOPICS = [
   {
     id: 'orientation',
     keys: {
-      tr: ['portre', 'manzara', 'yatay dikey', 'dikey ekran', 'yatay ekran', 'oryantasyon', 'çevir ekranı', 'cevir ekrani'],
+      tr: ['portre', 'manzara', 'yatay dikey', 'dikey ekran', 'yatay ekran', 'oryantasyon', 'çevir ekranı', 'cevir ekrani', 'dikey kullan', 'dikey mi', 'yatay mı', 'dik dur', 'ayakta duran ekran'],
       en: ['portrait', 'landscape', 'orientation', 'vertical screen'],
       ar: ['عمودي', 'أفقي', 'الاتجاه'],
     },
@@ -779,7 +779,7 @@ export const TOPICS = [
   {
     id: 'seam',
     keys: {
-      tr: ['derz', 'çizgi', 'cizgi', 'birleşim', 'birlesim', 'ek yeri', 'çerçeve çizgisi', 'panel arası', 'panel arasi', 'görüntü bölün', 'goruntu bolun'],
+      tr: ['derz', 'çizgi', 'cizgi', 'birleşim', 'birlesim', 'ek yeri', 'çerçeve çizgisi', 'panel arası', 'panel arasi', 'görüntü bölün', 'goruntu bolun', 'kare kare', 'bölünme', 'bölünmüş görünüyor', 'kutu kutu', 'ızgara', 'çerçeve çizgileri'],
       en: ['seam', 'line', 'joint', 'gap between panels', 'split image'],
       ar: ['الفواصل', 'الخطوط', 'الوصلات'],
     },
@@ -793,7 +793,7 @@ export const TOPICS = [
   {
     id: 'accountmore',
     keys: {
-      tr: ['şifremi unuttum', 'sifremi unuttum', 'parolamı unuttum', 'parolami unuttum', 'hesabımı', 'hesabimi', 'hesabım nasıl', 'hesap sil', 'üyeliğimi sil', 'uyeligimi sil', 'başka bilgisayar', 'baska bilgisayar', 'başka cihaz', 'baska cihaz', 'oturum aç kapat', 'çıkış yap', 'cikis yap'],
+      tr: ['şifremi unuttum', 'sifremi unuttum', 'parolamı unuttum', 'parolami unuttum', 'hesabımı', 'hesabimi', 'hesabım nasıl', 'hesap sil', 'üyeliğimi sil', 'uyeligimi sil', 'başka bilgisayar', 'baska bilgisayar', 'başka cihaz', 'baska cihaz', 'oturum aç kapat', 'çıkış yap', 'cikis yap', 'şifremi', 'parolamı', 'unuttum', 'hatırlamıyorum', 'hesabımı sil', 'üyeliğimi'],
       en: ['forgot password', 'delete account', 'another computer', 'another device', 'log out'],
       ar: ['نسيت كلمة المرور', 'حذف الحساب', 'جهاز آخر', 'تسجيل الخروج'],
     },
@@ -807,7 +807,7 @@ export const TOPICS = [
   {
     id: 'wallinput',
     keys: {
-      tr: ['ölçüleri değiştir', 'olculeri degistir', 'ölçüleri nasıl', 'olculeri nasil', 'duvar ölçüsü', 'duvar olcusu', 'ölçü gir', 'olcu gir', 'nereden girer', 'genişlik yükseklik', 'genislik yukseklik', 'metre gir', 'ölçüyü değiştir', 'olcuyu degistir'],
+      tr: ['ölçüleri değiştir', 'olculeri degistir', 'ölçüleri nasıl', 'olculeri nasil', 'duvar ölçüsü', 'duvar olcusu', 'ölçü gir', 'olcu gir', 'nereden girer', 'genişlik yükseklik', 'genislik yukseklik', 'metre gir', 'ölçüyü değiştir', 'olcuyu degistir', 'duvar genişliği', 'duvar yüksekliği', 'ebat gir', 'boyut gir', 'kendi ölçüm', 'ölçü yaz', 'metrekare gir', 'duvarım', 'duvarimiz', 'duvarımız', 'alanım'],
       en: ['wall size', 'enter dimensions', 'change size', 'width height'],
       ar: ['مقاس الجدار', 'إدخال الأبعاد', 'تغيير المقاس'],
     },
@@ -1162,67 +1162,140 @@ export function enYakinKonu(text, lang = 'tr') {
   return bestSim >= 0.82 ? { topic: best, benzerlik: bestSim } : null
 }
 
-export function findTopic(text, lang = 'tr') {
-  const q = sadelestir(text)
-  if (!q) return null
-  const qKelimeler = q.split(' ')
+/**
+ * ANAHTAR KELİME AĞIRLIKLARI — hangi kelime ne kadar ayırt edici?
+ *
+ * Eski puanlamada "en uzun anahtar kazanır" kuralı vardı ve tek bir sıradan
+ * kelime bütün cevabı saptırabiliyordu:
+ *   "faturayı şirkete kesebilir misiniz"  → güç tüketimi (elektrik FATURASI)
+ *   "ekran gözümü yormasın karanlık olsun" → parlaklık
+ * Çünkü kaç anahtarın tuttuğu değil, en uzununun tutması belirleyiciydi.
+ *
+ * Çözüm: her kelime, KAÇ KONUDA geçtiğine göre ağırlıklandırılıyor.
+ * "ekran" neredeyse her konuda geçer, tek başına hiçbir şey söylemez;
+ * "kdv", "sarkit", "hoparlor" tek bir konuya aittir ve çok şey söyler.
+ * Bu, arama motorlarının ters belge frekansı (IDF) yaklaşımıdır.
+ */
+const agirlikOnbellek = new Map()
+function agirlikTablosu(lang) {
+  const onbellek = agirlikOnbellek.get(lang)
+  if (onbellek) return onbellek
 
-  let best = null
-  let bestScore = 0
+  const gectigiKonuSayisi = new Map()
+  for (const topic of TOPICS) {
+    const kelimeler = new Set()
+    for (const k of topic.keys[lang] || topic.keys.tr) {
+      for (const w of sadelestir(k).split(' ')) if (w) kelimeler.add(w)
+    }
+    for (const w of kelimeler) gectigiKonuSayisi.set(w, (gectigiKonuSayisi.get(w) || 0) + 1)
+  }
+
+  const tablo = new Map()
+  for (const [w, adet] of gectigiKonuSayisi) {
+    let a = Math.log(TOPICS.length / adet)
+    if (w.length <= 2) a *= 0.35 // "mm", "3d" gibi parçalar tek başına zayıf kanıt
+    tablo.set(w, Math.max(0.1, a))
+  }
+  agirlikOnbellek.set(lang, tablo)
+  return tablo
+}
+
+/** Bir anahtarın toplam kanıt değeri. */
+function anahtarAgirligi(anahtar, tablo) {
+  const parcalar = anahtar.split(' ').filter(Boolean)
+  let toplam = 0
+  for (const parca of parcalar) {
+    // Tabloda olmayan kelime = yalnızca bu konuda geçiyor demektir, en yüksek ağırlık.
+    toplam += tablo.has(parca) ? tablo.get(parca) : Math.log(TOPICS.length)
+  }
+  /*
+   * Çok kelimeli anahtar tesadüfen eşleşmez ("asma tavan", "kdv dahil").
+   * Kelime sayısı arttıkça güven de artsın.
+   */
+  if (parcalar.length > 1) toplam *= 1 + 0.3 * (parcalar.length - 1)
+  return toplam
+}
+
+/**
+ * Konuları puanlar ve en güçlü ikisini döndürür.
+ *
+ * Bir konunun puanı = en güçlü kanıtı + diğer kanıtlarının bir kısmı.
+ * Böylece üç zayıf ipucunu birden tutturan konu, tek bir orta ipucu tutturana
+ * göre öne geçer — ama tek güçlü kanıt da (ör. "kdv") yeterli kalır.
+ */
+function konulariPuanla(text, lang) {
+  const q = sadelestir(text)
+  if (!q) return []
+  const qKelimeler = q.split(' ')
+  const tablo = agirlikTablosu(lang)
+  const sonuclar = []
 
   for (const topic of TOPICS) {
     const keys = topic.keys[lang] || topic.keys.tr
-    let score = 0
+    let enGuclu = 0
+    let toplam = 0
 
     for (const k of keys) {
       const anahtar = sadelestir(k)
       if (!anahtar) continue
+      const agirlik = anahtarAgirligi(anahtar, tablo)
+      let kanit = 0
 
-      /*
-       * 1) Kelime BAŞINDA geçiyor mu.
-       *
-       * Düz "içinde geçiyor mu" araması yanlış eşleşmeler üretiyordu:
-       *   "bilgisi" içinde "isi"  → ısı konusu
-       *   "maç kaç" içinde "kaç k" → çözünürlük konusu
-       * Kelime sınırı şartı bunları eler. Sonda sınır ARANMAZ; Türkçe ekler
-       * yüzünden ("izlenmeli", "bükülmüş") sondan eşleşme mümkün olmazdı.
-       */
-      if (kelimeBasinda(q, anahtar)) {
-        score = Math.max(score, anahtar.length)
-        continue
+      // 1) Anahtar, bir kelimenin başında geçiyor mu (Türkçe ekler sonda kalabilir)
+      if (kelimeBasinda(q, anahtar)) kanit = agirlik
+      else {
+        // 2) Türkçe son sessiz yumuşaması: "temizlik" → "temizliği"
+        const yumusak = yumusakBicim(anahtar)
+        if (yumusak && kelimeBasinda(q, yumusak)) kanit = agirlik
+        // 3) Yazım hatası payı — kesin eşleşmeden daha az güvenilir
+        else if (!anahtar.includes(' ')) {
+          if (qKelimeler.some((kel) => bireBirYakin(kel, anahtar))) kanit = agirlik * 0.7
+        } else if (cokKelimeYakin(qKelimeler, anahtar)) kanit = agirlik * 0.7
       }
 
-      /*
-       * 2) Türkçe ek almış hâli: "temizlik" anahtarı "temizliği" içinde.
-       * Yumuşamış biçim de kelime başında aranıyor.
-       */
-      const yumusak = yumusakBicim(anahtar)
-      if (yumusak && kelimeBasinda(q, yumusak)) {
-        score = Math.max(score, anahtar.length)
-        continue
-      }
-
-      // 3) Tek kelimelik anahtarlarda yazım hatası payı
-      if (!anahtar.includes(' ')) {
-        for (const kel of qKelimeler) {
-          if (bireBirYakin(kel, anahtar)) {
-            score = Math.max(score, anahtar.length - 1) // hatalı eşleşme biraz daha düşük puan
-            break
-          }
-        }
-        continue
-      }
-
-      // 4) Çok kelimeli anahtar, cümlede hatalı yazımla geçiyor olabilir
-      if (cokKelimeYakin(qKelimeler, anahtar)) {
-        score = Math.max(score, anahtar.length - 1)
-      }
+      if (!kanit) continue
+      toplam += kanit
+      if (kanit > enGuclu) enGuclu = kanit
     }
 
-    if (score > bestScore) {
-      bestScore = score
-      best = topic
-    }
+    if (!enGuclu) continue
+    sonuclar.push({ topic, puan: enGuclu + 0.4 * (toplam - enGuclu) })
   }
-  return best
+
+  sonuclar.sort((a, b) => b.puan - a.puan)
+  return sonuclar
+}
+
+/*
+ * EŞİKLER — ölçerek seçildi (scratchpad/olcum.mjs, scratchpad/zor.mjs).
+ *
+ * YETER: bu puanın altındaki eşleşme cevap vermeye yetmez. "ekran" gibi
+ * her konuda geçen tek bir kelimenin puanı bunun altında kalır.
+ *
+ * FARK: birinci, ikinciyi bu oranda geçemiyorsa soru gerçekten belirsizdir.
+ * Böyle durumda cevap uydurmak yerine "şunu mu demek istediniz?" diye
+ * sormak doğru olur — yanlış cevap, sorudan daha kötüdür.
+ */
+const YETER = 1.0
+const FARK = 1.2
+
+export function findTopic(text, lang = 'tr') {
+  const sirali = konulariPuanla(text, lang)
+  if (!sirali.length) return null
+  const [birinci, ikinci] = sirali
+  if (birinci.puan < YETER) return null
+  if (ikinci && birinci.puan < ikinci.puan * FARK) return null
+  return birinci.topic
+}
+
+/**
+ * Emin olunamayan ama akla yatkın konu — "şunu mu demek istediniz?" için.
+ * findTopic'in eşiklerine takılan eşleşmeler burada geri döner; kullanıcıya
+ * cevap olarak değil, SORU olarak sunulur.
+ */
+export function olasiKonu(text, lang = 'tr') {
+  const sirali = konulariPuanla(text, lang)
+  if (!sirali.length) return null
+  if (sirali[0].puan < 0.55) return null
+  return { topic: sirali[0].topic, puan: sirali[0].puan }
 }

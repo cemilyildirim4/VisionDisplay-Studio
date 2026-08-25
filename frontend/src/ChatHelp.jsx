@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLang } from './useLang.js'
-import { TOPICS, FALLBACK, GREETING, findTopic, alanIlgili, enYakinKonu, onayMi, devamMi } from './helpTopics.js'
+import { TOPICS, FALLBACK, GREETING, findTopic, alanIlgili, enYakinKonu, olasiKonu, onayMi, devamMi } from './helpTopics.js'
 import { API_URL, apiFetch } from './apiClient.js'
-import { OBSERVATION_WRITE_ENABLED } from './featureFlags.js'
+import { CHAT_LOG_ENABLED } from './featureFlags.js'
 
 
 
@@ -95,7 +95,13 @@ export default function ChatHelp({ open, onClose }) {
      * Cevabı doğrudan vermiyoruz — "şunu mu demek istediniz?" diye soruyoruz,
      * kullanıcı onaylıyor. Yanlış tahmin böylece zararsız kalıyor.
      */
-    const tahmin = topic ? null : enYakinKonu(text, lang)
+    /*
+     * Konu kesinleşmediyse iki tahmin yolu denenir:
+     *   1) enYakinKonu — yazım hatası ("izlme mesafsi")
+     *   2) olasiKonu   — anlamca yakın ama emin olunamayan eşleşme
+     * Sonuç cevap olarak değil, onaylanacak bir SORU olarak sunulur.
+     */
+    const tahmin = topic ? null : enYakinKonu(text, lang) || olasiKonu(text, lang)
     bekleyenOneriRef.current = tahmin ? tahmin.topic : null
     /*
      * Tahmin edilen konunun BAŞLIĞI kullanıcının yazdığının aynısıysa soru
@@ -126,10 +132,12 @@ export default function ChatHelp({ open, onClose }) {
     setShowTips(false) // yer açılsın; kullanıcı isterse başlığa tıklayıp geri açar
 
     /*
-     * Development/beta: soruyu arka planda kaydet (SSS adayları).
-     * Canlıda yazma kapalı; sohbet yine yerel bilgi tabanıyla çalışır.
+     * Soruyu arka planda kaydet — canlıda da. Yönetim panelindeki
+     * "Sohbet Kayıtları" ve "Cevaplanamayan Soru" listeleri bunu kullanıyor;
+     * bilgi tabanı bu kayıtlara bakılarak büyütülüyor.
+     * Kayıt başarısız olsa bile sohbet aksamaz (catch boş).
      */
-    if (OBSERVATION_WRITE_ENABLED) {
+    if (CHAT_LOG_ENABLED) {
       apiFetch(`${API_URL}/api/chatlogs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
