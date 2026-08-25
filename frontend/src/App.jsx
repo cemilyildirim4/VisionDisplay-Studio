@@ -213,15 +213,40 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [arFotolar, setArFotolar] = useState([])
 
   /*
-   * Kaydedilen kare listeye EKLENİR, üstüne yazılmaz: müşteri hem kamerada
-   * hem AR'de kare kaydedebiliyor ve ikisi de rapora girmeli. Sunucu da en
-   * çok 6 kare basıyor; burada da aynı sınır tutuluyor ki gereksiz büyük
-   * istek gönderilmesin. Aynı kare iki kez eklenmez (aynı düğmeye iki kez
-   * basmak raporu çoğaltmasın).
+   * İKİNCİ VE SONRAKİ KARELERDE KULLANICIYA SORULUR.
+   *
+   * İlk kare doğrudan eklenir — sorulacak bir şey yok. Elde kare varken
+   * yenisi gelince kullanıcının niyeti belirsizdir: bazen farklı açılardan
+   * birkaç kare toplar, bazen de "bu daha iyi oldu" diye eskisinin yerine
+   * koymak ister. Sessizce birini seçmek yerine üç seçenek sunuluyor:
+   * hepsi kalsın · yalnızca bu kalsın · bunu ekleme.
+   *
+   * Sunucu en çok 6 kare basıyor; burada da aynı sınır tutuluyor ki
+   * gereksiz büyük istek gönderilmesin. Aynı kare iki kez eklenmez (aynı
+   * düğmeye iki kez basmak raporu çoğaltmasın).
    */
+  const [kareSorusu, setKareSorusu] = useState(null)
+
+  /* Dönen değer: kare rapora GİRDİ mi. Kamera/AR ekranı bildirimini buna
+     göre seçiyor — karar sorulduysa henüz söz verecek bir şey yok. */
   const kareKaydedildi = (veri) => {
+    if (!veri) return false
+    if (arFotolar.includes(veri)) return true
+    if (arFotolar.length === 0) {
+      setArFotolar([veri])
+      return true
+    }
+    setKareSorusu(veri)
+    return false
+  }
+
+  const kareKarariVer = (karar) => {
+    const veri = kareSorusu
+    setKareSorusu(null)
     if (!veri) return
-    setArFotolar((l) => (l.includes(veri) ? l : [...l, veri].slice(-6)))
+    if (karar === 'hepsi') setArFotolar((l) => [...l, veri].slice(-6))
+    else if (karar === 'yalniz') setArFotolar([veri])
+    // 'ekleme' → rapor olduğu gibi kalır
   }
   const [resolution, setResolution] = useState('FHD') // FHD | UHD
   const [sboxRedundancy, setSboxRedundancy] = useState('no') // no | yes
@@ -1599,6 +1624,71 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             >
               {t('ar.close')}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/*
+        Yeni kare geldiğinde çıkan seçim. AR/kamera katmanlarının ÜSTÜNDE
+        durmalı (onlar z-50/z-60), yoksa kullanıcı soruyu göremez.
+        Dışına tıklamak kapatmaz: üç seçenekten biri bilinçli seçilmeli.
+      */}
+      {kareSorusu && (
+        <div className="fixed inset-0 z-[90] bg-[#001334]/60 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#161a21] rounded-3xl p-6 sm:p-8 w-full max-w-md max-h-[92vh] overflow-y-auto shadow-2xl">
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 text-center">
+              {t('frame.title')}
+            </h3>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center mt-2">
+              {t('frame.body').replace('{n}', String(arFotolar.length))}
+            </p>
+
+            {/* Hangi kareden söz edildiği görünsün diye küçük önizleme */}
+            <div className="mt-5 flex justify-center">
+              <figure className="w-40">
+                <img
+                  src={kareSorusu}
+                  alt=""
+                  className="w-40 h-28 object-cover rounded-xl border border-neutral-200 dark:border-[#2c333f]"
+                />
+                <figcaption className="text-[11px] text-neutral-500 dark:text-neutral-400 text-center mt-1.5">
+                  {t('frame.newLabel')}
+                </figcaption>
+              </figure>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => kareKarariVer('hepsi')}
+                className="rounded-2xl bg-brand text-white text-left px-5 py-3.5 hover:bg-brand-dark"
+              >
+                <span className="block font-semibold">{t('frame.keepAll')}</span>
+                <span className="block text-[12px] text-white/80 mt-0.5">{t('frame.keepAllNote')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => kareKarariVer('yalniz')}
+                className="rounded-2xl border border-neutral-300 dark:border-[#39414f] text-left px-5 py-3.5 hover:bg-neutral-50 dark:hover:bg-[#1b2029]"
+              >
+                <span className="block font-semibold text-neutral-800 dark:text-neutral-200">{t('frame.replace')}</span>
+                <span className="block text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">{t('frame.replaceNote')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => kareKarariVer('ekleme')}
+                className="rounded-2xl border border-neutral-300 dark:border-[#39414f] text-left px-5 py-3.5 hover:bg-neutral-50 dark:hover:bg-[#1b2029]"
+              >
+                <span className="block font-semibold text-neutral-800 dark:text-neutral-200">{t('frame.discard')}</span>
+                <span className="block text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">{t('frame.discardNote')}</span>
+              </button>
+            </div>
+
+            {arFotolar.length >= 6 && (
+              <p className="text-[12px] text-neutral-500 dark:text-neutral-400 text-center mt-4">
+                {t('frame.full')}
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -293,9 +293,49 @@ const dict = {
     en: 'Saved — it will also be added to the PDF report.',
     ar: 'تم الحفظ — وسيُضاف أيضًا إلى تقرير PDF.',
   },
+  /* Karar kullanıcıya sorulduğunda rapor sözü VERİLMEZ; "eklenecek" demek
+     sonra "Bunu ekleme" seçen kullanıcıya yalan olurdu. */
+  'ar.savedOnlyNote': {
+    tr: 'Kaydedildi — cihazınıza indirildi.',
+    en: 'Saved — downloaded to your device.',
+    ar: 'تم الحفظ — نُزّلت إلى جهازك.',
+  },
+
   'ar.title': { tr: 'Nasıl Görüneceğini Gör', en: 'See How It Will Look', ar: 'شاهد كيف سيبدو' },
   'ar.open': { tr: 'Nasıl görüneceğini gör', en: 'See how it will look', ar: 'شاهد كيف سيبدو' },
   'ar.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
+  // ---------- Yeni kare geldiğinde çıkan seçim ----------
+  'frame.title': { tr: 'Bu kareyi rapora ekleyelim mi?', en: 'Add this frame to the report?', ar: 'هل نضيف هذه اللقطة إلى التقرير؟' },
+  'frame.body': {
+    tr: 'Raporda zaten {n} kare var. Ne yapmak istersiniz?',
+    en: 'The report already has {n} frame(s). What would you like to do?',
+    ar: 'يحتوي التقرير بالفعل على {n} لقطة. ماذا تريد أن تفعل؟',
+  },
+  'frame.keepAll': { tr: 'Hepsi kalsın', en: 'Keep all of them', ar: 'الاحتفاظ بها جميعًا' },
+  'frame.keepAllNote': {
+    tr: 'Yeni kare diğerlerinin yanına eklenir; her biri rapora ayrı sayfa olur.',
+    en: 'The new frame joins the others; each becomes its own page in the report.',
+    ar: 'تُضاف اللقطة الجديدة إلى البقية، وتصبح كل واحدة صفحة مستقلة.',
+  },
+  'frame.replace': { tr: 'Yalnızca bu kalsın', en: 'Keep only this one', ar: 'الاحتفاظ بهذه فقط' },
+  'frame.replaceNote': {
+    tr: 'Önceki kareler rapordan çıkarılır, yalnızca bu kare kalır.',
+    en: 'The earlier frames are removed and only this one remains.',
+    ar: 'تُزال اللقطات السابقة ولا تبقى سوى هذه.',
+  },
+  'frame.discard': { tr: 'Bunu ekleme', en: 'Do not add this one', ar: 'لا تُضف هذه' },
+  'frame.discardNote': {
+    tr: 'Rapor olduğu gibi kalır. Kare yine de cihazınıza indirildi.',
+    en: 'The report stays as it is. The frame was still downloaded to your device.',
+    ar: 'يبقى التقرير كما هو، ومع ذلك نُزّلت اللقطة إلى جهازك.',
+  },
+  'frame.full': {
+    tr: 'Rapor en çok 6 kare alır; hepsini seçerseniz en eski kare düşer.',
+    en: 'The report holds at most 6 frames; keeping all will drop the oldest one.',
+    ar: 'يتسع التقرير لـ 6 لقطات كحد أقصى، وسيسقط الأقدم عند الاحتفاظ بالجميع.',
+  },
+  'frame.newLabel': { tr: 'Yeni kare', en: 'New frame', ar: 'اللقطة الجديدة' },
+
   'ar.save': { tr: 'Kaydet', en: 'Save', ar: 'حفظ' },
   'ar.shoot': { tr: 'Çek', en: 'Capture', ar: 'التقاط' },
   'ar.lastShot': { tr: 'Son çekim', en: 'Last shot', ar: 'آخر لقطة' },

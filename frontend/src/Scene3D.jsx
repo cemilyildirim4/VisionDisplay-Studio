@@ -1012,8 +1012,8 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
    * görünümde çalışır: jestler burada öğrenilir, ölçü ve açı burada
    * ayarlanır, sonra tek dokunuşla odaya taşınır.
    */
-  const [asama, setAsama] = useState('yerlestir')
-  /* Kaydetme/paylaşma sonrası kısa onay yazısı — kameradakiyle aynı */
+  const [asama, setAsama] = useState('yerlestir')
+  /* Kaydetme/paylaşma sonrası kısa onay yazısı — kameradakiyle aynı */
   const [arBildirim, setArBildirim] = useState(null)
 
   /*
@@ -1219,7 +1219,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     const mv = mvRef.current
     if (!mv?.toDataURL) return
     const veri = mv.toDataURL('image/jpeg', 0.92)
-    onSaved?.(veri)
+    const raporaGirdi = onSaved?.(veri)
     try {
       const blob = await (await fetch(veri)).blob()
       const url = URL.createObjectURL(blob)
@@ -1233,7 +1233,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     } catch {
       /* indirme engellendiyse kare yine rapora girmiş olur */
     }
-    setArBildirim(t('ar.savedNote'))
+    setArBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
   }, [model, onSaved, t])
 
   /*

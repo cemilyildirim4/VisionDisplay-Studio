@@ -588,9 +588,10 @@ export default function ArView({
    * "Görüntüyü Kaydet" Fotoğraflar'a koyar.
    */
   const kaydet = async () => {
-    const veri = cekim || (await yakala())
+    // Her seferinde YENİDEN yakala: eski kareyi tekrar kaydetmeyelim.
+    const veri = await yakala()
     if (!veri) return
-    onSaved?.(veri)
+    const raporaGirdi = onSaved?.(veri)
 
     /*
      * BLOB URL — data: URL DEĞİL.
@@ -620,7 +621,7 @@ export default function ArView({
      * eklenecek. Eskiden hiçbir geri bildirim yoktu; iOS'ta indirme sessizce
      * düştüğü için "kaydet çalışmıyor" izlenimi doğuyordu.
      */
-    setBildirim(t('ar.savedNote'))
+    setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
   }
 
   /*
@@ -630,7 +631,7 @@ export default function ArView({
    * hiçbir cihazda ölü kalmaz.
    */
   const paylas = async () => {
-    const veri = cekim || (await yakala())
+    const veri = await yakala() // paylaşımda da o anki görüntü
     if (!veri) return
     try {
       const blob = await (await fetch(veri)).blob()
