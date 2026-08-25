@@ -35,11 +35,7 @@ export function BrandMark({
           darkOnDark ? 'bg-white/20 h-9' : 'bg-neutral-200 dark:bg-[#2c333f] h-8'
         }`}
       />
-<<<<<<< HEAD
-      <div className={`yatay-gizle min-w-0 ${hideTextOnMobile ? 'hidden sm:block' : ''}`}>
-=======
-      <div className="min-w-0 w-full sm:w-auto max-w-full">
->>>>>>> feature/mobile-responsive
+      <div className={`yatay-gizle min-w-0 w-full sm:w-auto max-w-full ${hideTextOnMobile ? 'hidden sm:block' : ''}`}>
         {showCompany && (
           <p
             className={`m-0 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] truncate ${

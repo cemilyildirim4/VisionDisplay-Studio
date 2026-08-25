@@ -84,6 +84,7 @@ public class QuotesController : ControllerBase
             ScreenType = input.ScreenType,
             Resolution = input.Resolution,
             ScreensSummary = input.ScreensSummary,
+            ConfigJson = input.ConfigJson,
             Status = "Beklemede",
             Revision = 1,
             UserId = GetUserId(),

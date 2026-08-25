@@ -30,6 +30,14 @@ import { useAcilirKonum } from './hooks/useAcilirKonum.js'
 import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { useCabinets } from './hooks/useCabinets.js'
+import {
+  taslakOlustur,
+  taslagiYaz,
+  taslagiOku,
+  taslagiSil,
+  sayfaYenilendi,
+  duzenlemeyiAl,
+} from './tasarimTaslagi.js'
 
 // API kapalıyken de akış çalışsın diye örnek (generic) demo veri.
 // Kullanıcı kendi ürünleriyle değiştirecek.
@@ -195,6 +203,58 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [specsOpen, setSpecsOpen] = useState(false)
   const [showMeasurements, setShowMeasurements] = useState(true)
   const [exportOpen, setExportOpen] = useState(false)
+  /*
+   * KAMERADA KAYDEDİLEN KARE.
+   *
+   * "Kaydet" cihaza indiriyor; aynı kare burada da tutuluyor ki PDF raporuna
+   * "Mekânda Görünüm" sayfası olarak girsin. Yapılandırma değişse bile kare
+   * durur — müşteri o kareyi bilerek çekti, sessizce silmek yanlış olur.
+   */
+  const [arFotolar, setArFotolar] = useState([])
+
+  /*
+   * İKİNCİ VE SONRAKİ KARELERDE KULLANICIYA SORULUR.
+   *
+   * İlk kare doğrudan eklenir — sorulacak bir şey yok. Elde kare varken
+   * yenisi gelince kullanıcının niyeti belirsizdir: bazen farklı açılardan
+   * birkaç kare toplar, bazen de "bu daha iyi oldu" diye eskisinin yerine
+   * koymak ister. Sessizce birini seçmek yerine üç seçenek sunuluyor:
+   * hepsi kalsın · yalnızca bu kalsın · bunu ekleme.
+   *
+   * Sunucu en çok 6 kare basıyor; burada da aynı sınır tutuluyor ki
+   * gereksiz büyük istek gönderilmesin. Aynı kare iki kez eklenmez (aynı
+   * düğmeye iki kez basmak raporu çoğaltmasın).
+   */
+  const [kareSorusu, setKareSorusu] = useState(null)
+
+  /* Dönen değer: kare rapora GİRDİ mi. Kamera/AR ekranı bildirimini buna
+     göre seçiyor — karar sorulduysa henüz söz verecek bir şey yok. */
+  const kareKaydedildi = (veri) => {
+    if (!veri) return false
+    if (arFotolar.includes(veri)) return true
+    if (arFotolar.length === 0) {
+      setArFotolar([veri])
+      return true
+    }
+    setKareSorusu(veri)
+    return false
+  }
+
+  /* Tasarım kimlik değiştirdiğinde (sıfırlama, model değişimi, kayıtlı
+     projeye dönüş) kareler ve varsa bekleyen soru birlikte silinir. */
+  const kareleriTemizle = () => {
+    setArFotolar([])
+    setKareSorusu(null)
+  }
+
+  const kareKarariVer = (karar) => {
+    const veri = kareSorusu
+    setKareSorusu(null)
+    if (!veri) return
+    if (karar === 'hepsi') setArFotolar((l) => [...l, veri].slice(-6))
+    else if (karar === 'yalniz') setArFotolar([veri])
+    // 'ekleme' → rapor olduğu gibi kalır
+  }
   const [resolution, setResolution] = useState('FHD') // FHD | UHD
   const [sboxRedundancy, setSboxRedundancy] = useState('no') // no | yes
   /*
@@ -241,7 +301,96 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   // API verisi varsa onu, yoksa örnek veriyi kullan
   const displayCabinets = cabinets.length > 0 ? cabinets : SAMPLE_CABINETS
 
+  /*
+   * ══════════════ TASARIM TASLAĞI: GERİ TUŞU ve "DÜZENLE" ══════════════
+   *
+   * İki ayrı ihtiyaç, tek mekanizma (bkz. tasarimTaslagi.js):
+   *
+   *   • GERİ TUŞU. Telefonda geri tuşuna basıp dönünce sayfa baştan
+   *     kuruluyor ve kurulan tasarım kayboluyordu. Taslak her değişiklikte
+   *     sessionStorage'a yazılıyor, açılışta geri okunuyor.
+   *     SAYFA YENİLENDİĞİNDE ise bilerek sıfırlanıyor — istenen davranış bu.
+   *
+   *   • "TEKLİFLERİM → DÜZENLE". Kontrol Merkezi teklifin tasarımını bir
+   *     kutuya bırakıp konfigüratöre yönlendiriyor; burada alınıp yükleniyor.
+   *     Bu, geri tuşu taslağından ÖNCE gelir: kullanıcı açıkça o teklifi
+   *     açmak istemiştir.
+   */
+  const bekleyenTaslakRef = useRef(undefined)
+  if (bekleyenTaslakRef.current === undefined) {
+    const duzenle = duzenlemeyiAl()
+    if (duzenle) {
+      bekleyenTaslakRef.current = duzenle
+    } else if (sayfaYenilendi()) {
+      taslagiSil()
+      bekleyenTaslakRef.current = null
+    } else {
+      bekleyenTaslakRef.current = taslagiOku()
+    }
+  }
+  const [taslakUyari, setTaslakUyari] = useState(null)
+
+  /*
+   * Model NESNESİ taslakta durmuyor, yalnızca kodu duruyor: kabin listesi
+   * sunucudan geliyor ve fiyat/ölçü gibi alanları değişebilir. Bu yüzden
+   * yükleme, liste hazır olana kadar bekler ve modeli GÜNCEL listeden çözer.
+   */
+  useEffect(() => {
+    const t = bekleyenTaslakRef.current
+    if (!t) return
+    const model =
+      displayCabinets.find((m) => m.modelCode && m.modelCode === t.modelCode) ||
+      displayCabinets.find((m) => m.id === t.modelId)
+    if (!model) {
+      // Liste henüz gelmemiş olabilir; gelmiş ve model yoksa taslak ölüdür.
+      if (cabinetsLoading) return
+      bekleyenTaslakRef.current = null
+      taslagiSil()
+      setTaslakUyari(t.modelCode ? `${t.modelCode} artık listede yok.` : null)
+      return
+    }
+    bekleyenTaslakRef.current = null
+
+    // Geri yüklenen tasarım BAŞKA bir çalışma: bu oturumda toplanmış kareler
+    // ona ait değil.
+    kareleriTemizle()
+    setSelectedModel(model)
+    setWidth(t.width ?? 0)
+    setHeight(t.height ?? 0)
+    setCols(t.cols ?? 1)
+    setRows(t.rows ?? 1)
+    setScreenMode(t.screenMode ?? 'single')
+    setScreenType(t.screenType ?? 'flat')
+    setOrientation(t.orientation ?? 'landscape')
+    setCurveAmount(t.curveAmount ?? 60)
+    setResolution(t.resolution ?? 'FHD')
+    setSboxRedundancy(t.sboxRedundancy ?? 'no')
+    setScene(t.scene ?? 'none')
+    setScreens(Array.isArray(t.screens) ? t.screens : [])
+    setContent(t.content ?? 'led')
+    // Yüklenen görsel/video geri gelemez (blob adresi ölmüştür) — söyle.
+    if (t.icerikDustu) setTaslakUyari('Yüklediğiniz görsel/video geri yüklenemedi; içerik LED yüzeye alındı.')
+  }, [displayCabinets, cabinetsLoading])
+
+  /* Tasarım her değiştiğinde taslak tazelenir. */
+  useEffect(() => {
+    // Geri yükleme sırası gelmemişken yazmak, bekleyen taslağın üstüne boş
+    // durum yazıp onu silerdi.
+    if (bekleyenTaslakRef.current) return
+    taslagiYaz(
+      taslakOlustur({
+        selectedModel, width, height, cols, rows, screenMode, screenType,
+        orientation, curveAmount, resolution, sboxRedundancy, scene, screens, content,
+      }),
+    )
+  }, [selectedModel, width, height, cols, rows, screenMode, screenType,
+      orientation, curveAmount, resolution, sboxRedundancy, scene, screens, content])
+
   const handleChoose = (model) => {
+    // Başka bir modele geçmek, tasarımı baştan kurmak demek: eldeki kareler
+    // artık gösterilmeyen bir ürünün fotoğrafı. Aynı model yeniden seçilirse
+    // kareler durur (yanlışlıkla aynı satıra tıklamak çalışmayı silmesin).
+    if (model?.id !== selectedModel?.id) kareleriTemizle()
     setSelectedModel(model)
     setWidth((w) => w || 1)
     setHeight((h) => h || 1)
@@ -316,6 +465,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setScreens([])
     setShowMeasurements(true)
     setResetConfirmOpen(false)
+    setScene('none')
+    /*
+     * MEKÂN KARELERİ DE SİLİNİR.
+     *
+     * Kareler eski tasarımın fotoğrafı. Sıfırlayıp bambaşka bir ekran
+     * kurduktan sonra rapora hâlâ önceki tasarımın kamera görüntüsü
+     * giriyordu — müşteriye yanlış ürünün fotoğrafı gitmesi demek bu.
+     */
+    kareleriTemizle()
+    // Sıfırlama kalıcı olmalı: taslak durursa geri tuşuyla eski tasarım döner.
+    taslagiSil()
   }
 
   // Duvara sığdır: her tıklamada ekranı o anki duvara tam sığan maksimuma çeker.
@@ -954,6 +1114,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <polyline points="9 6 15 12 9 18" />
                     </svg>
                   </button>
+
+                  {/*
+                    Listede kavisli ekran varsa kavis burada da ayarlanabilir.
+                    Denetim yalnızca tek ekran dalındaydı; çoklu düzende
+                    kavisli ekran seçilince kavisi değiştirmenin hiçbir yolu
+                    yoktu, tasarım %60'a mahkûm kalıyordu.
+                  */}
+                  {screens.some((s) => s.type === 'curved' || s.type === 'curvedIn') && (
+                    <KavisAyari
+                      t={t}
+                      deger={curveAmount}
+                      onChange={setCurveAmount}
+                      /* Listede iç bükey varsa açı ona göre okunur */
+                      icbukey={screens.some((s) => s.type === 'curvedIn')}
+                      coklu
+                    />
+                  )}
                 </div>
               ) : (
                 <>
@@ -995,38 +1172,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         sahnede aynı anda değişir.
                       */}
                       {(screenType === 'curved' || screenType === 'curvedIn') && (
-                        <div className="mt-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
-                              {t('screen.curveAmount')}
-                            </span>
-                            <span className="text-[16px] font-semibold text-brand">%{curveAmount}</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            step={5}
-                            value={curveAmount}
-                            onChange={(e) => setCurveAmount(Number(e.target.value))}
-                            aria-label={t('screen.curveAmount')}
-                            className="w-full accent-[#2962ad] cursor-pointer"
-                          />
-                          <div className="flex justify-between text-[13px] text-neutral-400 dark:text-neutral-500">
-                            <span>{t('screen.curveFlat')}</span>
-                            <span>{t('screen.curveMax')}</span>
-                          </div>
-                          {/*
-                            Yüzde tek başına anlamsız: "%60 kavis" kaç derece
-                            demek, kullanıcı bilemiyordu. Yüzde derinliği
-                            (sagitta) ölçer, açı ondan türer — karşılığını
-                            burada gösteriyoruz. Açı ekran boyutundan bağımsız,
-                            o yüzden kabin sayısı değişince de doğru kalır.
-                          */}
-                          <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
-                            {t('screen.curveArc')}: ≈{curveArcDegrees(curveAmount, screenType === 'curvedIn')}°
-                          </div>
-                        </div>
+                        <KavisAyari
+                          t={t}
+                          deger={curveAmount}
+                          onChange={setCurveAmount}
+                          icbukey={screenType === 'curvedIn'}
+                        />
                       )}
                     </div>
                   )}
@@ -1394,6 +1545,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         resolution={resolution}
         curveAmount={curveAmount}
         hideRegions={isVideoWall}
+        /* Kamerada "Kaydet" denen kare rapora da girsin (bkz. kareKaydedildi) */
+        onSaved={kareKaydedildi}
       />
 
       <RecommendationWizard
@@ -1424,6 +1577,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             screenType={screenType}
             curveAmount={curveAmount}
             screens={screenMode === 'multi' ? screens : null}
+            /* AR'da deklanşör işletim sistemine ait; fotoğraf için kamera
+               ekranına geçiriyoruz (bkz. Scene3D → onOpenCamera) */
+            onOpenCamera={() => {
+              setScene3dOpen(false)
+              setArAcik(true)
+            }}
+            /* AR'de "Kaydet" denen kare de rapora girsin */
+            onSaved={kareKaydedildi}
           />
         </Suspense>
       )}
@@ -1454,8 +1615,105 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           // ihtiyaç duyduğu iki alan yalnızca burada mevcut.
           sboxRedundancy,
           isVideoWall,
+          /* Kamerada ve AR'de kaydedilen kareler — her biri PDF'e ek sayfa olur */
+          arFotolar,
+          /*
+           * Tasarımın TAMAMI teklifle birlikte saklansın diye. Teklif kaydında
+           * yalnızca özet vardı (model kodu, toplam sütun/satır, okunur bir
+           * çoklu ekran cümlesi) ve tasarım geri açılamıyordu. Bu alan
+           * "Tekliflerim → Düzenle"nin birebir çalışmasını sağlıyor.
+           */
+          tasarim: taslakOlustur({
+            selectedModel, width, height, cols, rows, screenMode, screenType,
+            orientation, curveAmount, resolution, sboxRedundancy, scene, screens, content,
+          }),
         }}
       />
+
+      {/*
+        TASLAK UYARISI — geri yüklemede tam olarak eski hâline dönülemediyse
+        kullanıcı bunu bilmeli (model listeden kalkmış ya da yüklediği
+        görsel/video geri gelememiş olabilir).
+      */}
+      {taslakUyari && (
+        <div className="fixed bottom-4 inset-x-0 z-[70] flex justify-center px-4 pointer-events-none">
+          <div className="pointer-events-auto max-w-md rounded-xl bg-neutral-900 text-white text-[13px] px-4 py-3 shadow-2xl flex items-start gap-3">
+            <span className="flex-1">{taslakUyari}</span>
+            <button
+              type="button"
+              onClick={() => setTaslakUyari(null)}
+              className="text-white/60 hover:text-white font-semibold shrink-0"
+            >
+              {t('ar.close')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/*
+        Yeni kare geldiğinde çıkan seçim. AR/kamera katmanlarının ÜSTÜNDE
+        durmalı (onlar z-50/z-60), yoksa kullanıcı soruyu göremez.
+        Dışına tıklamak kapatmaz: üç seçenekten biri bilinçli seçilmeli.
+      */}
+      {kareSorusu && (
+        <div className="fixed inset-0 z-[90] bg-[#001334]/60 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#161a21] rounded-3xl p-6 sm:p-8 w-full max-w-md max-h-[92vh] overflow-y-auto shadow-2xl">
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 text-center">
+              {t('frame.title')}
+            </h3>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center mt-2">
+              {t('frame.body').replace('{n}', String(arFotolar.length))}
+            </p>
+
+            {/* Hangi kareden söz edildiği görünsün diye küçük önizleme */}
+            <div className="mt-5 flex justify-center">
+              <figure className="w-40">
+                <img
+                  src={kareSorusu}
+                  alt=""
+                  className="w-40 h-28 object-cover rounded-xl border border-neutral-200 dark:border-[#2c333f]"
+                />
+                <figcaption className="text-[11px] text-neutral-500 dark:text-neutral-400 text-center mt-1.5">
+                  {t('frame.newLabel')}
+                </figcaption>
+              </figure>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => kareKarariVer('hepsi')}
+                className="rounded-2xl bg-brand text-white text-left px-5 py-3.5 hover:bg-brand-dark"
+              >
+                <span className="block font-semibold">{t('frame.keepAll')}</span>
+                <span className="block text-[12px] text-white/80 mt-0.5">{t('frame.keepAllNote')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => kareKarariVer('yalniz')}
+                className="rounded-2xl border border-neutral-300 dark:border-[#39414f] text-left px-5 py-3.5 hover:bg-neutral-50 dark:hover:bg-[#1b2029]"
+              >
+                <span className="block font-semibold text-neutral-800 dark:text-neutral-200">{t('frame.replace')}</span>
+                <span className="block text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">{t('frame.replaceNote')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => kareKarariVer('ekleme')}
+                className="rounded-2xl border border-neutral-300 dark:border-[#39414f] text-left px-5 py-3.5 hover:bg-neutral-50 dark:hover:bg-[#1b2029]"
+              >
+                <span className="block font-semibold text-neutral-800 dark:text-neutral-200">{t('frame.discard')}</span>
+                <span className="block text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">{t('frame.discardNote')}</span>
+              </button>
+            </div>
+
+            {arFotolar.length >= 6 && (
+              <p className="text-[12px] text-neutral-500 dark:text-neutral-400 text-center mt-4">
+                {t('frame.full')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Sıfırlama onayı */}
       {resetConfirmOpen && (
@@ -1492,6 +1750,58 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * KAVİS MİKTARI DENETİMİ.
+ *
+ * Hem tek ekranda hem ÇOKLU ekranda kullanılıyor. Önce yalnızca tek ekran
+ * dalında duruyordu: çoklu düzende kavisli bir ekran seçildiğinde kavisi
+ * ayarlayacak hiçbir denetim yoktu ve tasarım %60'a mahkûm kalıyordu.
+ *
+ * Değer TASARIMIN TAMAMI için tek: kavisli ekranların hepsi aynı kavisle
+ * çiziliyor (2D önizleme, kamera ve 3D sahne aynı değeri okuyor). Çoklu
+ * düzende bunu kullanıcıya da söylüyoruz.
+ */
+function KavisAyari({ t, deger, onChange, icbukey, coklu = false }) {
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
+          {t('screen.curveAmount')}
+        </span>
+        <span className="text-[16px] font-semibold text-brand">%{deger}</span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={deger}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={t('screen.curveAmount')}
+        className="w-full accent-[#2962ad] cursor-pointer"
+      />
+      <div className="flex justify-between text-[13px] text-neutral-400 dark:text-neutral-500">
+        <span>{t('screen.curveFlat')}</span>
+        <span>{t('screen.curveMax')}</span>
+      </div>
+      {/*
+        Yüzde tek başına anlamsız: "%60 kavis" kaç derece demek, kullanıcı
+        bilemiyordu. Yüzde derinliği (sagitta) ölçer, açı ondan türer —
+        karşılığını burada gösteriyoruz. Açı ekran boyutundan bağımsız, o
+        yüzden kabin sayısı değişince de doğru kalır.
+      */}
+      <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
+        {t('screen.curveArc')}: ≈{curveArcDegrees(deger, icbukey)}°
+      </div>
+      {coklu && (
+        <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
+          {t('screen.curveAllScreens')}
         </div>
       )}
     </div>

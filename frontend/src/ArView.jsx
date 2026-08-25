@@ -6,6 +6,12 @@ import { videoSrcFor } from './videoContent.js'
 import { LED_LIT_FILTER } from './content.js'
 import { useLang } from './useLang.js'
 import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
+/* Yerleştirme akışının görünen parçaları AR ekranıyla ortak — bkz. ArYerlestirme.jsx */
+import {
+  YerlestirKatmani,
+  AraclarSutunu,
+  TusTakimi,
+} from './ArYerlestirme.jsx'
 
 /**
  * AR / KAMERA SİMÜLASYON EKRANI
@@ -62,9 +68,12 @@ function Etiket({ x, y, children, vurgu = false }) {
       className={`absolute -translate-x-1/2 -translate-y-1/2 px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-semibold whitespace-nowrap max-w-[42vw] sm:max-w-none overflow-hidden text-ellipsis shadow-lg pointer-events-none ${
         vurgu ? 'bg-brand text-white' : 'bg-black/70 text-white'
       }`}
-      /* Tasarımın üstünde kalmalı: kenarlara yapışan ölçüler aksi hâlde
-         tasarımın altında kalıp görünmüyor. */
-      style={{ left: x, top: y, zIndex: 2 }}
+      /*
+       * Tasarımın ÜSTÜNDE kalmalı. Tasarım katmanı `transform` taşıdığı için
+       * kendi yığın bağlamını kuruyor; etiketin ondan yüksek bir z değeri
+       * olmazsa tasarımın kenarına denk gelen etiket yarım görünüyordu.
+       */
+      style={{ left: x, top: y, zIndex: 5 }}
     >
       {children}
     </div>
@@ -100,6 +109,8 @@ export default function ArView({
   resolution,
   curveAmount,
   hideRegions,
+  /** Kaydedilen kare — rapora (PDF) girsin diye üst bileşene bildirilir. */
+  onSaved,
 }) {
   const { t } = useLang()
   const videoRef = useRef(null)
@@ -110,6 +121,8 @@ export default function ArView({
   const katmanRef = useRef(null)
 
   const [ornekAcik, setOrnekAcik] = useState(false)
+  /* Kaydetme/paylaşma sonrası kısa onay yazısı (bkz. kaydet) */
+  const [bildirim, setBildirim] = useState(null)
   const [hata, setHata] = useState(null)
   // Hazır arka planlar — 3D görünümüyle ortak liste (bkz. ornekMekanlar.js)
   const ORNEKLER = ORNEK_MEKANLAR
@@ -123,7 +136,26 @@ export default function ArView({
   const fotoRef = useRef(null)
   const resimRef = useRef(null)
   const [arAcik, setArAcik] = useState(true)
+  /*
+   * Deklanşörle yakalanan son kare. Kaydet bunu KULLANIR, yeniden yakalamaz —
+   * yeniden yakalamak (html2canvas) beklemek demek ve bekleme sırasında
+   * tarayıcının "kullanıcı bastı" izni düşüyor; iOS Safari o izin olmadan
+   * indirmeyi sessizce iptal ediyor, ekranda "kaydedildi" yazsa bile dosya
+   * hiçbir yere inmiyordu.
+   *
+   * Bayatlamasın diye: tasarım kımıldadığı anda (taşıma, ölçek, dönüş, ölçü
+   * gizleme, arka plan değişimi) kare atılır. Böylece hem eski kare tekrar
+   * kaydedilmez hem de deklanşöre basılmışsa indirme beklemesiz olur.
+   */
   const [cekim, setCekim] = useState(null)
+  /*
+   * Karenin yakalandığı an. Kamera CANLI: tasarım kımıldamasa bile telefonu
+   * çevirince görüntü değişir, yani eldeki kare saniyeler içinde eskir.
+   * Bu yüzden kare yalnızca çok tazeyken (deklanşöre basıp hemen Kaydet
+   * demek gibi) yeniden kullanılır; ötesinde yeniden yakalanır.
+   */
+  const cekimZamanRef = useRef(0)
+  const KARE_TAZELIK_MS = 2000
   /*
    * Ölçü etiketleri ve kenar boşluğu çizgileri açık/kapalı. Kamerada asıl amaç
    * ekranın mekânda nasıl duracağını GÖRMEK; ölçüler yardımcıdır ve fotoğrafta
@@ -131,6 +163,38 @@ export default function ArView({
    */
   const [olculer, setOlculer] = useState(true)
   const [mesgul, setMesgul] = useState(false)
+  /* Cihaza kaydetme sayfası: kare + "Fotoğraflara kaydet" / "İndir" */
+  const [kareSayfasi, setKareSayfasi] = useState(null)
+
+  /*
+   * ────────────────────────────────────────────────────────────────────────
+   * YERLEŞTİRME AKIŞI — referans: Amazon "Odanızda görüntüleyin"
+   *
+   * Orada iş üç adımda yürüyor ve her adım ne yapılacağını kendisi söylüyor:
+   *   1) 'yerlestir' — "Yerleştirmek için dokunun", ekranda bir nişangâh var
+   *   2) 'yerlesti'  — ürün duruyor; taşınıyor, döndürülüyor, ölçekleniyor
+   *
+   * Önce bir de "Sürükle ve döndür" karşılama kartı vardı; kaldırıldı.
+   * Akış doğrudan yerleştirmeyle başlıyor.
+   *
+   * Bizde eskiden bu adımlar yoktu: pencere açılır açılmaz tasarım ortada
+   * beliriyordu, ne yapılacağını anlatan hiçbir şey yoktu. Müşteri ekranı
+   * sürükleyebileceğini ya da iki parmakla büyütebileceğini ancak tesadüfen
+   * keşfediyordu.
+   *
+   * NOT — GERÇEK YÜZEY ALGILAMA YOK, OLAMAZ.
+   * Amazon bunu kendi uygulamasında ARKit ile yapıyor: zemini tanıyor,
+   * noktalarla gösteriyor ve sen yürüsen bile ürün yerinde kalıyor. Tarayıcıda
+   * bunun karşılığı WebXR ve iOS Safari WebXR'ı desteklemiyor. Burada kamera
+   * görüntüsünün ÜSTÜNE çiziyoruz: yerleştirme, taşıma, döndürme ve ölçekleme
+   * aynı şekilde çalışıyor; eksik olan tek şey dünya takibi.
+   * ────────────────────────────────────────────────────────────────────────
+   */
+  const [asama, setAsama] = useState('yerlestir')
+  // Y ekseni dönüşü (derece) — iki parmakla çevirerek ya da tuş takımıyla
+  const [donus, setDonus] = useState(0)
+  // Hassas ayar tuş takımı (ok tuşları + döndürme) açık mı
+  const [tusTakimi, setTusTakimi] = useState(false)
 
   // Tasarımın ekrandaki yeri (merkez, px) ve ölçeği (px/m)
   const [merkez, setMerkez] = useState({ x: 0, y: 0 })
@@ -239,6 +303,16 @@ export default function ArView({
     akisRef.current = null
     setCekim(null)
     setArkaFoto(null)
+    /*
+     * Yerleştirme akışı da başa alınır. Bileşen kapanınca DOM'dan kalkmıyor
+     * (yalnızca `open` false oluyor), dolayısıyla sıfırlanmasaydı pencere
+     * yeniden açıldığında ürün bir önceki oturumun konumunda ve dönüşünde
+     * hazır beliriyor, "dokunarak yerleştirme" adımı hiç görünmüyordu.
+     */
+    setAsama('yerlestir')
+    setDonus(0)
+    setTusTakimi(false)
+    setMerkez({ x: 0, y: 0 }) // {0,0} = "henüz konmadı"; ölçüm etkisi ortalar
   }, [open])
 
   useEffect(() => () => akisRef.current?.getTracks().forEach((iz) => iz.stop()), [])
@@ -299,8 +373,19 @@ export default function ArView({
   const baslangicRef = useRef(null)
   const merkezRef = useRef(merkez)
   const olcekRef = useRef(pxPerM)
+  const donusRef = useRef(donus)
   merkezRef.current = merkez
   olcekRef.current = pxPerM
+  donusRef.current = donus
+
+  /*
+   * İki parmağın YATAYLA yaptığı açı (derece). Parmaklar çevrildikçe bu açı
+   * değişiyor ve farkı doğrudan ürünün dönüşüne yazılıyor — Amazon'daki
+   * "Sürükle ve döndür" jestinin karşılığı. Ölçekleme (parmak arası mesafe)
+   * ve döndürme (parmak arası açı) aynı hareketten aynı anda okunuyor, tıpkı
+   * orada olduğu gibi.
+   */
+  const aci = (a, b) => (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI
 
   const anlikKaydet = () => {
     const n = [...isaretRef.current.values()]
@@ -308,8 +393,10 @@ export default function ArView({
     baslangicRef.current = {
       merkez: merkezRef.current,
       pxPerM: olcekRef.current,
+      donus: donusRef.current,
       orta: ortaNokta(n),
       uzaklik: n.length > 1 ? uzaklik(n[0], n[1]) : 0,
+      aci: n.length > 1 ? aci(n[0], n[1]) : 0,
     }
   }
 
@@ -329,6 +416,12 @@ export default function ArView({
 
     if (n.length > 1 && b.uzaklik > 0) {
       setPxPerM(kis(b.pxPerM * (uzaklik(n[0], n[1]) / b.uzaklik), EN_KUCUK_OLCEK, EN_BUYUK_OLCEK))
+      // Parmakların çevrilmesi ürünü Y ekseninde döndürür (bkz. `aci`)
+      let fark = aci(n[0], n[1]) - b.aci
+      // -180/+180 sınırından atlarken dönüşün sıçramaması için sarma
+      if (fark > 180) fark -= 360
+      if (fark < -180) fark += 360
+      setDonus(b.donus + fark)
     }
     setMerkez({ x: b.merkez.x + (orta.x - b.orta.x), y: b.merkez.y + (orta.y - b.orta.y) })
   }
@@ -448,6 +541,14 @@ export default function ArView({
     }
   }
 
+  /*
+   * Tasarım kımıldadıysa eldeki kare artık o görüntüyü göstermiyor.
+   * (Kaydet'in eski kareyi tekrar rapora sokması bu yüzden mümkündü.)
+   */
+  useEffect(() => {
+    setCekim(null)
+  }, [merkez, pxPerM, donus, olculer, arAcik, arkaFoto, asama])
+
   const yakala = async () => {
     const v = arkaFoto ? resimRef.current : videoRef.current
     const kap = kapRef.current
@@ -493,6 +594,7 @@ export default function ArView({
       }
       const veri = c.toDataURL('image/jpeg', 0.92)
       setCekim(veri)
+      cekimZamanRef.current = Date.now()
       return veri
     } catch {
       setHata(t('ar.errCapture'))
@@ -502,14 +604,146 @@ export default function ArView({
     }
   }
 
+  /*
+   * KAYDET — çekilen görüntü İKİ yere birden gider:
+   *   1) Cihaza iner (telefonda tarayıcının indirme akışı).
+   *   2) Rapora verilir: PDF alındığında "Mekânda Görünüm" sayfası olarak
+   *      basılır. Eskiden yalnızca indiriliyordu; müşteriye giden raporda
+   *      ekranın gerçek mekândaki hâli hiç görünmüyordu.
+   *
+   * İndirme <a download> ile yapılıyor. iOS Safari bunu doğrudan Fotoğraflar'a
+   * atmaz, "indirmek istiyor musunuz?" diye sorar ve Dosyalar'a kaydeder —
+   * bu tarayıcının kendi davranışı, sayfadan değiştirilemiyor. Fotoğraflar'a
+   * atmak isteyen için PAYLAŞ düğmesi duruyor: iOS'un paylaşma sayfasından
+   * "Görüntüyü Kaydet" Fotoğraflar'a koyar.
+   */
+  const kareTaze = () => cekim && Date.now() - cekimZamanRef.current < KARE_TAZELIK_MS
+
   const kaydet = async () => {
-    const veri = cekim || (await yakala())
+    // Elde TAZE kare varsa onu kullan (bkz. cekim): beklemesiz indirme.
+    const veri = kareTaze() ? cekim : await yakala()
     if (!veri) return
-    const a = document.createElement('a')
-    a.href = veri
-    a.download = `ar-${model?.name || 'tasarim'}-${cols}x${rows}.jpg`
-    a.click()
+    const raporaGirdi = onSaved?.(veri)
+
+    /*
+     * BLOB URL — data: URL DEĞİL.
+     *
+     * Belirti: iPhone'da "Kaydet"e basınca Safari "…dosyasını indirmek
+     * istiyor musunuz?" diye soruyor, ama "İndir"e de "Görüntüle"ye de
+     * basınca hiçbir şey olmuyordu. Sebep indirilen adresin dev bir
+     * `data:image/jpeg;base64,…` dizesi olması: iOS Safari birkaç yüz KB'ı
+     * aşan data: URL'lerini indiremiyor ve sessizce düşüyor.
+     *
+     * Aynı bayt dizisi bir Blob'a konup `blob:` adresiyle veriliyor; bu yol
+     * boyut sınırına takılmıyor ve indirme gerçekten tamamlanıyor.
+     */
+    const indi = await cihazaKaydet(veri)
+
+    /*
+     * TELEFONDA "İNDİ" DEMEK YETMİYOR.
+     *
+     * <a download> masaüstünde çalışıyor ama iOS Safari'de dosya çoğu zaman
+     * Fotoğraflar'a değil Dosyalar'a gidiyor ya da hiç inmiyor; kullanıcı
+     * "kaydedildi" yazısını görüp telefonunda hiçbir şey bulamıyordu.
+     * Bu yüzden indirme kesin değilse kare EKRANDA açılıyor: oradan
+     * paylaşma sayfasıyla Fotoğraflar'a atılabiliyor ya da görsele basılı
+     * tutup kaydedilebiliyor.
+     */
+    if (indi) setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+    else await kareSayfasiAc(veri, raporaGirdi)
   }
+
+  /** Kareyi ekranda açar; indirme bağlantısı için blob adresi hazırlar. */
+  const kareSayfasiAc = async (veri, raporaGirdi) => {
+    let indirmeUrl = null
+    try {
+      indirmeUrl = URL.createObjectURL(await (await fetch(veri)).blob())
+    } catch {
+      /* blob kurulamazsa görsele basılı tutma yolu yine açık */
+    }
+    setKareSayfasi((eski) => {
+      if (eski?.indirmeUrl) URL.revokeObjectURL(eski.indirmeUrl)
+      return { veri, raporaGirdi, indirmeUrl }
+    })
+  }
+
+  /**
+   * Kareyi cihaza kaydetmeye çalışır. Döner: kesin kaydedildi mi.
+   *
+   * Sıra: paylaşma sayfası (telefonda Fotoğraflar'a atmanın tek güvenilir
+   * yolu) → <a download> (masaüstü ve Android). Hiçbiri kesin değilse false
+   * döner ve çağıran taraf kareyi ekranda açar.
+   */
+  const cihazaKaydet = async (veri) => {
+    const ad = `ar-${model?.name || 'tasarim'}-${cols}x${rows}.jpg`
+    let blob
+    try {
+      blob = await (await fetch(veri)).blob()
+    } catch {
+      return false
+    }
+
+    // 1) Paylaşma sayfası — iOS'ta "Görüntüyü Kaydet" Fotoğraflar'a koyar.
+    try {
+      const dosya = new File([blob], ad, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+        return true
+      }
+    } catch {
+      /* kullanıcı vazgeçtiyse ya da desteklenmiyorsa indirmeyi dene */
+    }
+
+    // 2) Klasik indirme — download özniteliği desteklenmiyorsa denemeyelim.
+    const a = document.createElement('a')
+    if (!('download' in a)) return false
+    const url = URL.createObjectURL(blob)
+    a.href = url
+    a.download = ad
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+    return true
+  }
+
+  /*
+   * PAYLAŞ — Amazon'un AR ekranındaki paylaşma düğmesinin karşılığı.
+   * Telefonda işletim sisteminin kendi paylaşma sayfası açılır (WhatsApp,
+   * e-posta…); desteklemeyen tarayıcıda dosya indirmeye düşer, yani düğme
+   * hiçbir cihazda ölü kalmaz.
+   */
+  const paylas = async () => {
+    const veri = kareTaze() ? cekim : await yakala()
+    if (!veri) return
+    const raporaGirdi = onSaved?.(veri) // paylaşılan kare de rapora girsin
+    const indi = await cihazaKaydet(veri)
+    if (indi) setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+    else await kareSayfasiAc(veri, raporaGirdi)
+  }
+
+  /*
+   * SIFIRLA — ürünü ortaya, dönüşü sıfıra, ölçeği başlangıca alır ve
+   * yerleştirme adımına döner. Amazon'daki ↻ düğmesi de aynı işi yapıyor:
+   * ürün kaybolduğunda ya da ölçek iyice bozulduğunda çıkış yolu.
+   */
+  const sifirla = () => {
+    setDonus(0)
+    setTusTakimi(false)
+    setMerkez({ x: kutu.w / 2, y: kutu.h / 2 })
+    setAsama('yerlestir')
+  }
+
+  /* Tuş takımı adımları: dokunmatikte parmakla tutturulamayan ince ayar için */
+  const kaydir = (dx, dy) => setMerkez((m) => ({ x: m.x + dx, y: m.y + dy }))
+  const cevir = (d) => setDonus((a) => a + d)
+
+  // Onay yazısı birkaç saniye sonra kendiliğinden kalkar
+  useEffect(() => {
+    if (!bildirim) return undefined
+    const z = setTimeout(() => setBildirim(null), 4000)
+    return () => clearTimeout(z)
+  }, [bildirim])
 
   // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
   useGovdeKilidi(open)
@@ -564,6 +798,49 @@ export default function ArView({
     ust: Math.max(0, ust) / pxPerM,
     alt: Math.max(0, kutu.h - alt) / pxPerM,
   }
+
+
+  /*
+   * ÖLÇÜ ETİKETLERİNİN YERİ
+   *
+   * İki takım etiket var ve ikisi de aynı iki eksen üzerinde duruyor:
+   *   • tasarımın KENDİ ölçüleri (vurgulu) — tasarımın hemen dışında,
+   *   • kenar BOŞLUKLARI — tasarımla görüntü kenarı arasındaki orta nokta.
+   *
+   * Tasarım küçüldükçe boşluklar büyüyor ve boşluk etiketi orta noktada
+   * kaldığı için tasarımın üstüne biniyordu; tasarım büyüdükçe de ikisi
+   * birbirine değiyordu. Bu yüzden ölçü etiketleri tasarımın DIŞINA alındı ve
+   * boşluk etiketleri onlardan en az AYRIK kadar uzağa itiliyor. Her ikisi de
+   * görüntü çerçevesinin içinde kalacak şekilde kırpılıyor.
+   */
+  const olcu = (() => {
+    /* Açıklık etiketlerin MERKEZLERİ arasında ölçülüyor; yatayda etiketin
+       kendi genişliği (~55 px) de araya girdiği için orası daha büyük. */
+    const AYRIK_X = 68
+    const AYRIK_Y = 26
+    const KENAR_X = 30 // etiketin görüntü kenarına en yakın durabileceği yer
+    const KENAR_Y = 22
+
+    // Tasarımın kendi ölçüleri: üst kenarın ÜSTÜ, sağ kenarın SAĞI
+    const genislikY = kis(ust - 14, KENAR_Y, kutu.h - KENAR_Y)
+    const yukseklikX = kis(sag + 34, KENAR_X, kutu.w - KENAR_X)
+
+    return {
+      genislikY,
+      yukseklikX,
+      /* Boşluk etiketleri boşluğun ortasında durur, ama tasarımın kendi
+         etiketine AYRIK kadar bile yaklaşamaz. */
+      boslukSolX: kis(sol / 2, KENAR_X, kutu.w - KENAR_X),
+      boslukSagX: kis(Math.max(sag + (kutu.w - sag) / 2, yukseklikX + AYRIK_X), KENAR_X, kutu.w - KENAR_X),
+      boslukUstY: kis(Math.min(ust / 2, genislikY - AYRIK_Y), KENAR_Y, kutu.h - KENAR_Y),
+      boslukAltY: kis(alt + (kutu.h - alt) / 2, KENAR_Y, kutu.h - KENAR_Y),
+      /* Kenar kadrajın dışındaysa o boşluk ölçülemez — etiketi hiç çizilmez */
+      solVar: sol > KENAR_X,
+      sagVar: sag < kutu.w - KENAR_X,
+      ustVar: ust > KENAR_Y,
+      altVar: alt < kutu.h - KENAR_Y,
+    }
+  })()
 
   const cizgi = 'absolute border-dashed border-white/60 pointer-events-none'
 
@@ -621,7 +898,8 @@ export default function ArView({
           hiç göremiyordu. Tasarımın görünmesi kameraya bağlı olmamalı: kamera
           yalnızca arka plandır, gecikirse arkası siyah kalır, tasarım durur.
         */}
-        {!hata && arAcik && kutu.w > 0 && (
+        {/* Tasarım YALNIZCA yerleştirildikten sonra çizilir (bkz. `asama`) */}
+        {!hata && arAcik && kutu.w > 0 && asama === 'yerlesti' && (
           <div ref={katmanRef} className="absolute inset-0 pointer-events-none">
             {olculer && (
               <>
@@ -631,31 +909,70 @@ export default function ArView({
                 <div className={cizgi} style={{ left: merkez.x, top: 0, height: Math.max(0, ust), borderLeftWidth: 1 }} />
                 <div className={cizgi} style={{ left: merkez.x, top: alt, height: Math.max(0, kutu.h - alt), borderLeftWidth: 1 }} />
 
-                <Etiket x={Math.max(28, sol / 2)} y={merkez.y}>{metre(bosluk.sol)}</Etiket>
-                <Etiket x={Math.min(kutu.w - 28, sag + (kutu.w - sag) / 2)} y={merkez.y}>{metre(bosluk.sag)}</Etiket>
-                <Etiket x={merkez.x} y={Math.max(20, ust / 2)}>{metre(bosluk.ust)}</Etiket>
-                <Etiket x={merkez.x} y={Math.min(kutu.h - 20, alt + (kutu.h - alt) / 2)}>{metre(bosluk.alt)}</Etiket>
+                {/*
+                  Boşluk etiketi yalnızca o kenar GÖRÜNTÜNÜN İÇİNDEyken çizilir.
+                  Tasarım kadraja sığmayacak kadar büyütüldüğünde boşluk yok
+                  demektir; "0 cm" yazmak bilgi taşımadığı gibi tasarımın kendi
+                  ölçü etiketiyle aynı kenara sıkışıp üst üste biniyordu.
+                */}
+                {olcu.solVar && <Etiket x={olcu.boslukSolX} y={merkez.y}>{metre(bosluk.sol)}</Etiket>}
+                {olcu.sagVar && <Etiket x={olcu.boslukSagX} y={merkez.y}>{metre(bosluk.sag)}</Etiket>}
+                {olcu.ustVar && <Etiket x={merkez.x} y={olcu.boslukUstY}>{metre(bosluk.ust)}</Etiket>}
+                {olcu.altVar && <Etiket x={merkez.x} y={olcu.boslukAltY}>{metre(bosluk.alt)}</Etiket>}
 
                 {/*
                   Tasarımın kendi ölçüleri — vurgulu, çünkü bunlar KESİN.
-                  Tasarımın İÇİNE, kenarlarına yapışık duruyorlar: dışarı
-                  konduklarında kenar boşluğu etiketleriyle üst üste biniyorlardı.
+                  Tasarımın DIŞINDA: genişlik üst kenarın üstünde, yükseklik sağ
+                  kenarın sağında. Önceden içeride, kenarlara yapışıktılar;
+                  tasarım küçültüldüğünde etiketler ekranın neredeyse tamamını
+                  kaplayıp altındaki tasarımı görünmez ediyordu (bkz. olcuYerlesimi).
                 */}
-                <Etiket x={merkez.x} y={ust + 14} vurgu>{metre(tasarimWm)}</Etiket>
-                <Etiket x={sag - 32} y={merkez.y} vurgu>{metre(tasarimHm)}</Etiket>
+                <Etiket x={merkez.x} y={olcu.genislikY} vurgu>{metre(tasarimWm)}</Etiket>
+                <Etiket x={olcu.yukseklikX} y={merkez.y} vurgu>{metre(tasarimHm)}</Etiket>
               </>
             )}
 
             {/* Tasarımın kendisi */}
             <div
               className="absolute pointer-events-auto"
-              style={{ left: sol, top: ust, width: w, height: h, cursor: 'move', touchAction: 'none' }}
+              style={{
+                left: sol,
+                top: ust,
+                width: w,
+                height: h,
+                cursor: 'move',
+                touchAction: 'none',
+                /*
+                 * DÖNDÜRME — iki parmakla çevirince ya da tuş takımından.
+                 * Ekranlar 2B çiziliyor, dolayısıyla dönüş bir perspektif
+                 * dönüşümüyle veriliyor: ürün yana döndükçe kenarı daralıyor
+                 * ve mekâna açılı oturduğu hissi çıkıyor. Amazon'da bu gerçek
+                 * 3B model dönüşü; buradaki yaklaşık karşılığı.
+                 */
+                transform: `perspective(1400px) rotateY(${donus}deg)`,
+                transformStyle: 'preserve-3d',
+              }}
               onPointerDown={parmakIndi}
               onPointerMove={parmakHareket}
               onPointerUp={parmakKalkti}
               onPointerCancel={parmakKalkti}
               onWheel={tekerlek}
             >
+              {/*
+                SEÇİM DIŞ HATTI KALDIRILDI.
+
+                Ürünün çevresinde camgöbeği bir çerçeve vardı; jestlerin ona
+                işlediğini göstermesi içindi. Ama çerçeve silüeti değil SINIR
+                KUTUSUNU izliyordu: kavisli ekranda ürün yaya bükülüyor,
+                dikdörtgen çizgi ise düz kalıyor ve ekranın kenarlarıyla hiç
+                örtüşmüyordu — mekâna oturup oturmadığına bakılan bir ekranda
+                göze batan, yanıltıcı bir çizgi. Silüeti izletmek her karede
+                filtre maliyeti demek, mobilde pahalı.
+
+                Seçili olduğu zaten anlaşılıyor: ölçü etiketleri ürünle
+                birlikte gidiyor, sağdaki araç sütunu ve tuş takımı yalnızca
+                ürün yerleştikten sonra çıkıyor.
+              */}
               {/* Ekranlar şeridi — alta hizalı, WallPreview ile aynı yerleşim */}
               <div style={{ position: 'absolute', inset: 0 }}>
                 {/* z0: Tek içerik katmanı — tüm şeride yayılır, ekran şekline kırpılır */}
@@ -715,8 +1032,106 @@ export default function ArView({
           </div>
         )}
 
+        {/* ══════════════════ YERLEŞTİRME AKIŞI (bkz. `asama`) ══════════════════ */}
+        {/* Karşılama → yerleştirme → araçlar sırası AR ekranıyla ortak parçalardan
+            geliyor (ArYerlestirme.jsx); ikisi de birebir aynı görünsün diye. */}
+
+        {/*
+          Ekranın herhangi bir yerine dokunulunca ürün TAM ORAYA konur. Amazon
+          gerçek zeminde bir nişangâh gösteriyor; bizde yüzey algılama olmadığı
+          için nişangâh sabit bir hedef — dokunulan nokta yine de yerleştirme
+          noktası.
+        */}
+        {!hata && arAcik && asama === 'yerlestir' && (
+          <YerlestirKatmani
+            t={t}
+            onYerlestir={(n) => {
+              setMerkez(n)
+              setAsama('yerlesti')
+            }}
+          />
+        )}
+
+        {!hata && arAcik && asama === 'yerlesti' && (
+          <AraclarSutunu
+            t={t}
+            onSifirla={sifirla}
+            onPaylas={paylas}
+            onTusTakimi={() => setTusTakimi((a) => !a)}
+            tusTakimi={tusTakimi}
+          />
+        )}
+
+        {!hata && arAcik && asama === 'yerlesti' && tusTakimi && (
+          /* Adım büyüklüğü kameraya ait: burada piksel, AR ekranında metre. */
+          <TusTakimi t={t} onKaydir={(dx, dy) => kaydir(dx * 12, dy * 12)} onCevir={(d) => cevir(d * 15)} />
+        )}
+
+        {/*
+          KAYDETME ONAYI — üst barın altında, kısa süre görünür.
+          z-50: araç çubukları z-40'ta; onay onların da üstünde durmalı.
+        */}
+        {/*
+          KARE HAZIR — indirme kesin olmadığında açılır (çoğunlukla iOS).
+          Kullanıcı buradan paylaşma sayfasıyla Fotoğraflar'a atabilir,
+          indirmeyi tekrar deneyebilir ya da görsele basılı tutup kaydedebilir.
+          Kamera araçlarının üstünde durmalı, bu yüzden z-[70].
+        */}
+        {kareSayfasi && (
+          <div className="absolute inset-0 z-[70] bg-black/85 flex items-center justify-center p-4">
+            <div className="w-full max-w-sm max-h-full overflow-y-auto bg-[#161a21] rounded-3xl p-5 text-center">
+              <h3 className="m-0 text-white text-base font-semibold">{t('shot.title')}</h3>
+              <img
+                src={kareSayfasi.veri}
+                alt=""
+                className="mt-4 w-full rounded-2xl border border-white/15"
+              />
+              <p className="mt-3 mb-0 text-[12px] text-white/60">{t('shot.hint')}</p>
+              {kareSayfasi.raporaGirdi && (
+                <p className="mt-1 mb-0 text-[12px] text-white/60">{t('shot.inReport')}</p>
+              )}
+              <div className="mt-4 flex flex-col gap-2">
+                {typeof navigator !== 'undefined' && navigator.canShare && (
+                  <button
+                    type="button"
+                    onClick={() => cihazaKaydet(kareSayfasi.veri)}
+                    className="rounded-full bg-white text-[#10141b] font-semibold py-3 hover:bg-white/85"
+                  >
+                    {t('shot.savePhotos')}
+                  </button>
+                )}
+                <a
+                  href={kareSayfasi.indirmeUrl || kareSayfasi.veri}
+                  download={`ar-${model?.name || 'tasarim'}-${cols}x${rows}.jpg`}
+                  className="rounded-full border border-white/25 text-white font-semibold py-3 no-underline"
+                >
+                  {t('shot.download')}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (kareSayfasi.indirmeUrl) URL.revokeObjectURL(kareSayfasi.indirmeUrl)
+                    setKareSayfasi(null)
+                  }}
+                  className="rounded-full text-white/60 text-[13px] py-2 hover:text-white"
+                >
+                  {t('shot.close')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {bildirim && (
+          <div className="absolute top-16 inset-x-0 z-50 flex justify-center px-6 pointer-events-none">
+            <p className="m-0 rounded-full bg-black/80 text-white text-[12.5px] font-semibold px-4 py-2 text-center shadow-lg">
+              {bildirim}
+            </p>
+          </div>
+        )}
+
         {/* ---------------------------------------------------------- ÜST BAR */}
-        <div className="absolute top-0 inset-x-0 flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-b from-black/70 to-transparent">
+        <div className="absolute top-0 inset-x-0 z-40 flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-b from-black/70 to-transparent">
           <button
             type="button"
             onClick={onClose}
@@ -819,18 +1234,13 @@ export default function ArView({
         )}
 
         {/* ---------------------------------------------------------- ALT BAR */}
-<<<<<<< HEAD
-        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-8 pb-5">
+        <div className="absolute bottom-2 left-2 right-2 sm:bottom-0 sm:inset-x-0 z-40 bg-gradient-to-t from-black/80 to-transparent pt-6 sm:pt-8 pb-3 sm:pb-5">
           {/*
             Dar telefonlarda beş denetim 390 pikselin dışına taşıyordu (soldaki
             LENS ve sağdaki AR düğmesi ekranın dışında kalıyor, tıklanamıyordu).
             Şerit artık YATAY KAYDIRILIYOR; sığdığında ortalanmış duruyor.
           */}
-          <div className="flex items-center justify-center sm:justify-center gap-4 px-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-=======
-        <div className="absolute bottom-2 left-2 right-2 sm:bottom-0 sm:inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-6 sm:pt-8 pb-3 sm:pb-5">
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 px-2 sm:px-4">
->>>>>>> feature/mobile-responsive
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 px-2 sm:px-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {/* Fotoğraf arka plandayken lens/flaş anlamsız — yerine fotoğrafı değiştir */}
             {arkaFoto ? (
               /* Fotoğraftayken: fotoğrafı değiştir, ya da kameraya geri dön */

@@ -222,6 +222,10 @@ CREATE TABLE IF NOT EXISTS public.quotes
     screen_type character varying(20) COLLATE pg_catalog."default",
     resolution character varying(10) COLLATE pg_catalog."default",
     screens_summary text COLLATE pg_catalog."default",
+    -- Tasarımın tamamı (JSON): "Tekliflerim → Düzenle" bunu geri yükler.
+    -- Yalnızca özet alanları tasarımı geri açmaya yetmiyordu; çoklu ekran
+    -- düzeni screens_summary'de yalnızca okunur bir cümle olarak duruyor.
+    config_json text COLLATE pg_catalog."default",
     status character varying(20) COLLATE pg_catalog."default" DEFAULT 'Beklemede'::character varying,
     revision integer DEFAULT 1,
     admin_note text COLLATE pg_catalog."default",

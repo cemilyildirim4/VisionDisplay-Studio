@@ -9,6 +9,12 @@ import { useLang } from './useLang.js'
 import { curveDepthFor, DEFAULT_CONTENT_SRC } from './content.js'
 import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
 import { videoSrcFor, createVideoElement } from './videoContent.js'
+/* AR yerleştirme akışının görünen parçaları kamera ekranıyla ORTAK — bkz. ArYerlestirme.jsx */
+import {
+  YerlestirKatmani,
+  AraclarSutunu,
+  TusTakimi,
+} from './ArYerlestirme.jsx'
 
 /**
  * GERÇEK 3D GÖRÜNÜM (react-three-fiber) — mevcut 2D Canvas/SVG önizlemenin
@@ -750,6 +756,71 @@ function disaAktarmaMalzemeleri(scene) {
   }
 }
 
+/**
+ * INSTANCE'LAR DIŞA AKTARIMDA GERÇEK NESNEYE ÇEVRİLİR.
+ *
+ * Kabin gövdeleri sahnede tek bir InstancedMesh olarak çiziliyor (yüzlerce
+ * kabin tek çizim çağrısına iniyor, bkz. `Instances`). Ama:
+ *   • USDZExporter instance matrislerini hiç yazmıyor — ürettiği dosyada
+ *     kabinlerin yalnızca BİRİ geometri taşıyor, kalanlar boş birer düğüm
+ *     olarak çıkıyor.
+ *   • Sonuç: iPhone'da Quick Look'ta duvarın arkasına dönüldüğünde koca bir
+ *     LED duvar yerine tek, ince bir plaka görünüyordu.
+ *
+ * Dışa aktarma sırasında instance'lar geçici olarak sıradan mesh'lere
+ * açılıyor: geometri ve malzeme PAYLAŞILIYOR, yalnızca konum/dönüş/ölçek
+ * kopyalanıyor — bellek maliyeti yok denecek kadar az. Sahne dosyaya
+ * yazıldıktan sonra her şey aynen geri konuyor, canlı görünüm instance'lı
+ * hızlı hâline dönüyor.
+ */
+function disaAktarmaGeometrileri(scene) {
+  const geriAl = []
+  const hedefler = []
+  scene.traverse((o) => { if (o.isInstancedMesh) hedefler.push(o) })
+
+  for (const im of hedefler) {
+    const ebeveyn = im.parent
+    if (!ebeveyn) continue
+
+    const grup = new THREE.Group()
+    grup.name = im.name || 'Kabinler'
+    // InstancedMesh'in KENDİ dönüşümü (kavisli duvarda grup döndürülüyor)
+    grup.position.copy(im.position)
+    grup.quaternion.copy(im.quaternion)
+    grup.scale.copy(im.scale)
+
+    const m = new THREE.Matrix4()
+    const adet = Math.min(im.count, im.instanceMatrix?.count ?? im.count)
+    for (let i = 0; i < adet; i++) {
+      im.getMatrixAt(i, m)
+      const mesh = new THREE.Mesh(im.geometry, im.material)
+      m.decompose(mesh.position, mesh.quaternion, mesh.scale)
+      grup.add(mesh)
+    }
+
+    const sira = ebeveyn.children.indexOf(im)
+    ebeveyn.remove(im)
+    ebeveyn.add(grup)
+    geriAl.push({ ebeveyn, im, grup, sira })
+  }
+
+  return {
+    geriYukle() {
+      for (const k of geriAl) {
+        k.ebeveyn.remove(k.grup)
+        k.grup.clear() // geometri/malzeme paylaşıldığı için dispose EDİLMEZ
+        k.ebeveyn.add(k.im)
+        // Kardeş sırası korunur: çizim sırası sahnedeki yerleşimi etkiliyor
+        const su = k.ebeveyn.children.indexOf(k.im)
+        if (k.sira >= 0 && su !== k.sira) {
+          k.ebeveyn.children.splice(su, 1)
+          k.ebeveyn.children.splice(k.sira, 0, k.im)
+        }
+      }
+    },
+  }
+}
+
 /** GLB + USDZ dışa aktarma ve `<model-viewer>` ile gerçek Scene Viewer / Quick Look AR. */
 function useGlbAr() {
   const { t } = useLang()
@@ -774,19 +845,45 @@ function useGlbAr() {
       await import('@google/model-viewer')
 
       /*
-       * İçerik görseli TextureLoader ile ASENKRON yükleniyor. Görsel daha
-       * inmeden dışa aktarılırsa dokunun `image`'ı boş oluyor ve exporter
-       * "No valid image data found" diyerek düşüyor. Sahne açılır açılmaz
-       * düğmeye basıldığında olabilecek bir yarış; kısa ve sınırlı bekleme
-       * yeterli, süre dolarsa yine de dışa aktarılır (doku o zaman atlanır).
+       * İÇERİK DOKUSU GERÇEKTEN HAZIR MI?
+       *
+       * Belirti: AR'de (Quick Look / Scene Viewer) panel kapkara çıkıyordu —
+       * ne görsel ne video görünüyordu. Sebep iki ayrı yarış:
+       *
+       *   GÖRSEL: TextureLoader asenkron yüklüyor. Eskiden yalnızca dokunun
+       *     `image` alanı DOLU MU diye bakılıyordu; oysa `image` daha ilk
+       *     karede atanmış olabiliyor ve içi boş oluyor. Artık gerçekten
+       *     çözülmüş mü (`complete` + genişlik) diye bakılıyor.
+       *
+       *   VİDEO: dokusu bir TUVAL. Tuval en baştan var, yani eski kontrol
+       *     anında geçiyordu — ama üzerine henüz tek bir kare çizilmemişti.
+       *     Dışa aktarılan şey o boş, siyah tuvaldi. Artık videonun ilk
+       *     karesi beklenip tuvale ELLE çiziliyor; hazır kare GLB/USDZ'ye
+       *     gömülüyor.
+       *
+       * Bekleme süresi 3 sn'den 10 sn'ye çıkarıldı: telefonda hücresel ağda
+       * örnek video/görsel bu sürede inmiyordu ve boş doku aktarılıyordu.
        */
       await new Promise((resolve) => {
-        const bitis = performance.now() + 3000
+        const bitis = performance.now() + 10000
         const bak = () => {
           let bekleyen = false
           sceneRef.current.traverse((o) => {
             const harita = o.material?.map
-            if (harita && !harita.image) bekleyen = true
+            if (!harita) return
+            const video = harita.userData?.video
+            if (video) {
+              // Videonun ilk karesi gelmeden tuval boş; kareyi burada da çiz
+              if (video.readyState < 2) { bekleyen = true; return }
+              try {
+                harita.image.getContext('2d').drawImage(video, 0, 0, harita.image.width, harita.image.height)
+                harita.needsUpdate = true
+              } catch { /* kare henüz çizilemiyor — bir sonraki turda yeniden */ }
+              return
+            }
+            const g = harita.image
+            const hazir = g && (g.complete === undefined || g.complete) && (g.naturalWidth ?? g.width ?? 0) > 0
+            if (!hazir) bekleyen = true
           })
           if (!bekleyen || performance.now() > bitis) resolve()
           else requestAnimationFrame(bak)
@@ -801,6 +898,7 @@ function useGlbAr() {
        * Eskiden yalnızca GLB vardı; iPhone'da `quick-look` kipi açılacak dosya
        * bulamadığı için "AR'da Gör" hiçbir şey yapmıyordu.
        */
+      const acilmis = disaAktarmaGeometrileri(sceneRef.current)
       const kilit = disaAktarmaMalzemeleri(sceneRef.current)
       let glb
       let usdz = null
@@ -832,6 +930,7 @@ function useGlbAr() {
         }
       } finally {
         kilit.geriYukle()
+        acilmis.geriYukle()
       }
 
       setViewerUrl(URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' })))
@@ -870,7 +969,7 @@ function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
   )
 }
 
-export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens }) {
+export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens, onOpenCamera, onSaved }) {
   const { t } = useLang()
   const { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy } = useGlbAr()
 
@@ -900,6 +999,269 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
       mv.removeEventListener('load', bak)
     }
   }, [viewerUrl, iosUrl])
+
+  /*
+   * YERLEŞTİRME AKIŞI — kameradakinin (ArView) AR ekranındaki karşılığı.
+   * Amazon'da AR üç adımda yürüyor ve her adım ne yapılacağını kendisi
+   * söylüyor: karşılama kartı → "yerleştirmek için dokunun" → yerleşmiş
+   * ürünün araçları. Burası model-viewer üstünde aynı sırayı kuruyor.
+   *
+   * NOT: Ürün gerçekten odaya oturtulduğunda (Scene Viewer / Quick Look /
+   * WebXR) yerleştirmeyi ARTIK İŞLETİM SİSTEMİ yönetir; oradaki arayüzü
+   * tarayıcıdan değiştiremeyiz. Bu akış AR'a girmeden önceki sayfa-içi
+   * görünümde çalışır: jestler burada öğrenilir, ölçü ve açı burada
+   * ayarlanır, sonra tek dokunuşla odaya taşınır.
+   */
+  const [asama, setAsama] = useState('yerlestir')
+  /* Kaydetme/paylaşma sonrası kısa onay yazısı — kameradakiyle aynı */
+  const [arBildirim, setArBildirim] = useState(null)
+
+  /*
+   * EL ANİMASYONU (model-viewer'ın etkileşim ipucu) SÜREKLİ DÖNÜYORDU.
+   *
+   * Sebep: ipucu "kullanıcı bir süredir hiç dokunmadı" diye gösteriliyor;
+   * bizim jest katmanımız model-viewer'ın ÜSTÜNDE durup dokunuşları kendisi
+   * yuttuğu için model-viewer hiçbir zaman etkileşim görmüyor ve ipucunu
+   * tekrar tekrar açıyordu.
+   *
+   * İstenen: yalnızca ilk açılışta bir kez görünsün, sonra gitsin. Açılışta
+   * hemen gösteriliyor (eşik 0) ve ilk dokunuşta — dokunulmasa bile birkaç
+   * saniye sonra — kalıcı olarak kapatılıyor.
+   */
+  const [ipucuAcik, setIpucuAcik] = useState(true)
+  const [tusTakimi, setTusTakimi] = useState(false)
+
+  /* Pencere her açılışında akış başa alınır — bileşen DOM'da kaldığı için
+     aksi hâlde önceki oturumun adımı hazır beliriyor. */
+  useEffect(() => {
+    setAsama('yerlestir')
+    setTusTakimi(false)
+    setIpucuAcik(true)
+  }, [viewerUrl])
+
+  /*
+   * Sayaç, ürün YERLEŞTİKTEN sonra başlar; panel açılır açılmaz değil.
+   * Açılışta karşılama kartı ekranı kaplıyor, altındaki ipucu görülmüyor:
+   * sayacı orada başlatmak, el hiç görünmeden kapanması demekti.
+   * Ekran gerçekten kullanılabilir hâle geldiğinde bir kez gösterilip
+   * dokunulmasa bile birkaç saniye sonra kalıcı olarak kapanıyor.
+   */
+  useEffect(() => {
+    if (!ipucuAcik || asama !== 'yerlesti') return undefined
+    const z = setTimeout(() => setIpucuAcik(false), 4000)
+    return () => clearTimeout(z)
+  }, [ipucuAcik, asama])
+
+  /** Kamera hedefini (bakılan nokta) kaydırır — ürün ekranda o yöne kayar. */
+  const ADIM_M = 0.08
+  const kaydirAr = useCallback((dx, dy) => {
+    const mv = mvRef.current
+    if (!mv?.getCameraTarget) return
+    const h = mv.getCameraTarget()
+    /* Hedef ürünün TERSİNE kayar: hedefi sağa almak ürünü sola götürür. */
+    mv.cameraTarget = `${h.x - dx * ADIM_M}m ${h.y + dy * ADIM_M}m ${h.z}m`
+  }, [])
+
+  /** Ürünü yatayda döndürür (kamerayı çevirerek — model-viewer'ın yolu bu). */
+  const cevirAr = useCallback((yon) => {
+    const mv = mvRef.current
+    if (!mv?.getCameraOrbit) return
+    const o = mv.getCameraOrbit()
+    const derece = (o.theta * 180) / Math.PI + yon * 15
+    mv.cameraOrbit = `${derece}deg ${(o.phi * 180) / Math.PI}deg ${o.radius}m`
+  }, [])
+
+  /** Yakınlaştırma — yörünge yarıçapı; iki parmakla yapılanın tuşlu karşılığı. */
+  const olcekAr = useCallback((kat) => {
+    const mv = mvRef.current
+    if (!mv?.getCameraOrbit) return
+    const o = mv.getCameraOrbit()
+    mv.cameraOrbit = `${(o.theta * 180) / Math.PI}deg ${(o.phi * 180) / Math.PI}deg ${o.radius * kat}m`
+  }, [])
+
+  /*
+   * ═══════════════ PARMAK / FARE İLE TAŞI, DÖNDÜR, BOYUTLANDIR ═══════════════
+   *
+   * Tuş takımı ince ayar için; asıl kullanım parmakla olmalı — kamera
+   * ekranında da öyle. model-viewer'ın kendi denetimlerinde sürükleme
+   * DÖNDÜRÜYOR, taşımak için iki parmak (ya da farede sağ tuş) gerekiyor;
+   * kimse bunu kendiliğinden bulmuyordu.
+   *
+   * Bu yüzden ürün yerleştikten sonra model-viewer'ın üstüne kendi jest
+   * katmanımız geliyor ve kameradakiyle AYNI kuralı uyguluyor:
+   *   • tek parmak / fare sürükleme → ürünü TAŞI,
+   *   • iki parmak aç-kapa         → büyüt / küçült,
+   *   • iki parmak çevir           → döndür,
+   *   • fare tekerleği             → büyüt / küçült.
+   *
+   * Piksel → metre çevrimi görüntü yüksekliğine ve kameranın uzaklığına
+   * bağlı: uzaktayken aynı sürükleme daha çok metre eder, yakınken daha az.
+   * Sabit bir katsayı yakınlaştırmanın her kademesinde yanlış hissettiriyordu.
+   */
+  // Onay yazısı birkaç saniye sonra kendiliğinden kalkar
+  useEffect(() => {
+    if (!arBildirim) return undefined
+    const z = setTimeout(() => setArBildirim(null), 4000)
+    return () => clearTimeout(z)
+  }, [arBildirim])
+
+  const jestRef = useRef({ isaretciler: new Map(), uzaklik: 0, aci: 0 })
+
+  const jestOlcegi = useCallback(() => {
+    const mv = mvRef.current
+    if (!mv?.getCameraOrbit) return 0
+    const kutu = mv.getBoundingClientRect()
+    if (!kutu.height) return 0
+    // Görüntünün yüksekliği kabaca kamera uzaklığı kadar dünya yüksekliği gösterir
+    return mv.getCameraOrbit().radius / kutu.height
+  }, [])
+
+  const jestBasla = useCallback((e) => {
+    setIpucuAcik(false) // ilk dokunuşta ipucu kalkar, bir daha gelmez
+    const d = jestRef.current
+    // Parmak ÖNCE kaydedilir: setPointerCapture atarsa (bazı tarayıcılar ve
+    // otomatik testler atıyor) ikinci parmak hiç kaydolmuyor, iki parmaklı
+    // jestler sessizce tek parmak sanılıp taşımaya dönüşüyordu.
+    d.isaretciler.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId)
+    } catch {
+      /* yakalama olmasa da olur: olaylar zaten bu katmana geliyor */
+    }
+    if (d.isaretciler.size === 2) {
+      const [a, b] = [...d.isaretciler.values()]
+      d.uzaklik = Math.hypot(a.x - b.x, a.y - b.y)
+      d.aci = Math.atan2(b.y - a.y, b.x - a.x)
+    }
+  }, [])
+
+  const jestHareket = useCallback((e) => {
+    const d = jestRef.current
+    const onceki = d.isaretciler.get(e.pointerId)
+    if (!onceki) return
+    const simdi = { x: e.clientX, y: e.clientY }
+    d.isaretciler.set(e.pointerId, simdi)
+    const mv = mvRef.current
+    if (!mv?.getCameraOrbit) return
+
+    if (d.isaretciler.size === 1) {
+      // TAŞI — hedefi ürünün TERSİNE kaydırınca ürün parmağı takip eder
+      const m = jestOlcegi()
+      if (!m) return
+      const h = mv.getCameraTarget()
+      mv.cameraTarget =
+        String(h.x - (simdi.x - onceki.x) * m) + 'm ' +
+        String(h.y + (simdi.y - onceki.y) * m) + 'm ' +
+        String(h.z) + 'm'
+      return
+    }
+
+    if (d.isaretciler.size === 2) {
+      const [a, b] = [...d.isaretciler.values()]
+      const uzaklik = Math.hypot(a.x - b.x, a.y - b.y)
+      const aci = Math.atan2(b.y - a.y, b.x - a.x)
+      const o = mv.getCameraOrbit()
+      // Parmaklar açıldıkça yarıçap küçülür, yani ürün büyür
+      const kat = d.uzaklik > 0 ? d.uzaklik / uzaklik : 1
+      const derece = (o.theta * 180) / Math.PI + ((aci - d.aci) * 180) / Math.PI
+      mv.cameraOrbit =
+        String(derece) + 'deg ' +
+        String((o.phi * 180) / Math.PI) + 'deg ' +
+        String(o.radius * kat) + 'm'
+      d.uzaklik = uzaklik
+      d.aci = aci
+    }
+  }, [jestOlcegi])
+
+  const jestBitir = useCallback((e) => {
+    const d = jestRef.current
+    d.isaretciler.delete(e.pointerId)
+    if (d.isaretciler.size < 2) {
+      d.uzaklik = 0
+      d.aci = 0
+    }
+  }, [])
+
+  const jestTekerlek = useCallback((e) => {
+    olcekAr(e.deltaY > 0 ? 1.08 : 1 / 1.08)
+  }, [olcekAr])
+
+  /*
+   * SIFIRLA — açıyı, yakınlaştırmayı ve kaydırmayı başlangıca alıp yerleştirme
+   * adımına döner. Amazon'daki ↻ düğmesi de aynı işi yapıyor: ürün kadrajdan
+   * çıktığında ya da açı iyice bozulduğunda çıkış yolu.
+   */
+  const sifirlaAr = useCallback(() => {
+    const mv = mvRef.current
+    if (mv) {
+      mv.cameraOrbit = 'auto auto auto'
+      mv.cameraTarget = 'auto auto auto'
+      mv.fieldOfView = 'auto'
+      mv.resetTurntableRotation?.()
+      mv.jumpCameraToGoal?.()
+    }
+    setTusTakimi(false)
+    setAsama('yerlestir')
+  }, [])
+
+  /*
+   * KAYDET — kameradaki "Kaydet" düğmesinin AR'deki karşılığı.
+   *
+   * Kare iki yere birden gider: cihaza iner ve rapora verilir; PDF alındığında
+   * "Mekânda Görünüm" sayfası olarak basılır. Eskiden AR'den rapora hiçbir şey
+   * gitmiyordu — yalnızca kamera ekranı besliyordu.
+   *
+   * İndirme blob adresiyle yapılıyor, data: URL ile değil: iOS Safari büyük
+   * data: URL'lerini indiremeyip sessizce düşüyor (kamerada da aynı sebeple
+   * blob'a geçilmişti).
+   */
+  const kaydetAr = useCallback(async () => {
+    const mv = mvRef.current
+    if (!mv?.toDataURL) return
+    const veri = mv.toDataURL('image/jpeg', 0.92)
+    const raporaGirdi = onSaved?.(veri)
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'ar-' + (model?.name || 'tasarim') + '.jpg'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch {
+      /* indirme engellendiyse kare yine rapora girmiş olur */
+    }
+    setArBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+  }, [model, onSaved, t])
+
+  /*
+   * PAYLAŞ — o anki görüntüyü işletim sisteminin paylaşma sayfasına verir
+   * (WhatsApp, e-posta…). Desteklemeyen tarayıcıda dosya indirmeye düşer,
+   * yani düğme hiçbir cihazda ölü kalmaz. Kameradaki paylaş düğmesiyle aynı.
+   */
+  const paylasAr = useCallback(async () => {
+    const mv = mvRef.current
+    if (!mv?.toDataURL) return
+    const veri = mv.toDataURL('image/jpeg', 0.92)
+    onSaved?.(veri) // paylaşılan kare de rapora girsin
+    const ad = `ar-${model?.name || 'tasarim'}.jpg`
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const dosya = new File([blob], ad, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+        return
+      }
+    } catch {
+      /* kullanıcı vazgeçti ya da tarayıcı desteklemiyor — indirmeye düşülür */
+    }
+    const a = document.createElement('a')
+    a.href = veri
+    a.download = ad
+    a.click()
+  }, [model, t])
 
   /*
    * ARKA PLAN — kameradaki (ArView) ile aynı mantık: sahnenin arkasına hazır
@@ -1087,12 +1449,39 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
       {viewerUrl && (
         <div className="absolute inset-0 z-20 bg-black/90 flex flex-col">
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-            <span className="text-white text-sm font-semibold min-w-0">{t('scene3d.arReady')}</span>
-            <button type="button" onClick={close} className="text-white/80 hover:text-white text-sm p-3 min-h-[44px] inline-flex items-center">
-              {t('ar.close')}
-            </button>
+            <span className="text-white text-sm font-semibold min-w-0 truncate">{t('scene3d.arReady')}</span>
+            <div className="flex items-center gap-2.5 shrink-0">
+              {/*
+                KAYDET — kameradaki düğmenin karşılığı. Kare cihaza iner ve
+                rapora girer; yalnızca ürün yerleştikten sonra anlamlı.
+              */}
+              {asama === 'yerlesti' && (
+                <button
+                  type="button"
+                  onClick={kaydetAr}
+                  className="rounded-full px-4 py-3 min-h-[44px] text-[13px] font-semibold bg-white text-[#10141b] hover:bg-white/85 transition-colors"
+                >
+                  {t('ar.save')}
+                </button>
+              )}
+              <button type="button" onClick={close} className="text-white/80 hover:text-white text-sm p-3 min-h-[44px] inline-flex items-center">
+                {t('ar.close')}
+              </button>
+            </div>
           </div>
-          <div className="flex-1">
+
+          {/* Kaydetme onayı — kameradakiyle aynı yazı ve aynı davranış */}
+          {arBildirim && (
+            <div className="absolute top-14 inset-x-0 z-30 flex justify-center px-6 pointer-events-none">
+              <p className="m-0 rounded-full bg-black/85 text-white text-[12.5px] font-semibold px-4 py-2 text-center shadow-lg">
+                {arBildirim}
+              </p>
+            </div>
+          )}
+
+          {/* model-viewer'ın kendisi ve akışın katmanları aynı kutuda; katmanlar
+              onun ÜSTÜNE biniyor, o yüzden burası `relative`. */}
+          <div className="flex-1 relative">
             {/* model-viewer standart bir HTML özel elemanıdır; React JSX'te
                 doğrudan kullanılabilir, ekstra sarmalayıcıya gerek yoktur. */}
             <model-viewer
@@ -1115,9 +1504,83 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
                */
               ar-scale="auto"
               camera-controls
+              /* El animasyonu bir kez görünsün, sonra sussun — bkz. ipucuAcik */
+              interaction-prompt={ipucuAcik && asama === 'yerlesti' ? 'auto' : 'none'}
+              interaction-prompt-threshold="0"
               shadow-intensity="1"
               style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
             />
+
+            {/*
+              JEST KATMANI — parmak/fare ile taşı, döndür, boyutlandır.
+              Yalnızca ürün yerleştikten sonra ve model-viewer'ın ÜSTÜNDE.
+              model-viewer'ın kendi denetiminde sürükleme döndürüyor, taşımak
+              iki parmak istiyordu; burada kural kameradakiyle aynı:
+              tek parmak taşır, iki parmak döndürüp boyutlandırır.
+              z-10: araç düğmeleri (z-20) bunun üstünde kalmalı.
+              touchAction 'none': tarayıcı sayfayı kaydırmaya kalkmasın.
+            */}
+            {asama === 'yerlesti' && (
+              <div
+                className="absolute inset-0 z-10"
+                style={{ touchAction: 'none' }}
+                onPointerDown={jestBasla}
+                onPointerMove={jestHareket}
+                onPointerUp={jestBitir}
+                onPointerCancel={jestBitir}
+                onWheel={jestTekerlek}
+              />
+            )}
+
+            {/* ═════════════ YERLEŞTİRME AKIŞI (bkz. `asama`) ═════════════
+                Kameradakiyle birebir aynı parçalar — ArYerlestirme.jsx. */}
+
+            {/*
+              "Yerleştirmek için dokunun" — ürün yerleşir ve ARAÇLAR AÇILIR.
+              Dokunuş İŞLETİM SİSTEMİNİN AR'INI AÇMAZ.
+
+              Önce açıyordu ve bütün mesele buydu: telefonda dokunulur
+              dokunulmaz Quick Look/Scene Viewer devreye giriyor, ekranı
+              tamamen işletim sistemi devralıyordu. Bizim yön tuşlarımız,
+              sıfırlama düğmemiz ve parmak jestlerimiz hiç görünmüyordu —
+              kullanıcı AR'de kamera ekranındaki araçların hiçbirini
+              bulamıyordu.
+
+              Artık akış kameradakiyle aynı: yerleştir → araçlarla oynat.
+              Odaya gerçekten koymak isteyen alttaki "Odanızda görüntüleyin"
+              düğmesine basar; orası zaten işletim sisteminin işi.
+            */}
+            {asama === 'yerlestir' && (
+              <YerlestirKatmani t={t} onYerlestir={() => setAsama('yerlesti')} />
+            )}
+
+            {asama === 'yerlesti' && (
+              <AraclarSutunu
+                t={t}
+                onSifirla={sifirlaAr}
+                onPaylas={paylasAr}
+                onTusTakimi={() => setTusTakimi((a) => !a)}
+                tusTakimi={tusTakimi}
+              />
+            )}
+
+            {/* Yakınlaştırma sütunu — kameradaki +/− ile aynı yerde, sağ altta */}
+            {asama === 'yerlesti' && (
+              <div className="absolute right-3 bottom-32 z-20 flex flex-col rounded-full bg-black/55 backdrop-blur-sm overflow-hidden">
+                <button type="button" onClick={() => olcekAr(1 / 1.12)} aria-label={t('ar.bigger')} className="w-10 h-10 text-white text-xl leading-none hover:bg-white/15">
+                  +
+                </button>
+                <div className="h-px bg-white/25" />
+                <button type="button" onClick={() => olcekAr(1.12)} aria-label={t('ar.smaller')} className="w-10 h-10 text-white text-xl leading-none hover:bg-white/15">
+                  −
+                </button>
+              </div>
+            )}
+
+            {asama === 'yerlesti' && tusTakimi && (
+              /* Adım büyüklüğü AR ekranına ait: burada metre, kamerada piksel. */
+              <TusTakimi t={t} onKaydir={kaydirAr} onCevir={cevirAr} className="bottom-6" />
+            )}
           </div>
 
           {/*
@@ -1142,6 +1605,27 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
               </button>
             ) : (
               <p className="text-center text-[12px] text-white/55 m-0">{t('scene3d.arUnsupported')}</p>
+            )}
+            {/*
+              FOTOĞRAF — AR'a girildiğinde ekranı işletim sistemi devralıyor
+              (Quick Look / Scene Viewer). Oradaki beyaz deklanşör Apple'ın
+              kendi düğmesi; ne davranışına ne de görünümüne sayfadan
+              müdahale edebiliyoruz ve her cihazda çalışmıyor. Bizim kamera
+              ekranımızda deklanşör çalışıyor, üstelik kare hem cihaza iniyor
+              hem PDF raporuna giriyor — kısayol oraya götürüyor.
+            */}
+            {onOpenCamera && (
+              <button
+                type="button"
+                onClick={onOpenCamera}
+                className="mt-2 w-full rounded-full py-2.5 text-[13.5px] font-semibold border border-white/30 text-white/85 hover:border-white/70 transition-colors inline-flex items-center justify-center gap-2"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 8.5A1.5 1.5 0 014.5 7h2l1.2-2h8.6L17.5 7h2A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5v-9z" />
+                  <circle cx="12" cy="13" r="3.5" />
+                </svg>
+                {t('scene3d.takePhoto')}
+              </button>
             )}
             <p className="mt-2 text-center text-[11px] text-white/45 m-0">{t('scene3d.arHint')}</p>
           </div>

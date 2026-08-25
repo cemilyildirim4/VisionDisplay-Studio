@@ -1050,7 +1050,6 @@ export default function AdminPanel() {
       </header>
       <BrandStripe />
 
-<<<<<<< HEAD
       {/*
         ---- Gruplu sekme çubuğu ----
 
@@ -1075,13 +1074,8 @@ export default function AdminPanel() {
         kendi grubundan kopup yanlış sekmenin üstünde kalıyor, gruplama
         anlatmak yerine yanıltıyordu.
       */}
-      <div className="bg-white dark:bg-[#121821] border-b border-neutral-200 dark:border-[#2a3342] px-4 sm:px-8">
+      <div className="bg-white dark:bg-[#121821] border-b border-neutral-200 dark:border-[#2a3342] px-4 sm:px-8 w-full">
         <div className="flex flex-wrap items-end gap-x-1 lg:gap-6">
-=======
-      {/* ---- Gruplu sekme çubuğu ---- */}
-      <div className="bg-white dark:bg-[#121821] border-b border-neutral-200 dark:border-[#2a3342] px-4 sm:px-8 overflow-x-auto w-full">
-        <div className="flex items-end gap-4 sm:gap-6 min-w-max">
->>>>>>> feature/mobile-responsive
           {TAB_GROUPS.map((group, gi) => (
             <div key={group.label} className="flex flex-wrap items-end lg:gap-1">
               {gi > 0 && <span className="hidden lg:block w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 mb-2" />}
@@ -1095,11 +1089,7 @@ export default function AdminPanel() {
                       key={t.key}
                       type="button"
                       onClick={() => setTab(t.key)}
-<<<<<<< HEAD
-                      className={`whitespace-nowrap px-2 lg:px-3 xl:px-4 py-2 lg:py-2.5 text-[13px] lg:text-sm font-medium border-b-2 -mb-px transition-colors ${
-=======
-                      className={`whitespace-nowrap px-3 sm:px-4 py-2.5 min-h-[44px] text-sm font-medium border-b-2 -mb-px transition-colors ${
->>>>>>> feature/mobile-responsive
+                      className={`whitespace-nowrap px-2 lg:px-3 xl:px-4 py-2 lg:py-2.5 min-h-[44px] text-[13px] lg:text-sm font-medium border-b-2 -mb-px transition-colors ${
                         tab === t.key
                           ? 'border-[#2962ad] text-[#2962ad] dark:text-[#9db9dc]'
                           : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'

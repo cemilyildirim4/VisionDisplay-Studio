@@ -44,6 +44,23 @@ public class PdfReportRequestDto : CreateConfigurationDto
     /// <summary>data:image/...;base64,... veya ham base64. En fazla ~6 MB çözülür.</summary>
     public string? PreviewImageBase64 { get; set; }
 
+    /// <summary>
+    /// Kamerada ("Nasıl Görüneceğini Gör") çekilip KAYDEDİLEN kare. Varsa
+    /// rapora "Mekânda Görünüm" sayfası olarak eklenir; yoksa o sayfa hiç
+    /// basılmaz. Önizleme görseliyle aynı biçim ve aynı boyut sınırı.
+    /// </summary>
+    public string? ArImageBase64 { get; set; }
+
+    /// <summary>
+    /// Kullanıcının rapora ELİYLE eklediği mekân fotoğrafları.
+    ///
+    /// iPhone'da AR (Quick Look) içindeki deklanşör Apple'ın kendi düğmesi:
+    /// çektiği kare doğrudan Fotoğraflar'a gidiyor, sayfa onu hiç göremiyor.
+    /// Bu alan o kareleri (ya da herhangi bir mekân fotoğrafını) rapora
+    /// sokmanın yolu. Her biri ayrı bir "Mekânda Görünüm" sayfası olur.
+    /// </summary>
+    public List<string>? ArImagesBase64 { get; set; }
+
     public PdfReportExtras ToExtras() => new()
     {
         Phone = Phone,
@@ -57,9 +74,34 @@ public class PdfReportRequestDto : CreateConfigurationDto
         WallHeightM = WallHeightM,
         ScreenMode = ScreenMode,
         PreviewImage = DecodePreview(PreviewImageBase64),
+        ArImages = DecodeAll(ArImageBase64, ArImagesBase64),
     };
 
     private const int MaxPreviewBytes = 6 * 1024 * 1024;
+
+    /// <summary>Rapora en çok bu kadar mekân karesi girer — PDF şişmesin.</summary>
+    private const int MaxArImages = 6;
+
+    /// <summary>
+    /// Otomatik kaydedilen kare ile elle eklenenleri tek listede birleştirir.
+    /// Çözülemeyen ya da boş olanlar sessizce atlanır: tek bozuk fotoğraf
+    /// yüzünden raporun tamamı düşmemeli.
+    /// </summary>
+    private static List<byte[]> DecodeAll(string? tek, List<string>? liste)
+    {
+        var sonuc = new List<byte[]>();
+        var bytes = DecodePreview(tek);
+        if (bytes != null) sonuc.Add(bytes);
+
+        foreach (var ham in liste ?? new List<string>())
+        {
+            if (sonuc.Count >= MaxArImages) break;
+            var b = DecodePreview(ham);
+            if (b != null) sonuc.Add(b);
+        }
+
+        return sonuc;
+    }
 
     private static byte[]? DecodePreview(string? raw)
     {

@@ -15,9 +15,10 @@ import { useLang } from './useLang.js'
  */
 
 const HUMAN_HEIGHT_M = 1.8
-// Duvar YÜKSEKLİĞİ bundan azsa silüet gösterilmez.
-// 2 m'de figür duvarın %90'ını kaplar — hâlâ okunur bir ölçek referansıdır.
-const HUMAN_MIN_WALL_M = 2
+// Duvar YÜKSEKLİĞİ bundan azsa silüet gösterilmez. Eşik figürün kendi boyu:
+// duvar 1,80 m ise figür tam duvar kadardır, hâlâ doğru bir ölçek referansıdır.
+// (Eşik 2 m iken duvarı 1,80'e indirince silüet ortadan kayboluyordu.)
+const HUMAN_MIN_WALL_M = HUMAN_HEIGHT_M
 // İç L Tipi: dikiş (köşe) kenarının üstten ve alttan içeri girme oranı (%).
 // Kanatlar trapez olur → köşenin geriye kaçtığı hissi. 0 = düz, büyüdükçe köşe
 // daha keskin (90°'ye yakın) görünür.
@@ -279,8 +280,7 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     const birlesikClip = `polygon(0% 0%, ${lYuzde}% ${p}%, 100% 0%, 100% 100%, ${lYuzde}% ${100 - p}%, 0% 100%)`
 
     return (
-<<<<<<< HEAD
-      <div className="relative shrink-0" style={{ width: wPx, height: hPx }}>
+      <div className="relative shrink-0 max-w-full" style={{ width: wPx, height: hPx }}>
         {/*
           DİKİŞ DOLGUSU. İki kanat komşu kutular ve kırpma kenarları
           yumuşatıldığında tam örtüşmüyor; dikişin alt ucunda birkaç piksellik
@@ -306,9 +306,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
             }}
           />
         )}
-=======
-      <div className="relative shrink-0 max-w-full" style={{ width: wPx, height: hPx }}>
->>>>>>> feature/mobile-responsive
         <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
           {/*
             İKİ YÜZ FARKLI AYDINLIKTA — köşeyi asıl anlatan şey bu.
@@ -786,7 +783,7 @@ export default function WallPreview({
     // Duvarın çevresindeki mutlak konumlu öğeler için sabit pay (tek ekran
     // dalındaki hesapla aynı mantık): kırpılmasınlar diye yer ayrılır.
     // Silüet duvarla aynı satırda olduğu için genişliği de hesaba katılır.
-    const showHumanM = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M
+    const showHumanM = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005
     const humanWmM = showHumanM ? HUMAN_HEIGHT_M * HUMAN_FIG_W_RATIO : 0
     const sahnePayM = showMeasurements ? 150 : 48
     // Dar ekranda yan pay en az 152 (76 + 76): satır artır/azalt düğmesi ve ölçü
@@ -802,7 +799,32 @@ export default function WallPreview({
     const sahneOlcek = sahneOlcekVarsayilan || Infinity
     // Ust sinir yalnizca sahne YOKKEN: sahne varsa olcegi sahne belirler,
     // sabit bir tavan mekani tuvalin ortasinda kucucuk birakiyordu.
-    const pxPerM = Math.min(availW / (wallWm + humanWmM), availH / wallHm, sahneVar ? Infinity : 280, sahneOlcek)
+    /*
+     * KAVİS PAYI (çoklu ekran).
+     *
+     * Kavisli ekranın tuvali kendi kutusundan `maxD` kadar uzun: kavis üstte
+     * ve altta eşit taşıyor (bkz. CurvedScreen). Tek ekran dalında bu taşma
+     * ölçek hesabına katılıyordu, çoklu dalda katılmıyordu — tasarım kabın
+     * kenarına dayandığında kavis kırpılıyor ve ekran DÜZ görünüyordu.
+     *
+     * Pay, düzendeki EN DERİN kavisten hesaplanıyor: her ekranın derinliği
+     * kendi genişliğine oranlı, yani en geniş kavisli ekran belirleyici.
+     */
+    const kavisPayiM = list.reduce((enBuyuk, s) => {
+      if (s.type !== 'curved' && s.type !== 'curvedIn') return enBuyuk
+      const derinlik =
+        (Math.max(0, Math.min(100, curveAmount)) / 100) *
+        curveDepthFor(s.type === 'curvedIn') *
+        s.wm
+      return Math.max(enBuyuk, derinlik)
+    }, 0)
+
+    const pxPerM = Math.min(
+      availW / (wallWm + humanWmM),
+      availH / (wallHm + kavisPayiM),
+      sahneVar ? Infinity : 280,
+      sahneOlcek,
+    )
     olcekRef.current = pxPerM
     const wallW = wallWm * pxPerM
     const wallH = wallHm * pxPerM
@@ -810,6 +832,17 @@ export default function WallPreview({
     const maxHpx = maxHm * pxPerM
     const marginXpx = (wallW - totalWpx) / 2
     const stripTop = (wallH - maxHpx) / 2
+    /*
+     * Kavis payının piksel karşılığı. Kavisli ekran şeridin üstüne ve altına
+     * eşit taşıyor (yarısı üstte, yarısı altta). Ölçü etiketleri duvara göre
+     * konumlanıyordu; bombe duvarın üstüne çıkınca genişlik etiketinin ÜSTÜNE
+     * biniyor ve etiket görünmez oluyordu. Etiketler ve kılavuz çizgileri
+     * bombenin dışına itiliyor — tek ekran dalında da ölçüler bombenin
+     * dışında duruyor.
+     */
+    const kavisPayiPx = kavisPayiM * pxPerM
+    const bombePx = kavisPayiPx / 2
+
     const marginXm = (wallWm - totalWm) / 2
     const marginYm = (wallHm - maxHm) / 2
     const humanH = HUMAN_HEIGHT_M * pxPerM
@@ -880,7 +913,16 @@ export default function WallPreview({
 )}
           <div className="relative">
             {/* Sınırlayıcı duvar */}
-            <div style={{ width: wallW, height: wallH }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative overflow-hidden`}>
+            {/*
+              Kavis VARSA kutu kırpmaz. Kavisli ekranın tuvali kendi şeridinden
+              taşıyor; duvar kutusu `overflow-hidden` olduğu için taşan kısım
+              kesiliyor ve panel düz bir dikdörtgen olarak çıkıyordu. Tek ekran
+              dalında ekran bu kutunun içinde olmadığı için sorun görülmüyordu.
+            */}
+            <div
+              style={{ width: wallW, height: wallH }}
+              className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative ${kavisPayiM > 0 ? 'overflow-visible' : 'overflow-hidden'}`}
+            >
               {/* Ekranlar şeridi (ortalanmış, alta hizalı) */}
               <div style={{ position: 'absolute', left: marginXpx, top: stripTop, width: totalWpx, height: maxHpx }}>
                 {/* z0: Tek içerik katmanı — tüm şeride yayılır, ekran şekline kırpılır */}
@@ -946,21 +988,21 @@ export default function WallPreview({
             {showMeasurements && (
               <>
                 {/* Dikey kılavuz çizgileri: duvar kenarları + ekran sınırları */}
-                <VL left={0} top={-56} height={wallH + 140} />
-                <VL left={wallW} top={-56} height={wallH + 140} />
+                <VL left={0} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
+                <VL left={wallW} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 {placed.map((s, i) => (
-                  <VL key={`v${i}`} left={marginXpx + s.xStart} top={-56} height={wallH + 140} />
+                  <VL key={`v${i}`} left={marginXpx + s.xStart} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 ))}
-                <VL left={marginXpx + totalWpx} top={-56} height={wallH + 140} />
+                <VL left={marginXpx + totalWpx} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
 
                 {/* Sol/sağ kenar payı (üstte, gri) */}
                 {marginXpx > 34 && (
                   <>
-                    <div className="absolute" style={{ left: marginXpx / 2, top: -40, transform: 'translateX(-50%)' }}>
-            <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(marginXm)}</span>
+                    <div className="absolute" style={{ left: marginXpx / 2, top: -40 - bombePx, transform: 'translateX(-50%)' }}>
+                      <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(marginXm)}</span>
                     </div>
-                    <div className="absolute" style={{ left: wallW - marginXpx / 2, top: -40, transform: 'translateX(-50%)' }}>
-            <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(marginXm)}</span>
+                    <div className="absolute" style={{ left: wallW - marginXpx / 2, top: -40 - bombePx, transform: 'translateX(-50%)' }}>
+                      <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(marginXm)}</span>
                     </div>
                   </>
                 )}
@@ -971,29 +1013,13 @@ export default function WallPreview({
                     üstünde ürünün parçasıymış gibi duruyordu. */}
                 {placed.map((s, i) => {
                   const isTop = i % 2 === 0
-<<<<<<< HEAD
-                  return (
-                    <div
-                      key={`lbl${i}`}
-                      className="absolute flex flex-col items-center gap-1"
-                      style={{ left: marginXpx + s.center, transform: 'translateX(-50%)', top: isTop ? -34 : wallH + 26 }}
-=======
-                  const name = (
-                    <span className="bg-brand text-white text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-1 rounded-lg whitespace-nowrap max-w-[70vw] overflow-hidden text-ellipsis">
-                      {t('screen.label')} {String(i + 1).padStart(2, '0')} · {turAdi(s.type)}
-                    </span>
-                  )
-                  const meas = (
-                    <span className="bg-neutral-800 text-white text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(s.wm)}</span>
-                  )
                   return (
                     <div
                       key={`lbl${i}`}
                       className="absolute flex flex-col items-center gap-1 max-w-[70vw] pointer-events-none"
-                      style={{ left: marginXpx + s.center, transform: 'translateX(-50%)', top: isTop ? -54 : wallH + 26 }}
->>>>>>> feature/mobile-responsive
+                      style={{ left: marginXpx + s.center, transform: 'translateX(-50%)', top: isTop ? -34 - bombePx : wallH + 26 + bombePx }}
                     >
-                      <span className="bg-neutral-800 text-white text-[11px] px-2 py-1 rounded-lg whitespace-nowrap">{fmtU(s.wm)}</span>
+                      <span className="bg-neutral-800 text-white text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(s.wm)}</span>
                     </div>
                   )
                 })}
@@ -1058,7 +1084,7 @@ export default function WallPreview({
    */
   const SIDE_UI_PX = sahneVar ? (dar ? Math.max(sahnePay, 152) : sahnePay) : dar ? 152 : 180 // sol + sağ
   const VERT_UI_PX = sahneVar ? sahnePay : dar ? 92 : 190 // üst + alt
-  const showHuman = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M
+  const showHuman = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005
   const HUMAN_GAP_PX = 24 // flex gap-6
   const humanWm = showHuman ? HUMAN_HEIGHT_M * HUMAN_FIG_W_RATIO : 0
 
@@ -1146,7 +1172,7 @@ export default function WallPreview({
   return (
     <div ref={containerRef} className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0">
       <div dir="ltr" className="flex items-end gap-3 sm:gap-6 max-w-full">
-        {!sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M && (
+        {!sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005 && (
             <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
           )}
 
@@ -1187,19 +1213,6 @@ export default function WallPreview({
                 <SegH w={marginXpx} label={fmtU(marginXm)} muted />
               </div>
 
-<<<<<<< HEAD
-=======
-              {/* Ekran türü — çizimin altında, ölçülerle aynı hizada */}
-              <div
-                className="absolute flex justify-center"
-                style={{ left: marginXpx, top: marginYpx + screenH + 10, width: screenW }}
-              >
-                <span className="bg-brand text-white text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-1 rounded-lg whitespace-nowrap max-w-[70vw] overflow-hidden text-ellipsis">
-                  {turAdi(screenType)}
-                </span>
-              </div>
-
->>>>>>> feature/mobile-responsive
               {/* Sağ ölçü etiketleri */}
               <div style={{ position: 'absolute', left: Math.min(wallW + 10 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
                 <SegV h={marginYpx} label={fmtU(marginYm)} muted />
@@ -1219,15 +1232,10 @@ export default function WallPreview({
 
               {/* Sağdaki +/- : Satır (ekran yüksekliği) */}
               <div
-<<<<<<< HEAD
-                data-pdf-gizle className="absolute flex flex-col rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm"
+                data-pdf-gizle className="absolute flex flex-col rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
                 /* Telefonda kabın dışına düşüp tıklanamaz hale geliyordu: sağ
                    kenarın içinde kalacak şekilde sınırlanıyor. */
                 style={{ left: Math.min(wallW + 44 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 34)), top: marginYpx + screenH / 2, transform: 'translateY(-50%)' }}
-=======
-                data-pdf-gizle className="absolute flex flex-col rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
-                style={{ left: wallW + 44 + sahnePayPx, top: marginYpx + screenH / 2, transform: 'translateY(-50%)' }}
->>>>>>> feature/mobile-responsive
               >
                 <StepBtn dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
                 <div className="h-px bg-neutral-200 dark:bg-[#2c333f]" />

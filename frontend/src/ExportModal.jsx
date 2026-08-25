@@ -81,7 +81,6 @@ export default function ExportModal({ open, onClose, summary }) {
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(null)
-
   const setContactField = (field, value) => {
     const setters = {
       customer: setCustomer,
@@ -263,6 +262,16 @@ export default function ExportModal({ open, onClose, summary }) {
           wallHeightM: Number(summary.height) || null,
           screenMode: summary.screenMode || 'single',
           previewImageBase64,
+          /*
+           * Kamerada "Kaydet" denen kare. Yoksa alan boş gider ve rapora o
+           * sayfa hiç eklenmez — akış değişmez.
+           */
+          /*
+           * Kamerada ve AR'de kaydedilen kareler. Her biri raporda ayrı bir
+           * "Mekânda Görünüm" sayfası olur. Liste boşsa o sayfalar hiç
+           * basılmaz; yapılandırma görseli sayfası ise HER ZAMAN basılır.
+           */
+          arImagesBase64: summary.arFotolar || [],
         }),
       })
       if (!res.ok) {
@@ -309,6 +318,12 @@ export default function ExportModal({ open, onClose, summary }) {
         screenType: summary.screenType || null,
         resolution: summary.resolution || null,
         screensSummary: screensText.join(' · '),
+        /*
+         * Tasarımın tamamı. screensSummary yalnızca insan okusun diye yazılmış
+         * bir cümle; buradaki JSON ise makineye geri verilebilir hâli ve
+         * "Tekliflerim → Düzenle" tasarımı bundan birebir açıyor.
+         */
+        configJson: summary.tasarim ? JSON.stringify(summary.tasarim) : null,
       }
       const sendQuote = (body) =>
         apiFetch(`${API_URL}/api/quotes`, {
@@ -503,15 +518,9 @@ export default function ExportModal({ open, onClose, summary }) {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <button
             type="submit"
-<<<<<<< HEAD
             disabled={!hazir || busy}
-            className={`flex-1 rounded-full py-3 text-sm font-semibold transition-colors ${
-              hazir && !busy ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
-=======
-            disabled={!consent || busy || !isAuthenticated}
             className={`flex-1 rounded-full py-3 min-h-[44px] text-sm font-semibold transition-colors w-full sm:w-auto ${
-              consent && !busy && isAuthenticated ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
->>>>>>> feature/mobile-responsive
+              hazir && !busy ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
           >
             {busy ? t('exp.generating') : t('pdf.professional')}
@@ -521,13 +530,8 @@ export default function ExportModal({ open, onClose, summary }) {
             disabled={!hazir || busy}
             onClick={handleExcelExport}
             title={t('exp.csvHint')}
-<<<<<<< HEAD
-            className={`rounded-full px-4 py-3 text-sm font-semibold border transition-colors ${
-              hazir && !busy
-=======
             className={`rounded-full px-4 py-3 min-h-[44px] text-sm font-semibold border transition-colors w-full sm:w-auto ${
-              consent && !busy
->>>>>>> feature/mobile-responsive
+              hazir && !busy
                 ? 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-brand hover:text-brand'
                 : 'border-neutral-200 dark:border-[#242b36] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}

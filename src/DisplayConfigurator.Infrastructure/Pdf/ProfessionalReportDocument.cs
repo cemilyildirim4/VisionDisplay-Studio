@@ -56,6 +56,71 @@ public class ProfessionalReportDocument : IDocument
             page.Content().Element(ComposeScreenVisual);
             page.Footer().Element(ComposeFooter);
         });
+
+        /*
+         * MEKÂNDA GÖRÜNÜM — yalnızca müşteri kamerada bir kare KAYDETTİYSE.
+         * Yapılandırma görseli ekranı teknik olarak gösteriyor; bu sayfa aynı
+         * ekranın müşterinin kendi mekânındaki hâlini gösteriyor. Kare yoksa
+         * sayfa hiç açılmaz, rapor eskisi gibi kalır.
+         */
+        /*
+         * Her mekân karesi ayrı bir sayfa. Kareler iki yoldan geliyor:
+         * kamerada "Kaydet" denen kare ve kullanıcının rapora eklediği
+         * fotoğraflar (iPhone'da Quick Look'un çektiği kareyi rapora sokmanın
+         * tek yolu bu — o kare Fotoğraflar'a gidiyor, sayfa göremiyor).
+         * Liste boşsa hiç sayfa açılmaz, rapor eskisi gibi kalır.
+         */
+        foreach (var kare in _extras.ArImages)
+        {
+            if (kare is not { Length: > 0 }) continue;
+            var gorsel = kare;
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(1.4f, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(9.5f).FontFamily("Arial").FontColor(Ink));
+
+                page.Header().Element(ComposeArHeader);
+                page.Content().Element(c => ComposeArVisual(c, gorsel));
+                page.Footer().Element(ComposeFooter);
+            });
+        }
+    }
+
+    private void ComposeArHeader(IContainer container)
+    {
+        var size = $"{_config.TotalWidthM:F2} × {_config.TotalHeightM:F2} m";
+        container.Column(col =>
+        {
+            col.Item().Row(row =>
+            {
+                row.RelativeItem().Text("MEKÂNDA GÖRÜNÜM")
+                    .FontSize(11).Bold().FontColor(BrandBlue);
+                row.AutoItem().Text($"{Empty(_config.CabinModelName, "")} · {size}")
+                    .FontSize(9).FontColor(Colors.Grey.Darken1);
+            });
+            col.Item().PaddingTop(6).Height(3).Background(BrandBlue);
+            col.Item().Height(2).Background(BrandOrange);
+        });
+    }
+
+    private void ComposeArVisual(IContainer container, byte[] gorsel)
+    {
+        container.Column(col =>
+        {
+            col.Item().AlignCenter().AlignMiddle()
+                .Image(gorsel)
+                .FitArea();
+            /*
+             * Kenar boşlukları TAHMİN — kamerada derinlik algılama yok, ölçek
+             * müşterinin tasarımı duvara oturtmasından geliyor. Yanlış
+             * anlaşılmasın diye rapor bunu açıkça yazıyor.
+             */
+            col.Item().PaddingTop(10)
+                .Text("Kamera görüntüsü üzerine yerleştirilmiş temsilî görünüm. Ekranın kendi ölçüleri yapılandırmadan gelir ve kesindir; kenar boşlukları tahminîdir.")
+                .FontSize(7.5f).FontColor(Colors.Grey.Darken1);
+        });
     }
 
     private void ComposeScreenVisual(IContainer container)
@@ -104,6 +169,15 @@ public class ProfessionalReportDocument : IDocument
         });
     }
 
+    /// <summary>Ölçü hissi veren insan silüetinin gerçek boyu (metre).</summary>
+    private const float HumanHeightM = 1.80f;
+
+    /// <summary>Şematik kutusunun toplam yüksekliği (punto).</summary>
+    private const float SchematicH = 320f;
+
+    /// <summary>Kutunun kenarlığı + iç payı: ızgara bu kadar içeride başlıyor.</summary>
+    private const float SchematicPad = 6.5f;
+
     private void DrawSchematic(IContainer container)
     {
         int cols = Math.Max(1, _config.Cols);
@@ -112,11 +186,18 @@ public class ProfessionalReportDocument : IDocument
         int visR = Math.Min(rows, 12);
         bool lshape = string.Equals(_extras.ScreenType, "lshape", StringComparison.OrdinalIgnoreCase);
 
+        // Izgaranın net yüksekliği bu kadar punto ve ekranın TotalHeightM'sine
+        // karşılık geliyor → 1 metre = izgaraH / TotalHeightM punto.
+        var izgaraH = SchematicH - 2 * SchematicPad;
+        var ekranHm = _config.TotalHeightM > 0.05 ? (float)_config.TotalHeightM : HumanHeightM;
+        // Ekran insandan kısaysa figür kutuyu taşırmasın diye tavan koyuyoruz.
+        var insanH = Math.Min(izgaraH - 12f, izgaraH * HumanHeightM / ekranHm);
+
         container.Column(col =>
         {
             col.Item().AlignCenter().Text($"{_config.TotalWidthM:F2} m")
                 .FontSize(11).Bold().FontColor(BrandBlue);
-            col.Item().PaddingTop(6).Height(320).Row(row =>
+            col.Item().PaddingTop(6).Height(SchematicH).Row(row =>
             {
                 row.RelativeItem().Element(box =>
                 {
@@ -130,7 +211,20 @@ public class ProfessionalReportDocument : IDocument
                 row.ConstantItem(36).AlignMiddle().AlignCenter()
                     .Text($"{_config.TotalHeightM:F2} m")
                     .FontSize(11).Bold().FontColor(BrandBlue);
-                row.ConstantItem(42).AlignBottom().PaddingBottom(12).Element(DrawHuman);
+                /*
+                 * İnsan silüeti ÖLÇEKLİ çizilir: ekranın yüksekliği ızgaranın
+                 * yüksekliğine karşılık geldiğine göre, 1,80 m'lik figür de
+                 * aynı ölçekte olmalı. Eskiden sabit ~66 punto yüksekliğinde
+                 * çiziliyordu; 2 m'lik ekranın yanında da 6 m'lik ekranın
+                 * yanında da aynı boyda duruyor, "1.8 m" etiketi gerçeği
+                 * söylemiyordu.
+                 *
+                 * Ayak hizası ızgaranın alt kenarına oturur (PaddingBottom =
+                 * kutunun kenarlık + iç payı).
+                 */
+                row.ConstantItem(Math.Max(42f, insanH * HumanFigWRatio + 6f))
+                    .AlignBottom().PaddingBottom(SchematicPad)
+                    .Element(c => DrawHuman(c, insanH));
             });
             col.Item().PaddingTop(10).AlignCenter()
                 .Text($"{Empty(_config.CabinModelName, "Model")}  ·  {cols} × {rows}  ·  {ScreenTypeLabel(_extras.ScreenType)}")
@@ -181,14 +275,35 @@ public class ProfessionalReportDocument : IDocument
         });
     }
 
-    private static void DrawHuman(IContainer container)
+    /* Figürün en/boy oranı — ön yüzdeki WallPreview silüetiyle aynı. */
+    private const float HumanFigWRatio = 0.43f;
+
+    /// <summary>
+    /// 1,80 m'lik figürü verilen puntoluk boyda çizer. Parçaların oranları
+    /// (baş · gövde · bacak) sabit; yalnızca ölçek değişir.
+    /// </summary>
+    private static void DrawHuman(IContainer container, float h)
     {
+        /*
+         * Parçaların toplamı TAM h olmalı — figürün tepesi ile ayak hizası
+         * arası 1,80 m'yi temsil ediyor. Boy etiketi bu yüzden figürün ÜSTÜNE
+         * konuyor: sütun alta hizalı olduğu için üstteki fazlalık figürü
+         * yukarı itmez, ayaklar ızgaranın alt kenarında kalır. (Etiket altta
+         * dururken figürü kendi yüksekliği kadar kısaltmak zorunda kalıyorduk.)
+         */
+        var bas = h * 0.19f;
+        var bosluk = h * 0.03f;
+        var govde = h * 0.42f;
+        var bacak = h - bas - govde - 2 * bosluk;
+        var renk = Color.FromHex("#94a3b8");
+
         container.Column(c =>
         {
-            c.Item().AlignCenter().Width(12).Height(12).Background(Color.FromHex("#94a3b8"));
-            c.Item().AlignCenter().PaddingTop(2).Width(16).Height(28).Background(Color.FromHex("#94a3b8"));
-            c.Item().AlignCenter().PaddingTop(2).Width(10).Height(22).Background(Color.FromHex("#94a3b8"));
-            c.Item().AlignCenter().PaddingTop(4).Text("1.8 m").FontSize(7).FontColor(Colors.Grey.Darken1);
+            c.Item().AlignCenter().PaddingBottom(3)
+                .Text($"{HumanHeightM:0.00} m").FontSize(7).FontColor(Colors.Grey.Darken1);
+            c.Item().AlignCenter().Width(bas).Height(bas).Background(renk);
+            c.Item().AlignCenter().PaddingTop(bosluk).Width(bas * 1.3f).Height(govde).Background(renk);
+            c.Item().AlignCenter().PaddingTop(bosluk).Width(bas * 0.8f).Height(bacak).Background(renk);
         });
     }
 
