@@ -59,7 +59,7 @@ function metre(v) {
 function Etiket({ x, y, children, vurgu = false }) {
   return (
     <div
-      className={`absolute -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap shadow-lg ${
+      className={`absolute -translate-x-1/2 -translate-y-1/2 px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-semibold whitespace-nowrap max-w-[42vw] sm:max-w-none overflow-hidden text-ellipsis shadow-lg pointer-events-none ${
         vurgu ? 'bg-brand text-white' : 'bg-black/70 text-white'
       }`}
       /* Tasarımın üstünde kalmalı: kenarlara yapışan ölçüler aksi hâlde
@@ -77,7 +77,7 @@ function AracDugme({ onClick, etiket, deger, aktif = false }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg min-w-[64px] transition-colors ${
+      className={`flex flex-col items-center justify-center gap-0.5 px-3 py-3 min-h-[44px] rounded-lg min-w-[64px] transition-colors ${
         aktif ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
       }`}
     >
@@ -583,25 +583,25 @@ export default function ArView({
           kapatmak, ekranı hiç denenemez bırakıyordu.
         */}
         {hata && (
-          <div className="absolute inset-0 flex items-center justify-center p-8 bg-[#10141b]">
-            <div className="max-w-sm text-center">
+          <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-8 bg-[#10141b]">
+            <div className="max-w-sm w-full text-center px-2">
               <p className="text-neutral-200 text-sm leading-relaxed m-0">{hata}</p>
               <div className="mt-5 flex flex-col gap-2.5">
                 <button
                   type="button"
                   onClick={() => fotoRef.current?.click()}
-                  className="rounded-full px-6 py-2.5 text-sm font-semibold bg-brand text-white hover:bg-brand-dark transition-colors"
+                  className="rounded-full px-6 py-3 min-h-[44px] text-sm font-semibold bg-brand text-white hover:bg-brand-dark transition-colors w-full"
                 >
                   {t('ar.usePhoto')}
                 </button>
                 <button
                   type="button"
                   onClick={yenidenDene}
-                  className="rounded-full px-6 py-2 text-[13px] font-semibold border border-white/25 text-white/85 hover:border-white/60 transition-colors"
+                  className="rounded-full px-6 py-3 min-h-[44px] text-[13px] font-semibold border border-white/25 text-white/85 hover:border-white/60 transition-colors w-full"
                 >
                   {t('ar.retry')}
                 </button>
-                <button type="button" onClick={onClose} className="text-[12.5px] text-white/50 hover:text-white/80 mt-1">
+                <button type="button" onClick={onClose} className="text-[12.5px] text-white/50 hover:text-white/80 mt-1 min-h-[44px] inline-flex items-center justify-center w-full">
                   {t('ar.close')}
                 </button>
               </div>
@@ -716,27 +716,27 @@ export default function ArView({
         )}
 
         {/* ---------------------------------------------------------- ÜST BAR */}
-        <div className="absolute top-0 inset-x-0 flex items-center gap-3 px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
+        <div className="absolute top-0 inset-x-0 flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-b from-black/70 to-transparent">
           <button
             type="button"
             onClick={onClose}
             aria-label={t('ar.close')}
-            className="text-white/90 hover:text-white p-1"
+            className="text-white/90 hover:text-white p-3 min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
           >
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
-          <span className="text-white text-[13px] font-semibold">{t('ar.title')}</span>
+          <span className="text-white text-[13px] font-semibold min-w-0 truncate">{t('ar.title')}</span>
 
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2 sm:gap-2.5 w-full sm:w-auto">
             {/* Ölçüleri göster/gizle — fotoğraf çekmeden önce sadeleştirmek için */}
             <button
               type="button"
               onClick={() => setOlculer((o) => !o)}
               aria-label={olculer ? t('tool.hideMeasures') : t('tool.showMeasures')}
               title={olculer ? t('tool.hideMeasures') : t('tool.showMeasures')}
-              className={`rounded-full px-3 py-1.5 text-[13px] font-semibold border transition-colors ${
+              className={`rounded-full px-3 py-3 min-h-[44px] text-[13px] font-semibold border transition-colors ${
                 olculer
                   ? 'border-white/30 text-white/85 hover:border-white/70'
                   : 'border-white/70 bg-white/15 text-white'
@@ -762,7 +762,7 @@ export default function ArView({
               type="button"
               onClick={kaydet}
               disabled={mesgul}
-              className="rounded-full px-4 py-1.5 text-[13px] font-semibold bg-white text-[#10141b] hover:bg-white/85 disabled:opacity-50 transition-colors"
+              className="rounded-full px-4 py-3 min-h-[44px] text-[13px] font-semibold bg-white text-[#10141b] hover:bg-white/85 disabled:opacity-50 transition-colors"
             >
               {t('ar.save')}
             </button>
@@ -771,7 +771,7 @@ export default function ArView({
 
         {/* Kullanım uyarısı — perspektif düzeltmesi yok, karşıdan bakılmalı */}
         {!hata && (
-          <p className="absolute top-16 inset-x-0 text-center text-[11px] text-white/70 px-8 m-0 pointer-events-none">
+          <p className="absolute top-20 sm:top-16 inset-x-0 text-center text-[11px] text-white/70 px-4 sm:px-8 m-0 pointer-events-none max-w-full">
             {t('ar.hint')}
           </p>
         )}
@@ -780,12 +780,12 @@ export default function ArView({
         {!hata && arAcik && (
           /* Sağ kenarın ORTASINDA değil altında: ortada tasarımın ölçü
              etiketlerinin üstüne biniyordu. */
-          <div className="absolute right-3 bottom-32 flex flex-col rounded-full bg-black/55 backdrop-blur-sm overflow-hidden">
-            <button type="button" onClick={() => adimla(1.12)} aria-label={t('ar.bigger')} className="w-10 h-10 text-white text-xl leading-none hover:bg-white/15">
+          <div className="absolute bottom-24 right-2 sm:bottom-32 sm:right-3 flex flex-row sm:flex-col rounded-full bg-black/55 backdrop-blur-sm overflow-hidden">
+            <button type="button" onClick={() => adimla(1.12)} aria-label={t('ar.bigger')} className="w-11 h-11 min-h-[44px] min-w-[44px] p-3 text-white text-xl leading-none hover:bg-white/15">
               +
             </button>
-            <div className="h-px bg-white/25" />
-            <button type="button" onClick={() => adimla(1 / 1.12)} aria-label={t('ar.smaller')} className="w-10 h-10 text-white text-xl leading-none hover:bg-white/15">
+            <div className="w-px sm:w-auto sm:h-px bg-white/25" />
+            <button type="button" onClick={() => adimla(1 / 1.12)} aria-label={t('ar.smaller')} className="w-11 h-11 min-h-[44px] min-w-[44px] p-3 text-white text-xl leading-none hover:bg-white/15">
               −
             </button>
           </div>
@@ -796,8 +796,8 @@ export default function ArView({
           Küçük resimler; dokunulan mekân arka plan olur.
         */}
         {ornekAcik && (
-          <div className="absolute bottom-28 inset-x-0 px-4">
-            <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="absolute bottom-24 left-2 right-2 sm:bottom-28 sm:inset-x-0 px-2 sm:px-4">
+            <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
               {ORNEKLER.map((o) => (
                 <button
                   key={o.yol}
@@ -819,6 +819,7 @@ export default function ArView({
         )}
 
         {/* ---------------------------------------------------------- ALT BAR */}
+<<<<<<< HEAD
         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-8 pb-5">
           {/*
             Dar telefonlarda beş denetim 390 pikselin dışına taşıyordu (soldaki
@@ -826,6 +827,10 @@ export default function ArView({
             Şerit artık YATAY KAYDIRILIYOR; sığdığında ortalanmış duruyor.
           */}
           <div className="flex items-center justify-center sm:justify-center gap-4 px-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+=======
+        <div className="absolute bottom-2 left-2 right-2 sm:bottom-0 sm:inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-6 sm:pt-8 pb-3 sm:pb-5">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 px-2 sm:px-4">
+>>>>>>> feature/mobile-responsive
             {/* Fotoğraf arka plandayken lens/flaş anlamsız — yerine fotoğrafı değiştir */}
             {arkaFoto ? (
               /* Fotoğraftayken: fotoğrafı değiştir, ya da kameraya geri dön */
@@ -848,7 +853,7 @@ export default function ArView({
               onClick={yakala}
               disabled={mesgul || !!hata}
               aria-label={t('ar.shoot')}
-              className="w-16 h-16 rounded-full border-4 border-white/90 flex items-center justify-center disabled:opacity-40"
+              className="w-16 h-16 min-h-[44px] min-w-[44px] rounded-full border-4 border-white/90 flex items-center justify-center disabled:opacity-40 shrink-0"
             >
               <span className={`w-12 h-12 rounded-full transition-colors ${mesgul ? 'bg-white/50' : 'bg-white'}`} />
             </button>
@@ -906,7 +911,7 @@ export default function ArView({
 
           {/* Flaş desteklenmiyorsa sessizce yanıltmayalım */}
           {!flasVar && !hata && !arkaFoto && (
-            <p className="text-center text-[10px] text-white/45 mt-2 m-0">{t('ar.noFlash')}</p>
+            <p className="text-center text-[10px] text-white/45 mt-2 m-0 px-4 max-w-full">{t('ar.noFlash')}</p>
           )}
         </div>
       </div>

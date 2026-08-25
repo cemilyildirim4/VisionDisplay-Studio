@@ -197,7 +197,7 @@ function FilterDropdown({ filter, selected, onToggle, isOpen, onOpen }) {
       <button
         type="button"
         onClick={onOpen}
-        className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 min-h-[44px] text-sm transition-colors max-w-full ${
           count > 0
             ? 'btn-selected border'
             : 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-neutral-400 dark:hover:border-[#4a5364]'
@@ -209,7 +209,7 @@ function FilterDropdown({ filter, selected, onToggle, isOpen, onOpen }) {
       </button>
 
       {isOpen && (
-        <div className="absolute z-20 mt-2 w-64 max-h-72 overflow-y-auto rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#161a21] p-3 shadow-xl flex flex-col gap-2.5">
+        <div className="absolute z-20 mt-2 w-64 max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#161a21] p-3 shadow-xl flex flex-col gap-2.5 left-0">
           {filter.options.map((opt) => (
             <OptionRow
               key={optLabel(opt)}
@@ -463,13 +463,13 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
         ]
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#001334]/45 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-[#001334]/45 flex items-center justify-center p-0 sm:p-4" onClick={onClose}>
       <div
-        className="bg-white dark:bg-[#161a21] rounded-2xl sm:rounded-3xl w-full max-w-[1040px] max-h-[95vh] sm:max-h-[92vh] flex flex-col relative shadow-2xl"
+        className="bg-white dark:bg-[#161a21] rounded-2xl sm:rounded-3xl w-full max-w-[calc(100%-2rem)] mx-4 md:mx-auto md:max-w-[1040px] max-h-[90vh] overflow-y-auto flex flex-col relative shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Başlık — koyu şerit; iki kocaman sekme yerine bölmeli düğme */}
-        <div className="bg-[#12151c] text-white px-4 sm:px-6 py-3.5 shrink-0 flex items-center justify-between gap-4 rounded-t-2xl sm:rounded-t-3xl">
+        <div className="bg-[#12151c] text-white px-4 sm:px-6 py-3.5 shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 rounded-t-2xl sm:rounded-t-3xl">
           <h2 className="text-base sm:text-lg font-bold m-0 truncate">{t('msm.title')}</h2>
           <div className="flex items-center gap-3 shrink-0">
             <div className="hidden sm:flex bg-white/10 rounded-lg p-1 gap-1">
@@ -478,7 +478,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                   key={key}
                   type="button"
                   onClick={() => switchTab(key)}
-                  className={`px-3.5 py-1.5 rounded-md text-[12.5px] font-semibold transition-colors ${
+                  className={`px-3.5 py-2 min-h-[44px] rounded-md text-[12.5px] font-semibold transition-colors ${
                     tab === key ? 'btn-selected' : 'text-neutral-300 hover:text-white'
                   }`}
                 >
@@ -486,7 +486,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                 </button>
               ))}
             </div>
-            <button type="button" onClick={onClose} aria-label={t('exp.close')} className="text-white/70 hover:text-white transition-colors">
+            <button type="button" onClick={onClose} aria-label={t('exp.close')} className="text-white/70 hover:text-white transition-colors inline-flex items-center justify-center min-h-[44px] min-w-[44px]">
               <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <line x1="6" y1="6" x2="18" y2="18" />
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -510,7 +510,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                 key={key}
                 type="button"
                 onClick={() => switchTab(key)}
-                className={`py-2 rounded-lg text-[13px] font-semibold transition-colors ${
+                className={`py-2 min-h-[44px] rounded-lg text-[13px] font-semibold transition-colors ${
                   tab === key ? 'btn-selected' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-600 dark:text-neutral-400'
                 }`}
               >
@@ -530,7 +530,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('msm.modelNamePh')}
-                className="w-full bg-neutral-100 dark:bg-[#222833] rounded-lg py-2 pl-10 pr-3 text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand/25"
+                className="w-full max-w-full bg-neutral-100 dark:bg-[#222833] rounded-lg py-2 min-h-[44px] pl-10 pr-3 text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand/25"
               />
             </div>
           </div>
@@ -547,7 +547,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                 key={f.v}
                 type="button"
                 onClick={() => setTypeFilter(f.v)}
-                className={`rounded-full px-3 py-1 text-[12px] font-semibold border transition-colors ${
+                className={`rounded-full px-3 py-2 min-h-[44px] text-[12px] font-semibold border transition-colors ${
                   typeFilter === f.v
                     ? 'btn-selected border'
                     : 'border-neutral-300 dark:border-[#39414f] text-neutral-600 dark:text-neutral-300 hover:border-brand'
@@ -620,7 +620,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
           </div>
 
           {/* Sonuç sayısı */}
-          <div className="flex items-center justify-between mb-1.5 shrink-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0 mb-1.5 shrink-0 max-w-full">
             <span className="text-[11px] font-semibold tracking-[0.06em] uppercase text-neutral-500 dark:text-neutral-400">
               {rows.length} {t('msm.results')}
             </span>
@@ -748,19 +748,19 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
 
         {/* Karşılaştırmaya eklenen modeller varsa, altta uyarı çubuğu */}
         {compareIds.length > 0 && !compareOpen && (
-          <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-2.5 border-t border-neutral-200 dark:border-[#2c333f] bg-brand-tint shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-6 py-2.5 border-t border-neutral-200 dark:border-[#2c333f] bg-brand-tint shrink-0">
             <span className="text-sm text-brand dark:text-brand-light font-medium">
               {compareIds.length} {t('compare.selectedCount')}
             </span>
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setCompareIds([])} className="text-xs text-neutral-500 dark:text-neutral-400 hover:underline">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+              <button type="button" onClick={() => setCompareIds([])} className="text-xs text-neutral-500 dark:text-neutral-400 hover:underline min-h-[44px] inline-flex items-center justify-center">
                 {t('msm.clear')}
               </button>
               <button
                 type="button"
                 disabled={compareIds.length < 2}
                 onClick={() => setCompareOpen(true)}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold text-white transition-colors ${
+                className={`rounded-full px-4 py-1.5 min-h-[44px] text-sm font-semibold text-white transition-colors w-full sm:w-auto ${
                   compareIds.length >= 2 ? 'bg-brand hover:bg-brand-dark' : 'bg-neutral-300 dark:bg-[#2c333f] cursor-not-allowed'
                 }`}
               >
@@ -772,7 +772,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
 
         {/* Alt: Seç butonu */}
         {/* Alt bar — seçilen model solda, onay sağda */}
-        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 border-t border-neutral-200 dark:border-[#2c333f] bg-neutral-50 dark:bg-[#1b2029] shrink-0 rounded-b-2xl sm:rounded-b-3xl">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 border-t border-neutral-200 dark:border-[#2c333f] bg-neutral-50 dark:bg-[#1b2029] shrink-0 rounded-b-2xl sm:rounded-b-3xl">
           <div className="min-w-0 text-sm">
             {selected ? (
               <>
@@ -792,7 +792,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                 onClose()
               }
             }}
-            className={`rounded-lg px-6 sm:px-10 py-2.5 text-sm font-semibold text-white transition-colors shrink-0 ${
+            className={`rounded-lg px-6 sm:px-10 py-2.5 min-h-[44px] text-sm font-semibold text-white transition-colors w-full sm:w-auto shrink-0 ${
               selected
                 ? 'bg-brand hover:bg-brand-dark'
                 : 'bg-neutral-300 dark:bg-[#2c333f] dark:text-neutral-500 cursor-not-allowed'
@@ -806,9 +806,9 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
       {/* Karşılaştırma tablosu — modelleri yan yana gösterir, buradan doğrudan seçilebilir */}
       {compareOpen && (
         <div className="absolute inset-0 z-10 bg-white dark:bg-[#161a21] rounded-2xl sm:rounded-3xl flex flex-col" onClick={(e) => e.stopPropagation()}>
-          <div className="bg-[#12151c] text-white px-4 sm:px-6 py-3.5 shrink-0 flex items-center justify-between gap-4 rounded-t-2xl sm:rounded-t-3xl">
+          <div className="bg-[#12151c] text-white px-4 sm:px-6 py-3.5 shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 rounded-t-2xl sm:rounded-t-3xl">
             <h2 className="text-base sm:text-lg font-bold m-0">{t('compare.title')}</h2>
-            <button type="button" onClick={() => setCompareOpen(false)} aria-label={t('exp.close')} className="text-white/70 hover:text-white transition-colors">
+            <button type="button" onClick={() => setCompareOpen(false)} aria-label={t('exp.close')} className="text-white/70 hover:text-white transition-colors inline-flex items-center justify-center min-h-[44px] min-w-[44px]">
               <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <line x1="6" y1="6" x2="18" y2="18" />
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -829,7 +829,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                         <button
                           type="button"
                           onClick={() => confirmChoice(c)}
-                          className="mt-1.5 rounded-full bg-brand text-white text-xs font-semibold px-3 py-1 hover:bg-brand-dark"
+                          className="mt-1.5 rounded-full bg-brand text-white text-xs font-semibold px-3 py-2 min-h-[44px] hover:bg-brand-dark inline-flex items-center"
                         >
                           {t('msm.choose')}
                         </button>

@@ -227,7 +227,7 @@ export default function CurvedScreen({
   // NOT: Kutuya gölge verilmiyor — panel kavisli olduğu için dikdörtgen bir gölge
   // panelin dışına taşıp beyaz duvarda gri iz bırakıyordu.
   return (
-    <div className="relative shrink-0" style={{ width: wPx, height: hPx, overflow: 'visible' }}>
+    <div className="relative shrink-0 max-w-full" style={{ width: wPx, height: hPx, overflow: 'visible' }}>
       {/* Tuval kutudan maxD kadar uzun; -maxD/2 ile ortalanır → kavis üstte ve altta
           eşit taşar, ekranın görsel merkezi kutunun merkeziyle çakışır. */}
       <canvas ref={canvasRef} style={{ position: 'absolute', top: -maxD / 2, left: 0, width: wPx, height: hPx + maxD }} />

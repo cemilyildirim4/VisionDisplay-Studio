@@ -217,6 +217,7 @@ button:disabled {
   background: var(--color-accent-dark);
 }
 
+<<<<<<< HEAD
 /* ---------------------------------------------------------------------------
    TELEFON YATAYKEN İKİ SÜTUN
 
@@ -291,4 +292,9 @@ button:disabled {
  */
 @media (orientation: landscape) and (max-height: 600px) {
   .yatay-gizle { display: none; }
+=======
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+>>>>>>> feature/mobile-responsive
 }
