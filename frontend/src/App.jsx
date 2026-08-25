@@ -240,6 +240,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return false
   }
 
+  /* Tasarım kimlik değiştirdiğinde (sıfırlama, model değişimi, kayıtlı
+     projeye dönüş) kareler ve varsa bekleyen soru birlikte silinir. */
+  const kareleriTemizle = () => {
+    setArFotolar([])
+    setKareSorusu(null)
+  }
+
   const kareKarariVer = (karar) => {
     const veri = kareSorusu
     setKareSorusu(null)
@@ -344,6 +351,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
     bekleyenTaslakRef.current = null
 
+    // Geri yüklenen tasarım BAŞKA bir çalışma: bu oturumda toplanmış kareler
+    // ona ait değil.
+    kareleriTemizle()
     setSelectedModel(model)
     setWidth(t.width ?? 0)
     setHeight(t.height ?? 0)
@@ -377,6 +387,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       orientation, curveAmount, resolution, sboxRedundancy, scene, screens, content])
 
   const handleChoose = (model) => {
+    // Başka bir modele geçmek, tasarımı baştan kurmak demek: eldeki kareler
+    // artık gösterilmeyen bir ürünün fotoğrafı. Aynı model yeniden seçilirse
+    // kareler durur (yanlışlıkla aynı satıra tıklamak çalışmayı silmesin).
+    if (model?.id !== selectedModel?.id) kareleriTemizle()
     setSelectedModel(model)
     setWidth((w) => w || 1)
     setHeight((h) => h || 1)
@@ -452,6 +466,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setShowMeasurements(true)
     setResetConfirmOpen(false)
     setScene('none')
+    /*
+     * MEKÂN KARELERİ DE SİLİNİR.
+     *
+     * Kareler eski tasarımın fotoğrafı. Sıfırlayıp bambaşka bir ekran
+     * kurduktan sonra rapora hâlâ önceki tasarımın kamera görüntüsü
+     * giriyordu — müşteriye yanlış ürünün fotoğrafı gitmesi demek bu.
+     */
+    kareleriTemizle()
     // Sıfırlama kalıcı olmalı: taslak durursa geri tuşuyla eski tasarım döner.
     taslagiSil()
   }
