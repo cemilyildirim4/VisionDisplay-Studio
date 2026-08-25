@@ -110,12 +110,18 @@ export default function Cephe({
             duruyordu; dış mekân hissi hiç yoktu.
           */}
           <linearGradient id="cephe-silu-uzak" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#93b3cd" />
-            <stop offset="100%" stopColor="#c2d6e5" />
+            <stop offset="0%" stopColor="#a9c2d6" />
+            <stop offset="100%" stopColor="#d6e4ee" />
           </linearGradient>
           <linearGradient id="cephe-silu-yakin" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#6e8ba6" />
-            <stop offset="100%" stopColor="#a3b8c9" />
+            <stop offset="0%" stopColor="#8fa8c0" />
+            <stop offset="100%" stopColor="#c3d3e0" />
+          </linearGradient>
+          {/* Ufuk pusu — silüetin dibini gökyüzünde eritir */}
+          <linearGradient id="cephe-pus" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#c8e2f1" stopOpacity="0" />
+            <stop offset="70%" stopColor="#d8e9f4" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#eddfd0" stopOpacity="0.75" />
           </linearGradient>
           {/* Ekranın cepheye vuran ışığı */}
           <radialGradient id="cephe-isik" cx="0.5" cy="0.5" r="0.5">
@@ -132,82 +138,104 @@ export default function Cephe({
 
         {(() => {
           /*
-           * ŞEHİR SİLÜETİ.
+           * UZAKTAKİ ŞEHİR — cephenin arkasında, ufka yakın.
            *
-           * Cephenin İKİ YANINDA, ondan alçak bloklar. Alçak olmaları şart:
-           * bizim binamız öndeki ve asıl olan; komşular onunla boy ölçüşürse
-           * ekran kalabalığın içinde kaybolur.
+           * ÖNCEKİ HÂLİ YAPAY DURUYORDU. Sebepleri tek tek:
+           *   • Fazla YÜKSEKTİLER. Cephenin yarısına kadar çıkan bloklar
+           *     "uzaktaki şehir" değil, hemen yanı başındaki binalar gibi
+           *     okunuyordu; oysa hepsi arka plan olmalı.
+           *   • Fazla KOYUYDULAR. Uzaktaki her şey havanın pusuyla gökyüzüne
+           *     yaklaşır. Gökten belirgin biçimde ayrılan bir gri, kartondan
+           *     kesilmiş gibi durur.
+           *   • Beyaz PENCERE ŞERİTLERİ vardı. Bu ölçekte tek tek pencere
+           *     görünmez; parlak beyaz bantlar oyuncak binası hissi veriyordu.
            *
-           * Ölçüler cepheye oranlı, böylece duvar ölçüsü değişince silüet de
-           * onunla birlikte büyür/küçülür ve kompozisyon bozulmaz. Dizi sabit
-           * (rastgele değil): her çizimde aynı şehir görünür, ekran yeniden
-           * çizilince binalar yerinden oynamaz.
+           * Şimdi: alçak, gökyüzüne yakın tonda, penceresiz siluet. Biçim
+           * çeşitliliği (ince kule, geniş blok, kademeli çatı, anten) ve
+           * üstüne binen pus, "şehir" hissini pencere çizmeden veriyor.
+           *
+           * Ölçüler cepheye oranlı — duvar ölçüsü değişince silüet de onunla
+           * büyür. Dizi sabit: her çizimde aynı şehir, bloklar oynamaz.
            */
-          const yer = Math.max(0, sol) // solda kalan boşluk
+          const solYer = Math.max(0, sol)
           const sagYer = Math.max(0, tuvalW - sag)
-          if (yer < 12 && sagYer < 12) return null
+          if (solYer < 16 && sagYer < 16) return null
 
-          // [genişlik payı, yükseklik payı, çatı tipi] — 0 düz, 1 basamaklı
+          // [genişlik payı, yükseklik payı, tip] · tip: 0 düz · 1 kademeli · 2 antenli
           const UZAK = [
-            [0.30, 0.30, 0], [0.22, 0.42, 1], [0.26, 0.24, 0], [0.24, 0.36, 0],
+            [0.26, 0.15, 0], [0.15, 0.24, 2], [0.30, 0.11, 0],
+            [0.19, 0.19, 1], [0.24, 0.13, 0],
           ]
           const YAKIN = [
-            [0.34, 0.22, 0], [0.28, 0.34, 1], [0.30, 0.17, 0],
+            [0.34, 0.10, 0], [0.20, 0.17, 1], [0.28, 0.08, 0], [0.22, 0.13, 0],
           ]
-          // Sağ yan aynı dizinin tersi: iki taraf ayna görüntüsü gibi durmasın.
           const UZAK_SAG = [...UZAK].reverse()
           const YAKIN_SAG = [...YAKIN].reverse()
 
-          const blok = (x0, genislik, liste, dolgu, taban, anahtar, yon) => {
-            if (genislik < 12) return null
+          const seri = (x0, genislik, liste, dolgu, taban, anahtar, yon) => {
+            if (genislik < 16) return null
             let imlec = x0
             const parcalar = []
             liste.forEach(([gp, yp, tip], i) => {
               const w = genislik * gp
               const h = duvarH * yp
-              // Sağa giderken imleç kutunun SOL kenarı, sola giderken SAĞ kenarı.
               const x = yon > 0 ? imlec : imlec - w
               const y = taban - h
               parcalar.push(
                 <g key={anahtar + i}>
                   <rect x={x} y={y} width={w} height={h} fill={dolgu} />
-                  {/* Basamaklı çatı — hepsi düz kutu olunca sıra sıra tuğla gibi duruyor */}
+                  {/* Kademeli çatı: üstte daha dar bir kat */}
                   {tip === 1 && (
-                    <rect x={x + w * 0.28} y={y - h * 0.16} width={w * 0.44} height={h * 0.16} fill={dolgu} />
+                    <rect
+                      x={x + w * 0.22}
+                      y={y - h * 0.22}
+                      width={w * 0.56}
+                      height={h * 0.22}
+                      fill={dolgu}
+                    />
                   )}
-                  {/* Pencere lekeleri — ayrı ayrı değil, satır satır; uzaktan bakışta böyle görünür */}
-                  {[0.18, 0.36, 0.54, 0.72, 0.9].map((k) =>
-                    h * (1 - k) > 6 ? (
-                      <rect
-                        key={k}
-                        x={x + w * 0.16}
-                        y={y + h * k - Math.max(1, h * 0.022)}
-                        width={w * 0.68}
-                        height={Math.max(1, h * 0.022)}
-                        fill="#ffffff"
-                        opacity="0.16"
-                      />
-                    ) : null,
+                  {/* Anten/kule — siluete dikey bir vurgu, hepsi kutu olmasın */}
+                  {tip === 2 && (
+                    <rect
+                      x={x + w * 0.46}
+                      y={y - h * 0.3}
+                      width={Math.max(0.8, w * 0.07)}
+                      height={h * 0.3}
+                      fill={dolgu}
+                    />
                   )}
                 </g>,
               )
-              imlec += yon * (w + genislik * 0.04)
+              imlec += yon * (w + genislik * 0.035)
             })
             return parcalar
           }
 
+          const usta = Math.min(alt, ust + duvarH * 0.42) // silüetin çıkabileceği en üst hat
           return (
             <>
-              {/* Uzak katman — biraz yukarıdan başlar, hava perspektifiyle soluk */}
-              <g opacity="0.85">
-                {blok(sol, yer, UZAK, 'url(#cephe-silu-uzak)', alt - duvarH * 0.012, 'us', -1)}
-                {blok(sag, sagYer, UZAK_SAG, 'url(#cephe-silu-uzak)', alt - duvarH * 0.012, 'ud', 1)}
+              {/* Uzak sıra — gökyüzüne en yakın ton, neredeyse pus */}
+              <g opacity="0.55">
+                {seri(sol, solYer, UZAK, 'url(#cephe-silu-uzak)', alt - duvarH * 0.02, 'us', -1)}
+                {seri(sag, sagYer, UZAK_SAG, 'url(#cephe-silu-uzak)', alt - duvarH * 0.02, 'ud', 1)}
               </g>
-              {/* Yakın katman — tabanı kaldırım hizasında, bir tık koyu */}
-              <g opacity="0.95">
-                {blok(sol, yer, YAKIN, 'url(#cephe-silu-yakin)', alt, 'ys', -1)}
-                {blok(sag, sagYer, YAKIN_SAG, 'url(#cephe-silu-yakin)', alt, 'yd', 1)}
+              {/* Yakın sıra — bir tık belirgin, tabanı kaldırım hizasında */}
+              <g opacity="0.7">
+                {seri(sol, solYer, YAKIN, 'url(#cephe-silu-yakin)', alt, 'ys', -1)}
+                {seri(sag, sagYer, YAKIN_SAG, 'url(#cephe-silu-yakin)', alt, 'yd', 1)}
               </g>
+              {/*
+                PUS — silüetin dibine doğru koyulaşan gökyüzü rengi. Uzaktaki
+                yapıların ayakları havada erir; keskin biten bir silüet maket
+                gibi durur.
+              */}
+              <rect
+                x={0}
+                y={usta}
+                width={tuvalW}
+                height={Math.max(1, alt - usta)}
+                fill="url(#cephe-pus)"
+              />
             </>
           )
         })()}
