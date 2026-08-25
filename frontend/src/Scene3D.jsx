@@ -1220,18 +1220,32 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     if (!mv?.toDataURL) return
     const veri = mv.toDataURL('image/jpeg', 0.92)
     const raporaGirdi = onSaved?.(veri)
+    /*
+     * ÖNCE PAYLAŞMA SAYFASI, SONRA İNDİRME.
+     *
+     * Telefonda aranan yer Fotoğraflar; <a download> ise iOS'ta dosyayı
+     * Dosyalar'a koyuyor ya da hiç indirmiyor. Paylaşma sayfasındaki
+     * "Görüntüyü Kaydet" kareyi doğrudan Fotoğraflar'a atıyor.
+     * (Kameradaki Kaydet ile aynı sıra — bkz. ArView/cihazaKaydet.)
+     */
+    const ad = 'ar-' + (model?.name || 'tasarim') + '.jpg'
     try {
       const blob = await (await fetch(veri)).blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'ar-' + (model?.name || 'tasarim') + '.jpg'
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 60000)
+      const dosya = new File([blob], ad, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+      } else {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = ad
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        setTimeout(() => URL.revokeObjectURL(url), 60000)
+      }
     } catch {
-      /* indirme engellendiyse kare yine rapora girmiş olur */
+      /* kullanıcı vazgeçti ya da indirme engellendi — kare yine rapora girdi */
     }
     setArBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
   }, [model, onSaved, t])

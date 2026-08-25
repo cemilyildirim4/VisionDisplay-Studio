@@ -305,6 +305,11 @@ const dict = {
     ar: 'إذا لم يبدأ التنزيل: اضغط مطولًا على الصورة ثم اختر «حفظ الصورة».',
   },
   'shot.inReport': { tr: 'Bu kare PDF raporuna eklendi.', en: 'This frame was added to the PDF report.', ar: 'أُضيفت هذه اللقطة إلى تقرير PDF.' },
+  'shot.iosNote': {
+    tr: 'iPhone/iPad: "Fotoğraflara kaydet" → açılan sayfadan "Görüntüyü Kaydet".',
+    en: 'iPhone/iPad: "Save to Photos" → then choose "Save Image" in the share sheet.',
+    ar: 'آيفون/آيباد: «الحفظ في الصور» ← ثم اختر «حفظ الصورة».',
+  },
   'shot.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
 
   'ar.savedOnlyNote': {
@@ -346,6 +351,7 @@ const dict = {
     en: 'The report holds at most 6 frames; keeping all will drop the oldest one.',
     ar: 'يتسع التقرير لـ 6 لقطات كحد أقصى، وسيسقط الأقدم عند الاحتفاظ بالجميع.',
   },
+  'frame.existing': { tr: 'Raporda şu an bunlar var', en: 'Currently in the report', ar: 'الموجود حاليًا في التقرير' },
   'frame.newLabel': { tr: 'Yeni kare', en: 'New frame', ar: 'اللقطة الجديدة' },
 
   'ar.save': { tr: 'Kaydet', en: 'Save', ar: 'حفظ' },

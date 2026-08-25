@@ -1665,6 +1665,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               {t('frame.body').replace('{n}', String(arFotolar.length))}
             </p>
 
+            {/*
+              RAPORDA HÂLİHAZIRDA NE VAR — kullanıcı "hangi kareler?" diye
+              tahmin etmesin. Yeni kare hemen yanında duruyor ki karşılaştırıp
+              karar verebilsin.
+            */}
+            <div className="mt-5">
+              <p className="m-0 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400 text-center">
+                {t('frame.existing')}
+              </p>
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                {arFotolar.map((k, i) => (
+                  <img
+                    key={i}
+                    src={k}
+                    alt=""
+                    className="w-20 h-14 object-cover rounded-lg border border-neutral-200 dark:border-[#2c333f]"
+                  />
+                ))}
+              </div>
+            </div>
+
             {/* Hangi kareden söz edildiği görünsün diye küçük önizleme */}
             <div className="mt-5 flex justify-center">
               <figure className="w-40">

@@ -667,6 +667,13 @@ export default function ArView({
     })
   }
 
+  /** iPhone/iPad mi? (iPadOS kendini Mac gibi tanıtıyor, dokunma sayısına bakılıyor.) */
+  const iosCihaz = () => {
+    if (typeof navigator === 'undefined') return false
+    const p = navigator.platform || ''
+    return /iPhone|iPad|iPod/.test(p) || (/Mac/.test(p) && navigator.maxTouchPoints > 1)
+  }
+
   /**
    * Kareyi cihaza kaydetmeye çalışır. Döner: kesin kaydedildi mi.
    *
@@ -694,9 +701,18 @@ export default function ArView({
       /* kullanıcı vazgeçtiyse ya da desteklenmiyorsa indirmeyi dene */
     }
 
-    // 2) Klasik indirme — download özniteliği desteklenmiyorsa denemeyelim.
+    /*
+     * 2) Klasik indirme — MASAÜSTÜ VE ANDROID İÇİN.
+     *
+     * iPhone/iPad'de denemiyoruz: orada <a download> dosyayı Fotoğraflar'a
+     * değil Dosyalar'a koyuyor (kullanıcının aradığı yer orası değil) ve
+     * çoğu zaman hiç inmiyor — üstelik indi mi anlamanın bir yolu yok, yani
+     * "kaydedildi" demek yalan olurdu. iOS'ta tek doğru yol paylaşma
+     * sayfasındaki "Görüntüyü Kaydet"; o da olmadıysa kareyi ekranda açıp
+     * kullanıcıya bırakıyoruz.
+     */
     const a = document.createElement('a')
-    if (!('download' in a)) return false
+    if (iosCihaz() || !('download' in a)) return false
     const url = URL.createObjectURL(blob)
     a.href = url
     a.download = ad
@@ -1086,7 +1102,9 @@ export default function ArView({
                 alt=""
                 className="mt-4 w-full rounded-2xl border border-white/15"
               />
-              <p className="mt-3 mb-0 text-[12px] text-white/60">{t('shot.hint')}</p>
+              <p className="mt-3 mb-0 text-[12px] text-white/60">
+                {iosCihaz() ? t('shot.iosNote') : t('shot.hint')}
+              </p>
               {kareSayfasi.raporaGirdi && (
                 <p className="mt-1 mb-0 text-[12px] text-white/60">{t('shot.inReport')}</p>
               )}
