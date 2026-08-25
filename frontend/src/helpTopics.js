@@ -260,7 +260,7 @@ export const TOPICS = [
   {
     id: 'power',
     keys: {
-      tr: ['güç', 'guc', 'watt', 'elektrik', 'tüketim', 'tuketim', 'devre', 'ısı üretimi', 'ısınma', 'btu', 'kaç watt', 'sigorta', 'klima', 'soğutma', 'fatura'],
+      tr: ['amper', 'sigorta', 'elektrik hattı', 'elektrik hatti', 'güç', 'guc', 'watt', 'elektrik', 'tüketim', 'tuketim', 'devre', 'ısı üretimi', 'ısınma', 'btu', 'kaç watt', 'sigorta', 'klima', 'soğutma', 'fatura'],
       en: ['power', 'watt', 'consumption', 'circuit', 'heat', 'btu'],
       ar: ['الطاقة', 'واط', 'استهلاك'],
     },
@@ -348,7 +348,7 @@ export const TOPICS = [
   {
     id: 'usage',
     keys: {
-      tr: ['pdf', 'nereden iner', 'nasıl indiririm', 'nasil indiririm', 'çıktı', 'cikti', 'dışa aktar', 'disa aktar', 'kaydet', 'nereden bakarım'],
+      tr: ['teknik özellik', 'teknik ozellik', 'özellikler nerede', 'ozellikler nerede', 'pdf', 'nereden iner', 'nasıl indiririm', 'nasil indiririm', 'çıktı', 'cikti', 'dışa aktar', 'disa aktar', 'kaydet', 'nereden bakarım'],
       en: ['pdf', 'download', 'export', 'where is'],
       ar: ['بي دي اف', 'تنزيل', 'تصدير'],
     },
@@ -382,7 +382,7 @@ export const TOPICS = [
   {
     id: 'camera',
     keys: {
-      tr: ['kamera', 'kameray', 'kamera özelliği', 'kamera ozelligi', 'nasıl görüneceğini gör', 'nasil gorunecegini gor', 'duvarımda gör', 'duvarimda gor', 'odamda gör', 'odamda gor', 'fotoğrafta gör', 'fotografta gor', 'canlı önizleme', 'canli onizleme', 'gerçek mekân', 'gercek mekan', 'telefonun kamerası'],
+      tr: ['galeri', 'galeriye', 'fotoğraflara kaydet', 'fotograflara kaydet', 'kamera', 'kameray', 'kamera özelliği', 'kamera ozelligi', 'nasıl görüneceğini gör', 'nasil gorunecegini gor', 'duvarımda gör', 'duvarimda gor', 'odamda gör', 'odamda gor', 'fotoğrafta gör', 'fotografta gor', 'canlı önizleme', 'canli onizleme', 'gerçek mekân', 'gercek mekan', 'telefonun kamerası'],
       en: ['camera', 'see how it will look', 'see it on my wall', 'in my room', 'live preview'],
       ar: ['الكاميرا', 'في غرفتي', 'على جداري'],
     },
@@ -396,7 +396,7 @@ export const TOPICS = [
   {
     id: 'ar',
     keys: {
-      tr: ['ar modu', 'ar görünümü', 'ar nasıl', 'ar nasil', 'artırılmış gerçeklik', 'artirilmis gerceklik', "ar'da gör", 'arda gor', 'ar özelliği', 'ar ozelligi', 'odama koy', 'gerçek boyutta gör', 'gercek boyutta gor', 'quick look', 'scene viewer'],
+      tr: ['ar modu', 'ar görünümü', 'ar nasıl', 'ar nasil', 'ar nasl', 'ar calis', 'ar çalış', 'artırılmış gerçeklik', 'artirilmis gerceklik', "ar'da gör", 'arda gor', 'ar özelliği', 'ar ozelligi', 'odama koy', 'gerçek boyutta gör', 'gercek boyutta gor', 'quick look', 'scene viewer'],
       en: ['augmented reality', 'view in ar', 'ar mode', 'place in my room', 'real size'],
       ar: ['الواقع المعزز', 'ضعها في غرفتي'],
     },
@@ -606,7 +606,7 @@ export const TOPICS = [
   {
     id: 'control',
     keys: {
-      tr: ['kontrol', 'neye bağlan', 'neye baglan', 'nasıl bağlan', 'nasil baglan', 'işlemci', 'islemci', 'gönderici', 'gonderici', 'alıcı kart', 'alici kart', 'kablo', 'rj45', 'bağlantı', 'baglanti', 'nasıl bağlanır', 'nasil baglanir', 'bilgisayara bağla'],
+      tr: ['kontrol', 'neye bağlan', 'neye baglan', 'nasıl bağlan', 'nasil baglan', 'bilgisayara', 'bilgisayardan', 'hdmi', 'dvi', 'display port', 'giriş', 'kaynak cihaz', 'işlemci', 'islemci', 'gönderici', 'gonderici', 'alıcı kart', 'alici kart', 'kablo', 'rj45', 'bağlantı', 'baglanti', 'nasıl bağlanır', 'nasil baglanir', 'bilgisayara bağla'],
       en: ['controller', 'processor', 'sending card', 'receiving card', 'cable', 'rj45', 'how to connect'],
       ar: ['وحدة التحكم', 'المعالج', 'الكابل', 'التوصيل'],
     },
@@ -620,7 +620,7 @@ export const TOPICS = [
   {
     id: 'lifetime',
     keys: {
-      tr: ['ömür', 'omur', 'ömrü', 'omru', 'kaç yıl', 'kac yil', 'ne kadar dayanır', 'ne kadar dayanir', 'saat', 'sürekli açık', 'surekli acik', '7/24', 'dayanıklılık'],
+      tr: ['ömür', 'omur', 'ömrü', 'omru', 'kaç yıl', 'kac yil', 'ne kadar dayanır', 'ne kadar dayanir', 'bin saat', 'kaç saat', 'kac saat', 'sürekli açık', 'surekli acik', '7/24', 'dayanıklılık'],
       en: ['lifetime', 'lifespan', 'how many years', 'how long does it last', 'hours', '24/7'],
       ar: ['العمر الافتراضي', 'كم سنة', 'كم يدوم'],
     },
@@ -629,6 +629,193 @@ export const TOPICS = [
       tr: 'LED diyotların ömrü genel olarak 100.000 saat mertebesinde anılır; bu, parlaklığın başlangıç değerinin yarısına düştüğü süredir — ekran o an sönmez.\n\nGünde 12 saat çalışan bir ekran için kabaca 20 yıldan uzun bir süreye karşılık gelir. Gerçek ömrü etkileyenler: sürekli tam parlaklıkta çalıştırmak, yüksek sıcaklık, nem ve tozdur.\n\nParlaklığı ortama göre düşürmek hem ömrü uzatır hem enerji tüketimini azaltır.\n\nProjenize özel garanti ve bakım şartları için satış ekibiyle görüşün.',
       en: 'LED diode life is generally quoted around 100,000 hours — the point at which brightness has fallen to half its original value, not the point where the screen dies.\n\nAt 12 hours a day that is well over 20 years. What really shortens it: running at full brightness constantly, high temperature, humidity and dust.\n\nDimming to suit the room extends life and cuts energy use at the same time.\n\nFor warranty and maintenance terms on your project, talk to the sales team.',
       ar: 'يُذكر عمر الديودات عادةً بنحو 100000 ساعة، وهي النقطة التي ينخفض فيها السطوع إلى النصف وليس التوقف. تشغيلها بأقصى سطوع دائمًا والحرارة والرطوبة والغبار تقصّر العمر.',
+    },
+  },
+  /* ------------------------------------------------------------------
+   * SIK SORULAN AMA CEVAPSIZ KALAN KONULAR
+   * Aşağıdakiler gerçek soru kalıpları taranarak eklendi: yardımcı bunların
+   * hiçbirine cevap veremiyor, "anlamadım" diyordu.
+   * ------------------------------------------------------------------ */
+  {
+    id: 'heat',
+    keys: {
+      tr: ['ısı', 'isi yapar', 'ısınır', 'isinir', 'sıcaklık', 'sicaklik', 'klima', 'havalandırma', 'havalandirma', 'soğutma', 'sogutma', 'fan', 'ısı üretimi'],
+      en: ['heat', 'temperature', 'cooling', 'air conditioning', 'ventilation', 'fan'],
+      ar: ['الحرارة', 'التبريد', 'التكييف'],
+    },
+    q: { tr: 'Ekran ısınır mı, klima gerekir mi?', en: 'Does it get hot? Is cooling needed?', ar: 'هل تسخن الشاشة؟ هل يلزم تبريد؟' },
+    a: {
+      tr: 'Evet, LED ekran çalışırken ısı üretir; harcadığı gücün neredeyse tamamı sonunda ısıya döner. Teknik Özellikler bölümünde "Isı Üretimi" satırında BTU/saat olarak hesaplanmış hâlde görürsünüz.\n\nKüçük ekranlarda ortamın kendi havalandırması yeter. Büyük ekranlarda, kapalı nişlerde ve arkası havasız kalan kurulumlarda soğutma planlanmalıdır — sıcaklık hem parlaklığı düşürür hem ömrü kısaltır.\n\nKesin çözüm projeye göre değişir; ısı yükünü mekanik tesisat ekibinizle paylaşın.',
+      en: 'Yes. An LED screen produces heat — almost all the power it draws ends up as heat. See "Heat Output" (BTU/h) under Specifications.\n\nSmall screens are fine with normal room ventilation. Large screens, recessed niches and installations with no airflow behind them need planned cooling: heat lowers brightness and shortens life.\n\nThe right solution depends on the project — share the heat load with your HVAC engineer.',
+      ar: 'نعم، تنتج شاشة LED حرارة؛ وتظهر القيمة في «إنتاج الحرارة» ضمن المواصفات. الشاشات الكبيرة والتركيبات المغلقة تحتاج إلى تبريد مخطط له.',
+    },
+  },
+  {
+    id: 'audio',
+    keys: {
+      tr: ['ses', 'hoparlör', 'hoparlor', 'ses sistemi', 'anfi', 'amfi', 'mikrofon', 'sesli'],
+      en: ['sound', 'speaker', 'audio', 'amplifier'],
+      ar: ['الصوت', 'السماعات', 'مكبر الصوت'],
+    },
+    q: { tr: 'Ekranın sesi var mı?', en: 'Does the screen have sound?', ar: 'هل تحتوي الشاشة على صوت؟' },
+    a: {
+      tr: 'LED ekranların ve video duvarı panellerinin kendi hoparlörü yoktur; görüntü ve ses ayrı sistemlerdir.\n\nSes, içerik kaynağından (oynatıcı/bilgisayar) ayrı bir ses sistemine verilir. Mekâna göre tavan hoparlörü, sahne sistemi ya da ekranın altına gizlenen bir çubuk hoparlör kullanılır.\n\nSes sistemini de birlikte planlamak isterseniz satış ekibiyle görüşün.',
+      en: 'LED screens and video-wall panels have no built-in speakers; picture and sound are separate systems.\n\nAudio goes from the content source (player/PC) to a separate sound system — ceiling speakers, a stage system, or a soundbar hidden under the screen, depending on the space.\n\nTalk to sales if you want the audio planned together with the screen.',
+      ar: 'لا تحتوي شاشات LED على سماعات مدمجة؛ يُوصَّل الصوت من مصدر المحتوى إلى نظام صوتي منفصل.',
+    },
+  },
+  {
+    id: 'cms',
+    keys: {
+      tr: ['kumanda', 'uzaktan', 'içerik değiştir', 'icerik degistir', 'internet', 'wifi', 'usb', 'yazılım', 'yazilim', 'içerik yönetim', 'icerik yonetim', 'cms', 'program', 'playlist', 'zamanla', 'planla'],
+      en: ['remote', 'content management', 'cms', 'software', 'internet', 'wifi', 'usb', 'schedule', 'playlist'],
+      ar: ['التحكم عن بعد', 'إدارة المحتوى', 'برنامج', 'إنترنت'],
+    },
+    q: { tr: 'İçeriği uzaktan değiştirebilir miyim?', en: 'Can I change the content remotely?', ar: 'هل يمكنني تغيير المحتوى عن بُعد؟' },
+    a: {
+      tr: 'Evet. Ekrana bağlı oynatıcı bir içerik yönetim yazılımıyla (CMS) çalışır: içerik uzaktan yüklenir, oynatma listesi ve saat planı kurulur, birden fazla ekran tek panelden yönetilir.\n\nİnternet bağlantısı bunun için gerekir; USB ile yerel oynatma da mümkündür ama o zaman içerik değişimi elden yapılır.\n\nHangi yazılımın projenize uygun olduğu ve lisans koşulları için satış ekibiyle görüşün — kurulum ve eğitim hizmetlerimiz arasında.',
+      en: 'Yes. The player attached to the screen runs content-management software (CMS): you upload content remotely, build playlists and schedules, and manage several screens from one panel.\n\nThat needs an internet connection. Local USB playback also works, but then content is changed by hand.\n\nFor the right software and licence terms talk to sales — installation and training are among our services.',
+      ar: 'نعم، عبر برنامج إدارة المحتوى (CMS): رفع المحتوى عن بُعد، قوائم تشغيل وجدولة، وإدارة عدة شاشات من لوحة واحدة. يتطلب اتصال إنترنت.',
+    },
+  },
+  {
+    id: 'repair',
+    keys: {
+      tr: ['bozulursa', 'arıza', 'ariza', 'kırılırsa', 'kirilirsa', 'yedek parça', 'yedek parca', 'modül değiş', 'modul degis', 'tamir', 'onarım', 'onarim', 'temizlik', 'temizleme', 'nasıl temizlenir'],
+      en: ['broken', 'fault', 'spare part', 'replace module', 'repair', 'cleaning'],
+      ar: ['عطل', 'قطع غيار', 'إصلاح', 'تنظيف'],
+    },
+    q: { tr: 'Bir modül bozulursa ne olur?', en: 'What happens if a module fails?', ar: 'ماذا يحدث إذا تعطلت وحدة؟' },
+    a: {
+      tr: 'LED ekranın en büyük avantajı budur: arıza tüm ekranı durdurmaz. Bozulan modül ya da kabin tek başına sökülüp değiştirilir, kalan ekran çalışmaya devam eder.\n\nDeğişimin hangi yönden yapılacağını modelin "Hizmet" bilgisi söyler (ön ya da arka erişim); dar alanlarda ön erişimli modeller tercih edilir.\n\nTemizlik: ekran kapalı ve soğukken, kuru ya da hafif nemli mikrofiber bezle. Kimyasal, sprey ve basınçlı hava kullanılmaz.\n\nYedek parça, arıza ve servis süreleri için bizimle iletişime geçin.',
+      en: 'This is the big advantage of LED: a fault does not stop the whole wall. The failed module or cabinet is removed and replaced on its own while the rest keeps running.\n\nThe model’s "Service" attribute says from which side (front or rear access); front-service models suit tight spaces.\n\nCleaning: screen off and cool, dry or barely damp microfibre cloth. No chemicals, sprays or compressed air.\n\nContact us for spare parts, faults and service times.',
+      ar: 'العطل لا يوقف الشاشة كلها: تُستبدل الوحدة أو الخزانة المعطلة وحدها. التنظيف بقطعة ميكروفايبر جافة والشاشة مطفأة، بلا مواد كيميائية.',
+    },
+  },
+  {
+    id: 'mounting',
+    keys: {
+      tr: ['vinç', 'vinc', 'kaç kişi', 'kac kisi', 'asma tavan', 'tavana as', 'zemine mi', 'ayaklı', 'ayakli', 'stand', 'askı', 'aski', 'nasıl asılır', 'nasil asilir', 'taşınabilir', 'tasinabilir', 'sökülüp takıl'],
+      en: ['crane', 'how many people', 'suspended ceiling', 'hanging', 'stand', 'floor mount', 'portable'],
+      ar: ['رافعة', 'التعليق', 'حامل', 'قابل للنقل'],
+    },
+    q: { tr: 'Ekran nasıl monte edilir?', en: 'How is the screen mounted?', ar: 'كيف تُركّب الشاشة؟' },
+    a: {
+      tr: 'Üç yaygın yol var:\n\n• Duvara montaj — en yaygını. Taşıyıcı duvara çelik askı iskeleti kurulur, kabinler ona takılır.\n• Asma (rigging) — tavandan askı; sahne ve fuar kurulumlarında. Tavanın taşıma kapasitesi hesaplanmalıdır; alçıpan asma tavan tek başına taşımaz.\n• Ayaklı/mobil kasa — taşınabilir kurulum; etkinlikten etkinliğe sökülüp takılabilir.\n\nEkip ve ekipman ihtiyacı (kaç kişi, platform ya da vinç gerekip gerekmediği) ekranın yüksekliğine ve ağırlığına göre belirlenir; keşif sonrası netleşir.\n\nKurulumu bizim ekibimiz yapar — ayrıntı için iletişime geçin.',
+      en: 'Three common ways:\n\n• Wall mount — the usual one: a steel sub-frame on a load-bearing wall, cabinets clip onto it.\n• Rigging — hung from the ceiling, for stages and exhibitions. The ceiling’s load capacity must be calculated; a plasterboard suspended ceiling cannot carry it alone.\n• Stand or mobile case — portable setups that travel between events.\n\nCrew and equipment (how many people, platform or crane) depend on the screen’s height and weight and are settled after a site survey.\n\nOur team does the installation — get in touch for details.',
+      ar: 'ثلاث طرق: التثبيت على جدار حامل، التعليق من السقف (بحساب التحمل)، أو حامل متنقل. يُحدَّد الطاقم والمعدات بعد المعاينة.',
+    },
+  },
+  {
+    id: 'delivery',
+    keys: {
+      tr: ['teslim', 'stok', 'ne zaman gelir', 'kaç günde', 'kac gunde', 'kiralık', 'kiralik', 'kiralama', 'ikinci el', 'ihracat', 'yurt dışı', 'yurt disi', 'kargo', 'nakliye'],
+      en: ['delivery', 'lead time', 'stock', 'rental', 'second hand', 'export', 'shipping'],
+      ar: ['التسليم', 'المخزون', 'الإيجار', 'التصدير', 'الشحن'],
+    },
+    q: { tr: 'Teslim süresi ve stok durumu nedir?', en: 'What about lead time and stock?', ar: 'ما مدة التسليم وحالة المخزون؟' },
+    a: {
+      tr: `Teslim süresi modele, adete ve o anki stoğa göre değişir; kiralama, ihracat ve nakliye de proje bazında değerlendirilir. Bu konularda kesin bilgiyi yalnızca satış ekibi verebilir:\n\n${ILETISIM_TR}\n\nYapılandırmanızı bitirip PDF teklifi gönderirseniz, ekip modele ve adete bakarak süreyi doğrudan yazar.`,
+      en: `Lead time depends on the model, quantity and current stock; rental, export and shipping are assessed per project. Only the sales team can give firm answers:\n\n${ILETISIM_EN}\n\nIf you finish your configuration and send the PDF quote, they can answer with the exact model and quantity in hand.`,
+      ar: `تعتمد مدة التسليم على الطراز والكمية والمخزون؛ ويُقيَّم الإيجار والتصدير والشحن حسب المشروع. يُرجى التواصل معنا:\n\n${ILETISIM_EN}`,
+    },
+  },
+  {
+    id: 'payment',
+    keys: {
+      tr: ['kdv', 'vergi', 'taksit', 'ödeme', 'odeme', 'fatura', 'peşin', 'pesin', 'havale', 'kredi kartı', 'kredi karti', 'döviz', 'doviz', 'kur'],
+      en: ['vat', 'tax', 'instalment', 'payment', 'invoice', 'credit card', 'currency'],
+      ar: ['ضريبة', 'تقسيط', 'الدفع', 'فاتورة'],
+    },
+    q: { tr: 'Ödeme ve fatura nasıl?', en: 'How do payment and invoicing work?', ar: 'كيف تتم عملية الدفع والفاتورة؟' },
+    a: {
+      tr: `Fiyatlar proje bazında belirlenir; KDV, ödeme planı, taksit ve fatura konuları teklifle birlikte netleşir. Bu başlıklar için satış ekibiyle görüşün:\n\n${ILETISIM_TR}`,
+      en: `Prices are set per project; VAT, payment plan, instalments and invoicing are settled with the quote. Please talk to sales:\n\n${ILETISIM_EN}`,
+      ar: `تُحدَّد الأسعار حسب المشروع، وتُحسم الضريبة وخطة الدفع والفاتورة مع عرض السعر. يُرجى التواصل معنا:\n\n${ILETISIM_EN}`,
+    },
+  },
+  {
+    id: 'specialled',
+    keys: {
+      tr: ['şeffaf', 'seffaf', 'esnek', 'bükülebilir', 'bukulebilir', 'zemin led', 'yer ledi', 'küp ekran', 'kup ekran', 'tünel', 'tunel', 'silindir', 'poster led', 'özel şekil', 'ozel sekil'],
+      en: ['transparent', 'flexible', 'floor led', 'cube', 'tunnel', 'cylinder', 'custom shape'],
+      ar: ['شفافة', 'مرنة', 'أرضية', 'مكعب', 'نفق'],
+    },
+    q: { tr: 'Şeffaf, esnek ya da özel şekilli LED var mı?', en: 'Do you have transparent, flexible or custom-shaped LED?', ar: 'هل لديكم شاشات شفافة أو مرنة أو بأشكال خاصة؟' },
+    a: {
+      tr: 'Evet. Düz ve kavisli duvarların dışında özel biçimli LED çözümleri de yapıyoruz: LED küp ekran, LED tünel ekran, ayaklı poster LED ekran ve vitrinlerde kullanılan şeffaf uygulamalar.\n\nBu ürünler bu konfigüratörde yer almıyor; ölçü ve biçim projeye özel çıkarılıyor.\n\nAklınızdaki biçimi anlatın, uygunluğunu ve yaklaşık ölçüyü satış ekibi değerlendirsin.',
+      en: 'Yes. Besides flat and curved walls we build custom-shaped LED: LED cubes, LED tunnels, standing poster LED and transparent applications for shop windows.\n\nThose are not in this configurator; their size and shape are engineered per project.\n\nDescribe the shape you have in mind and the sales team will assess it.',
+      ar: 'نعم: مكعبات LED، أنفاق LED، شاشات بوستر بحامل، وتطبيقات شفافة للواجهات. هذه المنتجات ليست ضمن المُهيّئ وتُصمَّم حسب المشروع.',
+    },
+  },
+  {
+    id: 'autobright',
+    keys: {
+      tr: ['gece parlaklık', 'otomatik parlaklık', 'otomatik parlaklik', 'parlaklık ayarlan', 'parlaklik ayarlan', 'kısılır mı', 'kisilir mi', 'ışık sensörü', 'isik sensoru', 'göz alır', 'goz alir'],
+      en: ['auto brightness', 'dimming', 'night brightness', 'light sensor', 'too bright'],
+      ar: ['السطوع التلقائي', 'خفض السطوع', 'حساس الضوء'],
+    },
+    q: { tr: 'Parlaklık gece kısılabiliyor mu?', en: 'Can brightness be dimmed at night?', ar: 'هل يمكن خفض السطوع ليلاً؟' },
+    a: {
+      tr: 'Evet. Parlaklık kontrol yazılımından yüzde olarak ayarlanır; saate göre otomatik plan da kurulabilir. Işık sensörüyle ortam aydınlığına göre kendiliğinden ayarlanan kurulumlar da mümkündür.\n\nDış mekân ekranı gündüz için yüksek parlaklıkta üretilir (5.000 nit ve üzeri); geceleyin aynı parlaklıkta çalıştırmak hem göz alır hem gereksiz enerji harcar. Kısmak ayrıca ömrü uzatır.',
+      en: 'Yes. Brightness is set as a percentage in the control software, and can follow a time schedule. Installations with a light sensor adjust themselves to ambient light.\n\nOutdoor screens are built bright for daylight (5,000 nits and up); running that at night dazzles viewers and wastes energy. Dimming also extends life.',
+      ar: 'نعم، يُضبط السطوع بالنسبة المئوية في برنامج التحكم، ويمكن جدولته زمنيًا أو ربطه بحساس ضوء. الخفض ليلاً يريح العين ويطيل العمر.',
+    },
+  },
+  {
+    id: 'orientation',
+    keys: {
+      tr: ['portre', 'manzara', 'yatay dikey', 'dikey ekran', 'yatay ekran', 'oryantasyon', 'çevir ekranı', 'cevir ekrani'],
+      en: ['portrait', 'landscape', 'orientation', 'vertical screen'],
+      ar: ['عمودي', 'أفقي', 'الاتجاه'],
+    },
+    q: { tr: 'Portre ve manzara ne fark eder?', en: 'What is the difference between portrait and landscape?', ar: 'ما الفرق بين العمودي والأفقي؟' },
+    a: {
+      tr: 'Video duvarı panelleri 90° döndürülerek dikey de kurulabilir. "Manzara" panel yatay, "Portre" dikey demektir.\n\nDöndürünce panelin en ve boy ölçüsü ile piksel sayısı yer değiştirir; önizleme, kabin sayısı ve teknik özellikler buna göre yeniden hesaplanır.\n\nPortre; asansör holü, mağaza girişi ve dikey afiş içerikleri için tercih edilir. Bu seçenek yalnızca video duvarı panellerinde vardır — LED kabinler zaten kare/dikdörtgen modüllerden istenen orana kurulur.',
+      en: 'Video-wall panels can be rotated 90°. "Landscape" means the panel lies horizontally, "Portrait" vertically.\n\nRotating swaps the panel’s width/height and pixel counts; the preview, cabinet count and specifications are recalculated accordingly.\n\nPortrait suits lift lobbies, shop entrances and vertical poster content. The option exists only for video-wall panels — LED cabinets are already built up to any ratio from modules.',
+      ar: '«أفقي» يعني اللوحة ممتدة عرضيًا و«عمودي» بتدويرها 90°. يبدّل التدوير الأبعاد وعدد البكسل ويُعاد الحساب. الخيار متاح للوحات جدار الفيديو فقط.',
+    },
+  },
+  {
+    id: 'seam',
+    keys: {
+      tr: ['derz', 'çizgi', 'cizgi', 'birleşim', 'birlesim', 'ek yeri', 'çerçeve çizgisi', 'panel arası', 'panel arasi', 'görüntü bölün', 'goruntu bolun'],
+      en: ['seam', 'line', 'joint', 'gap between panels', 'split image'],
+      ar: ['الفواصل', 'الخطوط', 'الوصلات'],
+    },
+    q: { tr: 'Önizlemedeki çizgiler ne?', en: 'What are the lines in the preview?', ar: 'ما هذه الخطوط في المعاينة؟' },
+    a: {
+      tr: 'Panel birleşimleridir.\n\n• Video duvarında paneller arasında gerçek bir çerçeve (bezel) vardır; görüntü o ince çizgiyle bölünür. Modelin bezel ölçüsü Teknik Özellikler’de yazar ve katalogda buna göre süzebilirsiniz — 0,88 mm bir panel, 1,74 mm olandan belirgin şekilde kesintisiz görünür.\n• LED duvarda çerçeve yoktur; kabinler yüzey yüzeye oturur ve görüntü kesintisizdir. Önizlemedeki çok soluk çizgi yalnızca kabin sınırını sezdirmek içindir.\n\nKesintisiz tek parça görüntü isteniyorsa LED duvarı; ofis/kontrol odası gibi çok pencereli içerikte video duvarı tercih edilir.',
+      en: 'They are panel joints.\n\n• On a video wall there is a real bezel between panels, so the image is split by that thin line. The model’s bezel is listed under Specifications and can be filtered in the catalogue — 0.88 mm looks far more seamless than 1.74 mm.\n• On an LED wall there is no bezel: cabinets sit surface to surface and the image is continuous. The very faint line in the preview only hints at the cabinet edge.\n\nFor a truly seamless picture choose an LED wall; for multi-window content (offices, control rooms) a video wall is usual.',
+      ar: 'إنها وصلات اللوحات: في جدار الفيديو يوجد إطار حقيقي بين اللوحات يقسم الصورة، أما جدار LED فبلا إطار والصورة متصلة.',
+    },
+  },
+  {
+    id: 'accountmore',
+    keys: {
+      tr: ['şifremi unuttum', 'sifremi unuttum', 'parolamı unuttum', 'parolami unuttum', 'hesabımı', 'hesabimi', 'hesabım nasıl', 'hesap sil', 'üyeliğimi sil', 'uyeligimi sil', 'başka bilgisayar', 'baska bilgisayar', 'başka cihaz', 'baska cihaz', 'oturum aç kapat', 'çıkış yap', 'cikis yap'],
+      en: ['forgot password', 'delete account', 'another computer', 'another device', 'log out'],
+      ar: ['نسيت كلمة المرور', 'حذف الحساب', 'جهاز آخر', 'تسجيل الخروج'],
+    },
+    q: { tr: 'Parolamı unuttum / hesabımı silmek istiyorum', en: 'Forgot my password / want to delete my account', ar: 'نسيت كلمة المرور / أريد حذف حسابي' },
+    a: {
+      tr: 'Hesabınıza her cihazdan e-posta ve parolanızla girebilirsiniz; kayıtlı teklifleriniz hesabınıza bağlıdır, cihaza değil.\n\nParola sıfırlama ve hesap silme işlemleri şu an kendi kendine yapılamıyor; bu talepler için bizimle iletişime geçin, yönetici tarafından yürütülüyor.\n\nÇıkış yapmak için profil menüsündeki oturumu kapatın.',
+      en: 'You can sign in from any device with your e-mail and password; your saved quotes belong to the account, not the device.\n\nPassword reset and account deletion are not yet self-service — contact us and an administrator will handle it.\n\nTo sign out, use the session menu under your profile.',
+      ar: 'يمكنك الدخول من أي جهاز ببريدك وكلمة المرور، فالعروض مرتبطة بالحساب لا بالجهاز. أما إعادة تعيين كلمة المرور وحذف الحساب فيتمّان عبر التواصل معنا.',
+    },
+  },
+  {
+    id: 'wallinput',
+    keys: {
+      tr: ['ölçüleri değiştir', 'olculeri degistir', 'ölçüleri nasıl', 'olculeri nasil', 'duvar ölçüsü', 'duvar olcusu', 'ölçü gir', 'olcu gir', 'nereden girer', 'genişlik yükseklik', 'genislik yukseklik', 'metre gir', 'ölçüyü değiştir', 'olcuyu degistir'],
+      en: ['wall size', 'enter dimensions', 'change size', 'width height'],
+      ar: ['مقاس الجدار', 'إدخال الأبعاد', 'تغيير المقاس'],
+    },
+    q: { tr: 'Duvar ölçüsünü nereden giriyorum?', en: 'Where do I enter the wall size?', ar: 'من أين أُدخل مقاس الجدار؟' },
+    a: {
+      tr: 'Sol paneldeki "Duvar" bölümünden: GENİŞLİK ve YÜKSEKLİK kutularına metre cinsinden yazarsınız (ör. 4 ve 2,5). +/− tuşlarıyla da değiştirilebilir.\n\nEkranın ölçüsü buradan bağımsızdır; onu "Ekran" bölümündeki sütun ve satır sayısı belirler. "Duvara sığdır" düğmesi o duvara sığan en büyük kabin sayısını kendisi hesaplar.\n\nÖnizlemedeki etiketler ekranın gerçek en/boy ölçüsünü ve duvarda kalan boşlukları gösterir.',
+      en: 'In the "Wall" section of the left panel: type WIDTH and HEIGHT in metres (e.g. 4 and 2.5), or use the +/− buttons.\n\nThe screen size is independent of that — it comes from the column and row count under "Screen". The "Fit to wall" button works out the largest cabinet count that fits.\n\nThe preview labels show the screen’s real width/height and the margins left on the wall.',
+      ar: 'من قسم «الجدار» في اللوحة اليسرى: اكتب العرض والارتفاع بالمتر. مقاس الشاشة مستقل ويأتي من عدد الأعمدة والصفوف، وزر «ملاءمة الجدار» يحسب الأكبر الذي يتسع.',
     },
   },
   {
@@ -797,35 +984,70 @@ function kelimeBasinda(q, anahtar) {
   return false
 }
 
+/**
+ * İki kelime yazım hatası payıyla aynı sayılır mı?
+ *
+ * Kaç harf hataya izin verildiği kelime uzunluğuna bağlı:
+ *   < 6 harf  → hiç (kısa kelimelerde 1 harf bile anlamı değiştirir:
+ *               "yakın"/"yayın", "dolar"/"dolap", "saat"/"sat")
+ *   6–9 harf  → 1
+ *   10+ harf  → 2 ("cozunurluk" ↔ "cozunurlk" gibi iki eksikli yazımlar
+ *               gerçek sorularda sık çıkıyor)
+ *
+ * İLK HARF ŞARTI: yazım hatası neredeyse hiç ilk harfte olmuyor, ama bu şart
+ * olmadan "tatil"↔"titre", "eczane"↔"cekim" gibi alakasız çiftler eşleşip
+ * konu dışı sorulara cevap ürettiriyordu.
+ */
 function bireBirYakin(a, b) {
   if (a === b) return true
-  if (Math.abs(a.length - b.length) > 1) return false
-  /*
-   * 6 harften kısa kelimelerde 1 harf hatayı affetmiyoruz. Ölçtük:
-   *   "yakın" ↔ "yayın", "dolar" ↔ "dolap", "yemek" ↔ "yedek"
-   * gibi alakasız çiftler yanlış konulara götürüyordu.
-   * Kısa ama önemli kelimelerin yaygın yazım hataları anahtar listesine
-   * elle eklendi (ör. "kabbin").
-   */
-  if (a.length < 6) return false
-  let i = 0
-  let j = 0
-  let fark = 0
-  while (i < a.length && j < b.length) {
-    if (a[i] === b[j]) {
-      i++
-      j++
-      continue
+  const n = Math.max(a.length, b.length)
+  if (n < 6) return false
+  if (a[0] !== b[0]) return false
+  const izin = n >= 10 ? 2 : 1
+  if (Math.abs(a.length - b.length) > izin) return false
+  return uzaklik(a, b) <= izin
+}
+
+/**
+ * TÜRKÇE SON SESSİZ YUMUŞAMASI.
+ *
+ * "temizlik" → "temizliği", "hesap" → "hesabım", "kanat" → "kanadı".
+ * Anahtar kelime sözlükte sert biçimiyle yazılı, kullanıcı ise ekli hâlini
+ * yazıyor; kelime başı eşleşmesi bu yüzden tutmuyordu. Anahtarın yumuşamış
+ * biçimi de aranıyor, böylece bütün bir hata sınıfı kapanıyor.
+ */
+const YUMUSAMA = { k: 'g', p: 'b', t: 'd', c: 'c' }
+function yumusakBicim(anahtar) {
+  // Kısa anahtarlarda yumuşatmak tehlikeli: "bük" → "bug" olunca "bugün"
+  // kelimesi kavis konusuna gidiyordu.
+  if (anahtar.length < 5) return null
+  const son = anahtar[anahtar.length - 1]
+  const yeni = YUMUSAMA[son]
+  if (!yeni || yeni === son) return null
+  return anahtar.slice(0, -1) + yeni
+}
+
+/**
+ * Çok kelimeli anahtar, cümlenin herhangi bir yerinde yazım hatasıyla geçiyor mu?
+ *
+ * "ar nasil" anahtarı, "ar nasl calisir" cümlesinde kelime başı aramasıyla
+ * bulunamıyordu (tek harf eksik). Anahtar kaç kelimeyse cümleden o kadar
+ * kelimelik pencereler alınıp karşılaştırılıyor.
+ */
+function cokKelimeYakin(qKelimeler, anahtar) {
+  const parcalar = anahtar.split(' ')
+  if (parcalar.length < 2 || qKelimeler.length < parcalar.length) return false
+  for (let i = 0; i + parcalar.length <= qKelimeler.length; i++) {
+    let tut = true
+    for (let j = 0; j < parcalar.length; j++) {
+      const kel = qKelimeler[i + j]
+      const parca = parcalar[j]
+      // Kısa parçalar (ör. "ar", "ne") birebir olmalı; uzunlarda hata payı var.
+      if (kel !== parca && !bireBirYakin(kel, parca)) { tut = false; break }
     }
-    if (++fark > 1) return false
-    if (a.length > b.length) i++
-    else if (a.length < b.length) j++
-    else {
-      i++
-      j++
-    }
+    if (tut) return true
   }
-  return fark + (a.length - i) + (b.length - j) <= 1
+  return false
 }
 
 /**
@@ -872,6 +1094,46 @@ function uzaklik(a, b) {
  *
  * @returns {{topic: object, benzerlik: number} | null}
  */
+/**
+ * ONAY SÖZLERİ — "şunu mu demek istediniz?" sorusuna evet demek.
+ * Kullanıcı öneriyi tıklamak yerine yazıyla onaylıyor; eskiden bu "evet"
+ * cevabı alakasız bir soru sayılıp "anlamadım" yanıtı alıyordu.
+ */
+const ONAY = {
+  tr: ['evet', 'evt', 'aynen', 'tamam', 'olur', 'he', 'hee', 'oyle', 'öyle', 'dogru', 'doğru', 'tabii', 'tabi'],
+  en: ['yes', 'yep', 'yeah', 'correct', 'right', 'ok', 'okay', 'sure'],
+  ar: ['نعم', 'أجل', 'صحيح', 'تمام'],
+}
+
+/** Kullanıcı önceki öneriyi onaylıyor mu? */
+export function onayMi(text, lang = 'tr') {
+  const q = sadelestir(text)
+  if (!q || q.split(' ').length > 3) return false
+  const liste = ONAY[lang] || ONAY.tr
+  return liste.some((k) => q === sadelestir(k) || q.startsWith(sadelestir(k) + ' '))
+}
+
+/**
+ * DEVAM SÖZLERİ — kendi başına anlamı olmayan, önceki soruya bağlanan mesajlar.
+ * "peki ya?", "neden?", "biraz daha anlat" gibi. Bunlar tek başına hiçbir
+ * konuya uymuyor; önceki mesajla birleştirilmeleri gerekiyor.
+ */
+const DEVAM = {
+  tr: ['peki', 'ya', 'neden', 'niye', 'nasil', 'nasıl', 'daha', 'devam', 'detay', 'ayrinti', 'ayrıntı', 'baska', 'başka', 'ornek', 'örnek', 'anlamadim', 'anlamadım', 'aciklar', 'açıklar', 'yani'],
+  en: ['why', 'how', 'more', 'detail', 'continue', 'else', 'example', 'explain'],
+  ar: ['لماذا', 'كيف', 'المزيد', 'تفصيل', 'مثال'],
+}
+
+/** Mesaj, kendi başına değil önceki soruya bağlı bir devam sorusu mu? */
+export function devamMi(text, lang = 'tr') {
+  const q = sadelestir(text)
+  if (!q) return false
+  const kelimeler = q.split(' ')
+  if (kelimeler.length > 5) return false
+  const liste = DEVAM[lang] || DEVAM.tr
+  return kelimeler.some((k) => liste.includes(k))
+}
+
 export function enYakinKonu(text, lang = 'tr') {
   const q = sadelestir(text)
   if (!q) return null
@@ -930,7 +1192,17 @@ export function findTopic(text, lang = 'tr') {
         continue
       }
 
-      // 2) Tek kelimelik anahtarlarda 1 harf hataya izin ver
+      /*
+       * 2) Türkçe ek almış hâli: "temizlik" anahtarı "temizliği" içinde.
+       * Yumuşamış biçim de kelime başında aranıyor.
+       */
+      const yumusak = yumusakBicim(anahtar)
+      if (yumusak && kelimeBasinda(q, yumusak)) {
+        score = Math.max(score, anahtar.length)
+        continue
+      }
+
+      // 3) Tek kelimelik anahtarlarda yazım hatası payı
       if (!anahtar.includes(' ')) {
         for (const kel of qKelimeler) {
           if (bireBirYakin(kel, anahtar)) {
@@ -938,6 +1210,12 @@ export function findTopic(text, lang = 'tr') {
             break
           }
         }
+        continue
+      }
+
+      // 4) Çok kelimeli anahtar, cümlede hatalı yazımla geçiyor olabilir
+      if (cokKelimeYakin(qKelimeler, anahtar)) {
+        score = Math.max(score, anahtar.length - 1)
       }
     }
 
