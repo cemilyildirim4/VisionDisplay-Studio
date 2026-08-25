@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
-import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, cabinetGridStyle, bezelPxFor, bezelGapStyle, L_KIRILMA_PCT } from './content.js'
+import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, cabinetGridStyle, L_KIRILMA_PCT } from './content.js'
 import { videoSrcFor } from './videoContent.js'
 import { useLang } from './useLang.js'
 
@@ -456,9 +456,20 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
   const lineColor = isNone ? 'rgba(100,116,139,0.28)' : undefined
   // Diyot dokusu kabin ölçüsünden türer → desen kabin sınırlarıyla hizalı olur
   const cabinetDots = ledDotSize(wPx / nCols, hPx / nRows)
-  // Video duvarı: paneller arasında fiziksel çerçeve payı (bezel) var.
-  // bezelMm yalnızca video duvarı panellerinde tanımlı; LED kabinlerde null.
-  const bezelPx = bezelPxFor(model?.bezelMm, wPx / nCols, model?.widthMm)
+  /*
+   * VİDEO DUVARI DERZLERİ SİLİK ÇİZGİYLE.
+   *
+   * Paneller arasındaki çerçeve (bezel) görünürlük için on kat abartılıp
+   * kalın siyah bir boşluk olarak çiziliyordu. Sonuç: görüntünün üzerinde
+   * kalın siyah haç — ekranın kendisinden çok derzler göze çarpıyor, tasarım
+   * bölünmüş gibi duruyordu (hem manzarada hem portrede).
+   *
+   * Derz KALDIRILMADI, saç teli inceliğindeki soluk çizgiye indirildi: panel
+   * birleşimleri hâlâ seziliyor ama görüntüyü kesmiyor. LED kabinlerdeki
+   * birleşim çizgileriyle aynı çizim — video duvarında da tek yüzey hissi
+   * korunuyor. Derzin gerçek ölçüsü Teknik Özellikler'de (bezelMm) yazıyor.
+   */
+  const bezelPx = null
 
   return (
     <div
@@ -494,9 +505,7 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
             position: 'absolute',
             inset: 0,
             pointerEvents: 'none',
-            ...(bezelPx
-              ? bezelGapStyle(wPx / nCols, hPx / nRows, bezelPx)
-              : cabinetGridStyle(wPx / nCols, hPx / nRows, lineColor)),
+            ...cabinetGridStyle(wPx / nCols, hPx / nRows, lineColor),
           }}
         />
       )}
