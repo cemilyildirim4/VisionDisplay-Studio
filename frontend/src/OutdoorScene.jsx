@@ -27,12 +27,18 @@ const ARKA_PLAN = '/bos-merkezli-dis-mekan-led-arka-plan.png'
  * Zemin çizgisi: kaldırım taşlarının ortası (0,735). Bir tık aşağısı yola
  * taşar, yukarısı çalıların içine girer.
  *
- * Metre karşılığı: çalı şeridi yaklaşık 1,2 m yüksekliğinde ve fotoğrafta
- * ~50 piksel tutuyor; bu derinlikte 1 m ≈ 42–45 piksel ediyor, yani
- * fotoğrafın tam genişliği ~34 m. Gözle kestirilmiş bir referans, ölçüm değil.
+ * Metre karşılığı: ilk denemede kadraj genişliği 34 m alınmıştı ve billboard
+ * gereğinden küçük duruyordu. Sağlaması yolun kendisi: alttaki asfalt
+ * fotoğrafın tamamını kaplıyor ve altı şeritlik bir yol ~20 m eder. Yol,
+ * kaldırımdan DAHA YAKIN olduğu için kaldırım hizasında kadraj biraz daha
+ * geniş bir metreye denk gelir — 34 değil, 22 m civarı. Yeni değer hem
+ * fotoğrafın kendi geometrisiyle tutarlı hem de billboardu meydandaki
+ * gerçek ağırlığında gösteriyor.
+ *
+ * Billboard büyük/küçük gelirse değiştirilecek tek sayı budur.
  */
 const ZEMIN_ORANI = 0.735
-const KADRAJ_METRE = 34
+const KADRAJ_METRE = 22
 
 /** Kaide (beton taban) — gerçek ölçü, metre. */
 const KAIDE_YUKSEK_M = 0.16
