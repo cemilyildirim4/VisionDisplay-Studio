@@ -215,6 +215,8 @@ export default function ArView({
   const [dunyaAcik, setDunyaAcik] = useState(false)
   const [dunyaDurum, setDunyaDurum] = useState(DURUM.ARANIYOR)
   const [dunyaBilgi, setDunyaBilgi] = useState(null)
+  // AR açılışında en son ulaşılan adım — takılırsa nerede durduğu görünsün.
+  const [dunyaAdim, setDunyaAdim] = useState(null)
   const [dunyaHazirlaniyor, setDunyaHazirlaniyor] = useState(false)
 
   const [asama, setAsama] = useState('yerlestir')
@@ -869,9 +871,37 @@ export default function ArView({
    * ve ikinci bir çizim yolu (dolayısıyla ikinci bir hata kaynağı) doğmaz.
    */
   const tasarimDokusu = async () => {
-    const el = tasarimRef.current
+    /*
+     * TASARIMIN HAZIR OLMASI BEKLENİR.
+     *
+     * AR, kamera açılır açılmaz isteniyor; o anda tasarım katmanı henüz
+     * çizilmemiş oluyor (görüntü alanı ölçülene kadar genişliği sıfır).
+     * Eskiden burada hemen null dönülüyor, oturum da daha ilk karede
+     * kapanıyordu — telefonda "hiçbir şey olmuyor" denmesinin sebebi buydu.
+     *
+     * Bekleme oturum AÇILDIKTAN SONRA olduğu için kullanıcı hareketi hakkını
+     * düşürmüyor.
+     */
+    const el = await (async () => {
+      for (let i = 0; i < 60; i++) {
+        const e = tasarimRef.current
+        if (e && e.clientWidth > 0 && e.clientHeight > 0) return e
+        await new Promise((c) => requestAnimationFrame(c))
+      }
+      return null
+    })()
     if (!el) return null
-    const k = await html2canvas(el, { backgroundColor: null, scale: 2, logging: false, useCORS: true })
+    const k = await html2canvas(el, {
+      backgroundColor: null,
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      // Katman yerleştirmeden önce saydam duruyor; kopyada görünür yapılır.
+      onclone: (_belge, kopya) => {
+        kopya.style.opacity = '1'
+        kopya.style.visibility = 'visible'
+      },
+    })
     const doku = new THREE.CanvasTexture(k)
     doku.colorSpace = THREE.SRGBColorSpace
     doku.anisotropy = 4
@@ -898,6 +928,7 @@ export default function ArView({
       yukseklikM: tasarimHm,
       ustKatman: arKatmanRef.current,
       onDurum: setDunyaDurum,
+      onAdim: setDunyaAdim,
       onBitti: () => {
         oturumRef.current = null
         setDunyaAcik(false)
@@ -911,7 +942,13 @@ export default function ArView({
         setDunyaDurum(DURUM.ARANIYOR)
       })
       .catch((e) => {
-        if (!sessiz) setBildirim(`${t('arw.failed')} (${e?.name || e?.message || 'bilinmeyen'})`)
+        const ad = e?.name || ''
+        // Oturum hiç açılamadıysa sessiz kalınabilir; sonrasındaki hatalar değil.
+        const oturumHatasi = ad === 'OturumAcilamadi' || ad === 'NotSupportedError' || ad === 'NotAllowedError'
+        setDunyaAdim(`durdu: ${ad || e?.message || 'bilinmeyen'}`)
+        if (!sessiz || !oturumHatasi) {
+          setBildirim(`${t('arw.failed')} (${ad || e?.message || 'bilinmeyen'})`)
+        }
       })
       .finally(() => setDunyaHazirlaniyor(false))
   }
@@ -1181,8 +1218,15 @@ export default function ArView({
           yalnızca arka plandır, gecikirse arkası siyah kalır, tasarım durur.
         */}
         {/* Tasarım YALNIZCA yerleştirildikten sonra çizilir (bkz. `asama`) */}
-        {!hata && arAcik && kutu.w > 0 && asama === 'yerlesti' && (
-          <div ref={katmanRef} className="absolute inset-0 pointer-events-none">
+        {!hata && arAcik && kutu.w > 0 && (
+          <div
+            ref={katmanRef}
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              opacity: asama === 'yerlesti' ? 1 : 0,
+              pointerEvents: asama === 'yerlesti' ? undefined : 'none',
+            }}
+          >
             {olculer && (
               <>
                 {/* Kenar boşluğu çizgileri: tasarımdan görüntü kenarlarına */}
@@ -1350,6 +1394,18 @@ export default function ArView({
             onTusTakimi={() => setTusTakimi((a) => !a)}
             tusTakimi={tusTakimi}
           />
+        )}
+
+        {/*
+          AR TANI ŞERİDİ. AR açılışı birkaç adımdan geçiyor; bir adımda
+          takılırsa dışarıdan "hiçbir şey olmadı" gibi görünüyordu. Son adım
+          burada yazıyor — cihazda tek bakışta nerede durduğu anlaşılıyor.
+          AR gerçekten açıldığında bu şerit görünmez (oturum ekranı kaplar).
+        */}
+        {!hata && arAcik && dunyaAdim && !dunyaAcik && (
+          <div className="absolute bottom-24 inset-x-0 z-40 flex justify-center px-6 pointer-events-none">
+            <span className="rounded-full bg-black/70 text-white/80 text-[11px] px-3 py-1">AR: {dunyaAdim}</span>
+          </div>
         )}
 
         {!hata && arAcik && asama === 'yerlesti' && tusTakimi && (

@@ -197,25 +197,38 @@ export async function arBaslat({
   ustKatman,
   onDurum = () => {},
   onBitti = () => {},
+  onAdim = () => {},
 }) {
+  /*
+   * ADIM BİLDİRİMİ.
+   *
+   * AR açılışı birbirine bağlı birkaç adımdan geçiyor ve bunlardan biri
+   * takılırsa dışarıdan bakınca "hiçbir şey olmadı" gibi görünüyor — cihazda
+   * hata ayıklamak da mümkün değil. Her adım dışarı bildiriliyor; arayüz son
+   * ulaşılan adımı gösteriyor, böylece nerede durduğu görünür oluyor.
+   */
   /*
    * OTURUM İSTEĞİ İLK İŞTİR — ÖNÜNDE HİÇBİR await OLAMAZ.
    * requestSession yalnızca kullanıcı hareketinin hemen ardından kabul edilir;
    * araya bir bekleme girerse tarayıcı isteği reddeder.
    */
+  onAdim('oturum isteniyor')
   const { oturum, kademe } = await oturumAc(ustKatman)
 
+  onAdim('oturum açıldı: ' + kademe)
   const doku = await dokuUret()
   if (!doku) {
     oturum.end().catch(() => {})
     throw new Error('tasarım görüntüsü üretilemedi')
   }
 
+  onAdim('tasarım görüntüsü hazır')
   const cizer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas'), alpha: true, antialias: true })
   cizer.setPixelRatio(window.devicePixelRatio)
   cizer.xr.enabled = true
   cizer.xr.setReferenceSpaceType('local')
   await cizer.xr.setSession(oturum)
+  onAdim('çizici bağlandı')
 
   const sahne = new THREE.Scene()
   const kamera = new THREE.PerspectiveCamera()
@@ -227,6 +240,7 @@ export async function arBaslat({
   sahne.add(tasarim)
 
   const referans = await oturum.requestReferenceSpace('local')
+  onAdim('referans uzayı alındı')
 
   // Hit-test olmayabilir (merdivenin alt basamakları); o zaman kamera önü kullanılır.
   let vurusUzayi = null
@@ -337,6 +351,7 @@ export async function arBaslat({
   }
 
   cizer.setAnimationLoop(kareCiz)
+  onAdim(vurusUzayi ? 'yüzey aranıyor' : 'yüzey algılama yok, taslak önde')
 
   oturum.addEventListener('end', () => {
     cizer.setAnimationLoop(null)
