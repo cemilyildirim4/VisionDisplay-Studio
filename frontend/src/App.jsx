@@ -7,6 +7,7 @@ import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import Oturtma from './Oturtma.jsx'
+import Avm from './Avm.jsx'
 import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
@@ -216,6 +217,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * o çerçeveye oturuyor. İkisi birbirine karışmasın diye ayrı pencereler.
    */
   const [oturtmaAcik, setOturtmaAcik] = useState(false)
+  const [avmAcik, setAvmAcik] = useState(false)
   const [showMeasurements, setShowMeasurements] = useState(true)
   const [exportOpen, setExportOpen] = useState(false)
   /*
@@ -1537,6 +1539,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   bilmiyordu. Şimdi ekran her hâlükârda açılıyor ve sorun varsa
                   sebebini yazıp fotoğrafla devam etme yolu sunuyor.
                 */}
+                {/*
+                  AVM KORİDORU — hazır fotoğraflı mekân.
+                  Çizilmiş mekânlar ölçüyü doğru veriyor ama "gerçekten böyle
+                  mi görünür" sorusuna cevap vermiyor. Fotoğraf onu veriyor;
+                  ekran fotoğrafın kendi ölçeğinde çizildiği için de ölçü
+                  bilgisi kaybolmuyor.
+                */}
+                {hasModel && (
+                  <button
+                    type="button"
+                    onClick={() => setAvmAcik(true)}
+                    className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
+                  >
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 20h18M5 20V9l7-5 7 5v11" />
+                      <rect x="9" y="12" width="6" height="4.5" rx="0.6" />
+                    </svg>
+                    {t('avm.open')}
+                  </button>
+                )}
                 {hasModel && (
                   <button
                     type="button"
@@ -1680,6 +1702,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         curveAmount={curveAmount}
         hideRegions={isVideoWall}
         onSaved={kareKaydedildi}
+      />
+
+      {/*
+        AVM KORİDORU — fotoğraflı mekân.
+        Ölçüler burada da uygulamanın kendi kabin ızgarasından geliyor;
+        pencerede değiştirilenler doğrudan yapılandırmayı değiştirir.
+      */}
+      <Avm
+        open={avmAcik && hasModel}
+        onClose={() => setAvmAcik(false)}
+        cols={cols}
+        rows={rows}
+        colsMax={colsMax}
+        rowsMax={rowsMax}
+        cwM={cwM}
+        chM={chM}
+        onCols={setCols}
+        onRows={setRows}
+        content={content}
+        contentUrl={contentUrl}
       />
 
       <RecommendationWizard
