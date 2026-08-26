@@ -214,7 +214,7 @@ export default function ArView({
   const [dunyaVar, setDunyaVar] = useState(false)
   const [dunyaAcik, setDunyaAcik] = useState(false)
   const [dunyaDurum, setDunyaDurum] = useState(DURUM.ARANIYOR)
-  const [dunyaOtomatik, setDunyaOtomatik] = useState(true)
+  const [dunyaBilgi, setDunyaBilgi] = useState(null)
   const [dunyaHazirlaniyor, setDunyaHazirlaniyor] = useState(false)
 
   const [asama, setAsama] = useState('yerlestir')
@@ -827,6 +827,32 @@ export default function ArView({
     }
   }, [open])
 
+  /*
+   * KAMERA AÇILIR AÇILMAZ GERÇEK YÜZEY MODU DENENİR.
+   *
+   * Ayrı bir düğme ya da "önce ekrana dokun" adımı yok: pencere açılır
+   * açılmaz oturum isteniyor. Bunu yapabilmemizin sebebi, pencereyi açan
+   * düğmeye basmanın hâlâ geçerli bir kullanıcı hareketi sayılması —
+   * tarayıcı bu hakkı birkaç saniye taşıyor. Bu yüzden istek, destek
+   * yoklaması BİLE beklenmeden gönderiliyor; beklemek hakkı düşürürdü.
+   *
+   * Açılmazsa hiçbir uyarı çıkmaz (sessiz deneme): kullanıcı kameradaki
+   * bindirme yoluyla devam eder, yerleştirme dokunuşunda yeniden denenir.
+   */
+  const otoDenendiRef = useRef(false)
+  useEffect(() => {
+    if (!open) {
+      otoDenendiRef.current = false
+      return
+    }
+    if (otoDenendiRef.current) return
+    otoDenendiRef.current = true
+    dunyayaGir(true)
+    // dunyayaGir her render’da yeniden kurulur; bağımlılığa almak denemeyi
+    // tekrarlatır, o yüzden yalnızca `open` izleniyor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   // Pencere kapanırsa oturum da kapansın — kamera ve XR açık kalmasın.
   useEffect(() => {
     if (open) return
@@ -871,7 +897,6 @@ export default function ArView({
       genislikM: tasarimWm,
       yukseklikM: tasarimHm,
       ustKatman: arKatmanRef.current,
-      otomatik: dunyaOtomatik,
       onDurum: setDunyaDurum,
       onBitti: () => {
         oturumRef.current = null
@@ -881,6 +906,7 @@ export default function ArView({
     })
       .then((o) => {
         oturumRef.current = o
+        setDunyaBilgi(o.bilgi)
         setDunyaAcik(true)
         setDunyaDurum(DURUM.ARANIYOR)
       })
@@ -1005,9 +1031,11 @@ export default function ArView({
   const dunyaAlt =
     dunyaDurum === DURUM.YERLESTI
       ? t('arw.walk')
-      : dunyaDurum === DURUM.YUZEY_VAR && !dunyaOtomatik
+      : dunyaDurum === DURUM.YUZEY_VAR
         ? t('arw.tapHint')
-        : null
+        : dunyaBilgi && !dunyaBilgi.yuzeyAlgilama
+          ? t('arw.noPlanes')
+          : t('arw.aimHint')
 
   const dunyaArayuz = (
     <div
@@ -1039,14 +1067,15 @@ export default function ArView({
         (motor her karede yeniden hit-test yapar). Düğmeler bunun ÜSTÜNDE
         durduğu için tıklamalarını bu alan yutmaz.
       */}
+      {/*
+        Ekranın ortasına dokunmak taslağın durduğu yere yerleştirir.
+        WebXR'ın kendi 'select' olayı da aynı işi yapıyor; bu alan
+        dom-overlay açıkken dokunuşun üstteki arayüze takılmamasını sağlıyor.
+      */}
       <div
         className="flex-1"
-        onPointerDown={() => oturumRef.current?.suruklemeBaslat?.()}
-        onPointerUp={() => oturumRef.current?.suruklemeBitir?.()}
-        onPointerCancel={() => oturumRef.current?.suruklemeBitir?.()}
         onClick={() => {
-          // Elle modda dokunmak yerleştirir.
-          if (!dunyaOtomatik) oturumRef.current?.dokunmaYerlestir?.()
+          if (dunyaDurum !== DURUM.YERLESTI) oturumRef.current?.yerlestir?.()
         }}
       />
 
@@ -1062,24 +1091,24 @@ export default function ArView({
 
       {/* Denetimler */}
       <div className="px-4 pb-6 flex items-center justify-center gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={() => oturumRef.current?.yenidenYerlestir?.()}
-          className="rounded-full bg-white/95 text-[#10141b] text-[12.5px] font-semibold px-4 py-2"
-        >
-          {t('arw.replace')}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const yeni = !dunyaOtomatik
-            setDunyaOtomatik(yeni)
-            oturumRef.current?.otomatikAyarla?.(yeni)
-          }}
-          className="rounded-full border border-white/40 text-white text-[12.5px] font-semibold px-4 py-2"
-        >
-          {dunyaOtomatik ? t('arw.auto') : t('arw.manual')}
-        </button>
+        {dunyaDurum === DURUM.YERLESTI && (
+          <button
+            type="button"
+            onClick={() => oturumRef.current?.yenidenYerlestir?.()}
+            className="rounded-full bg-white/95 text-[#10141b] text-[12.5px] font-semibold px-4 py-2"
+          >
+            {t('arw.replace')}
+          </button>
+        )}
+        {dunyaDurum !== DURUM.YERLESTI && (
+          <button
+            type="button"
+            onClick={() => oturumRef.current?.yerlestir?.()}
+            className="rounded-full bg-brand text-white text-[12.5px] font-semibold px-5 py-2"
+          >
+            {t('arw.place')}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => {
