@@ -127,7 +127,8 @@ function panelPath(ctx, w, E, s = Math.max(1, STEP / 2)) {
  * satır çizgileri. Buradan çıkan tuval, hedefe dilimlenerek bükülür.
  */
 function yuzeyiCiz(w, h, o) {
-  const { contentType, img, imgSX, imgSY, imgSW, imgSH } = o
+  // cols/rows: diyot dokusunun kabin olcusune gore siklastigi yer.
+  const { contentType, img, imgSX, imgSY, imgSW, imgSH, cols, rows } = o
   const { canvas, ctx } = araTuval(w, h)
   const isLit = contentType === 'image' || contentType === 'gradient'
   const gorselHazir = contentType === 'image' && isDrawable(img) && imgSW > 0 && imgSH > 0
