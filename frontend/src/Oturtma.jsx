@@ -740,8 +740,8 @@ export default function Oturtma({
               >
                 {yonerge || (takip ? (bulunan ? t('fit.followHint') : t('fit.searching')) : t('fit.hint'))}
               </span>
-              {kullanilanM ? (
-                <span className="text-white/70 tabular-nums"> · {metre(kullanilanM)}</span>
+              {onerilenM ? (
+                <span className="text-white/70 tabular-nums"> · {metre(onerilenM)}</span>
               ) : null}
             </p>
           </div>
@@ -753,6 +753,7 @@ export default function Oturtma({
         <div className="absolute right-3 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-2">
           {/* Mesafe: + üstte, değer ortada, − altta (yukarı = uzak) */}
           <div className="flex flex-col items-center rounded-2xl bg-black/60 backdrop-blur px-1.5 py-1.5 gap-1">
+            <span className="text-white/60 text-[9px] uppercase tracking-wide leading-none">{t('fit.lblDistance')}</span>
             <button
               type="button"
               aria-label="mesafe-arttir"
@@ -783,6 +784,7 @@ export default function Oturtma({
           </div>
 
           {/* Önerilen mesafeye dön / ayarla */}
+          <div className="flex flex-col items-center gap-0.5">
           <button
             type="button"
             aria-label={elleMesafe !== null ? t('fit.distReset') : t('fit.snap')}
@@ -805,8 +807,16 @@ export default function Oturtma({
               <path d="M4 18v-5h5" />
             </svg>
           </button>
+          <span
+            className="text-white text-[9px] uppercase tracking-wide leading-none"
+            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}
+          >
+            {t('fit.lblReset')}
+          </span>
+          </div>
 
           {/* Otomatik takip */}
+          <div className="flex flex-col items-center gap-0.5">
           <button
             type="button"
             aria-label={t('fit.follow')}
@@ -821,6 +831,13 @@ export default function Oturtma({
               <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
             </svg>
           </button>
+          <span
+            className={`text-[9px] uppercase tracking-wide leading-none ${takip ? 'text-white' : 'text-white/55'}`}
+            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}
+          >
+            {t('fit.lblFollow')}
+          </span>
+          </div>
         </div>
       )}
 
