@@ -311,12 +311,21 @@ export default function Oturtma({
       const yer = uygunYuzeyBul(c, tasarimWm / tasarimHm)
       if (!yer) return null
 
-      const alanW = yer.w * W
-      // Önerilen mesafedeki genişlik: bundan büyüğü ekranı olduğundan yakın gösterir.
-      const onerilenW = onerilenM
+      /*
+       * BOYUT BULUNAN ALANA GÖRE DEĞİL, GERÇEK ÖLÇÜYE GÖRE.
+       *
+       * Önceden taslak, bulunan boşluğa sığsın diye küçültülüyordu; o zaman
+       * ekranda görünen dikdörtgen artık ürünün gerçek ölçüsünü anlatmıyordu.
+       * Oysa bu ekranın bütün amacı ölçüyü göstermek.
+       *
+       * Boyut artık tek bir şeyden geliyor: ekran, önerilen izleme
+       * mesafesinden bakıldığında kadrajın ne kadarını kaplar. Takip yalnızca
+       * YERİ seçiyor, boyuta karışmıyor. Kullanıcı farklı bir uzaklıktaysa
+       * iki parmakla kendisi ayarlıyor.
+       */
+      const hedefW = onerilenM
         ? W * (Math.tan(Math.atan(tasarimWm / 2 / onerilenM)) / Math.tan((KAMERA_ACISI * Math.PI) / 360))
-        : alanW
-      const hedefW = Math.min(alanW, onerilenW || alanW)
+        : yer.w * W
 
       return {
         merkez: { x: (yer.x + yer.w / 2) * W, y: (yer.y + yer.h / 2) * H },

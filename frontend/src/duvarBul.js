@@ -132,8 +132,12 @@ export function uygunYuzeyBul(kaynak, oran) {
         if (duzluk > esik) continue
 
         const parlaklik = dikdortgenToplami(tp, W, x, y, pw, ph) / alan
-        // Kapkara ya da patlamış beyaz alanlar duvar değil, bilgi yok demektir.
-        if (parlaklik < 25 || parlaklik > 240) continue
+        /*
+         * Çok koyu ya da patlamış beyaz alanlar duvar değil: birincisi
+         * gölge/karanlık köşe, ikincisi pencere ya da lamba. İkisinde de
+         * "ayrıntı yok" ölçütü yanıltıcı biçimde düşük çıkar.
+         */
+        if (parlaklik < 45 || parlaklik > 240) continue
 
         // Renk saçılımı: E[x²] − E[x]²
         const kareOrt = dikdortgenToplami(tk, W, x, y, pw, ph) / alan
@@ -147,21 +151,29 @@ export function uygunYuzeyBul(kaynak, oran) {
          *  • dikey konum   : göz hizası tercih edilir; en alt şerit çoğunlukla
          *                    zemin ve kalabalık olur
          *  • yatay merkez  : kadrajın ortasına yakın olan yeğlenir
+         *  • açık renk     : duvarlar çoğunlukla beyaz ya da açık tonludur;
+         *                    koyu alanlar genellikle gölge, mobilya ya da
+         *                    ekranın kendisi olur. Kural değil, TERCİH:
+         *                    yeterince düz koyu bir alan hâlâ seçilebilir,
+         *                    ama açık olan eşit şartlarda öne geçer.
          */
         const merkezY = (y + ph / 2) / H
         const merkezX = (x + pw / 2) / W
         const dikeyUygunluk = 1 - Math.min(1, Math.abs(merkezY - 0.45) / 0.5)
         const yatayUygunluk = 1 - Math.min(1, Math.abs(merkezX - 0.5) / 0.5)
 
+        const acikRenk = Math.max(0, Math.min(1, (parlaklik - 70) / 130))
+
         const puan =
           (1 - duzluk / esik) * 3 +
           (1 - Math.min(1, sacilim / 46)) * 1.6 +
+          acikRenk * 2.2 +
           genislikOran * 1.4 +
           dikeyUygunluk * 0.9 +
           yatayUygunluk * 0.6
 
         if (!enIyi || puan > enIyi.puan) {
-          enIyi = { x, y, w: pw, h: ph, duzluk, sacilim, puan }
+          enIyi = { x, y, w: pw, h: ph, duzluk, sacilim, parlaklik, puan }
         }
       }
     }
@@ -176,6 +188,7 @@ export function uygunYuzeyBul(kaynak, oran) {
     h: enIyi.h / H,
     duzluk: enIyi.duzluk,
     sacilim: enIyi.sacilim,
+    parlaklik: enIyi.parlaklik,
     /*
      * Güven: hem pürüzsüzlük hem tek düzelik. Arayüz bunu kullanıcıya
      * "kuvvetli/zayıf öneri" olarak gösteriyor; zayıfsa kullanıcı elle
