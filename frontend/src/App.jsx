@@ -6,6 +6,7 @@ import MultiScreenModal from './MultiScreenModal.jsx'
 import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
+import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
 import { BrandMark, BrandStripe } from './BrandChrome.jsx'
@@ -164,21 +165,6 @@ const SAMPLE_CABINETS = [
  * kaldırıldı.
  */
 
-const RESOLUTIONS = [
-  {
-    v: 'FHD',
-    w: 1920,
-    h: 1080,
-    desc: 'FHD (Full High Definition): 1920×1080 piksel, ~2,1 milyon piksel. Halk arasında 1080p olarak bilinir; TV, monitör ve çoğu internet videosunda kullanılan standart çözünürlük.',
-  },
-  {
-    v: 'UHD',
-    w: 3840,
-    h: 2160,
-    desc: 'UHD (Ultra High Definition / 4K): 3840×2160 piksel, ~8,3 milyon piksel — FHD\'nin tam 4 katı. Büyük ekranlarda bile piksellerin görünmesini engeller, daha keskin ve ayrıntılı görüntü sağlar.',
-  },
-]
-
 // Tema Root.jsx'te kuruluyor (yönetim ekranı da aynı temayı kullansın diye)
 function App({ theme, onToggleTheme: temaDegistir }) {
   const { t, lang, setLang } = useLang()
@@ -275,7 +261,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setArFotolar((l) => [...l.filter((k) => k.kaynak !== yeni.kaynak), yeni].slice(-6))
     // 'ekleme' → rapor olduğu gibi kalır
   }
-  const [resolution, setResolution] = useState('FHD') // FHD | UHD
+  /*
+   * Ekrana gönderilen SİNYALİN standardı (ekranın kendi çözünürlüğü değil).
+   * Önizlemede sinyal bölgelerinin kaç parçaya bölündüğünü belirler, PDF ve
+   * kayıtlı tekliflerde de saklanır. Kullanıcıya sunulan FHD/UHD düğmeleri
+   * kaldırıldı: o alan artık ekranın gerçek piksel çözünürlüğünü gösteriyor.
+   * Değer yalnızca taslak geri yüklenirken ve sıfırlamada değişir.
+   */
+  const [resolution, setResolution] = useState('FHD')
   const [sboxRedundancy, setSboxRedundancy] = useState('no') // no | yes
   /*
    * Ekranın arkasındaki mekân: 'none' ya da PANO_ID.
@@ -522,6 +515,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       : selectedModel
 
   // Duvar–ekran dengesi: ekran duvardan büyük olamaz (Samsung mantığı)
+  // Ekranın gerçek piksel çözünürlüğü (Teknik Özellikler ile aynı kaynak).
+  const ekranCozunurlugu = computeSpecs(previewModel, cols, rows)
+
   const cwM = (previewModel?.widthMm || 500) / 1000
   const chM = (previewModel?.heightMm || 500) / 1000
   // Kabin ölçüsü mm olarak — sütun/satır altındaki hesap satırı için
@@ -1251,26 +1247,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               */}
               <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('screen.settings')}</h2>
 
-              {/* Çözünürlük (video duvarında yok) */}
-              {!isVideoWall && (
+{/*
+                ÇÖZÜNÜRLÜK: seçilebilen bir ayar değil, HESAPLANAN bir sonuç.
+                Eskiden burada FHD/UHD düğmeleri vardı; bunlar ekrana gönderilen
+                sinyalin standardıydı, ekranın kendi çözünürlüğü değil. Kullanıcı
+                "çözünürlük" başlığı altında ekranının kaç piksel olduğunu
+                görmeyi bekliyor — o değer de kabin sayısıyla birlikte değişiyor.
+
+                Değer Teknik Özellikler'deki "Optik Parametre → Çözünürlük"
+                satırıyla AYNI kaynaktan (computeSpecs) geliyor; iki yerde ayrı
+                formül tutulmuyor, ayrı state de yok.
+              */}
+              {!isVideoWall && ekranCozunurlugu && (
                 <div className="mb-2">
                   <div className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('res.heading')}</div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {RESOLUTIONS.map((r) => (
-                      <button
-                        key={r.v}
-                        type="button"
-                        title={r.desc}
-                        onClick={() => setResolution(r.v)}
-                        className={`py-2.5 rounded-lg text-[17px] transition-colors ${
-                          resolution === r.v
-                            ? 'btn-selected border-2'
-                            : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
-                        }`}
-                      >
-                        {r.v}
-                      </button>
-                    ))}
+                  <div
+                    title={t('res.totalHint')}
+                    className="py-2.5 px-4 rounded-lg border border-neutral-200 dark:border-[#2c333f] text-[17px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100"
+                  >
+                    {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)} px
                   </div>
                 </div>
               )}

@@ -122,16 +122,6 @@ function panelPath(ctx, w, E, s = Math.max(1, STEP / 2)) {
   ctx.closePath()
 }
 
-function roundRectPath(ctx, x, y, w, h, r) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.arcTo(x + w, y, x + w, y + h, r)
-  ctx.arcTo(x + w, y + h, x, y + h, r)
-  ctx.arcTo(x, y + h, x, y, r)
-  ctx.arcTo(x, y, x + w, y, r)
-  ctx.closePath()
-}
-
 /**
  * DÜZ panel yüzeyini ara tuvale çizer: içerik + (kapalıysa) diyot dokusu +
  * satır çizgileri. Buradan çıkan tuval, hedefe dilimlenerek bükülür.
@@ -205,14 +195,13 @@ function yuzeyiCiz(w, h, o) {
  *   imgSX,imgSY,imgSW,imgSH : kaynak görselden kullanılacak dikdörtgen (çoklu ekran dilimi)
  *   showGrid    : boolean
  *   cols, rows  : kabin sayıları
- *   hideRegions : FHD/UHD rozetlerini gizle
- *   resolution  : 'FHD' | 'UHD'
- *   rozet       : çözünürlük rozeti çizilsin mi (tasarım ekranı: evet, AR: hayır)
+ *   hideRegions : sinyal bölgesi göstergelerini gizle
+ *   resolution  : 'FHD' | 'UHD' — sinyalin standardı; bölge sayısını belirler
  *   concave     : true = içe kavisli (konkav), false = dışa kavisli (konveks)
  *   bufferScale : ara tuvalin piksel yoğunluğu (varsayılan 1)
  */
 export function drawCurvedScreen(ctx, o) {
-  const { w, h, maxD, curve, contentType, showGrid, cols, rows, hideRegions, resolution, rozet = false, concave = false, bufferScale = 1 } = o
+  const { w, h, maxD, curve, contentType, showGrid, cols, rows, hideRegions, resolution, concave = false, bufferScale = 1 } = o
 
   if (!(w > 0) || !(h > 0)) return
 
@@ -262,7 +251,7 @@ export function drawCurvedScreen(ctx, o) {
     ctx.stroke()
   }
 
-  ctx.restore() // panel kırpması biter — rozet tam görünsün
+  ctx.restore() // panel kırpması biter
 
   /*
    * BOŞ ÇERÇEVE ("Resim Yok") DIŞ HATTI.
@@ -276,19 +265,5 @@ export function drawCurvedScreen(ctx, o) {
     ctx.lineWidth = 1
     ctx.stroke()
     ctx.restore()
-  }
-
-  // Çözünürlük rozeti — sol üstte tek; yalnız tasarım ekranında (kamerada değil).
-  if (!hideRegions && rozet) {
-    const bx = 3
-    const by = E(0).top + 3
-    ctx.font = '600 9px Poppins, system-ui, sans-serif'
-    ctx.textBaseline = 'middle'
-    const tw = ctx.measureText(resolution).width
-    ctx.fillStyle = '#2962ad' // marka mavisi (brand.js / index.css --color-brand)
-    roundRectPath(ctx, bx, by, tw + 8, 13, 2)
-    ctx.fill()
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText(resolution, bx + 4, by + 7)
   }
 }

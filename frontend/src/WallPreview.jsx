@@ -163,7 +163,7 @@ export function VideoLayer({ src, gw, gh, left, top, lit }) {
  */
 // AR/kamera ekranı da AYNI bileşeni kullanır: tasarım orada da birebir aynı
 // çizilsin, iki ayrı kod yolu birbirinden ayrı düşmesin diye dışa açıldı.
-export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols, cozunurlukRozeti = false }) {
+export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols }) {
   const nCols = Math.max(1, cols)
   const nRows = Math.max(1, rows)
   const isNone = content === 'none'
@@ -223,7 +223,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         cols={nCols}
         rows={nRows}
         resolution={resolution}
-        cozunurlukRozeti={cozunurlukRozeti}
         content={content}
         contentUrl={contentUrl}
         curveAmount={curveAmount}
@@ -520,19 +519,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: LED_SHEEN }} />
       )}
 
-      {/* Çözünürlük rozeti — yalnızca yapılandırma önizlemesinde.
-          Bu rozet bir AYAR GÖSTERGESİ, ürünün parçası değil: tasarım yaparken
-          hangi çözünürlükte çalışıldığını hatırlatır. Kamera görünümünde,
-          3D sahnede ve PDF karesinde ekranın üstüne yapışmış bir etiket gibi
-          durduğu için oralarda çizilmiyor (cozunurlukRozeti varsayılan false;
-          data-pdf-gizle ile de PDF çekiminden düşüyor).
-          "Ölçüleri gizle" de bu rozeti kapatır: o düğme tasarımın üstündeki
-          bilgi katmanını temizlemek için var, rozet de o katmanın parçası. */}
-      {cozunurlukRozeti && !isNone && !hideRegions && groups.length > 0 && (
-        <span data-pdf-gizle className="absolute top-0.5 left-0.5 bg-brand text-white text-[9px] leading-none px-1 py-0.5 rounded-lg">
-          {resolution}
-        </span>
-      )}
     </div>
   )
 }
@@ -973,7 +959,6 @@ export default function WallPreview({
                 <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'flex-end' }}>
                   {placed.map((s, i) => (
                     <Screen
-                      cozunurlukRozeti={showMeasurements}
                       key={i}
                       wPx={s.wPx}
                       hPx={s.hPx}
@@ -1193,7 +1178,6 @@ export default function WallPreview({
         <div className="relative">
           <div style={{ width: wallW, height: wallH }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} flex items-center justify-center`}>
             <Screen
-              cozunurlukRozeti={showMeasurements}
               wPx={screenW}
               hPx={screenH}
               cols={nCols}

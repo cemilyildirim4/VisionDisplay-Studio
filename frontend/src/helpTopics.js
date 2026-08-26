@@ -193,14 +193,14 @@ export const TOPICS = [
       ar: ['الدقة', 'وضوح'],
     },
     q: {
-      tr: 'FHD ve UHD ne demek?',
-      en: 'What do FHD and UHD mean?',
-      ar: 'ماذا تعني FHD و UHD؟',
+      tr: 'Ekranımın çözünürlüğü kaç piksel?',
+      en: 'What is my screen resolution?',
+      ar: 'ما دقة شاشتي بالبكسل؟',
     },
     a: {
-      tr: '• FHD (Full HD): 1920 × 1080 piksel, yaklaşık 2,1 milyon piksel. Halk arasında 1080p denir.\n\n• UHD (4K): 3840 × 2160 piksel, yaklaşık 8,3 milyon piksel — FHD\'nin tam 4 katı. Büyük ekranlarda daha keskin görüntü verir.\n\nBu ayar, ekrana gönderilecek sinyalin çözünürlüğüdür. Ekranın kendi piksel sayısı kabin sayısından hesaplanır ve Teknik Özellikler bölümünde ayrıca gösterilir.',
-      en: '• FHD (Full HD): 1920 × 1080 pixels, about 2.1 million pixels — commonly called 1080p.\n\n• UHD (4K): 3840 × 2160 pixels, about 8.3 million — exactly four times FHD. Sharper on large screens.\n\nThis setting is the resolution of the signal sent to the screen. The screen\'s own pixel count comes from the cabinet count and is shown separately under Specifications.',
-      ar: '• FHD: 1920 × 1080 بكسل.\n• UHD (4K): 3840 × 2160 بكسل، أي أربعة أضعاف FHD.',
+      tr: 'Ekranınızın çözünürlüğü seçilen bir ayar değil, kabin düzeninden HESAPLANIR: her kabinin kendi piksel sayısı, kaç sütun ve kaç satır kullandığınızla çarpılır.\n\nSağ paneldeki "Çözünürlük" alanında toplam değeri (örneğin 318 × 318 px) doğrudan görürsünüz; sütun ya da satır ekleyince anında değişir. Aynı değer Teknik Özellikler → Optik Parametre bölümünde de yazar.\n\nBunu FHD (1920 × 1080) ya da UHD (3840 × 2160) ile karıştırmayın: onlar ekrana gönderilen sinyalin standardıdır. LED ekranın kendi piksel sayısı bunlardan bağımsızdır — kabin ekledikçe artar.',
+      en: 'Your screen resolution is not a setting you pick — it is calculated from the cabinet layout: each cabinet\'s own pixel count multiplied by the number of columns and rows you use.\n\nThe "Resolution" field in the right-hand panel shows the total (for example 318 × 318 px) and updates the moment you add a column or row. The same value appears under Specifications → Optical Parameter.\n\nDo not confuse this with FHD (1920 × 1080) or UHD (3840 × 2160): those are standards for the signal sent to the screen. An LED screen\'s own pixel count is independent of them and grows as you add cabinets.',
+      ar: 'دقة شاشتك تُحسب من تخطيط الخزائن: عدد بكسل كل خزانة مضروبًا في عدد الأعمدة والصفوف. تظهر القيمة الإجمالية في حقل «الدقة» وتتغير فور إضافة عمود أو صف. أما FHD و UHD فهما معياران للإشارة المرسلة إلى الشاشة، وليسا دقة الشاشة نفسها.',
     },
   },
   {

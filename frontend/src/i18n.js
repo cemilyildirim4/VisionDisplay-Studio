@@ -246,6 +246,11 @@ const dict = {
 
   // ---------- Çözünürlük ----------
   'res.heading': { tr: 'Çözünürlük', en: 'Resolution', ar: 'الدقة' },
+  'res.totalHint': {
+    tr: 'Seçtiğiniz modelin ve kabin düzeninin toplam piksel sayısı',
+    en: 'Total pixel count of the selected model and cabinet layout',
+    ar: 'إجمالي عدد البكسل للطراز وتخطيط الخزائن المحددين',
+  },
 
   // ---------- Yapılandırma ----------
   'conf.heading': { tr: 'Yapılandırma', en: 'Configuration', ar: 'التهيئة' },
