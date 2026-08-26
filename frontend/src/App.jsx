@@ -166,6 +166,27 @@ const SAMPLE_CABINETS = [
  * kaldırıldı.
  */
 
+/**
+ * İKİ YERLEŞİMİN DE HESABI (yatay ve dikey).
+ *
+ * "Duvara sığdır" bu hesabı yapıp çok LED olanı uyguluyor. Aynı hesap sol
+ * panelde geçici bir bilgi satırı olarak da gösteriliyor; ikisi TEK yerden
+ * geliyor ki gösterilen sayı ile uygulanan yerleşim ayrışmasın.
+ */
+function yerlesimSecenekleri(m, genislikM, yukseklikM) {
+  if (!m) return null
+  const EPSILON = 1e-9
+  const gW = m.widthMm || 500
+  const gH = m.heightMm || 500
+  const hesapla = (kabinWmm, kabinHmm) => {
+    const c = Math.max(1, Math.floor(genislikM / (kabinWmm / 1000) + EPSILON))
+    const r = Math.max(1, Math.floor(yukseklikM / (kabinHmm / 1000) + EPSILON))
+    // Kabin başına LED = piksel sayısı; dönmekle değişmez, yalnızca yer değiştirir.
+    return { cols: c, rows: r, led: c * r * (m.pixelWidth || 0) * (m.pixelHeight || 0) }
+  }
+  return { yatay: hesapla(gW, gH), dikey: hesapla(gH, gW) }
+}
+
 // Tema Root.jsx'te kuruluyor (yönetim ekranı da aynı temayı kullansın diye)
 function App({ theme, onToggleTheme: temaDegistir }) {
   const { t, lang, setLang } = useLang()
@@ -522,18 +543,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return
     }
 
-    // Bir yerleşimin duvara kaç kabin sığdırdığı ve toplam LED sayısı
-    const hesapla = (kabinWmm, kabinHmm) => {
-      const c = Math.max(1, Math.floor(width / (kabinWmm / 1000) + EPS))
-      const r = Math.max(1, Math.floor(height / (kabinHmm / 1000) + EPS))
-      // Kabin başına LED = piksel sayısı; dönmekle değişmez, yalnızca yer değiştirir.
-      return { cols: c, rows: r, led: c * r * (m.pixelWidth || 0) * (m.pixelHeight || 0) }
-    }
-
-    const gW = m.widthMm || 500
-    const gH = m.heightMm || 500
-    const yatay = hesapla(gW, gH)
-    const dikey = hesapla(gH, gW)
+    const { yatay, dikey } = yerlesimSecenekleri(m, width, height)
 
     const dikeySec = dikey.led > yatay.led || (dikey.led === yatay.led && portrait)
     const kazanan = dikeySec ? dikey : yatay
@@ -640,6 +650,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    *
    * L yoksa null döner ve mekân eskisi gibi dikdörtgen kasa çizer.
    */
+  /*
+   * GEÇİCİ BİLGİ SATIRI.
+   *
+   * "Duvara sığdır" kararını arka planda veriyor; bu satır kararın
+   * dayanağını (iki yerleşimin LED sayısı) görünür kılıyor. Doğrulama
+   * bitince kaldırılacak — hesabın kendisi yerinde kalır.
+   */
+  const yerlesimBilgisi = useMemo(
+    () => yerlesimSecenekleri(selectedModel, width, height),
+    [selectedModel, width, height],
+  )
+
   const ekranSekli = useMemo(() => {
     if (!(tasarimWm > 0) || !(tasarimHm > 0)) return null
     // Tek ekranda da tür bilgisi var; çoklu ekranda her ekranın kendi türü
@@ -1163,6 +1185,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 >
                   {t('conf.fitToWall')}
                 </button>
+                {yerlesimBilgisi && (
+                  <div className="mt-2 text-[15px] leading-snug text-neutral-500 dark:text-neutral-400 tabular-nums">
+                    <div>
+                      Yatay: {yerlesimBilgisi.yatay.cols}×{yerlesimBilgisi.yatay.rows} kabin ·{' '}
+                      {yerlesimBilgisi.yatay.led.toLocaleString('tr-TR')} LED
+                    </div>
+                    <div>
+                      Dikey: {yerlesimBilgisi.dikey.cols}×{yerlesimBilgisi.dikey.rows} kabin ·{' '}
+                      {yerlesimBilgisi.dikey.led.toLocaleString('tr-TR')} LED
+                    </div>
+                  </div>
+                )}
               </div>
 
           {hasModel && (
