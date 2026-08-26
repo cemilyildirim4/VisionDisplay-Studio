@@ -45,18 +45,17 @@ const KAMERA_ACISI = 67
 /**
  * Ekrandaki görüntü hangi uzaklıktan bakmaya denk geliyor?
  *
- * Gerçek genişliği W olan bir ekran, d uzaklıktan bakıldığında kadrajın
- * belli bir oranını kaplar. Buradaki hesap bunun tersi: kadrajı ne kadar
- * kapladığına bakıp d'yi buluyor.
+ * Gerçek genişliği W olan bir ekran, d uzaklıktan bakıldığında görüntünün
+ * belli bir oranını kaplar. Buradaki hesap bunun tersi.
  *
- *   yarıAçı   = atan(oran · tan(kameraAçısı / 2))
- *   uzaklık   = (W / 2) / tan(yarıAçı)
+ *   uzaklık = (W / 2) / (oran · tanYarıAçı)
+ *
+ * tanYarıAçı, EKRANDA GÖRÜNEN alanın yarı açısının tanjantıdır — sensörün
+ * kendi açısı değil (bkz. gorunurTan).
  */
-function denkUzaklik(genislikM, kapladigiOran) {
-  if (!(genislikM > 0) || !(kapladigiOran > 0)) return null
-  const yariAci = Math.atan(kapladigiOran * Math.tan((KAMERA_ACISI * Math.PI) / 360))
-  if (yariAci <= 0) return null
-  return genislikM / 2 / Math.tan(yariAci)
+function denkUzaklik(genislikM, kapladigiOran, tanYariAci) {
+  if (!(genislikM > 0) || !(kapladigiOran > 0) || !(tanYariAci > 0)) return null
+  return genislikM / 2 / (kapladigiOran * tanYariAci)
 }
 
 function metre(v) {
@@ -110,6 +109,8 @@ export default function Oturtma({
    * uzaklıkta duruyor ya da denemek istiyor olabilir. null = öneriyi kullan.
    */
   const [elleMesafe, setElleMesafe] = useState(null)
+  // Video ölçüleri geç gelir; geldiğinde ölçek hesabı tazelensin.
+  const [videoOlcu, setVideoOlcu] = useState(0)
   // Otomatik yerleştirmenin bulduğu alan — taslağın arkasında soluk gösterilir.
   const [bulunan, setBulunan] = useState(null)
 
@@ -171,12 +172,14 @@ export default function Oturtma({
       setKutu({ w: r.width, h: r.height })
       setMerkez((m) => (m.x === 0 && m.y === 0 ? { x: r.width / 2, y: r.height / 2 } : m))
       setPxPerM((p) => (p === 0 ? Math.max(EN_KUCUK, Math.min(EN_BUYUK, (r.width * 0.55) / tasarimWm)) : p))
+      // videoOlcu değişince ölçek yeniden kurulsun diye burada okunuyor
+      void videoOlcu
     }
     olc()
     const go = new ResizeObserver(olc)
     go.observe(el)
     return () => go.disconnect()
-  }, [open, tasarimWm])
+  }, [open, tasarimWm, videoOlcu])
 
   // Pencere kapanınca her şey sıfırlansın (yeniden açılışta eski kare kalmasın)
   useEffect(() => {
@@ -263,10 +266,34 @@ export default function Oturtma({
    *                uzaklıktan bakmaya denk gelir
    * Aradaki fark kullanıcıya yön olarak söyleniyor: uzaklaşın / yaklaşın.
    */
+  /*
+   * EKRANDA GÖRÜNEN AÇI (yarı açının tanjantı).
+   *
+   * Buradaki en büyük hata kaynağı buydu: kamera görüntüsü object-fit:cover
+   * ile KIRPILARAK gösteriliyor. Dikey bir kadrajda yatay bir akışın sağı
+   * solu kesiliyor, yani ekranda gördüğümüz açı sensörün açısından çok daha
+   * dar. Sensör açısıyla hesaplayınca tasarım olduğundan 3 kata varan
+   * oranda KÜÇÜK çiziliyordu.
+   *
+   * Görünen genişlik oranı (fx) doğrudan kırpmadan geliyor; ölçüm gerektiren
+   * bir şey değil, cover kuralının kendisi:
+   *   video kadrajdan genişse  → fx = kadrajOranı / videoOranı
+   *   değilse                  → fx = 1 (yatayda kırpma yok)
+   */
+  const gorunurTan = () => {
+    const tam = Math.tan((KAMERA_ACISI * Math.PI) / 360)
+    const v = videoRef.current
+    if (!v?.videoWidth || !v?.videoHeight || !(kutu.w > 0) || !(kutu.h > 0)) return tam
+    const oranV = v.videoWidth / v.videoHeight
+    const oranK = kutu.w / kutu.h
+    const fx = oranV > oranK ? oranK / oranV : 1
+    return fx * tam
+  }
+
   const onerilenM = model ? viewingDistanceFor(model, cols, rows) : null
   // Taslağın boyutu bu mesafeden hesaplanır (elle değer öneriyi ezer).
   const kullanilanM = elleMesafe ?? onerilenM
-  const simdikiM = kutu.w > 0 ? denkUzaklik(tasarimWm, w / kutu.w) : null
+  const simdikiM = kutu.w > 0 ? denkUzaklik(tasarimWm, w / kutu.w, gorunurTan()) : null
   const sigmiyor = kutu.w > 0 && (w > kutu.w || h > kutu.h)
   const oran = kullanilanM && simdikiM ? simdikiM / kullanilanM : null
   const yonerge = sigmiyor
@@ -334,9 +361,7 @@ export default function Oturtma({
        * YERİ seçiyor, boyuta karışmıyor. Kullanıcı farklı bir uzaklıktaysa
        * iki parmakla kendisi ayarlıyor.
        */
-      const hedefW = kullanilanM
-        ? W * (Math.tan(Math.atan(tasarimWm / 2 / kullanilanM)) / Math.tan((KAMERA_ACISI * Math.PI) / 360))
-        : yer.w * W
+      const hedefW = kullanilanM ? W * (tasarimWm / 2 / kullanilanM / gorunurTan()) : yer.w * W
 
       return {
         merkez: { x: (yer.x + yer.w / 2) * W, y: (yer.y + yer.h / 2) * H },
@@ -406,8 +431,7 @@ export default function Oturtma({
   const onerilenMesafeyeAyarla = (hedefMesafe = kullanilanM) => {
     if (!hedefMesafe || !(kutu.w > 0)) return
     // denkUzaklik'in tersi: bu uzaklıkta ekran kadrajın ne kadarını kaplar?
-    const yariAci = Math.atan(tasarimWm / 2 / hedefMesafe)
-    const kaplama = Math.tan(yariAci) / Math.tan((KAMERA_ACISI * Math.PI) / 360)
+    const kaplama = tasarimWm / 2 / hedefMesafe / gorunurTan()
     const yeni = (kutu.w * kaplama) / tasarimWm
     setPxPerM(Math.max(EN_KUCUK, Math.min(EN_BUYUK, yeni)))
   }
@@ -509,7 +533,13 @@ export default function Oturtma({
   return (
     <div className="fixed inset-0 z-[60] bg-black select-none" style={{ touchAction: 'none' }}>
       <div ref={kapRef} className="absolute inset-0 overflow-hidden">
-        <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          onLoadedMetadata={() => setVideoOlcu((n) => n + 1)}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
 
         {hata && (
           <div className="absolute inset-0 flex items-center justify-center p-8 bg-[#10141b]">
