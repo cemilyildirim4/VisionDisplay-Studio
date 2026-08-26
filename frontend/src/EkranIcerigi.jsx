@@ -2,24 +2,21 @@
  * EKRANIN İÇİ — fotoğraflı mekânların ortak içerik katmanı.
  *
  * Tek kural: kreatif GERİLMEZ. Reklam görselinin oranı ekranın oranıyla
- * uyuşmadığında iki seçenek var ve ikisi de bozmadan çalışır:
+ * uyuşmadığında görselin tamamı gösterilir (contain), artan yer siyah kalır.
  *
- *   • contain (varsayılan) — görselin tamamı görünür, artan yer siyah kalır.
- *   • cover ("ekranı doldur") — ekran dolar, görselin kenarları KIRPILIR.
- *
- * Üçüncü bir yol (fill / %100 × %100) kasıtlı olarak yok: o, görseli gerer ve
- * müşteriye gerçekte göremeyeceği bir şey gösterir.
+ * Gerdiren bir seçenek (fill / %100 × %100) kasıtlı olarak yok: o, müşteriye
+ * gerçekte göremeyeceği bir şey gösterir.
  */
 
 import { DEFAULT_CONTENT_SRC, LED_GRADIENT } from './content.js'
 import { SAMPLE_VIDEO_SRC } from './videoContent.js'
 
-export default function EkranIcerigi({ content, contentUrl, doldur = false }) {
+export default function EkranIcerigi({ content, contentUrl }) {
   const ortak = {
     width: '100%',
     height: '100%',
     display: 'block',
-    objectFit: doldur ? 'cover' : 'contain',
+    objectFit: 'contain',
     objectPosition: 'center',
     background: '#000',
   }

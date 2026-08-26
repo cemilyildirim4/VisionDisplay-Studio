@@ -101,7 +101,6 @@ function OutdoorBillboard({
   wm,
   content,
   contentUrl,
-  doldur,
   isikVar,
 }) {
   const cerceve = Math.round(
@@ -186,7 +185,7 @@ function OutdoorBillboard({
           }}
         >
           <div style={{ width: '100%', height: '100%', overflow: 'hidden', background: '#000' }}>
-            <EkranIcerigi content={content} contentUrl={contentUrl} doldur={doldur} />
+            <EkranIcerigi content={content} contentUrl={contentUrl} />
           </div>
         </div>
 
@@ -265,8 +264,6 @@ function DimensionControls({
   onRows,
   wm,
   hm,
-  doldur,
-  onDoldur,
 }) {
   const { t } = useLang()
 
@@ -304,15 +301,6 @@ function DimensionControls({
     <div className="rounded-2xl bg-black/70 backdrop-blur px-3 py-2 w-[236px]">
       <Satir etiket={t('avm.width')} deger={cols} enCok={colsMax} kabinM={cwM} degistir={onCols} toplamM={wm} />
       <Satir etiket={t('avm.height')} deger={rows} enCok={rowsMax} kabinM={chM} degistir={onRows} toplamM={hm} />
-      <button
-        type="button"
-        onClick={() => onDoldur(!doldur)}
-        className={`mt-1 w-full rounded-lg py-1.5 text-[11.5px] font-semibold transition-colors ${
-          doldur ? 'bg-brand text-white' : 'bg-white/15 hover:bg-white/25 text-white'
-        }`}
-      >
-        {t('dis.fill')}: {doldur ? t('dis.on') : t('dis.off')}
-      </button>
     </div>
   )
 }
@@ -337,7 +325,6 @@ export default function OutdoorScene({
   const sahneRef = useRef(null)
   const [sahne, setSahne] = useState({ w: 0, h: 0 })
   const [foto, setFoto] = useState({ w: 0, h: 0 })
-  const [doldur, setDoldur] = useState(false)
 
   useGovdeKilidi(open)
 
@@ -407,7 +394,6 @@ export default function OutdoorScene({
             wm={wm}
             content={content}
             contentUrl={contentUrl}
-            doldur={doldur}
             isikVar={isikVar}
           />
         )}
@@ -433,8 +419,6 @@ export default function OutdoorScene({
             onRows={onRows}
             wm={wm}
             hm={hm}
-            doldur={doldur}
-            onDoldur={setDoldur}
           />
         </div>
 
