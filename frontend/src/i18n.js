@@ -507,9 +507,9 @@ const dict = {
   },
   'content.none': { tr: 'Resim Yok', en: 'No Image', ar: 'بدون صورة' },
   'content.hint': {
-    tr: '* Yalnızca JPG veya PNG biçiminde, maksimum 3 MB',
-    en: '* JPG or PNG only, max 3 MB',
-    ar: '* JPG أو PNG فقط، بحد أقصى 3 ميغابايت',
+    tr: '* Yalnızca JPG veya PNG biçiminde, maksimum 60 MB',
+    en: '* JPG or PNG only, max 60 MB',
+    ar: '* JPG أو PNG فقط، بحد أقصى 60 ميغابايت',
   },
   'content.errFormat': {
     tr: 'Yalnızca JPG veya PNG formatı desteklenir.',
@@ -517,9 +517,9 @@ const dict = {
     ar: 'يُدعم تنسيق JPG أو PNG فقط.',
   },
   'content.errSize': {
-    tr: 'Dosya boyutu en fazla 3 MB olabilir.',
-    en: 'File size can be at most 3 MB.',
-    ar: 'الحد الأقصى لحجم الملف 3 ميغابايت.',
+    tr: 'Dosya boyutu en fazla 60 MB olabilir.',
+    en: 'File size can be at most 60 MB.',
+    ar: 'الحد الأقصى لحجم الملف 60 ميغابايت.',
   },
 
   // ---------- PDF ----------

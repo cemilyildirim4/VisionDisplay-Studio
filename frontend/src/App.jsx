@@ -26,7 +26,7 @@ import ArView from './ArView.jsx'
 // gömülürse ilk yükleme herkes için ağırlaşır. Bu yüzden "3D Görünüm" düğmesine
 // basılana kadar hiç indirilmez (kod bölme / code-splitting).
 const Scene3D = guvenliLazy(() => import('./Scene3D.jsx'))
-import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, L_KIRILMA_PCT, curveDepthFor } from './content.js'
+import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, L_KIRILMA_PCT, curveDepthFor, IMAGE_MAX_MB } from './content.js'
 import { LANGUAGES } from './i18n.js'
 import { useAcilirKonum } from './hooks/useAcilirKonum.js'
 import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
@@ -475,17 +475,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       alert(t('content.errFormat'))
       return
     }
-    if (file.size > 3 * 1024 * 1024) {
+    if (file.size > IMAGE_MAX_MB * 1024 * 1024) {
       alert(t('content.errSize'))
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
-      setContentUrl(reader.result)
-      setContent('upload')
-    }
-    reader.readAsDataURL(file)
+    /*
+     * Blob adresi, base64 değil.
+     *
+     * Eskiden dosya FileReader ile data URL'e çevriliyordu; base64 dosyayı
+     * ~%37 büyütür ve tamamı bir dize olarak React durumunda tutulur. 3 MB'da
+     * bunun bedeli görünmezdi, 60 MB'da sekmeyi zorlar. Blob adresi ise yalnızca
+     * bir işaretçi; dosya diskte kalır, tarayıcı gerektiği kadarını okur.
+     * Video zaten böyle çalışıyordu, görsel de artık aynı yolu kullanıyor.
+     */
+    if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
+    setContentUrl(URL.createObjectURL(file))
+    setContent('upload')
   }
 
   // Üst buton: tüm tasarımı ve modeli sıfırla

@@ -1,3 +1,14 @@
+/**
+ * Yüklenen GÖRSELİN üst sınırı (MB).
+ *
+ * Görsel sunucuya gitmiyor; videoda olduğu gibi tarayıcıda bir blob adresi
+ * olarak tutuluyor, yani sınır ağ değil bellek kaynaklı. 3 MB bugünün
+ * dosyaları için çok düşüktü: telefonla çekilmiş tek bir fotoğraf ya da
+ * ajanstan gelen basılı çözünürlükte bir görsel bile geçemiyordu.
+ * 60 MB, video için kabul ettiğimiz 250 MB'ın yanında rahat kalıyor.
+ */
+export const IMAGE_MAX_MB = 60
+
 // Varsayılan içerik görseli — public/default-content.jpg (kullanıcı bu dosyayı ekler)
 export const DEFAULT_CONTENT_SRC = '/default-content.jpg'
 

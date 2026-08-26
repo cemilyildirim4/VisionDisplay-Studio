@@ -430,9 +430,9 @@ export const TOPICS = [
     },
     q: { tr: 'Ekranda kendi görselimi gösterebilir miyim?', en: 'Can I show my own image on the screen?', ar: 'هل يمكنني عرض صورتي على الشاشة؟' },
     a: {
-      tr: 'Evet. Sağ paneldeki "İçerik" bölümünden seçersiniz:\n\n• LED EKRAN — boş panel dokusu (ekranın kendisi görünsün diye)\n• ÖRNEK GÖRÜNTÜ / ÖRNEK VİDEO — hazır içerik\n• Resim Ekle / Video Ekle — kendi dosyanız\n• Resim Yok — boş çerçeve\n\nGörsel için JPG veya PNG, en fazla 3 MB.\n\nSeçtiğiniz içerik önizlemede, 3D görünümde ve AR\u2019da da görünür — çoklu ekranda tek görsel tüm duvara yayılır.',
-      en: 'Yes. Use the "Content" section in the right panel:\n\n• LED SCREEN — bare panel texture (to show the screen itself)\n• SAMPLE IMAGE / SAMPLE VIDEO — ready-made content\n• Add Image / Add Video — your own file\n• No Image — empty frame\n\nImages: JPG or PNG, up to 3 MB.\n\nWhatever you pick also appears in the 3D view and in AR — in multi-screen mode one image spreads across the whole wall.',
-      ar: 'نعم. من قسم «المحتوى» في اللوحة اليمنى: نسيج LED، صورة/فيديو تجريبي، أو ملفك الخاص (JPG/PNG حتى 3 ميغابايت). يظهر المحتوى أيضًا في العرض ثلاثي الأبعاد والواقع المعزز.',
+      tr: 'Evet. Sağ paneldeki "İçerik" bölümünden seçersiniz:\n\n• LED EKRAN — boş panel dokusu (ekranın kendisi görünsün diye)\n• ÖRNEK GÖRÜNTÜ / ÖRNEK VİDEO — hazır içerik\n• Resim Ekle / Video Ekle — kendi dosyanız\n• Resim Yok — boş çerçeve\n\nGörsel için JPG veya PNG, en fazla 60 MB.\n\nSeçtiğiniz içerik önizlemede, 3D görünümde ve AR\u2019da da görünür — çoklu ekranda tek görsel tüm duvara yayılır.',
+      en: 'Yes. Use the "Content" section in the right panel:\n\n• LED SCREEN — bare panel texture (to show the screen itself)\n• SAMPLE IMAGE / SAMPLE VIDEO — ready-made content\n• Add Image / Add Video — your own file\n• No Image — empty frame\n\nImages: JPG or PNG, up to 60 MB.\n\nWhatever you pick also appears in the 3D view and in AR — in multi-screen mode one image spreads across the whole wall.',
+      ar: 'نعم. من قسم «المحتوى» في اللوحة اليمنى: نسيج LED، صورة/فيديو تجريبي، أو ملفك الخاص (JPG/PNG حتى 60 ميغابايت). يظهر المحتوى أيضًا في العرض ثلاثي الأبعاد والواقع المعزز.',
     },
   },
   {
