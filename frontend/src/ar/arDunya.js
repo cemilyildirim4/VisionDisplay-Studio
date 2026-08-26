@@ -134,7 +134,8 @@ export function yerlesimMatrisi(duruşMatrisi, kameraKonumu, yukseklikM) {
  * AR oturumunu açar.
  *
  * @param {object} p
- *   doku          : THREE.Texture — tasarımın görüntüsü
+ *   dokuUret      : () => Promise<THREE.Texture> — tasarımın görüntüsü.
+ *                   OTURUM AÇILDIKTAN SONRA çağrılır; bkz. aşağıdaki not.
  *   genislikM     : tasarımın gerçek genişliği (metre)
  *   yukseklikM    : tasarımın gerçek yüksekliği (metre)
  *   ustKatman     : dom-overlay olarak gösterilecek DOM öğesi
@@ -145,7 +146,7 @@ export function yerlesimMatrisi(duruşMatrisi, kameraKonumu, yukseklikM) {
  * @returns {Promise<{ kapat: fn, yenidenYerlestir: fn, otomatikAyarla: fn, kareAl: fn }>}
  */
 export async function arBaslat({
-  doku,
+  dokuUret,
   genislikM,
   yukseklikM,
   ustKatman,
@@ -154,6 +155,17 @@ export async function arBaslat({
   onBitti = () => {},
   onHata = () => {},
 }) {
+  /*
+   * OTURUM İSTEĞİ İLK İŞTİR — ÖNÜNDE HİÇBİR await OLAMAZ.
+   *
+   * requestSession yalnızca kullanıcı hareketinin (dokunma) hemen ardından
+   * kabul edilir. Önceki sürümde tasarımın görüntüsü html2canvas ile önce
+   * üretiliyordu; o bekleme sırasında hareket hakkı düşüyor ve tarayıcı
+   * oturumu "NotAllowedError" ile reddediyordu — telefonda görülen
+   * "Gerçek yüzey modu açılamadı" hatası buydu.
+   *
+   * Bu yüzden doku, oturum açıldıktan SONRA üretiliyor.
+   */
   const ozellikler = {
     requiredFeatures: ['hit-test'],
     optionalFeatures: ['anchors', 'local-floor', 'dom-overlay'],
@@ -161,6 +173,12 @@ export async function arBaslat({
   if (ustKatman) ozellikler.domOverlay = { root: ustKatman }
 
   const oturum = await navigator.xr.requestSession('immersive-ar', ozellikler)
+
+  const doku = await dokuUret()
+  if (!doku) {
+    oturum.end().catch(() => {})
+    throw new Error('tasarım görüntüsü üretilemedi')
+  }
 
   const tuval = document.createElement('canvas')
   const cizer = new THREE.WebGLRenderer({ canvas: tuval, alpha: true, antialias: true })

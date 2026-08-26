@@ -852,34 +852,42 @@ export default function ArView({
     return doku
   }
 
-  const dunyayaGir = async () => {
-    if (dunyaHazirlaniyor) return
+  /**
+   * Gerçek yüzey moduna geçer.
+   *
+   * ÖNEMLİ: burada arBaslat'tan ÖNCE hiçbir şey beklenmez. WebXR oturumu
+   * ancak kullanıcı hareketinin hemen ardından açılabiliyor; araya bir await
+   * girerse tarayıcı isteği reddediyor. Doku üretimi de bu yüzden oturumun
+   * içine, açılıştan sonrasına alındı.
+   *
+   * @param sessiz  Kendiliğinden denemede hata yazısı gösterilmez.
+   */
+  const dunyayaGir = (sessiz = false) => {
+    if (dunyaHazirlaniyor || oturumRef.current) return
     setDunyaHazirlaniyor(true)
-    try {
-      const doku = await tasarimDokusu()
-      if (!doku) throw new Error('tasarım yok')
-      const o = await arBaslat({
-        doku,
-        // FİZİKSEL ÖLÇEK: konfigüratördeki metre değerleri doğrudan geçer.
-        genislikM: tasarimWm,
-        yukseklikM: tasarimHm,
-        ustKatman: arKatmanRef.current,
-        otomatik: dunyaOtomatik,
-        onDurum: setDunyaDurum,
-        onBitti: () => {
-          oturumRef.current = null
-          setDunyaAcik(false)
-          setDunyaDurum(DURUM.ARANIYOR)
-        },
+    arBaslat({
+      dokuUret: tasarimDokusu,
+      // FİZİKSEL ÖLÇEK: konfigüratördeki metre değerleri doğrudan geçer.
+      genislikM: tasarimWm,
+      yukseklikM: tasarimHm,
+      ustKatman: arKatmanRef.current,
+      otomatik: dunyaOtomatik,
+      onDurum: setDunyaDurum,
+      onBitti: () => {
+        oturumRef.current = null
+        setDunyaAcik(false)
+        setDunyaDurum(DURUM.ARANIYOR)
+      },
+    })
+      .then((o) => {
+        oturumRef.current = o
+        setDunyaAcik(true)
+        setDunyaDurum(DURUM.ARANIYOR)
       })
-      oturumRef.current = o
-      setDunyaAcik(true)
-      setDunyaDurum(DURUM.ARANIYOR)
-    } catch {
-      setBildirim(t('arw.failed'))
-    } finally {
-      setDunyaHazirlaniyor(false)
-    }
+      .catch((e) => {
+        if (!sessiz) setBildirim(`${t('arw.failed')} (${e?.name || e?.message || 'bilinmeyen'})`)
+      })
+      .finally(() => setDunyaHazirlaniyor(false))
   }
 
   // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
@@ -1294,6 +1302,13 @@ export default function ArView({
             onYerlestir={(n) => {
               setMerkez(n)
               setAsama('yerlesti')
+              /*
+               * Cihaz destekliyorsa kamera açılışındaki bu ilk dokunuş
+               * doğrudan gerçek yüzey moduna geçirir — ayrı bir düğme yok.
+               * Dokunuş kullanıcı hareketidir, WebXR oturumu ancak böyle
+               * açılabiliyor (bkz. dunyayaGir).
+               */
+              if (dunyaVar) dunyayaGir()
             }}
           />
         )}
@@ -1306,28 +1321,6 @@ export default function ArView({
             onTusTakimi={() => setTusTakimi((a) => !a)}
             tusTakimi={tusTakimi}
           />
-        )}
-
-        {/*
-          GERÇEK YÜZEYE YERLEŞTİR.
-          Yalnızca cihaz WebXR AR açabiliyorsa görünür; desteklemeyen
-          cihazlarda kimseye çalışmayan bir düğme gösterilmez.
-        */}
-        {!hata && arAcik && asama === 'yerlesti' && dunyaVar && !dunyaAcik && (
-          <div className="absolute bottom-28 inset-x-0 z-40 flex justify-center px-6 pointer-events-none">
-            <button
-              type="button"
-              onClick={dunyayaGir}
-              disabled={dunyaHazirlaniyor}
-              className="pointer-events-auto rounded-full bg-brand text-white text-[13px] font-semibold px-5 py-2.5 shadow-lg disabled:opacity-60 flex items-center gap-2"
-            >
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 7l9-4 9 4-9 4-9-4z" />
-                <path d="M3 12l9 4 9-4M3 17l9 4 9-4" />
-              </svg>
-              {dunyaHazirlaniyor ? t('arw.starting') : t('arw.enter')}
-            </button>
-          </div>
         )}
 
         {!hata && arAcik && asama === 'yerlesti' && tusTakimi && (
