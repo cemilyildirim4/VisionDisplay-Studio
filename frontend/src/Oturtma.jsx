@@ -101,10 +101,9 @@ export default function Oturtma({
   const [sonuc, setSonuc] = useState(null)
   const [mesgul, setMesgul] = useState(false)
   const [bildirim, setBildirim] = useState(null)
-  const [taraniyor, setTaraniyor] = useState(false)
+  const [takip, setTakip] = useState(true)
   // Otomatik yerleştirmenin bulduğu alan — taslağın arkasında soluk gösterilir.
   const [bulunan, setBulunan] = useState(null)
-  const otoDenendiRef = useRef(false)
 
   useGovdeKilidi(open)
 
@@ -179,34 +178,9 @@ export default function Oturtma({
     setPxPerM(0)
     setMerkez({ x: 0, y: 0 })
     setBulunan(null)
-    otoDenendiRef.current = false
+    setTakip(true)
   }, [open])
 
-  /*
-   * Kamera görüntüsü akmaya başlayınca BİR KEZ kendiliğinden taranır:
-   * kullanıcı hiçbir şeye dokunmadan bir öneri görsün. Sessiz yapılıyor —
-   * uygun yer bulunamazsa kimseyi uyarmaya gerek yok, taslak ortada durur.
-   */
-  useEffect(() => {
-    if (!open || hata || !(kutu.w > 0) || otoDenendiRef.current) return
-    const v = videoRef.current
-    if (!v) return
-    let zaman = null
-    const dene = () => {
-      if (otoDenendiRef.current) return
-      if (!v.videoWidth) {
-        zaman = setTimeout(dene, 400)
-        return
-      }
-      otoDenendiRef.current = true
-      otomatikYerlestir(true)
-    }
-    zaman = setTimeout(dene, 600)
-    return () => clearTimeout(zaman)
-    // otomatikYerlestir her render'da yenilenir; bağımlılığa almak taramayı
-    // tekrarlatır. Tek seferlik olması otoDenendiRef ile güvence altında.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, hata, kutu.w])
 
   useEffect(() => {
     if (!bildirim) return
@@ -217,6 +191,14 @@ export default function Oturtma({
   /* -------------------------------------------------------------- jestler */
 
   const parmakIndi = (e) => {
+    /*
+     * Elle dokunmak takibi kapatır: kullanıcı taslağı bir yere koyduysa
+     * orada kalmalı, tarama onu geri çekmemeli.
+     */
+    if (takip) {
+      setTakip(false)
+      setBildirim(t('fit.followOffHint'))
+    }
     e.currentTarget.setPointerCapture?.(e.pointerId)
     parmaklarRef.current.set(e.pointerId, e)
     const p = [...parmaklarRef.current.values()]
@@ -288,7 +270,7 @@ export default function Oturtma({
   const yonergeIyi = !sigmiyor && oran !== null && oran >= 0.8 && oran <= 1.25
 
   /**
-   * OTOMATİK YERLEŞTİRME.
+   * CANLI TAKİP.
    *
    * Kameranın o anki karesi taranır (bkz. duvarBul.js), tasarımın en/boy
    * oranına uyan en düz ve boş alan bulunur, taslak oraya taşınır.
@@ -300,10 +282,9 @@ export default function Oturtma({
    * Boyut, bulunan alanı aşmaz ve önerilen izleme mesafesinden daha yakın
    * görünecek kadar da büyümez — ikisinin küçüğü alınır.
    */
-  const otomatikYerlestir = async (sessiz = false) => {
+  const yuzeyAra = () => {
     const v = videoRef.current
-    if (!v?.videoWidth || !(kutu.w > 0) || taraniyor) return
-    setTaraniyor(true)
+    if (!v?.videoWidth || !(kutu.w > 0)) return null
     try {
       const W = Math.round(kutu.w)
       const H = Math.round(kutu.h)
@@ -328,11 +309,7 @@ export default function Oturtma({
       g.drawImage(v, sx, sy, sw, sh, 0, 0, W, H)
 
       const yer = uygunYuzeyBul(c, tasarimWm / tasarimHm)
-      if (!yer) {
-        setBulunan(null)
-        if (!sessiz) setBildirim(t('fit.autoNone'))
-        return
-      }
+      if (!yer) return null
 
       const alanW = yer.w * W
       // Önerilen mesafedeki genişlik: bundan büyüğü ekranı olduğundan yakın gösterir.
@@ -341,17 +318,69 @@ export default function Oturtma({
         : alanW
       const hedefW = Math.min(alanW, onerilenW || alanW)
 
-      setPxPerM(Math.max(EN_KUCUK, Math.min(EN_BUYUK, hedefW / tasarimWm)))
-      setMerkez({ x: (yer.x + yer.w / 2) * W, y: (yer.y + yer.h / 2) * H })
-      setBulunan({ x: yer.x * W, y: yer.y * H, w: yer.w * W, h: yer.h * H })
-      if (!sessiz) setBildirim(t('fit.autoDone'))
+      return {
+        merkez: { x: (yer.x + yer.w / 2) * W, y: (yer.y + yer.h / 2) * H },
+        pxPerM: Math.max(EN_KUCUK, Math.min(EN_BUYUK, hedefW / tasarimWm)),
+        alan: { x: yer.x * W, y: yer.y * H, w: yer.w * W, h: yer.h * H },
+        guven: yer.guven,
+      }
     } catch {
-      setBulunan(null)
-      if (!sessiz) setBildirim(t('fit.autoNone'))
-    } finally {
-      setTaraniyor(false)
+      return null
     }
   }
+
+  /*
+   * TAKİP DÖNGÜSÜ.
+   *
+   * Kamera her kımıldadığında görüntü değişiyor; taslağın da onunla birlikte
+   * gitmesi gerek — kullanıcı her seferinde bir düğmeye basmak zorunda
+   * kalmasın. Döngü iki iş yapıyor:
+   *
+   *   • ~4 kez/sn TARAMA. Bir kare 1 ms'den kısa sürüyor (integral tablo
+   *     sayesinde), yani sürekli çalışması pahalı değil.
+   *   • ~20 kez/sn YUMUŞATMA. Taslak hedefe zıplamıyor, ona doğru kayıyor.
+   *     Zıplarsa hem göz yorar hem de tarama gürültüsü titreme gibi görünür.
+   *
+   * Parmak ekrandayken durur: kullanıcı taşırken taslağı geri çekmek
+   * kullanıcıyla kavga etmek olurdu. Elle taşımak takibi zaten kapatıyor.
+   */
+  const hedefRef = useRef(null)
+  useEffect(() => {
+    if (!open || hata || !takip || sonuc || !(kutu.w > 0)) return
+
+    let calisiyor = true
+    let sonTarama = 0
+
+    const adim = () => {
+      if (!calisiyor) return
+      const simdi = performance.now()
+      const parmakVar = parmaklarRef.current.size > 0
+
+      if (!parmakVar && simdi - sonTarama > 250) {
+        sonTarama = simdi
+        const yeni = yuzeyAra()
+        hedefRef.current = yeni
+        setBulunan(yeni ? yeni.alan : null)
+      }
+
+      const h = hedefRef.current
+      if (h && !parmakVar) {
+        const k = 0.3 // yumuşatma katsayısı
+        setMerkez((m) => ({ x: m.x + (h.merkez.x - m.x) * k, y: m.y + (h.merkez.y - m.y) * k }))
+        setPxPerM((p) => p + (h.pxPerM - p) * k)
+      }
+      zamanlayici = setTimeout(adim, 50)
+    }
+
+    let zamanlayici = setTimeout(adim, 400)
+    return () => {
+      calisiyor = false
+      clearTimeout(zamanlayici)
+    }
+    // yuzeyAra her render'da yenilenir; bağımlılığa alınırsa döngü sürekli
+    // kurulup yıkılır. İhtiyacı olan değerler zaten aşağıdaki listede.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, hata, takip, sonuc, kutu.w, tasarimWm, tasarimHm, onerilenM])
 
   /** Taslağı, önerilen mesafeden görünecek büyüklüğe ayarlar. */
   const onerilenMesafeyeAyarla = () => {
@@ -592,7 +621,9 @@ export default function Oturtma({
       {/* YÖNERGE + İZLEME MESAFESİ */}
       {!hata && !sonuc && (
         <div className="absolute top-14 inset-x-0 z-40 px-6 flex flex-col items-center gap-2">
-          <p className="text-center text-white/85 text-[12.5px] m-0">{t('fit.hint')}</p>
+          <p className="text-center text-white/85 text-[12.5px] m-0">
+            {takip ? (bulunan ? t('fit.followHint') : t('fit.searching')) : t('fit.hint')}
+          </p>
 
           {onerilenM && (
             <div className="rounded-xl bg-black/70 backdrop-blur px-3.5 py-2 max-w-[320px] w-full">
@@ -620,11 +651,12 @@ export default function Oturtma({
                 </button>
                 <button
                   type="button"
-                  onClick={() => otomatikYerlestir(false)}
-                  disabled={taraniyor}
-                  className="flex-1 rounded-lg bg-brand hover:bg-brand-dark text-white text-[11.5px] font-semibold py-1.5 transition-colors disabled:opacity-60"
+                  onClick={() => setTakip((a) => !a)}
+                  className={`flex-1 rounded-lg text-[11.5px] font-semibold py-1.5 transition-colors ${
+                    takip ? 'bg-brand hover:bg-brand-dark text-white' : 'bg-white/15 hover:bg-white/25 text-white'
+                  }`}
                 >
-                  {taraniyor ? t('fit.scanning') : t('fit.auto')}
+                  {t('fit.follow')}: {takip ? t('fit.followOn') : t('fit.followOff')}
                 </button>
               </div>
             </div>

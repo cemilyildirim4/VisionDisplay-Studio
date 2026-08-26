@@ -27,8 +27,21 @@
 /** Çözümleme genişliği — daha büyüğü belirgin fayda vermeden yavaşlatıyor. */
 const COZUMLEME_W = 160
 
-/** Bu eşiğin üstünde ortalama gradyan varsa alan "düz" sayılmaz. */
-const DUZLUK_ESIGI = 22
+/*
+ * DÜZLÜK EŞİĞİ ARTIK GÖRELİ.
+ *
+ * Sabit bir eşik iki yönde de yanılıyordu: loş bir odada her yer "düz"
+ * çıkıyor, aydınlık ve dokulu bir mekânda ise (sıvalı duvar, halı deseni,
+ * tuğla) hiçbir yer eşiği geçemiyor ve "uygun yer bulunamadı" deniyordu.
+ * Duvarın düzlüğü mutlak bir sayı değil, O KAREYE GÖRE bir şeydir: aranan,
+ * karenin geri kalanından belirgin biçimde daha sakin olan bölge.
+ *
+ * Eşik bu yüzden karenin kendi ortalama gradyanından türetiliyor; alt ve üst
+ * sınırlar yalnızca uç durumlar için (bomboş ya da tamamen kalabalık kare).
+ */
+const GORELI_KATSAYI = 0.62
+const MUTLAK_EN_AZ = 4
+const MUTLAK_EN_COK = 34
 
 /**
  * Aday pencerenin kadraja göre en küçük ve en büyük genişliği.
@@ -86,9 +99,21 @@ export function uygunYuzeyBul(kaynak, oran) {
     }
   }
 
-  // 3) Toplam tabloları: gradyan ve parlaklık
+  // 3) Toplam tabloları: gradyan, parlaklık ve parlaklığın KARESİ
   const tg = toplamTablosu(gradyan, W, H)
   const tp = toplamTablosu(gri, W, H)
+  /*
+   * Karelerin toplamı, herhangi bir dikdörtgenin renk SAÇILIMINI (standart
+   * sapma) da dört okumayla vermeye yarıyor. Gradyan "ayrıntı var mı" der;
+   * saçılım "renk tek düze mi" der. İkisi farklı şeyleri yakalar: yumuşak
+   * geçişli bir gölge gradyanı düşük tutar ama saçılımı büyütür, desenli bir
+   * duvar kâğıdı ise tersini yapar. Duvar ikisinde de sakindir.
+   */
+  const tk = toplamTablosu(kareler(gri), W, H)
+
+  // Karenin genel hareketliliği — eşik buna göre belirlenir.
+  const geneOrtalama = dikdortgenToplami(tg, W, 0, 0, W, H) / (W * H)
+  const esik = Math.max(MUTLAK_EN_AZ, Math.min(MUTLAK_EN_COK, geneOrtalama * GORELI_KATSAYI))
 
   // 4) Aday pencereler
   let enIyi = null
@@ -104,11 +129,16 @@ export function uygunYuzeyBul(kaynak, oran) {
       for (let x = 0; x + pw <= W; x += adim) {
         const alan = pw * ph
         const duzluk = dikdortgenToplami(tg, W, x, y, pw, ph) / alan
-        if (duzluk > DUZLUK_ESIGI) continue
+        if (duzluk > esik) continue
 
         const parlaklik = dikdortgenToplami(tp, W, x, y, pw, ph) / alan
         // Kapkara ya da patlamış beyaz alanlar duvar değil, bilgi yok demektir.
         if (parlaklik < 25 || parlaklik > 240) continue
+
+        // Renk saçılımı: E[x²] − E[x]²
+        const kareOrt = dikdortgenToplami(tk, W, x, y, pw, ph) / alan
+        const sacilim = Math.sqrt(Math.max(0, kareOrt - parlaklik * parlaklik))
+        if (sacilim > 46) continue // içinde koyu/açık iki ayrı şey var demektir
 
         /*
          * PUAN.
@@ -124,10 +154,14 @@ export function uygunYuzeyBul(kaynak, oran) {
         const yatayUygunluk = 1 - Math.min(1, Math.abs(merkezX - 0.5) / 0.5)
 
         const puan =
-          (1 - duzluk / DUZLUK_ESIGI) * 3 + genislikOran * 1.4 + dikeyUygunluk * 0.9 + yatayUygunluk * 0.6
+          (1 - duzluk / esik) * 3 +
+          (1 - Math.min(1, sacilim / 46)) * 1.6 +
+          genislikOran * 1.4 +
+          dikeyUygunluk * 0.9 +
+          yatayUygunluk * 0.6
 
         if (!enIyi || puan > enIyi.puan) {
-          enIyi = { x, y, w: pw, h: ph, duzluk, puan }
+          enIyi = { x, y, w: pw, h: ph, duzluk, sacilim, puan }
         }
       }
     }
@@ -141,9 +175,24 @@ export function uygunYuzeyBul(kaynak, oran) {
     w: enIyi.w / W,
     h: enIyi.h / H,
     duzluk: enIyi.duzluk,
-    // 0–1 arası kabaca güven: alan ne kadar düzse o kadar yüksek
-    guven: Math.max(0, Math.min(1, 1 - enIyi.duzluk / DUZLUK_ESIGI)),
+    sacilim: enIyi.sacilim,
+    /*
+     * Güven: hem pürüzsüzlük hem tek düzelik. Arayüz bunu kullanıcıya
+     * "kuvvetli/zayıf öneri" olarak gösteriyor; zayıfsa kullanıcı elle
+     * taşımaya devam eder.
+     */
+    guven: Math.max(
+      0,
+      Math.min(1, (1 - enIyi.duzluk / esik) * 0.6 + (1 - Math.min(1, enIyi.sacilim / 46)) * 0.4),
+    ),
   }
+}
+
+/** Her elemanın karesi — renk saçılımı hesabı için. */
+function kareler(kaynak) {
+  const c = new Float32Array(kaynak.length)
+  for (let i = 0; i < kaynak.length; i++) c[i] = kaynak[i] * kaynak[i]
+  return c
 }
 
 /** Toplam tablosu (integral image): T[y][x] = sol üst dikdörtgenin toplamı. */
