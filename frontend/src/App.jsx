@@ -1271,21 +1271,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               )}
 
 
-              {/* S-Kutu Yedekliliği (video duvarında yok) */}
-              {!isVideoWall && (
-                <div className="mb-2">
-                  <div className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('sbox.heading')}</div>
-                  <Segmented
-                    value={sboxRedundancy}
-                    onChange={setSboxRedundancy}
-                    options={[
-                      { v: 'no', l: t('common.no') },
-                      { v: 'yes', l: t('common.yes') },
-                    ]}
-                  />
-                </div>
-              )}
-
               <div className="mb-2">
                 <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('content.heading')}</h2>
                 <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" onChange={handleFile} className="hidden" />

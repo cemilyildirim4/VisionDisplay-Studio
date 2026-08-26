@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
-import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, cabinetGridStyle, L_KIRILMA_PCT } from './content.js'
+import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, L_KIRILMA_PCT } from './content.js'
 import { videoSrcFor } from './videoContent.js'
 import { useLang } from './useLang.js'
 
@@ -251,8 +251,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     const leftW = wPx * (lCols / totalCols)
     const rightW = wPx - leftW
     const cw = (model?.widthMm || 500) / 1000
-    // Kabin birleşim çizgisi: boş çerçevede görünür gri, panelde çok soluk ışık teli
-    const gridLine = isNone ? 'rgba(100,116,139,0.28)' : undefined
     // Dikiş kenarının üstten/alttan içeri girme oranı (%). Köşenin derinlik hissi.
     const p = L_CORNER_PINCH_PCT
     // Her kanadın diyot dokusu kendi kabin ölçüsünden türer
@@ -261,18 +259,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     const rightDots = isNone || isLit ? null : ledDotSize(rightW / rCols, hPx / nRows)
     const leftClip = `polygon(0% 0%, 100% ${p}%, 100% ${100 - p}%, 0% 100%)`
     const rightClip = `polygon(0% ${p}%, 100% 0%, 100% 100%, 0% ${100 - p}%)`
-
-    const Grid = ({ cols_, wingW }) =>
-      !isNone && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            ...cabinetGridStyle(wingW / cols_, hPx / nRows, gridLine),
-          }}
-        />
-      )
 
     // İki kanadın birleşiminin dış hattı — alttaki dolgu katmanı bu şekle kırpılır
     const lYuzde = (leftW / wPx) * 100
@@ -337,7 +323,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           >
             {videoSrc && <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX} top={offsetY} lit={isLit} />}
             {leftDots && <LedDotsCanvas wPx={leftW} hPx={hPx} dotW={leftDots.dotW} dotH={leftDots.dotH} />}
-            <Grid cols_={lCols} wingW={leftW} />
             {/* Gölge katmanı kaldırıldı: görüntü düz ekrandakiyle aynı canlılıkta
                 kalmalı. Köşeyi zaten iki kanadın trapez kırpımı ve dikiş çizgisi
                 anlatıyor. */}
@@ -356,7 +341,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           >
             {videoSrc && <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX + leftW} top={offsetY} lit={isLit} />}
             {rightDots && <LedDotsCanvas wPx={rightW} hPx={hPx} dotW={rightDots.dotW} dotH={rightDots.dotH} />}
-            <Grid cols_={rCols} wingW={rightW} />
             {/* Gölge katmanı kaldırıldı — bkz. sol kanattaki not. */}
           </div>
         </div>
@@ -435,7 +419,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
   }
 
   // ---- DÜZ (ve boş çerçeve) ----
-  const showCabinetGrid = nCols * nRows > 1 && nCols * nRows <= 600
   const signal = resolution === 'UHD' ? { w: 3840, h: 2160 } : { w: 1920, h: 1080 }
   // model yoksa da çizim sürmeli: burada patlarsa tasarım katmanının TAMAMI
   // çizilmiyor ve kamerada hiçbir şey görünmüyordu.
@@ -451,29 +434,8 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
       groups.push({ left: (gx * dispCols) / nCols, top: (gy * dispRows) / nRows, width: wCells / nCols, height: hCells / nRows })
     }
   }
-  // Kabin birleşim çizgisi: boş çerçevede görünür gri, panelde çok soluk ışık teli
-  const lineColor = isNone ? 'rgba(100,116,139,0.28)' : undefined
   // Diyot dokusu kabin ölçüsünden türer → desen kabin sınırlarıyla hizalı olur
   const cabinetDots = ledDotSize(wPx / nCols, hPx / nRows)
-  /*
-   * VİDEO DUVARI DERZLERİ SİLİK ÇİZGİYLE.
-   *
-   * Paneller arasındaki çerçeve (bezel) görünürlük için on kat abartılıp
-   * kalın siyah bir boşluk olarak çiziliyordu. Sonuç: görüntünün üzerinde
-   * kalın siyah haç — ekranın kendisinden çok derzler göze çarpıyor, tasarım
-   * bölünmüş gibi duruyordu (hem manzarada hem portrede).
-   *
-   * Derz KALDIRILMADI, 1 piksellik soluk çizgiye indirildi: panel birleşimi
-   * seziliyor ama görüntüyü kesmiyor. Derzin gerçek ölçüsü Teknik
-   * Özellikler'de (bezelMm) yazıyor.
-   *
-   * ÇİZGİNİN RENGİ AYRI: LED kabinlerde birleşim beyaza çalan çok soluk bir
-   * çizgi (rgba(255,255,255,.13)); parlak bir görselin üzerinde bu hiç
-   * görünmüyor. Video duvarında derz gerçekte KOYU bir çerçeve olduğu için
-   * koyu ve biraz daha belirgin çiziliyor — açık görselde de seçilebiliyor.
-   */
-  const videoDuvari = !!model?.bezelMm
-  const derzRengi = videoDuvari ? 'rgba(10,12,16,0.42)' : lineColor
 
   return (
     <div
@@ -499,19 +461,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           Desen kabin sınırlarıyla hizalıdır, modül modül tekrarlanır. */}
       {!frameOnly && !isNone && !isLit && cabinetDots && (
         <LedDotsCanvas wPx={wPx} hPx={hPx} dotW={cabinetDots.dotW} dotH={cabinetDots.dotH} />
-      )}
-
-      {/* Kabin birleşimleri — tek katman gradyan (kenarlıklar üst üste binip
-          kalınlaşmıyor, çizgi saç teli inceliğinde ve çok soluk kalıyor). */}
-      {showCabinetGrid && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            ...cabinetGridStyle(wPx / nCols, hPx / nRows, derzRengi),
-          }}
-        />
       )}
 
       {/* Cam parlaması — yayın yaparken ekranın camlı yüzeyinde ışık yansıması */}

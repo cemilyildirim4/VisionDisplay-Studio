@@ -117,7 +117,6 @@ export default function CurvedScreen({
       imgSY,
       imgSW,
       imgSH,
-      showGrid: nCols * nRows > 1 && nCols * nRows <= 900,
       cols: nCols,
       rows: nRows,
       hideRegions,

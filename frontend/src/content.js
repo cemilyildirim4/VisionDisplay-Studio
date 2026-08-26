@@ -106,17 +106,6 @@ export const LED_SHEEN =
   'linear-gradient(168deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 18%, rgba(255,255,255,0) 42%)'
 
 /**
- * Kabin birleşim çizgileri.
- * Her hücreye ayrı kenarlık çizmek yerine tek katmanda gradyanla çizilir:
- * komşu kenarlıklar üst üste binip kalınlaşmaz, çizgi hep saç teli inceliğinde kalır.
- * Renk çok soluk — panel tek parça görünsün, birleşim sadece sezilsin.
- */
-export const cabinetGridStyle = (cellW, cellH, color = 'rgba(255,255,255,0.13)') => ({
-  backgroundImage: `linear-gradient(to right, ${color} 1px, transparent 1px), linear-gradient(to bottom, ${color} 1px, transparent 1px)`,
-  backgroundSize: `${cellW}px ${cellH}px`,
-})
-
-/**
  * VİDEO DUVARI çerçeve payı (bezel).
  *
  * Video duvarında paneller arasında fiziksel bir çerçeve vardır; görüntü bu
