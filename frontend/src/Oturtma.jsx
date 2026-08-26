@@ -229,11 +229,19 @@ export default function Oturtma({
 
     if (b.tur === 'olcek' && p.length >= 2) {
       const oran = uzaklik(p[0], p[1]) / (b.uzaklik || 1)
-      setPxPerM(Math.max(EN_KUCUK, Math.min(EN_BUYUK, b.pxPerM * oran)))
+      const yeni = Math.max(EN_KUCUK, Math.min(EN_BUYUK, b.pxPerM * oran))
+      setPxPerM(yeni)
+      setMerkez((m) => sinirla(m, tasarimWm * yeni, tasarimHm * yeni))
       return
     }
     if (b.tur === 'tasi') {
-      setMerkez({ x: b.merkez.x + (e.clientX - b.x), y: b.merkez.y + (e.clientY - b.y) })
+      setMerkez(
+        sinirla(
+          { x: b.merkez.x + (e.clientX - b.x), y: b.merkez.y + (e.clientY - b.y) },
+          tasarimWm * pxPerM,
+          tasarimHm * pxPerM,
+        ),
+      )
     }
   }
 
@@ -288,6 +296,25 @@ export default function Oturtma({
     const oranK = kutu.w / kutu.h
     const fx = oranV > oranK ? oranK / oranV : 1
     return fx * tam
+  }
+
+  /**
+   * TASLAĞIN TAMAMI KADRAJDA KALSIN.
+   *
+   * Otomatik yerleştirme, tasarımı kadrajın kenarına yakın bir noktaya
+   * koyabiliyordu; gerçek ölçüde çizilen taslak da oradan taşıp yarısı
+   * ekran dışında kalıyordu. Kamera nereye bakıyorsa tasarımın TAMAMI orada
+   * görünmeli — yarısı görünmeyen bir çerçeve ne ölçü verir ne fikir.
+   *
+   * Merkez, dört kenar da içeride kalacak biçimde sınırlanıyor. Tasarım
+   * kadraja hiç sığmıyorsa (çok yakınsınız) ortalanıyor; o durumu zaten
+   * üstteki "sığmıyor" uyarısı anlatıyor.
+   */
+  const sinirla = (m, gen, yuk) => {
+    if (!(kutu.w > 0) || !(kutu.h > 0)) return m
+    const x = gen >= kutu.w ? kutu.w / 2 : Math.min(kutu.w - gen / 2, Math.max(gen / 2, m.x))
+    const y = yuk >= kutu.h ? kutu.h / 2 : Math.min(kutu.h - yuk / 2, Math.max(yuk / 2, m.y))
+    return { x, y }
   }
 
   const onerilenM = model ? viewingDistanceFor(model, cols, rows) : null
@@ -363,8 +390,9 @@ export default function Oturtma({
        */
       const hedefW = kullanilanM ? W * (tasarimWm / 2 / kullanilanM / gorunurTan()) : yer.w * W
 
+      const hedefH = hedefW / (tasarimWm / tasarimHm)
       return {
-        merkez: { x: (yer.x + yer.w / 2) * W, y: (yer.y + yer.h / 2) * H },
+        merkez: sinirla({ x: (yer.x + yer.w / 2) * W, y: (yer.y + yer.h / 2) * H }, hedefW, hedefH),
         pxPerM: Math.max(EN_KUCUK, Math.min(EN_BUYUK, hedefW / tasarimWm)),
         alan: { x: yer.x * W, y: yer.y * H, w: yer.w * W, h: yer.h * H },
         guven: yer.guven,
@@ -432,8 +460,10 @@ export default function Oturtma({
     if (!hedefMesafe || !(kutu.w > 0)) return
     // denkUzaklik'in tersi: bu uzaklıkta ekran kadrajın ne kadarını kaplar?
     const kaplama = tasarimWm / 2 / hedefMesafe / gorunurTan()
-    const yeni = (kutu.w * kaplama) / tasarimWm
-    setPxPerM(Math.max(EN_KUCUK, Math.min(EN_BUYUK, yeni)))
+    const yeni = Math.max(EN_KUCUK, Math.min(EN_BUYUK, (kutu.w * kaplama) / tasarimWm))
+    setPxPerM(yeni)
+    // Büyüyen taslak kadrajdan taşabilir; merkez yeniden içeri alınır.
+    setMerkez((m) => sinirla(m, tasarimWm * yeni, tasarimHm * yeni))
   }
 
   /**
