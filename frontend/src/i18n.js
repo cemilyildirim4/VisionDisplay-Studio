@@ -335,6 +335,8 @@ const dict = {
   'avm.width': { tr: 'Genişlik', en: 'Width', ar: 'العرض' },
   'avm.height': { tr: 'Yükseklik', en: 'Height', ar: 'الارتفاع' },
   'avm.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
+  'scene.recenter': { tr: 'Ortala', en: 'Re-center', ar: 'توسيط' },
+  'scene.dragHint': { tr: 'sürükleyerek taşıyın', en: 'drag to move', ar: 'اسحب للتحريك' },
   'avm.shrunk': { tr: 'sahneye sığdırıldı', en: 'scaled to fit the scene', ar: 'تم تصغيره ليناسب المشهد' },
   'dis.open': { tr: 'Şehir meydanında gör', en: 'See on a city plaza', ar: 'شاهده في ساحة المدينة' },
   'dis.title': { tr: 'Şehir meydanı', en: 'City plaza', ar: 'ساحة المدينة' },

@@ -18,6 +18,7 @@ import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import EkranIcerigi from './EkranIcerigi.jsx'
 import { fotoYerlesimi, sigdirmaKatsayisi } from './sahneOlcek.js'
+import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 
 const ARKA_PLAN = '/yakin-plan-dis-mekan-led-arka-plan.png'
 
@@ -99,6 +100,8 @@ function OutdoorBillboard({
   tabanY,
   pxPerM,
   wm,
+  kayma,
+  tutamak,
   content,
   contentUrl,
   isikVar,
@@ -128,10 +131,10 @@ function OutdoorBillboard({
         className="absolute pointer-events-none"
         style={{
           left: '50%',
-          top: tabanY,
+          top: tabanY + kayma.y,
           width: Math.max(wPx, direkKalinlik * 3) * 1.25,
           height: Math.max(6, wPx * 0.05),
-          transform: 'translate(-50%, -50%)',
+          transform: `translate(calc(-50% + ${kayma.x}px), -50%)`,
           background:
             'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.24) 45%, rgba(0,0,0,0) 74%)',
           transition: GECIS,
@@ -148,10 +151,10 @@ function OutdoorBillboard({
           className="absolute pointer-events-none"
           style={{
             left: '50%',
-            top: tabanY,
+            top: tabanY + kayma.y,
             width: wPx * 1.5,
             height: Math.max(10, wPx * 0.12),
-            transform: 'translate(-50%, -40%)',
+            transform: `translate(calc(-50% + ${kayma.x}px), -40%)`,
             background:
               'radial-gradient(ellipse at center, rgba(150,190,255,0.15) 0%, rgba(150,190,255,0.05) 50%, rgba(0,0,0,0) 75%)',
             transition: GECIS,
@@ -159,13 +162,19 @@ function OutdoorBillboard({
         />
       )}
 
+      {/*
+        Sürüklenebilir gövde. Tutamak billboardun kendisi — taşımak için
+        önce bir düğmeye basmak gerekmiyor.
+      */}
       <div
         className="absolute flex flex-col items-center"
+        {...tutamak}
         style={{
           left: '50%',
-          top: tabanY,
-          transform: 'translate(-50%, -100%)',
+          top: tabanY + kayma.y,
+          transform: `translate(calc(-50% + ${kayma.x}px), -100%)`,
           transition: GECIS,
+          ...tutamak.style,
         }}
       >
         {/* --- çerçeve + ekran alanı ------------------------------------- */}
@@ -376,6 +385,11 @@ export default function OutdoorScene({
     return { w: wPx * kisilma, h: hPx * kisilma, kisilma }
   }, [yerlesim, wm, hm, sahne.w])
 
+  /* Sürükleme — kaymanın metre karşılığı ölçeğe bağlı olduğu için burada. */
+  const pxPerM = (yerlesim?.pxPerM || 0) * olcu.kisilma
+  const { ofsetM, tasindi, sifirla, tutamak } = useSurukleme(pxPerM)
+  const kayma = kaymayiSinirla(ofsetM, pxPerM, sahne, olcu.w, yerlesim?.tabanY || 0)
+
   if (!open) return null
 
   const isikVar = content !== 'none' && content !== 'led'
@@ -390,8 +404,10 @@ export default function OutdoorScene({
             wPx={olcu.w}
             hPx={olcu.h}
             tabanY={yerlesim.tabanY}
-            pxPerM={yerlesim.pxPerM * olcu.kisilma}
+            pxPerM={pxPerM}
             wm={wm}
+            kayma={kayma}
+            tutamak={tutamak}
             content={content}
             contentUrl={contentUrl}
             isikVar={isikVar}
@@ -403,11 +419,22 @@ export default function OutdoorScene({
             <p className="m-0 text-[12px] text-white/85 tabular-nums">
               {t('dis.title')} · {wm.toFixed(2)} × {hm.toFixed(2)} m
               {olcu.kisilma < 0.999 ? <span className="text-amber-300"> · {t('avm.shrunk')}</span> : null}
+              {!tasindi ? <span className="text-white/45"> · {t('scene.dragHint')}</span> : null}
             </p>
           </div>
         </div>
 
-        <div className="absolute right-3 bottom-3">
+        <div className="absolute right-3 bottom-3 flex flex-col items-end gap-2">
+          {/* Ortala yalnızca billboard taşınmışken görünür. */}
+          {tasindi && (
+            <button
+              type="button"
+              onClick={sifirla}
+              className="rounded-full bg-black/70 backdrop-blur px-3.5 py-1.5 text-[11.5px] font-semibold text-white"
+            >
+              {t('scene.recenter')}
+            </button>
+          )}
           <DimensionControls
             cols={cols}
             rows={rows}

@@ -25,6 +25,7 @@ import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import EkranIcerigi from './EkranIcerigi.jsx'
 import { fotoYerlesimi, sigdirmaKatsayisi } from './sahneOlcek.js'
+import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 
 const ARKA_PLAN = '/led-ekran-avm-arka-plan.png'
 
@@ -88,7 +89,7 @@ function SceneBackground({ onOlcu }) {
  * ekran de aynı oranda şişerdi; 3 m'lik bir ekranda kasa 10 cm kalınlığında
  * görünürdü. Kasa sabit px, ekran alanı gerçek ölçü.
  */
-function LedKiosk({ wPx, hPx, tabanY, content, contentUrl }) {
+function LedKiosk({ wPx, hPx, tabanY, kayma, tutamak, content, contentUrl }) {
   const gecis = 'width 220ms ease, height 220ms ease, left 220ms ease'
 
   return (
@@ -98,23 +99,29 @@ function LedKiosk({ wPx, hPx, tabanY, content, contentUrl }) {
         className="absolute pointer-events-none"
         style={{
           left: '50%',
-          top: tabanY,
+          top: tabanY + kayma.y,
           width: wPx * 1.15,
           height: Math.max(8, wPx * 0.07),
-          transform: 'translate(-50%, -55%)',
+          transform: `translate(calc(-50% + ${kayma.x}px), -55%)`,
           background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0) 72%)',
           transition: gecis,
         }}
       />
 
+      {/*
+        Sürüklenebilir gövde. Tutamak ekranın kendisi: taşımak için önce bir
+        düğmeye basmak gerekmiyor, doğrudan ekrana dokunup çekiliyor.
+      */}
       <div
         className="absolute"
+        {...tutamak}
         style={{
           left: '50%',
-          top: tabanY - hPx - GOVDE_PX,
+          top: tabanY - hPx - GOVDE_PX + kayma.y,
           width: wPx,
-          transform: 'translateX(-50%)',
+          transform: `translateX(calc(-50% + ${kayma.x}px))`,
           transition: gecis,
+          ...tutamak.style,
         }}
       >
         {/* Kasa + ekran alanı */}
@@ -238,6 +245,11 @@ export default function Avm({
   const [sahne, setSahne] = useState({ w: 0, h: 0 })
   const [foto, setFoto] = useState({ w: 0, h: 0 })
 
+  /*
+   * Sürükleme. Ölçek hesabı bittikten sonra bağlanıyor, çünkü kaymanın
+   * metre karşılığı piksel/metre oranına bağlı.
+   */
+
   useGovdeKilidi(open)
 
   /* Sahne ölçüsünü izle — pencere yeniden boyutlandığında ölçek tazelensin */
@@ -299,6 +311,10 @@ export default function Avm({
     return { w: w * kisilma, h: h * kisilma, kisilma }
   }, [yerlesim, wm, hm, sahne.w])
 
+  const pxPerM = (yerlesim?.pxPerM || 0) * olcu.kisilma
+  const { ofsetM, tasindi, sifirla, tutamak } = useSurukleme(pxPerM)
+  const kayma = kaymayiSinirla(ofsetM, pxPerM, sahne, olcu.w, yerlesim?.tabanY || 0)
+
   if (!open) return null
 
   return (
@@ -311,6 +327,8 @@ export default function Avm({
             wPx={olcu.w}
             hPx={olcu.h}
             tabanY={yerlesim.tabanY}
+            kayma={kayma}
+            tutamak={tutamak}
             content={content}
             contentUrl={contentUrl}
           />
@@ -322,12 +340,27 @@ export default function Avm({
             <p className="m-0 text-[12px] text-white/85 tabular-nums">
               {t('avm.title')} · {wm.toFixed(2)} × {hm.toFixed(2)} m
               {olcu.kisilma < 0.999 ? <span className="text-amber-300"> · {t('avm.shrunk')}</span> : null}
+              {!tasindi ? <span className="text-white/45"> · {t('scene.dragHint')}</span> : null}
             </p>
           </div>
         </div>
 
         {/* Denetimler sağ altta — koridorun ortasını kapatmasın */}
         <div className="absolute right-3 bottom-3 flex flex-col items-end gap-2">
+          {/*
+            Ortala yalnızca ekran taşınmışken görünüyor: hiç dokunulmamışken
+            "ortala" demek, kullanıcıya yapmadığı bir şeyi geri alma seçeneği
+            sunmak olurdu.
+          */}
+          {tasindi && (
+            <button
+              type="button"
+              onClick={sifirla}
+              className="rounded-full bg-black/70 backdrop-blur px-3.5 py-1.5 text-[11.5px] font-semibold text-white"
+            >
+              {t('scene.recenter')}
+            </button>
+          )}
           <DimensionControls
             cols={cols}
             rows={rows}
