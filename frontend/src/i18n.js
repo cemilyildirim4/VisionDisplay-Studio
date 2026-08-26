@@ -239,6 +239,13 @@ const dict = {
   'screen.orientation': { tr: 'Oryantasyon', en: 'Orientation', ar: 'الاتجاه' },
   'screen.landscape': { tr: 'Manzara', en: 'Landscape', ar: 'أفقي' },
   'screen.portrait': { tr: 'Portre', en: 'Portrait', ar: 'عمودي' },
+  /*
+   * LED bölümünde "Oryantasyon / Manzara / Portre" fotoğrafçılık dili kalıyor;
+   * kurulumu anlatan karşılıkları daha anlaşılır: yatay mı dikey mi asılacak.
+   */
+  'screen.layout': { tr: 'Yerleşim', en: 'Layout', ar: 'الوضعية' },
+  'screen.horizontal': { tr: 'Yatay', en: 'Horizontal', ar: 'أفقي' },
+  'screen.vertical': { tr: 'Dikey', en: 'Vertical', ar: 'عمودي' },
   'screen.columns': { tr: 'Sütunlar', en: 'Columns', ar: 'الأعمدة' },
   'screen.rows': { tr: 'Satırlar', en: 'Rows', ar: 'الصفوف' },
   'screen.changeSettings': { tr: 'Ekran ayarlarını değiştir', en: 'Change screen setting', ar: 'تغيير إعدادات الشاشة' },

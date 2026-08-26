@@ -509,7 +509,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const hasModel = !!selectedModel
   const category = selectedModel?.category || 'led'
   const isVideoWall = category === 'videowall'
-  const portrait = isVideoWall && orientation === 'portrait'
+  /*
+   * DİKEY YERLEŞİM HER MODELDE.
+   *
+   * Portre seçeneği yalnızca video duvarında açıktı; oysa LED kabin ve
+   * paneller de dikey kurulabiliyor (asansör holü, vitrin kolonu, tabela).
+   * Mekanizma zaten geneldi — kabin 90° dönüyor — sadece video duvarına
+   * kilitliydi.
+   */
+  const portrait = orientation === 'portrait'
   // Portre modunda ekran 90° döner: kabin en/boy ve piksel değerleri takas edilir
   const previewModel =
     selectedModel && portrait
@@ -1211,6 +1219,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           icbukey={screenType === 'curvedIn'}
                         />
                       )}
+
+                      {/*
+                        YERLEŞİM — yatay ya da dikey. Dikeyde kabin 90° döner:
+                        en/boy ve piksel sayıları takas edilir, dolayısıyla
+                        ölçüler, çözünürlük ve teknik özellikler kendiliğinden
+                        yeni yerleşime göre hesaplanır.
+                      */}
+                      <div className="mt-3">
+                        <div className="text-[18px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.layout')}</div>
+                        <Segmented
+                          buyuk
+                          value={orientation}
+                          onChange={setOrientation}
+                          options={[
+                            { v: 'landscape', l: t('screen.horizontal') },
+                            { v: 'portrait', l: t('screen.vertical') },
+                          ]}
+                        />
+                      </div>
                     </div>
                   )}
 
