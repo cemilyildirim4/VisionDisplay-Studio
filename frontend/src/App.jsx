@@ -6,6 +6,7 @@ import MultiScreenModal from './MultiScreenModal.jsx'
 import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
+import Oturtma from './Oturtma.jsx'
 import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
@@ -187,6 +188,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
   // Teknik Özellikler pop-up'ı (Bileşenler de içinde)
   const [specsOpen, setSpecsOpen] = useState(false)
+  /*
+   * KAMERADA OTURT — "Nasıl Görüneceğini Gör"den ayrı bir özellik.
+   * Orada tasarım doğrudan kameranın üstünde duruyor; burada önce yalnızca
+   * ölçülere göre bir TASLAK çerçeve görünüyor, deklanşöre basılınca tasarım
+   * o çerçeveye oturuyor. İkisi birbirine karışmasın diye ayrı pencereler.
+   */
+  const [oturtmaAcik, setOturtmaAcik] = useState(false)
   const [showMeasurements, setShowMeasurements] = useState(true)
   const [exportOpen, setExportOpen] = useState(false)
   /*
@@ -770,6 +778,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               <rect x="4" y="4" width="16" height="16" rx="1.5" />
               <line x1="4" y1="14" x2="14" y2="14" />
               <line x1="14" y1="4" x2="14" y2="20" />
+            </svg>
+          </IconButton>
+
+          {/* Kamerada oturt — taslak çerçeve, sonra çekim (bkz. Oturtma.jsx) */}
+          <IconButton active={hasModel} label={t('fit.open')} onClick={() => hasModel && setOturtmaAcik(true)}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" />
+              <rect x="8" y="8" width="8" height="8" rx="1" />
             </svg>
           </IconButton>
 
@@ -1446,6 +1462,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {t('ar.open')}
                   </button>
                 )}
+                {hasModel && (
+                  <button
+                    type="button"
+                    onClick={() => setOturtmaAcik(true)}
+                    className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
+                  >
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" />
+                      <rect x="8" y="8" width="8" height="8" rx="1" />
+                    </svg>
+                    {t('fit.open')}
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -1546,6 +1575,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         curveAmount={curveAmount}
         hideRegions={isVideoWall}
         /* Kamerada "Kaydet" denen kare rapora da girsin (bkz. kareKaydedildi) */
+        onSaved={kareKaydedildi}
+      />
+
+      <Oturtma
+        open={oturtmaAcik && hasModel}
+        onClose={() => setOturtmaAcik(false)}
+        model={previewModel}
+        cols={cols}
+        rows={rows}
+        screens={screenMode === 'multi' ? screens : null}
+        content={content}
+        contentUrl={contentUrl}
+        screenType={screenType}
+        resolution={resolution}
+        curveAmount={curveAmount}
+        hideRegions={isVideoWall}
         onSaved={kareKaydedildi}
       />
 
