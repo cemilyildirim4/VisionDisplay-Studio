@@ -23,8 +23,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
-import { DEFAULT_CONTENT_SRC, LED_GRADIENT } from './content.js'
-import { SAMPLE_VIDEO_SRC } from './videoContent.js'
+import EkranIcerigi from './EkranIcerigi.jsx'
+import { fotoYerlesimi, sigdirmaKatsayisi } from './sahneOlcek.js'
 
 const ARKA_PLAN = '/led-ekran-avm-arka-plan.png'
 
@@ -76,41 +76,6 @@ function SceneBackground({ onOlcu }) {
       style={{ objectFit: 'cover', objectPosition: 'center center' }}
     />
   )
-}
-
-/* --------------------------------------------------------------- ekran içeriği */
-
-/**
- * Ekranın İÇİ.
- *
- * Kritik kural burada: içerik görseli `object-fit: contain` ile çiziliyor.
- * Dikey bir afişi yatay ekrana koyduğunuzda görsel GERİLMEZ; yanlarda siyah
- * boşluk kalır. Boşluk kalması bir kusur değil, doğru bilgi — gerçek ekranda
- * da olacak olan budur.
- */
-function ScreenContent({ content, contentUrl }) {
-  const ortak = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'contain',
-    objectPosition: 'center',
-    background: '#000',
-    display: 'block',
-  }
-
-  if (content === 'video' && contentUrl) {
-    return <video src={contentUrl} autoPlay loop muted playsInline style={ortak} />
-  }
-  if (content === 'sample') {
-    return <video src={SAMPLE_VIDEO_SRC} autoPlay loop muted playsInline style={ortak} />
-  }
-  if (content === 'photo') return <img src={DEFAULT_CONTENT_SRC} alt="" style={ortak} />
-  if (content === 'upload' && contentUrl) return <img src={contentUrl} alt="" style={ortak} />
-  if (content === 'led') {
-    // Çıplak panel dokusu: görsel değil, LED noktalarının kendisi.
-    return <div style={{ width: '100%', height: '100%', backgroundImage: LED_GRADIENT }} />
-  }
-  return <div style={{ width: '100%', height: '100%', background: '#000' }} />
 }
 
 /* ------------------------------------------------------------------- kiosk */
@@ -166,7 +131,7 @@ function LedKiosk({ wPx, hPx, tabanY, content, contentUrl }) {
           }}
         >
           <div style={{ width: '100%', height: '100%', overflow: 'hidden', background: '#000' }}>
-            <ScreenContent content={content} contentUrl={contentUrl} />
+            <EkranIcerigi content={content} contentUrl={contentUrl} />
           </div>
         </div>
 
@@ -301,26 +266,16 @@ export default function Avm({
    * bilmek için aynı hesabı burada da yapıyoruz — yoksa pencere oranı
    * değiştiğinde kiosk havada ya da yerin altında kalırdı.
    */
-  const yerlesim = useMemo(() => {
-    if (!(sahne.w > 0) || !(sahne.h > 0)) return null
-    if (!(foto.w > 0) || !(foto.h > 0)) {
-      // Fotoğraf henüz yüklenmedi: pencereye dayalı makul bir yedek ölçek.
-      return {
-        pxPerM: Math.min(sahne.w / 3.5, sahne.h / 2.5),
-        tabanY: sahne.h * ZEMIN_ORANI,
-      }
-    }
-    const olcek = Math.max(sahne.w / foto.w, sahne.h / foto.h)
-    const cizilenW = foto.w * olcek
-    const cizilenH = foto.h * olcek
-    const ham = sahne.h / 2 + (ZEMIN_ORANI - 0.5) * cizilenH
-    return {
-      // Koridor genişliği fotoğrafın tamamına yayılı kabul ediliyor.
-      pxPerM: cizilenW / KORIDOR_METRE,
-      // Fotoğraftaki oran → ekranda kaçıncı piksel (ortalanmış kırpma)
-      tabanY: Math.max(sahne.h * TABAN_EN_AZ, Math.min(sahne.h * TABAN_EN_COK, ham)),
-    }
-  }, [sahne.w, sahne.h, foto.w, foto.h])
+  const yerlesim = useMemo(
+    () =>
+      fotoYerlesimi(sahne, foto, {
+        zeminOrani: ZEMIN_ORANI,
+        kadrajMetre: KORIDOR_METRE,
+        tabanEnAz: TABAN_EN_AZ,
+        tabanEnCok: TABAN_EN_COK,
+      }),
+    [sahne, foto],
+  )
 
   /*
    * Ekranın piksel ölçüsü.
@@ -330,11 +285,17 @@ export default function Avm({
    */
   const olcu = useMemo(() => {
     if (!yerlesim) return { w: 0, h: 0, kisilma: 1 }
-    let w = wm * yerlesim.pxPerM
-    let h = hm * yerlesim.pxPerM
-    const enCokW = sahne.w * YATAY_PAY
-    const enCokH = yerlesim.tabanY * DIKEY_PAY
-    const kisilma = Math.min(1, enCokW / w, enCokH / h)
+    const w = wm * yerlesim.pxPerM
+    const h = hm * yerlesim.pxPerM
+    // Gövde ve kasa da yer kaplar; sığma hesabına onlar da giriyor.
+    const kisilma = sigdirmaKatsayisi(
+      w,
+      h,
+      sahne.w * YATAY_PAY,
+      yerlesim.tabanY * DIKEY_PAY,
+      KASA_PX * 2,
+      KASA_PX * 2 + GOVDE_PX,
+    )
     return { w: w * kisilma, h: h * kisilma, kisilma }
   }, [yerlesim, wm, hm, sahne.w])
 

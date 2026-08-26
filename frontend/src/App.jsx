@@ -8,6 +8,7 @@ import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import Oturtma from './Oturtma.jsx'
 import Avm from './Avm.jsx'
+import OutdoorScene from './OutdoorScene.jsx'
 import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
@@ -218,6 +219,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [oturtmaAcik, setOturtmaAcik] = useState(false)
   const [avmAcik, setAvmAcik] = useState(false)
+  const [disAcik, setDisAcik] = useState(false)
   const [showMeasurements, setShowMeasurements] = useState(true)
   const [exportOpen, setExportOpen] = useState(false)
   /*
@@ -1562,6 +1564,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 {hasModel && (
                   <button
                     type="button"
+                    onClick={() => setDisAcik(true)}
+                    className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
+                  >
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="4" y="4" width="16" height="10" rx="1" />
+                      <path d="M12 14v6M8 20h8" />
+                    </svg>
+                    {t('dis.open')}
+                  </button>
+                )}
+                {hasModel && (
+                  <button
+                    type="button"
                     onClick={() => setArAcik(true)}
                     className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
                   >
@@ -1709,6 +1724,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         Ölçüler burada da uygulamanın kendi kabin ızgarasından geliyor;
         pencerede değiştirilenler doğrudan yapılandırmayı değiştirir.
       */}
+      <OutdoorScene
+        open={disAcik && hasModel}
+        onClose={() => setDisAcik(false)}
+        cols={cols}
+        rows={rows}
+        colsMax={colsMax}
+        rowsMax={rowsMax}
+        cwM={cwM}
+        chM={chM}
+        onCols={setCols}
+        onRows={setRows}
+        content={content}
+        contentUrl={contentUrl}
+      />
+
       <Avm
         open={avmAcik && hasModel}
         onClose={() => setAvmAcik(false)}
