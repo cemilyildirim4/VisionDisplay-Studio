@@ -272,6 +272,10 @@ const dict = {
   'fit.goodDistance': { tr: 'Uygun mesafe', en: 'Good distance', ar: 'مسافة مناسبة' },
   'fit.tooBig': { tr: 'Ekran kadraja sığmıyor — geri çekilin', en: 'The screen does not fit the frame — step back', ar: 'الشاشة لا تتسع في الإطار — ابتعد' },
   'fit.snap': { tr: 'Önerilen mesafeye ayarla', en: 'Set to recommended distance', ar: 'اضبط على المسافة الموصى بها' },
+  'fit.auto': { tr: 'Otomatik yerleştir', en: 'Place automatically', ar: 'وضع تلقائي' },
+  'fit.scanning': { tr: 'Uygun yer aranıyor…', en: 'Looking for a suitable spot…', ar: 'يجري البحث عن مكان مناسب…' },
+  'fit.autoDone': { tr: 'Uygun yüzey bulundu ve yerleştirildi', en: 'Suitable surface found and placed', ar: 'تم العثور على سطح مناسب ووضعه' },
+  'fit.autoNone': { tr: 'Uygun düz alan bulunamadı — kamerayı boş bir duvara doğrultup tekrar deneyin', en: 'No flat area found — aim at an empty wall and try again', ar: 'لم يُعثر على مساحة مستوية — وجّه الكاميرا نحو جدار فارغ وحاول مجددًا' },
   'fit.distNote': {
     tr: 'Uzaklık kameranın görüş açısından kestirilir, yaklaşıktır.',
     en: 'The distance is estimated from the camera field of view and is approximate.',

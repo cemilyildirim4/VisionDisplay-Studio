@@ -6,6 +6,7 @@ import { LED_LIT_FILTER } from './content.js'
 import { useLang } from './useLang.js'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { viewingDistanceFor } from './viewingDistance.js'
+import { uygunYuzeyBul } from './duvarBul.js'
 
 /**
  * KAMERADA OTURTMA.
@@ -100,6 +101,10 @@ export default function Oturtma({
   const [sonuc, setSonuc] = useState(null)
   const [mesgul, setMesgul] = useState(false)
   const [bildirim, setBildirim] = useState(null)
+  const [taraniyor, setTaraniyor] = useState(false)
+  // Otomatik yerleştirmenin bulduğu alan — taslağın arkasında soluk gösterilir.
+  const [bulunan, setBulunan] = useState(null)
+  const otoDenendiRef = useRef(false)
 
   useGovdeKilidi(open)
 
@@ -173,7 +178,35 @@ export default function Oturtma({
     setHata(null)
     setPxPerM(0)
     setMerkez({ x: 0, y: 0 })
+    setBulunan(null)
+    otoDenendiRef.current = false
   }, [open])
+
+  /*
+   * Kamera görüntüsü akmaya başlayınca BİR KEZ kendiliğinden taranır:
+   * kullanıcı hiçbir şeye dokunmadan bir öneri görsün. Sessiz yapılıyor —
+   * uygun yer bulunamazsa kimseyi uyarmaya gerek yok, taslak ortada durur.
+   */
+  useEffect(() => {
+    if (!open || hata || !(kutu.w > 0) || otoDenendiRef.current) return
+    const v = videoRef.current
+    if (!v) return
+    let zaman = null
+    const dene = () => {
+      if (otoDenendiRef.current) return
+      if (!v.videoWidth) {
+        zaman = setTimeout(dene, 400)
+        return
+      }
+      otoDenendiRef.current = true
+      otomatikYerlestir(true)
+    }
+    zaman = setTimeout(dene, 600)
+    return () => clearTimeout(zaman)
+    // otomatikYerlestir her render'da yenilenir; bağımlılığa almak taramayı
+    // tekrarlatır. Tek seferlik olması otoDenendiRef ile güvence altında.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, hata, kutu.w])
 
   useEffect(() => {
     if (!bildirim) return
@@ -253,6 +286,72 @@ export default function Oturtma({
           ? t('fit.comeCloser')
           : t('fit.goodDistance')
   const yonergeIyi = !sigmiyor && oran !== null && oran >= 0.8 && oran <= 1.25
+
+  /**
+   * OTOMATİK YERLEŞTİRME.
+   *
+   * Kameranın o anki karesi taranır (bkz. duvarBul.js), tasarımın en/boy
+   * oranına uyan en düz ve boş alan bulunur, taslak oraya taşınır.
+   *
+   * Kare, ekranda görünen KIRPILMIŞ hâliyle taranıyor (object-fit: cover);
+   * böylece bulunan dikdörtgenin oranlı koordinatları doğrudan ekran
+   * koordinatına çevrilebiliyor, arada kayma olmuyor.
+   *
+   * Boyut, bulunan alanı aşmaz ve önerilen izleme mesafesinden daha yakın
+   * görünecek kadar da büyümez — ikisinin küçüğü alınır.
+   */
+  const otomatikYerlestir = async (sessiz = false) => {
+    const v = videoRef.current
+    if (!v?.videoWidth || !(kutu.w > 0) || taraniyor) return
+    setTaraniyor(true)
+    try {
+      const W = Math.round(kutu.w)
+      const H = Math.round(kutu.h)
+      const c = document.createElement('canvas')
+      c.width = W
+      c.height = H
+      const g = c.getContext('2d')
+      const oranV = v.videoWidth / v.videoHeight
+      const oranK = W / H
+      let sw, sh, sx, sy
+      if (oranV > oranK) {
+        sh = v.videoHeight
+        sw = sh * oranK
+        sx = (v.videoWidth - sw) / 2
+        sy = 0
+      } else {
+        sw = v.videoWidth
+        sh = sw / oranK
+        sx = 0
+        sy = (v.videoHeight - sh) / 2
+      }
+      g.drawImage(v, sx, sy, sw, sh, 0, 0, W, H)
+
+      const yer = uygunYuzeyBul(c, tasarimWm / tasarimHm)
+      if (!yer) {
+        setBulunan(null)
+        if (!sessiz) setBildirim(t('fit.autoNone'))
+        return
+      }
+
+      const alanW = yer.w * W
+      // Önerilen mesafedeki genişlik: bundan büyüğü ekranı olduğundan yakın gösterir.
+      const onerilenW = onerilenM
+        ? W * (Math.tan(Math.atan(tasarimWm / 2 / onerilenM)) / Math.tan((KAMERA_ACISI * Math.PI) / 360))
+        : alanW
+      const hedefW = Math.min(alanW, onerilenW || alanW)
+
+      setPxPerM(Math.max(EN_KUCUK, Math.min(EN_BUYUK, hedefW / tasarimWm)))
+      setMerkez({ x: (yer.x + yer.w / 2) * W, y: (yer.y + yer.h / 2) * H })
+      setBulunan({ x: yer.x * W, y: yer.y * H, w: yer.w * W, h: yer.h * H })
+      if (!sessiz) setBildirim(t('fit.autoDone'))
+    } catch {
+      setBulunan(null)
+      if (!sessiz) setBildirim(t('fit.autoNone'))
+    } finally {
+      setTaraniyor(false)
+    }
+  }
 
   /** Taslağı, önerilen mesafeden görünecek büyüklüğe ayarlar. */
   const onerilenMesafeyeAyarla = () => {
@@ -437,6 +536,18 @@ export default function Oturtma({
           </div>
         )}
 
+        {/*
+          BULUNAN YÜZEY. Otomatik yerleştirmenin seçtiği alan soluk bir
+          dikdörtgenle gösteriliyor: kullanıcı önerinin nereye dayandığını
+          görüyor, beğenmezse taslağı elle taşımaya devam ediyor.
+        */}
+        {!hata && !sonuc && bulunan && (
+          <div
+            className="absolute border border-emerald-300/60 bg-emerald-300/10 pointer-events-none rounded-sm"
+            style={{ left: bulunan.x, top: bulunan.y, width: bulunan.w, height: bulunan.h }}
+          />
+        )}
+
         {/* TASLAK — ölçülere göre çizilmiş boş çerçeve */}
         {!hata && !sonuc && kutu.w > 0 && (
           <div
@@ -499,13 +610,23 @@ export default function Oturtma({
                 {simdikiM ? ` · ${t('fit.asSeenFrom')} ${metre(simdikiM)}` : ''}
               </p>
               <p className="m-0 mt-0.5 text-white/45 text-[10px] text-center">{t('fit.distNote')}</p>
-              <button
-                type="button"
-                onClick={onerilenMesafeyeAyarla}
-                className="mt-1.5 w-full rounded-lg bg-white/15 hover:bg-white/25 text-white text-[11.5px] font-semibold py-1.5 transition-colors"
-              >
-                {t('fit.snap')}
-              </button>
+              <div className="mt-1.5 flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={onerilenMesafeyeAyarla}
+                  className="flex-1 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[11.5px] font-semibold py-1.5 transition-colors"
+                >
+                  {t('fit.snap')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => otomatikYerlestir(false)}
+                  disabled={taraniyor}
+                  className="flex-1 rounded-lg bg-brand hover:bg-brand-dark text-white text-[11.5px] font-semibold py-1.5 transition-colors disabled:opacity-60"
+                >
+                  {taraniyor ? t('fit.scanning') : t('fit.auto')}
+                </button>
+              </div>
             </div>
           )}
         </div>
