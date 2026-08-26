@@ -6,6 +6,8 @@ import { videoSrcFor } from './videoContent.js'
 import { LED_LIT_FILTER } from './content.js'
 import { useLang } from './useLang.js'
 import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
+import * as THREE from 'three'
+import { arBaslat, arDestekliMi, DURUM } from './ar/arDunya.js'
 /* Yerleştirme akışının görünen parçaları AR ekranıyla ortak — bkz. ArYerlestirme.jsx */
 import {
   YerlestirKatmani,
@@ -197,6 +199,24 @@ export default function ArView({
    * aynı şekilde çalışıyor; eksik olan tek şey dünya takibi.
    * ────────────────────────────────────────────────────────────────────────
    */
+  /*
+   * GERÇEK YÜZEYE YERLEŞTİRME (WebXR).
+   *
+   * Buradaki kamera görünümü bir BİNDİRMEDİR: tasarım ekrana çizilir, telefon
+   * kımıldayınca ekranla birlikte gelir. Cihaz WebXR destekliyorsa tasarım
+   * gerçek dünyada bir yüzeye çakılabiliyor — duvara koyup telefonu gezdirince
+   * ekran duvarda kalıyor. Desteklemeyen cihazlarda bu düğme hiç görünmez,
+   * bindirme yolu aynen çalışmaya devam eder.
+   */
+  const arKatmanRef = useRef(null)
+  const tasarimRef = useRef(null)
+  const oturumRef = useRef(null)
+  const [dunyaVar, setDunyaVar] = useState(false)
+  const [dunyaAcik, setDunyaAcik] = useState(false)
+  const [dunyaDurum, setDunyaDurum] = useState(DURUM.ARANIYOR)
+  const [dunyaOtomatik, setDunyaOtomatik] = useState(true)
+  const [dunyaHazirlaniyor, setDunyaHazirlaniyor] = useState(false)
+
   const [asama, setAsama] = useState('yerlestir')
   // Y ekseni dönüşü (derece) — iki parmakla çevirerek ya da tuş takımıyla
   const [donus, setDonus] = useState(0)
@@ -795,6 +815,73 @@ export default function ArView({
     return () => clearTimeout(z)
   }, [bildirim])
 
+  // Cihaz gerçek AR oturumu açabiliyor mu? (bir kez, pencere açılınca)
+  useEffect(() => {
+    if (!open) return
+    let iptal = false
+    arDestekliMi().then((v) => {
+      if (!iptal) setDunyaVar(v)
+    })
+    return () => {
+      iptal = true
+    }
+  }, [open])
+
+  // Pencere kapanırsa oturum da kapansın — kamera ve XR açık kalmasın.
+  useEffect(() => {
+    if (open) return
+    oturumRef.current?.kapat?.()
+    oturumRef.current = null
+    setDunyaAcik(false)
+  }, [open])
+
+  /**
+   * Tasarımın o anki görüntüsünü dokuya çevirir.
+   *
+   * Kaynak, ekranda duran tasarımın KENDİSİ: aynı bileşen, aynı içerik, aynı
+   * diyot dokusu. Böylece AR'de görünen şey önizlemedekiyle birebir aynı olur
+   * ve ikinci bir çizim yolu (dolayısıyla ikinci bir hata kaynağı) doğmaz.
+   */
+  const tasarimDokusu = async () => {
+    const el = tasarimRef.current
+    if (!el) return null
+    const k = await html2canvas(el, { backgroundColor: null, scale: 2, logging: false, useCORS: true })
+    const doku = new THREE.CanvasTexture(k)
+    doku.colorSpace = THREE.SRGBColorSpace
+    doku.anisotropy = 4
+    return doku
+  }
+
+  const dunyayaGir = async () => {
+    if (dunyaHazirlaniyor) return
+    setDunyaHazirlaniyor(true)
+    try {
+      const doku = await tasarimDokusu()
+      if (!doku) throw new Error('tasarım yok')
+      const o = await arBaslat({
+        doku,
+        // FİZİKSEL ÖLÇEK: konfigüratördeki metre değerleri doğrudan geçer.
+        genislikM: tasarimWm,
+        yukseklikM: tasarimHm,
+        ustKatman: arKatmanRef.current,
+        otomatik: dunyaOtomatik,
+        onDurum: setDunyaDurum,
+        onBitti: () => {
+          oturumRef.current = null
+          setDunyaAcik(false)
+          setDunyaDurum(DURUM.ARANIYOR)
+        },
+      })
+      oturumRef.current = o
+      setDunyaAcik(true)
+      setDunyaDurum(DURUM.ARANIYOR)
+    } catch {
+      setBildirim(t('arw.failed'))
+    } finally {
+      setDunyaHazirlaniyor(false)
+    }
+  }
+
   // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
   useGovdeKilidi(open)
 
@@ -894,7 +981,115 @@ export default function ArView({
 
   const cizgi = 'absolute border-dashed border-white/60 pointer-events-none'
 
+  /*
+   * AR OTURUMUNUN ARAYÜZÜ.
+   *
+   * WebXR oturumunda sayfa görünmez; yalnızca dom-overlay kökü olarak verilen
+   * bu ağaç kamera görüntüsünün üstünde çizilir. Bu yüzden kök HER ZAMAN DOM'da
+   * durur (oturum dışında gizli): oturum açılırken hazır olmalı.
+   */
+  const dunyaYazi =
+    dunyaDurum === DURUM.YERLESTI
+      ? t('arw.placed')
+      : dunyaDurum === DURUM.YUZEY_VAR
+        ? t('arw.found')
+        : t('arw.aim')
+  const dunyaAlt =
+    dunyaDurum === DURUM.YERLESTI
+      ? t('arw.walk')
+      : dunyaDurum === DURUM.YUZEY_VAR && !dunyaOtomatik
+        ? t('arw.tapHint')
+        : null
+
+  const dunyaArayuz = (
+    <div
+      ref={arKatmanRef}
+      className={dunyaAcik ? 'fixed inset-0 z-[80] flex flex-col' : 'hidden'}
+      style={{ touchAction: 'none' }}
+    >
+      {/* Durum şeridi: yüzey aranıyor → algılandı → yerleşti */}
+      <div className="pt-4 px-4 flex justify-center">
+        <div className="rounded-full bg-black/70 backdrop-blur px-4 py-2 text-center">
+          <p className="m-0 text-white text-[13px] font-semibold flex items-center gap-2 justify-center">
+            <span
+              className={`inline-block w-2 h-2 rounded-full ${
+                dunyaDurum === DURUM.YERLESTI
+                  ? 'bg-emerald-400'
+                  : dunyaDurum === DURUM.YUZEY_VAR
+                    ? 'bg-amber-300'
+                    : 'bg-white/50 animate-pulse'
+              }`}
+            />
+            {dunyaYazi}
+          </p>
+          {dunyaAlt && <p className="m-0 mt-0.5 text-white/70 text-[11.5px]">{dunyaAlt}</p>}
+        </div>
+      </div>
+
+      {/*
+        TAŞIMA ALANI. Basılı tutup sürüklerken tasarım yüzey üzerinde kayar
+        (motor her karede yeniden hit-test yapar). Düğmeler bunun ÜSTÜNDE
+        durduğu için tıklamalarını bu alan yutmaz.
+      */}
+      <div
+        className="flex-1"
+        onPointerDown={() => oturumRef.current?.suruklemeBaslat?.()}
+        onPointerUp={() => oturumRef.current?.suruklemeBitir?.()}
+        onPointerCancel={() => oturumRef.current?.suruklemeBitir?.()}
+        onClick={() => {
+          // Elle modda dokunmak yerleştirir.
+          if (!dunyaOtomatik) oturumRef.current?.dokunmaYerlestir?.()
+        }}
+      />
+
+      {/* Ölçü künyesi: gösterilen şey gerçek ürünün ölçüsüdür. */}
+      <div className="px-4 pb-3 flex justify-center">
+        <div className="rounded-lg bg-black/70 backdrop-blur px-3 py-1.5">
+          <p className="m-0 text-white text-[12.5px] font-semibold tabular-nums">
+            {metre(tasarimWm)} × {metre(tasarimHm)}
+          </p>
+          <p className="m-0 text-white/60 text-[10.5px] leading-tight">{t('arw.scaleLocked')}</p>
+        </div>
+      </div>
+
+      {/* Denetimler */}
+      <div className="px-4 pb-6 flex items-center justify-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => oturumRef.current?.yenidenYerlestir?.()}
+          className="rounded-full bg-white/95 text-[#10141b] text-[12.5px] font-semibold px-4 py-2"
+        >
+          {t('arw.replace')}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const yeni = !dunyaOtomatik
+            setDunyaOtomatik(yeni)
+            oturumRef.current?.otomatikAyarla?.(yeni)
+          }}
+          className="rounded-full border border-white/40 text-white text-[12.5px] font-semibold px-4 py-2"
+        >
+          {dunyaOtomatik ? t('arw.auto') : t('arw.manual')}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            oturumRef.current?.kapat?.()
+            oturumRef.current = null
+            setDunyaAcik(false)
+          }}
+          className="rounded-full border border-white/40 text-white text-[12.5px] font-semibold px-4 py-2"
+        >
+          {t('arw.exit')}
+        </button>
+      </div>
+    </div>
+  )
+
   return (
+    <>
+      {dunyaArayuz}
     <div className="fixed inset-0 z-[60] bg-black select-none" style={{ touchAction: 'none' }}>
       <div ref={kapRef} className="absolute inset-0 overflow-hidden">
         {arkaFoto ? (
@@ -984,6 +1179,7 @@ export default function ArView({
 
             {/* Tasarımın kendisi */}
             <div
+              ref={tasarimRef}
               className="absolute pointer-events-auto"
               style={{
                 left: sol,
@@ -1110,6 +1306,28 @@ export default function ArView({
             onTusTakimi={() => setTusTakimi((a) => !a)}
             tusTakimi={tusTakimi}
           />
+        )}
+
+        {/*
+          GERÇEK YÜZEYE YERLEŞTİR.
+          Yalnızca cihaz WebXR AR açabiliyorsa görünür; desteklemeyen
+          cihazlarda kimseye çalışmayan bir düğme gösterilmez.
+        */}
+        {!hata && arAcik && asama === 'yerlesti' && dunyaVar && !dunyaAcik && (
+          <div className="absolute bottom-28 inset-x-0 z-40 flex justify-center px-6 pointer-events-none">
+            <button
+              type="button"
+              onClick={dunyayaGir}
+              disabled={dunyaHazirlaniyor}
+              className="pointer-events-auto rounded-full bg-brand text-white text-[13px] font-semibold px-5 py-2.5 shadow-lg disabled:opacity-60 flex items-center gap-2"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7l9-4 9 4-9 4-9-4z" />
+                <path d="M3 12l9 4 9-4M3 17l9 4 9-4" />
+              </svg>
+              {dunyaHazirlaniyor ? t('arw.starting') : t('arw.enter')}
+            </button>
+          </div>
         )}
 
         {!hata && arAcik && asama === 'yerlesti' && tusTakimi && (
@@ -1387,5 +1605,6 @@ export default function ArView({
         </div>
       </div>
     </div>
+    </>
   )
 }

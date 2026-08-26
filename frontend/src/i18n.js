@@ -246,6 +246,26 @@ const dict = {
 
   // ---------- Çözünürlük ----------
   'res.heading': { tr: 'Çözünürlük', en: 'Resolution', ar: 'الدقة' },
+
+  // ---------- Gerçek yüzeye yerleştirme (WebXR) ----------
+  'arw.enter': { tr: 'Gerçek yüzeye yerleştir', en: 'Place on a real surface', ar: 'ضعها على سطح حقيقي' },
+  'arw.starting': { tr: 'Başlatılıyor…', en: 'Starting…', ar: 'يبدأ…' },
+  'arw.aim': { tr: 'Düz bir yüzeye kameranızı doğrultun', en: 'Point your camera at a flat surface', ar: 'وجّه الكاميرا نحو سطح مستوٍ' },
+  'arw.found': { tr: 'Yüzey algılandı', en: 'Surface detected', ar: 'تم اكتشاف السطح' },
+  'arw.placed': { tr: 'Yerleştirildi', en: 'Placed', ar: 'تم الوضع' },
+  'arw.walk': { tr: 'Telefonu gezdirin — ekran yerinde kalır', en: 'Move around — the screen stays in place', ar: 'تحرك — تبقى الشاشة في مكانها' },
+  'arw.dragHint': { tr: 'Taşımak için basılı tutup sürükleyin', en: 'Press and drag to move', ar: 'اضغط واسحب للتحريك' },
+  'arw.tapHint': { tr: 'Yerleştirmek için dokunun', en: 'Tap to place', ar: 'انقر للوضع' },
+  'arw.replace': { tr: 'Yeniden yerleştir', en: 'Place again', ar: 'أعد الوضع' },
+  'arw.auto': { tr: 'Otomatik', en: 'Automatic', ar: 'تلقائي' },
+  'arw.manual': { tr: 'Elle', en: 'Manual', ar: 'يدوي' },
+  'arw.exit': { tr: 'Çık', en: 'Exit', ar: 'خروج' },
+  'arw.scaleLocked': {
+    tr: 'Ölçü gerçek ürününüzün ölçüsüdür, yakınlaştırma onu değiştirmez.',
+    en: 'The size is your real product size; zooming does not change it.',
+    ar: 'المقاس هو مقاس المنتج الحقيقي؛ التكبير لا يغيّره.',
+  },
+  'arw.failed': { tr: 'Gerçek yüzey modu açılamadı; tasarımı elle yerleştirebilirsiniz.', en: 'Could not start surface mode; you can place the design manually.', ar: 'تعذّر بدء وضع السطح؛ يمكنك وضع التصميم يدويًا.' },
   'res.totalHint': {
     tr: 'Seçtiğiniz modelin ve kabin düzeninin toplam piksel sayısı',
     en: 'Total pixel count of the selected model and cabinet layout',
