@@ -102,6 +102,14 @@ export default function Oturtma({
   const [mesgul, setMesgul] = useState(false)
   const [bildirim, setBildirim] = useState(null)
   const [takip, setTakip] = useState(true)
+  /*
+   * ELLE İZLEME MESAFESİ.
+   *
+   * Taslağın büyüklüğü, ekranın hangi uzaklıktan görüneceğinden çıkıyor.
+   * Varsayılan, modele göre ÖNERİLEN mesafe; ama kullanıcı başka bir
+   * uzaklıkta duruyor ya da denemek istiyor olabilir. null = öneriyi kullan.
+   */
+  const [elleMesafe, setElleMesafe] = useState(null)
   // Otomatik yerleştirmenin bulduğu alan — taslağın arkasında soluk gösterilir.
   const [bulunan, setBulunan] = useState(null)
 
@@ -179,6 +187,7 @@ export default function Oturtma({
     setMerkez({ x: 0, y: 0 })
     setBulunan(null)
     setTakip(true)
+    setElleMesafe(null)
   }, [open])
 
 
@@ -255,9 +264,11 @@ export default function Oturtma({
    * Aradaki fark kullanıcıya yön olarak söyleniyor: uzaklaşın / yaklaşın.
    */
   const onerilenM = model ? viewingDistanceFor(model, cols, rows) : null
+  // Taslağın boyutu bu mesafeden hesaplanır (elle değer öneriyi ezer).
+  const kullanilanM = elleMesafe ?? onerilenM
   const simdikiM = kutu.w > 0 ? denkUzaklik(tasarimWm, w / kutu.w) : null
   const sigmiyor = kutu.w > 0 && (w > kutu.w || h > kutu.h)
-  const oran = onerilenM && simdikiM ? simdikiM / onerilenM : null
+  const oran = kullanilanM && simdikiM ? simdikiM / kullanilanM : null
   const yonerge = sigmiyor
     ? t('fit.tooBig')
     : oran === null
@@ -323,8 +334,8 @@ export default function Oturtma({
        * YERİ seçiyor, boyuta karışmıyor. Kullanıcı farklı bir uzaklıktaysa
        * iki parmakla kendisi ayarlıyor.
        */
-      const hedefW = onerilenM
-        ? W * (Math.tan(Math.atan(tasarimWm / 2 / onerilenM)) / Math.tan((KAMERA_ACISI * Math.PI) / 360))
+      const hedefW = kullanilanM
+        ? W * (Math.tan(Math.atan(tasarimWm / 2 / kullanilanM)) / Math.tan((KAMERA_ACISI * Math.PI) / 360))
         : yer.w * W
 
       return {
@@ -389,13 +400,13 @@ export default function Oturtma({
     // yuzeyAra her render'da yenilenir; bağımlılığa alınırsa döngü sürekli
     // kurulup yıkılır. İhtiyacı olan değerler zaten aşağıdaki listede.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, hata, takip, sonuc, kutu.w, tasarimWm, tasarimHm, onerilenM])
+  }, [open, hata, takip, sonuc, kutu.w, tasarimWm, tasarimHm, kullanilanM])
 
   /** Taslağı, önerilen mesafeden görünecek büyüklüğe ayarlar. */
-  const onerilenMesafeyeAyarla = () => {
-    if (!onerilenM || !(kutu.w > 0)) return
+  const onerilenMesafeyeAyarla = (hedefMesafe = kullanilanM) => {
+    if (!hedefMesafe || !(kutu.w > 0)) return
     // denkUzaklik'in tersi: bu uzaklıkta ekran kadrajın ne kadarını kaplar?
-    const yariAci = Math.atan(tasarimWm / 2 / onerilenM)
+    const yariAci = Math.atan(tasarimWm / 2 / hedefMesafe)
     const kaplama = Math.tan(yariAci) / Math.tan((KAMERA_ACISI * Math.PI) / 360)
     const yeni = (kutu.w * kaplama) / tasarimWm
     setPxPerM(Math.max(EN_KUCUK, Math.min(EN_BUYUK, yeni)))
@@ -645,8 +656,57 @@ export default function Oturtma({
                   {yonerge}
                 </p>
               )}
+              {/*
+                MESAFE AYARI. Taslağın boyutu buradan geliyor; değeri
+                değiştirmek ekranı o uzaklıktan görünecek büyüklüğe getirir.
+                Öneriden sapıldığında "elle" yazısı ve geri dönüş düğmesi çıkar.
+              */}
+              <div className="mt-1.5 flex items-center justify-center gap-1.5">
+                <span className="text-white/70 text-[11px]">{t('fit.distance')}</span>
+                <button
+                  type="button"
+                  aria-label="mesafe-azalt"
+                  onClick={() => {
+                    const yeni = Math.max(0.3, Math.round(((kullanilanM || 3) - 0.25) * 100) / 100)
+                    setElleMesafe(yeni)
+                    onerilenMesafeyeAyarla(yeni)
+                  }}
+                  className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[15px] leading-none font-semibold"
+                >
+                  −
+                </button>
+                <span className="text-white text-[12.5px] font-semibold tabular-nums min-w-[54px] text-center">
+                  {metre(kullanilanM)}
+                </span>
+                <button
+                  type="button"
+                  aria-label="mesafe-arttir"
+                  onClick={() => {
+                    const yeni = Math.min(60, Math.round(((kullanilanM || 3) + 0.25) * 100) / 100)
+                    setElleMesafe(yeni)
+                    onerilenMesafeyeAyarla(yeni)
+                  }}
+                  className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[15px] leading-none font-semibold"
+                >
+                  +
+                </button>
+                {elleMesafe !== null && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setElleMesafe(null)
+                      onerilenMesafeyeAyarla(onerilenM)
+                    }}
+                    className="ml-0.5 rounded-lg bg-white/15 hover:bg-white/25 text-white/90 text-[10.5px] px-2 py-1"
+                  >
+                    {t('fit.distReset')}
+                  </button>
+                )}
+              </div>
+
               <p className="m-0 mt-1 text-white/75 text-[11.5px] text-center tabular-nums">
                 {t('fit.viewDist')}: <b className="text-white">{metre(onerilenM)}</b>
+                {elleMesafe !== null ? ` (${t('fit.distManual')}: ${metre(elleMesafe)})` : ''}
                 {simdikiM ? ` · ${t('fit.asSeenFrom')} ${metre(simdikiM)}` : ''}
               </p>
               <p className="m-0 mt-0.5 text-white/45 text-[10px] text-center">{t('fit.distNote')}</p>
