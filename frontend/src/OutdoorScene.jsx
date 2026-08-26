@@ -19,7 +19,7 @@ import { useLang } from './useLang.js'
 import EkranIcerigi from './EkranIcerigi.jsx'
 import { fotoYerlesimi, sigdirmaKatsayisi } from './sahneOlcek.js'
 
-const ARKA_PLAN = '/bos-merkezli-dis-mekan-led-arka-plan.png'
+const ARKA_PLAN = '/yakin-plan-dis-mekan-led-arka-plan.png'
 
 /*
  * KALİBRASYON.
