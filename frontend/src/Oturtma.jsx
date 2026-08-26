@@ -528,7 +528,19 @@ export default function Oturtma({
   const seritYayin = content !== 'none' && content !== 'led'
   const maskePolygon = tekKatman ? seritMaskePolygon(yerlesim, h) : undefined
 
-  const kose = 'absolute w-7 h-7 border-white'
+  /*
+   * TASLAK SADELEŞTİRİLDİ.
+   *
+   * Kalın kesik çerçeve, iç dolgu, dört büyük köşe işareti ve iki dolgulu
+   * mavi etiket, bakılan şeyin önüne geçiyordu — oysa bu ekranda görülmek
+   * istenen mekânın kendisi. Çerçeve inceldi, dolgu kalktı, köşeler küçüldü;
+   * ölçüler dolgusuz, küçük ve gölgeli yazıya döndü. Bilgi aynı, gürültü yok.
+   */
+  const kose = 'absolute w-4 h-4 border-white/90'
+  const olcuYazi =
+    'absolute text-[10.5px] font-semibold text-white whitespace-nowrap pointer-events-none'
+  // Kamera görüntüsü her renkte olabilir; gölge okunurluğu dolgu olmadan sağlar.
+  const olcuGolge = { textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6)' }
 
   return (
     <div className="fixed inset-0 z-[60] bg-black select-none" style={{ touchAction: 'none' }}>
@@ -637,15 +649,15 @@ export default function Oturtma({
             onPointerUp={parmakKalkti}
             onPointerCancel={parmakKalkti}
           >
-            <div className="absolute inset-0 border-2 border-dashed border-white/85 bg-white/5" />
-            {/* Köşe işaretleri: çerçeve kamera görüntüsünün üstünde okunur kalsın */}
-            <div className={`${kose} left-0 top-0 border-l-4 border-t-4`} />
-            <div className={`${kose} right-0 top-0 border-r-4 border-t-4`} />
-            <div className={`${kose} left-0 bottom-0 border-l-4 border-b-4`} />
-            <div className={`${kose} right-0 bottom-0 border-r-4 border-b-4`} />
+            <div className="absolute inset-0 border border-dashed border-white/55" />
+            {/* Köşe işaretleri: çerçevenin sınırı kamera görüntüsünde seçilsin */}
+            <div className={`${kose} left-0 top-0 border-l-2 border-t-2`} />
+            <div className={`${kose} right-0 top-0 border-r-2 border-t-2`} />
+            <div className={`${kose} left-0 bottom-0 border-l-2 border-b-2`} />
+            <div className={`${kose} right-0 bottom-0 border-r-2 border-b-2`} />
 
             {/* Gerçek ölçüler */}
-            <span className="absolute left-1/2 -translate-x-1/2 -top-7 rounded-lg bg-brand text-white text-[12px] font-semibold px-2 py-0.5 whitespace-nowrap">
+            <span className={`${olcuYazi} left-1/2 -translate-x-1/2 -top-5`} style={olcuGolge}>
               {metre(tasarimWm)}
             </span>
             {/*
@@ -654,12 +666,11 @@ export default function Oturtma({
               O durumda etiket sola geçiyor.
             */}
             <span
-              className="absolute top-1/2 -translate-y-1/2 rounded-lg bg-brand text-white text-[12px] font-semibold px-2 py-0.5 whitespace-nowrap"
-              style={
-                sol + w > kutu.w - 96
-                  ? { right: '100%', marginRight: 8 }
-                  : { left: '100%', marginLeft: 8 }
-              }
+              className={`${olcuYazi} top-1/2 -translate-y-1/2`}
+              style={{
+                ...olcuGolge,
+                ...(sol + w > kutu.w - 96 ? { right: '100%', marginRight: 6 } : { left: '100%', marginLeft: 6 }),
+              }}
             >
               {metre(tasarimHm)}
             </span>
