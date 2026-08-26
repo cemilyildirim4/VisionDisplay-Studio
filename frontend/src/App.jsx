@@ -499,11 +499,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     taslagiSil()
   }
 
-  // Duvara sığdır: her tıklamada ekranı o anki duvara tam sığan maksimuma çeker.
-  // Aç/kapa değil — duvar ölçüsünü değiştirip tekrar bastığınızda yeniden sığdırır.
+  /*
+   * DUVARA SIĞDIR — İKİ YERLEŞİMİ DE HESAPLAR, ÇOK LED OLANI SEÇER.
+   *
+   * Aynı duvara kabin yatay ya da dikey dizilebiliyor ve ikisi genellikle
+   * aynı sayıda kabin almıyor: 320 × 160 mm'lik bir kabinle 2,00 × 1,00 m
+   * duvara yatay 6 × 6 = 36 kabin sığarken, dikey (160 × 320) 12 × 3 = 36
+   * çıkar; ölçüler değişince biri açık ara öne geçer. Daha çok kabin, daha
+   * çok LED, daha çok piksel demek — müşterinin duvarından alabileceği en
+   * yüksek çözünürlük.
+   *
+   * Bu yüzden düğme her iki yerleşimi de arka planda hesaplıyor ve LED sayısı
+   * fazla olanı uyguluyor. Kullanıcı hesabı görmüyor; yalnızca sonucu, yani
+   * ekranın o duvardaki en verimli hâlini görüyor. Eşitlikte o anki yerleşim
+   * korunuyor — sebepsiz yere ekranı çevirmek şaşırtıcı olurdu.
+   */
   const fitToWall = () => {
-    setCols(colsMax)
-    setRows(rowsMax)
+    const m = selectedModel
+    if (!m) {
+      setCols(colsMax)
+      setRows(rowsMax)
+      return
+    }
+
+    // Bir yerleşimin duvara kaç kabin sığdırdığı ve toplam LED sayısı
+    const hesapla = (kabinWmm, kabinHmm) => {
+      const c = Math.max(1, Math.floor(width / (kabinWmm / 1000) + EPS))
+      const r = Math.max(1, Math.floor(height / (kabinHmm / 1000) + EPS))
+      // Kabin başına LED = piksel sayısı; dönmekle değişmez, yalnızca yer değiştirir.
+      return { cols: c, rows: r, led: c * r * (m.pixelWidth || 0) * (m.pixelHeight || 0) }
+    }
+
+    const gW = m.widthMm || 500
+    const gH = m.heightMm || 500
+    const yatay = hesapla(gW, gH)
+    const dikey = hesapla(gH, gW)
+
+    const dikeySec = dikey.led > yatay.led || (dikey.led === yatay.led && portrait)
+    const kazanan = dikeySec ? dikey : yatay
+
+    setOrientation(dikeySec ? 'portrait' : 'landscape')
+    setCols(kazanan.cols)
+    setRows(kazanan.rows)
   }
 
   const hasModel = !!selectedModel
