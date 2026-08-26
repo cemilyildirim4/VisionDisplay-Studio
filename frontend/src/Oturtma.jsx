@@ -648,7 +648,19 @@ export default function Oturtma({
             <span className="absolute left-1/2 -translate-x-1/2 -top-7 rounded-lg bg-brand text-white text-[12px] font-semibold px-2 py-0.5 whitespace-nowrap">
               {metre(tasarimWm)}
             </span>
-            <span className="absolute top-1/2 -translate-y-1/2 -right-2 translate-x-full rounded-lg bg-brand text-white text-[12px] font-semibold px-2 py-0.5 whitespace-nowrap">
+            {/*
+              Yükseklik etiketi sağda durur; ama sağ kenarda denetim sütunu var
+              ve taslak oraya yaklaşınca etiket düğmelerin altında kalıyordu.
+              O durumda etiket sola geçiyor.
+            */}
+            <span
+              className="absolute top-1/2 -translate-y-1/2 rounded-lg bg-brand text-white text-[12px] font-semibold px-2 py-0.5 whitespace-nowrap"
+              style={
+                sol + w > kutu.w - 96
+                  ? { right: '100%', marginRight: 8 }
+                  : { left: '100%', marginLeft: 8 }
+              }
+            >
               {metre(tasarimHm)}
             </span>
           </div>
@@ -668,98 +680,106 @@ export default function Oturtma({
         <span className="text-white text-[13px] font-semibold">{t('fit.title')}</span>
       </div>
 
-      {/* YÖNERGE + İZLEME MESAFESİ */}
+      {/*
+        BİLGİ ÜSTTE TEK SATIR, DENETİMLER SAĞ KENARDA.
+
+        Önceden hepsi üstte büyük bir kutudaydı ve kadrajın üçte birini
+        kapatıyordu — oysa bu ekranda bakılan şey tasarımın MEKÂNDA nasıl
+        durduğu. Artık üstte yalnızca durum ve mesafe var; ayarlar sağda,
+        parmağın rahat eriştiği yerde, ince bir sütun hâlinde.
+      */}
       {!hata && !sonuc && (
-        <div className="absolute top-14 inset-x-0 z-40 px-6 flex flex-col items-center gap-2">
-          <p className="text-center text-white/85 text-[12.5px] m-0">
-            {takip ? (bulunan ? t('fit.followHint') : t('fit.searching')) : t('fit.hint')}
-          </p>
+        <div className="absolute top-14 inset-x-0 z-40 px-4 flex justify-center pointer-events-none">
+          <div className="rounded-full bg-black/65 backdrop-blur px-3 py-1.5 max-w-[90%]">
+            <p className="m-0 text-center text-[12px] leading-tight">
+              <span
+                className={
+                  sigmiyor ? 'text-amber-300 font-semibold' : yonergeIyi ? 'text-emerald-300 font-semibold' : 'text-white font-semibold'
+                }
+              >
+                {yonerge || (takip ? (bulunan ? t('fit.followHint') : t('fit.searching')) : t('fit.hint'))}
+              </span>
+              {kullanilanM ? (
+                <span className="text-white/70 tabular-nums"> · {metre(kullanilanM)}</span>
+              ) : null}
+            </p>
+          </div>
+        </div>
+      )}
 
-          {onerilenM && (
-            <div className="rounded-xl bg-black/70 backdrop-blur px-3.5 py-2 max-w-[320px] w-full">
-              {yonerge && (
-                <p
-                  className={`m-0 text-[13px] font-semibold text-center ${
-                    sigmiyor ? 'text-amber-300' : yonergeIyi ? 'text-emerald-300' : 'text-white'
-                  }`}
-                >
-                  {yonerge}
-                </p>
-              )}
-              {/*
-                MESAFE AYARI. Taslağın boyutu buradan geliyor; değeri
-                değiştirmek ekranı o uzaklıktan görünecek büyüklüğe getirir.
-                Öneriden sapıldığında "elle" yazısı ve geri dönüş düğmesi çıkar.
-              */}
-              <div className="mt-1.5 flex items-center justify-center gap-1.5">
-                <span className="text-white/70 text-[11px]">{t('fit.distance')}</span>
-                <button
-                  type="button"
-                  aria-label="mesafe-azalt"
-                  onClick={() => {
-                    const yeni = Math.max(0.3, Math.round(((kullanilanM || 3) - 0.25) * 100) / 100)
-                    setElleMesafe(yeni)
-                    onerilenMesafeyeAyarla(yeni)
-                  }}
-                  className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[15px] leading-none font-semibold"
-                >
-                  −
-                </button>
-                <span className="text-white text-[12.5px] font-semibold tabular-nums min-w-[54px] text-center">
-                  {metre(kullanilanM)}
-                </span>
-                <button
-                  type="button"
-                  aria-label="mesafe-arttir"
-                  onClick={() => {
-                    const yeni = Math.min(60, Math.round(((kullanilanM || 3) + 0.25) * 100) / 100)
-                    setElleMesafe(yeni)
-                    onerilenMesafeyeAyarla(yeni)
-                  }}
-                  className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[15px] leading-none font-semibold"
-                >
-                  +
-                </button>
-                {elleMesafe !== null && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setElleMesafe(null)
-                      onerilenMesafeyeAyarla(onerilenM)
-                    }}
-                    className="ml-0.5 rounded-lg bg-white/15 hover:bg-white/25 text-white/90 text-[10.5px] px-2 py-1"
-                  >
-                    {t('fit.distReset')}
-                  </button>
-                )}
-              </div>
+      {/* SAĞ SÜTUN — denetimler */}
+      {!hata && !sonuc && (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-2">
+          {/* Mesafe: + üstte, değer ortada, − altta (yukarı = uzak) */}
+          <div className="flex flex-col items-center rounded-2xl bg-black/60 backdrop-blur px-1.5 py-1.5 gap-1">
+            <button
+              type="button"
+              aria-label="mesafe-arttir"
+              onClick={() => {
+                const yeni = Math.min(60, Math.round(((kullanilanM || 3) + 0.25) * 100) / 100)
+                setElleMesafe(yeni)
+                onerilenMesafeyeAyarla(yeni)
+              }}
+              className="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-[17px] leading-none font-semibold"
+            >
+              +
+            </button>
+            <span className="text-white text-[11px] font-semibold tabular-nums px-1 text-center leading-tight">
+              {metre(kullanilanM)}
+            </span>
+            <button
+              type="button"
+              aria-label="mesafe-azalt"
+              onClick={() => {
+                const yeni = Math.max(0.3, Math.round(((kullanilanM || 3) - 0.25) * 100) / 100)
+                setElleMesafe(yeni)
+                onerilenMesafeyeAyarla(yeni)
+              }}
+              className="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-[17px] leading-none font-semibold"
+            >
+              −
+            </button>
+          </div>
 
-              <p className="m-0 mt-1 text-white/75 text-[11.5px] text-center tabular-nums">
-                {t('fit.viewDist')}: <b className="text-white">{metre(onerilenM)}</b>
-                {elleMesafe !== null ? ` (${t('fit.distManual')}: ${metre(elleMesafe)})` : ''}
-                {simdikiM ? ` · ${t('fit.asSeenFrom')} ${metre(simdikiM)}` : ''}
-              </p>
-              <p className="m-0 mt-0.5 text-white/45 text-[10px] text-center">{t('fit.distNote')}</p>
-              <div className="mt-1.5 flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={onerilenMesafeyeAyarla}
-                  className="flex-1 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[11.5px] font-semibold py-1.5 transition-colors"
-                >
-                  {t('fit.snap')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTakip((a) => !a)}
-                  className={`flex-1 rounded-lg text-[11.5px] font-semibold py-1.5 transition-colors ${
-                    takip ? 'bg-brand hover:bg-brand-dark text-white' : 'bg-white/15 hover:bg-white/25 text-white'
-                  }`}
-                >
-                  {t('fit.follow')}: {takip ? t('fit.followOn') : t('fit.followOff')}
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Önerilen mesafeye dön / ayarla */}
+          <button
+            type="button"
+            aria-label={elleMesafe !== null ? t('fit.distReset') : t('fit.snap')}
+            title={elleMesafe !== null ? t('fit.distReset') : t('fit.snap')}
+            onClick={() => {
+              if (elleMesafe !== null) {
+                setElleMesafe(null)
+                onerilenMesafeyeAyarla(onerilenM)
+              } else {
+                onerilenMesafeyeAyarla(onerilenM)
+              }
+            }}
+            className={`w-11 h-11 rounded-full backdrop-blur flex items-center justify-center ${
+              elleMesafe !== null ? 'bg-white text-[#10141b]' : 'bg-black/60 text-white'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" opacity="0" />
+              <path d="M4 12a8 8 0 1 1 2.4 5.7" />
+              <path d="M4 18v-5h5" />
+            </svg>
+          </button>
+
+          {/* Otomatik takip */}
+          <button
+            type="button"
+            aria-label={t('fit.follow')}
+            title={`${t('fit.follow')}: ${takip ? t('fit.followOn') : t('fit.followOff')}`}
+            onClick={() => setTakip((a) => !a)}
+            className={`w-11 h-11 rounded-full backdrop-blur flex items-center justify-center ${
+              takip ? 'bg-brand text-white' : 'bg-black/60 text-white/70'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3.2" />
+              <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+            </svg>
+          </button>
         </div>
       )}
 
