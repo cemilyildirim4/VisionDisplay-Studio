@@ -64,3 +64,19 @@ export function sigdirmaKatsayisi(wPx, hPx, enCokW, enCokH, payW = 0, payH = 0) 
   const kullanilabilirH = Math.max(1, enCokH - payH)
   return Math.min(1, kullanilabilirW / wPx, kullanilabilirH / hPx)
 }
+
+/**
+ * FOTOGRAFIN CEKILDIGI MESAFE - izleme mesafesi denetiminin baslangici.
+ *
+ * Kadrajin zemin hizasinda kac metreye denk geldigini biliyoruz; kameranin
+ * yatay gorus acisini da varsayarsak, fotografcinin o noktadan ne kadar
+ * uzakta durdugu basit bir ucgen: yari genislik / tan(yari aci).
+ *
+ * Kesin bir sayi degil, gorus acisi varsayim. Ama denetim GORELI calisiyor:
+ * onemli olan "buradan bakinca" ile "yaklasinca" arasindaki oran.
+ */
+export const KAMERA_ACISI = 65
+
+export function kadrajMesafesi(kadrajMetre) {
+  return kadrajMetre / 2 / Math.tan((KAMERA_ACISI * Math.PI) / 360)
+}

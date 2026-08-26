@@ -17,7 +17,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import EkranIcerigi from './EkranIcerigi.jsx'
-import { fotoYerlesimi, sigdirmaKatsayisi } from './sahneOlcek.js'
+import { fotoYerlesimi, sigdirmaKatsayisi, kadrajMesafesi } from './sahneOlcek.js'
+import SahneDenetimleri from './SahneDenetimleri.jsx'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 
 const ARKA_PLAN = '/yakin-plan-dis-mekan-led-arka-plan.png'
@@ -61,6 +62,14 @@ const YAN_DESTEK_ESIGI_M = 2.5
 /** Sahnede kenarlarda bırakılan pay. */
 const YATAY_PAY = 0.86
 const DIKEY_PAY = 0.9
+
+/*
+ * IZLEME MESAFESI - bkz. SahneDenetimleri.jsx. Fotografin cekildigi nokta
+ * en uzak mesafe; yaklasildiginda sahnenin tamami birlikte buyuyor, yani
+ * ekranin meydana orani korunuyor.
+ */
+const UZAK_MESAFE = kadrajMesafesi(KADRAJ_METRE)
+const YAKIN_MESAFE = 2
 
 const GECIS = 'width 220ms ease, height 220ms ease, bottom 220ms ease'
 
@@ -252,68 +261,6 @@ function OutdoorBillboard({
   )
 }
 
-/* -------------------------------------------------------------- denetimler */
-
-/**
- * Ölçü denetimleri.
- *
- * Metre kutusu yerine KABİN SAYISI değiştiriliyor: ekranın gerçek ölçüsü
- * uygulamada kabin ızgarasından çıkıyor ve tek kaynak orası. Ayrı bir metre
- * durumu, aynı ekranın iki farklı ölçüye sahip olması demek olurdu. Kullanıcı
- * metreyi yine görüyor.
- */
-function DimensionControls({
-  cols,
-  rows,
-  colsMax,
-  rowsMax,
-  cwM,
-  chM,
-  onCols,
-  onRows,
-  wm,
-  hm,
-}) {
-  const { t } = useLang()
-
-  const Satir = ({ etiket, deger, enCok, kabinM, degistir, toplamM }) => (
-    <div className="flex items-center justify-between gap-3 py-1.5">
-      <span className="text-[12px] text-white/70">{etiket}</span>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          aria-label={`${etiket}-azalt`}
-          onClick={() => degistir(Math.max(1, deger - 1))}
-          className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[15px] leading-none"
-        >
-          −
-        </button>
-        <span className="text-white text-[12.5px] font-semibold tabular-nums w-[74px] text-center">
-          {toplamM.toFixed(2)} m
-          <span className="block text-[10px] font-normal text-white/50">
-            {deger} × {(kabinM * 100).toFixed(0)} cm
-          </span>
-        </span>
-        <button
-          type="button"
-          aria-label={`${etiket}-arttir`}
-          onClick={() => degistir(Math.min(enCok, deger + 1))}
-          className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[15px] leading-none"
-        >
-          +
-        </button>
-      </div>
-    </div>
-  )
-
-  return (
-    <div className="rounded-2xl bg-black/70 backdrop-blur px-3 py-2 w-[236px]">
-      <Satir etiket={t('avm.width')} deger={cols} enCok={colsMax} kabinM={cwM} degistir={onCols} toplamM={wm} />
-      <Satir etiket={t('avm.height')} deger={rows} enCok={rowsMax} kabinM={chM} degistir={onRows} toplamM={hm} />
-    </div>
-  )
-}
-
 /* ------------------------------------------------------------------ sahne */
 
 export default function OutdoorScene({
@@ -334,6 +281,8 @@ export default function OutdoorScene({
   const sahneRef = useRef(null)
   const [sahne, setSahne] = useState({ w: 0, h: 0 })
   const [foto, setFoto] = useState({ w: 0, h: 0 })
+  /* Izleme mesafesi - varsayilani fotografin cekildigi nokta. */
+  const [mesafe, setMesafe] = useState(UZAK_MESAFE)
 
   useGovdeKilidi(open)
 
@@ -386,9 +335,30 @@ export default function OutdoorScene({
   }, [yerlesim, wm, hm, sahne.w])
 
   /* Sürükleme — kaymanın metre karşılığı ölçeğe bağlı olduğu için burada. */
+  /*
+   * YAKINLIK.
+   *
+   * Mesafe yariya inince goruntu iki katina cikar - basit perspektif. Olcek
+   * sahnenin TAMAMINA uygulaniyor (arka plan + ekran birlikte), o yuzden
+   * ekranin mekana orani hic degismiyor; sadece daha yakindan bakiliyor.
+   * Fotografin cekildigi noktadan geriye gidilemiyor: orada goruntu yok.
+   */
+  const yakinlik = Math.max(1, UZAK_MESAFE / Math.max(YAKIN_MESAFE, mesafe))
+
+  /*
+   * Surukleme. Parmak ekranda 100 px gittiginde sahnede kac metre gidildigi
+   * yakinliga da bagli - yakinlasinca ayni hareket daha az metre eder.
+   * Kancaya bu yuzden EKRANDAKI piksel/metre veriliyor.
+   */
   const pxPerM = (yerlesim?.pxPerM || 0) * olcu.kisilma
-  const { ofsetM, tasindi, sifirla, tutamak } = useSurukleme(pxPerM)
-  const kayma = kaymayiSinirla(ofsetM, pxPerM, sahne, olcu.w, yerlesim?.tabanY || 0)
+  const { ofsetM, tasindi, sifirla, tutamak } = useSurukleme(pxPerM * yakinlik)
+  const kayma = kaymayiSinirla(
+    ofsetM,
+    pxPerM,
+    { w: sahne.w / yakinlik, h: sahne.h / yakinlik },
+    olcu.w,
+    yerlesim?.tabanY || 0,
+  )
 
   if (!open) return null
 
@@ -397,22 +367,37 @@ export default function OutdoorScene({
   return (
     <div className="fixed inset-0 z-[60] bg-black select-none">
       <div ref={sahneRef} className="absolute inset-0 overflow-hidden">
-        <SceneBackground onOlcu={setFoto} />
+        {/*
+          YAKINLIK KATMANI. Arka plan ve billboard BURADA BIRLIKTE
+          olcekleniyor - ayni katmanda olduklari icin aralarindaki oran hic
+          degismiyor. Olcegin merkezi tabani: yaklasirken bakilan sey
+          kadrajda yerinde kaliyor, sahne onun etrafinda aciliyor.
+        */}
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: `scale(${yakinlik})`,
+            transformOrigin: `calc(50% + ${kayma.x}px) ${(yerlesim?.tabanY || 0) + kayma.y}px`,
+            transition: 'transform 220ms ease',
+          }}
+        >
+          <SceneBackground onOlcu={setFoto} />
 
-        {olcu.w > 0 && (
-          <OutdoorBillboard
-            wPx={olcu.w}
-            hPx={olcu.h}
-            tabanY={yerlesim.tabanY}
-            pxPerM={pxPerM}
-            wm={wm}
-            kayma={kayma}
-            tutamak={tutamak}
-            content={content}
-            contentUrl={contentUrl}
-            isikVar={isikVar}
-          />
-        )}
+          {olcu.w > 0 && (
+            <OutdoorBillboard
+              wPx={olcu.w}
+              hPx={olcu.h}
+              tabanY={yerlesim.tabanY}
+              pxPerM={pxPerM}
+              wm={wm}
+              kayma={kayma}
+              tutamak={tutamak}
+              content={content}
+              contentUrl={contentUrl}
+              isikVar={isikVar}
+            />
+          )}
+        </div>
 
         <div className="absolute top-3 inset-x-0 px-4 flex justify-center pointer-events-none">
           <div className="rounded-full bg-black/70 backdrop-blur px-3.5 py-1.5">
@@ -435,7 +420,11 @@ export default function OutdoorScene({
               {t('scene.recenter')}
             </button>
           )}
-          <DimensionControls
+          <SahneDenetimleri
+            mesafe={mesafe}
+            enYakinMesafe={YAKIN_MESAFE}
+            enUzakMesafe={UZAK_MESAFE}
+            onMesafe={setMesafe}
             cols={cols}
             rows={rows}
             colsMax={colsMax}
