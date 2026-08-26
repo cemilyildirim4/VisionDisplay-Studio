@@ -265,6 +265,18 @@ const dict = {
   'fit.errCamera': { tr: 'Kamera açılamadı. Tarayıcı ayarlarından kamera iznini verip tekrar deneyin.', en: 'Could not open the camera. Allow camera access and try again.', ar: 'تعذّر فتح الكاميرا.' },
   'fit.errShot': { tr: 'Kare alınamadı, tekrar deneyin.', en: 'Could not capture the shot, try again.', ar: 'تعذّر التقاط اللقطة.' },
   'fit.open': { tr: 'Kamerada oturt', en: 'Fit in camera', ar: 'التركيب بالكاميرا' },
+  'fit.viewDist': { tr: 'Önerilen izleme mesafesi', en: 'Recommended viewing distance', ar: 'مسافة المشاهدة الموصى بها' },
+  'fit.asSeenFrom': { tr: 'Bu görünüm yaklaşık şu uzaklığa denk', en: 'This view is roughly the same as from', ar: 'هذا المنظر يعادل تقريبًا من' },
+  'fit.goBack': { tr: 'Biraz uzaklaşın', en: 'Step back a little', ar: 'ابتعد قليلًا' },
+  'fit.comeCloser': { tr: 'Biraz yaklaşabilirsiniz', en: 'You can step a little closer', ar: 'يمكنك الاقتراب قليلًا' },
+  'fit.goodDistance': { tr: 'Uygun mesafe', en: 'Good distance', ar: 'مسافة مناسبة' },
+  'fit.tooBig': { tr: 'Ekran kadraja sığmıyor — geri çekilin', en: 'The screen does not fit the frame — step back', ar: 'الشاشة لا تتسع في الإطار — ابتعد' },
+  'fit.snap': { tr: 'Önerilen mesafeye ayarla', en: 'Set to recommended distance', ar: 'اضبط على المسافة الموصى بها' },
+  'fit.distNote': {
+    tr: 'Uzaklık kameranın görüş açısından kestirilir, yaklaşıktır.',
+    en: 'The distance is estimated from the camera field of view and is approximate.',
+    ar: 'تُقدَّر المسافة من زاوية رؤية الكاميرا وهي تقريبية.',
+  },
   'res.totalHint': {
     tr: 'Seçtiğiniz modelin ve kabin düzeninin toplam piksel sayısı',
     en: 'Total pixel count of the selected model and cabinet layout',

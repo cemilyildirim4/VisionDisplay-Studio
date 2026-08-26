@@ -5,6 +5,7 @@ import { videoSrcFor } from './videoContent.js'
 import { LED_LIT_FILTER } from './content.js'
 import { useLang } from './useLang.js'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
+import { viewingDistanceFor } from './viewingDistance.js'
 
 /**
  * KAMERADA OTURTMA.
@@ -28,6 +29,34 @@ import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 
 const EN_KUCUK = 40 // piksel/metre
 const EN_BUYUK = 4000
+
+/*
+ * TELEFON ARKA KAMERASININ YATAY GÖRÜŞ AÇISI (derece).
+ *
+ * Tarayıcı gerçek görüş açısını vermiyor — MediaTrackSettings'te böyle bir
+ * alan yok. Ana kameralarda tipik değer 65°–70° arasında; 67° alındı.
+ * Bu yüzden aşağıdaki uzaklık kestirimi YAKLAŞIKTIR ve kullanıcıya da öyle
+ * söyleniyor. Amaç santim hassasiyeti değil, "uzaklaşın / yaklaşın" gibi
+ * doğru yönü göstermek.
+ */
+const KAMERA_ACISI = 67
+
+/**
+ * Ekrandaki görüntü hangi uzaklıktan bakmaya denk geliyor?
+ *
+ * Gerçek genişliği W olan bir ekran, d uzaklıktan bakıldığında kadrajın
+ * belli bir oranını kaplar. Buradaki hesap bunun tersi: kadrajı ne kadar
+ * kapladığına bakıp d'yi buluyor.
+ *
+ *   yarıAçı   = atan(oran · tan(kameraAçısı / 2))
+ *   uzaklık   = (W / 2) / tan(yarıAçı)
+ */
+function denkUzaklik(genislikM, kapladigiOran) {
+  if (!(genislikM > 0) || !(kapladigiOran > 0)) return null
+  const yariAci = Math.atan(kapladigiOran * Math.tan((KAMERA_ACISI * Math.PI) / 360))
+  if (yariAci <= 0) return null
+  return genislikM / 2 / Math.tan(yariAci)
+}
 
 function metre(v) {
   if (!isFinite(v)) return '—'
@@ -199,6 +228,41 @@ export default function Oturtma({
   const h = tasarimHm * pxPerM
   const sol = merkez.x - w / 2
   const ust = merkez.y - h / 2
+
+  /*
+   * İZLEME MESAFESİ REHBERİ.
+   *
+   * İki sayı karşılaştırılıyor:
+   *   • önerilen : bu ekranın rahat izlenebileceği mesafe (piksel aralığı ve
+   *                ekran köşegeninden; Teknik Özellikler'dekiyle aynı hesap)
+   *   • şimdiki  : taslak kadrajın bu kadarını kaplıyorsa, gerçekte hangi
+   *                uzaklıktan bakmaya denk gelir
+   * Aradaki fark kullanıcıya yön olarak söyleniyor: uzaklaşın / yaklaşın.
+   */
+  const onerilenM = model ? viewingDistanceFor(model, cols, rows) : null
+  const simdikiM = kutu.w > 0 ? denkUzaklik(tasarimWm, w / kutu.w) : null
+  const sigmiyor = kutu.w > 0 && (w > kutu.w || h > kutu.h)
+  const oran = onerilenM && simdikiM ? simdikiM / onerilenM : null
+  const yonerge = sigmiyor
+    ? t('fit.tooBig')
+    : oran === null
+      ? null
+      : oran < 0.8
+        ? t('fit.goBack')
+        : oran > 1.25
+          ? t('fit.comeCloser')
+          : t('fit.goodDistance')
+  const yonergeIyi = !sigmiyor && oran !== null && oran >= 0.8 && oran <= 1.25
+
+  /** Taslağı, önerilen mesafeden görünecek büyüklüğe ayarlar. */
+  const onerilenMesafeyeAyarla = () => {
+    if (!onerilenM || !(kutu.w > 0)) return
+    // denkUzaklik'in tersi: bu uzaklıkta ekran kadrajın ne kadarını kaplar?
+    const yariAci = Math.atan(tasarimWm / 2 / onerilenM)
+    const kaplama = Math.tan(yariAci) / Math.tan((KAMERA_ACISI * Math.PI) / 360)
+    const yeni = (kutu.w * kaplama) / tasarimWm
+    setPxPerM(Math.max(EN_KUCUK, Math.min(EN_BUYUK, yeni)))
+  }
 
   /**
    * Kamera karesini ve tasarımı tek görüntüde birleştirir.
@@ -414,11 +478,37 @@ export default function Oturtma({
         <span className="text-white text-[13px] font-semibold">{t('fit.title')}</span>
       </div>
 
-      {/* YÖNERGE */}
+      {/* YÖNERGE + İZLEME MESAFESİ */}
       {!hata && !sonuc && (
-        <p className="absolute top-14 inset-x-0 z-40 text-center text-white/85 text-[12.5px] px-8 m-0">
-          {t('fit.hint')}
-        </p>
+        <div className="absolute top-14 inset-x-0 z-40 px-6 flex flex-col items-center gap-2">
+          <p className="text-center text-white/85 text-[12.5px] m-0">{t('fit.hint')}</p>
+
+          {onerilenM && (
+            <div className="rounded-xl bg-black/70 backdrop-blur px-3.5 py-2 max-w-[320px] w-full">
+              {yonerge && (
+                <p
+                  className={`m-0 text-[13px] font-semibold text-center ${
+                    sigmiyor ? 'text-amber-300' : yonergeIyi ? 'text-emerald-300' : 'text-white'
+                  }`}
+                >
+                  {yonerge}
+                </p>
+              )}
+              <p className="m-0 mt-1 text-white/75 text-[11.5px] text-center tabular-nums">
+                {t('fit.viewDist')}: <b className="text-white">{metre(onerilenM)}</b>
+                {simdikiM ? ` · ${t('fit.asSeenFrom')} ${metre(simdikiM)}` : ''}
+              </p>
+              <p className="m-0 mt-0.5 text-white/45 text-[10px] text-center">{t('fit.distNote')}</p>
+              <button
+                type="button"
+                onClick={onerilenMesafeyeAyarla}
+                className="mt-1.5 w-full rounded-lg bg-white/15 hover:bg-white/25 text-white text-[11.5px] font-semibold py-1.5 transition-colors"
+              >
+                {t('fit.snap')}
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {bildirim && (
