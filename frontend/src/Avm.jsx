@@ -24,7 +24,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import EkranIcerigi from './EkranIcerigi.jsx'
-import { fotoYerlesimi, sigdirmaKatsayisi, kadrajMesafesi, otoMesafe } from './sahneOlcek.js'
+import { fotoYerlesimi, sigdirmaKatsayisi, kadrajMesafesi } from './sahneOlcek.js'
 import SahneDenetimleri from './SahneDenetimleri.jsx'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 
@@ -68,16 +68,6 @@ const DIKEY_PAY = 0.94
  */
 const UZAK_MESAFE = kadrajMesafesi(KORIDOR_METRE)
 const YAKIN_MESAFE = 1.5
-/*
- * YAKINLIK ÜST SINIRI.
- *
- * Yaklaşmak fotoğrafı büyütüyor; belli bir noktadan sonra arka plan
- * çözünürlüğünü kaybediyor ve mekân tanınmaz oluyor. 2,2 kat, fotoğrafın
- * hâlâ mekân gibi durduğu son nokta. Küçük bir ekran bu sınırdan sonra
- * küçük görünmeye devam eder — doğrusu da budur: 32 cm’lik bir totem
- * meydanda gerçekten küçüktür.
- */
-const EN_COK_YAKINLIK = 2.2
 
 /* ------------------------------------------------------------------ arka plan */
 
@@ -200,14 +190,8 @@ export default function Avm({
   const sahneRef = useRef(null)
   const [sahne, setSahne] = useState({ w: 0, h: 0 })
   const [foto, setFoto] = useState({ w: 0, h: 0 })
-  /*
-   * Izleme mesafesi. null = KENDILIGINDEN secilsin.
-   *
-   * Mekan acildiginda ya da olcu degistiginde mesafe otomatik hesaplaniyor,
-   * boylece tasarim her zaman oturmus geliyor. Kullanici mesafeye elle
-   * dokundugu anda karar ona geciyor ve otomatik hesap devreden cikiyor.
-   */
-  const [mesafe, setMesafe] = useState(null)
+  /* Izleme mesafesi - varsayilani fotografin cekildigi nokta. */
+  const [mesafe, setMesafe] = useState(UZAK_MESAFE)
 
   /*
    * Sürükleme. Ölçek hesabı bittikten sonra bağlanıyor, çünkü kaymanın
@@ -215,7 +199,6 @@ export default function Avm({
    */
 
   useGovdeKilidi(open)
-
 
   /* Sahne ölçüsünü izle — pencere yeniden boyutlandığında ölçek tazelensin */
   useEffect(() => {
@@ -284,23 +267,7 @@ export default function Avm({
    * ekranin mekana orani hic degismiyor; sadece daha yakindan bakiliyor.
    * Fotografin cekildigi noktadan geriye gidilemiyor: orada goruntu yok.
    */
-  const kendiliginden = useMemo(
-    () =>
-      otoMesafe({
-        ekranWpx: olcu.w,
-        ekranHpx: olcu.h,
-        sahne,
-        tabanY: yerlesim?.tabanY || 0,
-        uzakMesafe: UZAK_MESAFE,
-        yakinMesafe: YAKIN_MESAFE,
-      }),
-    [olcu.w, olcu.h, sahne, yerlesim],
-  )
-  const kullanilanMesafe = mesafe ?? kendiliginden
-  const yakinlik = Math.max(
-    1,
-    Math.min(EN_COK_YAKINLIK, UZAK_MESAFE / Math.max(YAKIN_MESAFE, kullanilanMesafe)),
-  )
+  const yakinlik = Math.max(1, UZAK_MESAFE / Math.max(YAKIN_MESAFE, mesafe))
 
   /*
    * Surukleme. Parmak ekranda 100 px gittiginde sahnede kac metre gidildigi
@@ -312,27 +279,10 @@ export default function Avm({
   const kayma = kaymayiSinirla(
     ofsetM,
     pxPerM,
-    /*
-     * DİKKAT: burada sahnenin GERÇEK ölçüsü veriliyor, yakınlığa bölünmüş
-     * hâli değil. Taban çizgisi ölçeklenmemiş koordinatta; ikisini
-     * karıştırmak kaymayı bir anda yüzlerce piksel öteliyordu (ekran
-     * kadrajın dışına fırlıyordu).
-     */
-    sahne,
+    { w: sahne.w / yakinlik, h: sahne.h / yakinlik },
     olcu.w,
     yerlesim?.tabanY || 0,
   )
-
-  /*
-   * Her açılışta temiz başla. Önceki oturumdan kalan konum ve mesafe, yeni
-   * bir tasarıma yanlış yerden bakmak olurdu; mekân her açıldığında tasarım
-   * ortada ve kendiliğinden seçilmiş mesafede görünüyor.
-   */
-  useEffect(() => {
-    if (!open) return
-    setMesafe(null)
-    sifirla()
-  }, [open, sifirla])
 
   if (!open) return null
 
@@ -386,25 +336,17 @@ export default function Avm({
             "ortala" demek, kullanıcıya yapmadığı bir şeyi geri alma seçeneği
             sunmak olurdu.
           */}
-          {/*
-            Görünümü sıfırla: hem konumu hem mesafeyi varsayılana döndürür.
-            Mesafe varsayılanı sabit bir sayı değil, o ölçüye göre
-            kendiliğinden seçilen mesafe — yani "açıldığı hâline dön".
-          */}
-          {(tasindi || mesafe !== null) && (
+          {tasindi && (
             <button
               type="button"
-              onClick={() => {
-                sifirla()
-                setMesafe(null)
-              }}
+              onClick={sifirla}
               className="rounded-full bg-black/70 backdrop-blur px-3.5 py-1.5 text-[11.5px] font-semibold text-white"
             >
               {t('scene.recenter')}
             </button>
           )}
           <SahneDenetimleri
-            mesafe={kullanilanMesafe}
+            mesafe={mesafe}
             enYakinMesafe={YAKIN_MESAFE}
             enUzakMesafe={UZAK_MESAFE}
             onMesafe={setMesafe}

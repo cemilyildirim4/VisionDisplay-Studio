@@ -335,7 +335,7 @@ const dict = {
   'avm.width': { tr: 'Genişlik', en: 'Width', ar: 'العرض' },
   'avm.height': { tr: 'Yükseklik', en: 'Height', ar: 'الارتفاع' },
   'avm.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
-  'scene.recenter': { tr: 'Görünümü sıfırla', en: 'Reset view', ar: 'إعادة ضبط العرض' },
+  'scene.recenter': { tr: 'Ortala', en: 'Re-center', ar: 'توسيط' },
   'scene.dragHint': { tr: 'sürükleyerek taşıyın', en: 'drag to move', ar: 'اسحب للتحريك' },
   'scene.distance': { tr: 'Mesafe', en: 'Distance', ar: 'المسافة' },
   'scene.fromHere': { tr: 'buradan bakınca', en: 'viewing distance', ar: 'مسافة المشاهدة' },
