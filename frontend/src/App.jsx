@@ -927,10 +927,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
     if (!yer?.pxPerM) return null
     /*
-     * Ekranin piksel olcegi fotografin kendi olceginden geliyor ve arka
-     * planin yakinligiyla CARPILMIYOR: zoom yalnizca arka plana ait.
+     * OLCU DOGRULUGU.
+     *
+     * Ekranin piksel olcegi fotografinkiyle AYNI olmak zorunda: fotograf
+     * yakinlastiginda mekandaki 1 metre daha fazla piksel ediyor, ekran da
+     * ayni oranda buyumezse 4 m lik bir tasarim mekanda 4 m yer kaplamaz.
+     * (Zoom yalnizca arka plan <img> ine uygulanan bir CSS donusumu; burasi
+     * ise ekranin gercek metre karsiligi. Olcu etiketleri, surukleme ve
+     * arayuz bundan etkilenmiyor.)
      */
-    const gercek = yer.pxPerM
+    const gercek = yer.pxPerM * sahneYakinlik
     // Fotoğrafın tuvalde görünen kısmı: sığdırılmışta bantlar dışında kalan alan
     const alanW = Math.min(tuvalBoyut.w, yer.genislik * sahneYakinlik)
     const alanH = Math.min(tuvalBoyut.h, yer.yukseklik * sahneYakinlik)
