@@ -49,11 +49,21 @@ export const SAHNELER = [
      */
     id: 'avm',
     kiosk: true, // kasa + direk + kaide cizilsin
+    zoomlu: true, // sahne yakinlasip uzaklasabiliyor (bkz. App.jsx sahneYakinlik)
     ad: 'avm.title',
-    dosya: '/led-ekran-avm-arka-plan.png',
-    kaynak: { w: 1122, h: 1402 },
-    panel: { x0: 429, y0: 711, x1: 693, y1: 869 },
-    panelEnM: 3,
+    dosya: '/zoom-destekli-ic-mekan-led-ana-arka-plan.png',
+    kaynak: { w: 1672, h: 941 },
+    /*
+     * Panel, fotografta var olan bir yuzey degil: ekranin oturacagi yeri
+     * biz sectik. Alt kenari zemin cizgisine (0,78) oturuyor, merkezi
+     * kadrajin ortasinda.
+     *
+     * Metre karsiligi: arka duvar ~960 piksel ve yaklasik 12 m; duvar
+     * hizasinda 1 m ~ 80 piksel. Panelin durdugu yer daha yakin oldugu
+     * icin oradaki olcek ~110 piksel/m. Panel 4,00 x 2,40 m secildi.
+     */
+    panel: { x0: 616, y0: 470, x1: 1056, y1: 734 },
+    panelEnM: 4,
     maskeli: false, // fotografta kendi LED yuzeyi yok
   },
   {
@@ -67,10 +77,17 @@ export const SAHNELER = [
      */
     id: 'meydan-gece',
     kiosk: true, // kasa + direk + kaide cizilsin
+    zoomlu: true, // sahne yakinlasip uzaklasabiliyor (bkz. App.jsx sahneYakinlik)
     ad: 'dis.title',
-    dosya: '/cok-dar-yakin-dis-mekan-led-arka-plan.png',
-    kaynak: { w: 1484, h: 1060 },
-    panel: { x0: 542, y0: 608, x1: 942, y1: 848 },
+    dosya: '/zoom-destekli-dis-mekan-led-ana-arka-plan.png',
+    kaynak: { w: 1672, h: 941 },
+    /*
+     * Zemin cizgisi: dosemenin ortasi (0,80). Metre karsiligi: tas duvar
+     * ~900 piksel ve on iki panelden olusuyor (~18 m), yani duvar
+     * hizasinda 1 m ~ 50 piksel; panelin durdugu daha yakin hizada
+     * ~75 piksel/m. Panel 4,00 x 2,40 m.
+     */
+    panel: { x0: 686, y0: 573, x1: 986, y1: 753 },
     panelEnM: 4,
     maskeli: false,
   },
@@ -130,6 +147,9 @@ export const SAHNELER = [
   },
 ]
 
+/** Sahne yakinliginin alt siniri — App.jsx ile ayni deger olmali. */
+export const EN_AZ_YAKINLIK = 0.82
+
 export const sahneBul = (id) => SAHNELER.find((s) => s.id === id) || null
 
 /**
@@ -148,7 +168,17 @@ export function fotoYerlesim(sahne, tuvalW, tuvalH) {
   // Panel ortalanınca kapatılması gereken paylar: karşılıklı payların büyüğü
   const yatay = Math.max(panel.x0, kaynak.w - panel.x1)
   const dikey = Math.max(panel.y0, kaynak.h - panel.y1)
-  const s = Math.max(tuvalW / (2 * yatay + panelW), tuvalH / (2 * dikey + panelH))
+  /*
+   * KAPSAMA PAYI.
+   *
+   * Zoomlu mekanlarda fotograf en genis acida (yakinlik 0,82) kuculuyor;
+   * tam kaplayacak olcekte cizilseydi o anda kenarlardan bos zemin gorunurdu.
+   * Fotograf bu yuzden bastan 1/0,82 kadar buyuk cizilir. Olcek bozulmuyor:
+   * px/m de ayni oranda buyudugu icin ekranin mekana orani sabit kaliyor.
+   */
+  const kapsama = sahne.zoomlu ? EN_AZ_YAKINLIK : 1
+  const s =
+    Math.max(tuvalW / (2 * yatay + panelW), tuvalH / (2 * dikey + panelH)) / kapsama
   return {
     s,
     genislik: kaynak.w * s,

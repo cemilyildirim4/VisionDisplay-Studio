@@ -39,6 +39,7 @@ export default function Scene({
   duvarWm,
   duvarHm,
   ekranSekli,
+  yakinlik = 1,
 }) {
   // Fotoğraflı mekânlar sahneler.js'te tanımlı; yeni eklemek için orası yeterli
   const sahne = sahneBul(id)
@@ -56,6 +57,7 @@ export default function Scene({
         tuvalH={tuvalH}
         ekranWpx={ekranWpx}
         ekranHpx={ekranHpx}
+        yakinlik={yakinlik}
       />
     )
 

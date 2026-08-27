@@ -24,11 +24,20 @@
 
 import { fotoYerlesim } from './sahneler.js'
 
-export default function PanoFoto({ sahne, tuvalW, tuvalH, ekranWpx = 0, ekranHpx = 0 }) {
+export default function PanoFoto({
+  sahne,
+  tuvalW,
+  tuvalH,
+  ekranWpx = 0,
+  ekranHpx = 0,
+  yakinlik = 1,
+}) {
   const yer = fotoYerlesim(sahne, tuvalW, tuvalH)
   if (!yer) return null
 
   const tasma = Math.max(2, Math.round(yer.panelWpx * 0.006))
+  const panelYariW = (sahne.panel.x1 - sahne.panel.x0) / 2
+  const panelYariH = (sahne.panel.y1 - sahne.panel.y0) / 2
 
   /*
    * KIOSK GOVDESI.
@@ -42,14 +51,31 @@ export default function PanoFoto({ sahne, tuvalW, tuvalH, ekranWpx = 0, ekranHpx
    * ise gercek metre - mekanin kendi olceginden (yer.pxPerM) turuyor.
    */
   const kiosk = sahne.kiosk && ekranWpx > 0 && ekranHpx > 0
-  const pxPerM = yer.pxPerM || 1
+  // Ekran arka planla birlikte olceklendigi icin kiosk govdesi de ayni oranda
+  const pxPerM = (yer.pxPerM || 1) * yakinlik
   const kasa = Math.max(3, Math.min(14, ekranWpx * 0.014))
   const ekranHm = ekranHpx / pxPerM
   const direkH = Math.min(2.5, Math.max(0.5, ekranHm * 0.3)) * pxPerM
   const direkW = Math.min(0.45, Math.max(0.09, (ekranWpx / pxPerM) * 0.09)) * pxPerM
   const kaideH = Math.max(3, 0.14 * pxPerM)
   const ekranAlt = tuvalH / 2 + ekranHpx / 2
-  const tabanY = ekranAlt + direkH + kaideH
+
+  /*
+   * KIOSK FOTOGRAFIN ICINDE KALSIN.
+   *
+   * Buyuk tasarimlarda ekran fotografin alt kenarindan tasabiliyor; ekranin
+   * tasmasi kasitli (mekan o kadar buyuk degil, bilgi bu), ama DIREK ve KAIDE
+   * fotografin disinda, bos zeminde asili kalinca kirik gorunuyordu. Govdenin
+   * dibi fotografin alt kenarini gecmiyor; gecmesi gerekiyorsa direk kisaliyor.
+   *
+   * Fotograf panelin merkezine gore olceklendigi icin alt kenarin yakinlik
+   * sonrasi yeri de ayni merkeze gore hesaplaniyor.
+   */
+  const panelMerkezY = tuvalH / 2
+  const fotoAlt = panelMerkezY + (yer.ust + yer.yukseklik - panelMerkezY) * yakinlik
+  const yerKalan = fotoAlt - kaideH - ekranAlt
+  const direk = Math.max(0, Math.min(direkH, yerKalan))
+  const tabanY = ekranAlt + direk + kaideH
   const metal = 'linear-gradient(180deg, #3a3f47 0%, #23272d 42%, #14171b 100%)'
   const yanDestek = ekranWpx / pxPerM > 2.5
 
@@ -75,6 +101,18 @@ export default function PanoFoto({ sahne, tuvalW, tuvalH, ekranWpx = 0, ekranHpx
               width: yer.genislik,
               height: yer.yukseklik,
               maxWidth: 'none',
+              /*
+               * Yakinlik yalnizca FOTOGRAFA uygulaniyor. Sahne kapsayicisina
+               * uygulansaydi olcu etiketleri ve denetimler de olceklenirdi.
+               * Olcegin merkezi panelin merkezi: yaklasirken ekranin durdugu
+               * nokta kadrajda yerinde kaliyor, mekan onun etrafinda aciliyor.
+               */
+              transform: `scale(${yakinlik})`,
+              transformOrigin: `${(sahne.panel.x0 + panelYariW) * yer.s}px ${
+                (sahne.panel.y0 + panelYariH) * yer.s
+              }px`,
+              transition: 'transform 420ms cubic-bezier(0.22, 1, 0.36, 1)',
+              willChange: 'transform',
             }}
           />
           {/*
@@ -129,7 +167,7 @@ export default function PanoFoto({ sahne, tuvalW, tuvalH, ekranWpx = 0, ekranHpx
               left: tuvalW / 2 - direkW / 2,
               top: ekranAlt,
               width: direkW,
-              height: direkH,
+              height: direk,
               background: metal,
             }}
           />
@@ -142,7 +180,7 @@ export default function PanoFoto({ sahne, tuvalW, tuvalH, ekranWpx = 0, ekranHpx
                   left: tuvalW / 2 + k * ekranWpx - direkW * 0.31,
                   top: ekranAlt,
                   width: direkW * 0.62,
-                  height: direkH,
+                  height: direk,
                   background: metal,
                   opacity: 0.92,
                 }}
@@ -154,7 +192,7 @@ export default function PanoFoto({ sahne, tuvalW, tuvalH, ekranWpx = 0, ekranHpx
             style={{
               position: 'absolute',
               left: tuvalW / 2 - (yanDestek ? 0.39 : 0.22) * ekranWpx,
-              top: ekranAlt + direkH,
+              top: ekranAlt + direk,
               width: (yanDestek ? 0.78 : 0.44) * ekranWpx,
               height: kaideH,
               background: 'linear-gradient(180deg, #2a2e34 0%, #171a1e 60%, #0d0f12 100%)',

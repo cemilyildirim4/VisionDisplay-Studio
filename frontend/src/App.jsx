@@ -21,7 +21,7 @@ import { salonOlcek } from './Salon.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
-import { sahneBul, fotoYerlesim } from './sahneler.js'
+import { sahneBul, fotoYerlesim, EN_AZ_YAKINLIK } from './sahneler.js'
 import { panoOlculeri, PANO_SAHNE_EN_M } from './Pano.jsx'
 import ArView from './ArView.jsx'
 // three.js/react-three-fiber/drei/model-viewer tek başına ~1.8 MB — ana pakete
@@ -770,10 +770,36 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * salonunda da aynı kusur vardı ve gerçek ölçüye geçilerek düzeltildi.
    */
   const fotoSahne = sahneBul(scene)
+
+  /*
+   * SAHNE YAKINLIGI — "kamera geri cekiliyor" etkisi.
+   *
+   * Kucuk bir kiosk, fotografin cekildigi mesafeden bakildiginda nokta
+   * gibi kaliyor; buyuk bir billboard ise kadraja sigmiyor. Cozum, tek
+   * bir fotograf uzerinde kamerayi yaklastirip uzaklastirmak.
+   *
+   * Olcu ikiye katlandikca yakinlik bir basamak azaliyor (log2). Sinirlar
+   * dar tutuldu: 1,28 uzerinde fotograf cozunurlugunu kaybediyor, 0,82
+   * altinda ise kenarlardan disari cikiyor.
+   *
+   * ONEMLI: yakinlik hem arka plana hem de ekranin piksel olcegine AYNI
+   * yonde uygulaniyor. Ekran arka planla birlikte buyuyup kuculdugu icin
+   * ikisi arasindaki oran — yani olcu bilgisi — hic degismiyor; degisen
+   * yalnizca bakis mesafesi. (Ters yonde uygulamak, yani ekrani arka plan
+   * yaklastikca kucultmek, etkiyi goturur ve olcuyu de bozardi.)
+   */
+  const sahneYakinlik = useMemo(() => {
+    const TEMEL_M = 0.96
+    const oran = Math.max(tasarimWm / TEMEL_M, tasarimHm / TEMEL_M)
+    if (!(oran > 0)) return 1
+    return Math.max(EN_AZ_YAKINLIK, Math.min(1.28, 1.28 - Math.log2(oran) * 0.12))
+  }, [tasarimWm, tasarimHm])
+
   const fotoOlcek =
     // Arka planı olmayan mekânda ölçek referansı yok; ekran serbest ölçülür
     fotoSahne?.dosya && ekranWm > 0 && ekranHm > 0
-      ? fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)?.pxPerM || null
+      ? (fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)?.pxPerM || 0) * sahneYakinlik ||
+        null
       : null
   /*
    * SALON ölçeği. Salonun arka duvarı gerçek metre ölçüsünde çizildiği için
@@ -980,6 +1006,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               ekranHpx={tasarimHm * (cizimOlcek || 0)}
               /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
               ekranSekli={ekranSekli}
+              /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
+              yakinlik={sahneYakinlik}
             />
           )}
 
