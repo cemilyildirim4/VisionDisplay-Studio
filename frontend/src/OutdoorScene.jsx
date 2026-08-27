@@ -39,8 +39,8 @@ const ARKA_PLAN = '/cok-dar-yakin-dis-mekan-led-arka-plan.png'
  *
  * Billboard büyük/küçük gelirse değiştirilecek tek sayı budur.
  */
-const ZEMIN_ORANI = 0.735
-const KADRAJ_METRE = 22
+const ZEMIN_ORANI = 0.8
+const KADRAJ_METRE = 15
 
 /** Kaide (beton taban) — gerçek ölçü, metre. */
 const KAIDE_YUKSEK_M = 0.16

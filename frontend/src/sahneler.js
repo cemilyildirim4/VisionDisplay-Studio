@@ -69,8 +69,8 @@ export const SAHNELER = [
     kiosk: true, // kasa + direk + kaide cizilsin
     ad: 'dis.title',
     dosya: '/cok-dar-yakin-dis-mekan-led-arka-plan.png',
-    kaynak: { w: 1535, h: 1025 },
-    panel: { x0: 628, y0: 585, x1: 907, y1: 753 },
+    kaynak: { w: 1484, h: 1060 },
+    panel: { x0: 542, y0: 608, x1: 942, y1: 848 },
     panelEnM: 4,
     maskeli: false,
   },
