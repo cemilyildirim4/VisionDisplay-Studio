@@ -332,6 +332,8 @@ const dict = {
   'scene.customOff': { tr: 'Kapalı', en: 'Off', ar: 'معطّل' },
   'scene.custom': { tr: 'Kendi fotoğrafım', en: 'My photo', ar: 'صورتي' },
   'scene.legs': { tr: 'Kiosk ayağı', en: 'Kiosk stand', ar: 'قاعدة الكشك' },
+  'scene.viewDist': { tr: 'İzleme mesafesi (m)', en: 'Viewing distance (m)', ar: 'مسافة المشاهدة (م)' },
+  'scene.viewDistReset': { tr: 'Önerilen mesafeye dön', en: 'Back to suggested distance', ar: 'العودة إلى المسافة المقترحة' },
   'scene.legsOn': { tr: 'Görünsün', en: 'Show', ar: 'إظهار' },
   'scene.legsOff': { tr: 'Gizle', en: 'Hide', ar: 'إخفاء' },
   'scene.customAdd': { tr: 'Fotoğraf ekle', en: 'Add photo', ar: 'إضافة صورة' },

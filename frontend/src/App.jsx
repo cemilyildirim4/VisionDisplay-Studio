@@ -27,6 +27,7 @@ import {
   oneriYatayKaymasi,
 } from './sahneler.js'
 import { ozelMekanKaydi, MEKAN_TURLERI, MEKAN_EN_COK_MB, VARSAYILAN_ALAN_M } from './ozelMekan.js'
+import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { panoOlculeri, PANO_SAHNE_EN_M } from './Pano.jsx'
 import ArView from './ArView.jsx'
@@ -329,6 +330,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [ozelUyari, setOzelUyari] = useState(null)
   /* Kiosk ayakları — duvara asılan ekranda ayak olmaz, kapatılabiliyor. */
   const [ayakVar, setAyakVar] = useState(true)
+  /*
+   * İZLEME MESAFESİ — mekânda ekrana kaç metreden bakıldığı.
+   *
+   * null = kullanıcı dokunmadı; o zaman modelin/tasarımın kendi ÖNERİLEN
+   * mesafesi kullanılır (viewingDistance.js — modeldeki değer ya da
+   * pitch × 2,5 ile köşegenin büyüğü). Kullanıcı değiştirdiği anda kendi
+   * değeri geçerli olur; model veya ölçü değişse bile ona dokunulmaz.
+   */
+  const [izlemeM, setIzlemeM] = useState(null)
   const ozelDosyaRef = useRef(null)
   const [arAcik, setArAcik] = useState(false)
   const [scene3dOpen, setScene3dOpen] = useState(false)
@@ -876,6 +886,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }, [tasarimWm, tasarimHm])
 
   /*
+   * İzleme mesafesinin görüntüye yansıması.
+   *
+   * Önerilen mesafede ekran birebir ölçekte durur (çarpan 1). Kullanıcı
+   * uzaklaştıkça ekran küçülür, yaklaştıkça büyür — mesafeyle ters orantılı,
+   * gerçek perspektifte olduğu gibi.
+   *
+   * Yalnızca EKRANIN ölçeğine uygulanıyor, arka plana değil: fotoğraf tek
+   * bir kareden ibaret, onu yakınlaştırmak çözünürlüğünü bozar; kendi
+   * fotoğrafında ise tamamının görünmesi gerektiği için zaten kırpılamaz.
+   * Yani değişen şey ekranın mekân içindeki görünen büyüklüğü.
+   */
+  const oneriIzlemeM = useMemo(
+    () => viewingDistanceFor(selectedModel, cols, rows) || 0,
+    [selectedModel, cols, rows],
+  )
+  const izlemeCarpani =
+    izlemeM > 0 && oneriIzlemeM > 0
+      ? Math.max(0.25, Math.min(4, oneriIzlemeM / izlemeM))
+      : 1
+
+  /*
    * FOTOĞRAFLI MEKÂNDA ÇİZİM ÖLÇEĞİ.
    *
    * Ölçek mekânın kendi ölçeğinden geliyor: 4 m'lik ekran, fotoğrafta 4 m'ye
@@ -892,7 +923,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!fotoSahne?.dosya || !(ekranWm > 0) || !(ekranHm > 0)) return null
     const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
     if (!yer?.pxPerM) return null
-    const gercek = yer.pxPerM * sahneYakinlik
+    const gercek = yer.pxPerM * sahneYakinlik * izlemeCarpani
     // Fotoğrafın tuvalde görünen kısmı: sığdırılmışta bantlar dışında kalan alan
     const alanW = Math.min(tuvalBoyut.w, yer.genislik * sahneYakinlik)
     const alanH = Math.min(tuvalBoyut.h, yer.yukseklik * sahneYakinlik)
@@ -1806,6 +1837,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     </button>
                     {ozelUyari && (
                       <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">{ozelUyari}</p>
+                    )}
+                  </div>
+                )}
+
+                {/*
+                  İZLEME MESAFESİ — yalnızca fotoğraflı mekânda.
+                  Varsayılanı modelin önerilen mesafesi; artırınca ekran
+                  uzaktan bakılmış gibi küçülür.
+                */}
+                {surukleAktif && oneriIzlemeM > 0 && (
+                  <div className="mt-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[15px] text-neutral-600 dark:text-neutral-400">
+                        {t('scene.viewDist')}
+                      </span>
+                      <Stepper
+                        value={izlemeM ?? oneriIzlemeM}
+                        onChange={setIzlemeM}
+                        min={0.5}
+                        max={60}
+                        step={0.5}
+                        decimals={1}
+                      />
+                    </div>
+                    {izlemeM != null && (
+                      <button
+                        type="button"
+                        onClick={() => setIzlemeM(null)}
+                        className="mt-1.5 w-full py-1.5 rounded-lg text-[13px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-500 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        {t('scene.viewDistReset')}
+                      </button>
                     )}
                   </div>
                 )}
