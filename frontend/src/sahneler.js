@@ -48,6 +48,7 @@ export const SAHNELER = [
      * 1 m ~ 88 piksel. Panel 3,00 x 1,80 m secildi.
      */
     id: 'avm',
+    kiosk: true, // kasa + direk + kaide cizilsin
     ad: 'avm.title',
     dosya: '/led-ekran-avm-arka-plan.png',
     kaynak: { w: 1122, h: 1402 },
@@ -65,6 +66,7 @@ export const SAHNELER = [
      * 1 m ~ 70 piksel. Panel 4,00 x 2,40 m.
      */
     id: 'meydan-gece',
+    kiosk: true, // kasa + direk + kaide cizilsin
     ad: 'dis.title',
     dosya: '/cok-dar-yakin-dis-mekan-led-arka-plan.png',
     kaynak: { w: 1535, h: 1025 },
