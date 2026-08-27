@@ -1239,7 +1239,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           </IconButton>
 
           {/* Kamerada oturt — taslak çerçeve, sonra çekim (bkz. Oturtma.jsx) */}
-          <IconButton active={hasModel} label={t('fit.open')} onClick={() => hasModel && setOturtmaAcik(true)}>
+          <IconButton
+            active={hasModel}
+            label={t('fit.open')}
+            sadeceIkon
+            onClick={() => hasModel && setOturtmaAcik(true)}
+          >
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" />
               <rect x="8" y="8" width="8" height="8" rx="1" />
@@ -2961,12 +2966,21 @@ function FieldLabel({ children, muted = false }) {
   )
 }
 
-function IconButton({ children, label, active, onClick }) {
+/**
+ * Üst çubuk düğmesi.
+ *
+ * : yazı hiç çizilmez, yalnızca simge kalır. Üst çubuk dar
+ * ekranlarda sıkışıyordu; adı zaten simgesinden anlaşılan düğmelerde yazıyı
+ * taşımak yer israfı. Ad, ipucu (title) ve ekran okuyucu etiketi olarak
+ * duruyor — erişilebilirlik kaybı yok.
+ */
+function IconButton({ children, label, active, onClick, sadeceIkon = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={label}
+      aria-label={label}
       className={`h-9 rounded-full px-2.5 lg:pl-2.5 lg:pr-3 inline-flex items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap transition-colors shrink-0 ${
         active
           ? 'btn-selected'
@@ -2974,7 +2988,7 @@ function IconButton({ children, label, active, onClick }) {
       }`}
     >
       <span className="shrink-0 flex items-center justify-center">{children}</span>
-      <span className="hidden lg:inline">{label}</span>
+      {!sadeceIkon && <span className="hidden lg:inline">{label}</span>}
     </button>
   )
 }
