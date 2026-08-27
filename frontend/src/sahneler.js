@@ -62,7 +62,7 @@ export const SAHNELER = [
      * hizasinda 1 m ~ 80 piksel. Panelin durdugu yer daha yakin oldugu
      * icin oradaki olcek ~110 piksel/m. Panel 4,00 x 2,40 m secildi.
      */
-    panel: { x0: 616, y0: 470, x1: 1056, y1: 734 },
+    panel: { x0: 616, y0: 338, x1: 1056, y1: 602 },
     panelEnM: 4,
     maskeli: false, // fotografta kendi LED yuzeyi yok
   },
@@ -87,7 +87,7 @@ export const SAHNELER = [
      * hizasinda 1 m ~ 50 piksel; panelin durdugu daha yakin hizada
      * ~75 piksel/m. Panel 4,00 x 2,40 m.
      */
-    panel: { x0: 686, y0: 573, x1: 986, y1: 753 },
+    panel: { x0: 686, y0: 380, x1: 986, y1: 560 },
     panelEnM: 4,
     maskeli: false,
   },
@@ -147,6 +147,20 @@ export const SAHNELER = [
   },
 ]
 
+/*
+ * PANELIN DIKEY YERI NEDEN FOTOGRAFIN ORTASINDA?
+ *
+ * Fotograf, panelin merkezi tuvalin merkezine gelecek sekilde konuyor ve
+ * tuvali kaplamak zorunda. Panel fotografin altina yakin oldugunda altta
+ * kalan pay kucuk kaliyor; o payin tuvalin alt yarisini kapatabilmesi icin
+ * fotografin cok buyutulmesi gerekiyor ve mekan taninmaz halde yakinlasiyor.
+ * Panel dikeyde ortaya alininca iki pay esitleniyor, gereken buyutme en aza
+ * iniyor ve fotografin tamami is goruyor.
+ *
+ * Ekranin ZEMINE oturmus gorunmesini panelin yeri degil, kiosk govdesi
+ * sagliyor (bkz. PanoFoto.jsx): direk ekranin altindan zemine kadar iniyor.
+ */
+
 /** Sahne yakinliginin alt siniri — App.jsx ile ayni deger olmali. */
 export const EN_AZ_YAKINLIK = 0.82
 
@@ -165,9 +179,22 @@ export function fotoYerlesim(sahne, tuvalW, tuvalH) {
   const { kaynak, panel, panelEnM } = sahne
   const panelW = panel.x1 - panel.x0
   const panelH = panel.y1 - panel.y0
-  // Panel ortalanınca kapatılması gereken paylar: karşılıklı payların büyüğü
-  const yatay = Math.max(panel.x0, kaynak.w - panel.x1)
-  const dikey = Math.max(panel.y0, kaynak.h - panel.y1)
+  /*
+   * KAPLAMA HESABI — panelin merkezine gore.
+   *
+   * Fotograf, panelin merkezi tuvalin merkezine gelecek sekilde konuyor.
+   * O halde tuvalin alt yarisini kapatan sey, panelin merkezinin ALTINDA
+   * kalan fotograf payidir; ust yarisini kapatan da ustunde kalan pay.
+   * Ikisi farkli oldugunda belirleyici olan KUCUK olandir - buyugune gore
+   * hesaplanirsa kucuk taraf tuvale yetismez ve o kenarda bos serit kalir.
+   * (Panelleri fotografin ortasina yakin olan eski mekanlarda iki pay birbirine
+   * yakindi ve fark gorunmuyordu; zemine oturan panellerde alt pay cok kucuk
+   * oldugu icin altta beyaz bir serit olusuyordu.)
+   */
+  const merkezX = panel.x0 + panelW / 2
+  const merkezY = panel.y0 + panelH / 2
+  const yatay = Math.min(merkezX, kaynak.w - merkezX)
+  const dikey = Math.min(merkezY, kaynak.h - merkezY)
   /*
    * KAPSAMA PAYI.
    *
@@ -177,14 +204,13 @@ export function fotoYerlesim(sahne, tuvalW, tuvalH) {
    * px/m de ayni oranda buyudugu icin ekranin mekana orani sabit kaliyor.
    */
   const kapsama = sahne.zoomlu ? EN_AZ_YAKINLIK : 1
-  const s =
-    Math.max(tuvalW / (2 * yatay + panelW), tuvalH / (2 * dikey + panelH)) / kapsama
+  const s = Math.max(tuvalW / 2 / yatay, tuvalH / 2 / dikey) / kapsama
   return {
     s,
     genislik: kaynak.w * s,
     yukseklik: kaynak.h * s,
-    sol: tuvalW / 2 - (panel.x0 + panelW / 2) * s,
-    ust: tuvalH / 2 - (panel.y0 + panelH / 2) * s,
+    sol: tuvalW / 2 - merkezX * s,
+    ust: tuvalH / 2 - merkezY * s,
     // Panelin tuvaldeki ölçüsü — ekran tam buraya oturur
     panelWpx: panelW * s,
     panelHpx: panelH * s,
