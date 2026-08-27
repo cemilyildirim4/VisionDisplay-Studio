@@ -10,17 +10,20 @@ public class ConfigurationService : IConfigurationService
     private readonly IConfigurationRepository _configurationRepository;
     private readonly ICabinRepository _cabinRepository;
     private readonly IHardwareCatalogRepository _hardwareCatalogRepository;
+    private readonly ISystemSettingsRepository _systemSettingsRepository;
     private readonly IPdfReportService _pdfReportService;
 
     public ConfigurationService(
         IConfigurationRepository configurationRepository,
         ICabinRepository cabinRepository,
         IHardwareCatalogRepository hardwareCatalogRepository,
+        ISystemSettingsRepository systemSettingsRepository,
         IPdfReportService pdfReportService)
     {
         _configurationRepository = configurationRepository;
         _cabinRepository = cabinRepository;
         _hardwareCatalogRepository = hardwareCatalogRepository;
+        _systemSettingsRepository = systemSettingsRepository;
         _pdfReportService = pdfReportService;
     }
 
@@ -65,6 +68,7 @@ public class ConfigurationService : IConfigurationService
             throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
 
         var hardware = await LoadHardwareAsync(dto);
+        dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
         var responseDto = CalculateConfigurationDto(dto, cabin, hardware);
 
         var entity = new Configuration
@@ -90,7 +94,7 @@ public class ConfigurationService : IConfigurationService
             Is4K = responseDto.Is4K,
             TotalPrice = responseDto.TotalPrice,
             HasMiniPc = dto.HasMiniPc,
-            LaborCostMultiplier = dto.LaborCostMultiplier,
+            LaborCostMultiplier = dto.LaborCostMultiplier ?? 1m,
             PowerSupplyId = dto.PowerSupplyId,
             MiniPcId = dto.MiniPcId,
             PatchCableId = dto.PatchCableId,
@@ -139,6 +143,7 @@ public class ConfigurationService : IConfigurationService
             throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
 
         var hardware = await LoadHardwareAsync(dto);
+        dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
         var configDto = CalculateConfigurationDto(dto, cabin, hardware);
         return _pdfReportService.Generate(configDto, extras, cabin);
     }

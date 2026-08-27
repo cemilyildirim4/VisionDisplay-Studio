@@ -7,6 +7,7 @@ import { API_URL, apiFetch } from '../apiClient.js'
 import { queryClient } from '../queryClient.js'
 import { TESTER_ROLE_ENABLED } from '../featureFlags.js'
 import { useSession } from '../SessionContext.jsx'
+import HardwareCatalogSection from './HardwareCatalogSection.jsx'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
@@ -14,7 +15,7 @@ import { useSession } from '../SessionContext.jsx'
  *
  * Gruplar:
  *  - Genel:   Dashboard (özet + analitik)
- *  - Ürün:    Modeller, Seriler
+ *  - Ürün:    Modeller, Seriler, Donanım (güç kaynağı, mini PC, patch, alıcı kart, işlemci + işçilik)
  *  - Satış:   Teklifler, Kayıtlı Projeler
  *  - Sistem:  Sohbet Kayıtları, Geri Bildirimler, Kullanıcılar
  *
@@ -43,6 +44,7 @@ const TAB_GROUPS = [
     items: [
       { key: 'cabins', label: 'Modeller' },
       { key: 'series', label: 'Seriler' },
+      { key: 'hardware', label: 'Donanım' },
     ],
   },
   {
@@ -1144,6 +1146,7 @@ export default function AdminPanel() {
                     <h3 className="text-sm font-bold m-0 mb-3">Hızlı işlemler</h3>
                     <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                       <button type="button" onClick={() => setTab('cabins')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Modeller</button>
+                      <button type="button" onClick={() => setTab('hardware')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Donanım</button>
                       <button type="button" onClick={() => setTab('quotes')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Teklifler</button>
                       <button type="button" onClick={() => setTab('users')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Kullanıcılar</button>
                     </div>
@@ -1542,6 +1545,11 @@ export default function AdminPanel() {
               Buradaki değişiklikler doğrudan veritabanına yazılır. Konfigüratör sayfasını yenilediğinizde yeni modeller görünür.
             </p>
           </>
+        )}
+
+        {/* ================= DONANIM + İŞÇİLİK ================= */}
+        {tab === 'hardware' && (
+          <HardwareCatalogSection oturumDustu={oturumDustu} askConfirm={askConfirm} />
         )}
 
         {/* ================= SERİLER ================= */}

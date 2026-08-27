@@ -125,4 +125,56 @@ public class InMemoryHardwareCatalogRepository : IHardwareCatalogRepository
         Task.FromResult<IEnumerable<Processor>>(Processors.Values);
     public Task<Processor?> GetProcessorByIdAsync(int id) =>
         Task.FromResult(Processors.TryGetValue(id, out var x) ? x : null);
+
+    public Task<PowerSupply> CreatePowerSupplyAsync(PowerSupply item) => Create(PowerSupplies, item);
+    public Task<bool> UpdatePowerSupplyAsync(PowerSupply item) => Update(PowerSupplies, item);
+    public Task<bool> DeletePowerSupplyAsync(int id) => Task.FromResult(PowerSupplies.Remove(id));
+    public Task<int> CountPowerSupplyReferencesAsync(int id) => Task.FromResult(0);
+
+    public Task<MiniPc> CreateMiniPcAsync(MiniPc item) => Create(MiniPcs, item);
+    public Task<bool> UpdateMiniPcAsync(MiniPc item) => Update(MiniPcs, item);
+    public Task<bool> DeleteMiniPcAsync(int id) => Task.FromResult(MiniPcs.Remove(id));
+    public Task<int> CountMiniPcReferencesAsync(int id) => Task.FromResult(0);
+
+    public Task<PatchCable> CreatePatchCableAsync(PatchCable item) => Create(PatchCables, item);
+    public Task<bool> UpdatePatchCableAsync(PatchCable item) => Update(PatchCables, item);
+    public Task<bool> DeletePatchCableAsync(int id) => Task.FromResult(PatchCables.Remove(id));
+    public Task<int> CountPatchCableReferencesAsync(int id) => Task.FromResult(0);
+
+    public Task<ReceivingCard> CreateReceivingCardAsync(ReceivingCard item) => Create(ReceivingCards, item);
+    public Task<bool> UpdateReceivingCardAsync(ReceivingCard item) => Update(ReceivingCards, item);
+    public Task<bool> DeleteReceivingCardAsync(int id) => Task.FromResult(ReceivingCards.Remove(id));
+    public Task<int> CountReceivingCardReferencesAsync(int id) => Task.FromResult(0);
+
+    public Task<Processor> CreateProcessorAsync(Processor item) => Create(Processors, item);
+    public Task<bool> UpdateProcessorAsync(Processor item) => Update(Processors, item);
+    public Task<bool> DeleteProcessorAsync(int id) => Task.FromResult(Processors.Remove(id));
+    public Task<int> CountProcessorReferencesAsync(int id) => Task.FromResult(0);
+
+    private static Task<T> Create<T>(Dictionary<int, T> store, T item) where T : HardwareComponent
+    {
+        item.Id = store.Count == 0 ? 1 : store.Keys.Max() + 1;
+        store[item.Id] = item;
+        return Task.FromResult(item);
+    }
+
+    private static Task<bool> Update<T>(Dictionary<int, T> store, T item) where T : HardwareComponent
+    {
+        if (!store.ContainsKey(item.Id)) return Task.FromResult(false);
+        store[item.Id] = item;
+        return Task.FromResult(true);
+    }
+}
+
+public class InMemorySystemSettingsRepository : ISystemSettingsRepository
+{
+    public decimal LaborCostMultiplier { get; set; } = 1m;
+
+    public Task<decimal> GetLaborCostMultiplierAsync() => Task.FromResult(LaborCostMultiplier);
+
+    public Task SetLaborCostMultiplierAsync(decimal value)
+    {
+        LaborCostMultiplier = value;
+        return Task.CompletedTask;
+    }
 }

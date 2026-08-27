@@ -411,6 +411,22 @@ CREATE INDEX IF NOT EXISTS idx_configurations_processor_id
     ON public.configurations USING btree (processor_id);
 
 
+-- Table: public.system_settings
+-- Sistem geneli ayarlar. labor_cost_multiplier: işçilik ($USD/m²).
+
+CREATE TABLE IF NOT EXISTS public.system_settings
+(
+    key character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    value text COLLATE pg_catalog."default" NOT NULL,
+    updated_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT system_settings_pkey PRIMARY KEY (key)
+);
+
+INSERT INTO public.system_settings (key, value)
+VALUES ('labor_cost_multiplier', '1.0000')
+ON CONFLICT (key) DO NOTHING;
+
+
 -- Table: public.chat_logs
 -- Sohbet yardımcısına sorulan sorular - cevaplanamayanlar bilgi tabanı için önemli.
 

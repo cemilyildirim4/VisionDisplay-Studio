@@ -132,7 +132,7 @@ public static class ConfigurationCalculator
         decimal widthM = totalWidthMm / 1000m;
         decimal heightM = totalHeightMm / 1000m;
         decimal screenAreaM2 = Math.Round(widthM * heightM, 4);
-        decimal laborMultiplier = dto.LaborCostMultiplier;
+        decimal laborMultiplier = dto.LaborCostMultiplier ?? 1m;
         decimal laborCost = Math.Round(screenAreaM2 * laborMultiplier, 2);
         decimal adminTotal = Math.Round(hardwareSubtotal + laborCost, 2);
 

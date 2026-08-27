@@ -25,8 +25,8 @@ public class CreateConfigurationDto
     /// <summary>Yapılandırmaya mini PC dahil edilsin mi.</summary>
     public bool HasMiniPc { get; set; }
 
-    /// <summary>İşçilik maliyeti çarpanı (para birimi / m²). Varsayılan 1.00.</summary>
-    public decimal LaborCostMultiplier { get; set; } = 1m;
+    /// <summary>İşçilik maliyeti çarpanı (para birimi / m²). Boşsa sistem varsayılanı kullanılır.</summary>
+    public decimal? LaborCostMultiplier { get; set; }
 
     public int? PowerSupplyId { get; set; }
     public int? MiniPcId { get; set; }
