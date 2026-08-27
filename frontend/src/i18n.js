@@ -343,7 +343,6 @@ const dict = {
   'scene.pano': { tr: 'Açık hava panosu', en: 'Outdoor billboard', ar: 'لوحة خارجية' },
   'scene.customOff': { tr: 'Kapalı', en: 'Off', ar: 'معطّل' },
   'scene.custom': { tr: 'Kendi fotoğrafım', en: 'My photo', ar: 'صورتي' },
-  'scene.legs': { tr: 'Kiosk ayağı', en: 'Kiosk stand', ar: 'قاعدة الكشك' },
   'scene.viewDist': { tr: 'Mesafe', en: 'Distance', ar: 'المسافة' },
   'scene.viewDistHint': {
     tr: 'Ekrandan izleyiciye tahmini uzaklık',
@@ -378,8 +377,8 @@ const dict = {
   },
   'scene.on': { tr: 'Açık', en: 'On', ar: 'مفعّل' },
   'scene.off': { tr: 'Kapalı', en: 'Off', ar: 'معطّل' },
-  'scene.legsOn': { tr: 'Görünsün', en: 'Show', ar: 'إظهار' },
-  'scene.legsOff': { tr: 'Gizle', en: 'Hide', ar: 'إخفاء' },
+  'scene.legsAdd': { tr: 'Kiosk ayağı ekle', en: 'Add kiosk stand', ar: 'إضافة قاعدة الكشك' },
+  'scene.legsRemove': { tr: 'Kiosk ayağını çıkar', en: 'Remove kiosk stand', ar: 'إزالة قاعدة الكشك' },
   'scene.customAdd': { tr: 'Fotoğraf ekle', en: 'Add photo', ar: 'إضافة صورة' },
   'scene.customChange': { tr: 'Fotoğrafı değiştir', en: 'Change photo', ar: 'تغيير الصورة' },
   'scene.suggest': { tr: 'Önerilen yere koy', en: 'Use suggested spot', ar: 'ضعه في المكان المقترح' },

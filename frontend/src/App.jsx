@@ -337,7 +337,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Modelin fotoğrafta gördükleri — arayüzde adlarıyla yazılıyor. */
   const [ozelNesneler, setOzelNesneler] = useState(null)
   /* Kiosk ayakları — duvara asılan ekranda ayak olmaz, kapatılabiliyor. */
-  const [ayakVar, setAyakVar] = useState(true)
+  /*
+   * Kiosk ayagi VARSAYILAN OLARAK YOK. Ekranlarin cogu duvara ya da bir
+   * panoya montelidir; ayak isteyen tek dugmeyle ekliyor.
+   */
+  const [ayakVar, setAyakVar] = useState(false)
   /*
    * İZLEME MESAFESİ — mekânda ekrana kaç metreden bakıldığı.
    *
@@ -598,21 +602,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * kullanıcının işine yarıyor.
      */
     /*
-     * YERDE Mİ, DUVARDA MI? — fotoğrafın kendisi söylüyor.
+     * AYAK KARARINI ARTIK UYGULAMA VERMİYOR.
      *
-     * Önerilen alanın dibi zemin çizgisine yakınsa orası yere konacak bir
-     * totemin yeridir; ayaklar kalır ve ekran zemine oturur. Alan duvarda,
-     * zeminden belirgin biçimde yukarıdaysa (asılı bir panel, bilbord, odadaki
-     * ekran) ayak çizmek yanlış olur: ekran o alanın TAM ORTASINA asılıyor.
-     *
-     * Kullanıcı isterse ayak seçeneğiyle bunu değiştirebiliyor.
+     * Bir ara önerilen alanın zemine uzaklığına bakıp ayakları kendiliğinden
+     * açıp kapatıyordum. Kaldırıldı: ayak varsayılan olarak yok, isteyen tek
+     * düğmeyle ekliyor. Ekranların çoğu duvara ya da bir panoya monteli
+     * olduğu için doğru varsayılan bu.
      */
-    const kY = kayit?.kaynak?.h || 0
-    if (kY && kayit?.panel && kayit?.zeminY != null) {
-      const panelAlt = kayit.panel.y1 / kY
-      const zemin = kayit.zeminY / kY
-      setAyakVar(zemin - panelAlt <= 0.12)
-    }
 
     const sayim = kayit?.nesneSayimi
     if (sayim) {
@@ -2095,27 +2091,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   zemine oturuyor, kasa ve gölge yerinde kalıyor.
                 */}
                 {surukleAktif && (
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <span className="text-[15px] text-neutral-600 dark:text-neutral-400">
-                      {t('scene.legs')}
-                    </span>
-                    <div className="flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
-                      {[true, false].map((v) => (
-                        <button
-                          key={String(v)}
-                          type="button"
-                          onClick={() => setAyakVar(v)}
-                          className={`px-3 py-1.5 text-[14px] transition-colors ${
-                            ayakVar === v
-                              ? 'btn-selected'
-                              : 'text-neutral-600 dark:text-neutral-400 hover:text-brand'
-                          }`}
-                        >
-                          {v ? t('scene.legsOn') : t('scene.legsOff')}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAyakVar((v) => !v)}
+                    className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                  >
+                    {ayakVar ? t('scene.legsRemove') : t('scene.legsAdd')}
+                  </button>
                 )}
 
                 {/*
