@@ -20,7 +20,7 @@
  * değişmeden çalışıyor.
  */
 
-import { uygunYuzeyBul } from './duvarBul.js'
+import { uygunYuzeyBul, zeminCizgisiBul } from './duvarBul.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
 export const VARSAYILAN_ALAN_M = 4
@@ -100,14 +100,32 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
     tamGorunsun: true,
     zoomlu: false,
     /*
-     * Zemin çizgisi: önerilen alanın ALT kenarı — düz alanın bittiği yer,
-     * çoğunlukla duvarın zeminle buluştuğu hizadır. Öneri yoksa panelin
-     * 1,6 m altı; hazır mekânlarda kullanılan kuralın aynısı.
+     * Zemin çizgisi FOTOĞRAFTAN okunuyor (zeminCizgisiBul): duvarın bittiği
+     * yatay kırılma. Kiosk hep buraya oturuyor — ayaklı ise ayakların dibi,
+     * ayaksız ise ekranın dibi.
+     *
+     * Belirgin bir kırılma yoksa önerilen alanın alt kenarına düşülüyor; o da
+     * düz yüzeyin bittiği yerdir, en azından tutarlı bir tahmindir.
+     * Her hâlükârda panelin altında kalmak zorunda: ekranın içinden geçen bir
+     * zemin çizgisi kiosku duvarın içine gömerdi.
      */
-    zeminY: yer
-      ? Math.round(Math.min(H - 2, (yer.y + yer.h) * H))
-      : Math.round(merkezY + (1.6 * genislik) / alanM),
+    zeminY: zeminY(tuval, H, merkezY + yariH, yer),
     /** Öneri ne kadar güvenilir — arayüz zayıf öneriyi kullanıcıya söyler. */
     guven: yer ? yer.guven : 0,
   }
+}
+
+/**
+ * Zemin çizgisi: önce fotoğraftan, olmazsa önerilen alanın altından.
+ * Panelin altında kalması güvence altına alınıyor.
+ */
+function zeminY(tuval, H, panelAlt, yer) {
+  let oran = null
+  try {
+    oran = zeminCizgisiBul(tuval)
+  } catch {
+    oran = null
+  }
+  const bulunan = oran != null ? oran * H : yer ? (yer.y + yer.h) * H : panelAlt
+  return Math.round(Math.max(panelAlt + 2, Math.min(H - 2, bulunan)))
 }

@@ -281,7 +281,15 @@ export function govdeOlculeri(ekranHm) {
  * denk gelmesi icin ekran + govde bu kadar asagi kaydirilir. Kayma ekrana da
  * govdeye de ayni uygulanir, ikisi tek parca gibi hareket eder.
  */
-export function zeminOturmaKaymasi(sahne, yer, tuvalH, yakinlik, ekranHpx, ayakVar = true) {
+export function zeminOturmaKaymasi(
+  sahne,
+  yer,
+  tuvalH,
+  yakinlik,
+  ekranHpx,
+  ayakVar = true,
+  ekranWpx = 0,
+) {
   if (!sahne || sahne.zeminY == null || !yer) return 0
   /*
    * Fotograf, panelin merkezi etrafinda olcekleniyor; zemin cizgisinin
@@ -291,9 +299,14 @@ export function zeminOturmaKaymasi(sahne, yer, tuvalH, yakinlik, ekranHpx, ayakV
   const zeminPx = yer.merkezYpx + (yer.zeminYpx - yer.merkezYpx) * yakinlik
   const pxPerM = yer.pxPerM * yakinlik
   const ekranAlt = tuvalH / 2 + ekranHpx / 2
-  /* Ayaklar gizliyse ekranin DIBI zemine oturur; govde payi yok. */
+  /*
+   * Ayaklar gizliyse ekranin DIBI zemine oturur. "Dibi" ekran alani degil,
+   * KASANIN alt kenari: gorunen sey o. Kasa kalinligi PanoFoto ile ayni
+   * kuraldan hesaplaniyor, yoksa ekran zeminin birkac piksel altina batiyor.
+   */
   const { direkM, kaideM } = govdeOlculeri(ekranHpx / pxPerM)
-  const govde = ayakVar ? (direkM + kaideM) * pxPerM : 0
+  const kasa = Math.max(3, Math.min(14, ekranWpx * 0.014))
+  const govde = ayakVar ? (direkM + kaideM) * pxPerM : kasa
   return zeminPx - (ekranAlt + govde)
 }
 

@@ -934,6 +934,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         sahneYakinlik,
         tasarimHm * (cizimOlcek || 0),
         ayakVar,
+        tasarimWm * (cizimOlcek || 0),
       )
     : 0
   /* Sığdırılmış fotoğrafta ekran, önerilen alanın üstüne yatayda da kayar. */

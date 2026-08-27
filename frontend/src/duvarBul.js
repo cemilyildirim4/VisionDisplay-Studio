@@ -230,3 +230,77 @@ function dikdortgenToplami(t, W, x, y, w, h) {
   const d = t[(y + h) * g + (x + w)]
   return d - b - c + a
 }
+
+/**
+ * ZEMİN ÇİZGİSİNİ BULMA.
+ *
+ * Kiosk bir yere konacaksa oturacağı bir zemin gerekiyor. Fotoğrafta zemin,
+ * duvarın (ya da vitrinin) bittiği yerdeki YATAY KIRILMADIR: o satırda üstteki
+ * ve alttaki pikseller birbirinden belirgin biçimde ayrılır — renk değişir,
+ * çoğu zaman bir gölge ya da süpürgelik çizgisi vardır.
+ *
+ * Yöntem: her satır için dikey komşu farkının satır ortalaması alınıyor; en
+ * yüksek ortalamaya sahip satır zemin çizgisi kabul ediliyor. Arama yalnızca
+ * karenin alt yarısında yapılıyor — üst yarıdaki güçlü yatay kırılmalar tavan,
+ * raf ya da pencere üstü olur, zemin değil.
+ *
+ * Kesin bir ölçüm değil; fotoğrafta belirgin bir kırılma yoksa (düz bir gökyüzü,
+ * tek renk bir arka plan) null döner ve çağıran taraf kendi varsayımına döner.
+ *
+ * @param {HTMLCanvasElement|HTMLImageElement} kaynak
+ * @param {number} enAz  aramanın başladığı yükseklik oranı
+ * @param {number} enCok aramanın bittiği oran
+ * @returns {number|null} zemin çizgisinin yükseklik ORANI (0–1)
+ */
+export function zeminCizgisiBul(kaynak, enAz = 0.45, enCok = 0.94) {
+  const kaynakW = kaynak.videoWidth || kaynak.width
+  const kaynakH = kaynak.videoHeight || kaynak.height
+  if (!kaynakW || !kaynakH) return null
+
+  const W = COZUMLEME_W
+  const H = Math.max(4, Math.round((W * kaynakH) / kaynakW))
+
+  const tuval = document.createElement('canvas')
+  tuval.width = W
+  tuval.height = H
+  const ctx = tuval.getContext('2d', { willReadFrequently: true })
+  ctx.drawImage(kaynak, 0, 0, W, H)
+
+  let veri
+  try {
+    veri = ctx.getImageData(0, 0, W, H).data
+  } catch {
+    return null
+  }
+
+  const gri = new Float32Array(W * H)
+  for (let i = 0, p = 0; i < gri.length; i++, p += 4) {
+    gri[i] = 0.299 * veri[p] + 0.587 * veri[p + 1] + 0.114 * veri[p + 2]
+  }
+
+  const bas = Math.max(1, Math.floor(H * enAz))
+  const son = Math.min(H - 2, Math.floor(H * enCok))
+  if (son <= bas) return null
+
+  let enIyi = null
+  let toplam = 0
+  let sayi = 0
+  for (let y = bas; y <= son; y++) {
+    let fark = 0
+    for (let x = 0; x < W; x++) fark += Math.abs(gri[(y + 1) * W + x] - gri[y * W + x])
+    const ort = fark / W
+    toplam += ort
+    sayi++
+    if (!enIyi || ort > enIyi.ort) enIyi = { y, ort }
+  }
+
+  /*
+   * Kırılma, alt yarının genel hareketliliğinden belirgin biçimde ayrışmalı.
+   * Ayrışmıyorsa ortada bir zemin çizgisi yok demektir — uydurmaktansa
+   * cevapsız kalmak daha iyi.
+   */
+  const ortalama = toplam / Math.max(1, sayi)
+  if (!enIyi || enIyi.ort < Math.max(3, ortalama * 1.8)) return null
+
+  return (enIyi.y + 1) / H
+}
