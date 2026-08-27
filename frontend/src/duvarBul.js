@@ -56,10 +56,19 @@ const EN_BUYUK_ORAN = 0.8
  *
  * @param {HTMLCanvasElement|HTMLVideoElement} kaynak  kamera karesi
  * @param {number} oran  tasarımın en/boy oranı (genişlik / yükseklik)
+ * @param {object} [secenekler]
+ * @param {boolean} [secenekler.fotograf] Kullanıcının eklediği MEKÂN
+ *        fotoğrafı için ek ölçütleri açar. Kamera karesinde kapalı:
+ *        orada kadraj sürekli oynuyor, tek bir kareye göre "zemin",
+ *        "tavan" gibi kararlar vermek yanıltıcı olur.
+ * @param {number|null} [secenekler.zeminOran] Zemin çizgisinin dikey yeri
+ *        (0–1). Verilirse ekran zeminin altına konmaz.
  * @returns {{x:number, y:number, w:number, h:number, duzluk:number, guven:number}|null}
  *          Değerler 0–1 arası ORANLIDIR (kaynağın ölçüsünden bağımsız).
  */
-export function uygunYuzeyBul(kaynak, oran) {
+export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
+  const fotograf = !!secenekler.fotograf
+  const zeminOran = secenekler.zeminOran != null ? secenekler.zeminOran : null
   if (!kaynak || !(oran > 0)) return null
 
   const kaynakW = kaynak.videoWidth || kaynak.width
@@ -84,8 +93,17 @@ export function uygunYuzeyBul(kaynak, oran) {
 
   // 1) Gri tonlama
   const gri = new Float32Array(W * H)
+  /*
+   * GÖKYÜZÜ AYRIMI için mavi–kırmızı farkı da tutuluyor (yalnızca fotoğraf
+   * kipinde kullanılıyor). Dış mekân karesinin en düz, en tek düze yeri
+   * gökyüzüdür ve ekran oraya konmaz; ama gri tonlamada gökyüzü ile açık bir
+   * duvar birbirinden ayırt edilemiyor. Ayıran şey RENK: gökyüzü —gündüz de
+   * alacakaranlıkta da— mavi baskındır, duvar değildir.
+   */
+  const mavilik = new Float32Array(W * H)
   for (let i = 0, p = 0; i < gri.length; i++, p += 4) {
     gri[i] = 0.299 * veri[p] + 0.587 * veri[p + 1] + 0.114 * veri[p + 2]
+    mavilik[i] = veri[p + 2] - veri[p]
   }
 
   // 2) Komşu farkı: sağdaki ve alttaki pikselle
@@ -110,14 +128,42 @@ export function uygunYuzeyBul(kaynak, oran) {
    * duvar kâğıdı ise tersini yapar. Duvar ikisinde de sakindir.
    */
   const tk = toplamTablosu(kareler(gri), W, H)
+  /* Mavilik toplam tablosu — gökyüzü elemesi için (yalnızca fotoğraf kipi). */
+  const tm = fotograf ? toplamTablosu(mavilik, W, H) : null
 
   // Karenin genel hareketliliği — eşik buna göre belirlenir.
   const geneOrtalama = dikdortgenToplami(tg, W, 0, 0, W, H) / (W * H)
-  const esik = Math.max(MUTLAK_EN_AZ, Math.min(MUTLAK_EN_COK, geneOrtalama * GORELI_KATSAYI))
+  /* Karenin ortalama parlaklığı — "bu bölge geneline göre koyu mu?" için. */
+  const geneParlaklik = dikdortgenToplami(tp, W, 0, 0, W, H) / (W * H)
+  const esikTemel = Math.max(MUTLAK_EN_AZ, Math.min(MUTLAK_EN_COK, geneOrtalama * GORELI_KATSAYI))
 
   // 4) Aday pencereler
   let enIyi = null
   const adimSayisi = 5 // ölçek basamağı
+
+  /*
+   * İKİ TURLU ARAMA (yalnızca fotoğrafta).
+   *
+   * Birinci tur katı: gerçekten sakin bir yüzey arıyor. Bazı fotoğraflarda
+   * böyle bir yer yok — taş kaplama duvar, dokulu sıva, aydınlatma lekeleri.
+   * Eskiden bu durumda "yer bulunamadı" deyip ekranı kadrajın tam ortasına
+   * koyuyorduk; orası çoğu zaman gökyüzü ya da masanın üstü oluyordu.
+   *
+   * İkinci tur, eşiği gevşetip aynı ölçütlerle yeniden bakıyor. Sonuç daha
+   * az güvenilir ve güven puanı buna göre düşürülüyor, ama "duvarın dokulu
+   * bir yeri", "kadrajın ortası"ndan her zaman iyidir.
+   */
+  const turlar = fotograf ? [1, 1.9] : [1]
+  let turCarpani = 1
+  for (const carpan of turlar) {
+    turCarpani = carpan
+    enIyi = araTur(carpan)
+    if (enIyi) break
+  }
+
+  function araTur(carpan) {
+  const esik = esikTemel * carpan
+  let enIyi = null
   for (let s = 0; s < adimSayisi; s++) {
     const genislikOran = EN_KUCUK_ORAN + ((EN_BUYUK_ORAN - EN_KUCUK_ORAN) * s) / (adimSayisi - 1)
     const pw = Math.round(W * genislikOran)
@@ -131,13 +177,51 @@ export function uygunYuzeyBul(kaynak, oran) {
         const duzluk = dikdortgenToplami(tg, W, x, y, pw, ph) / alan
         if (duzluk > esik) continue
 
+        /*
+         * FOTOĞRAFTA ELEME — LED ekran nereye KONMAZ.
+         *
+         * Düzlük tek başına yetmiyor: bir odanın en düz yeri çoğu zaman
+         * zemin, tavan ya da pencere camıdır. Ekran hiçbirine konmaz.
+         * Bunlar tercih değil, doğrudan eleme; çünkü orası ne kadar düz
+         * olursa olsun yanlış cevaptır.
+         */
+        if (fotograf) {
+          // Zeminin altı: kaide oraya oturur, ekran gövdesi değil.
+          if (zeminOran != null && (y + ph) / H > zeminOran + 0.04) continue
+          /*
+           * Zeminden ÇOK yukarısı da yanlış: dış mekân fotoğraflarında en düz
+           * yer gökyüzüdür, iç mekânda tavana yakın boşluk. Ekran ya zeminde
+           * durur ya da duvarda makul bir yükseklikte asılıdır; ikisi de zemin
+           * çizgisinin hemen üstündeki kuşaktır.
+           */
+          if (zeminOran != null && zeminOran - (y + ph) / H > 0.55) continue
+          /*
+           * Gökyüzü: mavi baskın ve kadrajın üst yarısında. Alt yarıda
+           * aranmıyor, çünkü orada mavi bir şey büyük ihtimalle su, halı ya
+           * da boyalı bir yüzeydir — hepsi ekran konabilecek yerlerdir.
+           */
+          if (tm && (y + ph / 2) / H < 0.58) {
+            const mavi = dikdortgenToplami(tm, W, x, y, pw, ph) / (pw * ph)
+            if (mavi > 10) continue
+          }
+          // Tavan şeridi ve kadrajın en dibi
+          if (y / H < 0.06 || (y + ph) / H > 0.97) continue
+          // Kadraj kenarına yapışık: yarısı dışarıda kalmış bir yüzeydir
+          const kenarPay = Math.max(2, Math.round(W * 0.02))
+          if (x < kenarPay || x + pw > W - kenarPay) continue
+        }
+
         const parlaklik = dikdortgenToplami(tp, W, x, y, pw, ph) / alan
         /*
          * Çok koyu ya da patlamış beyaz alanlar duvar değil: birincisi
          * gölge/karanlık köşe, ikincisi pencere ya da lamba. İkisinde de
          * "ayrıntı yok" ölçütü yanıltıcı biçimde düşük çıkar.
+         *
+         * FOTOĞRAFTA alt sınır düşük: odada zaten asılı duran koyu bir
+         * ekran ya da panel, aranan yerin ta kendisidir.
          */
-        if (parlaklik < 45 || parlaklik > 240) continue
+        const enAzParlaklik = fotograf ? 16 : 45
+        if (parlaklik < enAzParlaklik || parlaklik > 240) continue
 
         // Renk saçılımı: E[x²] − E[x]²
         const kareOrt = dikdortgenToplami(tk, W, x, y, pw, ph) / alan
@@ -164,19 +248,79 @@ export function uygunYuzeyBul(kaynak, oran) {
 
         const acikRenk = Math.max(0, Math.min(1, (parlaklik - 70) / 130))
 
+        /*
+         * ÇERÇEVE KONTRASTI — "burası bir yüzey mi, yoksa büyük bir şeyin
+         * ortasından kestiğim rastgele bir parça mı?"
+         *
+         * İçi sakin AMA kenarı belirgin olan alan, gerçekten sınırları
+         * olan bir yüzeydir: asılı bir panel, bir pano, odadaki mevcut
+         * ekran, duvardaki kaplama bölümü. Boş duvarın ortasından
+         * kesilen bir dikdörtgenin kenarı da içi kadar sakindir; işte
+         * ikisini ayıran ölçüt bu.
+         *
+         * Dış çerçevenin gradyanı, iç bölge çıkarılarak bulunuyor.
+         */
+        let cerceve = 0
+        if (fotograf) {
+          const m = Math.max(2, Math.round(pw * 0.05))
+          const dx = Math.max(0, x - m)
+          const dy = Math.max(0, y - m)
+          const dw = Math.min(W - dx, pw + 2 * m)
+          const dh = Math.min(H - dy, ph + 2 * m)
+          const disAlan = dw * dh - alan
+          if (disAlan > 0) {
+            const halka =
+              (dikdortgenToplami(tg, W, dx, dy, dw, dh) -
+                dikdortgenToplami(tg, W, x, y, pw, ph)) /
+              disAlan
+            cerceve = Math.max(0, Math.min(1, halka / (esik * 2)))
+          }
+        }
+
+        /*
+         * ODADA ZATEN EKRAN VARSA ORASI DOĞRU YERDİR.
+         * Karenin genelinden belirgin koyu + kenarı belirgin = büyük
+         * ihtimalle bir ekran ya da panel. İki koşul birlikte aranıyor;
+         * tek başına koyuluk, gölgeyi ya da halıyı da seçerdi.
+         */
+        const koyuluk = Math.max(0, Math.min(1, (geneParlaklik - parlaklik) / Math.max(1, geneParlaklik)))
+        const mevcutEkran = fotograf ? koyuluk * cerceve : 0
+
+        /*
+         * ZEMİNE YAKINLIK. Ekranın dibi zemin çizgisinin hemen üstündeyse
+         * (ayaklı totem ya da normal yükseklikte asılmış panel) doğru kuşaktır;
+         * yükseldikçe gökyüzüne/tavana doğru gider ve anlamını yitirir.
+         */
+        const zeminYakinlik =
+          fotograf && zeminOran != null
+            ? 1 - Math.min(1, Math.max(0, zeminOran - (y + ph) / H) / 0.45)
+            : 0
+
+        /*
+         * Açık renk tercihi fotoğrafta HAFİFLETİLDİ: bir toplantı odasında
+         * en açık yer pencere kenarıdır ve ekran oraya konmaz. Kamerada
+         * eskisi gibi kalıyor (orada aranan şey düz bir duvar).
+         */
+        const acikAgirlik = fotograf ? 0.9 : 2.2
+
         const puan =
           (1 - duzluk / esik) * 3 +
           (1 - Math.min(1, sacilim / 46)) * 1.6 +
-          acikRenk * 2.2 +
+          acikRenk * acikAgirlik +
           genislikOran * 1.4 +
           dikeyUygunluk * 0.9 +
-          yatayUygunluk * 0.6
+          yatayUygunluk * 0.6 +
+          cerceve * 1.8 +
+          mevcutEkran * 2.6 +
+          zeminYakinlik * 1.6
 
         if (!enIyi || puan > enIyi.puan) {
           enIyi = { x, y, w: pw, h: ph, duzluk, sacilim, parlaklik, puan }
         }
       }
     }
+  }
+  return enIyi
   }
 
   if (!enIyi) return null
@@ -196,7 +340,13 @@ export function uygunYuzeyBul(kaynak, oran) {
      */
     guven: Math.max(
       0,
-      Math.min(1, (1 - enIyi.duzluk / esik) * 0.6 + (1 - Math.min(1, enIyi.sacilim / 46)) * 0.4),
+      Math.min(
+        1,
+        ((1 - enIyi.duzluk / (esikTemel * turCarpani)) * 0.6 +
+          (1 - Math.min(1, enIyi.sacilim / 46)) * 0.4) *
+          /* Gevşetilmiş turda bulunan yer daha az güvenilir. */
+          (turCarpani > 1 ? 0.6 : 1),
+      ),
     ),
   }
 }

@@ -56,9 +56,22 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
   tuval.getContext('2d').drawImage(gorsel, 0, 0)
 
   const enBoy = oran > 0 ? oran : 16 / 9
+
+  /*
+   * Zemin çizgisi ÖNCE bulunuyor: yüzey araması onu bir sınır olarak
+   * kullanıyor (ekran zeminin altına konmaz). Eskiden sonra bulunuyordu ve
+   * yalnızca kioskun oturacağı yeri belirliyordu.
+   */
+  let zeminOran = null
+  try {
+    zeminOran = zeminCizgisiBul(tuval)
+  } catch {
+    zeminOran = null
+  }
+
   let yer = null
   try {
-    yer = uygunYuzeyBul(tuval, enBoy)
+    yer = uygunYuzeyBul(tuval, enBoy, { fotograf: true, zeminOran })
   } catch {
     yer = null // okunamayan görüntü: öneri yok, orta kullanılır
   }
@@ -110,7 +123,7 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
      * Her hâlükârda panelin altında kalmak zorunda: ekranın içinden geçen bir
      * zemin çizgisi kiosku duvarın içine gömerdi.
      */
-    zeminY: zeminY(tuval, H, merkezY + yariH, yer),
+    zeminY: zeminY(zeminOran, H, merkezY + yariH, yer),
     /** Öneri ne kadar güvenilir — arayüz zayıf öneriyi kullanıcıya söyler. */
     guven: yer ? yer.guven : 0,
     /*
@@ -135,13 +148,7 @@ function aciOlc(tuval) {
  * Zemin çizgisi: önce fotoğraftan, olmazsa önerilen alanın altından.
  * Panelin altında kalması güvence altına alınıyor.
  */
-function zeminY(tuval, H, panelAlt, yer) {
-  let oran = null
-  try {
-    oran = zeminCizgisiBul(tuval)
-  } catch {
-    oran = null
-  }
+function zeminY(oran, H, panelAlt, yer) {
   const bulunan = oran != null ? oran * H : yer ? (yer.y + yer.h) * H : panelAlt
   return Math.round(Math.max(panelAlt + 2, Math.min(H - 2, bulunan)))
 }
