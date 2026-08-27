@@ -178,13 +178,30 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
    */
   const turlar = fotograf ? [1, 1.9] : [1]
   let turCarpani = 1
-  for (const carpan of turlar) {
-    turCarpani = carpan
-    enIyi = araTur(carpan)
-    if (enIyi) break
+
+  /*
+   * MODEL BİR EKRAN BULDUYSA ORASI ŞARTTIR — puan değil, KOŞUL.
+   *
+   * Önce bunu bir bonus olarak vermiştim; sezgisel ölçütler (özellikle
+   * "çerçevesi belirgin ve parlak") onu bastırabiliyordu ve tasarım, odada
+   * duran ekranın yerine pencereye gidiyordu. Modelin gördüğü şey bilgidir,
+   * tahminlerin oyuyla yarışmamalı: ekranın bulunduğu yerle örtüşmeyen
+   * adaylar hiç değerlendirilmiyor.
+   *
+   * Hiçbir aday şartı sağlayamazsa (ekran kadrajın kenarında, tasarımın oranı
+   * hiç uymuyor) şart kaldırılıp yeniden bakılıyor — cevapsız kalmaktansa.
+   */
+  const ekranVar = !!nesneler?.ekranKutusu
+  const kosullar = ekranVar ? [true, false] : [false]
+  disari: for (const ekranSart of kosullar) {
+    for (const carpan of turlar) {
+      turCarpani = carpan
+      enIyi = araTur(carpan, ekranSart)
+      if (enIyi) break disari
+    }
   }
 
-  function araTur(carpan) {
+  function araTur(carpan, ekranSart) {
   const esik = esikTemel * carpan
   let enIyi = null
   for (let s = 0; s < adimSayisi; s++) {
@@ -217,7 +234,7 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
            * durur ya da duvarda makul bir yükseklikte asılıdır; ikisi de zemin
            * çizgisinin hemen üstündeki kuşaktır.
            */
-          if (zeminOran != null && zeminOran - (y + ph) / H > 0.55) continue
+          if (zeminOran != null && zeminOran - (y + ph) / H > 0.72) continue
           /*
            * Gökyüzü: mavi baskın ve kadrajın üst yarısında. Alt yarıda
            * aranmıyor, çünkü orada mavi bir şey büyük ihtimalle su, halı ya
@@ -243,43 +260,6 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
           const kenarPay = Math.max(2, Math.round(W * 0.02))
           if (x < kenarPay || x + pw > W - kenarPay) continue
         }
-
-        const parlaklik = dikdortgenToplami(tp, W, x, y, pw, ph) / alan
-        /*
-         * Çok koyu ya da patlamış beyaz alanlar duvar değil: birincisi
-         * gölge/karanlık köşe, ikincisi pencere ya da lamba. İkisinde de
-         * "ayrıntı yok" ölçütü yanıltıcı biçimde düşük çıkar.
-         *
-         * FOTOĞRAFTA alt sınır düşük: odada zaten asılı duran koyu bir
-         * ekran ya da panel, aranan yerin ta kendisidir.
-         */
-        const enAzParlaklik = fotograf ? 16 : 45
-        if (parlaklik < enAzParlaklik || parlaklik > 240) continue
-
-        // Renk saçılımı: E[x²] − E[x]²
-        const kareOrt = dikdortgenToplami(tk, W, x, y, pw, ph) / alan
-        const sacilim = Math.sqrt(Math.max(0, kareOrt - parlaklik * parlaklik))
-        if (sacilim > 46) continue // içinde koyu/açık iki ayrı şey var demektir
-
-        /*
-         * PUAN.
-         *  • düzlük        : asıl ölçüt, küçük olan iyi
-         *  • büyüklük      : aynı düzlükte daha geniş alan yeğlenir
-         *  • dikey konum   : göz hizası tercih edilir; en alt şerit çoğunlukla
-         *                    zemin ve kalabalık olur
-         *  • yatay merkez  : kadrajın ortasına yakın olan yeğlenir
-         *  • açık renk     : duvarlar çoğunlukla beyaz ya da açık tonludur;
-         *                    koyu alanlar genellikle gölge, mobilya ya da
-         *                    ekranın kendisi olur. Kural değil, TERCİH:
-         *                    yeterince düz koyu bir alan hâlâ seçilebilir,
-         *                    ama açık olan eşit şartlarda öne geçer.
-         */
-        const merkezY = (y + ph / 2) / H
-        const merkezX = (x + pw / 2) / W
-        const dikeyUygunluk = 1 - Math.min(1, Math.abs(merkezY - 0.45) / 0.5)
-        const yatayUygunluk = 1 - Math.min(1, Math.abs(merkezX - 0.5) / 0.5)
-
-        const acikRenk = Math.max(0, Math.min(1, (parlaklik - 70) / 130))
 
         /*
          * ÇERÇEVE KONTRASTI — "burası bir yüzey mi, yoksa büyük bir şeyin
@@ -310,6 +290,58 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
           }
         }
 
+        const parlaklik = dikdortgenToplami(tp, W, x, y, pw, ph) / alan
+        /*
+         * Çok koyu ya da patlamış beyaz alanlar duvar değil: birincisi
+         * gölge/karanlık köşe, ikincisi pencere ya da lamba. İkisinde de
+         * "ayrıntı yok" ölçütü yanıltıcı biçimde düşük çıkar.
+         *
+         * FOTOĞRAFTA alt sınır düşük: odada zaten asılı duran koyu bir
+         * ekran ya da panel, aranan yerin ta kendisidir.
+         */
+        const enAzParlaklik = fotograf ? 16 : 45
+        /*
+         * ÜST SINIR ARTIK ÇERÇEVEYE BAĞLI.
+         *
+         * Eski kural çok parlak her alanı eliyordu (pencere, lamba). Ama BOŞ
+         * BEYAZ BİR PANO da çok parlaktır — ve ekranın konacağı yerin ta
+         * kendisidir. Şehir sokağındaki bomboş beyaz bir reklam panosu tam bu
+         * yüzden eleniyor, tasarım da binaların üstünde saçma bir yere
+         * gidiyordu.
+         *
+         * Ayıran şey KENARIDIR: panonun çerçevesi vardır, gökyüzünün ya da
+         * patlamış bir pencerenin yoktur. Kenarı belirginse parlaklık sınırı
+         * neredeyse tamamen açılıyor.
+         */
+        const enCokParlaklik = fotograf && cerceve > 0.25 ? 253 : 240
+        if (parlaklik < enAzParlaklik || parlaklik > enCokParlaklik) continue
+
+        // Renk saçılımı: E[x²] − E[x]²
+        const kareOrt = dikdortgenToplami(tk, W, x, y, pw, ph) / alan
+        const sacilim = Math.sqrt(Math.max(0, kareOrt - parlaklik * parlaklik))
+        if (sacilim > 46) continue // içinde koyu/açık iki ayrı şey var demektir
+
+        /*
+         * PUAN.
+         *  • düzlük        : asıl ölçüt, küçük olan iyi
+         *  • büyüklük      : aynı düzlükte daha geniş alan yeğlenir
+         *  • dikey konum   : göz hizası tercih edilir; en alt şerit çoğunlukla
+         *                    zemin ve kalabalık olur
+         *  • yatay merkez  : kadrajın ortasına yakın olan yeğlenir
+         *  • açık renk     : duvarlar çoğunlukla beyaz ya da açık tonludur;
+         *                    koyu alanlar genellikle gölge, mobilya ya da
+         *                    ekranın kendisi olur. Kural değil, TERCİH:
+         *                    yeterince düz koyu bir alan hâlâ seçilebilir,
+         *                    ama açık olan eşit şartlarda öne geçer.
+         */
+        const merkezY = (y + ph / 2) / H
+        const merkezX = (x + pw / 2) / W
+        const dikeyUygunluk = 1 - Math.min(1, Math.abs(merkezY - 0.45) / 0.5)
+        const yatayUygunluk = 1 - Math.min(1, Math.abs(merkezX - 0.5) / 0.5)
+
+        const acikRenk = Math.max(0, Math.min(1, (parlaklik - 70) / 130))
+
+
         /*
          * ODADA ZATEN EKRAN VARSA ORASI DOĞRU YERDİR.
          * Karenin genelinden belirgin koyu + kenarı belirgin = büyük
@@ -333,6 +365,8 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
           const ortakW = Math.max(0, Math.min(x + pw, kx1) - Math.max(x, kx0))
           const ortakH = Math.max(0, Math.min(y + ph, ky1) - Math.max(y, ky0))
           mevcutEkran = (ortakW * ortakH) / alan
+          /* Şart turunda: ekranın bulunduğu yerle örtüşmeyen aday elenir. */
+          if (ekranSart && mevcutEkran < 0.35) continue
         }
 
         /*
@@ -359,9 +393,9 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
           genislikOran * 1.4 +
           dikeyUygunluk * 0.9 +
           yatayUygunluk * 0.6 +
-          cerceve * 1.8 +
+          cerceve * 3 +
           mevcutEkran * 2.6 +
-          zeminYakinlik * 1.6
+          zeminYakinlik * 0.8
 
         if (!enIyi || puan > enIyi.puan) {
           enIyi = { x, y, w: pw, h: ph, duzluk, sacilim, parlaklik, puan }
