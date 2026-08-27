@@ -472,11 +472,23 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
   )
 }
 
+/*
+ * ÖLÇÜ ETİKETİ.
+ *
+ * Görünme eşiği etiketin GERÇEK genişliğine göre: "0,34 m" 10 px yazıyla
+ * yaklaşık 46 piksel tutuyor. Eşik 30 iken dar şeritlerde etiketler
+ * komşularının üstüne biniyor ve üç ölçü iç içe geçmiş gibi duruyordu.
+ *
+ * Pay etiketleri (muted) sığmadığında gizleniyor; EKRANIN kendi ölçüsü ise
+ * her zaman yazılıyor — okunması gereken asıl sayı o.
+ */
+const ETIKET_EN_AZ = 50
+
 function SegH({ w, label, muted }) {
   return (
     <div style={{ width: w }} className="flex items-center justify-center shrink-0">
-      {w > 30 && (
-        <span className={`text-[11px] leading-none px-1.5 py-1 rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
+      {(!muted || w >= ETIKET_EN_AZ) && (
+        <span className={`text-[10px] leading-none px-1.5 py-[3px] rounded-md whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
           {label}
         </span>
       )}
@@ -487,8 +499,8 @@ function SegH({ w, label, muted }) {
 function SegV({ h, label, muted }) {
   return (
     <div style={{ height: h }} className="flex items-center justify-center shrink-0">
-      {h > 30 && (
-        <span style={{ writingMode: 'vertical-rl' }} className={`text-[11px] leading-none px-1 py-1.5 rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
+      {(!muted || h >= ETIKET_EN_AZ) && (
+        <span style={{ writingMode: 'vertical-rl' }} className={`text-[10px] leading-none px-[3px] py-1.5 rounded-md whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
           {label}
         </span>
       )}
