@@ -558,10 +558,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       })
       setScene('ozel')
       mekaniOrtala()
-      // Zayıf öneride kullanıcıya söyleniyor; sessizce ortaya koymak yanıltıcı olurdu.
-      setOzelUyari(kayit.guven > 0.25 ? null : t('scene.weakSuggest'))
+      oneriyiUygula(kayit)
     }
     gorsel.src = url
+  }
+
+  /*
+   * ÖNERİYİ UYGULA — yer ve açı birlikte.
+   *
+   * Yer, düz ve boş bir alan arayan yüzey bulucudan geliyor (duvarBul.js);
+   * açı ise fotoğrafın kaçış noktasından ölçülüyor (aciBul.js). İkisi ayrı
+   * ölçüm: biri 'nereye', öteki 'hangi açıyla'. Güven düşükse ekran
+   * karşıdan konuyor ve kullanıcıya söyleniyor — yanlış bir açıyla
+   * çevirmektense düz bırakmak daha dürüst.
+   */
+  const ACI_ESIGI = 0.45
+  const oneriyiUygula = (kayit) => {
+    const aci = kayit?.aci
+    const saglam = aci && aci.guven >= ACI_ESIGI && (Math.abs(aci.yaw) > 1.5 || Math.abs(aci.tilt) > 1.5)
+    yonuAyarla(saglam ? aci : null)
+    setOzelUyari(
+      kayit.guven > 0.25
+        ? saglam
+          ? t('scene.angleFound')
+          : t('scene.angleWeak')
+        : t('scene.weakSuggest'),
+    )
   }
 
   /* Öneriyi tazele: ölçü ya da alan genişliği değişmiş olabilir. */
@@ -572,6 +594,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const kayit = ozelMekanKaydi(ozelSahne.dosya, gorsel, tasarimWm / tasarimHm, alanM)
       if (kayit) setOzelSahne(kayit)
       mekaniOrtala()
+      if (kayit) oneriyiUygula(kayit)
     }
     gorsel.src = ozelSahne.dosya
   }
@@ -1021,7 +1044,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * duruyor. Fare aynı tutamağı kullanıyor, sadece kipi değişiyor:
    * taşımak da yön vermek de ekranı elle tutup sürüklemek.
    */
-  const { yon: mekanYon, dondu: mekanDondu, sifirla: yonuSifirla, tutamak: yonTutamak } = useYon()
+  const {
+    yon: mekanYon,
+    dondu: mekanDondu,
+    sifirla: yonuSifirla,
+    ayarla: yonuAyarla,
+    tutamak: yonTutamak,
+  } = useYon()
   const [yonKipi, setYonKipi] = useState('tasi') // tasi | dondur
   const etkinTutamak = yonKipi === 'dondur' ? yonTutamak : mekanTutamak
 

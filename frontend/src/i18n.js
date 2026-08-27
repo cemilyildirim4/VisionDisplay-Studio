@@ -360,6 +360,16 @@ const dict = {
     ar: 'أمسك الشاشة واسحبها جانبًا: تنطبق على الجدران المائلة.',
   },
   'scene.turnReset': { tr: 'Yönü sıfırla', en: 'Reset orientation', ar: 'إعادة ضبط الاتجاه' },
+  'scene.angleFound': {
+    tr: 'Fotoğraftaki açı ölçüldü, ekran ona göre çevrildi.',
+    en: 'The angle in the photo was measured; the screen was turned to match.',
+    ar: 'تم قياس الزاوية في الصورة وتم توجيه الشاشة وفقًا لها.',
+  },
+  'scene.angleWeak': {
+    tr: 'Fotoğrafta belirgin bir açı bulunamadı; ekran karşıdan kondu. Yön verebilirsiniz.',
+    en: 'No clear angle found in the photo; the screen was placed head-on. You can turn it.',
+    ar: 'لم يتم العثور على زاوية واضحة؛ وُضعت الشاشة من الأمام. يمكنك توجيهها.',
+  },
   'scene.on': { tr: 'Açık', en: 'On', ar: 'مفعّل' },
   'scene.off': { tr: 'Kapalı', en: 'Off', ar: 'معطّل' },
   'scene.legsOn': { tr: 'Görünsün', en: 'Show', ar: 'إظهار' },

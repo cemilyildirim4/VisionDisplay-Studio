@@ -41,6 +41,15 @@ export function useYon() {
 
   const sifirla = useCallback(() => setYon({ yaw: 0, tilt: 0 }), [])
 
+  /** Ölçülen açıyı doğrudan uygular (fotoğraf çözümlemesi için). */
+  const ayarla = useCallback((yeni) => {
+    if (!yeni) return setYon({ yaw: 0, tilt: 0 })
+    setYon({
+      yaw: kis(Number(yeni.yaw) || 0, YAW_SINIR),
+      tilt: kis(Number(yeni.tilt) || 0, TILT_SINIR),
+    })
+  }, [])
+
   const parmakIndi = useCallback(
     (e) => {
       e.currentTarget.setPointerCapture?.(e.pointerId)
@@ -71,6 +80,7 @@ export function useYon() {
     yon,
     dondu,
     sifirla,
+    ayarla,
     tutamak: {
       onPointerDown: parmakIndi,
       onPointerMove: parmakHareket,

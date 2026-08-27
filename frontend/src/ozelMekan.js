@@ -21,6 +21,7 @@
  */
 
 import { uygunYuzeyBul, zeminCizgisiBul } from './duvarBul.js'
+import { perspektifAcisi } from './aciBul.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
 export const VARSAYILAN_ALAN_M = 4
@@ -112,6 +113,21 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
     zeminY: zeminY(tuval, H, merkezY + yariH, yer),
     /** Öneri ne kadar güvenilir — arayüz zayıf öneriyi kullanıcıya söyler. */
     guven: yer ? yer.guven : 0,
+    /*
+     * BAKIŞ AÇISI (derece) — fotoğrafın kaçış noktasından ölçülüyor.
+     * Öneri uygulanınca ekran bu açıya çevriliyor; kullanıcı isterse elle
+     * değiştirebiliyor. Bkz. aciBul.js.
+     */
+    aci: aciOlc(tuval),
+  }
+}
+
+/** Bakış açısı ölçümü — okunamayan görüntüde sessizce vazgeçilir. */
+function aciOlc(tuval) {
+  try {
+    return perspektifAcisi(tuval)
+  } catch {
+    return null
   }
 }
 
