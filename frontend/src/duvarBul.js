@@ -408,6 +408,64 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
 
   if (!enIyi) return null
 
+  /*
+   * BOŞ ALANI BÜYÜT VE ORTALA.
+   *
+   * Arama, adayları kaba adımlarla (pencere genişliğinin sekizde biri)
+   * tarıyor: hız için gerekli, ama seçilen dikdörtgen boş alanın ortasına
+   * denk gelmiyor — kenarına yapışık, yamuk duruyordu. "Boş yeri buluyor ama
+   * ortalamıyor" şikâyeti tam olarak buydu.
+   *
+   * Burada seçilen dikdörtgen, dört bir yana doğru sakin kaldığı sürece
+   * büyütülüyor: böylece o BOŞ ALANIN SINIRLARI bulunuyor. Sonra tasarımın
+   * kendi en/boy oranındaki dikdörtgen bu alanın tam ortasına, alana sığan en
+   * büyük ölçüde yerleştiriliyor.
+   */
+  const kutu = bosAlaniBul(enIyi)
+
+  function bosAlaniBul(a) {
+    const esik = esikTemel * turCarpani
+    let { x, y, w, h } = a
+    const kenarPay = fotograf ? Math.max(2, Math.round(W * 0.02)) : 0
+    /* Bir şeridin eklenebilir olması: sakin ve üstünde eşya yok. */
+    const seritUygun = (sx, sy, sw, sh) => {
+      if (sx < kenarPay || sy < 0 || sx + sw > W - kenarPay || sy + sh > H) return false
+      if (sw <= 0 || sh <= 0) return false
+      const g = dikdortgenToplami(tg, W, sx, sy, sw, sh) / (sw * sh)
+      if (g > esik) return false
+      if (te && dikdortgenToplami(te, W, sx, sy, sw, sh) / (sw * sh) > 0.02) return false
+      if (fotograf && zeminOran != null && (sy + sh) / H > zeminOran + 0.04) return false
+      return true
+    }
+    let buyudu = true
+    while (buyudu) {
+      buyudu = false
+      if (seritUygun(x - 1, y, 1, h)) { x -= 1; w += 1; buyudu = true }
+      if (seritUygun(x + w, y, 1, h)) { w += 1; buyudu = true }
+      if (seritUygun(x, y - 1, w, 1)) { y -= 1; h += 1; buyudu = true }
+      if (seritUygun(x, y + h, w, 1)) { h += 1; buyudu = true }
+    }
+    return { x, y, w, h }
+  }
+
+  /*
+   * Tasarımın oranındaki en büyük dikdörtgen, boş alanın ortasına. Kenarlara
+   * biraz nefes payı bırakılıyor (%94): ekranın kasası ve gölgesi alanın tam
+   * sınırına dayanınca sıkışmış görünüyor.
+   */
+  const payW = kutu.w * 0.94
+  const payH = kutu.h * 0.94
+  let sonW = Math.min(payW, payH * oran)
+  let sonH = sonW / oran
+  if (sonW < 4 || sonH < 4) {
+    sonW = enIyi.w
+    sonH = enIyi.h
+  }
+  const sonX = kutu.x + (kutu.w - sonW) / 2
+  const sonY = kutu.y + (kutu.h - sonH) / 2
+
+  enIyi = { ...enIyi, x: sonX, y: sonY, w: sonW, h: sonH }
+
   return {
     x: enIyi.x / W,
     y: enIyi.y / H,

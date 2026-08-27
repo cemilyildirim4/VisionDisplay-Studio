@@ -597,6 +597,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * oraya koymadığı anlaşılıyor; hiçbir şey görmediyse de bunu bilmek
      * kullanıcının işine yarıyor.
      */
+    /*
+     * YERDE Mİ, DUVARDA MI? — fotoğrafın kendisi söylüyor.
+     *
+     * Önerilen alanın dibi zemin çizgisine yakınsa orası yere konacak bir
+     * totemin yeridir; ayaklar kalır ve ekran zemine oturur. Alan duvarda,
+     * zeminden belirgin biçimde yukarıdaysa (asılı bir panel, bilbord, odadaki
+     * ekran) ayak çizmek yanlış olur: ekran o alanın TAM ORTASINA asılıyor.
+     *
+     * Kullanıcı isterse ayak seçeneğiyle bunu değiştirebiliyor.
+     */
+    const kY = kayit?.kaynak?.h || 0
+    if (kY && kayit?.panel && kayit?.zeminY != null) {
+      const panelAlt = kayit.panel.y1 / kY
+      const zemin = kayit.zeminY / kY
+      setAyakVar(zemin - panelAlt <= 0.12)
+    }
+
     const sayim = kayit?.nesneSayimi
     if (sayim) {
       const toplam = Object.values(sayim).reduce((a, b) => a + b, 0) || 1
