@@ -22,7 +22,7 @@
  * ────────────────────────────────────────────────────────────────────────────
  */
 
-import { fotoYerlesim, DIREK_M, KAIDE_M } from './sahneler.js'
+import { fotoYerlesim, govdeOlculeri } from './sahneler.js'
 
 export default function PanoFoto({
   sahne,
@@ -56,9 +56,10 @@ export default function PanoFoto({
   const pxPerM = (yer.pxPerM || 1) * yakinlik
   const kasa = Math.max(3, Math.min(14, ekranWpx * 0.014))
   const ekranHm = ekranHpx / pxPerM
-  const direkH = DIREK_M * pxPerM
+  const { direkM, kaideM } = govdeOlculeri(ekranHm)
+  const direkH = direkM * pxPerM
   const direkW = Math.min(0.45, Math.max(0.09, (ekranWpx / pxPerM) * 0.09)) * pxPerM
-  const kaideH = Math.max(3, KAIDE_M * pxPerM)
+  const kaideH = Math.max(2, kaideM * pxPerM)
   const ekranAlt = tuvalH / 2 + ekranHpx / 2
 
   /*

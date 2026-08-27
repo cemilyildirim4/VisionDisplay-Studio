@@ -234,15 +234,21 @@ export function fotoYerlesim(sahne, tuvalW, tuvalH) {
 }
 
 /**
- * KIOSK GOVDESININ GERCEK OLCULERI (metre).
+ * KIOSK GOVDESININ OLCULERI — ekranin boyuna ORANTILI (metre).
  *
- * Direk kisa ve SABIT. Onceden ekranin altiyla fotografin zemin cizgisi
- * arasindaki bosluga kadar uzuyordu; kucuk bir totemde bu 1,5 metreyi
- * asiyor ve kiosk bayrak diregine donuyordu. Dogrusu direk boyunu sabit
- * tutup KIOSKUN TAMAMINI zemine kadar asagi kaydirmak.
+ * Once sabitti (0,40 m direk). Iki uctan da yanlisti: 12 cm lik bir masa
+ * ekraninda direk ekranin uc kati oluyor, 6 m lik bir billboardda ise
+ * gorunmez kaliyordu. Simdi ekran yuksekliginin ucte biri kadar, ama alt ve
+ * ust sinirlarla: cok kucukte kaybolmasin, cok buyukte bayrak diregine
+ * donmesin.
  */
-export const DIREK_M = 0.4
-export const KAIDE_M = 0.14
+export function govdeOlculeri(ekranHm) {
+  const h = ekranHm > 0 ? ekranHm : 1
+  return {
+    direkM: Math.max(0.08, Math.min(0.6, h * 0.33)),
+    kaideM: Math.max(0.03, Math.min(0.16, h * 0.07)),
+  }
+}
 
 /**
  * Kiosku zemine oturtmak icin gereken DIKEY KAYMA (piksel).
@@ -257,5 +263,6 @@ export function zeminOturmaKaymasi(sahne, yer, tuvalH, yakinlik, ekranHpx) {
   const zeminPx = tuvalH / 2 + (sahne.zeminY - merkezY) * yer.s * yakinlik
   const pxPerM = yer.pxPerM * yakinlik
   const ekranAlt = tuvalH / 2 + ekranHpx / 2
-  return zeminPx - (ekranAlt + (DIREK_M + KAIDE_M) * pxPerM)
+  const { direkM, kaideM } = govdeOlculeri(ekranHpx / pxPerM)
+  return zeminPx - (ekranAlt + (direkM + kaideM) * pxPerM)
 }
