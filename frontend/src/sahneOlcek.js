@@ -80,3 +80,40 @@ export const KAMERA_ACISI = 65
 export function kadrajMesafesi(kadrajMetre) {
   return kadrajMetre / 2 / Math.tan((KAMERA_ACISI * Math.PI) / 360)
 }
+
+/**
+ * ACILISTA KENDILIGINDEN SECILEN IZLEME MESAFESI.
+ *
+ * Mekan acildiginda tasarimin "oturmus" gorunmesi gerekiyor; kullanicinin
+ * her seferinde mesafeyi elle ayarlamasi gereksiz bir is. Fotografin
+ * cekildigi noktadan bakinca kucuk bir ekran nokta gibi kalabiliyor, cunku
+ * o nokta 10-17 m uzakta.
+ *
+ * Cozum: ekranin kadrajda kaplamasi ISTENEN pay uzerinden gerekli yakinlik
+ * bulunuyor, oradan da mesafe. Yani "bu ekrani rahat gorecek kadar yaklas".
+ * Olcu bilgisi bozulmuyor: sahnenin tamami birlikte olcekleniyor, ekranin
+ * mekana orani sabit kaliyor - sadece bakis noktasi degisiyor.
+ *
+ * Uzaklasma yonu kapali (yakinlik >= 1): fotografin cekildigi noktadan
+ * geriye gidilemez.
+ */
+export function otoMesafe({
+  ekranWpx,
+  ekranHpx,
+  sahne,
+  tabanY,
+  uzakMesafe,
+  yakinMesafe,
+  hedefGenislikPayi = 0.5,
+  hedefYukseklikPayi = 0.55,
+}) {
+  if (!(ekranWpx > 0) || !(ekranHpx > 0) || !(sahne?.w > 0)) return uzakMesafe
+  const yakinlik = Math.max(
+    1,
+    Math.min(
+      (sahne.w * hedefGenislikPayi) / ekranWpx,
+      (tabanY * hedefYukseklikPayi) / ekranHpx,
+    ),
+  )
+  return Math.max(yakinMesafe, Math.min(uzakMesafe, uzakMesafe / yakinlik))
+}
