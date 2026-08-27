@@ -36,6 +36,43 @@
 
 export const SAHNELER = [
   {
+    /*
+     * AVM KORIDORU.
+     *
+     * Panel, fotografta var olan bir yuzey degil - ekranin oturacagi yeri
+     * biz sectik: koridor zemininin ortasi. Alt kenari zemin cizgisine
+     * (fotograf yuksekliginin 0,62 orani) oturuyor.
+     *
+     * Metre karsiligi: bu derinlikte iki vitrin arasi koridor ~7 m ve
+     * fotograf genisliginin ~%55ini kapliyor, yani tam genislik ~12,75 m,
+     * 1 m ~ 88 piksel. Panel 3,00 x 1,80 m secildi.
+     */
+    id: 'avm',
+    ad: 'avm.title',
+    dosya: '/led-ekran-avm-arka-plan.png',
+    kaynak: { w: 1122, h: 1402 },
+    panel: { x0: 429, y0: 711, x1: 693, y1: 869 },
+    panelEnM: 3,
+    maskeli: false, // fotografta kendi LED yuzeyi yok
+  },
+  {
+    /*
+     * SEHIR MEYDANI (gece dis mekan).
+     *
+     * Zemin cizgisi kaldirim taslarinin ortasi (0,735). Metre karsiligi:
+     * alttaki alti seritlik yol ~20 m ve kadrajin tamamini kapliyor; yol
+     * daha yakin oldugu icin kaldirim hizasinda kadraj ~22 m eder,
+     * 1 m ~ 70 piksel. Panel 4,00 x 2,40 m.
+     */
+    id: 'meydan-gece',
+    ad: 'dis.title',
+    dosya: '/cok-dar-yakin-dis-mekan-led-arka-plan.png',
+    kaynak: { w: 1535, h: 1025 },
+    panel: { x0: 628, y0: 585, x1: 907, y1: 753 },
+    panelEnM: 4,
+    maskeli: false,
+  },
+  {
     id: 'foto',
     ad: 'scene.foto', // i18n anahtarı
     dosya: '/pano-foto.jpg',

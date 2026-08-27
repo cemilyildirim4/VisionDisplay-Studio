@@ -1514,6 +1514,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 <div className="grid grid-cols-3 gap-2">
                   {[{ id: SALON_ID, ad: 'scene.salon' },
                     { id: CEPHE_ID, ad: 'scene.cephe' },
+                    { id: 'avm', ad: 'avm.title' },
+                    { id: 'meydan-gece', ad: 'dis.title' },
                     { id: 'none', ad: 'scene.customOff' }].map((s) => (
                     <button
                       key={s.id}
