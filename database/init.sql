@@ -84,6 +84,75 @@ ALTER TABLE IF EXISTS public.cabins
     OWNER to postgres;
 
 
+-- Table: public.power_supplies / mini_pcs / patch_cables / receiving_cards / processors
+-- Altı ana donanımın beş katalog tablosu (altıncısı cabins).
+
+CREATE TABLE IF NOT EXISTS public.power_supplies
+(
+    id serial NOT NULL,
+    name character varying(150) COLLATE pg_catalog."default" NOT NULL,
+    model character varying(100) COLLATE pg_catalog."default",
+    price numeric(12,2) NOT NULL DEFAULT 0,
+    power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
+    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
+    efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
+    created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT power_supplies_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.mini_pcs
+(
+    id serial NOT NULL,
+    name character varying(150) COLLATE pg_catalog."default" NOT NULL,
+    model character varying(100) COLLATE pg_catalog."default",
+    price numeric(12,2) NOT NULL DEFAULT 0,
+    power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
+    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
+    efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
+    created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT mini_pcs_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.patch_cables
+(
+    id serial NOT NULL,
+    name character varying(150) COLLATE pg_catalog."default" NOT NULL,
+    model character varying(100) COLLATE pg_catalog."default",
+    price numeric(12,2) NOT NULL DEFAULT 0,
+    power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
+    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
+    efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
+    created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT patch_cables_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.receiving_cards
+(
+    id serial NOT NULL,
+    name character varying(150) COLLATE pg_catalog."default" NOT NULL,
+    model character varying(100) COLLATE pg_catalog."default",
+    price numeric(12,2) NOT NULL DEFAULT 0,
+    power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
+    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
+    efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
+    created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT receiving_cards_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.processors
+(
+    id serial NOT NULL,
+    name character varying(150) COLLATE pg_catalog."default" NOT NULL,
+    model character varying(100) COLLATE pg_catalog."default",
+    price numeric(12,2) NOT NULL DEFAULT 0,
+    power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
+    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
+    efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
+    created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT processors_pkey PRIMARY KEY (id)
+);
+
+
 -- Table: public.users
 -- Bayi/musteri girisi (JWT). Beta asamasinda opsiyoneldir.
 
@@ -184,6 +253,13 @@ CREATE TABLE IF NOT EXISTS public.configurations
     status character varying(20) COLLATE pg_catalog."default" DEFAULT 'Taslak'::character varying,
     revision integer DEFAULT 1,
     user_id integer,
+    has_mini_pc boolean NOT NULL DEFAULT false,
+    labor_cost_multiplier numeric(8,4) NOT NULL DEFAULT 1.0000,
+    power_supply_id integer,
+    mini_pc_id integer,
+    patch_cable_id integer,
+    receiving_card_id integer,
+    processor_id integer,
     CONSTRAINT configurations_pkey PRIMARY KEY (id),
     CONSTRAINT configurations_cabin_id_fkey FOREIGN KEY (cabin_id)
         REFERENCES public.cabins (id) MATCH SIMPLE
@@ -191,6 +267,26 @@ CREATE TABLE IF NOT EXISTS public.configurations
         ON DELETE NO ACTION,
     CONSTRAINT configurations_user_id_fkey FOREIGN KEY (user_id)
         REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT configurations_power_supply_id_fkey FOREIGN KEY (power_supply_id)
+        REFERENCES public.power_supplies (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT configurations_mini_pc_id_fkey FOREIGN KEY (mini_pc_id)
+        REFERENCES public.mini_pcs (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT configurations_patch_cable_id_fkey FOREIGN KEY (patch_cable_id)
+        REFERENCES public.patch_cables (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT configurations_receiving_card_id_fkey FOREIGN KEY (receiving_card_id)
+        REFERENCES public.receiving_cards (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT configurations_processor_id_fkey FOREIGN KEY (processor_id)
+        REFERENCES public.processors (id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE SET NULL
 )
@@ -230,10 +326,42 @@ CREATE TABLE IF NOT EXISTS public.quotes
     revision integer DEFAULT 1,
     admin_note text COLLATE pg_catalog."default",
     user_id integer,
+    has_mini_pc boolean NOT NULL DEFAULT false,
+    labor_cost_multiplier numeric(8,4) NOT NULL DEFAULT 1.0000,
+    cabin_id integer,
+    power_supply_id integer,
+    mini_pc_id integer,
+    patch_cable_id integer,
+    receiving_card_id integer,
+    processor_id integer,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT quotes_pkey PRIMARY KEY (id),
     CONSTRAINT quotes_user_id_fkey FOREIGN KEY (user_id)
         REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT quotes_cabin_id_fkey FOREIGN KEY (cabin_id)
+        REFERENCES public.cabins (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT quotes_power_supply_id_fkey FOREIGN KEY (power_supply_id)
+        REFERENCES public.power_supplies (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT quotes_mini_pc_id_fkey FOREIGN KEY (mini_pc_id)
+        REFERENCES public.mini_pcs (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT quotes_patch_cable_id_fkey FOREIGN KEY (patch_cable_id)
+        REFERENCES public.patch_cables (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT quotes_receiving_card_id_fkey FOREIGN KEY (receiving_card_id)
+        REFERENCES public.receiving_cards (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT quotes_processor_id_fkey FOREIGN KEY (processor_id)
+        REFERENCES public.processors (id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE SET NULL
 )
@@ -246,8 +374,41 @@ ALTER TABLE IF EXISTS public.quotes
 CREATE INDEX IF NOT EXISTS idx_quotes_user_id
     ON public.quotes USING btree (user_id);
 
+CREATE INDEX IF NOT EXISTS idx_quotes_cabin_id
+    ON public.quotes USING btree (cabin_id);
+
+CREATE INDEX IF NOT EXISTS idx_quotes_power_supply_id
+    ON public.quotes USING btree (power_supply_id);
+
+CREATE INDEX IF NOT EXISTS idx_quotes_mini_pc_id
+    ON public.quotes USING btree (mini_pc_id);
+
+CREATE INDEX IF NOT EXISTS idx_quotes_patch_cable_id
+    ON public.quotes USING btree (patch_cable_id);
+
+CREATE INDEX IF NOT EXISTS idx_quotes_receiving_card_id
+    ON public.quotes USING btree (receiving_card_id);
+
+CREATE INDEX IF NOT EXISTS idx_quotes_processor_id
+    ON public.quotes USING btree (processor_id);
+
 CREATE INDEX IF NOT EXISTS idx_configurations_cabin_id
     ON public.configurations USING btree (cabin_id);
+
+CREATE INDEX IF NOT EXISTS idx_configurations_power_supply_id
+    ON public.configurations USING btree (power_supply_id);
+
+CREATE INDEX IF NOT EXISTS idx_configurations_mini_pc_id
+    ON public.configurations USING btree (mini_pc_id);
+
+CREATE INDEX IF NOT EXISTS idx_configurations_patch_cable_id
+    ON public.configurations USING btree (patch_cable_id);
+
+CREATE INDEX IF NOT EXISTS idx_configurations_receiving_card_id
+    ON public.configurations USING btree (receiving_card_id);
+
+CREATE INDEX IF NOT EXISTS idx_configurations_processor_id
+    ON public.configurations USING btree (processor_id);
 
 
 -- Table: public.chat_logs

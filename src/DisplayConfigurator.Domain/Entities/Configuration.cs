@@ -38,7 +38,24 @@ public class Configuration
     /// <summary>Giriş yapmış bir bayi/müşteri kaydettiyse hesabı — misafir kayıtlarında null.</summary>
     public int? UserId { get; set; }
 
+    /// <summary>Yapılandırmaya mini PC dahil edilsin mi.</summary>
+    public bool HasMiniPc { get; set; }
+
+    /// <summary>İşçilik maliyeti çarpanı (1.00 = standart).</summary>
+    public decimal LaborCostMultiplier { get; set; } = 1m;
+
+    public int? PowerSupplyId { get; set; }
+    public int? MiniPcId { get; set; }
+    public int? PatchCableId { get; set; }
+    public int? ReceivingCardId { get; set; }
+    public int? ProcessorId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Cabin? Cabin { get; set; }
+    public PowerSupply? PowerSupply { get; set; }
+    public MiniPc? MiniPc { get; set; }
+    public PatchCable? PatchCable { get; set; }
+    public ReceivingCard? ReceivingCard { get; set; }
+    public Processor? Processor { get; set; }
 }
