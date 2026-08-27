@@ -869,45 +869,45 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * gibi kaliyor; buyuk bir billboard ise kadraja sigmiyor. Cozum, tek
    * bir fotograf uzerinde kamerayi yaklastirip uzaklastirmak.
    *
-   * Olcu ikiye katlandikca yakinlik bir basamak azaliyor (log2). Sinirlar
-   * dar tutuldu: 1,28 uzerinde fotograf cozunurlugunu kaybediyor, 0,82
-   * altinda ise kenarlardan disari cikiyor.
+   * Bakis mesafesi ekranin kendi olcusunden geliyor: ekran buyudukce onu
+   * butun olarak gorebilmek icin geriye cekilmek gerekir. Baskin kenarin
+   * 4,5 kati, 3-22 m arasina sikistirilmis hali.
    *
-   * ONEMLI: yakinlik hem arka plana hem de ekranin piksel olcegine AYNI
-   * yonde uygulaniyor. Ekran arka planla birlikte buyuyup kuculdugu icin
-   * ikisi arasindaki oran — yani olcu bilgisi — hic degismiyor; degisen
-   * yalnizca bakis mesafesi. (Ters yonde uygulamak, yani ekrani arka plan
-   * yaklastikca kucultmek, etkiyi goturur ve olcuyu de bozardi.)
+   * Modelin kendi en uygun izleme mesafesi de bir ALT SINIR sayiliyor:
+   * piksel araligi geregi o mesafeden yakina gelinemez, gelinirse tek tek
+   * pikseller secilir. Formule eklenen tek sart bu.
+   */
+  const OTO_EN_AZ_M = 3
+  const OTO_EN_COK_M = 22
+  const otoIzlemeM = useMemo(() => {
+    const baskin = Math.max(tasarimWm, tasarimHm)
+    const modelin = viewingDistanceFor(selectedModel, cols, rows) || 0
+    const ham = Math.max(baskin * 4.5, modelin)
+    return Math.min(OTO_EN_COK_M, Math.max(OTO_EN_AZ_M, ham))
+  }, [tasarimWm, tasarimHm, selectedModel, cols, rows])
+
+  /** Yururlukteki mesafe: elle secildiyse o, yoksa otomatik hesap. */
+  const izlemeMesafesi = izlemeM != null ? izlemeM : otoIzlemeM
+
+  /*
+   * SAHNE YAKINLIGI — mesafenin arka plana yansimasi.
+   *
+   * Uzaklastikca kamera geri cekiliyor (zoom out), yaklastikca iceri
+   * giriyor. Sinirlar dar: 1,22 uzerinde fotograf cozunurlugunu kaybediyor,
+   * 0,84 altinda kenarlardan disari cikiyor.
+   *
+   * Yalnizca arka plan <img> ogesine uygulaniyor (bkz. PanoFoto). Kiosk,
+   * olcu etiketleri ve surukleme katmani ayni kaliyor; ekranin en-boy orani,
+   * modul hesabi ve icerik orani hicbir sekilde etkilenmiyor.
    */
   const sahneYakinlik = useMemo(() => {
     // Kendi fotoğrafı kırpılmadan gösteriliyor; orada yakınlaştırma yok.
     if (fotoSahne?.tamGorunsun) return 1
-    const TEMEL_M = 0.96
-    const oran = Math.max(tasarimWm / TEMEL_M, tasarimHm / TEMEL_M)
-    if (!(oran > 0)) return 1
-    return Math.max(EN_AZ_YAKINLIK, Math.min(1.28, 1.28 - Math.log2(oran) * 0.12))
-  }, [tasarimWm, tasarimHm])
-
-  /*
-   * İzleme mesafesinin görüntüye yansıması.
-   *
-   * Önerilen mesafede ekran birebir ölçekte durur (çarpan 1). Kullanıcı
-   * uzaklaştıkça ekran küçülür, yaklaştıkça büyür — mesafeyle ters orantılı,
-   * gerçek perspektifte olduğu gibi.
-   *
-   * Yalnızca EKRANIN ölçeğine uygulanıyor, arka plana değil: fotoğraf tek
-   * bir kareden ibaret, onu yakınlaştırmak çözünürlüğünü bozar; kendi
-   * fotoğrafında ise tamamının görünmesi gerektiği için zaten kırpılamaz.
-   * Yani değişen şey ekranın mekân içindeki görünen büyüklüğü.
-   */
-  const oneriIzlemeM = useMemo(
-    () => viewingDistanceFor(selectedModel, cols, rows) || 0,
-    [selectedModel, cols, rows],
-  )
-  const izlemeCarpani =
-    izlemeM > 0 && oneriIzlemeM > 0
-      ? Math.max(0.25, Math.min(4, oneriIzlemeM / izlemeM))
-      : 1
+    const ilerleme =
+      (izlemeMesafesi - OTO_EN_AZ_M) / (OTO_EN_COK_M - OTO_EN_AZ_M)
+    const zoom = 1.22 - ilerleme * 0.38
+    return Math.max(0.84, Math.min(1.22, zoom))
+  }, [fotoSahne, izlemeMesafesi])
 
   /*
    * FOTOĞRAFLI MEKÂNDA ÇİZİM ÖLÇEĞİ.
@@ -926,7 +926,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!fotoSahne?.dosya || !(ekranWm > 0) || !(ekranHm > 0)) return null
     const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
     if (!yer?.pxPerM) return null
-    const gercek = yer.pxPerM * sahneYakinlik * izlemeCarpani
+    /*
+     * Ekranin piksel olcegi fotografin kendi olceginden geliyor ve arka
+     * planin yakinligiyla CARPILMIYOR: zoom yalnizca arka plana ait.
+     */
+    const gercek = yer.pxPerM
     // Fotoğrafın tuvalde görünen kısmı: sığdırılmışta bantlar dışında kalan alan
     const alanW = Math.min(tuvalBoyut.w, yer.genislik * sahneYakinlik)
     const alanH = Math.min(tuvalBoyut.h, yer.yukseklik * sahneYakinlik)
@@ -1891,30 +1895,51 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   Varsayılanı modelin önerilen mesafesi; artırınca ekran
                   uzaktan bakılmış gibi küçülür.
                 */}
-                {surukleAktif && oneriIzlemeM > 0 && (
-                  <div className="mt-2">
+                {surukleAktif && (
+                  <div className="mt-2 border border-neutral-200 dark:border-[#2c333f] rounded-lg p-2.5">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-[15px] text-neutral-600 dark:text-neutral-400">
                         {t('scene.viewDist')}
                       </span>
-                      <Stepper
-                        value={izlemeM ?? oneriIzlemeM}
-                        onChange={setIzlemeM}
-                        min={0.5}
-                        max={60}
-                        step={0.5}
-                        decimals={1}
-                      />
+                      {izlemeM == null ? (
+                        <span className="text-[15px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-200">
+                          {izlemeMesafesi.toFixed(1).replace('.', ',')} m
+                        </span>
+                      ) : (
+                        <Stepper
+                          value={izlemeM}
+                          onChange={setIzlemeM}
+                          min={1}
+                          max={60}
+                          step={0.5}
+                          decimals={1}
+                        />
+                      )}
                     </div>
-                    {izlemeM != null && (
-                      <button
-                        type="button"
-                        onClick={() => setIzlemeM(null)}
-                        className="mt-1.5 w-full py-1.5 rounded-lg text-[13px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-500 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                      >
-                        {t('scene.viewDistReset')}
-                      </button>
-                    )}
+                    <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                      {t('scene.viewDistHint')}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
+                        {t('scene.viewDistAuto')}
+                      </span>
+                      <div className="flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                        {[true, false].map((oto) => (
+                          <button
+                            key={String(oto)}
+                            type="button"
+                            onClick={() => setIzlemeM(oto ? null : +izlemeMesafesi.toFixed(1))}
+                            className={`px-3 py-1.5 text-[14px] transition-colors ${
+                              (izlemeM == null) === oto
+                                ? 'bg-brand text-white'
+                                : 'text-neutral-600 dark:text-neutral-400 hover:text-brand'
+                            }`}
+                          >
+                            {t(oto ? 'scene.on' : 'scene.off')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
 
