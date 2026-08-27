@@ -875,12 +875,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return Math.max(EN_AZ_YAKINLIK, Math.min(1.28, 1.28 - Math.log2(oran) * 0.12))
   }, [tasarimWm, tasarimHm])
 
-  const fotoOlcek =
-    // Arka planı olmayan mekânda ölçek referansı yok; ekran serbest ölçülür
-    fotoSahne?.dosya && ekranWm > 0 && ekranHm > 0
-      ? (fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)?.pxPerM || 0) * sahneYakinlik ||
-        null
-      : null
+  /*
+   * FOTOĞRAFLI MEKÂNDA ÇİZİM ÖLÇEĞİ.
+   *
+   * Ölçek mekânın kendi ölçeğinden geliyor: 4 m'lik ekran, fotoğrafta 4 m'ye
+   * denk gelen kadar piksel kaplıyor. Ama tasarım mekândan büyükse bu, ekranın
+   * fotoğrafın dışına taşması demek — özellikle kendi fotoğrafında, çünkü orada
+   * fotoğraf tuvale sığdırıldığı için üstte ve altta bant kalıyor ve taşan ekran
+   * boşluğa çıkıyor.
+   *
+   * Bu yüzden ölçek, tasarımın (kiosk gövdesiyle birlikte) fotoğrafın içinde
+   * kalacağı değerle sınırlanıyor. Sınır devreye girdiğinde ekran artık birebir
+   * ölçekte değil; ama görünmeyen bir ekranın ölçeği de bir işe yaramıyor.
+   */
+  const fotoOlcek = (() => {
+    if (!fotoSahne?.dosya || !(ekranWm > 0) || !(ekranHm > 0)) return null
+    const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
+    if (!yer?.pxPerM) return null
+    const gercek = yer.pxPerM * sahneYakinlik
+    // Fotoğrafın tuvalde görünen kısmı: sığdırılmışta bantlar dışında kalan alan
+    const alanW = Math.min(tuvalBoyut.w, yer.genislik * sahneYakinlik)
+    const alanH = Math.min(tuvalBoyut.h, yer.yukseklik * sahneYakinlik)
+    const enCokW = (alanW * 0.94) / tasarimWm
+    // Yükseklikte kiosk gövdesine de pay bırakılıyor
+    const enCokH = (alanH * 0.82) / tasarimHm
+    return Math.min(gercek, enCokW, enCokH) || null
+  })()
   /*
    * SALON ölçeği. Salonun arka duvarı gerçek metre ölçüsünde çizildiği için
    * tuvale sığma hesabı da metre üzerinden yapılıyor — bkz. Salon.jsx.
@@ -950,9 +970,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       )
     : null
 
-  const mekanKayma = surukleAktif
-    ? { x: elleKayma.x + oneriKaymasi, y: elleKayma.y + oturmaKaymasi }
-    : null
+  /*
+   * EKRAN HER ZAMAN FOTOĞRAFIN İÇİNDE.
+   *
+   * Zemine oturtma kayması ekranı aşağı çekiyor; büyük tasarımlarda ekranın
+   * ÜSTÜ fotoğrafın dışına, kendi fotoğrafında da bantlara taşabiliyordu.
+   * Burada son bir sınır uygulanıyor: kioskun tamamı fotoğrafın çizildiği
+   * dikdörtgenin içinde kalıyor. Kiosk fotoğraftan uzunsa ortalanıyor —
+   * yarısını göstermektense tamamını göstermek daha faydalı.
+   */
+  const mekanKayma = (() => {
+    if (!surukleAktif) return null
+    const x = elleKayma.x + oneriKaymasi
+    let y = elleKayma.y + oturmaKaymasi
+    const yer = fotoYer
+    if (yer) {
+      const merkez = tuvalBoyut.h / 2
+      const fotoUst = Math.max(0, merkez + (yer.ust - merkez) * sahneYakinlik)
+      const fotoAlt = Math.min(
+        tuvalBoyut.h,
+        merkez + (yer.ust + yer.yukseklik - merkez) * sahneYakinlik,
+      )
+      const hPx = tasarimHm * (cizimOlcek || 0)
+      const govdeM = ayakVar ? 0.6 : 0
+      const govde = govdeM * (cizimOlcek || 0)
+      const ust = merkez - hPx / 2
+      const alt = merkez + hPx / 2 + govde
+      const toplam = alt - ust
+      if (toplam >= fotoAlt - fotoUst) {
+        y = (fotoUst + fotoAlt) / 2 - (ust + alt) / 2
+      } else {
+        y = Math.max(fotoUst + 4 - ust, Math.min(fotoAlt - 4 - alt, y))
+      }
+    }
+    return { x, y }
+  })()
 
 
   /*
