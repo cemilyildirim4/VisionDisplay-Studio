@@ -31,6 +31,17 @@ export default function PanoFoto({
   ekranWpx = 0,
   ekranHpx = 0,
   yakinlik = 1,
+  /*
+   * EKRANIN DIS HATTI (0..1 aralikta noktalar, App.jsx).
+   *
+   * Duz ekranda null. L tipinde ve kavislide ekran dikdortgen degildir;
+   * kasa duz bir kutu olarak cizilirse kirilmanin oldugu yerde ekranin
+   * disina tasar ve arkada siyah bir kama gorunur. Kasa ayni hatta
+   * kirpilarak bu duzeltiliyor.
+   */
+  ekranSekli = null,
+  /* Tasiyici direk L kosesinin altina gelsin diye (0..1). */
+  ayakOrani = 0.5,
   kayma = null,
   /* Ayaklar (direk + kaide) gizlenebiliyor; kasa ve gölge her hâlükârda kalır. */
   ayakVar = true,
@@ -84,6 +95,50 @@ export default function PanoFoto({
    * kaymayi aldigi icin ikisi birlikte iniyor.
    */
   const direk = direkH
+
+  /*
+   * KASA KIRPMASI — ekranin dis hatti kutuya oturtuluyor.
+   *
+   * Noktalar 0..1 araliginda ve EKRAN kutusuna gore; kasa kutusu her
+   * yandan `kasa` kadar daha buyuk oldugu icin ayni oranlar buyuk kutuya
+   * uygulaniyor. Sonuc: dis kenarlarda duzgun bir cerceve payi, kirilma
+   * yerinde ekranla ayni egim.
+   */
+  const kasaKirpma =
+    ekranSekli && ekranSekli.length > 2
+      ? `polygon(${ekranSekli
+          .map(([nx, ny]) => {
+            /*
+             * Kavisli ekranin dis hatti kutunun bir parmak disina tasabiliyor;
+             * kirpma kutunun disini zaten gostermedigi icin degerler araliga
+             * cekiliyor. L tipinde noktalar zaten aralikta, bir sey degismez.
+             */
+            const x = Math.max(0, Math.min(1, nx)) * (ekranWpx + kasa * 2)
+            const y = Math.max(0, Math.min(1, ny)) * (ekranHpx + kasa * 2)
+            return `${x.toFixed(2)}px ${y.toFixed(2)}px`
+          })
+          .join(', ')})`
+      : null
+
+  /* Direk ve kaidenin yatay merkezi — L kosesinin altina gelir. */
+  const ayakX = tuvalW / 2 + (ayakOrani - 0.5) * ekranWpx
+
+  /*
+   * DIREGIN UST UCU.
+   *
+   * Duz ekranda ekranin dibi (ekranAlt). L tipinde ise ekranin alt kenari
+   * kosede YUKARI kiriliyor; direk kutunun dibinden baslarsa aradaki kama
+   * bos kalir ve direk ekrana degmiyormus gibi gorunur. Bu yuzden dis hattin
+   * kosedeki alt noktasi bulunup direk oraya kadar uzatiliyor.
+   */
+  const direkUst = (() => {
+    if (!ekranSekli || ekranSekli.length < 3) return ekranAlt
+    const kutuUst = tuvalH / 2 - ekranHpx / 2
+    const yakinlar = ekranSekli.filter(([nx, ny]) => ny > 0.5 && Math.abs(nx - ayakOrani) < 0.03)
+    if (!yakinlar.length) return ekranAlt
+    const ny = Math.min(...yakinlar.map(([, y]) => y))
+    return Math.min(ekranAlt, kutuUst + Math.max(0, Math.min(1, ny)) * ekranHpx)
+  })()
 
   const tabanY = ekranAlt + direk + kaideH
   const metal = 'linear-gradient(180deg, #3a3f47 0%, #23272d 42%, #14171b 100%)'
@@ -171,9 +226,15 @@ export default function PanoFoto({
               width: ekranWpx + kasa * 2,
               height: ekranHpx + kasa * 2,
               background: metal,
-              borderRadius: Math.max(2, kasa * 0.35),
-              boxShadow:
-                'inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.5), 0 10px 26px rgba(0,0,0,0.35)',
+              /*
+               * Kirpma varken yuvarlak kose anlamsiz (kirpma zaten koseleri
+               * belirliyor) ve golge de kirpilirdi; duz ekranda ikisi de duruyor.
+               */
+              borderRadius: kasaKirpma ? 0 : Math.max(2, kasa * 0.35),
+              clipPath: kasaKirpma || undefined,
+              boxShadow: kasaKirpma
+                ? undefined
+                : 'inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.5), 0 10px 26px rgba(0,0,0,0.35)',
             }}
           />
 
@@ -188,10 +249,10 @@ export default function PanoFoto({
             <div
               style={{
                 position: 'absolute',
-                left: tuvalW / 2 - direkW / 2,
-                top: ekranAlt,
+                left: ayakX - direkW / 2,
+                top: direkUst,
                 width: direkW,
-                height: direk,
+                height: direk + (ekranAlt - direkUst),
                 background: metal,
               }}
             />
@@ -201,7 +262,7 @@ export default function PanoFoto({
                   key={k}
                   style={{
                     position: 'absolute',
-                    left: tuvalW / 2 + k * ekranWpx - direkW * 0.31,
+                    left: ayakX + k * ekranWpx - direkW * 0.31,
                     top: ekranAlt,
                     width: direkW * 0.62,
                     height: direk,
@@ -215,7 +276,7 @@ export default function PanoFoto({
             <div
               style={{
                 position: 'absolute',
-                left: tuvalW / 2 - (yanDestek ? 0.39 : 0.22) * ekranWpx,
+                left: ayakX - (yanDestek ? 0.39 : 0.22) * ekranWpx,
                 top: ekranAlt + direk,
                 width: (yanDestek ? 0.78 : 0.44) * ekranWpx,
                 height: kaideH,
@@ -231,7 +292,7 @@ export default function PanoFoto({
           <div
             style={{
               position: 'absolute',
-              left: tuvalW / 2 - ekranWpx * 0.62,
+              left: ayakX - ekranWpx * 0.62,
               top: tabanY - Math.max(4, ekranWpx * 0.025),
               width: ekranWpx * 1.24,
               height: Math.max(8, ekranWpx * 0.05),

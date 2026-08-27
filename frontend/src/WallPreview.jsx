@@ -881,7 +881,20 @@ export default function WallPreview({
          {showHumanM && (
   <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
 )}
-          <div className="relative">
+          {/*
+            ÇOKLU EKRANDA DA SÜRÜKLEME.
+            Kayma yalnızca tek ekran dalına uygulanıyordu; çoklu ekranda kiosk
+            gövdesi (PanoFoto) zemine iniyor, ekran ise tuvalin ortasında asılı
+            kalıyordu — ikisi birbirinden kopuyordu.
+          */}
+          <div
+            className="relative"
+            {...(tutamak || {})}
+            style={{
+              transform: kayma ? `translate(${kayma.x}px, ${kayma.y}px)` : undefined,
+              ...(tutamak ? tutamak.style : null),
+            }}
+          >
             {/* Sınırlayıcı duvar */}
             {/*
               Kavis VARSA kutu kırpmaz. Kavisli ekranın tuvali kendi şeridinden

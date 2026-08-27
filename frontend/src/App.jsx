@@ -818,6 +818,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return [...ust, ...alt]
   }, [cokluAktif, screens, cols, rows, screenType, curveAmount, tasarimWm, tasarimHm, cwM, chM])
 
+  /*
+   * KIOSK AYAĞININ YATAY YERİ (0..1, ekran kutusunda).
+   *
+   * L tipi ekran ortada bir köşe yapar; taşıyıcı direk o köşenin altına
+   * gelir, çünkü ağırlık orada toplanır ve iki kanat oradan ayrılır.
+   * Kanatların sütun sayısı farklıysa köşe ortada değildir, direk de
+   * ortada olmamalı. L yoksa değer 0,5 — yani eskisi gibi tam orta.
+   */
+  const ayakOrani = useMemo(() => {
+    const parcalar = cokluAktif
+      ? screens.map((s) => ({ cols: Math.max(1, s.cols), type: s.type || 'flat', leftCols: s.leftCols, rightCols: s.rightCols }))
+      : [{ cols: Math.max(1, cols), type: screenType || 'flat' }]
+    if (!(tasarimWm > 0)) return 0.5
+    const toplamCols = parcalar.reduce((a, s) => a + s.cols, 0)
+    if (!toplamCols) return 0.5
+    let gecen = 0
+    for (const s of parcalar) {
+      if (s.type === 'lshape') {
+        const lc = Math.max(1, s.leftCols || Math.ceil(s.cols / 2))
+        const rc = Math.max(1, s.rightCols || Math.max(1, s.cols - lc))
+        return (gecen + s.cols * (lc / (lc + rc))) / toplamCols
+      }
+      gecen += s.cols
+    }
+    return 0.5
+  }, [cokluAktif, screens, cols, screenType, tasarimWm])
+
   const mekanDuvarWm = Math.max(Number(width) || 0, tasarimWm)
   const mekanDuvarHm = Math.max(Number(height) || 0, tasarimHm)
   const panoOlcek =
@@ -1227,6 +1254,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               ekranHpx={tasarimHm * (cizimOlcek || 0)}
               /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
               ekranSekli={ekranSekli}
+              ayakOrani={ayakOrani}
               /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
               yakinlik={sahneYakinlik}
               kayma={mekanKayma}

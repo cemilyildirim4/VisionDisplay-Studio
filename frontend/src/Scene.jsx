@@ -39,6 +39,7 @@ export default function Scene({
   duvarWm,
   duvarHm,
   ekranSekli,
+  ayakOrani = 0.5,
   yakinlik = 1,
   kayma = null,
   /* Kullanicinin kendi fotografi — sahneler.js listesinde yok, disaridan gelir */
@@ -62,6 +63,8 @@ export default function Scene({
         ekranWpx={ekranWpx}
         ekranHpx={ekranHpx}
         yakinlik={yakinlik}
+        ekranSekli={ekranSekli}
+        ayakOrani={ayakOrani}
         kayma={kayma}
         ayakVar={ayakVar}
       />
