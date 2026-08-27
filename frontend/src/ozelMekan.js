@@ -23,6 +23,7 @@
 import { uygunYuzeyBul, zeminCizgisiBul } from './duvarBul.js'
 import { perspektifAcisi } from './aciBul.js'
 import { nesneHaritasi } from './nesneBul.js'
+import { derinlikHaritasi } from './derinlikBul.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
 export const VARSAYILAN_ALAN_M = 4
@@ -71,7 +72,6 @@ export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_
   }
 
   /*
-   * NESNE TANIMA (bkz. nesneBul.js). Model indirilemez ya da çalışmazsa
    * (eski tarayıcı, kesik bağlantı) sessizce eski sezgisel ölçütlere
    * dönülüyor — özellik kaybolur, uygulama durmaz.
    */
@@ -82,9 +82,21 @@ export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_
     nesneler = null
   }
 
+  /*
+   * DERİNLİK. Nesne tanıma 'ne olduğunu', derinlik 'nerede ve ne biçimde
+   * olduğunu' söylüyor. Yerleştirmenin asıl ölçütü ikincisi: düz bir yüzey
+   * mi, önünde bir şey var mı. İkisi de olmazsa eski sezgisel ölçütler.
+   */
+  let derinlik = null
+  try {
+    derinlik = await derinlikHaritasi(tuval)
+  } catch {
+    derinlik = null
+  }
+
   let yer = null
   try {
-    yer = uygunYuzeyBul(tuval, enBoy, { fotograf: true, zeminOran, nesneler })
+    yer = uygunYuzeyBul(tuval, enBoy, { fotograf: true, zeminOran, nesneler, derinlik })
   } catch {
     yer = null // okunamayan görüntü: öneri yok, orta kullanılır
   }
@@ -148,6 +160,7 @@ export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_
     /** Modelin fotoğrafta gördüğü nesneler — arayüz bunu kullanıcıya yazıyor. */
     nesneSayimi: nesneler ? nesneler.sayim : null,
     modelCalisti: !!nesneler,
+    derinlikCalisti: !!derinlik,
   }
 }
 

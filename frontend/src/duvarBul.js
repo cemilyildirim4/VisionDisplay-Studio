@@ -24,6 +24,8 @@
  * söylemez. Yaptığı şey, kalabalık olmayan bir yer önermek.
  */
 
+import { duzlemUyumu } from './derinlikBul.js'
+
 /** Çözümleme genişliği — daha büyüğü belirgin fayda vermeden yavaşlatıyor. */
 const COZUMLEME_W = 160
 
@@ -63,6 +65,10 @@ const EN_BUYUK_ORAN = 0.8
  *        "tavan" gibi kararlar vermek yanıltıcı olur.
  * @param {number|null} [secenekler.zeminOran] Zemin çizgisinin dikey yeri
  *        (0–1). Verilirse ekran zeminin altına konmaz.
+ * @param {object|null} [secenekler.derinlik] Derinlik haritasi (bkz.
+ *        derinlikBul.js). Verilirse 'burasi duz bir yuzey mi' ve 'onunde
+ *        bir sey var mi' sorulari GEOMETRIYLE cevaplaniyor; parlaklik ve
+ *        gradyan tahminleri ikinci plana dusuyor.
  * @param {object|null} [secenekler.nesneler] Sinir agindan gelen nesne
  *        haritasi (bkz. nesneBul.js): { w, h, engel, ekranKutusu }.
  *        Verilirse yerlestirme TAHMIN degil, BILGI ile yapilir: mobilya ve
@@ -74,6 +80,7 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
   const fotograf = !!secenekler.fotograf
   const zeminOran = secenekler.zeminOran != null ? secenekler.zeminOran : null
   const nesneler = secenekler.nesneler || null
+  const derinlik = secenekler.derinlik || null
   if (!kaynak || !(oran > 0)) return null
 
   const kaynakW = kaynak.videoWidth || kaynak.width
@@ -162,6 +169,14 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
 
   // 4) Aday pencereler
   let enIyi = null
+  /*
+   * Düzlem uydurma önbelleği. ARAMADAN ÖNCE tanımlanmak zorunda: arama
+   * döngüsü onu kullanan işlevi çağırıyor ve const bildirimleri hoisting ile
+   * erişilebilir olmuyor (ilk yazışımda buradaydı ve "Cannot access before
+   * initialization" hatası veriyordu; hata yutulduğu için de öneri sessizce
+   * boş dönüyordu).
+   */
+  const duzlemOnbellek = new Map()
   const adimSayisi = 5 // ölçek basamağı
 
   /*
@@ -176,7 +191,17 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
    * az güvenilir ve güven puanı buna göre düşürülüyor, ama "duvarın dokulu
    * bir yeri", "kadrajın ortası"ndan her zaman iyidir.
    */
-  const turlar = fotograf ? [1, 1.9] : [1]
+  /*
+   * DERİNLİK VARSA GÖRÜNTÜ EŞİĞİ GEVŞİYOR.
+   *
+   * Gradyan eşiği "burası düz mü" sorusunun tahmini cevabıydı. Derinlik
+   * geldiğinde aynı soruya geometriyle, çok daha doğru cevap veriliyor;
+   * gradyan eşiğini o zaman katı tutmak, dokulu ama dümdüz yüzeyleri
+   * (taş kaplama duvar, sıva, ahşap lambri) boşuna eliyor. Ölçtüm: şehir
+   * meydanı fotoğrafında 643 aday yalnızca dokusu yüzünden eleniyor ve
+   * geriye hiçbir aday kalmıyordu.
+   */
+  const turlar = !fotograf ? [1] : derinlik ? [2.2, 4] : [1, 1.9]
   let turCarpani = 1
 
   /*
@@ -193,12 +218,50 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
    */
   const ekranVar = !!nesneler?.ekranKutusu
   const kosullar = ekranVar ? [true, false] : [false]
-  disari: for (const ekranSart of kosullar) {
-    for (const carpan of turlar) {
-      turCarpani = carpan
-      enIyi = araTur(carpan, ekranSart)
-      if (enIyi) break disari
+
+  /*
+   * KISIT MERDİVENİ. Sırayla gevşetiliyor, ilk cevap bulunduğunda duruluyor:
+   *   1) her şey açık,
+   *   2) modelin ekran şartı kalkar,
+   *   3) yalnızca ZEMİN kuralı kalkar: büyük bir tasarımın dikdörtgeni zemin
+   *      çizgisini aşabilir. Gökyüzü, tavan ve kenar kuralları hep geçerli —
+   *
+   * gökyüzü derinlikte kusursuz bir düzlemdir ve gevşetilirse ekran göğe gider.
+   *
+   * Üçüncü basamak dar duvar kuşaklı fotoğraflar için: şehir meydanında
+   * adayların 551'i sırf alt kenarı zemin çizgisini geçtiği için eleniyor,
+   * geriye hiç aday kalmıyor ve ekran kadrajın ortasına düşüyordu.
+   */
+  let zeminEsnek = false
+  disari: for (const zeminKurali of [true, false]) {
+    zeminEsnek = !zeminKurali
+    for (const ekranSart of kosullar) {
+      for (const carpan of turlar) {
+        turCarpani = carpan
+        enIyi = araTur(carpan, ekranSart)
+        if (enIyi) break disari
+      }
     }
+  }
+
+  /*
+   * Düzlem uydurma aynı dikdörtgen için tekrar tekrar isteniyor (eleme ve
+   * puanlama). Sonuç önbelleğe alınıyor: arama yüz binlerce aday deniyor.
+   */
+  function duzlemDegeri(x, y, w, h) {
+    const anahtar = x + ',' + y + ',' + w + ',' + h
+    let d = duzlemOnbellek.get(anahtar)
+    if (!d) {
+      const ox = Math.round((x / W) * derinlik.w)
+      const oy = Math.round((y / H) * derinlik.h)
+      const ow = Math.max(2, Math.round((w / W) * derinlik.w))
+      const oh = Math.max(2, Math.round((h / H) * derinlik.h))
+      const sx = Math.min(ox, derinlik.w - ow)
+      const sy = Math.min(oy, derinlik.h - oh)
+      d = duzlemUyumu(derinlik, Math.max(0, sx), Math.max(0, sy), ow, oh)
+      duzlemOnbellek.set(anahtar, d)
+    }
+    return d
   }
 
   function araTur(carpan, ekranSart) {
@@ -227,7 +290,7 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
          */
         if (fotograf) {
           // Zeminin altı: kaide oraya oturur, ekran gövdesi değil.
-          if (zeminOran != null && (y + ph) / H > zeminOran + 0.04) continue
+          if (!zeminEsnek && zeminOran != null && (y + ph) / H > zeminOran + 0.04) continue
           /*
            * Zeminden ÇOK yukarısı da yanlış: dış mekân fotoğraflarında en düz
            * yer gökyüzüdür, iç mekânda tavana yakın boşluk. Ekran ya zeminde
@@ -244,6 +307,21 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
             const mavi = dikdortgenToplami(tm, W, x, y, pw, ph) / (pw * ph)
             if (mavi > 10) continue
           }
+
+          // Tavan şeridi ve kadrajın en dibi
+          if (y / H < 0.06 || (y + ph) / H > 0.97) continue
+          // Kadraj kenarına yapışık: yarısı dışarıda kalmış bir yüzeydir
+          const kenarPay = Math.max(2, Math.round(W * 0.02))
+          if (x < kenarPay || x + pw > W - kenarPay) continue
+        }
+
+        /*
+         * GEOMETRİ — kadraj kurallarından bağımsız, her zaman geçerli.
+         * Kısıt merdiveninin son basamağında zemin/gökyüzü/tavan kuralları
+         * kalkıyor; ama bir eşyanın üstüne ya da düz olmayan bir yüzeye
+         * yerleştirmek hiçbir durumda doğru değil.
+         */
+        if (fotograf) {
           /*
            * NESNENİN ÜSTÜ. Model bir sandalye, masa, saksı ya da insan
            * gördüyse orası odanın önündeki hacimdir; oraya konan ekran
@@ -254,11 +332,19 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
             const dolu = dikdortgenToplami(te, W, x, y, pw, ph) / (pw * ph)
             if (dolu > 0.08) continue
           }
-          // Tavan şeridi ve kadrajın en dibi
-          if (y / H < 0.06 || (y + ph) / H > 0.97) continue
-          // Kadraj kenarına yapışık: yarısı dışarıda kalmış bir yüzeydir
-          const kenarPay = Math.max(2, Math.round(W * 0.02))
-          if (x < kenarPay || x + pw > W - kenarPay) continue
+          /*
+           * DERİNLİK SINAMASI — asıl ölçüt bu.
+           *
+           * Yüzeye düzlem uyduruluyor: artık büyükse orası düz bir yüzey
+           * değil (mobilya yığını, bitki, kalabalık raf). Düzlemin önüne
+           * çıkan piksel varsa orada bir şey duruyor demektir — model onu
+           * adıyla tanımasa bile.
+           */
+          if (derinlik) {
+            const d = duzlemDegeri(x, y, pw, ph)
+            if (d.artik > 0.09) continue
+            if (d.onundeki > 0.22) continue
+          }
         }
 
         /*
@@ -374,6 +460,16 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
          * (ayaklı totem ya da normal yükseklikte asılmış panel) doğru kuşaktır;
          * yükseldikçe gökyüzüne/tavana doğru gider ve anlamını yitirir.
          */
+        /*
+         * DÜZLÜK PUANI: derinlik varsa gerçek geometriden, yoksa eskisi
+         * gibi görüntü gradyanından. İkisi aynı şeyi ölçmüyor; derinlik
+         * olan yerde onun sözü geçiyor.
+         */
+        const duzlem = derinlik ? duzlemDegeri(x, y, pw, ph) : null
+        const geometrikDuzluk = duzlem
+          ? Math.max(0, 1 - duzlem.artik / 0.09) * (1 - Math.min(1, duzlem.onundeki * 4))
+          : 0
+
         const zeminYakinlik =
           fotograf && zeminOran != null
             ? 1 - Math.min(1, Math.max(0, zeminOran - (y + ph) / H) / 0.45)
@@ -395,7 +491,8 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
           yatayUygunluk * 0.6 +
           cerceve * 3 +
           mevcutEkran * 2.6 +
-          zeminYakinlik * 0.8
+          zeminYakinlik * 0.8 +
+          geometrikDuzluk * 3.5
 
         if (!enIyi || puan > enIyi.puan) {
           enIyi = { x, y, w: pw, h: ph, duzluk, sacilim, parlaklik, puan }
