@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLang } from './useLang.js'
-import { TOPICS, FALLBACK, GREETING, findTopic, alanIlgili, enYakinKonu } from './helpTopics.js'
+import { TOPICS, FALLBACK, GREETING, findTopic, alanIlgili, enYakinKonu, olasiKonu, onayMi, devamMi } from './helpTopics.js'
 import { API_URL, apiFetch } from './apiClient.js'
-import { OBSERVATION_WRITE_ENABLED } from './featureFlags.js'
+import { CHAT_LOG_ENABLED } from './featureFlags.js'
 
 
 
@@ -21,6 +21,21 @@ export default function ChatHelp({ open, onClose }) {
   // Örnek sorular ilk açılışta görünür, ilk sorudan sonra kapanır
   const [showTips, setShowTips] = useState(true)
   const bodyRef = useRef(null)
+
+  /*
+   * SOHBETİN HAFIZASI — bir önceki mesaj unutulmuyor.
+   *
+   * Eskiden her mesaj tek başına değerlendiriliyordu. Sonuç:
+   *   • "şunu mu demek istediniz?" sorusuna "evet" yazan kullanıcı
+   *     "anlamadım" cevabı alıyordu (öneriyi tıklamak zorundaydı).
+   *   • "peki dış mekanda?" gibi önceki soruya bağlanan mesajlar hiçbir
+   *     konuya uymuyordu, çünkü tek başına anlamları yok.
+   *
+   * İki şey saklanıyor: son cevaplanan konu ve bekleyen öneri.
+   */
+  const sonKonuRef = useRef(null)
+  const sonSoruRef = useRef('')
+  const bekleyenOneriRef = useRef(null)
 
   // Dil değişince sohbet sıfırlanır — yarısı Türkçe yarısı İngilizce kalmasın
   useEffect(() => {
@@ -52,7 +67,22 @@ export default function ChatHelp({ open, onClose }) {
    * görüntüsündeki hata buydu.
    */
   const answer = (text, konu = null) => {
-    const topic = konu || findTopic(text, lang)
+    /*
+     * 1) Bekleyen bir öneri varsa ve kullanıcı "evet" diyorsa onu uygula.
+     * 2) Doğrudan eşleşme yoksa ve mesaj bir DEVAM sorusuysa (kendi başına
+     *    anlamı yok), önceki soruyla birleştirip tekrar dene; o da tutmazsa
+     *    son konunun cevabını ver — kullanıcı hâlâ onu konuşuyor.
+     */
+    let baglamNotu = null
+    if (!konu && bekleyenOneriRef.current && onayMi(text, lang)) {
+      konu = bekleyenOneriRef.current
+    }
+    let topic = konu || findTopic(text, lang)
+    if (!topic && !konu && sonKonuRef.current && (devamMi(text, lang) || onayMi(text, lang))) {
+      const birlesik = `${sonSoruRef.current} ${text}`.trim()
+      topic = findTopic(birlesik, lang) || sonKonuRef.current
+      baglamNotu = true
+    }
 
     /*
      * Cevap bulunamadıysa iki farklı yanıt veriyoruz:
@@ -65,7 +95,14 @@ export default function ChatHelp({ open, onClose }) {
      * Cevabı doğrudan vermiyoruz — "şunu mu demek istediniz?" diye soruyoruz,
      * kullanıcı onaylıyor. Yanlış tahmin böylece zararsız kalıyor.
      */
-    const tahmin = topic ? null : enYakinKonu(text, lang)
+    /*
+     * Konu kesinleşmediyse iki tahmin yolu denenir:
+     *   1) enYakinKonu — yazım hatası ("izlme mesafsi")
+     *   2) olasiKonu   — anlamca yakın ama emin olunamayan eşleşme
+     * Sonuç cevap olarak değil, onaylanacak bir SORU olarak sunulur.
+     */
+    const tahmin = topic ? null : enYakinKonu(text, lang) || olasiKonu(text, lang)
+    bekleyenOneriRef.current = tahmin ? tahmin.topic : null
     /*
      * Tahmin edilen konunun BAŞLIĞI kullanıcının yazdığının aynısıysa soru
      * sormanın anlamı yok — kullanıcı zaten onu sordu. Böyle durumda doğrudan
@@ -78,6 +115,13 @@ export default function ChatHelp({ open, onClose }) {
     const oneri = dogrudan ? null : tahmin
     const kutu = dogrudan || oneri ? null : alanIlgili(text) ? FALLBACK.related : FALLBACK.offTopic
     const reply = dogrudan ? dogrudan.a[lang] || dogrudan.a.tr : oneri ? null : kutu[lang] || kutu.tr
+    // Konuşma bağlamı: bir sonraki mesaj bunlara bakacak.
+    if (dogrudan) {
+      sonKonuRef.current = dogrudan
+      if (!baglamNotu) sonSoruRef.current = text
+      bekleyenOneriRef.current = null
+    }
+
     setMsgs((m) => [
       ...m,
       { who: 'me', text },
@@ -88,10 +132,12 @@ export default function ChatHelp({ open, onClose }) {
     setShowTips(false) // yer açılsın; kullanıcı isterse başlığa tıklayıp geri açar
 
     /*
-     * Development/beta: soruyu arka planda kaydet (SSS adayları).
-     * Canlıda yazma kapalı; sohbet yine yerel bilgi tabanıyla çalışır.
+     * Soruyu arka planda kaydet — canlıda da. Yönetim panelindeki
+     * "Sohbet Kayıtları" ve "Cevaplanamayan Soru" listeleri bunu kullanıyor;
+     * bilgi tabanı bu kayıtlara bakılarak büyütülüyor.
+     * Kayıt başarısız olsa bile sohbet aksamaz (catch boş).
      */
-    if (OBSERVATION_WRITE_ENABLED) {
+    if (CHAT_LOG_ENABLED) {
       apiFetch(`${API_URL}/api/chatlogs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -165,6 +165,13 @@ export default function ArView({
   const [mesgul, setMesgul] = useState(false)
   /* Cihaza kaydetme sayfası: kare + "Fotoğraflara kaydet" / "İndir" */
   const [kareSayfasi, setKareSayfasi] = useState(null)
+  /*
+   * iPhone'da indirilen dosya GALERİYE düşmüyor (Dosyalar › İndirilenler).
+   * Galeriye koymanın tek yolu paylaşma sayfasındaki "Görüntüyü Kaydet" —
+   * ama onu kendiliğinden açmak istemiyoruz. Bu yüzden kaydetme bildiriminin
+   * yanında, yalnızca iOS'ta, tek dokunuşluk bir kısayol duruyor.
+   */
+  const [galeriKare, setGaleriKare] = useState(null)
 
   /*
    * ────────────────────────────────────────────────────────────────────────
@@ -623,7 +630,7 @@ export default function ArView({
     // Elde TAZE kare varsa onu kullan (bkz. cekim): beklemesiz indirme.
     const veri = kareTaze() ? cekim : await yakala()
     if (!veri) return
-    const raporaGirdi = onSaved?.(veri)
+    const raporaGirdi = onSaved?.(veri, 'kamera')
 
     /*
      * BLOB URL — data: URL DEĞİL.
@@ -649,8 +656,24 @@ export default function ArView({
      * paylaşma sayfasıyla Fotoğraflar'a atılabiliyor ya da görsele basılı
      * tutup kaydedilebiliyor.
      */
-    if (indi) setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
-    else await kareSayfasiAc(veri, raporaGirdi)
+    if (indi) {
+      setBildirim(t(iosCihaz() ? 'shot.savedFiles' : raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+      setGaleriKare(iosCihaz() ? veri : null)
+    } else await kareSayfasiAc(veri, raporaGirdi)
+  }
+
+  /** Kareyi işletim sisteminin paylaşma sayfasına verir (iOS: Fotoğraflar). */
+  const galeriyeEkle = async (veri) => {
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const dosya = new File([blob], `ar-${model?.name || 'tasarim'}.jpg`, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+      }
+    } catch {
+      /* kullanıcı vazgeçti — dosya zaten inmişti */
+    }
+    setGaleriKare(null)
   }
 
   /** Kareyi ekranda açar; indirme bağlantısı için blob adresi hazırlar. */
@@ -665,6 +688,13 @@ export default function ArView({
       if (eski?.indirmeUrl) URL.revokeObjectURL(eski.indirmeUrl)
       return { veri, raporaGirdi, indirmeUrl }
     })
+  }
+
+  /** iPhone/iPad mi? (iPadOS kendini Mac gibi tanıtıyor, dokunma sayısına bakılıyor.) */
+  const iosCihaz = () => {
+    if (typeof navigator === 'undefined') return false
+    const p = navigator.platform || ''
+    return /iPhone|iPad|iPod/.test(p) || (/Mac/.test(p) && navigator.maxTouchPoints > 1)
   }
 
   /**
@@ -683,18 +713,18 @@ export default function ArView({
       return false
     }
 
-    // 1) Paylaşma sayfası — iOS'ta "Görüntüyü Kaydet" Fotoğraflar'a koyar.
-    try {
-      const dosya = new File([blob], ad, { type: 'image/jpeg' })
-      if (navigator.canShare?.({ files: [dosya] })) {
-        await navigator.share({ files: [dosya], title: t('ar.title') })
-        return true
-      }
-    } catch {
-      /* kullanıcı vazgeçtiyse ya da desteklenmiyorsa indirmeyi dene */
-    }
-
-    // 2) Klasik indirme — download özniteliği desteklenmiyorsa denemeyelim.
+    /*
+     * KAYDET HİÇBİR CİHAZDA PAYLAŞMA SAYFASI AÇMAZ.
+     *
+     * Bir ara iPhone'da paylaşma sayfası açılıyordu; oradaki "Görüntüyü
+     * Kaydet" kareyi Fotoğraflar'a koyuyor diye. Ama kullanıcı "Kaydet"
+     * dediğinde ek bir sayfayla uğraşmak istemiyor: dosya doğrudan insin,
+     * kare rapora girsin, o kadar. Paylaşmak isteyen için ayrı PAYLAŞ
+     * düğmesi zaten var.
+     *
+     * Sonuç: her cihazda <a download>. iPhone'da dosya Safari'nin
+     * İndirilenler klasörüne (Dosyalar uygulaması) iner.
+     */
     const a = document.createElement('a')
     if (!('download' in a)) return false
     const url = URL.createObjectURL(blob)
@@ -716,7 +746,27 @@ export default function ArView({
   const paylas = async () => {
     const veri = kareTaze() ? cekim : await yakala()
     if (!veri) return
-    const raporaGirdi = onSaved?.(veri) // paylaşılan kare de rapora girsin
+    const raporaGirdi = onSaved?.(veri, 'kamera') // paylaşılan kare de rapora girsin
+    /*
+     * PAYLAŞMA SAYFASI YALNIZCA BU DÜĞMEDE.
+     *
+     * Kaydet hiçbir cihazda paylaşma sayfası açmıyor (dosya doğrudan iniyor).
+     * Paylaşmak isteyen buraya basıyor: telefonda işletim sisteminin paylaşma
+     * sayfası açılıyor — iPhone'da oradaki "Görüntüyü Kaydet" kareyi
+     * Fotoğraflar'a da koyar. Desteklenmeyen tarayıcıda indirmeye düşüyor,
+     * yani düğme hiçbir cihazda ölü kalmıyor.
+     */
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const dosya = new File([blob], `ar-${model?.name || 'tasarim'}.jpg`, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+        setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+        return
+      }
+    } catch {
+      /* kullanıcı vazgeçti ya da desteklenmiyor — indirmeye düşülür */
+    }
     const indi = await cihazaKaydet(veri)
     if (indi) setBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
     else await kareSayfasiAc(veri, raporaGirdi)
@@ -1086,7 +1136,9 @@ export default function ArView({
                 alt=""
                 className="mt-4 w-full rounded-2xl border border-white/15"
               />
-              <p className="mt-3 mb-0 text-[12px] text-white/60">{t('shot.hint')}</p>
+              <p className="mt-3 mb-0 text-[12px] text-white/60">
+                {iosCihaz() ? t('shot.iosNote') : t('shot.hint')}
+              </p>
               {kareSayfasi.raporaGirdi && (
                 <p className="mt-1 mb-0 text-[12px] text-white/60">{t('shot.inReport')}</p>
               )}
@@ -1124,9 +1176,18 @@ export default function ArView({
 
         {bildirim && (
           <div className="absolute top-16 inset-x-0 z-50 flex justify-center px-6 pointer-events-none">
-            <p className="m-0 rounded-full bg-black/80 text-white text-[12.5px] font-semibold px-4 py-2 text-center shadow-lg">
-              {bildirim}
-            </p>
+            <div className="flex items-center gap-2 rounded-full bg-black/80 px-4 py-2 shadow-lg pointer-events-auto">
+              <p className="m-0 text-white text-[12.5px] font-semibold text-center">{bildirim}</p>
+              {galeriKare && (
+                <button
+                  type="button"
+                  onClick={() => galeriyeEkle(galeriKare)}
+                  className="shrink-0 rounded-full bg-white text-[#10141b] text-[12px] font-semibold px-3 py-1"
+                >
+                  {t('shot.toGallery')}
+                </button>
+              )}
+            </div>
           </div>
         )}
 

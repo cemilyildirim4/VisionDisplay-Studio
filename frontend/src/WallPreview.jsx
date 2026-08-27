@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
-import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, cabinetGridStyle, bezelPxFor, bezelGapStyle, L_KIRILMA_PCT } from './content.js'
+import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, L_KIRILMA_PCT } from './content.js'
 import { videoSrcFor } from './videoContent.js'
 import { useLang } from './useLang.js'
 
@@ -163,7 +163,7 @@ export function VideoLayer({ src, gw, gh, left, top, lit }) {
  */
 // AR/kamera ekranı da AYNI bileşeni kullanır: tasarım orada da birebir aynı
 // çizilsin, iki ayrı kod yolu birbirinden ayrı düşmesin diye dışa açıldı.
-export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols, cozunurlukRozeti = false }) {
+export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols }) {
   const nCols = Math.max(1, cols)
   const nRows = Math.max(1, rows)
   const isNone = content === 'none'
@@ -223,7 +223,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         cols={nCols}
         rows={nRows}
         resolution={resolution}
-        cozunurlukRozeti={cozunurlukRozeti}
         content={content}
         contentUrl={contentUrl}
         curveAmount={curveAmount}
@@ -252,8 +251,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     const leftW = wPx * (lCols / totalCols)
     const rightW = wPx - leftW
     const cw = (model?.widthMm || 500) / 1000
-    // Kabin birleşim çizgisi: boş çerçevede görünür gri, panelde çok soluk ışık teli
-    const gridLine = isNone ? 'rgba(100,116,139,0.28)' : undefined
     // Dikiş kenarının üstten/alttan içeri girme oranı (%). Köşenin derinlik hissi.
     const p = L_CORNER_PINCH_PCT
     // Her kanadın diyot dokusu kendi kabin ölçüsünden türer
@@ -262,18 +259,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     const rightDots = isNone || isLit ? null : ledDotSize(rightW / rCols, hPx / nRows)
     const leftClip = `polygon(0% 0%, 100% ${p}%, 100% ${100 - p}%, 0% 100%)`
     const rightClip = `polygon(0% ${p}%, 100% 0%, 100% 100%, 0% ${100 - p}%)`
-
-    const Grid = ({ cols_, wingW }) =>
-      !isNone && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            ...cabinetGridStyle(wingW / cols_, hPx / nRows, gridLine),
-          }}
-        />
-      )
 
     // İki kanadın birleşiminin dış hattı — alttaki dolgu katmanı bu şekle kırpılır
     const lYuzde = (leftW / wPx) * 100
@@ -338,7 +323,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           >
             {videoSrc && <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX} top={offsetY} lit={isLit} />}
             {leftDots && <LedDotsCanvas wPx={leftW} hPx={hPx} dotW={leftDots.dotW} dotH={leftDots.dotH} />}
-            <Grid cols_={lCols} wingW={leftW} />
             {/* Gölge katmanı kaldırıldı: görüntü düz ekrandakiyle aynı canlılıkta
                 kalmalı. Köşeyi zaten iki kanadın trapez kırpımı ve dikiş çizgisi
                 anlatıyor. */}
@@ -357,7 +341,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           >
             {videoSrc && <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX + leftW} top={offsetY} lit={isLit} />}
             {rightDots && <LedDotsCanvas wPx={rightW} hPx={hPx} dotW={rightDots.dotW} dotH={rightDots.dotH} />}
-            <Grid cols_={rCols} wingW={rightW} />
             {/* Gölge katmanı kaldırıldı — bkz. sol kanattaki not. */}
           </div>
         </div>
@@ -436,7 +419,6 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
   }
 
   // ---- DÜZ (ve boş çerçeve) ----
-  const showCabinetGrid = nCols * nRows > 1 && nCols * nRows <= 600
   const signal = resolution === 'UHD' ? { w: 3840, h: 2160 } : { w: 1920, h: 1080 }
   // model yoksa da çizim sürmeli: burada patlarsa tasarım katmanının TAMAMI
   // çizilmiyor ve kamerada hiçbir şey görünmüyordu.
@@ -452,13 +434,8 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
       groups.push({ left: (gx * dispCols) / nCols, top: (gy * dispRows) / nRows, width: wCells / nCols, height: hCells / nRows })
     }
   }
-  // Kabin birleşim çizgisi: boş çerçevede görünür gri, panelde çok soluk ışık teli
-  const lineColor = isNone ? 'rgba(100,116,139,0.28)' : undefined
   // Diyot dokusu kabin ölçüsünden türer → desen kabin sınırlarıyla hizalı olur
   const cabinetDots = ledDotSize(wPx / nCols, hPx / nRows)
-  // Video duvarı: paneller arasında fiziksel çerçeve payı (bezel) var.
-  // bezelMm yalnızca video duvarı panellerinde tanımlı; LED kabinlerde null.
-  const bezelPx = bezelPxFor(model?.bezelMm, wPx / nCols, model?.widthMm)
 
   return (
     <div
@@ -486,47 +463,31 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         <LedDotsCanvas wPx={wPx} hPx={hPx} dotW={cabinetDots.dotW} dotH={cabinetDots.dotH} />
       )}
 
-      {/* Kabin birleşimleri — tek katman gradyan (kenarlıklar üst üste binip
-          kalınlaşmıyor, çizgi saç teli inceliğinde ve çok soluk kalıyor). */}
-      {showCabinetGrid && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            ...(bezelPx
-              ? bezelGapStyle(wPx / nCols, hPx / nRows, bezelPx)
-              : cabinetGridStyle(wPx / nCols, hPx / nRows, lineColor)),
-          }}
-        />
-      )}
-
       {/* Cam parlaması — yayın yaparken ekranın camlı yüzeyinde ışık yansıması */}
       {!frameOnly && isLit && (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: LED_SHEEN }} />
       )}
 
-      {/* Çözünürlük rozeti — yalnızca yapılandırma önizlemesinde.
-          Bu rozet bir AYAR GÖSTERGESİ, ürünün parçası değil: tasarım yaparken
-          hangi çözünürlükte çalışıldığını hatırlatır. Kamera görünümünde,
-          3D sahnede ve PDF karesinde ekranın üstüne yapışmış bir etiket gibi
-          durduğu için oralarda çizilmiyor (cozunurlukRozeti varsayılan false;
-          data-pdf-gizle ile de PDF çekiminden düşüyor).
-          "Ölçüleri gizle" de bu rozeti kapatır: o düğme tasarımın üstündeki
-          bilgi katmanını temizlemek için var, rozet de o katmanın parçası. */}
-      {cozunurlukRozeti && !isNone && !hideRegions && groups.length > 0 && (
-        <span data-pdf-gizle className="absolute top-0.5 left-0.5 bg-brand text-white text-[9px] leading-none px-1 py-0.5 rounded-lg">
-          {resolution}
-        </span>
-      )}
     </div>
   )
 }
 
+/*
+ * ÖLÇÜ ETİKETİ.
+ *
+ * Görünme eşiği etiketin GERÇEK genişliğine göre: "0,34 m" 10 px yazıyla
+ * yaklaşık 46 piksel tutuyor. Eşik 30 iken dar şeritlerde etiketler
+ * komşularının üstüne biniyor ve üç ölçü iç içe geçmiş gibi duruyordu.
+ *
+ * Pay etiketleri (muted) sığmadığında gizleniyor; EKRANIN kendi ölçüsü ise
+ * her zaman yazılıyor — okunması gereken asıl sayı o.
+ */
+const ETIKET_EN_AZ = 50
+
 function SegH({ w, label, muted }) {
   return (
     <div style={{ width: w }} className="flex items-center justify-center shrink-0">
-      {w > 30 && (
+      {(!muted || w >= ETIKET_EN_AZ) && (
         <span className={`text-[10px] sm:text-[11px] leading-none px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
           {label}
         </span>
@@ -538,7 +499,7 @@ function SegH({ w, label, muted }) {
 function SegV({ h, label, muted }) {
   return (
     <div style={{ height: h }} className="flex items-center justify-center shrink-0">
-      {h > 30 && (
+      {(!muted || h >= ETIKET_EN_AZ) && (
         <span style={{ writingMode: 'vertical-rl' }} className={`text-[10px] sm:text-[11px] leading-none px-1 py-1.5 rounded-lg whitespace-nowrap max-h-[40vh] overflow-hidden ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
           {label}
         </span>
@@ -691,6 +652,15 @@ export default function WallPreview({
    * üstüne biniyordu. Bu pay kadar dışarı itiliyorlar.
    */
   sahnePayPx = 0,
+  /*
+   * FOTOGRAFLI MEKANDA SURUKLEME.
+   *
+   * Kayma ekranin kendisine degil, ekrani ve olcu etiketlerini bir arada
+   * tutan sarmalayiciya uygulanir: etiketler ve +/- dugmeleri ekranla
+   * birlikte gider, aralarindaki hiza bozulmaz.
+   */
+  kayma = null,
+  tutamak = null,
   /*
    * Sahnenin duvarının gerçek ölçüsü, { w, h } metre. Verilirse ÇİZİM ÖLÇEĞİ
    * buna sabitlenir: mekânın duvarı 6 m ise 3 m'lik ekran yarısını kaplar.
@@ -959,7 +929,6 @@ export default function WallPreview({
                 <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'flex-end' }}>
                   {placed.map((s, i) => (
                     <Screen
-                      cozunurlukRozeti={showMeasurements}
                       key={i}
                       wPx={s.wPx}
                       hPx={s.hPx}
@@ -1176,10 +1145,16 @@ export default function WallPreview({
             <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
           )}
 
-        <div className="relative">
+        <div
+          className="relative"
+          {...(tutamak || {})}
+          style={{
+            transform: kayma ? `translate(${kayma.x}px, ${kayma.y}px)` : undefined,
+            ...(tutamak ? tutamak.style : null),
+          }}
+        >
           <div style={{ width: wallW, height: wallH }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} flex items-center justify-center`}>
             <Screen
-              cozunurlukRozeti={showMeasurements}
               wPx={screenW}
               hPx={screenH}
               cols={nCols}

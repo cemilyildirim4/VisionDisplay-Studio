@@ -22,13 +22,72 @@
  * ────────────────────────────────────────────────────────────────────────────
  */
 
-import { fotoYerlesim } from './sahneler.js'
+import { fotoYerlesim, govdeOlculeri } from './sahneler.js'
 
-export default function PanoFoto({ sahne, tuvalW, tuvalH }) {
+export default function PanoFoto({
+  sahne,
+  tuvalW,
+  tuvalH,
+  ekranWpx = 0,
+  ekranHpx = 0,
+  yakinlik = 1,
+  kayma = null,
+  /* Ayaklar (direk + kaide) gizlenebiliyor; kasa ve gölge her hâlükârda kalır. */
+  ayakVar = true,
+}) {
   const yer = fotoYerlesim(sahne, tuvalW, tuvalH)
   if (!yer) return null
 
   const tasma = Math.max(2, Math.round(yer.panelWpx * 0.006))
+  const panelYariW = (sahne.panel.x1 - sahne.panel.x0) / 2
+  const panelYariH = (sahne.panel.y1 - sahne.panel.y0) / 2
+
+  /*
+   * KIOSK GOVDESI.
+   *
+   * Ekranin kendisini WallPreview ciziyor; burada onun ARKASINA ve ALTINA
+   * duran parcalar var: kasa, tasiyici direk, kaide ve zemin golgesi.
+   * Ekran tuvalin merkezine cizildigi icin hepsi merkeze gore konumlanir.
+   *
+   * Kasa kalinligi piksel ve SINIRLI: ekranla birlikte orantili buyuseydi
+   * 6 m lik bir ekranda yarim metrelik bir cerceve olurdu. Direk ve kaide
+   * ise gercek metre - mekanin kendi olceginden (yer.pxPerM) turuyor.
+   */
+  const kiosk = sahne.kiosk && ekranWpx > 0 && ekranHpx > 0
+  // Ekran arka planla birlikte olceklendigi icin kiosk govdesi de ayni oranda
+  const pxPerM = (yer.pxPerM || 1) * yakinlik
+  const kasa = Math.max(3, Math.min(14, ekranWpx * 0.014))
+  const ekranHm = ekranHpx / pxPerM
+  const { direkM, kaideM } = govdeOlculeri(ekranHm)
+  const direkH = direkM * pxPerM
+  const direkW = Math.min(0.45, Math.max(0.09, (ekranWpx / pxPerM) * 0.09)) * pxPerM
+  const kaideH = Math.max(2, kaideM * pxPerM)
+  const ekranAlt = tuvalH / 2 + ekranHpx / 2
+
+  /*
+   * KIOSK FOTOGRAFIN ICINDE KALSIN.
+   *
+   * Buyuk tasarimlarda ekran fotografin alt kenarindan tasabiliyor; ekranin
+   * tasmasi kasitli (mekan o kadar buyuk degil, bilgi bu), ama DIREK ve KAIDE
+   * fotografin disinda, bos zeminde asili kalinca kirik gorunuyordu. Govdenin
+   * dibi fotografin alt kenarini gecmiyor; gecmesi gerekiyorsa direk kisaliyor.
+   *
+   * Fotograf panelin merkezine gore olceklendigi icin alt kenarin yakinlik
+   * sonrasi yeri de ayni merkeze gore hesaplaniyor.
+   */
+  const panelMerkezY = tuvalH / 2
+  const fotoAlt = panelMerkezY + (yer.ust + yer.yukseklik - panelMerkezY) * yakinlik
+
+  /*
+   * Direk sabit boyda; kiosku zemine getiren sey App.jsx tarafindan
+   * uygulanan DIKEY KAYMA (bkz. zeminOturmaKaymasi). Ekran ve govde ayni
+   * kaymayi aldigi icin ikisi birlikte iniyor.
+   */
+  const direk = direkH
+
+  const tabanY = ekranAlt + direk + kaideH
+  const metal = 'linear-gradient(180deg, #3a3f47 0%, #23272d 42%, #14171b 100%)'
+  const yanDestek = ekranWpx / pxPerM > 2.5
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -52,6 +111,18 @@ export default function PanoFoto({ sahne, tuvalW, tuvalH }) {
               width: yer.genislik,
               height: yer.yukseklik,
               maxWidth: 'none',
+              /*
+               * Yakinlik yalnizca FOTOGRAFA uygulaniyor. Sahne kapsayicisina
+               * uygulansaydi olcu etiketleri ve denetimler de olceklenirdi.
+               * Olcegin merkezi panelin merkezi: yaklasirken ekranin durdugu
+               * nokta kadrajda yerinde kaliyor, mekan onun etrafinda aciliyor.
+               */
+              transform: `scale(${yakinlik})`,
+              transformOrigin: `${(sahne.panel.x0 + panelYariW) * yer.s}px ${
+                (sahne.panel.y0 + panelYariH) * yer.s
+              }px`,
+              transition: 'transform 420ms cubic-bezier(0.22, 1, 0.36, 1)',
+              willChange: 'transform',
             }}
           />
           {/*
@@ -80,6 +151,95 @@ export default function PanoFoto({ sahne, tuvalW, tuvalH }) {
           />
           )}
         </>
+      )}
+
+      {/* --- kiosk: kasa (ekranin arkasinda, kenarlardan tasar) ------- */}
+      {/*
+        Kiosk govdesi ekranla AYNI kaymayi aliyor: ekran WallPreview
+        tarafindan cizildigi icin ikisi ayri katmanda, ama tek parca
+        gorunmeleri gerekiyor.
+      */}
+      {kiosk && (
+        <div
+          style={{ position: 'absolute', inset: 0, transform: kayma ? `translate(${kayma.x}px, ${kayma.y}px)` : undefined }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              left: tuvalW / 2 - ekranWpx / 2 - kasa,
+              top: tuvalH / 2 - ekranHpx / 2 - kasa,
+              width: ekranWpx + kasa * 2,
+              height: ekranHpx + kasa * 2,
+              background: metal,
+              borderRadius: Math.max(2, kasa * 0.35),
+              boxShadow:
+                'inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.5), 0 10px 26px rgba(0,0,0,0.35)',
+            }}
+          />
+
+          {/*
+            AYAKLAR — kullanıcı gizleyebilir. Duvara asılan bir ekranın ayağı
+            olmaz; zorla çizilen direk o tasarımı yanlış gösterir. Gizlenince
+            ekranın dibi doğrudan zemine oturuyor (bkz. zeminOturmaKaymasi).
+          */}
+          {ayakVar && (
+            <>
+            {/* --- tasiyici direk(ler) --- */}
+            <div
+              style={{
+                position: 'absolute',
+                left: tuvalW / 2 - direkW / 2,
+                top: ekranAlt,
+                width: direkW,
+                height: direk,
+                background: metal,
+              }}
+            />
+            {yanDestek &&
+              [-0.3, 0.3].map((k) => (
+                <div
+                  key={k}
+                  style={{
+                    position: 'absolute',
+                    left: tuvalW / 2 + k * ekranWpx - direkW * 0.31,
+                    top: ekranAlt,
+                    width: direkW * 0.62,
+                    height: direk,
+                    background: metal,
+                    opacity: 0.92,
+                  }}
+                />
+              ))}
+
+            {/* --- kaide --- */}
+            <div
+              style={{
+                position: 'absolute',
+                left: tuvalW / 2 - (yanDestek ? 0.39 : 0.22) * ekranWpx,
+                top: ekranAlt + direk,
+                width: (yanDestek ? 0.78 : 0.44) * ekranWpx,
+                height: kaideH,
+                background: 'linear-gradient(180deg, #2a2e34 0%, #171a1e 60%, #0d0f12 100%)',
+                borderRadius: Math.max(1, kaideH * 0.15),
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
+              }}
+            />
+            </>
+          )}
+
+          {/* --- zemin golgesi --- */}
+          <div
+            style={{
+              position: 'absolute',
+              left: tuvalW / 2 - ekranWpx * 0.62,
+              top: tabanY - Math.max(4, ekranWpx * 0.025),
+              width: ekranWpx * 1.24,
+              height: Math.max(8, ekranWpx * 0.05),
+              background:
+                'radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0) 74%)',
+            }}
+          />
+        </div>
       )}
     </div>
   )

@@ -122,22 +122,13 @@ function panelPath(ctx, w, E, s = Math.max(1, STEP / 2)) {
   ctx.closePath()
 }
 
-function roundRectPath(ctx, x, y, w, h, r) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.arcTo(x + w, y, x + w, y + h, r)
-  ctx.arcTo(x + w, y + h, x, y + h, r)
-  ctx.arcTo(x, y + h, x, y, r)
-  ctx.arcTo(x, y, x + w, y, r)
-  ctx.closePath()
-}
-
 /**
  * DÜZ panel yüzeyini ara tuvale çizer: içerik + (kapalıysa) diyot dokusu +
  * satır çizgileri. Buradan çıkan tuval, hedefe dilimlenerek bükülür.
  */
 function yuzeyiCiz(w, h, o) {
-  const { contentType, img, imgSX, imgSY, imgSW, imgSH, showGrid, cols, rows } = o
+  // cols/rows: diyot dokusunun kabin olcusune gore siklastigi yer.
+  const { contentType, img, imgSX, imgSY, imgSW, imgSH, cols, rows } = o
   const { canvas, ctx } = araTuval(w, h)
   const isLit = contentType === 'image' || contentType === 'gradient'
   const gorselHazir = contentType === 'image' && isDrawable(img) && imgSW > 0 && imgSH > 0
@@ -174,23 +165,6 @@ function yuzeyiCiz(w, h, o) {
     paintLedDots(ctx, w, h, w / cols / LEDS_PER_CABINET_X, h / rows / LEDS_PER_CABINET_Y)
   }
 
-  /*
-   * SATIR çizgileri düz tuvalde yatay doğru; dilimlerle birlikte büküldükleri
-   * için hedefte kavisi kendiliğinden takip ederler. (Eskiden hedefte, her
-   * satır için genişlik boyunca nokta nokta eğri çiziliyordu.)
-   */
-  if (showGrid && rows > 1) {
-    ctx.strokeStyle = contentType === 'none' ? 'rgba(100,116,139,0.28)' : 'rgba(255,255,255,0.13)'
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    for (let r = 1; r < rows; r++) {
-      const y = Math.round((r / rows) * h) + 0.5
-      ctx.moveTo(0, y)
-      ctx.lineTo(w, y)
-    }
-    ctx.stroke()
-  }
-
   return canvas
 }
 
@@ -203,16 +177,14 @@ function yuzeyiCiz(w, h, o) {
  *   contentType : 'image' | 'gradient' | 'led' | 'none'
  *   img         : HTMLImageElement | HTMLVideoElement | null
  *   imgSX,imgSY,imgSW,imgSH : kaynak görselden kullanılacak dikdörtgen (çoklu ekran dilimi)
- *   showGrid    : boolean
  *   cols, rows  : kabin sayıları
- *   hideRegions : FHD/UHD rozetlerini gizle
- *   resolution  : 'FHD' | 'UHD'
- *   rozet       : çözünürlük rozeti çizilsin mi (tasarım ekranı: evet, AR: hayır)
+ *   hideRegions : sinyal bölgesi göstergelerini gizle
+ *   resolution  : 'FHD' | 'UHD' — sinyalin standardı; bölge sayısını belirler
  *   concave     : true = içe kavisli (konkav), false = dışa kavisli (konveks)
  *   bufferScale : ara tuvalin piksel yoğunluğu (varsayılan 1)
  */
 export function drawCurvedScreen(ctx, o) {
-  const { w, h, maxD, curve, contentType, showGrid, cols, rows, hideRegions, resolution, rozet = false, concave = false, bufferScale = 1 } = o
+  const { w, h, maxD, curve, contentType, cols, rows, hideRegions, resolution, concave = false, bufferScale = 1 } = o
 
   if (!(w > 0) || !(h > 0)) return
 
@@ -248,21 +220,7 @@ export function drawCurvedScreen(ctx, o) {
     ctx.drawImage(yuzey, x * bs, 0, Math.max(1, sw * bs), yuzeyH, x, top, sw + 0.6, bottom - top)
   }
 
-  // KOLON çizgileri dik: yüzeyle birlikte bükülemezler, hedefe çizilir.
-  if (showGrid && cols > 1) {
-    ctx.strokeStyle = contentType === 'none' ? 'rgba(100,116,139,0.28)' : 'rgba(255,255,255,0.13)'
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    for (let c = 1; c < cols; c++) {
-      const x = Math.round((c / cols) * w) + 0.5
-      const e = E(x)
-      ctx.moveTo(x, e.top)
-      ctx.lineTo(x, e.top + e.height)
-    }
-    ctx.stroke()
-  }
-
-  ctx.restore() // panel kırpması biter — rozet tam görünsün
+  ctx.restore() // panel kırpması biter
 
   /*
    * BOŞ ÇERÇEVE ("Resim Yok") DIŞ HATTI.
@@ -276,19 +234,5 @@ export function drawCurvedScreen(ctx, o) {
     ctx.lineWidth = 1
     ctx.stroke()
     ctx.restore()
-  }
-
-  // Çözünürlük rozeti — sol üstte tek; yalnız tasarım ekranında (kamerada değil).
-  if (!hideRegions && rozet) {
-    const bx = 3
-    const by = E(0).top + 3
-    ctx.font = '600 9px Poppins, system-ui, sans-serif'
-    ctx.textBaseline = 'middle'
-    const tw = ctx.measureText(resolution).width
-    ctx.fillStyle = '#2962ad' // marka mavisi (brand.js / index.css --color-brand)
-    roundRectPath(ctx, bx, by, tw + 8, 13, 2)
-    ctx.fill()
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText(resolution, bx + 4, by + 7)
   }
 }

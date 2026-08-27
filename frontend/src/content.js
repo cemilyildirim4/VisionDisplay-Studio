@@ -1,3 +1,14 @@
+/**
+ * Yüklenen GÖRSELİN üst sınırı (MB).
+ *
+ * Görsel sunucuya gitmiyor; videoda olduğu gibi tarayıcıda bir blob adresi
+ * olarak tutuluyor, yani sınır ağ değil bellek kaynaklı. 3 MB bugünün
+ * dosyaları için çok düşüktü: telefonla çekilmiş tek bir fotoğraf ya da
+ * ajanstan gelen basılı çözünürlükte bir görsel bile geçemiyordu.
+ * 60 MB, video için kabul ettiğimiz 250 MB'ın yanında rahat kalıyor.
+ */
+export const IMAGE_MAX_MB = 60
+
 // Varsayılan içerik görseli — public/default-content.jpg (kullanıcı bu dosyayı ekler)
 export const DEFAULT_CONTENT_SRC = '/default-content.jpg'
 
@@ -104,17 +115,6 @@ export const LED_LIT_FILTER = 'saturate(1.3) brightness(1.18) contrast(1.06)'
  */
 export const LED_SHEEN =
   'linear-gradient(168deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 18%, rgba(255,255,255,0) 42%)'
-
-/**
- * Kabin birleşim çizgileri.
- * Her hücreye ayrı kenarlık çizmek yerine tek katmanda gradyanla çizilir:
- * komşu kenarlıklar üst üste binip kalınlaşmaz, çizgi hep saç teli inceliğinde kalır.
- * Renk çok soluk — panel tek parça görünsün, birleşim sadece sezilsin.
- */
-export const cabinetGridStyle = (cellW, cellH, color = 'rgba(255,255,255,0.13)') => ({
-  backgroundImage: `linear-gradient(to right, ${color} 1px, transparent 1px), linear-gradient(to bottom, ${color} 1px, transparent 1px)`,
-  backgroundSize: `${cellW}px ${cellH}px`,
-})
 
 /**
  * VİDEO DUVARI çerçeve payı (bezel).

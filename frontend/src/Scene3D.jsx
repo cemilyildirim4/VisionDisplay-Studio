@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, Environment, Instances, Instance, ContactShadows } from '@react-three/drei'
+import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { USDZExporter } from 'three/examples/jsm/exporters/USDZExporter.js'
 import * as THREE from 'three'
@@ -76,58 +76,45 @@ const L_YARIM_ACI = Math.PI / 4
  * Tüm kabinler tek bir BufferGeometry'de birleştiriliyor (Instances bir kutuyu
  * paylaştığı için kabin başına farklı büküm veremezdi).
  */
-function esnekKabinGovdesi({ cabH, cabD, cols, rows, R, aci, konkav, bosluk }) {
+function esnekKabinGovdesi({ cabH, cabD, rows, R, aci, konkav }) {
   const totalH = rows * cabH
-  const adim = aci / cols
-  // Kenar boşluğu (bezel) açı cinsinden: yay boyunca sabit uzunluk kalsın
-  const acikPay = bosluk / R / 2
-  const yPay = bosluk / 2
+  const yAlt = -totalH / 2
+  const yUst = totalH / 2
+  // Yayı tek seferde böl: kabin sınırı yok, dolayısıyla dikiş de yok.
+  const dilim = Math.max(1, Math.ceil(aci / 0.035))
 
   const pos = []
   const idx = []
 
-  for (let c = 0; c < cols; c++) {
-    const a0 = -aci / 2 + c * adim + acikPay
-    const a1 = -aci / 2 + (c + 1) * adim - acikPay
-    // Kabin ne kadar dönüyorsa o kadar dilim: düşük kavislerde tek dilim yeter
-    const dilim = Math.max(1, Math.ceil((a1 - a0) / 0.035))
+  for (let i = 0; i <= dilim; i++) {
+    const a = -aci / 2 + (aci * i) / dilim
+    const on = yayNoktasi(a, R, konkav, cabD / 2)
+    const arka = yayNoktasi(a, R, konkav, -cabD / 2)
+    // Halka başına 4 köşe: ön-alt, ön-üst, arka-üst, arka-alt
+    pos.push(on.x, yAlt, on.z)
+    pos.push(on.x, yUst, on.z)
+    pos.push(arka.x, yUst, arka.z)
+    pos.push(arka.x, yAlt, arka.z)
+  }
 
-    for (let r = 0; r < rows; r++) {
-      const yAlt = r * cabH - totalH / 2 + yPay
-      const yUst = (r + 1) * cabH - totalH / 2 - yPay
-      const taban = pos.length / 3
-
-      for (let i = 0; i <= dilim; i++) {
-        const a = a0 + ((a1 - a0) * i) / dilim
-        const on = yayNoktasi(a, R, konkav, cabD / 2)
-        const arka = yayNoktasi(a, R, konkav, -cabD / 2)
-        // Halka başına 4 köşe: ön-alt, ön-üst, arka-üst, arka-alt
-        pos.push(on.x, yAlt, on.z)
-        pos.push(on.x, yUst, on.z)
-        pos.push(arka.x, yUst, arka.z)
-        pos.push(arka.x, yAlt, arka.z)
-      }
-
-      // Halkalar arası dört yüzey şeridi (ön, üst, arka, alt)
-      for (let i = 0; i < dilim; i++) {
-        const s = taban + i * 4
-        const n = s + 4
-        for (let k = 0; k < 4; k++) {
-          const a = s + k
-          const b = s + ((k + 1) % 4)
-          const c2 = n + ((k + 1) % 4)
-          const d = n + k
-          idx.push(a, b, c2, a, c2, d)
-        }
-      }
-
-      // İki uç kapak
-      const ilk = taban
-      const son = taban + dilim * 4
-      idx.push(ilk, ilk + 2, ilk + 1, ilk, ilk + 3, ilk + 2)
-      idx.push(son, son + 1, son + 2, son, son + 2, son + 3)
+  // Halkalar arası dört yüzey şeridi (ön, üst, arka, alt)
+  for (let i = 0; i < dilim; i++) {
+    const sIdx = i * 4
+    const n = sIdx + 4
+    for (let k = 0; k < 4; k++) {
+      const a = sIdx + k
+      const b = sIdx + ((k + 1) % 4)
+      const c2 = n + ((k + 1) % 4)
+      const d = n + k
+      idx.push(a, b, c2, a, c2, d)
     }
   }
+
+  // İki uç kapak
+  const ilk = 0
+  const sonHalka = dilim * 4
+  idx.push(ilk, ilk + 2, ilk + 1, ilk, ilk + 3, ilk + 2)
+  idx.push(sonHalka, sonHalka + 1, sonHalka + 2, sonHalka, sonHalka + 2, sonHalka + 3)
 
   const g = new THREE.BufferGeometry()
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
@@ -251,25 +238,23 @@ function DuzDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, uvOffset 
   const totalW = cols * cabW
   const totalH = rows * cabH
 
-  const positions = useMemo(() => {
-    const arr = []
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        arr.push([c * cabW - totalW / 2 + cabW / 2, r * cabH - totalH / 2 + cabH / 2, 0])
-      }
-    }
-    return arr
-  }, [cols, rows, cabW, cabH, totalW, totalH])
-
+  /*
+   * GOVDE TEK PARCA.
+   *
+   * Her kabin ayri bir kutu olarak ciziliyordu; kutular bitisik olsa bile
+   * komsu yuzeyler birlesim yerinde ince cizgiler olusturuyor ve ekranin
+   * arkasi parcali gorunuyordu. Govde artik ekranin tamami kadar tek bir
+   * kutu: hicbir birlesim izi kalmiyor.
+   *
+   * Kabin sayisi Teknik Ozellikler'de yaziyor; 3D sahnenin isi tasarimi
+   * butun gostermek.
+   */
   return (
     <group>
-      <Instances limit={Math.max(1, positions.length)} range={positions.length}>
-        <boxGeometry args={[cabW - (showBezels ? 0.003 : 0), cabH - (showBezels ? 0.003 : 0), cabD]} />
+      <mesh>
+        <boxGeometry args={[totalW, totalH, cabD]} />
         <meshStandardMaterial roughness={0.55} metalness={0.15} color="#12151c" />
-        {positions.map((p, i) => (
-          <Instance key={i} position={p} />
-        ))}
-      </Instances>
+      </mesh>
 
       <mesh position={[(payR - payL) / 2, 0, cabD / 2 + 0.002]}>
         <planeGeometry args={[totalW + payL + payR, totalH]} />
@@ -308,14 +293,12 @@ function KavisliDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, curve
       esnekKabinGovdesi({
         cabH,
         cabD,
-        cols,
         rows,
         R,
         aci,
         konkav,
-        bosluk: showBezels ? 0.003 : 0,
       }),
-    [cabH, cabD, cols, rows, R, aci, konkav, showBezels],
+    [cabH, cabD, rows, R, aci, konkav],
   )
 
   useEffect(() => () => govde.dispose(), [govde])
@@ -551,7 +534,12 @@ function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, scre
     texture.needsUpdate = true
   })
 
-  const showBezels = detailLevel === 'high'
+  /*
+   * Kabin araligi 3D'de de cizilmiyor: govde tek parca gorunsun.
+   * Yuksek detayda kabinler arasinda 3 mm bosluk birakiliyordu ve ekranin
+   * arkasi parcali duruyordu. Tasarim her yerde butun gorunmeli.
+   */
+  const showBezels = false
 
   // Çoklu ekran: şerit üzerinde konumlar
   const yerlesim = useMemo(() => {
@@ -1015,6 +1003,9 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
   const [asama, setAsama] = useState('yerlestir')
   /* Kaydetme/paylaşma sonrası kısa onay yazısı — kameradakiyle aynı */
   const [arBildirim, setArBildirim] = useState(null)
+  /* iOS'ta indirilen dosya galeriye düşmüyor; bildirimin yanındaki kısayolun
+     paylaşacağı kare (bkz. galeriyeEkleAr). */
+  const [galeriKareAr, setGaleriKareAr] = useState(null)
 
   /*
    * EL ANİMASYONU (model-viewer'ın etkileşim ipucu) SÜREKLİ DÖNÜYORDU.
@@ -1219,22 +1210,54 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     const mv = mvRef.current
     if (!mv?.toDataURL) return
     const veri = mv.toDataURL('image/jpeg', 0.92)
-    const raporaGirdi = onSaved?.(veri)
+    const raporaGirdi = onSaved?.(veri, 'ar')
+    /*
+     * ÖNCE PAYLAŞMA SAYFASI, SONRA İNDİRME.
+     *
+     * Telefonda aranan yer Fotoğraflar; <a download> ise iOS'ta dosyayı
+     * Dosyalar'a koyuyor ya da hiç indirmiyor. Paylaşma sayfasındaki
+     * "Görüntüyü Kaydet" kareyi doğrudan Fotoğraflar'a atıyor.
+     * (Kameradaki Kaydet ile aynı sıra — bkz. ArView/cihazaKaydet.)
+     */
+    const ad = 'ar-' + (model?.name || 'tasarim') + '.jpg'
+    // Paylaşma sayfası AÇILMAZ — her cihazda doğrudan indirme.
+    // (Kameradaki Kaydet ile aynı davranış; bkz. ArView/cihazaKaydet.)
     try {
       const blob = await (await fetch(veri)).blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'ar-' + (model?.name || 'tasarim') + '.jpg'
+      a.download = ad
       document.body.appendChild(a)
       a.click()
       a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 60000)
     } catch {
-      /* indirme engellendiyse kare yine rapora girmiş olur */
+      /* kullanıcı vazgeçti ya da indirme engellendi — kare yine rapora girdi */
     }
-    setArBildirim(t(raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+    // iOS'ta dosya galeriye değil Dosyalar'a iner; tek dokunuşluk kısayol
+    // bildirimin yanında duruyor (kamera ekranındakiyle aynı).
+    const ios =
+      typeof navigator !== 'undefined' &&
+      (/iPhone|iPad|iPod/.test(navigator.platform || '') ||
+        (/Mac/.test(navigator.platform || '') && navigator.maxTouchPoints > 1))
+    setArBildirim(t(ios ? 'shot.savedFiles' : raporaGirdi ? 'ar.savedNote' : 'ar.savedOnlyNote'))
+    setGaleriKareAr(ios ? veri : null)
   }, [model, onSaved, t])
+
+  /** Kareyi paylaşma sayfasına verir — iOS'ta "Görüntüyü Kaydet" galeriye koyar. */
+  const galeriyeEkleAr = useCallback(async (veri) => {
+    try {
+      const blob = await (await fetch(veri)).blob()
+      const dosya = new File([blob], 'ar-' + (model?.name || 'tasarim') + '.jpg', { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [dosya] })) {
+        await navigator.share({ files: [dosya], title: t('ar.title') })
+      }
+    } catch {
+      /* kullanıcı vazgeçti — dosya zaten inmişti */
+    }
+    setGaleriKareAr(null)
+  }, [model, t])
 
   /*
    * PAYLAŞ — o anki görüntüyü işletim sisteminin paylaşma sayfasına verir
@@ -1245,7 +1268,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     const mv = mvRef.current
     if (!mv?.toDataURL) return
     const veri = mv.toDataURL('image/jpeg', 0.92)
-    onSaved?.(veri) // paylaşılan kare de rapora girsin
+    onSaved?.(veri, 'ar') // paylaşılan kare de rapora girsin
     const ad = `ar-${model?.name || 'tasarim'}.jpg`
     try {
       const blob = await (await fetch(veri)).blob()
@@ -1473,9 +1496,18 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           {/* Kaydetme onayı — kameradakiyle aynı yazı ve aynı davranış */}
           {arBildirim && (
             <div className="absolute top-14 inset-x-0 z-30 flex justify-center px-6 pointer-events-none">
-              <p className="m-0 rounded-full bg-black/85 text-white text-[12.5px] font-semibold px-4 py-2 text-center shadow-lg">
-                {arBildirim}
-              </p>
+              <div className="flex items-center gap-2 rounded-full bg-black/85 px-4 py-2 shadow-lg pointer-events-auto">
+                <p className="m-0 text-white text-[12.5px] font-semibold text-center">{arBildirim}</p>
+                {galeriKareAr && (
+                  <button
+                    type="button"
+                    onClick={() => galeriyeEkleAr(galeriKareAr)}
+                    className="shrink-0 rounded-full bg-white text-[#10141b] text-[12px] font-semibold px-3 py-1"
+                  >
+                    {t('shot.toGallery')}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -1509,7 +1541,51 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
               interaction-prompt-threshold="0"
               shadow-intensity="1"
               style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
-            />
+            >
+              {/*
+                YERLEŞTİRME İPUCU (WebXR).
+
+                model-viewer, yüzey aranırken "cihazı çevirin" anlamına gelen
+                bir el animasyonu gösteriyor. Ne demek istediği anlaşılmıyor ve
+                kullanıcı ekranda ne yapacağını bilmiyordu. Bu slot o ipucunun
+                yerine geçiyor: ne yapılacağını düz cümleyle söylüyor.
+
+                NOT: Bu yalnızca AR oturumu SAYFANIN İÇİNDE çalıştığında (WebXR,
+                Android) geçerli. iPhone'da Quick Look, bazı Android'lerde Scene
+                Viewer devreye giriyor; onlar işletim sistemine ait ayrı
+                ekranlar ve içlerine düğme/ipucu eklenemiyor.
+              */}
+              {/*
+                model-viewer'IN KENDİ AR ROZETİ GİZLENDİ.
+
+                Köşede duran küçük yuvarlak küp düğmesi model-viewer'ın
+                varsayılan AR düğmesiydi. Bizim büyük "Odanızda görüntüleyin"
+                düğmemiz aynı işi yapıyor (activateAR); ikisi yan yana durunca
+                küçük olan hem gereksiz hem de dokunulduğunda bazı cihazlarda
+                sessiz kalıyordu. Slot'a boş bir düğme koymak varsayılanı
+                değiştiriyor; activateAR() bundan etkilenmiyor.
+              */}
+              <button slot="ar-button" aria-hidden="true" tabIndex={-1} style={{ display: 'none' }} />
+
+              <div slot="ar-prompt" style={{ pointerEvents: 'none' }}>
+                <p
+                  style={{
+                    margin: 0,
+                    maxWidth: 300,
+                    padding: '10px 16px',
+                    borderRadius: 999,
+                    background: 'rgba(0,0,0,.72)',
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textAlign: 'center',
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {t('scene3d.arScan')}
+                </p>
+              </div>
+            </model-viewer>
 
             {/*
               JEST KATMANI — parmak/fare ile taşı, döndür, boyutlandır.

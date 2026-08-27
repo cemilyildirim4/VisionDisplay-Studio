@@ -248,6 +248,58 @@ const dict = {
   // ---------- Çözünürlük ----------
   'res.heading': { tr: 'Çözünürlük', en: 'Resolution', ar: 'الدقة' },
 
+  // ---------- Kamerada oturtma (taslak → çekim) ----------
+  'fit.title': { tr: 'Kamerada Oturt', en: 'Fit in Camera', ar: 'التركيب بالكاميرا' },
+  'fit.hint': {
+    tr: 'Taslağı istediğiniz yere getirin — parmakla taşıyın, iki parmakla büyütün. Sonra çekin.',
+    en: 'Move the outline where you want it — drag with one finger, pinch to resize. Then shoot.',
+    ar: 'حرّك المخطط إلى المكان المطلوب، ثم التقط الصورة.',
+  },
+  'fit.shoot': { tr: 'Çek', en: 'Shoot', ar: 'التقاط' },
+  'fit.shootHint': { tr: 'Tasarım taslağın yerine oturur', en: 'The design lands in the outline', ar: 'يحل التصميم مكان المخطط' },
+  'fit.working': { tr: 'Hazırlanıyor…', en: 'Working…', ar: 'جارٍ التحضير…' },
+  'fit.again': { tr: 'Yeniden çek', en: 'Retake', ar: 'إعادة الالتقاط' },
+  'fit.save': { tr: 'Kaydet', en: 'Save', ar: 'حفظ' },
+  'fit.saved': { tr: 'Kare indirildi ve rapora eklendi', en: 'Shot downloaded and added to the report', ar: 'تم تنزيل اللقطة وإضافتها إلى التقرير' },
+  'fit.saveFailed': { tr: 'Kare indirilemedi', en: 'Could not download the shot', ar: 'تعذّر تنزيل اللقطة' },
+  'fit.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
+  'fit.errCamera': { tr: 'Kamera açılamadı. Tarayıcı ayarlarından kamera iznini verip tekrar deneyin.', en: 'Could not open the camera. Allow camera access and try again.', ar: 'تعذّر فتح الكاميرا.' },
+  'fit.errShot': { tr: 'Kare alınamadı, tekrar deneyin.', en: 'Could not capture the shot, try again.', ar: 'تعذّر التقاط اللقطة.' },
+  'fit.open': { tr: 'Kamerada oturt', en: 'Fit in camera', ar: 'التركيب بالكاميرا' },
+  'fit.viewDist': { tr: 'Önerilen izleme mesafesi', en: 'Recommended viewing distance', ar: 'مسافة المشاهدة الموصى بها' },
+  'fit.asSeenFrom': { tr: 'Bu görünüm yaklaşık şu uzaklığa denk', en: 'This view is roughly the same as from', ar: 'هذا المنظر يعادل تقريبًا من' },
+  'fit.goBack': { tr: 'Biraz uzaklaşın', en: 'Step back a little', ar: 'ابتعد قليلًا' },
+  'fit.comeCloser': { tr: 'Biraz yaklaşabilirsiniz', en: 'You can step a little closer', ar: 'يمكنك الاقتراب قليلًا' },
+  'fit.goodDistance': { tr: 'Uygun mesafe', en: 'Good distance', ar: 'مسافة مناسبة' },
+  'fit.tooBig': { tr: 'Ekran kadraja sığmıyor — geri çekilin', en: 'The screen does not fit the frame — step back', ar: 'الشاشة لا تتسع في الإطار — ابتعد' },
+  'fit.snap': { tr: 'Önerilen mesafeye ayarla', en: 'Set to recommended distance', ar: 'اضبط على المسافة الموصى بها' },
+  'fit.distance': { tr: 'İzleme mesafesi', en: 'Viewing distance', ar: 'مسافة المشاهدة' },
+  'fit.distReset': { tr: 'Öneriye dön', en: 'Back to recommended', ar: 'العودة إلى الموصى به' },
+  'fit.distManual': { tr: 'elle', en: 'manual', ar: 'يدوي' },
+  'fit.lblDistance': { tr: 'Mesafe', en: 'Distance', ar: 'المسافة' },
+  'fit.lblReset': { tr: 'Öneri', en: 'Default', ar: 'الموصى به' },
+  'fit.lblFollow': { tr: 'Takip', en: 'Follow', ar: 'تتبع' },
+  'fit.auto': { tr: 'Otomatik yerleştir', en: 'Place automatically', ar: 'وضع تلقائي' },
+  'fit.follow': { tr: 'Otomatik takip', en: 'Auto follow', ar: 'تتبع تلقائي' },
+  'fit.followOn': { tr: 'açık', en: 'on', ar: 'مفعّل' },
+  'fit.followOff': { tr: 'kapalı', en: 'off', ar: 'معطّل' },
+  'fit.followHint': { tr: 'Kamerayı gezdirin — taslak uygun yüzeyi izler', en: 'Move the camera — the outline follows a suitable surface', ar: 'حرّك الكاميرا — يتبع المخطط سطحًا مناسبًا' },
+  'fit.followOffHint': { tr: 'Taslak elle taşındı; takip kapandı', en: 'Outline moved by hand; following is off', ar: 'تم تحريك المخطط يدويًا؛ التتبع متوقف' },
+  'fit.searching': { tr: 'Uygun yüzey aranıyor…', en: 'Looking for a suitable surface…', ar: 'يجري البحث عن سطح مناسب…' },
+  'fit.scanning': { tr: 'Uygun yer aranıyor…', en: 'Looking for a suitable spot…', ar: 'يجري البحث عن مكان مناسب…' },
+  'fit.autoDone': { tr: 'Uygun yüzey bulundu ve yerleştirildi', en: 'Suitable surface found and placed', ar: 'تم العثور على سطح مناسب ووضعه' },
+  'fit.autoNone': { tr: 'Uygun düz alan bulunamadı — kamerayı boş bir duvara doğrultup tekrar deneyin', en: 'No flat area found — aim at an empty wall and try again', ar: 'لم يُعثر على مساحة مستوية — وجّه الكاميرا نحو جدار فارغ وحاول مجددًا' },
+  'fit.distNote': {
+    tr: 'Uzaklık kameranın görüş açısından kestirilir, yaklaşıktır.',
+    en: 'The distance is estimated from the camera field of view and is approximate.',
+    ar: 'تُقدَّر المسافة من زاوية رؤية الكاميرا وهي تقريبية.',
+  },
+  'res.totalHint': {
+    tr: 'Seçtiğiniz modelin ve kabin düzeninin toplam piksel sayısı',
+    en: 'Total pixel count of the selected model and cabinet layout',
+    ar: 'إجمالي عدد البكسل للطراز وتخطيط الخزائن المحددين',
+  },
+
   // ---------- Yapılandırma ----------
   'conf.heading': { tr: 'Yapılandırma', en: 'Configuration', ar: 'التهيئة' },
   'conf.fitToWall': { tr: 'Duvara sığdır', en: 'Fit to wall', ar: 'ملاءمة الجدار' },
@@ -290,6 +342,28 @@ const dict = {
   'scene.cephe': { tr: 'Dış mekân', en: 'Outdoor', ar: 'خارجي' },
   'scene.pano': { tr: 'Açık hava panosu', en: 'Outdoor billboard', ar: 'لوحة خارجية' },
   'scene.customOff': { tr: 'Kapalı', en: 'Off', ar: 'معطّل' },
+  'scene.custom': { tr: 'Kendi fotoğrafım', en: 'My photo', ar: 'صورتي' },
+  'scene.legs': { tr: 'Kiosk ayağı', en: 'Kiosk stand', ar: 'قاعدة الكشك' },
+  'scene.legsOn': { tr: 'Görünsün', en: 'Show', ar: 'إظهار' },
+  'scene.legsOff': { tr: 'Gizle', en: 'Hide', ar: 'إخفاء' },
+  'scene.customAdd': { tr: 'Fotoğraf ekle', en: 'Add photo', ar: 'إضافة صورة' },
+  'scene.customChange': { tr: 'Fotoğrafı değiştir', en: 'Change photo', ar: 'تغيير الصورة' },
+  'scene.suggest': { tr: 'Önerilen yere koy', en: 'Use suggested spot', ar: 'ضعه في المكان المقترح' },
+  'scene.customWidth': { tr: 'Bu alan kaç metre?', en: 'How wide is this area?', ar: 'كم عرض هذه المنطقة؟' },
+  'scene.weakSuggest': {
+    tr: 'Uygun bir yüzey bulunamadı; ekran ortaya kondu. Sürükleyerek taşıyabilirsiniz.',
+    en: 'No suitable surface found; the screen was centred. You can drag it.',
+    ar: 'لم يتم العثور على سطح مناسب؛ تم توسيط الشاشة. يمكنك سحبها.',
+  },
+  'scene.customErr': {
+    tr: 'Yalnızca JPG, PNG veya WebP fotoğraf ekleyebilirsiniz.',
+    en: 'You can only add a JPG, PNG or WebP photo.',
+    ar: 'يمكنك إضافة صورة JPG أو PNG أو WebP فقط.',
+  },
+  'avm.title': { tr: 'AVM koridoru', en: 'Mall corridor', ar: 'ممر المركز التجاري' },
+  'scene.recenter': { tr: 'Ortala', en: 'Re-center', ar: 'توسيط' },
+  'scene.dragHint': { tr: 'sürükleyerek taşıyın', en: 'drag to move', ar: 'اسحب للتحريك' },
+  'dis.title': { tr: 'Şehir meydanı', en: 'City plaza', ar: 'ساحة المدينة' },
   'ar.tapToPlace': { tr: 'Yerleştirmek için dokunun', en: 'Tap to place', ar: 'انقر للوضع' },
   'ar.reset': { tr: 'Sıfırla', en: 'Reset', ar: 'إعادة تعيين' },
   'ar.share': { tr: 'Paylaş', en: 'Share', ar: 'مشاركة' },
@@ -317,6 +391,21 @@ const dict = {
     ar: 'إذا لم يبدأ التنزيل: اضغط مطولًا على الصورة ثم اختر «حفظ الصورة».',
   },
   'shot.inReport': { tr: 'Bu kare PDF raporuna eklendi.', en: 'This frame was added to the PDF report.', ar: 'أُضيفت هذه اللقطة إلى تقرير PDF.' },
+  /* iOS'ta indirilen dosya Fotoğraflar'a değil Dosyalar'a iner; galeriye
+     koymanın tek yolu paylaşma sayfasındaki "Görüntüyü Kaydet". Bu yüzden
+     kaydetme bildiriminin yanında tek dokunuşluk bir kısayol duruyor. */
+  'shot.toGallery': { tr: 'Galeriye ekle', en: 'Add to gallery', ar: 'إضافة إلى المعرض' },
+  'shot.savedFiles': {
+    tr: 'Kaydedildi — Dosyalar › İndirilenler. Galeri için:',
+    en: 'Saved to Files › Downloads. For the gallery:',
+    ar: 'حُفظت في الملفات › التنزيلات. للمعرض:',
+  },
+
+  'shot.iosNote': {
+    tr: 'iPhone/iPad: "Fotoğraflara kaydet" → açılan sayfadan "Görüntüyü Kaydet".',
+    en: 'iPhone/iPad: "Save to Photos" → then choose "Save Image" in the share sheet.',
+    ar: 'آيفون/آيباد: «الحفظ في الصور» ← ثم اختر «حفظ الصورة».',
+  },
   'shot.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
 
   'ar.savedOnlyNote': {
@@ -331,10 +420,13 @@ const dict = {
   // ---------- Yeni kare geldiğinde çıkan seçim ----------
   'frame.title': { tr: 'Bu kareyi rapora ekleyelim mi?', en: 'Add this frame to the report?', ar: 'هل نضيف هذه اللقطة إلى التقرير؟' },
   'frame.body': {
-    tr: 'Raporda zaten {n} kare var. Ne yapmak istersiniz?',
-    en: 'The report already has {n} frame(s). What would you like to do?',
-    ar: 'يحتوي التقرير بالفعل على {n} لقطة. ماذا تريد أن تفعل؟',
+    tr: 'Raporda zaten {n} {k} var. Ne yapmak istersiniz?',
+    en: 'The report already has {n} {k}. What would you like to do?',
+    ar: 'يحتوي التقرير بالفعل على {n} {k}. ماذا تريد أن تفعل؟',
   },
+  /* Kamera ve AR kareleri AYRI değerlendiriliyor: biri diğerini düşürmüyor. */
+  'frame.kindCamera': { tr: 'kamera karesi', en: 'camera frame(s)', ar: 'لقطة كاميرا' },
+  'frame.kindAr': { tr: 'AR karesi', en: 'AR frame(s)', ar: 'لقطة واقع معزز' },
   'frame.keepAll': { tr: 'Hepsi kalsın', en: 'Keep all of them', ar: 'الاحتفاظ بها جميعًا' },
   'frame.keepAllNote': {
     tr: 'Yeni kare diğerlerinin yanına eklenir; her biri rapora ayrı sayfa olur.',
@@ -343,9 +435,9 @@ const dict = {
   },
   'frame.replace': { tr: 'Yalnızca bu kalsın', en: 'Keep only this one', ar: 'الاحتفاظ بهذه فقط' },
   'frame.replaceNote': {
-    tr: 'Önceki kareler rapordan çıkarılır, yalnızca bu kare kalır.',
-    en: 'The earlier frames are removed and only this one remains.',
-    ar: 'تُزال اللقطات السابقة ولا تبقى سوى هذه.',
+    tr: 'Aynı türdeki önceki kareler çıkarılır; diğer türdeki kareler kalır.',
+    en: 'Earlier frames of the same kind are removed; frames of the other kind stay.',
+    ar: 'تُزال اللقطات السابقة من النوع نفسه، وتبقى لقطات النوع الآخر.',
   },
   'frame.discard': { tr: 'Bunu ekleme', en: 'Do not add this one', ar: 'لا تُضف هذه' },
   'frame.discardNote': {
@@ -357,6 +449,12 @@ const dict = {
     tr: 'Rapor en çok 6 kare alır; hepsini seçerseniz en eski kare düşer.',
     en: 'The report holds at most 6 frames; keeping all will drop the oldest one.',
     ar: 'يتسع التقرير لـ 6 لقطات كحد أقصى، وسيسقط الأقدم عند الاحتفاظ بالجميع.',
+  },
+  'frame.existing': { tr: 'Raporda şu an bunlar var', en: 'Currently in the report', ar: 'الموجود حاليًا في التقرير' },
+  'frame.otherKept': {
+    tr: 'Diğer türdeki kareler bu karardan etkilenmez.',
+    en: 'Frames of the other kind are not affected by this choice.',
+    ar: 'لا تتأثر لقطات النوع الآخر بهذا الاختيار.',
   },
   'frame.newLabel': { tr: 'Yeni kare', en: 'New frame', ar: 'اللقطة الجديدة' },
 
@@ -443,9 +541,9 @@ const dict = {
   },
   'content.none': { tr: 'Resim Yok', en: 'No Image', ar: 'بدون صورة' },
   'content.hint': {
-    tr: '* Yalnızca JPG veya PNG biçiminde, maksimum 3 MB',
-    en: '* JPG or PNG only, max 3 MB',
-    ar: '* JPG أو PNG فقط، بحد أقصى 3 ميغابايت',
+    tr: '* Yalnızca JPG veya PNG biçiminde, maksimum 60 MB',
+    en: '* JPG or PNG only, max 60 MB',
+    ar: '* JPG أو PNG فقط، بحد أقصى 60 ميغابايت',
   },
   'content.errFormat': {
     tr: 'Yalnızca JPG veya PNG formatı desteklenir.',
@@ -453,9 +551,9 @@ const dict = {
     ar: 'يُدعم تنسيق JPG أو PNG فقط.',
   },
   'content.errSize': {
-    tr: 'Dosya boyutu en fazla 3 MB olabilir.',
-    en: 'File size can be at most 3 MB.',
-    ar: 'الحد الأقصى لحجم الملف 3 ميغابايت.',
+    tr: 'Dosya boyutu en fazla 60 MB olabilir.',
+    en: 'File size can be at most 60 MB.',
+    ar: 'الحد الأقصى لحجم الملف 60 ميغابايت.',
   },
 
   // ---------- PDF ----------
@@ -519,6 +617,23 @@ const dict = {
   'scene3d.viewInAr': { tr: "AR'da Gör", en: 'View in AR', ar: 'عرض بالواقع المعزز' },
   'scene3d.hint': { tr: 'Sürükleyerek döndürün, tekerlek/iki parmakla yakınlaştırın.', en: 'Drag to rotate, scroll/pinch to zoom.', ar: 'اسحب للتدوير، قرّب بالتمرير أو بإصبعين.' },
   'scene3d.arExportError': { tr: '3D model oluşturulamadı. Cihazınız veya tarayıcınız desteklemiyor olabilir.', en: 'Could not generate the 3D model. Your device or browser may not support this.', ar: 'تعذر إنشاء النموذج ثلاثي الأبعاد. قد لا يدعمه جهازك أو متصفحك.' },
+  /* WebXR oturumunda model-viewer'ın "cihazı çevirin" ipucunun yerine geçer */
+  'scene3d.arScan': {
+    tr: 'Kamerayı zemine doğrultun, sonra yerleştirmek için ekrana dokunun.',
+    en: 'Point the camera at the floor, then tap the screen to place it.',
+    ar: 'وجّه الكاميرا نحو الأرض ثم انقر على الشاشة لوضعها.',
+  },
+  'scene3d.arInSession': {
+    tr: 'Yerleştirmek için dokunun · taşımak için sürükleyin · iki parmakla döndürüp boyutlandırın',
+    en: 'Tap to place · drag to move · two fingers to rotate and resize',
+    ar: 'انقر للوضع · اسحب للتحريك · بإصبعين للتدوير وتغيير الحجم',
+  },
+  'scene3d.arKeysNote': {
+    tr: 'Yön tuşlarıyla ince ayar bu ekranda; telefonun AR ekranı Apple/Google’a ait, oraya düğme eklenemiyor.',
+    en: 'Arrow-key fine tuning lives on this screen; the phone’s AR view belongs to Apple/Google and cannot take our buttons.',
+    ar: 'الضبط الدقيق بالأسهم موجود في هذه الشاشة؛ شاشة الواقع المعزز في الهاتف تخص Apple/Google ولا يمكن إضافة أزرارنا إليها.',
+  },
+
   'scene3d.arPlace': { tr: 'Odanızda görüntüleyin', en: 'View in your room', ar: 'اعرضه في غرفتك' },
   'scene3d.takePhoto': { tr: 'Fotoğraf çek', en: 'Take a photo', ar: 'التقاط صورة' },
   'scene3d.arHint': { tr: 'Kamerayı zemine doğrultun, ekranı sürükleyerek yerleştirin; iki parmakla döndürün ve boyutlandırın.', en: 'Point the camera at the floor, drag to place the screen; pinch to rotate and resize.', ar: 'وجّه الكاميرا نحو الأرض، اسحب لوضع الشاشة؛ استخدم إصبعين للتدوير وتغيير الحجم.' },

@@ -71,10 +71,40 @@ export default function Salon({
   const tavanY = cy - duvarH / 2
   const sahneY = cy + duvarH / 2 // duvarın zeminle birleştiği çizgi
 
+  /*
+   * TEK KAÇIŞ NOKTALI PERSPEKTİF — kaçış noktası tuvalin merkezi (cx, cy).
+   *
+   * ÖNCEKİ ÇİZİM TUTARSIZDI: tavan/zemin/yan duvarlar arka duvarın
+   * köşelerinden TUVALİN KÖŞELERİNE çekiliyordu. Bu, yatayda ve dikeyde
+   * FARKLI kaçış noktası demek — duvarın en/boy oranı tuvalinkine eşit
+   * olmadıkça (ki hiç olmuyor) oda kutu gibi değil, çarpık bir huni gibi
+   * görünüyordu. Tavandaki şeritler de bu yüzden hiçbir yerde birleşmiyordu.
+   *
+   * DOĞRUSU: ön çerçeve, arka duvarın kaçış noktası etrafında k katı
+   * büyütülmüş hâlidir. Böylece sekiz kenarın hepsi aynı noktada birleşir.
+   * k, ön çerçeve tuvali taşıracak kadar büyük seçiliyor; taşan kısım zaten
+   * görünmüyor (SVG tuvali kırpıyor).
+   */
+  const k = Math.max(tuvalW / duvarW, tuvalH / duvarH) * 1.06
+  const onSol = cx - (duvarW / 2) * k
+  const onSag = cx + (duvarW / 2) * k
+  const onUst = cy - (duvarH / 2) * k
+  const onAlt = cy + (duvarH / 2) * k
+
+  /** Arka duvar kenarındaki bir noktanın ön çerçevedeki karşılığı. */
+  const ileri = (x, y) => [cx + (x - cx) * k, cy + (y - cy) * k]
+
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       <svg className="absolute inset-0" width={tuvalW} height={tuvalH}>
         <defs>
+          {/* Şeritler tavanın dışına taşmasın (yan duvara binen çizgi
+              perspektifi bozar). */}
+          <clipPath id="salon-tavan-kirp">
+            <polygon
+              points={`${onSol},${onUst} ${onSag},${onUst} ${duvarSag},${tavanY} ${duvarSol},${tavanY}`}
+            />
+          </clipPath>
           <linearGradient id="salon-tavan" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#f2f4f7" />
             <stop offset="100%" stopColor="#dfe3ea" />
@@ -104,21 +134,21 @@ export default function Salon({
 
         {/* Tavan */}
         <polygon
-          points={`0,0 ${tuvalW},0 ${duvarSag},${tavanY} ${duvarSol},${tavanY}`}
+          points={`${onSol},${onUst} ${onSag},${onUst} ${duvarSag},${tavanY} ${duvarSol},${tavanY}`}
           fill="url(#salon-tavan)"
         />
         {/* Zemin */}
         <polygon
-          points={`0,${tuvalH} ${tuvalW},${tuvalH} ${duvarSag},${sahneY} ${duvarSol},${sahneY}`}
+          points={`${onSol},${onAlt} ${onSag},${onAlt} ${duvarSag},${sahneY} ${duvarSol},${sahneY}`}
           fill="url(#salon-zemin)"
         />
         {/* Yan duvarlar */}
         <polygon
-          points={`0,0 ${duvarSol},${tavanY} ${duvarSol},${sahneY} 0,${tuvalH}`}
+          points={`${onSol},${onUst} ${duvarSol},${tavanY} ${duvarSol},${sahneY} ${onSol},${onAlt}`}
           fill="url(#salon-duvar-sol)"
         />
         <polygon
-          points={`${tuvalW},0 ${duvarSag},${tavanY} ${duvarSag},${sahneY} ${tuvalW},${tuvalH}`}
+          points={`${onSag},${onUst} ${duvarSag},${tavanY} ${duvarSag},${sahneY} ${onSag},${onAlt}`}
           fill="url(#salon-duvar-sag)"
         />
         {/* Arka duvar */}
@@ -136,19 +166,41 @@ export default function Salon({
           gösteriyordu. Kalın ve parlak olunca dikkati ekrandan çaldıkları için
           ince ve sönük tutuldular.
         */}
-        {[-0.66, -0.4, -0.14, 0.14, 0.4, 0.66].map((o, i) => {
-          const onX = cx + o * tuvalW
-          const arkaX = cx + o * (duvarSag - duvarSol) * 0.55
-          const yari = tuvalW * 0.012
-          return (
-            <polygon
-              key={i}
-              points={`${onX - yari},0 ${onX + yari},0 ${arkaX + 1},${tavanY} ${arkaX - 1},${tavanY}`}
-              fill="#8ea0b8"
-              opacity="0.30"
-            />
-          )
-        })}
+        <g clipPath="url(#salon-tavan-kirp)">
+          {[0.18, 0.38, 0.62, 0.82].map((t, i) => {
+            /*
+             * Şerit, arka duvarın üst kenarındaki bir noktadan kaçış noktası
+             * doğrultusunda ÖNE uzatılır — yani odanın gerçek derinlik
+             * çizgisidir. Eskiden ön ucu tuvalin kenarına, arka ucu gelişigüzel
+             * bir orana konuyordu; hiçbiri kaçış noktasında birleşmiyordu.
+             */
+            const arkaX = duvarSol + t * (duvarSag - duvarSol)
+            const [onX, onY] = ileri(arkaX, tavanY)
+            const arkaYari = Math.max(0.6, (duvarSag - duvarSol) * 0.006)
+            const onYari = arkaYari * k
+            return (
+              <polygon
+                key={i}
+                points={`${onX - onYari},${onY} ${onX + onYari},${onY} ${arkaX + arkaYari},${tavanY} ${arkaX - arkaYari},${tavanY}`}
+                fill="#8ea0b8"
+                opacity="0.15"
+              />
+            )
+          })}
+        </g>
+
+        {/*
+          KÖŞE ÇİZGİLERİ — duvar/tavan/zemin birleşimleri.
+          Yüzeyler yalnızca renkle ayrılınca sınırlar belirsiz kalıyor ve göz
+          odayı kutu olarak okumuyordu. Dört köşe çizgisi de kaçış noktasında
+          birleştiği için derinliği doğrudan anlatıyor.
+        */}
+        <g stroke="#9aa6b8" strokeWidth="1" opacity="0.35" fill="none">
+          <polyline points={`${onSol},${onUst} ${duvarSol},${tavanY} ${duvarSag},${tavanY} ${onSag},${onUst}`} />
+          <polyline points={`${onSol},${onAlt} ${duvarSol},${sahneY} ${duvarSag},${sahneY} ${onSag},${onAlt}`} />
+          <line x1={duvarSol} y1={tavanY} x2={duvarSol} y2={sahneY} />
+          <line x1={duvarSag} y1={tavanY} x2={duvarSag} y2={sahneY} />
+        </g>
 
         {/* Ekranın duvara vuran soğuk ışığı */}
         <ellipse cx={cx} cy={cy} rx={wPx * 1.35} ry={hPx * 1.9} fill="url(#salon-isik)" />

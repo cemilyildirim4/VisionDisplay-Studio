@@ -36,6 +36,81 @@
 
 export const SAHNELER = [
   {
+    /*
+     * AVM KORIDORU.
+     *
+     * Panel, fotografta var olan bir yuzey degil - ekranin oturacagi yeri
+     * biz sectik: koridor zemininin ortasi. Alt kenari zemin cizgisine
+     * (fotograf yuksekliginin 0,62 orani) oturuyor.
+     *
+     * Metre karsiligi: bu derinlikte iki vitrin arasi koridor ~7 m ve
+     * fotograf genisliginin ~%55ini kapliyor, yani tam genislik ~12,75 m,
+     * 1 m ~ 88 piksel. Panel 3,00 x 1,80 m secildi.
+     */
+    id: 'avm',
+    kiosk: true, // kasa + direk + kaide cizilsin
+    zoomlu: true, // sahne yakinlasip uzaklasabiliyor (bkz. App.jsx sahneYakinlik)
+    ad: 'avm.title',
+    dosya: '/zoom-destekli-ic-mekan-led-ana-arka-plan.png',
+    kaynak: { w: 1672, h: 941 },
+    /*
+     * Panel, fotografta var olan bir yuzey degil: ekranin oturacagi yeri
+     * biz sectik. Alt kenari zemin cizgisine (0,78) oturuyor, merkezi
+     * kadrajin ortasinda.
+     *
+     * Metre karsiligi: arka duvar ~960 piksel ve yaklasik 12 m; duvar
+     * hizasinda 1 m ~ 80 piksel. Panelin durdugu yer daha yakin oldugu
+     * icin oradaki olcek ~110 piksel/m. Panel 4,00 x 2,40 m secildi.
+     */
+    panel: { x0: 616, y0: 338, x1: 1056, y1: 602 },
+    /*
+     * ZEMIN CIZGISI (kaynak piksel) — kiosk kaidesi hep buraya oturur.
+     *
+     * Panelin merkezinden 1,6 m asagida secildi (110 px/m ile 176 piksel).
+     * Sebep: ekran her zaman tuvalin merkezine ciziliyor, yani ekranin
+     * ORTASI sabit. Zemin buradan 1,6 m asagidayken 2 m lik bir ekranin
+     * altinda ~0,6 m luk makul bir direk kaliyor; kucuk bir totemde direk
+     * uzuyor, 4 m lik bir ekranda ise sifira inip kaide ekranin dibine
+     * geliyor. Fotografin kendi zemin dokusu da tam bu hizada basliyor.
+     */
+    zeminY: 646,
+    panelEnM: 4,
+    maskeli: false, // fotografta kendi LED yuzeyi yok
+  },
+  {
+    /*
+     * SEHIR MEYDANI (gece dis mekan).
+     *
+     * Zemin cizgisi kaldirim taslarinin ortasi (0,735). Metre karsiligi:
+     * alttaki alti seritlik yol ~20 m ve kadrajin tamamini kapliyor; yol
+     * daha yakin oldugu icin kaldirim hizasinda kadraj ~22 m eder,
+     * 1 m ~ 70 piksel. Panel 4,00 x 2,40 m.
+     */
+    id: 'meydan-gece',
+    kiosk: true, // kasa + direk + kaide cizilsin
+    zoomlu: true, // sahne yakinlasip uzaklasabiliyor (bkz. App.jsx sahneYakinlik)
+    ad: 'dis.title',
+    dosya: '/zoom-destekli-dis-mekan-led-ana-arka-plan.png',
+    kaynak: { w: 1672, h: 941 },
+    /*
+     * Zemin cizgisi: dosemenin ortasi (0,80). Metre karsiligi: tas duvar
+     * ~900 piksel ve on iki panelden olusuyor (~18 m), yani duvar
+     * hizasinda 1 m ~ 50 piksel; panelin durdugu daha yakin hizada
+     * ~75 piksel/m. Panel 4,00 x 2,40 m.
+     */
+    panel: { x0: 686, y0: 380, x1: 986, y1: 560 },
+    /*
+     * Zemin cizgisi: DOSEMENIN basladigi hiza, cali seridinin ALTI.
+     *
+     * Once 590 idi ve cali seridinin ustune denk geliyordu; kucuk bir kiosk
+     * calilarin uzerinde duruyormus gibi gorunuyordu. Kaldirim taslarinin
+     * basladigi yer 640 - kiosk artik dosemeye basiyor.
+     */
+    zeminY: 740,
+    panelEnM: 4,
+    maskeli: false,
+  },
+  {
     id: 'foto',
     ad: 'scene.foto', // i18n anahtarı
     dosya: '/pano-foto.jpg',
@@ -91,6 +166,23 @@ export const SAHNELER = [
   },
 ]
 
+/*
+ * PANELIN DIKEY YERI NEDEN FOTOGRAFIN ORTASINDA?
+ *
+ * Fotograf, panelin merkezi tuvalin merkezine gelecek sekilde konuyor ve
+ * tuvali kaplamak zorunda. Panel fotografin altina yakin oldugunda altta
+ * kalan pay kucuk kaliyor; o payin tuvalin alt yarisini kapatabilmesi icin
+ * fotografin cok buyutulmesi gerekiyor ve mekan taninmaz halde yakinlasiyor.
+ * Panel dikeyde ortaya alininca iki pay esitleniyor, gereken buyutme en aza
+ * iniyor ve fotografin tamami is goruyor.
+ *
+ * Ekranin ZEMINE oturmus gorunmesini panelin yeri degil, kiosk govdesi
+ * sagliyor (bkz. PanoFoto.jsx): direk ekranin altindan zemine kadar iniyor.
+ */
+
+/** Sahne yakinliginin alt siniri — App.jsx ile ayni deger olmali. */
+export const EN_AZ_YAKINLIK = 0.82
+
 export const sahneBul = (id) => SAHNELER.find((s) => s.id === id) || null
 
 /**
@@ -106,20 +198,131 @@ export function fotoYerlesim(sahne, tuvalW, tuvalH) {
   const { kaynak, panel, panelEnM } = sahne
   const panelW = panel.x1 - panel.x0
   const panelH = panel.y1 - panel.y0
-  // Panel ortalanınca kapatılması gereken paylar: karşılıklı payların büyüğü
-  const yatay = Math.max(panel.x0, kaynak.w - panel.x1)
-  const dikey = Math.max(panel.y0, kaynak.h - panel.y1)
-  const s = Math.max(tuvalW / (2 * yatay + panelW), tuvalH / (2 * dikey + panelH))
+  /*
+   * KAPLAMA HESABI — panelin merkezine gore.
+   *
+   * Fotograf, panelin merkezi tuvalin merkezine gelecek sekilde konuyor.
+   * O halde tuvalin alt yarisini kapatan sey, panelin merkezinin ALTINDA
+   * kalan fotograf payidir; ust yarisini kapatan da ustunde kalan pay.
+   * Ikisi farkli oldugunda belirleyici olan KUCUK olandir - buyugune gore
+   * hesaplanirsa kucuk taraf tuvale yetismez ve o kenarda bos serit kalir.
+   * (Panelleri fotografin ortasina yakin olan eski mekanlarda iki pay birbirine
+   * yakindi ve fark gorunmuyordu; zemine oturan panellerde alt pay cok kucuk
+   * oldugu icin altta beyaz bir serit olusuyordu.)
+   */
+  const merkezX = panel.x0 + panelW / 2
+  const merkezY = panel.y0 + panelH / 2
+  const yatay = Math.min(merkezX, kaynak.w - merkezX)
+  const dikey = Math.min(merkezY, kaynak.h - merkezY)
+  /*
+   * KAPSAMA PAYI.
+   *
+   * Zoomlu mekanlarda fotograf en genis acida (yakinlik 0,82) kuculuyor;
+   * tam kaplayacak olcekte cizilseydi o anda kenarlardan bos zemin gorunurdu.
+   * Fotograf bu yuzden bastan 1/0,82 kadar buyuk cizilir. Olcek bozulmuyor:
+   * px/m de ayni oranda buyudugu icin ekranin mekana orani sabit kaliyor.
+   */
+  const kapsama = sahne.zoomlu ? EN_AZ_YAKINLIK : 1
+
+  /*
+   * IKI YERLESTIRME BICIMI.
+   *
+   * Hazir mekanlarda fotograf tuvali KAPLAR (cover): kenarlardan kirpilir,
+   * bos serit kalmaz. Olculeri bize ait oldugu icin neyin kirpildigini
+   * biliyoruz.
+   *
+   * Kullanicinin kendi fotografinda ise kirpmak yanlis: hangi kismin
+   * onemli oldugunu bilmiyoruz ve ekleyen kisi fotografin TAMAMINI gormeyi
+   * bekliyor. Orada fotograf tuvale SIGDIRILIR (contain), ortalanir ve
+   * hicbir yakinlastirma uygulanmaz; ekran da onerilen yere konur.
+   */
+  const sigdir = !!sahne.tamGorunsun
+  const s = sigdir
+    ? Math.min(tuvalW / kaynak.w, tuvalH / kaynak.h)
+    : Math.max(tuvalW / 2 / yatay, tuvalH / 2 / dikey) / kapsama
+  const sol = sigdir ? (tuvalW - kaynak.w * s) / 2 : tuvalW / 2 - merkezX * s
+  const ust = sigdir ? (tuvalH - kaynak.h * s) / 2 : tuvalH / 2 - merkezY * s
   return {
     s,
+    sigdir,
     genislik: kaynak.w * s,
     yukseklik: kaynak.h * s,
-    sol: tuvalW / 2 - (panel.x0 + panelW / 2) * s,
-    ust: tuvalH / 2 - (panel.y0 + panelH / 2) * s,
+    sol,
+    ust,
+    /* Panelin merkezinin TUVALDEKI yeri — ekranin gitmesi gereken nokta. */
+    merkezXpx: sol + merkezX * s,
+    merkezYpx: ust + merkezY * s,
+    /* Zemin cizgisinin tuvaldeki yeri (varsa). */
+    zeminYpx: sahne.zeminY != null ? ust + sahne.zeminY * s : null,
     // Panelin tuvaldeki ölçüsü — ekran tam buraya oturur
     panelWpx: panelW * s,
     panelHpx: panelH * s,
     // Sahnenin gerçek ölçeği (bilgi amaçlı; ölçü etiketleri buna dayanmaz)
     pxPerM: (panelW * s) / panelEnM,
   }
+}
+
+/**
+ * KIOSK GOVDESININ OLCULERI — ekranin boyuna ORANTILI (metre).
+ *
+ * Once sabitti (0,40 m direk). Iki uctan da yanlisti: 12 cm lik bir masa
+ * ekraninda direk ekranin uc kati oluyor, 6 m lik bir billboardda ise
+ * gorunmez kaliyordu. Simdi ekran yuksekliginin ucte biri kadar, ama alt ve
+ * ust sinirlarla: cok kucukte kaybolmasin, cok buyukte bayrak diregine
+ * donmesin.
+ */
+export function govdeOlculeri(ekranHm) {
+  const h = ekranHm > 0 ? ekranHm : 1
+  return {
+    direkM: Math.max(0.08, Math.min(0.6, h * 0.33)),
+    kaideM: Math.max(0.03, Math.min(0.16, h * 0.07)),
+  }
+}
+
+/**
+ * Kiosku zemine oturtmak icin gereken DIKEY KAYMA (piksel).
+ *
+ * Ekran tuvalin merkezine ciziliyor; kaidenin fotografin zemin cizgisine
+ * denk gelmesi icin ekran + govde bu kadar asagi kaydirilir. Kayma ekrana da
+ * govdeye de ayni uygulanir, ikisi tek parca gibi hareket eder.
+ */
+export function zeminOturmaKaymasi(
+  sahne,
+  yer,
+  tuvalH,
+  yakinlik,
+  ekranHpx,
+  ayakVar = true,
+  ekranWpx = 0,
+) {
+  if (!sahne || sahne.zeminY == null || !yer) return 0
+  /*
+   * Fotograf, panelin merkezi etrafinda olcekleniyor; zemin cizgisinin
+   * yakinlik sonrasi yeri de o merkeze gore bulunuyor. Sigdirilmis
+   * (contain) fotografta yakinlik 1 oldugu icin ayni bagintiya donuyor.
+   */
+  const zeminPx = yer.merkezYpx + (yer.zeminYpx - yer.merkezYpx) * yakinlik
+  const pxPerM = yer.pxPerM * yakinlik
+  const ekranAlt = tuvalH / 2 + ekranHpx / 2
+  /*
+   * Ayaklar gizliyse ekranin DIBI zemine oturur. "Dibi" ekran alani degil,
+   * KASANIN alt kenari: gorunen sey o. Kasa kalinligi PanoFoto ile ayni
+   * kuraldan hesaplaniyor, yoksa ekran zeminin birkac piksel altina batiyor.
+   */
+  const { direkM, kaideM } = govdeOlculeri(ekranHpx / pxPerM)
+  const kasa = Math.max(3, Math.min(14, ekranWpx * 0.014))
+  const govde = ayakVar ? (direkM + kaideM) * pxPerM : kasa
+  return zeminPx - (ekranAlt + govde)
+}
+
+/**
+ * Ekranin ONERILEN yere gitmesi icin gereken YATAY kayma.
+ *
+ * Kaplayan mekanlarda panel zaten tuvalin merkezine hizalandigi icin sifir.
+ * Sigdirilmis fotografta ise fotograf ortalaniyor, panel nerede bulunduysa
+ * orada kaliyor; ekran ona dogru kaydiriliyor.
+ */
+export function oneriYatayKaymasi(yer, tuvalW) {
+  if (!yer?.sigdir) return 0
+  return yer.merkezXpx - tuvalW / 2
 }

@@ -6,6 +6,8 @@ import MultiScreenModal from './MultiScreenModal.jsx'
 import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
+import Oturtma from './Oturtma.jsx'
+import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
 import { BrandMark, BrandStripe } from './BrandChrome.jsx'
@@ -17,14 +19,22 @@ import { salonOlcek } from './Salon.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
-import { sahneBul, fotoYerlesim } from './sahneler.js'
+import {
+  sahneBul,
+  fotoYerlesim,
+  EN_AZ_YAKINLIK,
+  zeminOturmaKaymasi,
+  oneriYatayKaymasi,
+} from './sahneler.js'
+import { ozelMekanKaydi, MEKAN_TURLERI, MEKAN_EN_COK_MB, VARSAYILAN_ALAN_M } from './ozelMekan.js'
+import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { panoOlculeri, PANO_SAHNE_EN_M } from './Pano.jsx'
 import ArView from './ArView.jsx'
 // three.js/react-three-fiber/drei/model-viewer tek başına ~1.8 MB — ana pakete
 // gömülürse ilk yükleme herkes için ağırlaşır. Bu yüzden "3D Görünüm" düğmesine
 // basılana kadar hiç indirilmez (kod bölme / code-splitting).
 const Scene3D = guvenliLazy(() => import('./Scene3D.jsx'))
-import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, L_KIRILMA_PCT, curveDepthFor } from './content.js'
+import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, L_KIRILMA_PCT, curveDepthFor, IMAGE_MAX_MB } from './content.js'
 import { LANGUAGES } from './i18n.js'
 import { useAcilirKonum } from './hooks/useAcilirKonum.js'
 import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
@@ -164,20 +174,26 @@ const SAMPLE_CABINETS = [
  * kaldırıldı.
  */
 
-const RESOLUTIONS = [
-  {
-    v: 'FHD',
-    w: 1920,
-    h: 1080,
-    desc: 'FHD (Full High Definition): 1920×1080 piksel, ~2,1 milyon piksel. Halk arasında 1080p olarak bilinir; TV, monitör ve çoğu internet videosunda kullanılan standart çözünürlük.',
-  },
-  {
-    v: 'UHD',
-    w: 3840,
-    h: 2160,
-    desc: 'UHD (Ultra High Definition / 4K): 3840×2160 piksel, ~8,3 milyon piksel — FHD\'nin tam 4 katı. Büyük ekranlarda bile piksellerin görünmesini engeller, daha keskin ve ayrıntılı görüntü sağlar.',
-  },
-]
+/**
+ * İKİ YERLEŞİMİN DE HESABI (yatay ve dikey).
+ *
+ * "Duvara sığdır" bu hesabı yapıp çok LED olanı uyguluyor. Aynı hesap sol
+ * panelde geçici bir bilgi satırı olarak da gösteriliyor; ikisi TEK yerden
+ * geliyor ki gösterilen sayı ile uygulanan yerleşim ayrışmasın.
+ */
+function yerlesimSecenekleri(m, genislikM, yukseklikM) {
+  if (!m) return null
+  const EPSILON = 1e-9
+  const gW = m.widthMm || 500
+  const gH = m.heightMm || 500
+  const hesapla = (kabinWmm, kabinHmm) => {
+    const c = Math.max(1, Math.floor(genislikM / (kabinWmm / 1000) + EPSILON))
+    const r = Math.max(1, Math.floor(yukseklikM / (kabinHmm / 1000) + EPSILON))
+    // Kabin başına LED = piksel sayısı; dönmekle değişmez, yalnızca yer değiştirir.
+    return { cols: c, rows: r, led: c * r * (m.pixelWidth || 0) * (m.pixelHeight || 0) }
+  }
+  return { yatay: hesapla(gW, gH), dikey: hesapla(gH, gW) }
+}
 
 // Tema Root.jsx'te kuruluyor (yönetim ekranı da aynı temayı kullansın diye)
 function App({ theme, onToggleTheme: temaDegistir }) {
@@ -201,6 +217,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
   // Teknik Özellikler pop-up'ı (Bileşenler de içinde)
   const [specsOpen, setSpecsOpen] = useState(false)
+  /*
+   * KAMERADA OTURT — "Nasıl Görüneceğini Gör"den ayrı bir özellik.
+   * Orada tasarım doğrudan kameranın üstünde duruyor; burada önce yalnızca
+   * ölçülere göre bir TASLAK çerçeve görünüyor, deklanşöre basılınca tasarım
+   * o çerçeveye oturuyor. İkisi birbirine karışmasın diye ayrı pencereler.
+   */
+  const [oturtmaAcik, setOturtmaAcik] = useState(false)
   const [showMeasurements, setShowMeasurements] = useState(true)
   const [exportOpen, setExportOpen] = useState(false)
   /*
@@ -227,16 +250,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [kareSorusu, setKareSorusu] = useState(null)
 
-  /* Dönen değer: kare rapora GİRDİ mi. Kamera/AR ekranı bildirimini buna
-     göre seçiyor — karar sorulduysa henüz söz verecek bir şey yok. */
-  const kareKaydedildi = (veri) => {
+  /*
+   * KAMERA VE AR KARELERİ AYRI DEĞERLENDİRİLİR.
+   *
+   * İkisi aynı torbadaydı: kamerada kare varken AR'de kaydedince "yalnızca
+   * bu kalsın" demek kamera karesini de siliyordu. Oysa bunlar birbirinin
+   * alternatifi değil — biri mekânın fotoğrafı, öbürü odaya yerleştirilmiş
+   * gerçek boyutlu model; rapora ikisi birden girebilmeli.
+   *
+   * Bu yüzden her kare kaynağıyla saklanıyor ve soru YALNIZCA aynı kaynaktan
+   * kare varsa çıkıyor; "yalnızca bu kalsın" da yalnızca aynı kaynağı temizler.
+   *
+   * Dönen değer: kare rapora GİRDİ mi. Kamera/AR ekranı bildirimini buna
+   * göre seçiyor — karar sorulduysa henüz söz verecek bir şey yok.
+   */
+  const kareKaydedildi = (veri, kaynak = 'kamera') => {
     if (!veri) return false
-    if (arFotolar.includes(veri)) return true
-    if (arFotolar.length === 0) {
-      setArFotolar([veri])
+    if (arFotolar.some((k) => k.veri === veri)) return true
+    if (!arFotolar.some((k) => k.kaynak === kaynak)) {
+      setArFotolar((l) => [...l, { veri, kaynak }].slice(-6))
       return true
     }
-    setKareSorusu(veri)
+    setKareSorusu({ veri, kaynak })
     return false
   }
 
@@ -247,15 +282,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setKareSorusu(null)
   }
 
+  /* Soru sorulan kareyle AYNI kaynaktan olanlar — pencere yalnızca bunları
+     gösterir ve "yalnızca bu kalsın" yalnızca bunları düşürür. */
+  const ayniTurKareler = kareSorusu
+    ? arFotolar.filter((k) => k.kaynak === kareSorusu.kaynak)
+    : []
+
   const kareKarariVer = (karar) => {
-    const veri = kareSorusu
+    const yeni = kareSorusu
     setKareSorusu(null)
-    if (!veri) return
-    if (karar === 'hepsi') setArFotolar((l) => [...l, veri].slice(-6))
-    else if (karar === 'yalniz') setArFotolar([veri])
+    if (!yeni) return
+    if (karar === 'hepsi') setArFotolar((l) => [...l, yeni].slice(-6))
+    else if (karar === 'yalniz')
+      // Yalnızca AYNI kaynaktakiler düşer; öbür türdeki kareler yerinde kalır.
+      setArFotolar((l) => [...l.filter((k) => k.kaynak !== yeni.kaynak), yeni].slice(-6))
     // 'ekleme' → rapor olduğu gibi kalır
   }
-  const [resolution, setResolution] = useState('FHD') // FHD | UHD
+  /*
+   * Ekrana gönderilen SİNYALİN standardı (ekranın kendi çözünürlüğü değil).
+   * Önizlemede sinyal bölgelerinin kaç parçaya bölündüğünü belirler, PDF ve
+   * kayıtlı tekliflerde de saklanır. Kullanıcıya sunulan FHD/UHD düğmeleri
+   * kaldırıldı: o alan artık ekranın gerçek piksel çözünürlüğünü gösteriyor.
+   * Değer yalnızca taslak geri yüklenirken ve sıfırlamada değişir.
+   */
+  const [resolution, setResolution] = useState('FHD')
   const [sboxRedundancy, setSboxRedundancy] = useState('no') // no | yes
   const [hasMiniPc, setHasMiniPc] = useState(false)
   /*
@@ -268,6 +318,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Mekânda deneme ihtiyacını da "Kamerada dene" (AR) ekranı karşılıyor.
    */
   const [scene, setScene] = useState('none')
+  /*
+   * KULLANICININ KENDİ MEKÂN FOTOĞRAFI.
+   *
+   * Hazır mekânlar sahneler.js'te sabit; bu ise çalışma anında üretiliyor
+   * (bkz. ozelMekan.js). Fotoğraf sunucuya gitmiyor, blob adresi olarak
+   * tarayıcıda kalıyor — içerik görselinde olduğu gibi.
+   */
+  const [ozelSahne, setOzelSahne] = useState(null)
+  const [ozelAlanM, setOzelAlanM] = useState(VARSAYILAN_ALAN_M)
+  const [ozelUyari, setOzelUyari] = useState(null)
+  /* Kiosk ayakları — duvara asılan ekranda ayak olmaz, kapatılabiliyor. */
+  const [ayakVar, setAyakVar] = useState(true)
+  const ozelDosyaRef = useRef(null)
   const [arAcik, setArAcik] = useState(false)
   const [scene3dOpen, setScene3dOpen] = useState(false)
   const [wizardOpen, setWizardOpen] = useState(false)
@@ -435,17 +498,71 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       alert(t('content.errFormat'))
       return
     }
-    if (file.size > 3 * 1024 * 1024) {
+    if (file.size > IMAGE_MAX_MB * 1024 * 1024) {
       alert(t('content.errSize'))
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
-      setContentUrl(reader.result)
-      setContent('upload')
+    /*
+     * Blob adresi, base64 değil.
+     *
+     * Eskiden dosya FileReader ile data URL'e çevriliyordu; base64 dosyayı
+     * ~%37 büyütür ve tamamı bir dize olarak React durumunda tutulur. 3 MB'da
+     * bunun bedeli görünmezdi, 60 MB'da sekmeyi zorlar. Blob adresi ise yalnızca
+     * bir işaretçi; dosya diskte kalır, tarayıcı gerektiği kadarını okur.
+     * Video zaten böyle çalışıyordu, görsel de artık aynı yolu kullanıyor.
+     */
+    if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
+    setContentUrl(URL.createObjectURL(file))
+    setContent('upload')
+  }
+
+  /*
+   * MEKÂN FOTOĞRAFI SEÇİLDİ.
+   *
+   * Görsel yüklendikten sonra yüzey bulucu çalışıyor ve ekranın oturacağı
+   * yer öneriliyor (bkz. ozelMekan.js). Kullanıcı beğenmezse sürükleyerek
+   * taşıyabiliyor; ölçek de "bu alan kaç metre" ile elinde.
+   */
+  const mekanFotoSecildi = (e) => {
+    const dosya = e.target.files?.[0]
+    e.target.value = ''
+    if (!dosya) return
+    if (!MEKAN_TURLERI.includes(dosya.type)) {
+      alert(t('scene.customErr'))
+      return
     }
-    reader.readAsDataURL(file)
+    if (dosya.size > MEKAN_EN_COK_MB * 1024 * 1024) {
+      alert(t('content.errSize'))
+      return
+    }
+    const url = URL.createObjectURL(dosya)
+    const gorsel = new Image()
+    gorsel.onload = () => {
+      const kayit = ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelAlanM)
+      if (!kayit) return
+      // Önceki fotoğrafın adresi bellekte kalmasın
+      setOzelSahne((eski) => {
+        if (eski?.dosya?.startsWith('blob:')) URL.revokeObjectURL(eski.dosya)
+        return kayit
+      })
+      setScene('ozel')
+      mekaniOrtala()
+      // Zayıf öneride kullanıcıya söyleniyor; sessizce ortaya koymak yanıltıcı olurdu.
+      setOzelUyari(kayit.guven > 0.25 ? null : t('scene.weakSuggest'))
+    }
+    gorsel.src = url
+  }
+
+  /* Öneriyi tazele: ölçü ya da alan genişliği değişmiş olabilir. */
+  const oneriyiTazele = (alanM = ozelAlanM) => {
+    if (!ozelSahne) return
+    const gorsel = new Image()
+    gorsel.onload = () => {
+      const kayit = ozelMekanKaydi(ozelSahne.dosya, gorsel, tasarimWm / tasarimHm, alanM)
+      if (kayit) setOzelSahne(kayit)
+      mekaniOrtala()
+    }
+    gorsel.src = ozelSahne.dosya
   }
 
   // Üst buton: tüm tasarımı ve modeli sıfırla
@@ -481,17 +598,55 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     taslagiSil()
   }
 
-  // Duvara sığdır: her tıklamada ekranı o anki duvara tam sığan maksimuma çeker.
-  // Aç/kapa değil — duvar ölçüsünü değiştirip tekrar bastığınızda yeniden sığdırır.
+  /*
+   * DUVARA SIĞDIR — İKİ YERLEŞİMİ DE HESAPLAR, ÇOK LED OLANI SEÇER.
+   *
+   * Aynı duvara kabin yatay ya da dikey dizilebiliyor ve ikisi genellikle
+   * aynı sayıda kabin almıyor: 320 × 160 mm'lik bir kabinle 2,00 × 1,00 m
+   * duvara yatay 6 × 6 = 36 kabin sığarken, dikey (160 × 320) 12 × 3 = 36
+   * çıkar; ölçüler değişince biri açık ara öne geçer. Daha çok kabin, daha
+   * çok LED, daha çok piksel demek — müşterinin duvarından alabileceği en
+   * yüksek çözünürlük.
+   *
+   * Bu yüzden düğme her iki yerleşimi de arka planda hesaplıyor ve LED sayısı
+   * fazla olanı uyguluyor. Kullanıcı hesabı görmüyor; yalnızca sonucu, yani
+   * ekranın o duvardaki en verimli hâlini görüyor. Eşitlikte o anki yerleşim
+   * korunuyor — sebepsiz yere ekranı çevirmek şaşırtıcı olurdu.
+   */
   const fitToWall = () => {
-    setCols(colsMax)
-    setRows(rowsMax)
+    const m = selectedModel
+    if (!m) {
+      setCols(colsMax)
+      setRows(rowsMax)
+      return
+    }
+
+    const { yatay, dikey } = yerlesimSecenekleri(m, width, height)
+
+    const dikeySec = dikey.led > yatay.led || (dikey.led === yatay.led && portrait)
+    const kazanan = dikeySec ? dikey : yatay
+
+    setOrientation(dikeySec ? 'portrait' : 'landscape')
+    setCols(kazanan.cols)
+    setRows(kazanan.rows)
   }
 
   const hasModel = !!selectedModel
   const category = selectedModel?.category || 'led'
   const isVideoWall = category === 'videowall'
-  const portrait = isVideoWall && orientation === 'portrait'
+  /*
+   * DİKEY YERLEŞİM HER MODELDE — AMA DÜĞMESİ YOK.
+   *
+   * LED kabin ve paneller de dikey kurulabiliyor (asansör holü, vitrin
+   * kolonu, tabela); mekanizma zaten geneldi, yalnızca video duvarına
+   * kilitliydi. Kilidi kalktı.
+   *
+   * Kullanıcıya ayrı bir Yatay/Dikey düğmesi SUNULMUYOR: "Duvara sığdır"
+   * iki yerleşimi de hesaplayıp çok LED olanı zaten kendisi seçiyor
+   * (bkz. fitToWall). Aynı kararı bir de elle sordurmak gereksiz.
+   * Video duvarında Oryantasyon denetimi eskisi gibi duruyor.
+   */
+  const portrait = orientation === 'portrait'
   // Portre modunda ekran 90° döner: kabin en/boy ve piksel değerleri takas edilir
   const previewModel =
     selectedModel && portrait
@@ -505,6 +660,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       : selectedModel
 
   // Duvar–ekran dengesi: ekran duvardan büyük olamaz (Samsung mantığı)
+  // Ekranın gerçek piksel çözünürlüğü (Teknik Özellikler ile aynı kaynak).
+  const ekranCozunurlugu = computeSpecs(previewModel, cols, rows)
+
   const cwM = (previewModel?.widthMm || 500) / 1000
   const chM = (previewModel?.heightMm || 500) / 1000
   // Kabin ölçüsü mm olarak — sütun/satır altındaki hesap satırı için
@@ -570,6 +728,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    *
    * L yoksa null döner ve mekân eskisi gibi dikdörtgen kasa çizer.
    */
+  /*
+   * GEÇİCİ BİLGİ SATIRI.
+   *
+   * "Duvara sığdır" kararını arka planda veriyor; bu satır kararın
+   * dayanağını (iki yerleşimin LED sayısı) görünür kılıyor. Doğrulama
+   * bitince kaldırılacak — hesabın kendisi yerinde kalır.
+   */
+  const yerlesimBilgisi = useMemo(
+    () => yerlesimSecenekleri(selectedModel, width, height),
+    [selectedModel, width, height],
+  )
+
   const ekranSekli = useMemo(() => {
     if (!(tasarimWm > 0) || !(tasarimHm > 0)) return null
     // Tek ekranda da tür bilgisi var; çoklu ekranda her ekranın kendi türü
@@ -668,12 +838,72 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * büyüklükte çıkıyordu, yani mekân hiçbir ölçü bilgisi vermiyordu. Toplantı
    * salonunda da aynı kusur vardı ve gerçek ölçüye geçilerek düzeltildi.
    */
-  const fotoSahne = sahneBul(scene)
-  const fotoOlcek =
-    // Arka planı olmayan mekânda ölçek referansı yok; ekran serbest ölçülür
-    fotoSahne?.dosya && ekranWm > 0 && ekranHm > 0
-      ? fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)?.pxPerM || null
-      : null
+  const fotoSahne = scene === 'ozel' ? ozelSahne : sahneBul(scene)
+  /*
+   * MEKANDA SURUKLEME.
+   *
+   * Ekranin mekan icindeki yeri sabit degil: musteri onu vitrinin onunde,
+   * girisin yaninda ya da koridorun solunda gormek isteyebilir. Kayma
+   * METRE olarak tutuluyor (bkz. useSurukleme) — pencere boyutlandiginda
+   * ekran mekan icinde kendiliginden yer degistirmesin diye.
+   *
+   * Yalnizca fotografli mekanlarda acik: cizilmis mekanlarda ekranin yeri
+   * odanin geometrisine bagli, oradan koparilmasi anlamsiz olurdu.
+   */
+  const surukleAktif = !!fotoSahne?.kiosk
+
+  /*
+   * SAHNE YAKINLIGI — "kamera geri cekiliyor" etkisi.
+   *
+   * Kucuk bir kiosk, fotografin cekildigi mesafeden bakildiginda nokta
+   * gibi kaliyor; buyuk bir billboard ise kadraja sigmiyor. Cozum, tek
+   * bir fotograf uzerinde kamerayi yaklastirip uzaklastirmak.
+   *
+   * Olcu ikiye katlandikca yakinlik bir basamak azaliyor (log2). Sinirlar
+   * dar tutuldu: 1,28 uzerinde fotograf cozunurlugunu kaybediyor, 0,82
+   * altinda ise kenarlardan disari cikiyor.
+   *
+   * ONEMLI: yakinlik hem arka plana hem de ekranin piksel olcegine AYNI
+   * yonde uygulaniyor. Ekran arka planla birlikte buyuyup kuculdugu icin
+   * ikisi arasindaki oran — yani olcu bilgisi — hic degismiyor; degisen
+   * yalnizca bakis mesafesi. (Ters yonde uygulamak, yani ekrani arka plan
+   * yaklastikca kucultmek, etkiyi goturur ve olcuyu de bozardi.)
+   */
+  const sahneYakinlik = useMemo(() => {
+    // Kendi fotoğrafı kırpılmadan gösteriliyor; orada yakınlaştırma yok.
+    if (fotoSahne?.tamGorunsun) return 1
+    const TEMEL_M = 0.96
+    const oran = Math.max(tasarimWm / TEMEL_M, tasarimHm / TEMEL_M)
+    if (!(oran > 0)) return 1
+    return Math.max(EN_AZ_YAKINLIK, Math.min(1.28, 1.28 - Math.log2(oran) * 0.12))
+  }, [tasarimWm, tasarimHm])
+
+  /*
+   * FOTOĞRAFLI MEKÂNDA ÇİZİM ÖLÇEĞİ.
+   *
+   * Ölçek mekânın kendi ölçeğinden geliyor: 4 m'lik ekran, fotoğrafta 4 m'ye
+   * denk gelen kadar piksel kaplıyor. Ama tasarım mekândan büyükse bu, ekranın
+   * fotoğrafın dışına taşması demek — özellikle kendi fotoğrafında, çünkü orada
+   * fotoğraf tuvale sığdırıldığı için üstte ve altta bant kalıyor ve taşan ekran
+   * boşluğa çıkıyor.
+   *
+   * Bu yüzden ölçek, tasarımın (kiosk gövdesiyle birlikte) fotoğrafın içinde
+   * kalacağı değerle sınırlanıyor. Sınır devreye girdiğinde ekran artık birebir
+   * ölçekte değil; ama görünmeyen bir ekranın ölçeği de bir işe yaramıyor.
+   */
+  const fotoOlcek = (() => {
+    if (!fotoSahne?.dosya || !(ekranWm > 0) || !(ekranHm > 0)) return null
+    const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
+    if (!yer?.pxPerM) return null
+    const gercek = yer.pxPerM * sahneYakinlik
+    // Fotoğrafın tuvalde görünen kısmı: sığdırılmışta bantlar dışında kalan alan
+    const alanW = Math.min(tuvalBoyut.w, yer.genislik * sahneYakinlik)
+    const alanH = Math.min(tuvalBoyut.h, yer.yukseklik * sahneYakinlik)
+    const enCokW = (alanW * 0.94) / tasarimWm
+    // Yükseklikte kiosk gövdesine de pay bırakılıyor
+    const enCokH = (alanH * 0.82) / tasarimHm
+    return Math.min(gercek, enCokW, enCokH) || null
+  })()
   /*
    * SALON ölçeği. Salonun arka duvarı gerçek metre ölçüsünde çizildiği için
    * tuvale sığma hesabı da metre üzerinden yapılıyor — bkz. Salon.jsx.
@@ -701,6 +931,83 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       : scene === SALON_ID || scene === CEPHE_ID
         ? Math.round(Math.max(2, 0.05 * cizimOlcek) + 6) // çizilmiş kasa: 5 cm
         : 0
+
+  /*
+   * MEKANDA SÜRÜKLEME — ölçek hesabından SONRA.
+   * Kaymanın metre karşılığı çizim ölçeğine bağlı; yukarıda tanımlansaydı
+   * bu değerlere henüz erişilemezdi.
+   */
+  const {
+    ofsetM: mekanOfsetM,
+    tasindi: mekanTasindi,
+    sifirla: mekaniOrtala,
+    tutamak: mekanTutamak,
+  } = useSurukleme(cizimOlcek || 0)
+
+  /*
+   * Kioskun zemine oturmasi icin gereken sabit dikey kayma. Kullanicinin
+   * suruklemesi bunun UZERINE biniyor: "Ortala" dedigi yer de burasi.
+   */
+  const fotoYer = surukleAktif ? fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h) : null
+  const oturmaKaymasi = surukleAktif
+    ? zeminOturmaKaymasi(
+        fotoSahne,
+        fotoYer,
+        tuvalBoyut.h,
+        sahneYakinlik,
+        tasarimHm * (cizimOlcek || 0),
+        ayakVar,
+        tasarimWm * (cizimOlcek || 0),
+      )
+    : 0
+  /* Sığdırılmış fotoğrafta ekran, önerilen alanın üstüne yatayda da kayar. */
+  const oneriKaymasi = surukleAktif ? oneriYatayKaymasi(fotoYer, tuvalBoyut.w) : 0
+
+  const elleKayma = surukleAktif
+    ? kaymayiSinirla(
+        mekanOfsetM,
+        cizimOlcek || 0,
+        tuvalBoyut,
+        tasarimWm * (cizimOlcek || 0),
+        tuvalBoyut.h / 2,
+      )
+    : null
+
+  /*
+   * EKRAN HER ZAMAN FOTOĞRAFIN İÇİNDE.
+   *
+   * Zemine oturtma kayması ekranı aşağı çekiyor; büyük tasarımlarda ekranın
+   * ÜSTÜ fotoğrafın dışına, kendi fotoğrafında da bantlara taşabiliyordu.
+   * Burada son bir sınır uygulanıyor: kioskun tamamı fotoğrafın çizildiği
+   * dikdörtgenin içinde kalıyor. Kiosk fotoğraftan uzunsa ortalanıyor —
+   * yarısını göstermektense tamamını göstermek daha faydalı.
+   */
+  const mekanKayma = (() => {
+    if (!surukleAktif) return null
+    const x = elleKayma.x + oneriKaymasi
+    let y = elleKayma.y + oturmaKaymasi
+    const yer = fotoYer
+    if (yer) {
+      const merkez = tuvalBoyut.h / 2
+      const fotoUst = Math.max(0, merkez + (yer.ust - merkez) * sahneYakinlik)
+      const fotoAlt = Math.min(
+        tuvalBoyut.h,
+        merkez + (yer.ust + yer.yukseklik - merkez) * sahneYakinlik,
+      )
+      const hPx = tasarimHm * (cizimOlcek || 0)
+      const govdeM = ayakVar ? 0.6 : 0
+      const govde = govdeM * (cizimOlcek || 0)
+      const ust = merkez - hPx / 2
+      const alt = merkez + hPx / 2 + govde
+      const toplam = alt - ust
+      if (toplam >= fotoAlt - fotoUst) {
+        y = (fotoUst + fotoAlt) / 2 - (ust + alt) / 2
+      } else {
+        y = Math.max(fotoUst + 4 - ust, Math.min(fotoAlt - 4 - alt, y))
+      }
+    }
+    return { x, y }
+  })()
 
 
   /*
@@ -757,6 +1064,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               <rect x="4" y="4" width="16" height="16" rx="1.5" />
               <line x1="4" y1="14" x2="14" y2="14" />
               <line x1="14" y1="4" x2="14" y2="20" />
+            </svg>
+          </IconButton>
+
+          {/* Kamerada oturt — taslak çerçeve, sonra çekim (bkz. Oturtma.jsx) */}
+          <IconButton active={hasModel} label={t('fit.open')} onClick={() => hasModel && setOturtmaAcik(true)}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" />
+              <rect x="8" y="8" width="8" height="8" rx="1" />
             </svg>
           </IconButton>
 
@@ -871,6 +1186,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               ekranHpx={tasarimHm * (cizimOlcek || 0)}
               /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
               ekranSekli={ekranSekli}
+              /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
+              yakinlik={sahneYakinlik}
+              kayma={mekanKayma}
+              ozelSahne={ozelSahne}
+              ayakVar={ayakVar}
             />
           )}
 
@@ -896,6 +1216,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               hideRegions={isVideoWall}
               sahneVar={scene !== 'none'}
               sahnePayPx={sahnePayPx}
+              kayma={mekanKayma}
+              tutamak={surukleAktif ? mekanTutamak : null}
               sahneOlcekVarsayilan={sahneOlcekVarsayilan}
               onPxPerM={setCizimOlcek}
             />
@@ -1085,6 +1407,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 >
                   {t('conf.fitToWall')}
                 </button>
+                {yerlesimBilgisi && (
+                  <div className="mt-2 text-[15px] leading-snug text-neutral-500 dark:text-neutral-400 tabular-nums">
+                    <div>
+                      Yatay: {yerlesimBilgisi.yatay.cols}×{yerlesimBilgisi.yatay.rows} kabin ·{' '}
+                      {yerlesimBilgisi.yatay.led.toLocaleString('tr-TR')} LED
+                    </div>
+                    <div>
+                      Dikey: {yerlesimBilgisi.dikey.cols}×{yerlesimBilgisi.dikey.rows} kabin ·{' '}
+                      {yerlesimBilgisi.dikey.led.toLocaleString('tr-TR')} LED
+                    </div>
+                  </div>
+                )}
               </div>
 
           {hasModel && (
@@ -1234,26 +1568,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               */}
               <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('screen.settings')}</h2>
 
-              {/* Çözünürlük (video duvarında yok) */}
-              {!isVideoWall && (
+{/*
+                ÇÖZÜNÜRLÜK: seçilebilen bir ayar değil, HESAPLANAN bir sonuç.
+                Eskiden burada FHD/UHD düğmeleri vardı; bunlar ekrana gönderilen
+                sinyalin standardıydı, ekranın kendi çözünürlüğü değil. Kullanıcı
+                "çözünürlük" başlığı altında ekranının kaç piksel olduğunu
+                görmeyi bekliyor — o değer de kabin sayısıyla birlikte değişiyor.
+
+                Değer Teknik Özellikler'deki "Optik Parametre → Çözünürlük"
+                satırıyla AYNI kaynaktan (computeSpecs) geliyor; iki yerde ayrı
+                formül tutulmuyor, ayrı state de yok.
+              */}
+              {!isVideoWall && ekranCozunurlugu && (
                 <div className="mb-2">
                   <div className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('res.heading')}</div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {RESOLUTIONS.map((r) => (
-                      <button
-                        key={r.v}
-                        type="button"
-                        title={r.desc}
-                        onClick={() => setResolution(r.v)}
-                        className={`py-2.5 rounded-lg text-[17px] transition-colors ${
-                          resolution === r.v
-                            ? 'btn-selected border-2'
-                            : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
-                        }`}
-                      >
-                        {r.v}
-                      </button>
-                    ))}
+                  <div
+                    title={t('res.totalHint')}
+                    className="py-2.5 px-4 rounded-lg border border-neutral-200 dark:border-[#2c333f] text-[17px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100"
+                  >
+                    {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)} px
                   </div>
                 </div>
               )}
@@ -1436,6 +1769,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 <div className="grid grid-cols-3 gap-2">
                   {[{ id: SALON_ID, ad: 'scene.salon' },
                     { id: CEPHE_ID, ad: 'scene.cephe' },
+                    { id: 'avm', ad: 'avm.title' },
+                    { id: 'meydan-gece', ad: 'dis.title' },
+                    ...(ozelSahne ? [{ id: 'ozel', ad: 'scene.custom' }] : []),
                     { id: 'none', ad: 'scene.customOff' }].map((s) => (
                     <button
                       key={s.id}
@@ -1463,6 +1799,107 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   bilmiyordu. Şimdi ekran her hâlükârda açılıyor ve sorun varsa
                   sebebini yazıp fotoğrafla devam etme yolu sunuyor.
                 */}
+                {/* Kendi fotoğrafı: ekleme, öneri ve ölçek */}
+                <input
+                  ref={ozelDosyaRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={mekanFotoSecildi}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => ozelDosyaRef.current?.click()}
+                  className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                    <path d="m3 16 5-5 4 4 3-3 6 6" />
+                  </svg>
+                  {ozelSahne ? t('scene.customChange') : t('scene.customAdd')}
+                </button>
+
+                {/*
+                  Kendi fotoğrafında ÖLÇEK fotoğraftan çıkarılamaz: bir duvarın
+                  kaç metre olduğunu görüntü söylemez. Bu yüzden soruluyor.
+                  Kullanıcı değeri değiştirince öneri de tazeleniyor.
+                */}
+                {scene === 'ozel' && ozelSahne && (
+                  <div className="mt-2 border border-neutral-200 dark:border-[#2c333f] rounded-lg p-2.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
+                        {t('scene.customWidth')}
+                      </span>
+                      <Stepper
+                        value={ozelAlanM}
+                        onChange={(v) => {
+                          setOzelAlanM(v)
+                          oneriyiTazele(v)
+                        }}
+                        min={0.5}
+                        max={40}
+                        step={0.5}
+                        decimals={1}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => oneriyiTazele()}
+                      className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                    >
+                      {t('scene.suggest')}
+                    </button>
+                    {ozelUyari && (
+                      <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">{ozelUyari}</p>
+                    )}
+                  </div>
+                )}
+
+                {/*
+                  KIOSK AYAĞI — yalnızca fotoğraflı mekânda.
+                  Duvara asılan bir ekranın ayağı olmaz; zorla çizilen direk o
+                  tasarımı yanlış gösterir. Kapatılınca ekranın dibi doğrudan
+                  zemine oturuyor, kasa ve gölge yerinde kalıyor.
+                */}
+                {surukleAktif && (
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <span className="text-[15px] text-neutral-600 dark:text-neutral-400">
+                      {t('scene.legs')}
+                    </span>
+                    <div className="flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                      {[true, false].map((v) => (
+                        <button
+                          key={String(v)}
+                          type="button"
+                          onClick={() => setAyakVar(v)}
+                          className={`px-3 py-1.5 text-[14px] transition-colors ${
+                            ayakVar === v
+                              ? 'btn-selected'
+                              : 'text-neutral-600 dark:text-neutral-400 hover:text-brand'
+                          }`}
+                        >
+                          {v ? t('scene.legsOn') : t('scene.legsOff')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/*
+                  ORTALA — yalnızca ekran mekân içinde taşınmışken görünür.
+                  Fotoğraflı mekânda ekran sürüklenerek taşınabiliyor; bu düğme
+                  onu açılıştaki yerine geri koyar. Hiç taşınmamışken göstermek,
+                  yapılmamış bir şeyi geri alma seçeneği sunmak olurdu.
+                */}
+                {surukleAktif && mekanTasindi && (
+                  <button
+                    type="button"
+                    onClick={mekaniOrtala}
+                    className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                  >
+                    {t('scene.recenter')}
+                  </button>
+                )}
                 {hasModel && (
                   <button
                     type="button"
@@ -1474,6 +1911,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <circle cx="12" cy="12.5" r="3.4" />
                     </svg>
                     {t('ar.open')}
+                  </button>
+                )}
+                {hasModel && (
+                  <button
+                    type="button"
+                    onClick={() => setOturtmaAcik(true)}
+                    className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
+                  >
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" />
+                      <rect x="8" y="8" width="8" height="8" rx="1" />
+                    </svg>
+                    {t('fit.open')}
                   </button>
                 )}
               </div>
@@ -1580,6 +2030,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         onSaved={kareKaydedildi}
       />
 
+      <Oturtma
+        open={oturtmaAcik && hasModel}
+        onClose={() => setOturtmaAcik(false)}
+        model={previewModel}
+        cols={cols}
+        rows={rows}
+        screens={screenMode === 'multi' ? screens : null}
+        content={content}
+        contentUrl={contentUrl}
+        screenType={screenType}
+        resolution={resolution}
+        curveAmount={curveAmount}
+        hideRegions={isVideoWall}
+        onSaved={kareKaydedildi}
+      />
+
+      {/*
+        AVM KORİDORU — fotoğraflı mekân.
+        Ölçüler burada da uygulamanın kendi kabin ızgarasından geliyor;
+        pencerede değiştirilenler doğrudan yapılandırmayı değiştirir.
+      */}
+
+
       <RecommendationWizard
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
@@ -1647,8 +2120,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           sboxRedundancy,
           hasMiniPc,
           isVideoWall,
-          /* Kamerada ve AR'de kaydedilen kareler — her biri PDF'e ek sayfa olur */
-          arFotolar,
+          /* Kamerada ve AR'de kaydedilen kareler — her biri PDF'e ek sayfa olur.
+             Rapora yalnızca görüntü gider; kaynak (kamera/AR) arayüzde,
+             hangi karenin hangisinin yerine geçeceğini bilmek için tutuluyor. */
+          arFotolar: arFotolar.map((k) => k.veri),
           /*
            * Tasarımın TAMAMI teklifle birlikte saklansın diye. Teklif kaydında
            * yalnızca özet vardı (model kodu, toplam sütun/satır, okunur bir
@@ -1694,14 +2169,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               {t('frame.title')}
             </h3>
             <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center mt-2">
-              {t('frame.body').replace('{n}', String(arFotolar.length))}
+              {t('frame.body')
+                .replace('{n}', String(ayniTurKareler.length))
+                .replace('{k}', t(kareSorusu.kaynak === 'ar' ? 'frame.kindAr' : 'frame.kindCamera'))}
             </p>
+
+            {/*
+              RAPORDA HÂLİHAZIRDA NE VAR — kullanıcı "hangi kareler?" diye
+              tahmin etmesin. Yeni kare hemen yanında duruyor ki karşılaştırıp
+              karar verebilsin.
+            */}
+            <div className="mt-5">
+              <p className="m-0 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400 text-center">
+                {t('frame.existing')}
+              </p>
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                {ayniTurKareler.map((k, i) => (
+                  <img
+                    key={i}
+                    src={k.veri}
+                    alt=""
+                    className="w-20 h-14 object-cover rounded-lg border border-neutral-200 dark:border-[#2c333f]"
+                  />
+                ))}
+              </div>
+            </div>
 
             {/* Hangi kareden söz edildiği görünsün diye küçük önizleme */}
             <div className="mt-5 flex justify-center">
               <figure className="w-40">
                 <img
-                  src={kareSorusu}
+                  src={kareSorusu.veri}
                   alt=""
                   className="w-40 h-28 object-cover rounded-xl border border-neutral-200 dark:border-[#2c333f]"
                 />
@@ -1737,6 +2235,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 <span className="block text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">{t('frame.discardNote')}</span>
               </button>
             </div>
+
+            {arFotolar.length > ayniTurKareler.length && (
+              <p className="text-[12px] text-neutral-500 dark:text-neutral-400 text-center mt-4">
+                {t('frame.otherKept')}
+              </p>
+            )}
 
             {arFotolar.length >= 6 && (
               <p className="text-[12px] text-neutral-500 dark:text-neutral-400 text-center mt-4">

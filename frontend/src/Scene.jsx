@@ -39,11 +39,33 @@ export default function Scene({
   duvarWm,
   duvarHm,
   ekranSekli,
+  yakinlik = 1,
+  kayma = null,
+  /* Kullanicinin kendi fotografi — sahneler.js listesinde yok, disaridan gelir */
+  ozelSahne = null,
+  ayakVar = true,
 }) {
   // Fotoğraflı mekânlar sahneler.js'te tanımlı; yeni eklemek için orası yeterli
-  const sahne = sahneBul(id)
+  const sahne = id === 'ozel' ? ozelSahne : sahneBul(id)
   // Fotoğraflı mekân sabittir; ekranın ölçüsünü bilmesi gerekmez
-  if (sahne) return <PanoFoto sahne={sahne} tuvalW={tuvalW} tuvalH={tuvalH} />
+  /*
+   * Fotografli mekan sabittir; olcegi tasarimdan gelmez. Ama kiosk govdesi
+   * (kasa, direk, kaide) ekranin olcusune gore cizildigi icin ekranin
+   * piksel olcusunu bilmesi gerekiyor.
+   */
+  if (sahne)
+    return (
+      <PanoFoto
+        sahne={sahne}
+        tuvalW={tuvalW}
+        tuvalH={tuvalH}
+        ekranWpx={ekranWpx}
+        ekranHpx={ekranHpx}
+        yakinlik={yakinlik}
+        kayma={kayma}
+        ayakVar={ayakVar}
+      />
+    )
 
   if (id === SALON_ID) {
     return (

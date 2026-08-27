@@ -78,10 +78,17 @@ export default function Cephe({
             gökyüzü doygun mavi → cephe sıcak krem → sokak koyu asfalt.
           */}
           <linearGradient id="cephe-gok" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2f7cc0" />
-            <stop offset="55%" stopColor="#71b3e0" />
-            <stop offset="100%" stopColor="#bcdcf0" />
+            <stop offset="0%" stopColor="#2b6fae" />
+            <stop offset="45%" stopColor="#7ab6de" />
+            <stop offset="80%" stopColor="#c8e2f1" />
+            <stop offset="100%" stopColor="#eddfd0" />
           </linearGradient>
+          {/* Ufuktaki gün ışığı — gökyüzünü düz bir mavi levha olmaktan çıkarır */}
+          <radialGradient id="cephe-ufuk-isik" cx="0.5" cy="1" r="0.75">
+            <stop offset="0%" stopColor="#ffe7c4" stopOpacity="0.85" />
+            <stop offset="60%" stopColor="#ffd9a8" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#ffd9a8" stopOpacity="0" />
+          </radialGradient>
           {/* Cephe yüzeyi — iç mekândaki arka duvarla (Salon.jsx) aynı ton */}
           <linearGradient id="cephe-yuzey" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#eef0f4" />
@@ -92,20 +99,29 @@ export default function Cephe({
             <stop offset="100%" stopColor="#3a3f46" />
           </linearGradient>
           {/*
-            KOMŞU BİNA RENKLERİ.
-            Eskiden tek düz koyu mavi (#4a5a70) idi; gökyüzünün yanında ham bir
-            lacivert leke gibi duruyordu. Artık ikisi de yukarıda koyu, ufka
-            doğru açılan gri-mavi: uzaklaştıkça havanın pusa dönmesi. Sol yüzey
-            ışık alan taraf olduğu için bir tık açık, sağ taraf gölgede —
-            biçimler simetrik, ayrımı yalnızca ışık yapıyor.
+            ŞEHİR SİLÜETİ — iki katman, ikisi de HAVA PERSPEKTİFİYLE soluyor.
+            Uzaktaki katman gökyüzüne daha yakın bir tonda; yakındaki bir tık
+            daha koyu. Gerçek şehirde uzaklık böyle okunur ve göz sıralamayı
+            kendiliğinden yapar.
+
+            ÖNCESİ: cephenin iki yanında, ekranla neredeyse aynı yükseklikte
+            iki büyük gri yamuk vardı. Derz ve kat çizgileriyle birlikte
+            "komşu bina" değil, ekranı iki yandan sıkıştıran duvarlar gibi
+            duruyordu; dış mekân hissi hiç yoktu.
           */}
-          <linearGradient id="cephe-bina-sol" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#68788c" />
-            <stop offset="100%" stopColor="#9aa7b4" />
+          <linearGradient id="cephe-silu-uzak" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a9c2d6" />
+            <stop offset="100%" stopColor="#d6e4ee" />
           </linearGradient>
-          <linearGradient id="cephe-bina-sag" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#55647a" />
-            <stop offset="100%" stopColor="#8794a3" />
+          <linearGradient id="cephe-silu-yakin" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8fa8c0" />
+            <stop offset="100%" stopColor="#c3d3e0" />
+          </linearGradient>
+          {/* Ufuk pusu — silüetin dibini gökyüzünde eritir */}
+          <linearGradient id="cephe-pus" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#c8e2f1" stopOpacity="0" />
+            <stop offset="70%" stopColor="#d8e9f4" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#eddfd0" stopOpacity="0.75" />
           </linearGradient>
           {/* Ekranın cepheye vuran ışığı */}
           <radialGradient id="cephe-isik" cx="0.5" cy="0.5" r="0.5">
@@ -117,88 +133,112 @@ export default function Cephe({
         {/* Gökyüzü — tuvalin tamamı, cephe bunun önünde durur */}
         <rect x={0} y={0} width={tuvalW} height={tuvalH} fill="url(#cephe-gok)" />
 
-        {/*
-          KOMŞU BİNALAR — cephenin iki yanında, geride kalan yapılar.
-          Sönük tutuluyorlar: derinlik hissi versinler ama ekranla yarışmasınlar.
-          Gökyüzünden belirgin biçimde koyular; daha açık bir tonda bina değil,
-          ufuktaki pus gibi duruyorlardı.
+        {/* Ufuk ışığı — gökyüzünün alt yarısına sıcak bir hava katar */}
+        <rect x={0} y={0} width={tuvalW} height={alt} fill="url(#cephe-ufuk-isik)" />
 
-          SİMETRİ: İki yanın yüksekliği farklı oranlardaydı (0,72 ve 0,84);
-          sol ve sağ blok gözle görülür biçimde farklı boyda duruyor, sahne
-          yamuk görünüyordu. Artık ikisi de AYNI oranda — fark yalnızca ışıkta.
+        {(() => {
+          /*
+           * UZAKTAKİ ŞEHİR — cephenin arkasında, ufka yakın.
+           *
+           * ÖNCEKİ HÂLİ YAPAY DURUYORDU. Sebepleri tek tek:
+           *   • Fazla YÜKSEKTİLER. Cephenin yarısına kadar çıkan bloklar
+           *     "uzaktaki şehir" değil, hemen yanı başındaki binalar gibi
+           *     okunuyordu; oysa hepsi arka plan olmalı.
+           *   • Fazla KOYUYDULAR. Uzaktaki her şey havanın pusuyla gökyüzüne
+           *     yaklaşır. Gökten belirgin biçimde ayrılan bir gri, kartondan
+           *     kesilmiş gibi durur.
+           *   • Beyaz PENCERE ŞERİTLERİ vardı. Bu ölçekte tek tek pencere
+           *     görünmez; parlak beyaz bantlar oyuncak binası hissi veriyordu.
+           *
+           * Şimdi: alçak, gökyüzüne yakın tonda, penceresiz siluet. Biçim
+           * çeşitliliği (ince kule, geniş blok, kademeli çatı, anten) ve
+           * üstüne binen pus, "şehir" hissini pencere çizmeden veriyor.
+           *
+           * Ölçüler cepheye oranlı — duvar ölçüsü değişince silüet de onunla
+           * büyür. Dizi sabit: her çizimde aynı şehir, bloklar oynamaz.
+           */
+          const solYer = Math.max(0, sol)
+          const sagYer = Math.max(0, tuvalW - sag)
+          if (solYer < 16 && sagYer < 16) return null
 
-          PERSPEKTİF: Düz dikdörtgen olduklarında yere dik duran yapılar değil,
-          arka planda duran koyu bir bant gibi görünüyorlardı. Artık iki kenar
-          da AYNI kaçış noktasına (cx, ufuk) aynı oranda çekiliyor — üst kenar
-          iniyor, alt kenar yükseliyor. Aynı oran şart: farklı olursa yüzey tek
-          bir noktada buluşmaz, perspektif değil çarpılma gibi okunur.
+          // [genişlik payı, yükseklik payı, tip] · tip: 0 düz · 1 kademeli · 2 antenli
+          const UZAK = [
+            [0.26, 0.15, 0], [0.15, 0.24, 2], [0.30, 0.11, 0],
+            [0.19, 0.19, 1], [0.24, 0.13, 0],
+          ]
+          const YAKIN = [
+            [0.34, 0.10, 0], [0.20, 0.17, 1], [0.28, 0.08, 0], [0.22, 0.13, 0],
+          ]
+          const UZAK_SAG = [...UZAK].reverse()
+          const YAKIN_SAG = [...YAKIN].reverse()
 
-          Derinliği pekiştiren iki ayrıntı:
-            • Dikey derzler cepheye yaklaştıkça SIKLAŞIYOR (t² dağılımı).
-              Eşit aralıklı olsalardı yamuk yine düz bir yüzey gibi dururdu.
-            • Kat çizgileri yüzeyi boydan boya geçiyor; taperlı dörtgende
-              kendiliğinden kaçış noktasına doğru toplanıyorlar.
-        */}
-        {[
-          { dis: 0, ic: sol, dolgu: 'url(#cephe-bina-sol)' },
-          { dis: tuvalW, ic: sag, dolgu: 'url(#cephe-bina-sag)' },
-        ].map((b, i) => {
-          const genislik = Math.abs(b.ic - b.dis)
-          if (genislik <= 2) return null
-          const disUst = ust + duvarH * 0.22
-          // İç kenar (cepheye bitişen) uzakta kalır: üst ve alt, kaçış
-          // noktasına aynı oranda (S) yaklaşır.
-          const S = 0.42
-          const icUst = disUst + (ufukY - disUst) * S
-          const icAlt = alt + (ufukY - alt) * S
-          const cizgi = Math.max(0.6, tuvalW * 0.0012)
+          const seri = (x0, genislik, liste, dolgu, taban, anahtar, yon) => {
+            if (genislik < 16) return null
+            let imlec = x0
+            const parcalar = []
+            liste.forEach(([gp, yp, tip], i) => {
+              const w = genislik * gp
+              const h = duvarH * yp
+              const x = yon > 0 ? imlec : imlec - w
+              const y = taban - h
+              parcalar.push(
+                <g key={anahtar + i}>
+                  <rect x={x} y={y} width={w} height={h} fill={dolgu} />
+                  {/* Kademeli çatı: üstte daha dar bir kat */}
+                  {tip === 1 && (
+                    <rect
+                      x={x + w * 0.22}
+                      y={y - h * 0.22}
+                      width={w * 0.56}
+                      height={h * 0.22}
+                      fill={dolgu}
+                    />
+                  )}
+                  {/* Anten/kule — siluete dikey bir vurgu, hepsi kutu olmasın */}
+                  {tip === 2 && (
+                    <rect
+                      x={x + w * 0.46}
+                      y={y - h * 0.3}
+                      width={Math.max(0.8, w * 0.07)}
+                      height={h * 0.3}
+                      fill={dolgu}
+                    />
+                  )}
+                </g>,
+              )
+              imlec += yon * (w + genislik * 0.035)
+            })
+            return parcalar
+          }
+
+          const usta = Math.min(alt, ust + duvarH * 0.42) // silüetin çıkabileceği en üst hat
           return (
-            <g key={i}>
-              <polygon
-                points={`${b.dis},${disUst} ${b.ic},${icUst} ${b.ic},${icAlt} ${b.dis},${alt}`}
-                fill={b.dolgu}
-              />
-              {/* Cepheye yaklaştıkça sıklaşan derzler — t² ile dağıtılıyor */}
-              {[1, 2, 3, 4, 5].map((k) => {
-                const t = 1 - (k / 6) * (k / 6) // dış kenarda seyrek, içte sık
-                const x = b.dis + (b.ic - b.dis) * t
-                const y1 = disUst + (icUst - disUst) * t
-                const y2 = alt + (icAlt - alt) * t
-                return (
-                  <line
-                    key={k}
-                    x1={x}
-                    y1={y1}
-                    x2={x}
-                    y2={y2}
-                    stroke="#33414f"
-                    strokeWidth={cizgi}
-                    opacity="0.35"
-                  />
-                )
-              })}
-              {/* Kat çizgileri — dörtgen daraldıkça kendiliğinden yaklaşırlar */}
-              {[0.22, 0.44, 0.66, 0.88].map((k) => (
-                <line
-                  key={`k${k}`}
-                  x1={b.dis}
-                  y1={disUst + (alt - disUst) * k}
-                  x2={b.ic}
-                  y2={icUst + (icAlt - icUst) * k}
-                  stroke="#33414f"
-                  strokeWidth={cizgi}
-                  opacity="0.22"
-                />
-              ))}
+            <>
+              {/* Uzak sıra — gökyüzüne en yakın ton, neredeyse pus */}
+              <g opacity="0.55">
+                {seri(sol, solYer, UZAK, 'url(#cephe-silu-uzak)', alt - duvarH * 0.02, 'us', -1)}
+                {seri(sag, sagYer, UZAK_SAG, 'url(#cephe-silu-uzak)', alt - duvarH * 0.02, 'ud', 1)}
+              </g>
+              {/* Yakın sıra — bir tık belirgin, tabanı kaldırım hizasında */}
+              <g opacity="0.7">
+                {seri(sol, solYer, YAKIN, 'url(#cephe-silu-yakin)', alt, 'ys', -1)}
+                {seri(sag, sagYer, YAKIN_SAG, 'url(#cephe-silu-yakin)', alt, 'yd', 1)}
+              </g>
               {/*
-                Cepheye bitişen kenardaki koyu gölge KALDIRILDI: duvarın rengini
-                değiştiriyor, yüzeyin yarısını asıl tondan başka bir renge
-                çekiyordu. Derinliği yamuk biçim, sıklaşan derzler ve ufka doğru
-                açılan degrade zaten veriyor.
+                PUS — silüetin dibine doğru koyulaşan gökyüzü rengi. Uzaktaki
+                yapıların ayakları havada erir; keskin biten bir silüet maket
+                gibi durur.
               */}
-            </g>
+              <rect
+                x={0}
+                y={usta}
+                width={tuvalW}
+                height={Math.max(1, alt - usta)}
+                fill="url(#cephe-pus)"
+              />
+            </>
           )
-        })}
+        })()}
 
         {/* Sokak */}
         <rect x={0} y={alt} width={tuvalW} height={tuvalH - alt} fill="url(#cephe-sokak)" />
@@ -265,8 +305,63 @@ export default function Cephe({
           />
         )}
 
+        {/* Binanın kaldırıma düşen gölgesi — cepheyi zemine oturtur */}
+        <rect
+          x={sol}
+          y={alt}
+          width={duvarW}
+          height={Math.max(1, kaldirimH * 0.45)}
+          fill="#5c626a"
+          opacity="0.28"
+        />
+
         {/* CEPHE — ekranın monte edildiği yüzey */}
         <rect x={sol} y={ust} width={duvarW} height={duvarH} fill="url(#cephe-yuzey)" />
+        {/*
+          CEPHEYE KARAKTER — üç ince ayrıntı, hiçbiri ekranla yarışmıyor:
+            • Panel derzleri: düz beyaz levha kâğıt gibi duruyordu; ince
+              düşey çizgiler yüzeyi kaplama panellere böler.
+            • Parapet: çatı hattındaki açık şerit. Binanın nerede bittiğini
+              gösterir; onsuz cephe gökyüzüne yapışık duruyordu.
+            • Zemin kotu: cephenin dibindeki koyu şerit (bodrum/giriş bandı).
+        */}
+        <g opacity="0.5">
+          {[0.2, 0.4, 0.6, 0.8].map((k) => (
+            <line
+              key={k}
+              x1={sol + duvarW * k}
+              y1={ust}
+              x2={sol + duvarW * k}
+              y2={alt}
+              stroke="#b9c1cc"
+              strokeWidth={Math.max(0.5, tuvalW * 0.0008)}
+            />
+          ))}
+        </g>
+        <rect
+          x={sol}
+          y={ust}
+          width={duvarW}
+          height={Math.max(1.5, duvarH * 0.022)}
+          fill="#ffffff"
+          opacity="0.75"
+        />
+        <rect
+          x={sol}
+          y={ust + Math.max(1.5, duvarH * 0.022)}
+          width={duvarW}
+          height={Math.max(0.6, duvarH * 0.005)}
+          fill="#9aa3ae"
+          opacity="0.45"
+        />
+        <rect
+          x={sol}
+          y={alt - Math.max(2, duvarH * 0.03)}
+          width={duvarW}
+          height={Math.max(2, duvarH * 0.03)}
+          fill="#c3cad3"
+          opacity="0.7"
+        />
         {/*
           Cephenin üst kenarındaki kahverengi saçak KALDIRILDI. Binaya karakter
           katsın diye eklenmişti ama duvarın üstünde asılı duran, hangi
