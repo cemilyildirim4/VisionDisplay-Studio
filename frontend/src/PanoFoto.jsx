@@ -73,8 +73,25 @@ export default function PanoFoto({
    */
   const panelMerkezY = tuvalH / 2
   const fotoAlt = panelMerkezY + (yer.ust + yer.yukseklik - panelMerkezY) * yakinlik
-  const yerKalan = fotoAlt - kaideH - ekranAlt
-  const direk = Math.max(0, Math.min(direkH, yerKalan))
+
+  /*
+   * ZEMINE OTURMA.
+   *
+   * Direk boyu ekranin olcusunden DEGIL, fotografin zemin cizgisinden
+   * geliyor: kaide her zaman o cizgide durur, direk ekranin altiyla zemin
+   * arasindaki bosluga uzar. Onceden direk boyu tasarima baglanmisti ve
+   * kucuk ekranlarda kiosk duvarin ortasinda havada kaliyordu.
+   *
+   * Fotograf panelin merkezine gore olceklendigi icin zemin cizgisinin
+   * tuvaldeki yeri de ayni merkeze gore hesaplaniyor.
+   */
+  const merkezYKaynak = sahne.panel.y0 + panelYariH
+  const zeminY =
+    sahne.zeminY != null
+      ? panelMerkezY + (sahne.zeminY - merkezYKaynak) * yer.s * yakinlik
+      : fotoAlt
+  // Ekran zemin cizgisinin altina tasiyorsa direk kalmaz; kaide ekranin dibine gelir.
+  const direk = Math.max(0, Math.min(zeminY, fotoAlt) - kaideH - ekranAlt)
   const tabanY = ekranAlt + direk + kaideH
   const metal = 'linear-gradient(180deg, #3a3f47 0%, #23272d 42%, #14171b 100%)'
   const yanDestek = ekranWpx / pxPerM > 2.5

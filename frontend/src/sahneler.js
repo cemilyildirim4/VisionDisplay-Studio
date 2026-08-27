@@ -63,6 +63,17 @@ export const SAHNELER = [
      * icin oradaki olcek ~110 piksel/m. Panel 4,00 x 2,40 m secildi.
      */
     panel: { x0: 616, y0: 338, x1: 1056, y1: 602 },
+    /*
+     * ZEMIN CIZGISI (kaynak piksel) — kiosk kaidesi hep buraya oturur.
+     *
+     * Panelin merkezinden 1,6 m asagida secildi (110 px/m ile 176 piksel).
+     * Sebep: ekran her zaman tuvalin merkezine ciziliyor, yani ekranin
+     * ORTASI sabit. Zemin buradan 1,6 m asagidayken 2 m lik bir ekranin
+     * altinda ~0,6 m luk makul bir direk kaliyor; kucuk bir totemde direk
+     * uzuyor, 4 m lik bir ekranda ise sifira inip kaide ekranin dibine
+     * geliyor. Fotografin kendi zemin dokusu da tam bu hizada basliyor.
+     */
+    zeminY: 646,
     panelEnM: 4,
     maskeli: false, // fotografta kendi LED yuzeyi yok
   },
@@ -88,6 +99,9 @@ export const SAHNELER = [
      * ~75 piksel/m. Panel 4,00 x 2,40 m.
      */
     panel: { x0: 686, y0: 380, x1: 986, y1: 560 },
+    /* Zemin cizgisi: panel merkezinin 1,6 m altisi (75 px/m ile 120 piksel);
+       fotografta dosemenin basladigi hizaya denk geliyor. */
+    zeminY: 590,
     panelEnM: 4,
     maskeli: false,
   },
