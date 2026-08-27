@@ -106,6 +106,7 @@ export function otoMesafe({
   yakinMesafe,
   hedefGenislikPayi = 0.5,
   hedefYukseklikPayi = 0.55,
+  enCokYakinlik = 2.2,
 }) {
   if (!(ekranWpx > 0) || !(ekranHpx > 0) || !(sahne?.w > 0)) return uzakMesafe
   const yakinlik = Math.max(
@@ -115,5 +116,5 @@ export function otoMesafe({
       (tabanY * hedefYukseklikPayi) / ekranHpx,
     ),
   )
-  return Math.max(yakinMesafe, Math.min(uzakMesafe, uzakMesafe / yakinlik))
+  return Math.max(yakinMesafe, Math.min(uzakMesafe, uzakMesafe / Math.min(enCokYakinlik, yakinlik)))
 }
