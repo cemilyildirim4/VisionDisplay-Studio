@@ -1661,20 +1661,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               )}
 
 
-              {/* S-Kutu Yedekliliği (video duvarında yok) */}
-              {!isVideoWall && (
-                <div className="mb-2">
-                  <div className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('sbox.heading')}</div>
-                  <Segmented
-                    value={sboxRedundancy}
-                    onChange={setSboxRedundancy}
-                    options={[
-                      { v: 'no', l: t('common.no') },
-                      { v: 'yes', l: t('common.yes') },
-                    ]}
-                  />
-                </div>
-              )}
+              {/*
+                S-KUTU YEDEKLİLİĞİ ALANI KALDIRILDI (ikinci kez — bkz. 7944640).
+                Bir dal birleşmesiyle geri gelmişti. sboxRedundancy state'i
+                duruyor ('no'): Teknik Özellikler'deki bileşen listesi, donanım
+                hesabı ve kayıtlı teklifler hâlâ onu okuyor.
+              */}
 
               {/* Mini PC — opsiyonel görüntü kaynağı; kapalıysa yalnızca işlemci */}
               {!isVideoWall && (
