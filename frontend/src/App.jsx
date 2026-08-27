@@ -19,7 +19,13 @@ import { salonOlcek } from './Salon.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
-import { sahneBul, fotoYerlesim, EN_AZ_YAKINLIK, zeminOturmaKaymasi } from './sahneler.js'
+import {
+  sahneBul,
+  fotoYerlesim,
+  EN_AZ_YAKINLIK,
+  zeminOturmaKaymasi,
+  oneriYatayKaymasi,
+} from './sahneler.js'
 import { ozelMekanKaydi, MEKAN_TURLERI, MEKAN_EN_COK_MB, VARSAYILAN_ALAN_M } from './ozelMekan.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { panoOlculeri, PANO_SAHNE_EN_M } from './Pano.jsx'
@@ -321,6 +327,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [ozelSahne, setOzelSahne] = useState(null)
   const [ozelAlanM, setOzelAlanM] = useState(VARSAYILAN_ALAN_M)
   const [ozelUyari, setOzelUyari] = useState(null)
+  /* Kiosk ayakları — duvara asılan ekranda ayak olmaz, kapatılabiliyor. */
+  const [ayakVar, setAyakVar] = useState(true)
   const ozelDosyaRef = useRef(null)
   const [arAcik, setArAcik] = useState(false)
   const [scene3dOpen, setScene3dOpen] = useState(false)
@@ -859,6 +867,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yaklastikca kucultmek, etkiyi goturur ve olcuyu de bozardi.)
    */
   const sahneYakinlik = useMemo(() => {
+    // Kendi fotoğrafı kırpılmadan gösteriliyor; orada yakınlaştırma yok.
+    if (fotoSahne?.tamGorunsun) return 1
     const TEMEL_M = 0.96
     const oran = Math.max(tasarimWm / TEMEL_M, tasarimHm / TEMEL_M)
     if (!(oran > 0)) return 1
@@ -915,15 +925,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kioskun zemine oturmasi icin gereken sabit dikey kayma. Kullanicinin
    * suruklemesi bunun UZERINE biniyor: "Ortala" dedigi yer de burasi.
    */
+  const fotoYer = surukleAktif ? fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h) : null
   const oturmaKaymasi = surukleAktif
     ? zeminOturmaKaymasi(
         fotoSahne,
-        fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h),
+        fotoYer,
         tuvalBoyut.h,
         sahneYakinlik,
         tasarimHm * (cizimOlcek || 0),
+        ayakVar,
       )
     : 0
+  /* Sığdırılmış fotoğrafta ekran, önerilen alanın üstüne yatayda da kayar. */
+  const oneriKaymasi = surukleAktif ? oneriYatayKaymasi(fotoYer, tuvalBoyut.w) : 0
 
   const elleKayma = surukleAktif
     ? kaymayiSinirla(
@@ -936,7 +950,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     : null
 
   const mekanKayma = surukleAktif
-    ? { x: elleKayma.x, y: elleKayma.y + oturmaKaymasi }
+    ? { x: elleKayma.x + oneriKaymasi, y: elleKayma.y + oturmaKaymasi }
     : null
 
 
@@ -1120,6 +1134,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               yakinlik={sahneYakinlik}
               kayma={mekanKayma}
               ozelSahne={ozelSahne}
+              ayakVar={ayakVar}
             />
           )}
 
@@ -1739,6 +1754,36 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {ozelUyari && (
                       <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">{ozelUyari}</p>
                     )}
+                  </div>
+                )}
+
+                {/*
+                  KIOSK AYAĞI — yalnızca fotoğraflı mekânda.
+                  Duvara asılan bir ekranın ayağı olmaz; zorla çizilen direk o
+                  tasarımı yanlış gösterir. Kapatılınca ekranın dibi doğrudan
+                  zemine oturuyor, kasa ve gölge yerinde kalıyor.
+                */}
+                {surukleAktif && (
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <span className="text-[15px] text-neutral-600 dark:text-neutral-400">
+                      {t('scene.legs')}
+                    </span>
+                    <div className="flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                      {[true, false].map((v) => (
+                        <button
+                          key={String(v)}
+                          type="button"
+                          onClick={() => setAyakVar(v)}
+                          className={`px-3 py-1.5 text-[14px] transition-colors ${
+                            ayakVar === v
+                              ? 'btn-selected'
+                              : 'text-neutral-600 dark:text-neutral-400 hover:text-brand'
+                          }`}
+                        >
+                          {v ? t('scene.legsOn') : t('scene.legsOff')}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 

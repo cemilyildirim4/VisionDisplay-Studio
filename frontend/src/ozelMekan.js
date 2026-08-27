@@ -68,12 +68,15 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
   const yariH = yukseklik / 2
 
   /*
-   * Panelin DİKEY merkezi kasıtlı olarak fotoğrafın ortasında: fotoğraf
-   * panelin merkezine göre yerleştirilip tuvali kaplamak zorunda ve panel
-   * kenara yakınken gereken büyütme kontrolden çıkıyor (bkz. sahneler.js).
-   * Önerinin YATAY yeri korunuyor — asıl bilgi orada.
+   * Panel, yüzey bulucunun önerdiği dikdörtgenin TA KENDİSİ — hazır
+   * mekânlardaki gibi ortaya çekilmiyor. Orada fotoğraf tuvali kaplamak
+   * zorunda olduğu için panelin kenara yakın olması sorun oluyordu; burada
+   * fotoğraf sığdırılıp tamamı gösterildiği için böyle bir kısıt yok.
    */
-  const merkezY = H / 2
+  const merkezY = Math.max(
+    yariH,
+    Math.min(H - yariH, yer ? (yer.y + yer.h / 2) * H : H / 2),
+  )
   const merkezX = Math.max(
     yariW,
     Math.min(W - yariW, yer ? (yer.x + yer.w / 2) * W : W / 2),
@@ -93,7 +96,9 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
     panelEnM: alanM,
     maskeli: false,
     kiosk: true,
-    zoomlu: true,
+    /* Kırpma ve yakınlaştırma yok: fotoğrafın tamamı görünür. */
+    tamGorunsun: true,
+    zoomlu: false,
     /*
      * Zemin çizgisi: önerilen alanın ALT kenarı — düz alanın bittiği yer,
      * çoğunlukla duvarın zeminle buluştuğu hizadır. Öneri yoksa panelin

@@ -218,13 +218,37 @@ export function fotoYerlesim(sahne, tuvalW, tuvalH) {
    * px/m de ayni oranda buyudugu icin ekranin mekana orani sabit kaliyor.
    */
   const kapsama = sahne.zoomlu ? EN_AZ_YAKINLIK : 1
-  const s = Math.max(tuvalW / 2 / yatay, tuvalH / 2 / dikey) / kapsama
+
+  /*
+   * IKI YERLESTIRME BICIMI.
+   *
+   * Hazir mekanlarda fotograf tuvali KAPLAR (cover): kenarlardan kirpilir,
+   * bos serit kalmaz. Olculeri bize ait oldugu icin neyin kirpildigini
+   * biliyoruz.
+   *
+   * Kullanicinin kendi fotografinda ise kirpmak yanlis: hangi kismin
+   * onemli oldugunu bilmiyoruz ve ekleyen kisi fotografin TAMAMINI gormeyi
+   * bekliyor. Orada fotograf tuvale SIGDIRILIR (contain), ortalanir ve
+   * hicbir yakinlastirma uygulanmaz; ekran da onerilen yere konur.
+   */
+  const sigdir = !!sahne.tamGorunsun
+  const s = sigdir
+    ? Math.min(tuvalW / kaynak.w, tuvalH / kaynak.h)
+    : Math.max(tuvalW / 2 / yatay, tuvalH / 2 / dikey) / kapsama
+  const sol = sigdir ? (tuvalW - kaynak.w * s) / 2 : tuvalW / 2 - merkezX * s
+  const ust = sigdir ? (tuvalH - kaynak.h * s) / 2 : tuvalH / 2 - merkezY * s
   return {
     s,
+    sigdir,
     genislik: kaynak.w * s,
     yukseklik: kaynak.h * s,
-    sol: tuvalW / 2 - merkezX * s,
-    ust: tuvalH / 2 - merkezY * s,
+    sol,
+    ust,
+    /* Panelin merkezinin TUVALDEKI yeri — ekranin gitmesi gereken nokta. */
+    merkezXpx: sol + merkezX * s,
+    merkezYpx: ust + merkezY * s,
+    /* Zemin cizgisinin tuvaldeki yeri (varsa). */
+    zeminYpx: sahne.zeminY != null ? ust + sahne.zeminY * s : null,
     // Panelin tuvaldeki ölçüsü — ekran tam buraya oturur
     panelWpx: panelW * s,
     panelHpx: panelH * s,
@@ -257,12 +281,30 @@ export function govdeOlculeri(ekranHm) {
  * denk gelmesi icin ekran + govde bu kadar asagi kaydirilir. Kayma ekrana da
  * govdeye de ayni uygulanir, ikisi tek parca gibi hareket eder.
  */
-export function zeminOturmaKaymasi(sahne, yer, tuvalH, yakinlik, ekranHpx) {
+export function zeminOturmaKaymasi(sahne, yer, tuvalH, yakinlik, ekranHpx, ayakVar = true) {
   if (!sahne || sahne.zeminY == null || !yer) return 0
-  const merkezY = sahne.panel.y0 + (sahne.panel.y1 - sahne.panel.y0) / 2
-  const zeminPx = tuvalH / 2 + (sahne.zeminY - merkezY) * yer.s * yakinlik
+  /*
+   * Fotograf, panelin merkezi etrafinda olcekleniyor; zemin cizgisinin
+   * yakinlik sonrasi yeri de o merkeze gore bulunuyor. Sigdirilmis
+   * (contain) fotografta yakinlik 1 oldugu icin ayni bagintiya donuyor.
+   */
+  const zeminPx = yer.merkezYpx + (yer.zeminYpx - yer.merkezYpx) * yakinlik
   const pxPerM = yer.pxPerM * yakinlik
   const ekranAlt = tuvalH / 2 + ekranHpx / 2
+  /* Ayaklar gizliyse ekranin DIBI zemine oturur; govde payi yok. */
   const { direkM, kaideM } = govdeOlculeri(ekranHpx / pxPerM)
-  return zeminPx - (ekranAlt + (direkM + kaideM) * pxPerM)
+  const govde = ayakVar ? (direkM + kaideM) * pxPerM : 0
+  return zeminPx - (ekranAlt + govde)
+}
+
+/**
+ * Ekranin ONERILEN yere gitmesi icin gereken YATAY kayma.
+ *
+ * Kaplayan mekanlarda panel zaten tuvalin merkezine hizalandigi icin sifir.
+ * Sigdirilmis fotografta ise fotograf ortalaniyor, panel nerede bulunduysa
+ * orada kaliyor; ekran ona dogru kaydiriliyor.
+ */
+export function oneriYatayKaymasi(yer, tuvalW) {
+  if (!yer?.sigdir) return 0
+  return yer.merkezXpx - tuvalW / 2
 }

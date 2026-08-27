@@ -32,6 +32,8 @@ export default function PanoFoto({
   ekranHpx = 0,
   yakinlik = 1,
   kayma = null,
+  /* Ayaklar (direk + kaide) gizlenebiliyor; kasa ve gölge her hâlükârda kalır. */
+  ayakVar = true,
 }) {
   const yer = fotoYerlesim(sahne, tuvalW, tuvalH)
   if (!yer) return null
@@ -175,46 +177,55 @@ export default function PanoFoto({
             }}
           />
 
-          {/* --- tasiyici direk(ler) --- */}
-          <div
-            style={{
-              position: 'absolute',
-              left: tuvalW / 2 - direkW / 2,
-              top: ekranAlt,
-              width: direkW,
-              height: direk,
-              background: metal,
-            }}
-          />
-          {yanDestek &&
-            [-0.3, 0.3].map((k) => (
-              <div
-                key={k}
-                style={{
-                  position: 'absolute',
-                  left: tuvalW / 2 + k * ekranWpx - direkW * 0.31,
-                  top: ekranAlt,
-                  width: direkW * 0.62,
-                  height: direk,
-                  background: metal,
-                  opacity: 0.92,
-                }}
-              />
-            ))}
+          {/*
+            AYAKLAR — kullanıcı gizleyebilir. Duvara asılan bir ekranın ayağı
+            olmaz; zorla çizilen direk o tasarımı yanlış gösterir. Gizlenince
+            ekranın dibi doğrudan zemine oturuyor (bkz. zeminOturmaKaymasi).
+          */}
+          {ayakVar && (
+            <>
+            {/* --- tasiyici direk(ler) --- */}
+            <div
+              style={{
+                position: 'absolute',
+                left: tuvalW / 2 - direkW / 2,
+                top: ekranAlt,
+                width: direkW,
+                height: direk,
+                background: metal,
+              }}
+            />
+            {yanDestek &&
+              [-0.3, 0.3].map((k) => (
+                <div
+                  key={k}
+                  style={{
+                    position: 'absolute',
+                    left: tuvalW / 2 + k * ekranWpx - direkW * 0.31,
+                    top: ekranAlt,
+                    width: direkW * 0.62,
+                    height: direk,
+                    background: metal,
+                    opacity: 0.92,
+                  }}
+                />
+              ))}
 
-          {/* --- kaide --- */}
-          <div
-            style={{
-              position: 'absolute',
-              left: tuvalW / 2 - (yanDestek ? 0.39 : 0.22) * ekranWpx,
-              top: ekranAlt + direk,
-              width: (yanDestek ? 0.78 : 0.44) * ekranWpx,
-              height: kaideH,
-              background: 'linear-gradient(180deg, #2a2e34 0%, #171a1e 60%, #0d0f12 100%)',
-              borderRadius: Math.max(1, kaideH * 0.15),
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
-            }}
-          />
+            {/* --- kaide --- */}
+            <div
+              style={{
+                position: 'absolute',
+                left: tuvalW / 2 - (yanDestek ? 0.39 : 0.22) * ekranWpx,
+                top: ekranAlt + direk,
+                width: (yanDestek ? 0.78 : 0.44) * ekranWpx,
+                height: kaideH,
+                background: 'linear-gradient(180deg, #2a2e34 0%, #171a1e 60%, #0d0f12 100%)',
+                borderRadius: Math.max(1, kaideH * 0.15),
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
+              }}
+            />
+            </>
+          )}
 
           {/* --- zemin golgesi --- */}
           <div
