@@ -109,10 +109,11 @@ public class ConfigurationsController : ControllerBase
         return Ok(new { message = "Durum güncellendi." });
     }
 
-    // GET: api/configurations/1/pdf — sahibi veya Admin; aksi halde 403 (IDOR).
+    // GET: api/configurations/1/pdf — sahibi veya Admin.
+    // Admin varsayılan olarak iç rapor (fiyat dökümü) alır; ?kind=client ile müşteri raporu.
     [Authorize]
     [HttpGet("{id:int}/pdf")]
-    public async Task<IActionResult> DownloadSpecSheet(int id)
+    public async Task<IActionResult> DownloadSpecSheet(int id, [FromQuery] string? kind)
     {
         var existing = await _configurationService.GetByIdAsync(id);
         if (existing == null)
@@ -121,15 +122,18 @@ public class ConfigurationsController : ControllerBase
         if (!CanAccessConfiguration(existing.UserId))
             return ForbidConfigAccess();
 
-        var pdfBytes = await _configurationService.GenerateSpecSheetPdfAsync(id);
+        var reportKind = ResolvePdfKind(kind);
+        var pdfBytes = await _configurationService.GenerateSpecSheetPdfAsync(id, reportKind);
         if (pdfBytes == null)
             return NotFound(new { message = "Konfigürasyon bulunamadı." });
 
-        string fileName = $"Profesyonel_Rapor_{id}.pdf";
+        string fileName = reportKind == PdfReportKind.Admin
+            ? $"Ic_Rapor_{id}.pdf"
+            : $"Musteri_Rapor_{id}.pdf";
         return File(pdfBytes, "application/pdf", fileName);
     }
 
-    // POST: api/configurations/export-pdf — teklif özeti + teknik şartname + ekran görseli
+    // POST: api/configurations/export-pdf — müşteri raporu (fiyat dökümü yok)
     [Authorize]
     [EnableRateLimiting("write")]
     [RequestSizeLimit(20_000_000)]
@@ -143,7 +147,8 @@ public class ConfigurationsController : ControllerBase
 
         try
         {
-            var pdfBytes = await _configurationService.GenerateSpecSheetPdfFromDtoAsync(dto, dto.ToExtras());
+            var pdfBytes = await _configurationService.GenerateSpecSheetPdfFromDtoAsync(
+                dto, dto.ToExtras(), PdfReportKind.Client);
 
             if (pdfBytes == null || pdfBytes.Length == 0)
             {
@@ -152,7 +157,7 @@ public class ConfigurationsController : ControllerBase
                     statusCode: StatusCodes.Status400BadRequest);
             }
 
-            return File(pdfBytes, "application/pdf", "Profesyonel_Rapor.pdf");
+            return File(pdfBytes, "application/pdf", "Musteri_Rapor.pdf");
         }
         catch (ArgumentException)
         {
@@ -169,6 +174,19 @@ public class ConfigurationsController : ControllerBase
                 detail: null,
                 statusCode: StatusCodes.Status500InternalServerError);
         }
+    }
+
+    private PdfReportKind ResolvePdfKind(string? kind)
+    {
+        if (string.Equals(kind, "client", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(kind, "musteri", StringComparison.OrdinalIgnoreCase))
+            return PdfReportKind.Client;
+
+        if (string.Equals(kind, "admin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(kind, "ic", StringComparison.OrdinalIgnoreCase))
+            return IsAdmin() ? PdfReportKind.Admin : PdfReportKind.Client;
+
+        return IsAdmin() ? PdfReportKind.Admin : PdfReportKind.Client;
     }
 
     private int? GetUserId()

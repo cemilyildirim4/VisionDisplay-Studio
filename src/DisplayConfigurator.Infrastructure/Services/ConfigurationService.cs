@@ -124,19 +124,32 @@ public class ConfigurationService : IConfigurationService
         return await _configurationRepository.UpdateStatusAsync(id, status);
     }
 
-    public async Task<byte[]?> GenerateSpecSheetPdfAsync(int id)
+    public async Task<byte[]?> GenerateSpecSheetPdfAsync(int id, PdfReportKind kind = PdfReportKind.Client)
     {
-        var configDto = await GetByIdAsync(id);
-        if (configDto == null) return null;
+        var entity = await _configurationRepository.GetByIdAsync(id);
+        if (entity == null) return null;
 
-        Cabin? cabin = configDto.CabinId > 0
-            ? await _cabinRepository.GetByIdAsync(configDto.CabinId)
+        Cabin? cabin = entity.CabinId > 0
+            ? await _cabinRepository.GetByIdAsync(entity.CabinId)
             : null;
+        if (cabin == null) return null;
 
-        return _pdfReportService.Generate(configDto, extras: null, cabin);
+        var dto = ToCreateDto(entity);
+        var hardware = await LoadHardwareAsync(dto);
+        dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
+        var configDto = CalculateConfigurationDto(dto, cabin, hardware);
+        configDto.Id = entity.Id;
+        configDto.UserId = entity.UserId;
+        configDto.Status = entity.Status;
+        configDto.Revision = entity.Revision;
+        configDto.CreatedAt = entity.CreatedAt;
+        return _pdfReportService.Generate(configDto, extras: null, cabin, kind);
     }
 
-    public async Task<byte[]> GenerateSpecSheetPdfFromDtoAsync(CreateConfigurationDto dto, PdfReportExtras? extras = null)
+    public async Task<byte[]> GenerateSpecSheetPdfFromDtoAsync(
+        CreateConfigurationDto dto,
+        PdfReportExtras? extras = null,
+        PdfReportKind kind = PdfReportKind.Client)
     {
         var cabin = await _cabinRepository.GetByIdAsync(dto.CabinId);
         if (cabin == null)
@@ -145,8 +158,26 @@ public class ConfigurationService : IConfigurationService
         var hardware = await LoadHardwareAsync(dto);
         dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
         var configDto = CalculateConfigurationDto(dto, cabin, hardware);
-        return _pdfReportService.Generate(configDto, extras, cabin);
+        return _pdfReportService.Generate(configDto, extras, cabin, kind);
     }
+
+    private static CreateConfigurationDto ToCreateDto(Configuration entity) => new()
+    {
+        ProjectName = entity.ProjectName,
+        CustomerName = entity.CustomerName,
+        CabinId = entity.CabinId,
+        Cols = entity.Cols,
+        Rows = entity.Rows,
+        AssemblyType = entity.AssemblyType,
+        ModulesPerCard = entity.ModulesPerCard,
+        HasMiniPc = entity.HasMiniPc,
+        LaborCostMultiplier = entity.LaborCostMultiplier,
+        PowerSupplyId = entity.PowerSupplyId,
+        MiniPcId = entity.MiniPcId,
+        PatchCableId = entity.PatchCableId,
+        ReceivingCardId = entity.ReceivingCardId,
+        ProcessorId = entity.ProcessorId,
+    };
 
     private static ConfigurationResponseDto CalculateConfigurationDto(
         CreateConfigurationDto dto,

@@ -174,6 +174,9 @@ public static class ConfigurationCalculator
             ReceivingCardId = dto.ReceivingCardId,
             ProcessorId = dto.ProcessorId,
             HardwareBreakdown = breakdown,
+            PsuEfficiencyRatio = hw.PowerSupply is { EfficiencyRatio: > 0 }
+                ? hw.PowerSupply.EfficiencyRatio
+                : null,
             TotalPrice = adminTotal,
             Status = "Beklemede",
             Revision = 1,
@@ -190,6 +193,23 @@ public static class ConfigurationCalculator
         var eta = efficiencyRatio > 0 ? efficiencyRatio : 1m;
         var psuLosses = moduleWatts * (1m - eta);
         return moduleWatts + (psuLosses / eta);
+    }
+
+    /// <summary>
+    /// En uygun izleme mesafesi (m): pitch kuralı ile köşegen kuralının büyüğü.
+    /// </summary>
+    public static decimal ViewingDistanceM(Cabin cabin, int cols, int rows)
+    {
+        decimal pitchBase = cabin.ViewingDistanceM is > 0
+            ? cabin.ViewingDistanceM.Value
+            : Math.Round(cabin.PixelPitchMm * 2.5m, 1);
+
+        if (cols <= 0 || rows <= 0) return pitchBase;
+
+        var widthM = cols * (cabin.WidthMm / 1000m);
+        var heightM = rows * (cabin.HeightMm / 1000m);
+        var diagonalM = (decimal)Math.Sqrt((double)(widthM * widthM + heightM * heightM));
+        return Math.Max(pitchBase, diagonalM);
     }
 
     private static HardwareLineItemDto Line(string key, string name, int quantity, decimal unitPrice) =>

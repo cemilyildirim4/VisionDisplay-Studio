@@ -46,7 +46,8 @@ public class ConfigurationServiceTests
         public byte[] Generate(
             ConfigurationResponseDto config,
             PdfReportExtras? extras = null,
-            Cabin? cabin = null) => [0x25, 0x50, 0x44, 0x46]; // %PDF
+            Cabin? cabin = null,
+            PdfReportKind kind = PdfReportKind.Client) => [0x25, 0x50, 0x44, 0x46];
     }
 
     [Fact]

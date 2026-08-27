@@ -305,7 +305,7 @@ export default function ExportModal({ open, onClose, summary }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `Profesyonel_Rapor_${summary.modelCode || belgeNo}.pdf`
+      a.download = `Musteri_Rapor_${summary.modelCode || belgeNo}.pdf`
       document.body.appendChild(a)
       a.click()
       a.remove()

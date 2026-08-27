@@ -85,6 +85,9 @@ public class ConfigurationResponseDto
 
     public IReadOnlyList<HardwareLineItemDto> HardwareBreakdown { get; set; } = [];
 
+    /// <summary>Seçili PSU verim oranı (0–1). Admin PDF güç tablosu için.</summary>
+    public decimal? PsuEfficiencyRatio { get; set; }
+
     // Fiyat & Tarih
     public decimal TotalPrice { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -964,13 +964,13 @@ export default function AdminPanel() {
 
   const downloadConfigPdf = async (c) => {
     try {
-      const res = await apiFetch(`${API_URL}/api/configurations/${c.id}/pdf`, { auth: true })
+      const res = await apiFetch(`${API_URL}/api/configurations/${c.id}/pdf?kind=admin`, { auth: true })
       if (!res.ok) throw new Error('PDF indirilemedi.')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `Proje_${c.id}_${c.projectName || ''}.pdf`
+      a.download = `Ic_Rapor_${c.id}_${c.projectName || ''}.pdf`
       document.body.appendChild(a)
       a.click()
       a.remove()
