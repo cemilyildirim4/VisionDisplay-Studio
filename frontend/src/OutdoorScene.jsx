@@ -21,7 +21,7 @@ import { fotoYerlesimi, sigdirmaKatsayisi, kadrajMesafesi } from './sahneOlcek.j
 import SahneDenetimleri from './SahneDenetimleri.jsx'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 
-const ARKA_PLAN = '/yakin-plan-dis-mekan-led-arka-plan.png'
+const ARKA_PLAN = '/cok-dar-yakin-dis-mekan-led-arka-plan.png'
 
 /*
  * KALİBRASYON.
