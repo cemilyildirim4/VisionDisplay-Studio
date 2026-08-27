@@ -31,6 +31,16 @@ function olcuMetni(g, y) {
   return `${g ?? '?'} m × ${y ?? '?'} m`
 }
 
+function teklifteMiniPc(q) {
+  if (typeof q.hasMiniPc === 'boolean') return q.hasMiniPc
+  try {
+    const taslak = q.configJson ? JSON.parse(q.configJson) : null
+    return Boolean(taslak?.hasMiniPc)
+  } catch {
+    return false
+  }
+}
+
 function TabButton({ active, onClick, children }) {
   return (
     <button
@@ -450,6 +460,7 @@ export default function ControlCenter() {
                           [t('cc.quotes.f.grid'), q.columns && q.rows ? `${q.columns} × ${q.rows}` : null],
                           [t('cc.quotes.f.type'), q.screenType],
                           [t('cc.quotes.f.resolution'), q.resolution],
+                          [t('cc.quotes.f.miniPc'), teklifteMiniPc(q) ? t('common.yes') : t('common.no')],
                           [t('cc.quotes.f.screens'), q.screensSummary],
                           [t('cc.quotes.f.customer'), q.customerName],
                           [t('cc.quotes.f.note'), q.adminNote],

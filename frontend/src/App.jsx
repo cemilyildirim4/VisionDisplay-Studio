@@ -257,6 +257,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
   const [resolution, setResolution] = useState('FHD') // FHD | UHD
   const [sboxRedundancy, setSboxRedundancy] = useState('no') // no | yes
+  const [hasMiniPc, setHasMiniPc] = useState(false)
   /*
    * Ekranın arkasındaki mekân: 'none' ya da PANO_ID.
    *
@@ -365,6 +366,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setCurveAmount(t.curveAmount ?? 60)
     setResolution(t.resolution ?? 'FHD')
     setSboxRedundancy(t.sboxRedundancy ?? 'no')
+    setHasMiniPc(Boolean(t.hasMiniPc))
     setScene(t.scene ?? 'none')
     setScreens(Array.isArray(t.screens) ? t.screens : [])
     setContent(t.content ?? 'led')
@@ -380,11 +382,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     taslagiYaz(
       taslakOlustur({
         selectedModel, width, height, cols, rows, screenMode, screenType,
-        orientation, curveAmount, resolution, sboxRedundancy, scene, screens, content,
+        orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene, screens, content,
       }),
     )
   }, [selectedModel, width, height, cols, rows, screenMode, screenType,
-      orientation, curveAmount, resolution, sboxRedundancy, scene, screens, content])
+      orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene, screens, content])
 
   const handleChoose = (model) => {
     // Başka bir modele geçmek, tasarımı baştan kurmak demek: eldeki kareler
@@ -458,6 +460,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setCurveAmount(60)
     setResolution('FHD')
     setSboxRedundancy('no')
+    setHasMiniPc(false)
     setContent('led')
     if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
     setContentUrl(null)
@@ -1271,6 +1274,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 </div>
               )}
 
+              {/* Mini PC — opsiyonel görüntü kaynağı; kapalıysa yalnızca işlemci */}
+              {!isVideoWall && (
+                <div className="mb-3">
+                  <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-neutral-200 dark:border-[#2c333f] p-3 hover:border-brand/40 transition-colors min-h-[44px]">
+                    <input
+                      type="checkbox"
+                      checked={hasMiniPc}
+                      onChange={(e) => setHasMiniPc(e.target.checked)}
+                      className="mt-1 h-4 w-4 shrink-0 accent-[#2962ad]"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-[15px] font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">
+                        {t('minipc.heading')}
+                      </span>
+                      <span className="inline-block mt-1.5 text-[11px] font-medium rounded-full px-2 py-0.5 bg-neutral-100 dark:bg-[#222833] text-neutral-600 dark:text-neutral-300">
+                        {t('minipc.hint')}
+                      </span>
+                      {!hasMiniPc && (
+                        <span className="block mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                          {t('minipc.offHint')}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                </div>
+              )}
+
               <div className="mb-2">
                 <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('content.heading')}</h2>
                 <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" onChange={handleFile} className="hidden" />
@@ -1505,6 +1535,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         cols={cols}
         rows={rows}
         sboxRedundancy={sboxRedundancy}
+        hasMiniPc={hasMiniPc}
         screenType={screenType}
         isVideoWall={isVideoWall}
         screenMode={screenMode}
@@ -1614,6 +1645,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           // Teknik özellik sayfası da aynı PDF'in içine giriyor; o sayfanın
           // ihtiyaç duyduğu iki alan yalnızca burada mevcut.
           sboxRedundancy,
+          hasMiniPc,
           isVideoWall,
           /* Kamerada ve AR'de kaydedilen kareler — her biri PDF'e ek sayfa olur */
           arFotolar,
@@ -1625,7 +1657,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
            */
           tasarim: taslakOlustur({
             selectedModel, width, height, cols, rows, screenMode, screenType,
-            orientation, curveAmount, resolution, sboxRedundancy, scene, screens, content,
+            orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene, screens, content,
           }),
         }}
       />

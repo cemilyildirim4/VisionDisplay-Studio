@@ -65,11 +65,16 @@ function CardGrid({ children }) {
 }
 
 /** Pop-up içeriği (Teknik Özellikler + Bileşenler tek listede). */
-function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false }) {
+function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false }) {
   const { t } = useLang()
   const has = !!model
   const total = cols * rows
   const s = computeSpecs(model, cols, rows)
+  const modulesPerCard = Number(model?.defaultModulesPerCard) > 0 ? Number(model.defaultModulesPerCard) : 10
+  const receivingCards =
+    String(model?.productType || '').toUpperCase() === 'MODULE'
+      ? Math.ceil(total / modulesPerCard)
+      : total
 
   const circuitText = (c) =>
     has ? `${c.circuits} ${t('sp.circuit')}\n${t('sp.perCircuit')}: ${c.perCircuit} ${t('sp.cabinet')}` : DASH
@@ -144,6 +149,21 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           <Block title={t('sp.customerSelection')}>
             <Pair label={t('screen.type')} value={t(`screen.${screenType}`)} />
             <Pair label={t('sbox.heading')} value={sboxRedundancy === 'yes' ? t('common.yes') : t('common.no')} />
+            <Pair label={t('sp.miniPc')} value={hasMiniPc ? t('common.yes') : t('common.no')} />
+          </Block>
+        )}
+
+        {has && (
+          <Block title={t('sp.package')}>
+            <Pair label={t('sp.pkg.module')} value={`${fmt(total)} ${t('sp.unit')}`} />
+            <Pair label={t('sp.pkg.processor')} value={`1 ${t('sp.unit')} · ${t('sp.pkg.included')}`} />
+            <Pair label={t('sp.pkg.psu')} value={`${fmt(total)} ${t('sp.unit')}`} />
+            <Pair
+              label={t('sp.pkg.miniPc')}
+              value={hasMiniPc ? `1 ${t('sp.unit')} · ${t('sp.pkg.included')}` : t('sp.pkg.viaProcessor')}
+            />
+            <Pair label={t('sp.pkg.patch')} value={`${fmt(receivingCards)} ${t('sp.unit')}`} />
+            <Pair label={t('sp.pkg.receiving')} value={`${fmt(receivingCards)} ${t('sp.unit')}`} />
           </Block>
         )}
 

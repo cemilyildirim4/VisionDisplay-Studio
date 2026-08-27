@@ -284,7 +284,6 @@ function OptionRow({ filterLabel, option, selected, onToggle }) {
 // "Seç" (choose) akışından bağımsız — birden fazla model işaretlenebilir.
 const COMPARE_ROWS = [
   { key: 'compare.type', get: (c) => (normalizeProductType(c.productType) === PRODUCT_TYPES.MODULE ? 'Panel' : 'Kabin') },
-  { key: 'compare.price', get: (c) => (c.price ? `$${Number(c.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : '—') },
   { key: 'compare.pitch', get: (c) => (c.pixelPitchMm ? `${c.pixelPitchMm} mm` : '—') },
   { key: 'compare.brightness', get: (c) => (c.brightnessNits ? `${c.brightnessNits} nit` : '—') },
   { key: 'compare.dimensions', get: (c) => `${c.widthMm} × ${c.heightMm} × ${c.depthMm} mm` },

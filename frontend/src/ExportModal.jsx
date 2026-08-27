@@ -66,6 +66,20 @@ function clampGrid(n) {
   return Math.min(50, v)
 }
 
+/** Mini PC seçiliyse katalogdaki ilk kaydı hesaplamaya bağlar; değilse işlemci-only. */
+async function resolveMiniPcFields(hasMiniPc) {
+  if (!hasMiniPc) return { hasMiniPc: false, miniPcId: null }
+  try {
+    const res = await apiFetch(`${API_URL}/api/hardware/mini-pcs`)
+    if (!res.ok) return { hasMiniPc: true, miniPcId: null }
+    const list = await res.json()
+    const id = Array.isArray(list) && list[0]?.id ? Number(list[0].id) : null
+    return { hasMiniPc: true, miniPcId: Number.isFinite(id) ? id : null }
+  } catch {
+    return { hasMiniPc: true, miniPcId: null }
+  }
+}
+
 export default function ExportModal({ open, onClose, summary }) {
   const { t, lang } = useLang()
   const { isAuthenticated } = useSession()
@@ -238,6 +252,7 @@ export default function ExportModal({ open, onClose, summary }) {
     try {
       const projectName = (customer ? `${customer} - ${summary.modelCode || ''}` : `Taslak - ${belgeNo}`).slice(0, 100)
       const previewImageBase64 = await captureScreenPreview()
+      const miniPc = await resolveMiniPcFields(Boolean(summary.hasMiniPc))
       const res = await apiFetch(`${API_URL}/api/configurations/export-pdf`, {
         method: 'POST',
         auth: true,
@@ -251,6 +266,8 @@ export default function ExportModal({ open, onClose, summary }) {
           rows: clampGrid(summary.rows),
           assemblyType: model.productType || 'CABINET',
           modulesPerCard: 0,
+          hasMiniPc: miniPc.hasMiniPc,
+          miniPcId: miniPc.miniPcId,
           phone: compactPhone(phone) || null,
           email: email.trim() || null,
           address: address.trim() || null,
@@ -324,6 +341,8 @@ export default function ExportModal({ open, onClose, summary }) {
          * "Tekliflerim → Düzenle" tasarımı bundan birebir açıyor.
          */
         configJson: summary.tasarim ? JSON.stringify(summary.tasarim) : null,
+        hasMiniPc: miniPc.hasMiniPc,
+        miniPcId: miniPc.miniPcId,
       }
       const sendQuote = (body) =>
         apiFetch(`${API_URL}/api/quotes`, {
@@ -364,6 +383,8 @@ export default function ExportModal({ open, onClose, summary }) {
             rows: clampGrid(summary.rows),
             assemblyType: model.productType || 'CABINET',
             modulesPerCard: 0,
+            hasMiniPc: miniPc.hasMiniPc,
+            miniPcId: miniPc.miniPcId,
           }),
         }).catch((e) => console.error('Proje kaydı gönderilemedi (PDF yine de indirildi):', e))
       }

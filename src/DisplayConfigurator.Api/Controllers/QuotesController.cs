@@ -85,6 +85,8 @@ public class QuotesController : ControllerBase
             Resolution = input.Resolution,
             ScreensSummary = input.ScreensSummary,
             ConfigJson = input.ConfigJson,
+            HasMiniPc = input.HasMiniPc,
+            MiniPcId = input.MiniPcId,
             Status = "Beklemede",
             Revision = 1,
             UserId = GetUserId(),

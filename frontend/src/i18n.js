@@ -140,6 +140,7 @@ const dict = {
   'cc.quotes.f.screens': { tr: 'Ekranlar', en: 'Screens', ar: 'الشاشات' },
   'cc.quotes.f.customer': { tr: 'Müşteri', en: 'Customer', ar: 'العميل' },
   'cc.quotes.f.note': { tr: 'Yetkili notu', en: 'Staff note', ar: 'ملاحظة الموظف' },
+  'cc.quotes.f.miniPc': { tr: 'Mini PC', en: 'Mini PC', ar: 'Mini PC' },
   'cc.tester.title': { tr: 'Hata bildir', en: 'Report a bug', ar: 'الإبلاغ عن خطأ' },
   'cc.tester.hint': {
     tr: 'Gördüğünüz sorunu kısaca yazın. Bildiriminiz kaydedilir ve yönetim panelinden okunur.',
@@ -253,6 +254,17 @@ const dict = {
 
   // ---------- S-Kutu ----------
   'sbox.heading': { tr: 'S-Kutu Yedekliliği', en: 'S-Box Redundancy', ar: 'تكرار S-Box' },
+  'minipc.heading': { tr: 'Mini PC Sistemi Dahil Edilsin', en: 'Include Mini PC System', ar: 'تضمين نظام Mini PC' },
+  'minipc.hint': {
+    tr: 'Görüntü kaynağı doğrudan Mini PC üzerinden yürütülsün',
+    en: 'Run the video source directly from the Mini PC',
+    ar: 'تشغيل مصدر الصورة مباشرة عبر Mini PC',
+  },
+  'minipc.offHint': {
+    tr: 'Kapalıyken görüntü yalnızca işlemci (Processor) üzerinden yürütülür.',
+    en: 'When off, video is driven by the processor only.',
+    ar: 'عند الإيقاف يعمل الفيديو عبر المعالج فقط.',
+  },
   'common.no': { tr: 'Hayır', en: 'No', ar: 'لا' },
   'common.yes': { tr: 'Evet', en: 'Yes', ar: 'نعم' },
 
@@ -693,6 +705,16 @@ const dict = {
   'sp.cabinet': { tr: 'Dolap', en: 'Cabinet', ar: 'خزانة' },
   'sp.heat': { tr: 'Isı Üretimi', en: 'Heat Generation', ar: 'توليد الحرارة' },
   'sp.customerSelection': { tr: 'Müşteri Seçimi', en: 'Customer Selection', ar: 'اختيار العميل' },
+  'sp.miniPc': { tr: 'Mini PC', en: 'Mini PC', ar: 'Mini PC' },
+  'sp.package': { tr: 'Toplam paket', en: 'Complete package', ar: 'الحزمة الكاملة' },
+  'sp.pkg.module': { tr: 'Modül / Kabin', en: 'Module / Cabinet', ar: 'وحدة / خزانة' },
+  'sp.pkg.processor': { tr: 'İşlemci', en: 'Processor', ar: 'المعالج' },
+  'sp.pkg.psu': { tr: 'Güç Kaynağı', en: 'Power Supply', ar: 'مزود الطاقة' },
+  'sp.pkg.miniPc': { tr: 'Mini PC', en: 'Mini PC', ar: 'Mini PC' },
+  'sp.pkg.patch': { tr: 'Patch Kablosu', en: 'Patch Cable', ar: 'كابل التوصيل' },
+  'sp.pkg.receiving': { tr: 'Alıcı Kart', en: 'Receiving Card', ar: 'بطاقة الاستقبال' },
+  'sp.pkg.included': { tr: 'Dahil', en: 'Included', ar: 'مضمّن' },
+  'sp.pkg.viaProcessor': { tr: 'Dahil değil — işlemci üzerinden', en: 'Not included — via processor', ar: 'غير مضمّن — عبر المعالج' },
   'sp.ledCabinets': { tr: 'LED Kabinler', en: 'LED Cabinets', ar: 'خزائن LED' },
   'sp.cabinetCount': { tr: 'Dolap sayısı', en: 'No. of Cabinets', ar: 'عدد الخزائن' },
   'sp.spareCabinets': { tr: 'Yedek Dolap Sayısı', en: 'No. of Spare Cabinets', ar: 'عدد الخزائن الاحتياطية' },

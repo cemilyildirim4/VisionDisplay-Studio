@@ -50,6 +50,7 @@ export function taslakOlustur(durum) {
     curveAmount: durum.curveAmount ?? 60,
     resolution: durum.resolution ?? 'FHD',
     sboxRedundancy: durum.sboxRedundancy ?? 'no',
+    hasMiniPc: Boolean(durum.hasMiniPc),
     scene: durum.scene ?? 'none',
     // Çoklu ekranda her ekranın kendi düzeni — teklif özetindeki cümlenin aksine
     // makineye geri verilebilir hâli.
