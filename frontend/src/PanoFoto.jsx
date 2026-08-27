@@ -23,6 +23,7 @@
  */
 
 import { fotoYerlesim, govdeOlculeri } from './sahneler.js'
+import { yonDonusumu } from './hooks/useYon.js'
 
 export default function PanoFoto({
   sahne,
@@ -42,6 +43,8 @@ export default function PanoFoto({
   ekranSekli = null,
   /* Tasiyici direk L kosesinin altina gelsin diye (0..1). */
   ayakOrani = 0.5,
+  /* Ekrana verilen aci (bkz. hooks/useYon.js) — govde de ayni acida durur. */
+  yon = null,
   kayma = null,
   /* Ayaklar (direk + kaide) gizlenebiliyor; kasa ve gölge her hâlükârda kalır. */
   ayakVar = true,
@@ -216,7 +219,22 @@ export default function PanoFoto({
       */}
       {kiosk && (
         <div
-          style={{ position: 'absolute', inset: 0, transform: kayma ? `translate(${kayma.x}px, ${kayma.y}px)` : undefined }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            /*
+             * Once tasima, sonra aci: aci ekranin KENDI merkezi etrafinda
+             * donmeli. Tuvalin merkezi zaten ekranin merkezi oldugu icin
+             * donusum noktasi ortada birakiliyor.
+             */
+            transform: [
+              kayma ? `translate(${kayma.x}px, ${kayma.y}px)` : null,
+              yonDonusumu(yon, ekranWpx),
+            ]
+              .filter(Boolean)
+              .join(' ') || undefined,
+            transformStyle: 'preserve-3d',
+          }}
         >
           <div
             style={{

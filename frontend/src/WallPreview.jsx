@@ -5,6 +5,7 @@ import { viewingDistanceFor } from './viewingDistance.js'
 import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, L_KIRILMA_PCT } from './content.js'
 import { videoSrcFor } from './videoContent.js'
 import { useLang } from './useLang.js'
+import { yonDonusumu } from './hooks/useYon.js'
 
 /**
  * Çalışma alanı önizlemesi.
@@ -662,6 +663,14 @@ export default function WallPreview({
   kayma = null,
   tutamak = null,
   /*
+   * EKRANA VERILEN ACI (bkz. hooks/useYon.js).
+   *
+   * Yalnizca EKRAN KUTUSUNA uygulaniyor; olcu etiketleri ve +/- dugmeleri
+   * disarida kaliyor. Onlar mekanin degil arayuzun parcasi, dondurulunce
+   * okunmaz oluyorlardi.
+   */
+  yon = null,
+  /*
    * Sahnenin duvarının gerçek ölçüsü, { w, h } metre. Verilirse ÇİZİM ÖLÇEĞİ
    * buna sabitlenir: mekânın duvarı 6 m ise 3 m'lik ekran yarısını kaplar.
    * Ölçek hissini veren şey bu — yoksa her ekran aynı büyüklükte görünüyordu.
@@ -903,7 +912,7 @@ export default function WallPreview({
               dalında ekran bu kutunun içinde olmadığı için sorun görülmüyordu.
             */}
             <div
-              style={{ width: wallW, height: wallH }}
+              style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }}
               className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative ${kavisPayiM > 0 ? 'overflow-visible' : 'overflow-hidden'}`}
             >
               {/* Ekranlar şeridi (ortalanmış, alta hizalı) */}
@@ -1166,7 +1175,7 @@ export default function WallPreview({
             ...(tutamak ? tutamak.style : null),
           }}
         >
-          <div style={{ width: wallW, height: wallH }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} flex items-center justify-center`}>
+          <div style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} flex items-center justify-center`}>
             <Screen
               wPx={screenW}
               hPx={screenH}

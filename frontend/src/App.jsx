@@ -29,6 +29,7 @@ import {
 import { ozelMekanKaydi, MEKAN_TURLERI, MEKAN_EN_COK_MB, VARSAYILAN_ALAN_M } from './ozelMekan.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
+import { useYon } from './hooks/useYon.js'
 import { panoOlculeri, PANO_SAHNE_EN_M } from './Pano.jsx'
 import ArView from './ArView.jsx'
 // three.js/react-three-fiber/drei/model-viewer tek başına ~1.8 MB — ana pakete
@@ -1013,6 +1014,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   } = useSurukleme(cizimOlcek || 0)
 
   /*
+   * MEKANDA YÖN VERME.
+   *
+   * Fotoğraf karşıdan çekilmemişse ekranı da o açıya çevirmek gerekiyor;
+   * yoksa yamuk bir duvara dümdüz bir dikdörtgen yapıştırılmış gibi
+   * duruyor. Fare aynı tutamağı kullanıyor, sadece kipi değişiyor:
+   * taşımak da yön vermek de ekranı elle tutup sürüklemek.
+   */
+  const { yon: mekanYon, dondu: mekanDondu, sifirla: yonuSifirla, tutamak: yonTutamak } = useYon()
+  const [yonKipi, setYonKipi] = useState('tasi') // tasi | dondur
+  const etkinTutamak = yonKipi === 'dondur' ? yonTutamak : mekanTutamak
+
+  /*
    * Kioskun zemine oturmasi icin gereken sabit dikey kayma. Kullanicinin
    * suruklemesi bunun UZERINE biniyor: "Ortala" dedigi yer de burasi.
    */
@@ -1255,6 +1268,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
               ekranSekli={ekranSekli}
               ayakOrani={ayakOrani}
+              yon={mekanYon}
               /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
               yakinlik={sahneYakinlik}
               kayma={mekanKayma}
@@ -1286,7 +1300,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               sahneVar={scene !== 'none'}
               sahnePayPx={sahnePayPx}
               kayma={mekanKayma}
-              tutamak={surukleAktif ? mekanTutamak : null}
+              tutamak={surukleAktif ? etkinTutamak : null}
+              yon={surukleAktif ? mekanYon : null}
               sahneOlcekVarsayilan={sahneOlcekVarsayilan}
               onPxPerM={setCizimOlcek}
             />
@@ -1996,6 +2011,51 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/*
+                  FARE KİPİ — taşı / yön ver.
+                  Yön verme, karşıdan çekilmemiş fotoğraflar için: ekran
+                  duvarın açısına döndürülünce yamuk görünür ve mekâna oturur.
+                */}
+                {surukleAktif && (
+                  <div className="mt-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[15px] text-neutral-600 dark:text-neutral-400">
+                        {t('scene.handle')}
+                      </span>
+                      <div className="flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                        {['tasi', 'dondur'].map((k) => (
+                          <button
+                            key={k}
+                            type="button"
+                            onClick={() => setYonKipi(k)}
+                            className={`px-3 py-1.5 text-[14px] transition-colors ${
+                              yonKipi === k
+                                ? 'btn-selected'
+                                : 'text-neutral-600 dark:text-neutral-400 hover:text-brand'
+                            }`}
+                          >
+                            {t(k === 'tasi' ? 'scene.handleMove' : 'scene.handleTurn')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {yonKipi === 'dondur' && (
+                      <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('scene.turnHint')}
+                      </p>
+                    )}
+                    {mekanDondu && (
+                      <button
+                        type="button"
+                        onClick={yonuSifirla}
+                        className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        {t('scene.turnReset')}
+                      </button>
+                    )}
                   </div>
                 )}
 
