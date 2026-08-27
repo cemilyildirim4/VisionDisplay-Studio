@@ -33,7 +33,7 @@ public class ConfigurationServiceTests
             PowerTypicalWatts = 200m,
             PowerMaxWatts = 600m,
         });
-        return new ConfigurationService(configRepo, cabinRepo, new StubPdfReportService());
+        return new ConfigurationService(configRepo, cabinRepo, new InMemoryHardwareCatalogRepository(), new StubPdfReportService());
     }
 
     private sealed class StubPdfReportService : DisplayConfigurator.Application.Interfaces.IPdfReportService
@@ -55,7 +55,7 @@ public class ConfigurationServiceTests
         Assert.True(result.Id > 0);
         Assert.Equal("Beklemede", result.Status);
         Assert.Equal(1, result.Revision);
-        Assert.Equal(12000m, result.TotalPrice);
+        Assert.Equal(12003m, result.TotalPrice);
 
         // Repository'ye gerçekten yazıldığını doğrula (yalnızca DTO'yu değil).
         var stored = await configRepo.GetByIdAsync(result.Id);

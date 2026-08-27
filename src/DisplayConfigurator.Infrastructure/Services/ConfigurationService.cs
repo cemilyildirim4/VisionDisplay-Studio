@@ -9,15 +9,18 @@ public class ConfigurationService : IConfigurationService
 {
     private readonly IConfigurationRepository _configurationRepository;
     private readonly ICabinRepository _cabinRepository;
+    private readonly IHardwareCatalogRepository _hardwareCatalogRepository;
     private readonly IPdfReportService _pdfReportService;
 
     public ConfigurationService(
         IConfigurationRepository configurationRepository,
         ICabinRepository cabinRepository,
+        IHardwareCatalogRepository hardwareCatalogRepository,
         IPdfReportService pdfReportService)
     {
         _configurationRepository = configurationRepository;
         _cabinRepository = cabinRepository;
+        _hardwareCatalogRepository = hardwareCatalogRepository;
         _pdfReportService = pdfReportService;
     }
 
@@ -61,7 +64,8 @@ public class ConfigurationService : IConfigurationService
         if (cabin == null)
             throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
 
-        var responseDto = CalculateConfigurationDto(dto, cabin);
+        var hardware = await LoadHardwareAsync(dto);
+        var responseDto = CalculateConfigurationDto(dto, cabin, hardware);
 
         var entity = new Configuration
         {
@@ -85,6 +89,13 @@ public class ConfigurationService : IConfigurationService
             IsFullHd = responseDto.IsFullHd,
             Is4K = responseDto.Is4K,
             TotalPrice = responseDto.TotalPrice,
+            HasMiniPc = dto.HasMiniPc,
+            LaborCostMultiplier = dto.LaborCostMultiplier,
+            PowerSupplyId = dto.PowerSupplyId,
+            MiniPcId = dto.MiniPcId,
+            PatchCableId = dto.PatchCableId,
+            ReceivingCardId = dto.ReceivingCardId,
+            ProcessorId = dto.ProcessorId,
             Status = "Beklemede",
             Revision = 1,
             UserId = userId,
@@ -92,9 +103,11 @@ public class ConfigurationService : IConfigurationService
         };
 
         int createdId = await _configurationRepository.CreateAsync(entity);
-        entity.Id = createdId;
-
-        return MapToResponseDto(entity, cabin);
+        responseDto.Id = createdId;
+        responseDto.UserId = userId;
+        responseDto.Status = entity.Status;
+        responseDto.Revision = entity.Revision;
+        return responseDto;
     }
 
     public async Task<bool> DeleteAsync(int id)
@@ -125,14 +138,64 @@ public class ConfigurationService : IConfigurationService
         if (cabin == null)
             throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
 
-        var configDto = CalculateConfigurationDto(dto, cabin);
+        var hardware = await LoadHardwareAsync(dto);
+        var configDto = CalculateConfigurationDto(dto, cabin, hardware);
         return _pdfReportService.Generate(configDto, extras, cabin);
     }
 
-    // Gerçek hesaplama mantığı DisplayConfigurator.Application/Engine/ConfigurationCalculator.cs'e
-    // taşındı (bkz. DisplayConfigurator.Tests) — burada yalnızca ince bir sarmalayıcı kalıyor.
-    private static ConfigurationResponseDto CalculateConfigurationDto(CreateConfigurationDto dto, Cabin cabin)
-        => ConfigurationCalculator.Calculate(dto, cabin);
+    private static ConfigurationResponseDto CalculateConfigurationDto(
+        CreateConfigurationDto dto,
+        Cabin cabin,
+        HardwareCatalogItems? hardware = null)
+        => ConfigurationCalculator.Calculate(dto, cabin, hardware);
+
+    private async Task<HardwareCatalogItems> LoadHardwareAsync(CreateConfigurationDto dto)
+    {
+        Processor? processor = null;
+        PowerSupply? powerSupply = null;
+        MiniPc? miniPc = null;
+        PatchCable? patchCable = null;
+        ReceivingCard? receivingCard = null;
+
+        if (dto.ProcessorId is > 0)
+        {
+            processor = await _hardwareCatalogRepository.GetProcessorByIdAsync(dto.ProcessorId.Value)
+                ?? throw new ArgumentException("Seçilen işlemci bulunamadı.");
+        }
+
+        if (dto.PowerSupplyId is > 0)
+        {
+            powerSupply = await _hardwareCatalogRepository.GetPowerSupplyByIdAsync(dto.PowerSupplyId.Value)
+                ?? throw new ArgumentException("Seçilen güç kaynağı bulunamadı.");
+        }
+
+        if (dto.MiniPcId is > 0)
+        {
+            miniPc = await _hardwareCatalogRepository.GetMiniPcByIdAsync(dto.MiniPcId.Value)
+                ?? throw new ArgumentException("Seçilen mini PC bulunamadı.");
+        }
+
+        if (dto.PatchCableId is > 0)
+        {
+            patchCable = await _hardwareCatalogRepository.GetPatchCableByIdAsync(dto.PatchCableId.Value)
+                ?? throw new ArgumentException("Seçilen patch kablosu bulunamadı.");
+        }
+
+        if (dto.ReceivingCardId is > 0)
+        {
+            receivingCard = await _hardwareCatalogRepository.GetReceivingCardByIdAsync(dto.ReceivingCardId.Value)
+                ?? throw new ArgumentException("Seçilen alıcı kart bulunamadı.");
+        }
+
+        return new HardwareCatalogItems
+        {
+            Processor = processor,
+            PowerSupply = powerSupply,
+            MiniPc = miniPc,
+            PatchCable = patchCable,
+            ReceivingCard = receivingCard,
+        };
+    }
 
     private static ConfigurationResponseDto MapToResponseDto(Configuration c, Cabin? cabin = null)
     {
@@ -148,6 +211,14 @@ public class ConfigurationService : IConfigurationService
                 ? Math.Round((totalUnits * cabin.PowerTypicalWatts) / 1000m, 2)
                 : Math.Round(maxPowerKw * 0.35m, 2);
         }
+
+        decimal widthM = c.TotalWidthMm / 1000m;
+        decimal heightM = c.TotalHeightMm / 1000m;
+        decimal screenAreaM2 = Math.Round(widthM * heightM, 4);
+        decimal laborMultiplier = c.LaborCostMultiplier;
+        decimal laborCost = Math.Round(screenAreaM2 * laborMultiplier, 2);
+        decimal moduleMaxWatts = totalUnits * (cabin?.PowerMaxWatts ?? 0m);
+        decimal moduleHeatBtu = Math.Round(moduleMaxWatts * ConfigurationCalculator.WattsToBtu, 2);
 
         return new ConfigurationResponseDto
         {
@@ -170,9 +241,20 @@ public class ConfigurationService : IConfigurationService
             TotalWeightKg = c.TotalWeightKg,
             TotalMaxPowerKw = maxPowerKw,
             TotalAvgPowerKw = avgPowerKw,
+            ModuleHeatDissipationBtu = moduleHeatBtu,
             AspectRatio = c.AspectRatio,
             IsFullHd = c.IsFullHd,
             Is4K = c.Is4K,
+            HasMiniPc = c.HasMiniPc,
+            LaborCostMultiplier = laborMultiplier,
+            ScreenAreaM2 = screenAreaM2,
+            LaborCost = laborCost,
+            HardwareSubtotal = Math.Round(c.TotalPrice - laborCost, 2),
+            PowerSupplyId = c.PowerSupplyId,
+            MiniPcId = c.MiniPcId,
+            PatchCableId = c.PatchCableId,
+            ReceivingCardId = c.ReceivingCardId,
+            ProcessorId = c.ProcessorId,
             TotalPrice = c.TotalPrice,
             Status = string.IsNullOrWhiteSpace(c.Status) ? "Taslak" : c.Status,
             Revision = c.Revision <= 0 ? 1 : c.Revision,

@@ -62,9 +62,17 @@ public class ConfigurationCalculatorTests
         Assert.Equal(7.2m, result.TotalMaxPowerKw);
         Assert.Equal(2.4m, result.TotalAvgPowerKw);
 
-        // Ağırlık: 12 x 6,5 kg = 78 kg. Fiyat: 12 x 1000 $ = 12.000 $.
+        // Ağırlık: 12 x 6,5 kg = 78 kg.
+        // Donanım: 12 x 1000 $ = 12.000 $. İşçilik: 2 m × 1,5 m = 3 m² × 1 = 3 $.
         Assert.Equal(78m, result.TotalWeightKg);
-        Assert.Equal(12000m, result.TotalPrice);
+        Assert.Equal(12000m, result.HardwareSubtotal);
+        Assert.Equal(3m, result.ScreenAreaM2);
+        Assert.Equal(3m, result.LaborCost);
+        Assert.Equal(12003m, result.TotalPrice);
+
+        Assert.Equal(6, result.HardwareBreakdown.Count);
+        Assert.Equal(12, result.HardwareBreakdown.Single(x => x.Key == "module").Quantity);
+        Assert.Equal(0, result.HardwareBreakdown.Single(x => x.Key == "miniPc").Quantity);
 
         // 2000x1500 = 4:3 en-boy oranı.
         Assert.Equal("4:3", result.AspectRatio);
@@ -166,5 +174,94 @@ public class ConfigurationCalculatorTests
     public void CalculateAspectRatio_BilinenOranlariEtiketler(int width, int height, string expected)
     {
         Assert.Equal(expected, ConfigurationCalculator.CalculateAspectRatio(width, height));
+    }
+
+    [Fact]
+    public void Calculate_HasMiniPcTrue_MiniPcSatiriniDahilEder()
+    {
+        var cabin = SampleCabinet();
+        var dto = new CreateConfigurationDto
+        {
+            ProjectName = "Mini PC",
+            CabinId = 1,
+            Cols = 4,
+            Rows = 3,
+            HasMiniPc = true,
+            MiniPcId = 9,
+        };
+        var hardware = new HardwareCatalogItems
+        {
+            MiniPc = new MiniPc { Id = 9, Name = "Ops Mini", Price = 250m },
+        };
+
+        var result = ConfigurationCalculator.Calculate(dto, cabin, hardware);
+
+        var miniPc = result.HardwareBreakdown.Single(x => x.Key == "miniPc");
+        Assert.Equal(1, miniPc.Quantity);
+        Assert.Equal(250m, miniPc.LineTotal);
+        Assert.Equal(12250m, result.HardwareSubtotal);
+        Assert.Equal(12253m, result.TotalPrice);
+    }
+
+    [Fact]
+    public void Calculate_PowerSupplyVerimi_ToplamWattVeBtuFormulunuUygular()
+    {
+        var cabin = SampleCabinet();
+        var dto = new CreateConfigurationDto
+        {
+            ProjectName = "PSU",
+            CabinId = 1,
+            Cols = 4,
+            Rows = 3,
+            LaborCostMultiplier = 0m,
+        };
+        var hardware = new HardwareCatalogItems
+        {
+            PowerSupply = new PowerSupply
+            {
+                Name = "MeanWell",
+                Price = 80m,
+                EfficiencyRatio = 0.9m,
+            },
+        };
+
+        var result = ConfigurationCalculator.Calculate(dto, cabin, hardware);
+
+        // Modül 7,2 kW; η=0,9 → 7,2 / 0,9 = 8 kW. PSU 12 × 80 $ = 960 $.
+        Assert.Equal(8.00m, result.TotalMaxPowerKw);
+        Assert.Equal(2.67m, result.TotalAvgPowerKw); // 2400 / 0.9 = 2666.6… → 2.67 kW
+        Assert.Equal(960m, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").LineTotal);
+        Assert.Equal(12960m, result.HardwareSubtotal);
+
+        // Modül ısı = 7200 × 3.412 = 24566.4; toplam BTU = (8000 × 3.412) + 24566.4
+        Assert.Equal(24566.4m, result.ModuleHeatDissipationBtu);
+        Assert.Equal(Math.Round(8000 * 3.412 + 24566.4), result.HeatDissipationBtu);
+    }
+
+    [Fact]
+    public void Calculate_IsçilikCarpani_EkranAlaniIleCarpilir()
+    {
+        var cabin = SampleCabinet();
+        var dto = new CreateConfigurationDto
+        {
+            ProjectName = "İşçilik",
+            CabinId = 1,
+            Cols = 4,
+            Rows = 3,
+            LaborCostMultiplier = 50m,
+        };
+
+        var result = ConfigurationCalculator.Calculate(dto, cabin);
+
+        Assert.Equal(3m, result.ScreenAreaM2);
+        Assert.Equal(150m, result.LaborCost);
+        Assert.Equal(12150m, result.TotalPrice);
+    }
+
+    [Fact]
+    public void ApplyPsuLosses_Verim1_ModulGucunuKorur()
+    {
+        Assert.Equal(7200m, ConfigurationCalculator.ApplyPsuLosses(7200m, 1m));
+        Assert.Equal(8000m, ConfigurationCalculator.ApplyPsuLosses(7200m, 0.9m));
     }
 }

@@ -60,10 +60,30 @@ public class ConfigurationResponseDto
     public decimal TotalMaxPowerKw { get; set; }
     public decimal TotalAvgPowerKw { get; set; }
 
+    /// <summary>Modüllerin kendi ısı yayılımı (BTU). Toplam BTU'ya watt dönüşümünün üstüne eklenir.</summary>
+    public decimal ModuleHeatDissipationBtu { get; set; }
+
     // Otomatik Türetilen Güç & Isı Bilgileri
     public double TotalMaxPowerWatts => (double)TotalMaxPowerKw * 1000.0;
     public double TotalAvgPowerWatts => (double)TotalAvgPowerKw * 1000.0;
-    public double HeatDissipationBtu => Math.Round(TotalMaxPowerWatts * 3.412);
+
+    /// <summary>Toplam BTU = (Toplam Watt × 3.412) + Modül ısı yayılımı.</summary>
+    public double HeatDissipationBtu =>
+        Math.Round(TotalMaxPowerWatts * 3.412 + (double)ModuleHeatDissipationBtu);
+
+    public bool HasMiniPc { get; set; }
+    public decimal LaborCostMultiplier { get; set; } = 1m;
+    public decimal ScreenAreaM2 { get; set; }
+    public decimal LaborCost { get; set; }
+    public decimal HardwareSubtotal { get; set; }
+
+    public int? PowerSupplyId { get; set; }
+    public int? MiniPcId { get; set; }
+    public int? PatchCableId { get; set; }
+    public int? ReceivingCardId { get; set; }
+    public int? ProcessorId { get; set; }
+
+    public IReadOnlyList<HardwareLineItemDto> HardwareBreakdown { get; set; } = [];
 
     // Fiyat & Tarih
     public decimal TotalPrice { get; set; }

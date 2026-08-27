@@ -92,3 +92,37 @@ public class InMemoryConfigurationRepository : IConfigurationRepository
         return Task.FromResult(true);
     }
 }
+
+public class InMemoryHardwareCatalogRepository : IHardwareCatalogRepository
+{
+    public Dictionary<int, PowerSupply> PowerSupplies { get; } = new();
+    public Dictionary<int, MiniPc> MiniPcs { get; } = new();
+    public Dictionary<int, PatchCable> PatchCables { get; } = new();
+    public Dictionary<int, ReceivingCard> ReceivingCards { get; } = new();
+    public Dictionary<int, Processor> Processors { get; } = new();
+
+    public Task<IEnumerable<PowerSupply>> GetPowerSuppliesAsync() =>
+        Task.FromResult<IEnumerable<PowerSupply>>(PowerSupplies.Values);
+    public Task<PowerSupply?> GetPowerSupplyByIdAsync(int id) =>
+        Task.FromResult(PowerSupplies.TryGetValue(id, out var x) ? x : null);
+
+    public Task<IEnumerable<MiniPc>> GetMiniPcsAsync() =>
+        Task.FromResult<IEnumerable<MiniPc>>(MiniPcs.Values);
+    public Task<MiniPc?> GetMiniPcByIdAsync(int id) =>
+        Task.FromResult(MiniPcs.TryGetValue(id, out var x) ? x : null);
+
+    public Task<IEnumerable<PatchCable>> GetPatchCablesAsync() =>
+        Task.FromResult<IEnumerable<PatchCable>>(PatchCables.Values);
+    public Task<PatchCable?> GetPatchCableByIdAsync(int id) =>
+        Task.FromResult(PatchCables.TryGetValue(id, out var x) ? x : null);
+
+    public Task<IEnumerable<ReceivingCard>> GetReceivingCardsAsync() =>
+        Task.FromResult<IEnumerable<ReceivingCard>>(ReceivingCards.Values);
+    public Task<ReceivingCard?> GetReceivingCardByIdAsync(int id) =>
+        Task.FromResult(ReceivingCards.TryGetValue(id, out var x) ? x : null);
+
+    public Task<IEnumerable<Processor>> GetProcessorsAsync() =>
+        Task.FromResult<IEnumerable<Processor>>(Processors.Values);
+    public Task<Processor?> GetProcessorByIdAsync(int id) =>
+        Task.FromResult(Processors.TryGetValue(id, out var x) ? x : null);
+}
