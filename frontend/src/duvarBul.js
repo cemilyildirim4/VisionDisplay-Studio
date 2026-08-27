@@ -63,12 +63,17 @@ const EN_BUYUK_ORAN = 0.8
  *        "tavan" gibi kararlar vermek yanıltıcı olur.
  * @param {number|null} [secenekler.zeminOran] Zemin çizgisinin dikey yeri
  *        (0–1). Verilirse ekran zeminin altına konmaz.
+ * @param {object|null} [secenekler.nesneler] Sinir agindan gelen nesne
+ *        haritasi (bkz. nesneBul.js): { w, h, engel, ekranKutusu }.
+ *        Verilirse yerlestirme TAHMIN degil, BILGI ile yapilir: mobilya ve
+ *        insanlarin uzeri elenir, odada duran ekranin yeri yeglenir.
  * @returns {{x:number, y:number, w:number, h:number, duzluk:number, guven:number}|null}
  *          Değerler 0–1 arası ORANLIDIR (kaynağın ölçüsünden bağımsız).
  */
 export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
   const fotograf = !!secenekler.fotograf
   const zeminOran = secenekler.zeminOran != null ? secenekler.zeminOran : null
+  const nesneler = secenekler.nesneler || null
   if (!kaynak || !(oran > 0)) return null
 
   const kaynakW = kaynak.videoWidth || kaynak.width
@@ -130,6 +135,24 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
   const tk = toplamTablosu(kareler(gri), W, H)
   /* Mavilik toplam tablosu — gökyüzü elemesi için (yalnızca fotoğraf kipi). */
   const tm = fotograf ? toplamTablosu(mavilik, W, H) : null
+
+  /*
+   * NESNE HARİTASI çözümleme ölçüsüne getiriliyor ve toplam tablosu
+   * çıkarılıyor: böylece her adayın kaçta kaçının bir eşyanın üstüne
+   * geldiği dört okumayla bulunuyor.
+   */
+  let te = null
+  if (nesneler?.engel) {
+    const e = new Float32Array(W * H)
+    for (let y = 0; y < H; y++) {
+      const ny = Math.min(nesneler.h - 1, Math.floor((y / H) * nesneler.h))
+      for (let x = 0; x < W; x++) {
+        const nx = Math.min(nesneler.w - 1, Math.floor((x / W) * nesneler.w))
+        e[y * W + x] = nesneler.engel[ny * nesneler.w + nx]
+      }
+    }
+    te = toplamTablosu(e, W, H)
+  }
 
   // Karenin genel hareketliliği — eşik buna göre belirlenir.
   const geneOrtalama = dikdortgenToplami(tg, W, 0, 0, W, H) / (W * H)
@@ -203,6 +226,16 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
           if (tm && (y + ph / 2) / H < 0.58) {
             const mavi = dikdortgenToplami(tm, W, x, y, pw, ph) / (pw * ph)
             if (mavi > 10) continue
+          }
+          /*
+           * NESNENİN ÜSTÜ. Model bir sandalye, masa, saksı ya da insan
+           * gördüyse orası odanın önündeki hacimdir; oraya konan ekran
+           * havada asılı durur. Küçük bir pay bırakılıyor (%8): nesnenin
+           * kenarı adayın köşesine değiyor diye iyi bir yer elenmesin.
+           */
+          if (te) {
+            const dolu = dikdortgenToplami(te, W, x, y, pw, ph) / (pw * ph)
+            if (dolu > 0.08) continue
           }
           // Tavan şeridi ve kadrajın en dibi
           if (y / H < 0.06 || (y + ph) / H > 0.97) continue
@@ -284,7 +317,23 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
          * tek başına koyuluk, gölgeyi ya da halıyı da seçerdi.
          */
         const koyuluk = Math.max(0, Math.min(1, (geneParlaklik - parlaklik) / Math.max(1, geneParlaklik)))
-        const mevcutEkran = fotograf ? koyuluk * cerceve : 0
+        let mevcutEkran = fotograf ? koyuluk * cerceve : 0
+
+        /*
+         * MODEL BİR EKRAN GÖRDÜYSE o kesin bilgidir ve sezgisel
+         * "koyu + çerçeveli" tahmininin yerine geçer. Örtüşme oranı ne
+         * kadar yüksekse aday o kadar iyi.
+         */
+        if (nesneler?.ekranKutusu) {
+          const k = nesneler.ekranKutusu
+          const kx0 = k.x * W
+          const ky0 = k.y * H
+          const kx1 = (k.x + k.w) * W
+          const ky1 = (k.y + k.h) * H
+          const ortakW = Math.max(0, Math.min(x + pw, kx1) - Math.max(x, kx0))
+          const ortakH = Math.max(0, Math.min(y + ph, ky1) - Math.max(y, ky0))
+          mevcutEkran = (ortakW * ortakH) / alan
+        }
 
         /*
          * ZEMİNE YAKINLIK. Ekranın dibi zemin çizgisinin hemen üstündeyse

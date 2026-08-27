@@ -25,8 +25,10 @@ import {
   EN_AZ_YAKINLIK,
   zeminOturmaKaymasi,
   oneriYatayKaymasi,
+  oneriDikeyKaymasi,
 } from './sahneler.js'
 import { ozelMekanKaydi, MEKAN_TURLERI, MEKAN_EN_COK_MB, VARSAYILAN_ALAN_M } from './ozelMekan.js'
+import { SINIF_ADLARI } from './nesneBul.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
@@ -330,6 +332,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [ozelSahne, setOzelSahne] = useState(null)
   const [ozelAlanM, setOzelAlanM] = useState(VARSAYILAN_ALAN_M)
   const [ozelUyari, setOzelUyari] = useState(null)
+  /* Model çalışırken kullanıcı beklediğini bilsin — birkaç saniye sürüyor. */
+  const [ozelInceleniyor, setOzelInceleniyor] = useState(false)
+  /* Modelin fotoğrafta gördükleri — arayüzde adlarıyla yazılıyor. */
+  const [ozelNesneler, setOzelNesneler] = useState(null)
   /* Kiosk ayakları — duvara asılan ekranda ayak olmaz, kapatılabiliyor. */
   const [ayakVar, setAyakVar] = useState(true)
   /*
@@ -548,8 +554,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
     const url = URL.createObjectURL(dosya)
     const gorsel = new Image()
-    gorsel.onload = () => {
-      const kayit = ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelAlanM)
+    gorsel.onload = async () => {
+      setOzelInceleniyor(true)
+      setOzelUyari(null)
+      let kayit = null
+      try {
+        kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelAlanM)
+      } finally {
+        setOzelInceleniyor(false)
+      }
       if (!kayit) return
       // Önceki fotoğrafın adresi bellekte kalmasın
       setOzelSahne((eski) => {
@@ -577,6 +590,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const aci = kayit?.aci
     const saglam = aci && aci.guven >= ACI_ESIGI && (Math.abs(aci.yaw) > 1.5 || Math.abs(aci.tilt) > 1.5)
     yonuAyarla(saglam ? aci : null)
+
+    /*
+     * Modelin gördükleri kullanıcıya yazılıyor. Sebebi şu: yerleştirme
+     * artık bir kara kutu değil — 'sandalye, masa gördüm' diyorsa neden
+     * oraya koymadığı anlaşılıyor; hiçbir şey görmediyse de bunu bilmek
+     * kullanıcının işine yarıyor.
+     */
+    const sayim = kayit?.nesneSayimi
+    if (sayim) {
+      const toplam = Object.values(sayim).reduce((a, b) => a + b, 0) || 1
+      const adlar = Object.entries(sayim)
+        .filter(([c, n]) => SINIF_ADLARI[c] && n / toplam > 0.004)
+        .sort((a, b) => b[1] - a[1])
+        .map(([c]) => SINIF_ADLARI[c])
+      setOzelNesneler(adlar.length ? adlar : null)
+    } else {
+      setOzelNesneler(null)
+    }
     setOzelUyari(
       kayit.guven > 0.25
         ? saglam
@@ -590,8 +621,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const oneriyiTazele = (alanM = ozelAlanM) => {
     if (!ozelSahne) return
     const gorsel = new Image()
-    gorsel.onload = () => {
-      const kayit = ozelMekanKaydi(ozelSahne.dosya, gorsel, tasarimWm / tasarimHm, alanM)
+    gorsel.onload = async () => {
+      setOzelInceleniyor(true)
+      let kayit = null
+      try {
+        kayit = await ozelMekanKaydi(ozelSahne.dosya, gorsel, tasarimWm / tasarimHm, alanM)
+      } finally {
+        setOzelInceleniyor(false)
+      }
       if (kayit) setOzelSahne(kayit)
       mekaniOrtala()
       if (kayit) oneriyiUygula(kayit)
@@ -1059,17 +1096,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * suruklemesi bunun UZERINE biniyor: "Ortala" dedigi yer de burasi.
    */
   const fotoYer = surukleAktif ? fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h) : null
-  const oturmaKaymasi = surukleAktif
-    ? zeminOturmaKaymasi(
-        fotoSahne,
-        fotoYer,
-        tuvalBoyut.h,
-        sahneYakinlik,
-        tasarimHm * (cizimOlcek || 0),
-        ayakVar,
-        tasarimWm * (cizimOlcek || 0),
-      )
-    : 0
+  /*
+   * DUVARA ASILI MI, YERDE Mİ?
+   *
+   * Ayaklar gizliyse ekran duvara asiliyor demektir; o zaman dikey yerini de
+   * oneri belirliyor (model odada asili duran ekranin hizasini bulmussa oraya
+   * gidiyor). Ayak varsa kiosk yerde durur ve dikey yeri zemin cizgisine
+   * kilitlidir.
+   */
+  const duvaraAsili = surukleAktif && !ayakVar && !!fotoYer?.sigdir
+  const oturmaKaymasi = !surukleAktif
+    ? 0
+    : duvaraAsili
+      ? oneriDikeyKaymasi(fotoYer, tuvalBoyut.h)
+      : zeminOturmaKaymasi(
+          fotoSahne,
+          fotoYer,
+          tuvalBoyut.h,
+          sahneYakinlik,
+          tasarimHm * (cizimOlcek || 0),
+          ayakVar,
+          tasarimWm * (cizimOlcek || 0),
+        )
   /* Sığdırılmış fotoğrafta ekran, önerilen alanın üstüne yatayda da kayar. */
   const oneriKaymasi = surukleAktif ? oneriYatayKaymasi(fotoYer, tuvalBoyut.w) : 0
 
@@ -1954,6 +2002,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     >
                       {t('scene.suggest')}
                     </button>
+                    {ozelInceleniyor && (
+                      <p className="mt-2 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('scene.analysing')}
+                      </p>
+                    )}
+                    {!ozelInceleniyor && ozelNesneler && (
+                      <p className="mt-2 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('scene.objectsFound')} {ozelNesneler.join(', ')}
+                      </p>
+                    )}
                     {ozelUyari && (
                       <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">{ozelUyari}</p>
                     )}

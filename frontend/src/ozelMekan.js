@@ -22,6 +22,7 @@
 
 import { uygunYuzeyBul, zeminCizgisiBul } from './duvarBul.js'
 import { perspektifAcisi } from './aciBul.js'
+import { nesneHaritasi } from './nesneBul.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
 export const VARSAYILAN_ALAN_M = 4
@@ -40,7 +41,7 @@ export const MEKAN_EN_COK_MB = 60
  * @param {number} oran   tasarımın en/boy oranı — öneri buna göre aranır
  * @param {number} alanM  önerilen alanın gerçek genişliği (metre)
  */
-export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
+export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
   const W = gorsel.naturalWidth
   const H = gorsel.naturalHeight
   if (!W || !H) return null
@@ -69,9 +70,21 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
     zeminOran = null
   }
 
+  /*
+   * NESNE TANIMA (bkz. nesneBul.js). Model indirilemez ya da çalışmazsa
+   * (eski tarayıcı, kesik bağlantı) sessizce eski sezgisel ölçütlere
+   * dönülüyor — özellik kaybolur, uygulama durmaz.
+   */
+  let nesneler = null
+  try {
+    nesneler = await nesneHaritasi(tuval)
+  } catch (e) {
+    nesneler = null
+  }
+
   let yer = null
   try {
-    yer = uygunYuzeyBul(tuval, enBoy, { fotograf: true, zeminOran })
+    yer = uygunYuzeyBul(tuval, enBoy, { fotograf: true, zeminOran, nesneler })
   } catch {
     yer = null // okunamayan görüntü: öneri yok, orta kullanılır
   }
@@ -132,6 +145,9 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
      * değiştirebiliyor. Bkz. aciBul.js.
      */
     aci: aciOlc(tuval),
+    /** Modelin fotoğrafta gördüğü nesneler — arayüz bunu kullanıcıya yazıyor. */
+    nesneSayimi: nesneler ? nesneler.sayim : null,
+    modelCalisti: !!nesneler,
   }
 }
 

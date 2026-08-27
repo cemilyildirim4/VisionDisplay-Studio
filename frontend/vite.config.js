@@ -80,6 +80,9 @@ self.addEventListener('activate', (event) => {
           // Admin paneli müşteri SW kurulumunda indirilmesin.
           '**/admin-*.js',
           '**/AdminPanel-*.js',
+          // Nesne tanima motoru: yalnizca kullanici mekan fotografi eklerse iner.
+          '**/ort*.js',
+          '**/onnxruntime*.js',
         ],
         runtimeCaching: [
           {

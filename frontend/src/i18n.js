@@ -365,6 +365,12 @@ const dict = {
     en: 'The angle in the photo was measured; the screen was turned to match.',
     ar: 'تم قياس الزاوية في الصورة وتم توجيه الشاشة وفقًا لها.',
   },
+  'scene.analysing': {
+    tr: 'Fotoğraf inceleniyor: nesneler ve açı bulunuyor…',
+    en: 'Analysing the photo: finding objects and angle…',
+    ar: 'يتم تحليل الصورة: البحث عن الأجسام والزاوية…',
+  },
+  'scene.objectsFound': { tr: 'Fotoğrafta görülenler:', en: 'Found in the photo:', ar: 'ما تم العثور عليه في الصورة:' },
   'scene.angleWeak': {
     tr: 'Fotoğrafta belirgin bir açı bulunamadı; ekran karşıdan kondu. Yön verebilirsiniz.',
     en: 'No clear angle found in the photo; the screen was placed head-on. You can turn it.',

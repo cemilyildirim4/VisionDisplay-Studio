@@ -326,3 +326,16 @@ export function oneriYatayKaymasi(yer, tuvalW) {
   if (!yer?.sigdir) return 0
   return yer.merkezXpx - tuvalW / 2
 }
+
+/**
+ * Onerilen yere gitmek icin gereken DIKEY kayma.
+ *
+ * Yalnizca ekran DUVARA ASILI oldugunda (kiosk ayaklari gizli) kullaniliyor.
+ * Ayakli kioskun dikey yerini zemin belirler — havada duramaz. Ayak yoksa
+ * boyle bir zorunluluk kalmiyor ve ekran, modelin onerdigi yukseklige,
+ * ornegin odada zaten asili duran ekranin hizasina konabiliyor.
+ */
+export function oneriDikeyKaymasi(yer, tuvalH) {
+  if (!yer?.sigdir) return 0
+  return yer.merkezYpx - tuvalH / 2
+}
