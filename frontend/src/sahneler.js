@@ -99,9 +99,14 @@ export const SAHNELER = [
      * ~75 piksel/m. Panel 4,00 x 2,40 m.
      */
     panel: { x0: 686, y0: 380, x1: 986, y1: 560 },
-    /* Zemin cizgisi: panel merkezinin 1,6 m altisi (75 px/m ile 120 piksel);
-       fotografta dosemenin basladigi hizaya denk geliyor. */
-    zeminY: 590,
+    /*
+     * Zemin cizgisi: DOSEMENIN basladigi hiza, cali seridinin ALTI.
+     *
+     * Once 590 idi ve cali seridinin ustune denk geliyordu; kucuk bir kiosk
+     * calilarin uzerinde duruyormus gibi gorunuyordu. Kaldirim taslarinin
+     * basladigi yer 640 - kiosk artik dosemeye basiyor.
+     */
+    zeminY: 640,
     panelEnM: 4,
     maskeli: false,
   },
