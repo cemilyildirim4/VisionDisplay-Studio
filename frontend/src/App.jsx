@@ -20,6 +20,7 @@ import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
 import { sahneBul, fotoYerlesim, EN_AZ_YAKINLIK, zeminOturmaKaymasi } from './sahneler.js'
+import { ozelMekanKaydi, MEKAN_TURLERI, MEKAN_EN_COK_MB, VARSAYILAN_ALAN_M } from './ozelMekan.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { panoOlculeri, PANO_SAHNE_EN_M } from './Pano.jsx'
 import ArView from './ArView.jsx'
@@ -310,6 +311,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Mekânda deneme ihtiyacını da "Kamerada dene" (AR) ekranı karşılıyor.
    */
   const [scene, setScene] = useState('none')
+  /*
+   * KULLANICININ KENDİ MEKÂN FOTOĞRAFI.
+   *
+   * Hazır mekânlar sahneler.js'te sabit; bu ise çalışma anında üretiliyor
+   * (bkz. ozelMekan.js). Fotoğraf sunucuya gitmiyor, blob adresi olarak
+   * tarayıcıda kalıyor — içerik görselinde olduğu gibi.
+   */
+  const [ozelSahne, setOzelSahne] = useState(null)
+  const [ozelAlanM, setOzelAlanM] = useState(VARSAYILAN_ALAN_M)
+  const [ozelUyari, setOzelUyari] = useState(null)
+  const ozelDosyaRef = useRef(null)
   const [arAcik, setArAcik] = useState(false)
   const [scene3dOpen, setScene3dOpen] = useState(false)
   const [wizardOpen, setWizardOpen] = useState(false)
@@ -492,6 +504,55 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
     setContentUrl(URL.createObjectURL(file))
     setContent('upload')
+  }
+
+  /*
+   * MEKÂN FOTOĞRAFI SEÇİLDİ.
+   *
+   * Görsel yüklendikten sonra yüzey bulucu çalışıyor ve ekranın oturacağı
+   * yer öneriliyor (bkz. ozelMekan.js). Kullanıcı beğenmezse sürükleyerek
+   * taşıyabiliyor; ölçek de "bu alan kaç metre" ile elinde.
+   */
+  const mekanFotoSecildi = (e) => {
+    const dosya = e.target.files?.[0]
+    e.target.value = ''
+    if (!dosya) return
+    if (!MEKAN_TURLERI.includes(dosya.type)) {
+      alert(t('scene.customErr'))
+      return
+    }
+    if (dosya.size > MEKAN_EN_COK_MB * 1024 * 1024) {
+      alert(t('content.errSize'))
+      return
+    }
+    const url = URL.createObjectURL(dosya)
+    const gorsel = new Image()
+    gorsel.onload = () => {
+      const kayit = ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelAlanM)
+      if (!kayit) return
+      // Önceki fotoğrafın adresi bellekte kalmasın
+      setOzelSahne((eski) => {
+        if (eski?.dosya?.startsWith('blob:')) URL.revokeObjectURL(eski.dosya)
+        return kayit
+      })
+      setScene('ozel')
+      mekaniOrtala()
+      // Zayıf öneride kullanıcıya söyleniyor; sessizce ortaya koymak yanıltıcı olurdu.
+      setOzelUyari(kayit.guven > 0.25 ? null : t('scene.weakSuggest'))
+    }
+    gorsel.src = url
+  }
+
+  /* Öneriyi tazele: ölçü ya da alan genişliği değişmiş olabilir. */
+  const oneriyiTazele = (alanM = ozelAlanM) => {
+    if (!ozelSahne) return
+    const gorsel = new Image()
+    gorsel.onload = () => {
+      const kayit = ozelMekanKaydi(ozelSahne.dosya, gorsel, tasarimWm / tasarimHm, alanM)
+      if (kayit) setOzelSahne(kayit)
+      mekaniOrtala()
+    }
+    gorsel.src = ozelSahne.dosya
   }
 
   // Üst buton: tüm tasarımı ve modeli sıfırla
@@ -766,7 +827,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * büyüklükte çıkıyordu, yani mekân hiçbir ölçü bilgisi vermiyordu. Toplantı
    * salonunda da aynı kusur vardı ve gerçek ölçüye geçilerek düzeltildi.
    */
-  const fotoSahne = sahneBul(scene)
+  const fotoSahne = scene === 'ozel' ? ozelSahne : sahneBul(scene)
   /*
    * MEKANDA SURUKLEME.
    *
@@ -1058,6 +1119,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
               yakinlik={sahneYakinlik}
               kayma={mekanKayma}
+              ozelSahne={ozelSahne}
             />
           )}
 
@@ -1596,6 +1658,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     { id: CEPHE_ID, ad: 'scene.cephe' },
                     { id: 'avm', ad: 'avm.title' },
                     { id: 'meydan-gece', ad: 'dis.title' },
+                    ...(ozelSahne ? [{ id: 'ozel', ad: 'scene.custom' }] : []),
                     { id: 'none', ad: 'scene.customOff' }].map((s) => (
                     <button
                       key={s.id}
@@ -1623,6 +1686,62 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   bilmiyordu. Şimdi ekran her hâlükârda açılıyor ve sorun varsa
                   sebebini yazıp fotoğrafla devam etme yolu sunuyor.
                 */}
+                {/* Kendi fotoğrafı: ekleme, öneri ve ölçek */}
+                <input
+                  ref={ozelDosyaRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={mekanFotoSecildi}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => ozelDosyaRef.current?.click()}
+                  className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                    <path d="m3 16 5-5 4 4 3-3 6 6" />
+                  </svg>
+                  {ozelSahne ? t('scene.customChange') : t('scene.customAdd')}
+                </button>
+
+                {/*
+                  Kendi fotoğrafında ÖLÇEK fotoğraftan çıkarılamaz: bir duvarın
+                  kaç metre olduğunu görüntü söylemez. Bu yüzden soruluyor.
+                  Kullanıcı değeri değiştirince öneri de tazeleniyor.
+                */}
+                {scene === 'ozel' && ozelSahne && (
+                  <div className="mt-2 border border-neutral-200 dark:border-[#2c333f] rounded-lg p-2.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
+                        {t('scene.customWidth')}
+                      </span>
+                      <Stepper
+                        value={ozelAlanM}
+                        onChange={(v) => {
+                          setOzelAlanM(v)
+                          oneriyiTazele(v)
+                        }}
+                        min={0.5}
+                        max={40}
+                        step={0.5}
+                        decimals={1}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => oneriyiTazele()}
+                      className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                    >
+                      {t('scene.suggest')}
+                    </button>
+                    {ozelUyari && (
+                      <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">{ozelUyari}</p>
+                    )}
+                  </div>
+                )}
+
                 {/*
                   ORTALA — yalnızca ekran mekân içinde taşınmışken görünür.
                   Fotoğraflı mekânda ekran sürüklenerek taşınabiliyor; bu düğme
