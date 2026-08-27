@@ -106,7 +106,7 @@ export const SAHNELER = [
      * calilarin uzerinde duruyormus gibi gorunuyordu. Kaldirim taslarinin
      * basladigi yer 640 - kiosk artik dosemeye basiyor.
      */
-    zeminY: 640,
+    zeminY: 740,
     panelEnM: 4,
     maskeli: false,
   },
