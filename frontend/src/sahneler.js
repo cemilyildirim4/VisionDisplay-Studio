@@ -232,3 +232,30 @@ export function fotoYerlesim(sahne, tuvalW, tuvalH) {
     pxPerM: (panelW * s) / panelEnM,
   }
 }
+
+/**
+ * KIOSK GOVDESININ GERCEK OLCULERI (metre).
+ *
+ * Direk kisa ve SABIT. Onceden ekranin altiyla fotografin zemin cizgisi
+ * arasindaki bosluga kadar uzuyordu; kucuk bir totemde bu 1,5 metreyi
+ * asiyor ve kiosk bayrak diregine donuyordu. Dogrusu direk boyunu sabit
+ * tutup KIOSKUN TAMAMINI zemine kadar asagi kaydirmak.
+ */
+export const DIREK_M = 0.4
+export const KAIDE_M = 0.14
+
+/**
+ * Kiosku zemine oturtmak icin gereken DIKEY KAYMA (piksel).
+ *
+ * Ekran tuvalin merkezine ciziliyor; kaidenin fotografin zemin cizgisine
+ * denk gelmesi icin ekran + govde bu kadar asagi kaydirilir. Kayma ekrana da
+ * govdeye de ayni uygulanir, ikisi tek parca gibi hareket eder.
+ */
+export function zeminOturmaKaymasi(sahne, yer, tuvalH, yakinlik, ekranHpx) {
+  if (!sahne || sahne.zeminY == null || !yer) return 0
+  const merkezY = sahne.panel.y0 + (sahne.panel.y1 - sahne.panel.y0) / 2
+  const zeminPx = tuvalH / 2 + (sahne.zeminY - merkezY) * yer.s * yakinlik
+  const pxPerM = yer.pxPerM * yakinlik
+  const ekranAlt = tuvalH / 2 + ekranHpx / 2
+  return zeminPx - (ekranAlt + (DIREK_M + KAIDE_M) * pxPerM)
+}

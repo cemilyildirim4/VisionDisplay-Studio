@@ -22,7 +22,7 @@
  * ────────────────────────────────────────────────────────────────────────────
  */
 
-import { fotoYerlesim } from './sahneler.js'
+import { fotoYerlesim, DIREK_M, KAIDE_M } from './sahneler.js'
 
 export default function PanoFoto({
   sahne,
@@ -31,6 +31,7 @@ export default function PanoFoto({
   ekranWpx = 0,
   ekranHpx = 0,
   yakinlik = 1,
+  kayma = null,
 }) {
   const yer = fotoYerlesim(sahne, tuvalW, tuvalH)
   if (!yer) return null
@@ -55,9 +56,9 @@ export default function PanoFoto({
   const pxPerM = (yer.pxPerM || 1) * yakinlik
   const kasa = Math.max(3, Math.min(14, ekranWpx * 0.014))
   const ekranHm = ekranHpx / pxPerM
-  const direkH = Math.min(2.5, Math.max(0.5, ekranHm * 0.3)) * pxPerM
+  const direkH = DIREK_M * pxPerM
   const direkW = Math.min(0.45, Math.max(0.09, (ekranWpx / pxPerM) * 0.09)) * pxPerM
-  const kaideH = Math.max(3, 0.14 * pxPerM)
+  const kaideH = Math.max(3, KAIDE_M * pxPerM)
   const ekranAlt = tuvalH / 2 + ekranHpx / 2
 
   /*
@@ -75,23 +76,12 @@ export default function PanoFoto({
   const fotoAlt = panelMerkezY + (yer.ust + yer.yukseklik - panelMerkezY) * yakinlik
 
   /*
-   * ZEMINE OTURMA.
-   *
-   * Direk boyu ekranin olcusunden DEGIL, fotografin zemin cizgisinden
-   * geliyor: kaide her zaman o cizgide durur, direk ekranin altiyla zemin
-   * arasindaki bosluga uzar. Onceden direk boyu tasarima baglanmisti ve
-   * kucuk ekranlarda kiosk duvarin ortasinda havada kaliyordu.
-   *
-   * Fotograf panelin merkezine gore olceklendigi icin zemin cizgisinin
-   * tuvaldeki yeri de ayni merkeze gore hesaplaniyor.
+   * Direk sabit boyda; kiosku zemine getiren sey App.jsx tarafindan
+   * uygulanan DIKEY KAYMA (bkz. zeminOturmaKaymasi). Ekran ve govde ayni
+   * kaymayi aldigi icin ikisi birlikte iniyor.
    */
-  const merkezYKaynak = sahne.panel.y0 + panelYariH
-  const zeminY =
-    sahne.zeminY != null
-      ? panelMerkezY + (sahne.zeminY - merkezYKaynak) * yer.s * yakinlik
-      : fotoAlt
-  // Ekran zemin cizgisinin altina tasiyorsa direk kalmaz; kaide ekranin dibine gelir.
-  const direk = Math.max(0, Math.min(zeminY, fotoAlt) - kaideH - ekranAlt)
+  const direk = direkH
+
   const tabanY = ekranAlt + direk + kaideH
   const metal = 'linear-gradient(180deg, #3a3f47 0%, #23272d 42%, #14171b 100%)'
   const yanDestek = ekranWpx / pxPerM > 2.5
@@ -161,8 +151,15 @@ export default function PanoFoto({
       )}
 
       {/* --- kiosk: kasa (ekranin arkasinda, kenarlardan tasar) ------- */}
+      {/*
+        Kiosk govdesi ekranla AYNI kaymayi aliyor: ekran WallPreview
+        tarafindan cizildigi icin ikisi ayri katmanda, ama tek parca
+        gorunmeleri gerekiyor.
+      */}
       {kiosk && (
-        <>
+        <div
+          style={{ position: 'absolute', inset: 0, transform: kayma ? `translate(${kayma.x}px, ${kayma.y}px)` : undefined }}
+        >
           <div
             style={{
               position: 'absolute',
@@ -230,7 +227,7 @@ export default function PanoFoto({
                 'radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0) 74%)',
             }}
           />
-        </>
+        </div>
       )}
     </div>
   )

@@ -641,6 +641,15 @@ export default function WallPreview({
    */
   sahnePayPx = 0,
   /*
+   * FOTOGRAFLI MEKANDA SURUKLEME.
+   *
+   * Kayma ekranin kendisine degil, ekrani ve olcu etiketlerini bir arada
+   * tutan sarmalayiciya uygulanir: etiketler ve +/- dugmeleri ekranla
+   * birlikte gider, aralarindaki hiza bozulmaz.
+   */
+  kayma = null,
+  tutamak = null,
+  /*
    * Sahnenin duvarının gerçek ölçüsü, { w, h } metre. Verilirse ÇİZİM ÖLÇEĞİ
    * buna sabitlenir: mekânın duvarı 6 m ise 3 m'lik ekran yarısını kaplar.
    * Ölçek hissini veren şey bu — yoksa her ekran aynı büyüklükte görünüyordu.
@@ -1124,7 +1133,14 @@ export default function WallPreview({
             <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
           )}
 
-        <div className="relative">
+        <div
+          className="relative"
+          {...(tutamak || {})}
+          style={{
+            transform: kayma ? `translate(${kayma.x}px, ${kayma.y}px)` : undefined,
+            ...(tutamak ? tutamak.style : null),
+          }}
+        >
           <div style={{ width: wallW, height: wallH }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} flex items-center justify-center`}>
             <Screen
               wPx={screenW}

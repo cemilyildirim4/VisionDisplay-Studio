@@ -7,8 +7,6 @@ import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import Oturtma from './Oturtma.jsx'
-import Avm from './Avm.jsx'
-import OutdoorScene from './OutdoorScene.jsx'
 import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
@@ -21,7 +19,8 @@ import { salonOlcek } from './Salon.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
-import { sahneBul, fotoYerlesim, EN_AZ_YAKINLIK } from './sahneler.js'
+import { sahneBul, fotoYerlesim, EN_AZ_YAKINLIK, zeminOturmaKaymasi } from './sahneler.js'
+import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { panoOlculeri, PANO_SAHNE_EN_M } from './Pano.jsx'
 import ArView from './ArView.jsx'
 // three.js/react-three-fiber/drei/model-viewer tek başına ~1.8 MB — ana pakete
@@ -218,8 +217,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * o çerçeveye oturuyor. İkisi birbirine karışmasın diye ayrı pencereler.
    */
   const [oturtmaAcik, setOturtmaAcik] = useState(false)
-  const [avmAcik, setAvmAcik] = useState(false)
-  const [disAcik, setDisAcik] = useState(false)
   const [showMeasurements, setShowMeasurements] = useState(true)
   const [exportOpen, setExportOpen] = useState(false)
   /*
@@ -770,6 +767,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * salonunda da aynı kusur vardı ve gerçek ölçüye geçilerek düzeltildi.
    */
   const fotoSahne = sahneBul(scene)
+  /*
+   * MEKANDA SURUKLEME.
+   *
+   * Ekranin mekan icindeki yeri sabit degil: musteri onu vitrinin onunde,
+   * girisin yaninda ya da koridorun solunda gormek isteyebilir. Kayma
+   * METRE olarak tutuluyor (bkz. useSurukleme) — pencere boyutlandiginda
+   * ekran mekan icinde kendiliginden yer degistirmesin diye.
+   *
+   * Yalnizca fotografli mekanlarda acik: cizilmis mekanlarda ekranin yeri
+   * odanin geometrisine bagli, oradan koparilmasi anlamsiz olurdu.
+   */
+  const surukleAktif = !!fotoSahne?.kiosk
 
   /*
    * SAHNE YAKINLIGI — "kamera geri cekiliyor" etkisi.
@@ -828,6 +837,46 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       : scene === SALON_ID || scene === CEPHE_ID
         ? Math.round(Math.max(2, 0.05 * cizimOlcek) + 6) // çizilmiş kasa: 5 cm
         : 0
+
+  /*
+   * MEKANDA SÜRÜKLEME — ölçek hesabından SONRA.
+   * Kaymanın metre karşılığı çizim ölçeğine bağlı; yukarıda tanımlansaydı
+   * bu değerlere henüz erişilemezdi.
+   */
+  const {
+    ofsetM: mekanOfsetM,
+    tasindi: mekanTasindi,
+    sifirla: mekaniOrtala,
+    tutamak: mekanTutamak,
+  } = useSurukleme(cizimOlcek || 0)
+
+  /*
+   * Kioskun zemine oturmasi icin gereken sabit dikey kayma. Kullanicinin
+   * suruklemesi bunun UZERINE biniyor: "Ortala" dedigi yer de burasi.
+   */
+  const oturmaKaymasi = surukleAktif
+    ? zeminOturmaKaymasi(
+        fotoSahne,
+        fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h),
+        tuvalBoyut.h,
+        sahneYakinlik,
+        tasarimHm * (cizimOlcek || 0),
+      )
+    : 0
+
+  const elleKayma = surukleAktif
+    ? kaymayiSinirla(
+        mekanOfsetM,
+        cizimOlcek || 0,
+        tuvalBoyut,
+        tasarimWm * (cizimOlcek || 0),
+        tuvalBoyut.h / 2,
+      )
+    : null
+
+  const mekanKayma = surukleAktif
+    ? { x: elleKayma.x, y: elleKayma.y + oturmaKaymasi }
+    : null
 
 
   /*
@@ -1008,6 +1057,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               ekranSekli={ekranSekli}
               /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
               yakinlik={sahneYakinlik}
+              kayma={mekanKayma}
             />
           )}
 
@@ -1033,6 +1083,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               hideRegions={isVideoWall}
               sahneVar={scene !== 'none'}
               sahnePayPx={sahnePayPx}
+              kayma={mekanKayma}
+              tutamak={surukleAktif ? mekanTutamak : null}
               sahneOlcekVarsayilan={sahneOlcekVarsayilan}
               onPxPerM={setCizimOlcek}
             />
@@ -1572,36 +1624,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   sebebini yazıp fotoğrafla devam etme yolu sunuyor.
                 */}
                 {/*
-                  AVM KORİDORU — hazır fotoğraflı mekân.
-                  Çizilmiş mekânlar ölçüyü doğru veriyor ama "gerçekten böyle
-                  mi görünür" sorusuna cevap vermiyor. Fotoğraf onu veriyor;
-                  ekran fotoğrafın kendi ölçeğinde çizildiği için de ölçü
-                  bilgisi kaybolmuyor.
+                  ORTALA — yalnızca ekran mekân içinde taşınmışken görünür.
+                  Fotoğraflı mekânda ekran sürüklenerek taşınabiliyor; bu düğme
+                  onu açılıştaki yerine geri koyar. Hiç taşınmamışken göstermek,
+                  yapılmamış bir şeyi geri alma seçeneği sunmak olurdu.
                 */}
-                {hasModel && (
+                {surukleAktif && mekanTasindi && (
                   <button
                     type="button"
-                    onClick={() => setAvmAcik(true)}
-                    className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
+                    onClick={mekaniOrtala}
+                    className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                   >
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 20h18M5 20V9l7-5 7 5v11" />
-                      <rect x="9" y="12" width="6" height="4.5" rx="0.6" />
-                    </svg>
-                    {t('avm.open')}
-                  </button>
-                )}
-                {hasModel && (
-                  <button
-                    type="button"
-                    onClick={() => setDisAcik(true)}
-                    className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
-                  >
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="4" y="4" width="16" height="10" rx="1" />
-                      <path d="M12 14v6M8 20h8" />
-                    </svg>
-                    {t('dis.open')}
+                    {t('scene.recenter')}
                   </button>
                 )}
                 {hasModel && (
@@ -1754,35 +1788,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         Ölçüler burada da uygulamanın kendi kabin ızgarasından geliyor;
         pencerede değiştirilenler doğrudan yapılandırmayı değiştirir.
       */}
-      <OutdoorScene
-        open={disAcik && hasModel}
-        onClose={() => setDisAcik(false)}
-        cols={cols}
-        rows={rows}
-        colsMax={colsMax}
-        rowsMax={rowsMax}
-        cwM={cwM}
-        chM={chM}
-        onCols={setCols}
-        onRows={setRows}
-        content={content}
-        contentUrl={contentUrl}
-      />
 
-      <Avm
-        open={avmAcik && hasModel}
-        onClose={() => setAvmAcik(false)}
-        cols={cols}
-        rows={rows}
-        colsMax={colsMax}
-        rowsMax={rowsMax}
-        cwM={cwM}
-        chM={chM}
-        onCols={setCols}
-        onRows={setRows}
-        content={content}
-        contentUrl={contentUrl}
-      />
 
       <RecommendationWizard
         open={wizardOpen}
