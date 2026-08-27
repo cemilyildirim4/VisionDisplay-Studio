@@ -30,6 +30,14 @@ public class QuoteRepository : IQuoteRepository
         revision AS Revision,
         admin_note AS AdminNote,
         user_id AS UserId,
+        has_mini_pc AS HasMiniPc,
+        labor_cost_multiplier AS LaborCostMultiplier,
+        cabin_id AS CabinId,
+        power_supply_id AS PowerSupplyId,
+        mini_pc_id AS MiniPcId,
+        patch_cable_id AS PatchCableId,
+        receiving_card_id AS ReceivingCardId,
+        processor_id AS ProcessorId,
         created_at AS CreatedAt";
 
     public QuoteRepository(IDbConnectionFactory connectionFactory)
@@ -89,14 +97,22 @@ public class QuoteRepository : IQuoteRepository
                 customer_name, phone, email, address, message,
                 model_code, wall_width_m, wall_height_m, screen_mode,
                 ""columns"", ""rows"", screen_type, resolution, screens_summary,
-                config_json, status, revision, user_id, created_at
+                config_json, status, revision, user_id,
+                has_mini_pc, labor_cost_multiplier,
+                cabin_id, power_supply_id, mini_pc_id,
+                patch_cable_id, receiving_card_id, processor_id,
+                created_at
             )
             VALUES
             (
                 @CustomerName, @Phone, @Email, @Address, @Message,
                 @ModelCode, @WallWidthM, @WallHeightM, @ScreenMode,
                 @Columns, @Rows, @ScreenType, @Resolution, @ScreensSummary,
-                @ConfigJson, @Status, @Revision, @UserId, NOW()
+                @ConfigJson, @Status, @Revision, @UserId,
+                @HasMiniPc, @LaborCostMultiplier,
+                @CabinId, @PowerSupplyId, @MiniPcId,
+                @PatchCableId, @ReceivingCardId, @ProcessorId,
+                NOW()
             )
             RETURNING id;";
 

@@ -33,7 +33,12 @@ public class ConfigurationServiceTests
             PowerTypicalWatts = 200m,
             PowerMaxWatts = 600m,
         });
-        return new ConfigurationService(configRepo, cabinRepo, new StubPdfReportService());
+        return new ConfigurationService(
+            configRepo,
+            cabinRepo,
+            new InMemoryHardwareCatalogRepository(),
+            new InMemorySystemSettingsRepository(),
+            new StubPdfReportService());
     }
 
     private sealed class StubPdfReportService : DisplayConfigurator.Application.Interfaces.IPdfReportService
@@ -41,7 +46,8 @@ public class ConfigurationServiceTests
         public byte[] Generate(
             ConfigurationResponseDto config,
             PdfReportExtras? extras = null,
-            Cabin? cabin = null) => [0x25, 0x50, 0x44, 0x46]; // %PDF
+            Cabin? cabin = null,
+            PdfReportKind kind = PdfReportKind.Client) => [0x25, 0x50, 0x44, 0x46];
     }
 
     [Fact]
@@ -55,7 +61,7 @@ public class ConfigurationServiceTests
         Assert.True(result.Id > 0);
         Assert.Equal("Beklemede", result.Status);
         Assert.Equal(1, result.Revision);
-        Assert.Equal(12000m, result.TotalPrice);
+        Assert.Equal(12003m, result.TotalPrice);
 
         // Repository'ye gerçekten yazıldığını doğrula (yalnızca DTO'yu değil).
         var stored = await configRepo.GetByIdAsync(result.Id);

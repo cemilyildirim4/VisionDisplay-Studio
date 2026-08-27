@@ -265,7 +265,7 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     const birlesikClip = `polygon(0% 0%, ${lYuzde}% ${p}%, 100% 0%, 100% 100%, ${lYuzde}% ${100 - p}%, 0% 100%)`
 
     return (
-      <div className="relative shrink-0" style={{ width: wPx, height: hPx }}>
+      <div className="relative shrink-0 max-w-full" style={{ width: wPx, height: hPx }}>
         {/*
           DİKİŞ DOLGUSU. İki kanat komşu kutular ve kırpma kenarları
           yumuşatıldığında tam örtüşmüyor; dikişin alt ucunda birkaç piksellik
@@ -410,8 +410,8 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         {/* Kanat başına metre ölçüsü */}
         {!hideRegions && (
           <div style={{ position: 'absolute', left: 0, top: hPx + 8, width: wPx, display: 'flex', justifyContent: 'space-between', pointerEvents: 'none' }}>
-            <span className="bg-neutral-800 text-white text-[10px] px-1.5 py-0.5 rounded-lg whitespace-nowrap">{(lCols * cw).toLocaleString('tr-TR', { maximumFractionDigits: 3 })} m</span>
-            <span className="bg-neutral-800 text-white text-[10px] px-1.5 py-0.5 rounded-lg whitespace-nowrap">{(rCols * cw).toLocaleString('tr-TR', { maximumFractionDigits: 3 })} m</span>
+            <span className="bg-neutral-800 text-white text-[10px] px-1.5 py-0.5 rounded-lg whitespace-nowrap max-w-[45%] overflow-hidden text-ellipsis">{(lCols * cw).toLocaleString('tr-TR', { maximumFractionDigits: 3 })} m</span>
+            <span className="bg-neutral-800 text-white text-[10px] px-1.5 py-0.5 rounded-lg whitespace-nowrap max-w-[45%] overflow-hidden text-ellipsis">{(rCols * cw).toLocaleString('tr-TR', { maximumFractionDigits: 3 })} m</span>
           </div>
         )}
       </div>
@@ -488,7 +488,7 @@ function SegH({ w, label, muted }) {
   return (
     <div style={{ width: w }} className="flex items-center justify-center shrink-0">
       {(!muted || w >= ETIKET_EN_AZ) && (
-        <span className={`text-[10px] leading-none px-1.5 py-[3px] rounded-md whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
+        <span className={`text-[10px] sm:text-[11px] leading-none px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
           {label}
         </span>
       )}
@@ -500,7 +500,7 @@ function SegV({ h, label, muted }) {
   return (
     <div style={{ height: h }} className="flex items-center justify-center shrink-0">
       {(!muted || h >= ETIKET_EN_AZ) && (
-        <span style={{ writingMode: 'vertical-rl' }} className={`text-[10px] leading-none px-[3px] py-1.5 rounded-md whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
+        <span style={{ writingMode: 'vertical-rl' }} className={`text-[10px] sm:text-[11px] leading-none px-1 py-1.5 rounded-lg whitespace-nowrap max-h-[40vh] overflow-hidden ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
           {label}
         </span>
       )}
@@ -516,7 +516,7 @@ function StepBtn({ dir, onClick, disabled }) {
       onClick={onClick}
       disabled={disabled}
       aria-label={dir === 'plus' ? 'Artır' : 'Azalt'}
-      className={`w-8 h-8 flex items-center justify-center ${disabled ? 'text-neutral-300' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#1b2029]'}`}
+      className={`w-11 h-11 min-h-[44px] min-w-[44px] p-3 flex items-center justify-center ${disabled ? 'text-neutral-300' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#1b2029]'}`}
     >
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
         {dir === 'plus' && <line x1="12" y1="6" x2="12" y2="18" />}
@@ -876,8 +876,8 @@ export default function WallPreview({
     const maskePolygon = seritMaskePolygon(placed, maxHpx)
 
     return (
-      <div ref={containerRef} className="relative w-full h-full flex items-center justify-center overflow-hidden">
-        <div dir="ltr" className="flex items-end gap-6">
+      <div ref={containerRef} className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0">
+        <div dir="ltr" className="flex items-end gap-3 sm:gap-6 max-w-full">
          {showHumanM && (
   <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
 )}
@@ -968,10 +968,10 @@ export default function WallPreview({
                 {marginXpx > 34 && (
                   <>
                     <div className="absolute" style={{ left: marginXpx / 2, top: -40 - bombePx, transform: 'translateX(-50%)' }}>
-                      <span className="bg-neutral-400 text-white text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap">{fmtU(marginXm)}</span>
+                      <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(marginXm)}</span>
                     </div>
                     <div className="absolute" style={{ left: wallW - marginXpx / 2, top: -40 - bombePx, transform: 'translateX(-50%)' }}>
-                      <span className="bg-neutral-400 text-white text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap">{fmtU(marginXm)}</span>
+                      <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(marginXm)}</span>
                     </div>
                   </>
                 )}
@@ -985,10 +985,10 @@ export default function WallPreview({
                   return (
                     <div
                       key={`lbl${i}`}
-                      className="absolute flex flex-col items-center gap-1"
+                      className="absolute flex flex-col items-center gap-1 max-w-[70vw] pointer-events-none"
                       style={{ left: marginXpx + s.center, transform: 'translateX(-50%)', top: isTop ? -34 - bombePx : wallH + 26 + bombePx }}
                     >
-                      <span className="bg-neutral-800 text-white text-[11px] px-2 py-1 rounded-lg whitespace-nowrap">{fmtU(s.wm)}</span>
+                      <span className="bg-neutral-800 text-white text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(s.wm)}</span>
                     </div>
                   )
                 })}
@@ -1139,8 +1139,8 @@ export default function WallPreview({
   const marginYm = Math.max(0, (wallHm - screenHm) / 2)
 
   return (
-    <div ref={containerRef} className="relative w-full h-full flex items-center justify-center overflow-hidden">
-      <div dir="ltr" className="flex items-end gap-6">
+    <div ref={containerRef} className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0">
+      <div dir="ltr" className="flex items-end gap-3 sm:gap-6 max-w-full">
         {!sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005 && (
             <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
           )}
@@ -1197,7 +1197,7 @@ export default function WallPreview({
 
               {/* Üstteki +/- : Sütun (ekran genişliği) */}
               <div
-                data-pdf-gizle className="absolute flex items-stretch rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm"
+                data-pdf-gizle className="absolute flex items-stretch rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
                 style={{ left: marginXpx + screenW / 2, top: -64 - sahnePayPx, transform: 'translateX(-50%)' }}
               >
                 <StepBtn dir="minus" onClick={() => onColsChange?.(Math.max(1, nCols - 1))} disabled={nCols <= 1} />
@@ -1207,7 +1207,7 @@ export default function WallPreview({
 
               {/* Sağdaki +/- : Satır (ekran yüksekliği) */}
               <div
-                data-pdf-gizle className="absolute flex flex-col rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm"
+                data-pdf-gizle className="absolute flex flex-col rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
                 /* Telefonda kabın dışına düşüp tıklanamaz hale geliyordu: sağ
                    kenarın içinde kalacak şekilde sınırlanıyor. */
                 style={{ left: Math.min(wallW + 44 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 34)), top: marginYpx + screenH / 2, transform: 'translateY(-50%)' }}

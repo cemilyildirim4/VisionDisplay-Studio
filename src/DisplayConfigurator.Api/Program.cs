@@ -72,6 +72,8 @@ builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
 builder.Services.AddScoped<IChatLogRepository, ChatLogRepository>();
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
+builder.Services.AddScoped<IHardwareCatalogRepository, HardwareCatalogRepository>();
+builder.Services.AddScoped<ISystemSettingsRepository, SystemSettingsRepository>();
 builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
 builder.Services.AddScoped<IPdfReportService, PdfReportService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();

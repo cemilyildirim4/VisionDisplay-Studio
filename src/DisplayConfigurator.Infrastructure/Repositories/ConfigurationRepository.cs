@@ -38,6 +38,13 @@ public class ConfigurationRepository : IConfigurationRepository
         cfg.status AS Status,
         cfg.revision AS Revision,
         cfg.user_id AS UserId,
+        cfg.has_mini_pc AS HasMiniPc,
+        cfg.labor_cost_multiplier AS LaborCostMultiplier,
+        cfg.power_supply_id AS PowerSupplyId,
+        cfg.mini_pc_id AS MiniPcId,
+        cfg.patch_cable_id AS PatchCableId,
+        cfg.receiving_card_id AS ReceivingCardId,
+        cfg.processor_id AS ProcessorId,
         cfg.created_at AS CreatedAt";
 
     public ConfigurationRepository(IDbConnectionFactory connectionFactory)
@@ -156,6 +163,13 @@ public class ConfigurationRepository : IConfigurationRepository
                 status,
                 revision,
                 user_id,
+                has_mini_pc,
+                labor_cost_multiplier,
+                power_supply_id,
+                mini_pc_id,
+                patch_cable_id,
+                receiving_card_id,
+                processor_id,
                 created_at
             )
             VALUES 
@@ -183,6 +197,13 @@ public class ConfigurationRepository : IConfigurationRepository
                 @Status,
                 @Revision,
                 @UserId,
+                @HasMiniPc,
+                @LaborCostMultiplier,
+                @PowerSupplyId,
+                @MiniPcId,
+                @PatchCableId,
+                @ReceivingCardId,
+                @ProcessorId,
                 COALESCE(@CreatedAt, NOW())
             )
             RETURNING id;";

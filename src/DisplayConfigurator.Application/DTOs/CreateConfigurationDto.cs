@@ -21,4 +21,16 @@ public class CreateConfigurationDto
     public int Rows { get; set; }
     public string? AssemblyType { get; set; } // "MODULE" veya "CABINET"
     public int ModulesPerCard { get; set; }   // Kullanıcı özel değer vermezse Cabin varsayılanı kullanılır
+
+    /// <summary>Yapılandırmaya mini PC dahil edilsin mi.</summary>
+    public bool HasMiniPc { get; set; }
+
+    /// <summary>İşçilik maliyeti çarpanı (para birimi / m²). Boşsa sistem varsayılanı kullanılır.</summary>
+    public decimal? LaborCostMultiplier { get; set; }
+
+    public int? PowerSupplyId { get; set; }
+    public int? MiniPcId { get; set; }
+    public int? PatchCableId { get; set; }
+    public int? ReceivingCardId { get; set; }
+    public int? ProcessorId { get; set; }
 }

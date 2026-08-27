@@ -31,12 +31,22 @@ function olcuMetni(g, y) {
   return `${g ?? '?'} m × ${y ?? '?'} m`
 }
 
+function teklifteMiniPc(q) {
+  if (typeof q.hasMiniPc === 'boolean') return q.hasMiniPc
+  try {
+    const taslak = q.configJson ? JSON.parse(q.configJson) : null
+    return Boolean(taslak?.hasMiniPc)
+  } catch {
+    return false
+  }
+}
+
 function TabButton({ active, onClick, children }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`px-3.5 py-2 rounded-lg text-[13px] font-semibold whitespace-nowrap transition-colors ${
+      className={`px-4 min-h-[44px] py-2.5 rounded-lg text-[13px] font-semibold whitespace-nowrap transition-colors inline-flex items-center justify-center w-full md:w-auto max-w-full ${
         active
           ? 'btn-selected'
           : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#1f2530]'
@@ -49,7 +59,7 @@ function TabButton({ active, onClick, children }) {
 
 function Panel({ title, hint, children }) {
   return (
-    <section className="border border-neutral-200 dark:border-[#2a3342] rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#121821]">
+    <section className="border border-neutral-200 dark:border-[#2a3342] rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#121821] w-full max-w-full overflow-x-hidden">
       <div className="mb-4">
         <h2 className="text-base font-bold m-0 text-neutral-900 dark:text-neutral-100">{title}</h2>
         {hint && <p className="text-[13px] text-neutral-500 dark:text-neutral-400 m-0 mt-1 leading-relaxed">{hint}</p>}
@@ -341,7 +351,7 @@ export default function ControlCenter() {
 
   return (
     <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans">
-      <header className="border-b border-neutral-200/80 dark:border-[#2a3342] bg-white dark:bg-[#121821] px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
+      <header className="border-b border-neutral-200/80 dark:border-[#2a3342] bg-white dark:bg-[#121821] w-full px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
         <BrandMark title={t('cc.title')} subtitle={t('app.tagline')} size="lg" />
         <a
           href="#"
@@ -350,20 +360,20 @@ export default function ControlCenter() {
             window.history.replaceState(null, '', window.location.pathname + window.location.search)
             window.dispatchEvent(new Event('hashchange'))
           }}
-          className="text-[13px] font-semibold text-brand hover:underline shrink-0"
+          className="text-[13px] font-semibold text-brand hover:underline shrink-0 inline-flex items-center min-h-[44px] max-w-full"
         >
           ← {t('cc.back')}
         </a>
       </header>
       <BrandStripe />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 brand-page-enter">
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 brand-page-enter">
         {/* Kimlik şeridi */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-6 min-w-0 max-w-full">
           <div className="h-14 w-14 rounded-full bg-brand text-white inline-flex items-center justify-center text-lg font-bold shrink-0">
             {initials}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 w-full sm:w-auto max-w-full">
             <div className="text-base font-bold truncate">{displayName}</div>
             <div className="text-[13px] text-neutral-500 dark:text-neutral-400 truncate">
               {email || t('cc.guestHint')}
@@ -375,7 +385,7 @@ export default function ControlCenter() {
         </div>
 
         {/* Sekmeler */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 mb-5">
+        <div className="flex flex-col md:flex-row flex-wrap gap-2 pb-1 mb-5 w-full max-w-full">
           {tabs.map((tb) => (
             <TabButton key={tb.id} active={tab === tb.id} onClick={() => goTab(tb.id)}>
               {tb.label}
@@ -413,7 +423,7 @@ export default function ControlCenter() {
                     key={q.id}
                     className="rounded-xl border border-neutral-200 dark:border-[#39414f] px-3.5 py-3"
                   >
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex flex-col md:flex-row flex-wrap items-stretch md:items-center justify-between gap-2 md:gap-3 max-w-full">
                       <div className="min-w-0">
                         <div className="text-[13px] font-semibold truncate">
                           {q.modelCode || t('cc.quotes.noModel')}
@@ -423,11 +433,11 @@ export default function ControlCenter() {
                           {tarihMetni(q.createdAt)} · {q.status}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 w-full md:w-auto">
                         <button
                           type="button"
                           onClick={() => setAcikTeklif(acikTeklif === q.id ? null : q.id)}
-                          className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[12px] font-semibold hover:border-brand transition-colors whitespace-nowrap"
+                          className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 min-h-[44px] py-2.5 text-[12px] font-semibold hover:border-brand transition-colors whitespace-nowrap inline-flex items-center justify-center w-full sm:w-auto max-w-full"
                         >
                           {acikTeklif === q.id ? t('cc.quotes.hide') : t('cc.quotes.view')}
                         </button>
@@ -435,7 +445,7 @@ export default function ControlCenter() {
                         <button
                           type="button"
                           onClick={() => teklifiDuzenle(q)}
-                          className="rounded-full bg-brand text-white px-3.5 py-1.5 text-[12px] font-semibold hover:bg-brand-dark transition-colors whitespace-nowrap"
+                          className="rounded-full bg-brand text-white px-4 min-h-[44px] py-2.5 text-[12px] font-semibold hover:bg-brand-dark transition-colors whitespace-nowrap inline-flex items-center justify-center w-full sm:w-auto max-w-full"
                         >
                           {t('cc.quotes.edit')}
                         </button>
@@ -443,13 +453,14 @@ export default function ControlCenter() {
                     </div>
 
                     {acikTeklif === q.id && (
-                      <dl className="mt-3 pt-3 border-t border-neutral-200 dark:border-[#39414f] grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 m-0 text-[12px]">
+                      <dl className="mt-3 pt-3 border-t border-neutral-200 dark:border-[#39414f] grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 m-0 text-[12px] max-w-full">
                         {[
                           [t('cc.quotes.f.model'), q.modelCode],
                           [t('cc.quotes.f.wall'), olcuMetni(q.wallWidthM, q.wallHeightM)],
                           [t('cc.quotes.f.grid'), q.columns && q.rows ? `${q.columns} × ${q.rows}` : null],
                           [t('cc.quotes.f.type'), q.screenType],
                           [t('cc.quotes.f.resolution'), q.resolution],
+                          [t('cc.quotes.f.miniPc'), teklifteMiniPc(q) ? t('common.yes') : t('common.no')],
                           [t('cc.quotes.f.screens'), q.screensSummary],
                           [t('cc.quotes.f.customer'), q.customerName],
                           [t('cc.quotes.f.note'), q.adminNote],
@@ -468,7 +479,7 @@ export default function ControlCenter() {
               </ul>
             )}
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-col md:flex-row flex-wrap gap-2 max-w-full">
               <a
                 href="#"
                 onClick={(e) => {
@@ -476,14 +487,14 @@ export default function ControlCenter() {
                   window.history.replaceState(null, '', window.location.pathname + window.location.search)
                   window.dispatchEvent(new Event('hashchange'))
                 }}
-                className="rounded-full bg-brand text-white px-4 py-2 text-[13px] font-semibold hover:bg-brand-dark transition-colors"
+                className="rounded-full bg-brand text-white px-4 min-h-[44px] py-2.5 text-[13px] font-semibold hover:bg-brand-dark transition-colors inline-flex items-center justify-center w-full md:w-auto max-w-full"
               >
                 {t('cc.quotes.new')}
               </a>
               <button
                 type="button"
                 onClick={teklifleriYukle}
-                className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 py-2 text-[13px] font-semibold hover:border-brand transition-colors"
+                className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 min-h-[44px] py-2.5 text-[13px] font-semibold hover:border-brand transition-colors w-full md:w-auto max-w-full"
               >
                 {t('cc.quotes.refresh')}
               </button>
@@ -499,14 +510,14 @@ export default function ControlCenter() {
                 onChange={(e) => setBugNote(e.target.value)}
                 rows={4}
                 placeholder={t('cc.tester.placeholder')}
-                className="w-full border border-neutral-300 dark:border-[#39414f] rounded-xl p-3 text-sm bg-transparent focus:outline-none focus:border-brand resize-none"
+                className="w-full max-w-full border border-neutral-300 dark:border-[#39414f] rounded-xl p-3 text-sm bg-transparent focus:outline-none focus:border-brand resize-none"
               />
-              <div className="mt-3 flex items-center gap-3">
+              <div className="mt-3 flex flex-col md:flex-row flex-wrap items-stretch md:items-center gap-2 max-w-full">
                 <button
                   type="button"
                   onClick={sendBugReport}
                   disabled={!bugNote.trim() || bugSending}
-                  className="rounded-full bg-amber-600 text-white px-4 py-2 text-[13px] font-semibold hover:bg-amber-700 disabled:opacity-40 transition-colors"
+                  className="rounded-full bg-amber-600 text-white px-4 min-h-[44px] py-2.5 text-[13px] font-semibold hover:bg-amber-700 disabled:opacity-40 transition-colors w-full md:w-auto max-w-full"
                 >
                   {bugSending ? t('cc.tester.sending') : t('cc.tester.send')}
                 </button>
@@ -532,7 +543,7 @@ export default function ControlCenter() {
                 hint={authMod === 'login' ? t('cc.login.hint') : t('cc.register.hint')}
               >
                 {/* Giriş ↔ Yeni kayıt anahtarı */}
-                <div className="inline-flex rounded-full border border-neutral-300 dark:border-[#39414f] p-0.5 mb-4">
+                <div className="inline-flex rounded-full border border-neutral-300 dark:border-[#39414f] p-0.5 mb-4 max-w-full">
                   {[
                     { id: 'login', label: t('profile.signIn') },
                     { id: 'register', label: t('cc.register.tab') },
@@ -541,7 +552,7 @@ export default function ControlCenter() {
                       key={m.id}
                       type="button"
                       onClick={() => authModDegistir(m.id)}
-                      className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${
+                      className={`rounded-full px-4 py-2 min-h-[44px] text-[13px] font-semibold transition-colors ${
                         authMod === m.id
                           ? 'bg-brand text-white'
                           : 'text-neutral-600 dark:text-neutral-300 hover:text-brand'
@@ -554,7 +565,7 @@ export default function ControlCenter() {
 
                 <form
                   onSubmit={authMod === 'login' ? handleLogin : handleRegister}
-                  className="flex flex-col gap-3 max-w-sm"
+                  className="flex flex-col gap-3 w-full max-w-sm"
                 >
                   {authMod === 'register' && (
                     <label className="block">
@@ -564,7 +575,7 @@ export default function ControlCenter() {
                         value={regName}
                         onChange={(e) => setRegName(e.target.value)}
                         placeholder={t('cc.register.namePlaceholder')}
-                        className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
+                        className="w-full max-w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 min-h-[44px] py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
                       />
                     </label>
                   )}
@@ -576,7 +587,7 @@ export default function ControlCenter() {
                       autoComplete="email"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
-                      className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
+                      className="w-full max-w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 min-h-[44px] py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
                     />
                   </label>
                   <label className="block">
@@ -588,7 +599,7 @@ export default function ControlCenter() {
                       autoComplete={authMod === 'login' ? 'current-password' : 'new-password'}
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      className="w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
+                      className="w-full max-w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 min-h-[44px] py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
                     />
                     {authMod === 'register' && (
                       <span className="text-[11.5px] text-neutral-500 dark:text-neutral-400 mt-1 block">
@@ -601,7 +612,7 @@ export default function ControlCenter() {
                   <button
                     type="submit"
                     disabled={loginBusy}
-                    className="rounded-full bg-brand text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors"
+                    className="rounded-full bg-brand text-white px-4 min-h-[44px] py-2.5 text-sm font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors w-full max-w-full"
                   >
                     {loginBusy
                       ? t(authMod === 'login' ? 'cc.login.busy' : 'cc.register.busy')
@@ -614,7 +625,7 @@ export default function ControlCenter() {
                 <button
                   type="button"
                   onClick={logout}
-                  className="rounded-full border border-red-300 text-red-600 px-4 py-2 text-[13px] font-semibold hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                  className="rounded-full border border-red-300 text-red-600 px-4 min-h-[44px] py-2.5 text-[13px] font-semibold hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors w-full md:w-auto max-w-full"
                 >
                   {t('profile.logout')}
                 </button>
@@ -642,7 +653,7 @@ export default function ControlCenter() {
 
             {isAdmin && (
               <Panel title={t('cc.adminGate.title')} hint={t('cc.adminGate.hint')}>
-                <a href="#yonetim" className="text-[13px] font-semibold text-brand hover:underline">
+                <a href="#yonetim" className="text-[13px] font-semibold text-brand hover:underline inline-flex items-center min-h-[44px] max-w-full">
                   {t('profile.adminPanel')} →
                 </a>
               </Panel>

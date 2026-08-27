@@ -92,3 +92,89 @@ public class InMemoryConfigurationRepository : IConfigurationRepository
         return Task.FromResult(true);
     }
 }
+
+public class InMemoryHardwareCatalogRepository : IHardwareCatalogRepository
+{
+    public Dictionary<int, PowerSupply> PowerSupplies { get; } = new();
+    public Dictionary<int, MiniPc> MiniPcs { get; } = new();
+    public Dictionary<int, PatchCable> PatchCables { get; } = new();
+    public Dictionary<int, ReceivingCard> ReceivingCards { get; } = new();
+    public Dictionary<int, Processor> Processors { get; } = new();
+
+    public Task<IEnumerable<PowerSupply>> GetPowerSuppliesAsync() =>
+        Task.FromResult<IEnumerable<PowerSupply>>(PowerSupplies.Values);
+    public Task<PowerSupply?> GetPowerSupplyByIdAsync(int id) =>
+        Task.FromResult(PowerSupplies.TryGetValue(id, out var x) ? x : null);
+
+    public Task<IEnumerable<MiniPc>> GetMiniPcsAsync() =>
+        Task.FromResult<IEnumerable<MiniPc>>(MiniPcs.Values);
+    public Task<MiniPc?> GetMiniPcByIdAsync(int id) =>
+        Task.FromResult(MiniPcs.TryGetValue(id, out var x) ? x : null);
+
+    public Task<IEnumerable<PatchCable>> GetPatchCablesAsync() =>
+        Task.FromResult<IEnumerable<PatchCable>>(PatchCables.Values);
+    public Task<PatchCable?> GetPatchCableByIdAsync(int id) =>
+        Task.FromResult(PatchCables.TryGetValue(id, out var x) ? x : null);
+
+    public Task<IEnumerable<ReceivingCard>> GetReceivingCardsAsync() =>
+        Task.FromResult<IEnumerable<ReceivingCard>>(ReceivingCards.Values);
+    public Task<ReceivingCard?> GetReceivingCardByIdAsync(int id) =>
+        Task.FromResult(ReceivingCards.TryGetValue(id, out var x) ? x : null);
+
+    public Task<IEnumerable<Processor>> GetProcessorsAsync() =>
+        Task.FromResult<IEnumerable<Processor>>(Processors.Values);
+    public Task<Processor?> GetProcessorByIdAsync(int id) =>
+        Task.FromResult(Processors.TryGetValue(id, out var x) ? x : null);
+
+    public Task<PowerSupply> CreatePowerSupplyAsync(PowerSupply item) => Create(PowerSupplies, item);
+    public Task<bool> UpdatePowerSupplyAsync(PowerSupply item) => Update(PowerSupplies, item);
+    public Task<bool> DeletePowerSupplyAsync(int id) => Task.FromResult(PowerSupplies.Remove(id));
+    public Task<int> CountPowerSupplyReferencesAsync(int id) => Task.FromResult(0);
+
+    public Task<MiniPc> CreateMiniPcAsync(MiniPc item) => Create(MiniPcs, item);
+    public Task<bool> UpdateMiniPcAsync(MiniPc item) => Update(MiniPcs, item);
+    public Task<bool> DeleteMiniPcAsync(int id) => Task.FromResult(MiniPcs.Remove(id));
+    public Task<int> CountMiniPcReferencesAsync(int id) => Task.FromResult(0);
+
+    public Task<PatchCable> CreatePatchCableAsync(PatchCable item) => Create(PatchCables, item);
+    public Task<bool> UpdatePatchCableAsync(PatchCable item) => Update(PatchCables, item);
+    public Task<bool> DeletePatchCableAsync(int id) => Task.FromResult(PatchCables.Remove(id));
+    public Task<int> CountPatchCableReferencesAsync(int id) => Task.FromResult(0);
+
+    public Task<ReceivingCard> CreateReceivingCardAsync(ReceivingCard item) => Create(ReceivingCards, item);
+    public Task<bool> UpdateReceivingCardAsync(ReceivingCard item) => Update(ReceivingCards, item);
+    public Task<bool> DeleteReceivingCardAsync(int id) => Task.FromResult(ReceivingCards.Remove(id));
+    public Task<int> CountReceivingCardReferencesAsync(int id) => Task.FromResult(0);
+
+    public Task<Processor> CreateProcessorAsync(Processor item) => Create(Processors, item);
+    public Task<bool> UpdateProcessorAsync(Processor item) => Update(Processors, item);
+    public Task<bool> DeleteProcessorAsync(int id) => Task.FromResult(Processors.Remove(id));
+    public Task<int> CountProcessorReferencesAsync(int id) => Task.FromResult(0);
+
+    private static Task<T> Create<T>(Dictionary<int, T> store, T item) where T : HardwareComponent
+    {
+        item.Id = store.Count == 0 ? 1 : store.Keys.Max() + 1;
+        store[item.Id] = item;
+        return Task.FromResult(item);
+    }
+
+    private static Task<bool> Update<T>(Dictionary<int, T> store, T item) where T : HardwareComponent
+    {
+        if (!store.ContainsKey(item.Id)) return Task.FromResult(false);
+        store[item.Id] = item;
+        return Task.FromResult(true);
+    }
+}
+
+public class InMemorySystemSettingsRepository : ISystemSettingsRepository
+{
+    public decimal LaborCostMultiplier { get; set; } = 1m;
+
+    public Task<decimal> GetLaborCostMultiplierAsync() => Task.FromResult(LaborCostMultiplier);
+
+    public Task SetLaborCostMultiplierAsync(decimal value)
+    {
+        LaborCostMultiplier = value;
+        return Task.CompletedTask;
+    }
+}

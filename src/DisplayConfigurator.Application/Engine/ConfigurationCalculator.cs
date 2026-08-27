@@ -17,7 +17,16 @@ public static class ConfigurationCalculator
     // 1 RJ45 portu standartta güvenli sınır olarak max 550.000 - 650.000 piksel taşır.
     public const int MaxPixelsPerPort = 650000;
 
+    /// <summary>Watt → BTU/saat dönüşüm katsayısı.</summary>
+    public const decimal WattsToBtu = 3.412m;
+
     public static ConfigurationResponseDto Calculate(CreateConfigurationDto dto, Cabin cabin)
+        => Calculate(dto, cabin, hardware: null);
+
+    public static ConfigurationResponseDto Calculate(
+        CreateConfigurationDto dto,
+        Cabin cabin,
+        HardwareCatalogItems? hardware)
     {
         // DTO zaten [Range(1,50)] ile sınırlı, ama servis doğrudan (validasyon
         // atlanarak) çağrılırsa 0/negatif ızgara sıfıra bölme veya anlamsız
@@ -68,23 +77,68 @@ public static class ConfigurationCalculator
         if (requiredPorts < 1) requiredPorts = 1;
 
         string recommendedProcessor = DetermineProcessor(totalPixels, requiredPorts);
+        int processorQty = requiredPorts > 16
+            ? (int)Math.Ceiling(requiredPorts / 16.0)
+            : 1;
 
-        // 3. GÜÇ, AĞIRLIK VE FİYAT HESAPLARI
+        // 3. DONANIM KIRILIMI (6 kalem)
+        var hw = hardware ?? new HardwareCatalogItems();
+        int moduleQty = totalUnits;
+        int powerSupplyQty = totalUnits; // kabin/modül başına 1 PSU
+        int receivingCardQty = receivingCardCount;
+        int patchCableQty = receivingCardCount;
+        int miniPcQty = dto.HasMiniPc ? 1 : 0;
+
+        var breakdown = new List<HardwareLineItemDto>
+        {
+            Line("module", !string.IsNullOrWhiteSpace(cabin.ModelCode) ? cabin.ModelCode : "Modül",
+                moduleQty, cabin.Price),
+            Line("processor", DisplayName(hw.Processor, recommendedProcessor),
+                processorQty, hw.Processor?.Price ?? 0m),
+            Line("powerSupply", DisplayName(hw.PowerSupply, "Güç Kaynağı"),
+                powerSupplyQty, hw.PowerSupply?.Price ?? 0m),
+            Line("miniPc", DisplayName(hw.MiniPc, "Mini PC"),
+                miniPcQty, hw.MiniPc?.Price ?? 0m),
+            Line("patchCable", DisplayName(hw.PatchCable, "Patch Kablosu"),
+                patchCableQty, hw.PatchCable?.Price ?? 0m),
+            Line("receivingCard", DisplayName(hw.ReceivingCard, "Alıcı Kart"),
+                receivingCardQty, hw.ReceivingCard?.Price ?? 0m),
+        };
+
+        decimal hardwareSubtotal = Math.Round(breakdown.Sum(x => x.LineTotal), 2);
+
+        // 4. GÜÇ VE ISI
         decimal maxWattsPerUnit = cabin.PowerMaxWatts;
         decimal avgWattsPerUnit = cabin.PowerTypicalWatts > 0
             ? cabin.PowerTypicalWatts
             : maxWattsPerUnit * 0.35m;
 
-        decimal maxPowerKw = Math.Round((totalUnits * maxWattsPerUnit) / 1000m, 2);
-        decimal avgPowerKw = Math.Round((totalUnits * avgWattsPerUnit) / 1000m, 2);
+        decimal moduleMaxWatts = totalUnits * maxWattsPerUnit;
+        decimal moduleAvgWatts = totalUnits * avgWattsPerUnit;
+
+        decimal efficiency = hw.PowerSupply is { EfficiencyRatio: > 0 }
+            ? hw.PowerSupply.EfficiencyRatio
+            : 1m;
+
+        decimal totalMaxWatts = ApplyPsuLosses(moduleMaxWatts, efficiency);
+        decimal totalAvgWatts = ApplyPsuLosses(moduleAvgWatts, efficiency);
+
+        decimal maxPowerKw = Math.Round(totalMaxWatts / 1000m, 2);
+        decimal avgPowerKw = Math.Round(totalAvgWatts / 1000m, 2);
+        decimal moduleHeatBtu = Math.Round(moduleMaxWatts * WattsToBtu, 2);
         decimal totalWeightKg = Math.Round(totalUnits * (cabin.WeightKg ?? 0m), 2);
+
+        // 5. İŞÇİLİK VE ADMIN FİYATI
+        decimal widthM = totalWidthMm / 1000m;
+        decimal heightM = totalHeightMm / 1000m;
+        decimal screenAreaM2 = Math.Round(widthM * heightM, 4);
+        decimal laborMultiplier = dto.LaborCostMultiplier ?? 1m;
+        decimal laborCost = Math.Round(screenAreaM2 * laborMultiplier, 2);
+        decimal adminTotal = Math.Round(hardwareSubtotal + laborCost, 2);
 
         string aspectRatio = CalculateAspectRatio(totalWidthMm, totalHeightMm);
         bool isFullHd = totalResW >= 1920 && totalResH >= 1080;
         bool is4K = totalResW >= 3840 && totalResH >= 2160;
-        // 2 ondalığa yuvarlanmazsa PDF/arayüzde "1234.5600000001 $" gibi kuruş
-        // hataları birikip görünürdü — parasal her alan burada normalize edilir.
-        decimal calculatedPrice = Math.Round(totalUnits * cabin.Price, 2);
 
         return new ConfigurationResponseDto
         {
@@ -105,14 +159,75 @@ public static class ConfigurationCalculator
             TotalWeightKg = totalWeightKg,
             TotalMaxPowerKw = maxPowerKw,
             TotalAvgPowerKw = avgPowerKw,
+            ModuleHeatDissipationBtu = moduleHeatBtu,
             AspectRatio = aspectRatio,
             IsFullHd = isFullHd,
             Is4K = is4K,
-            TotalPrice = calculatedPrice,
+            HasMiniPc = dto.HasMiniPc,
+            LaborCostMultiplier = laborMultiplier,
+            ScreenAreaM2 = screenAreaM2,
+            LaborCost = laborCost,
+            HardwareSubtotal = hardwareSubtotal,
+            PowerSupplyId = dto.PowerSupplyId,
+            MiniPcId = dto.MiniPcId,
+            PatchCableId = dto.PatchCableId,
+            ReceivingCardId = dto.ReceivingCardId,
+            ProcessorId = dto.ProcessorId,
+            HardwareBreakdown = breakdown,
+            PsuEfficiencyRatio = hw.PowerSupply is { EfficiencyRatio: > 0 }
+                ? hw.PowerSupply.EfficiencyRatio
+                : null,
+            TotalPrice = adminTotal,
             Status = "Beklemede",
             Revision = 1,
             CreatedAt = DateTime.UtcNow,
         };
+    }
+
+    /// <summary>
+    /// Toplam Watt = Modül Gücü + (Güç Kaynağı Kayıpları / EfficiencyRatio).
+    /// Kayıp = yük × (1 − η); η=1 iken (PSU yok) sonuç salt modül gücüdür.
+    /// </summary>
+    public static decimal ApplyPsuLosses(decimal moduleWatts, decimal efficiencyRatio)
+    {
+        var eta = efficiencyRatio > 0 ? efficiencyRatio : 1m;
+        var psuLosses = moduleWatts * (1m - eta);
+        return moduleWatts + (psuLosses / eta);
+    }
+
+    /// <summary>
+    /// En uygun izleme mesafesi (m): pitch kuralı ile köşegen kuralının büyüğü.
+    /// </summary>
+    public static decimal ViewingDistanceM(Cabin cabin, int cols, int rows)
+    {
+        decimal pitchBase = cabin.ViewingDistanceM is > 0
+            ? cabin.ViewingDistanceM.Value
+            : Math.Round(cabin.PixelPitchMm * 2.5m, 1);
+
+        if (cols <= 0 || rows <= 0) return pitchBase;
+
+        var widthM = cols * (cabin.WidthMm / 1000m);
+        var heightM = rows * (cabin.HeightMm / 1000m);
+        var diagonalM = (decimal)Math.Sqrt((double)(widthM * widthM + heightM * heightM));
+        return Math.Max(pitchBase, diagonalM);
+    }
+
+    private static HardwareLineItemDto Line(string key, string name, int quantity, decimal unitPrice) =>
+        new()
+        {
+            Key = key,
+            Name = name,
+            Quantity = quantity,
+            UnitPrice = Math.Round(unitPrice, 2),
+            LineTotal = Math.Round(quantity * unitPrice, 2),
+        };
+
+    private static string DisplayName(HardwareComponent? component, string fallback)
+    {
+        if (component == null) return fallback;
+        if (!string.IsNullOrWhiteSpace(component.Name)) return component.Name;
+        if (!string.IsNullOrWhiteSpace(component.Model)) return component.Model;
+        return fallback;
     }
 
     // --- NOVASTAR İŞLEMCİ SEÇİM SİMÜLASYONU ---

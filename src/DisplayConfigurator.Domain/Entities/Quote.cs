@@ -60,5 +60,26 @@ public class Quote
     /// <summary>Giriş yapmış bir bayi/müşteri oluşturduysa hesabı — misafir taleplerinde null.</summary>
     public int? UserId { get; set; }
 
+    /// <summary>Teklife mini PC dahil edilsin mi.</summary>
+    public bool HasMiniPc { get; set; }
+
+    /// <summary>İşçilik maliyeti çarpanı (1.00 = standart).</summary>
+    public decimal LaborCostMultiplier { get; set; } = 1m;
+
+    /// <summary>Altı ana donanım: kabin + güç kaynağı + mini PC + patch kablosu + alıcı kart + işlemci.</summary>
+    public int? CabinId { get; set; }
+    public int? PowerSupplyId { get; set; }
+    public int? MiniPcId { get; set; }
+    public int? PatchCableId { get; set; }
+    public int? ReceivingCardId { get; set; }
+    public int? ProcessorId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public Cabin? Cabin { get; set; }
+    public PowerSupply? PowerSupply { get; set; }
+    public MiniPc? MiniPc { get; set; }
+    public PatchCable? PatchCable { get; set; }
+    public ReceivingCard? ReceivingCard { get; set; }
+    public Processor? Processor { get; set; }
 }

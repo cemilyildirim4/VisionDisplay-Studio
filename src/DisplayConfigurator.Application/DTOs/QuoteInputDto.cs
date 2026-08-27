@@ -60,4 +60,9 @@ public class QuoteInputDto
     /// </summary>
     [StringLength(20000)]
     public string? ConfigJson { get; set; }
+
+    /// <summary>Mini PC pakete dahil mi. Kapalıysa görüntü işlemci üzerinden yürür.</summary>
+    public bool HasMiniPc { get; set; }
+
+    public int? MiniPcId { get; set; }
 }

@@ -24,9 +24,9 @@ function Pair({ label, value }) {
     )
   }
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5 border-b border-neutral-100 dark:border-[#242b36] last:border-b-0">
+    <div className="flex items-baseline justify-between gap-3 sm:gap-4 py-1.5 border-b border-neutral-100 dark:border-[#242b36] last:border-b-0 min-w-0 max-w-full overflow-x-auto">
       <span className="text-sm text-neutral-500 dark:text-neutral-400 shrink-0">{label}</span>
-      <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 text-right whitespace-pre-line">
+      <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 text-right whitespace-pre-line min-w-0">
         {value}
       </span>
     </div>
@@ -40,7 +40,7 @@ function Pair({ label, value }) {
 function Block({ title, children }) {
   return (
     <div
-      className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-lg px-4 py-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+      className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-lg px-4 py-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] min-w-0 max-w-full"
     >
       <div className="flex items-center gap-2 mb-2">
         <span className="w-1 h-4 rounded-full bg-brand shrink-0" />
@@ -58,18 +58,23 @@ function Block({ title, children }) {
  */
 function CardGrid({ children }) {
   return (
-    <div className="columns-1 md:columns-2 gap-5 md:[column-rule:1px_solid_#e5e5e5] [&>*]:break-inside-avoid [&>*]:mb-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 overflow-x-auto">
       {children}
     </div>
   )
 }
 
 /** Pop-up içeriği (Teknik Özellikler + Bileşenler tek listede). */
-function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false }) {
+function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false }) {
   const { t } = useLang()
   const has = !!model
   const total = cols * rows
   const s = computeSpecs(model, cols, rows)
+  const modulesPerCard = Number(model?.defaultModulesPerCard) > 0 ? Number(model.defaultModulesPerCard) : 10
+  const receivingCards =
+    String(model?.productType || '').toUpperCase() === 'MODULE'
+      ? Math.ceil(total / modulesPerCard)
+      : total
 
   const circuitText = (c) =>
     has ? `${c.circuits} ${t('sp.circuit')}\n${t('sp.perCircuit')}: ${c.perCircuit} ${t('sp.cabinet')}` : DASH
@@ -144,6 +149,21 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           <Block title={t('sp.customerSelection')}>
             <Pair label={t('screen.type')} value={t(`screen.${screenType}`)} />
             <Pair label={t('sbox.heading')} value={sboxRedundancy === 'yes' ? t('common.yes') : t('common.no')} />
+            <Pair label={t('sp.miniPc')} value={hasMiniPc ? t('common.yes') : t('common.no')} />
+          </Block>
+        )}
+
+        {has && (
+          <Block title={t('sp.package')}>
+            <Pair label={t('sp.pkg.module')} value={`${fmt(total)} ${t('sp.unit')}`} />
+            <Pair label={t('sp.pkg.processor')} value={`1 ${t('sp.unit')} · ${t('sp.pkg.included')}`} />
+            <Pair label={t('sp.pkg.psu')} value={`${fmt(total)} ${t('sp.unit')}`} />
+            <Pair
+              label={t('sp.pkg.miniPc')}
+              value={hasMiniPc ? `1 ${t('sp.unit')} · ${t('sp.pkg.included')}` : t('sp.pkg.viaProcessor')}
+            />
+            <Pair label={t('sp.pkg.patch')} value={`${fmt(receivingCards)} ${t('sp.unit')}`} />
+            <Pair label={t('sp.pkg.receiving')} value={`${fmt(receivingCards)} ${t('sp.unit')}`} />
           </Block>
         )}
 
@@ -218,21 +238,21 @@ export default function SpecsSection({ open = false, onClose, ...props }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#001334]/45 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-[#001334]/45 flex items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
+        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[calc(100%-2rem)] mx-4 md:mx-auto md:max-w-6xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Başlık */}
-        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200 dark:border-[#2c333f]">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200 dark:border-[#2c333f]">
           <div className="flex items-center gap-2.5">
             <span className="w-1 h-5 rounded-full bg-brand shrink-0" />
             <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 m-0">{t('sp.title')}</h2>
           </div>
           <div className="flex items-center gap-5">
-            <button type="button" onClick={onClose} aria-label={t('exp.close')} className="text-neutral-400 dark:text-neutral-500 hover:text-brand">
+            <button type="button" onClick={onClose} aria-label={t('exp.close')} className="text-neutral-400 dark:text-neutral-500 hover:text-brand inline-flex items-center justify-center min-h-[44px] min-w-[44px]">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <path d="M6 6l12 12M18 6L6 18" />
               </svg>
@@ -241,7 +261,7 @@ export default function SpecsSection({ open = false, onClose, ...props }) {
         </div>
 
         {/* İçerik */}
-        <div className="flex-1 overflow-y-auto bg-neutral-50/60 dark:bg-[#12161d] px-3 sm:px-5 py-4">
+        <div className="flex-1 overflow-y-auto overflow-x-auto bg-neutral-50/60 dark:bg-[#12161d] px-3 sm:px-5 py-4">
           <SpecsBody {...props} />
           <div className="mt-4 space-y-0.5 text-[10px] text-neutral-400 dark:text-neutral-500">
             <p className="m-0">{t('sp.footnote1')}</p>

@@ -167,7 +167,7 @@ export default function ChatHelp({ open, onClose }) {
     <>
       {/* Sohbet penceresi */}
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 w-[calc(100vw-2.5rem)] sm:w-[370px] max-h-[min(78vh,560px)] bg-white dark:bg-[#161a21] rounded-2xl shadow-2xl border border-neutral-200 dark:border-[#2c333f] flex flex-col overflow-hidden">
+        <div className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] sm:w-96 max-h-[min(78vh,560px)] bg-white dark:bg-[#161a21] rounded-2xl shadow-2xl border border-neutral-200 dark:border-[#2c333f] flex flex-col overflow-hidden">
           {/* Başlık */}
           <div className="bg-brand text-white px-4 py-3 flex items-center justify-between shrink-0 relative">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -183,7 +183,7 @@ export default function ChatHelp({ open, onClose }) {
               type="button"
               onClick={onClose}
               aria-label={t('exp.close')}
-              className="text-white/70 hover:text-white transition-colors"
+              className="text-white/70 hover:text-white transition-colors inline-flex items-center justify-center min-h-[44px] min-w-[44px] shrink-0"
             >
               <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <path d="M6 6l12 12M18 6L6 18" />
@@ -224,7 +224,7 @@ export default function ChatHelp({ open, onClose }) {
                       <button
                         type="button"
                         onClick={() => answer(m.suggest.q[lang] || m.suggest.q.tr, m.suggest)}
-                        className="mt-2 block w-full text-left text-[12.5px] font-medium text-brand dark:text-brand-light bg-brand-tint hover:bg-brand hover:text-white transition-colors rounded-lg px-3 py-2"
+                        className="mt-2 block w-full text-left text-[12.5px] font-medium text-brand dark:text-brand-light bg-brand-tint hover:bg-brand hover:text-white transition-colors rounded-lg px-3 py-2 min-h-[44px]"
                       >
                         {m.suggest.q[lang] || m.suggest.q.tr}
                       </button>
@@ -244,7 +244,7 @@ export default function ChatHelp({ open, onClose }) {
                 <button
                   type="button"
                   onClick={() => setShowTips((v) => !v)}
-                  className="w-full flex items-center justify-between text-[11px] font-semibold tracking-[0.05em] uppercase text-neutral-400 dark:text-neutral-500 hover:text-brand transition-colors py-1"
+                  className="w-full flex items-center justify-between text-[11px] font-semibold tracking-[0.05em] uppercase text-neutral-400 dark:text-neutral-500 hover:text-brand transition-colors py-1 min-h-[44px]"
                 >
                   {t('chat.examples')}
                   <svg
@@ -269,7 +269,7 @@ export default function ChatHelp({ open, onClose }) {
                         key={tp.id}
                         type="button"
                         onClick={() => answer(tp.q[lang] || tp.q.tr, tp)}
-                        className="text-left text-[12.5px] text-brand dark:text-brand-light bg-brand-tint hover:bg-brand hover:text-white transition-colors rounded-lg px-3 py-2"
+                        className="text-left text-[12.5px] text-brand dark:text-brand-light bg-brand-tint hover:bg-brand hover:text-white transition-colors rounded-lg px-3 py-2 min-h-[44px]"
                       >
                         {tp.q[lang] || tp.q.tr}
                       </button>
@@ -286,13 +286,13 @@ export default function ChatHelp({ open, onClose }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t('chat.placeholder')}
-              className="flex-1 bg-neutral-100 dark:bg-[#222833] rounded-full px-4 py-2 text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand/30"
+              className="flex-1 w-full min-w-0 max-w-full bg-neutral-100 dark:bg-[#222833] rounded-full px-4 py-2 min-h-[44px] text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
             <button
               type="submit"
               disabled={!input.trim()}
               aria-label={t('chat.send')}
-              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+              className={`w-11 h-11 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center shrink-0 transition-colors ${
                 input.trim() ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-200 dark:bg-[#2c333f] text-neutral-400 dark:text-neutral-500'
               }`}
             >

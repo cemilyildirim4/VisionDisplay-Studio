@@ -41,7 +41,7 @@ async function captureScreenPreview() {
 
 function Field({ label, error, children }) {
   return (
-    <label className="block mb-4">
+    <label className="block mb-4 max-w-full">
       <span className="text-xs text-neutral-500 dark:text-neutral-400">{label}</span>
       {children}
       {error ? <span className="text-red-500 text-xs mt-1 block">{error}</span> : null}
@@ -50,20 +50,34 @@ function Field({ label, error, children }) {
 }
 
 const inputCls =
-  'w-full mt-1 border-b border-neutral-300 dark:border-[#39414f] py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-neutral-800 dark:focus:border-brand placeholder:text-neutral-400'
+  'w-full max-w-full mt-1 border-b border-neutral-300 dark:border-[#39414f] py-2 min-h-[44px] text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-neutral-800 dark:focus:border-brand placeholder:text-neutral-400'
 
 const inputErrorCls =
-  'w-full mt-1 border-b border-red-500 py-2 text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-red-500 placeholder:text-neutral-400'
+  'w-full max-w-full mt-1 border-b border-red-500 py-2 min-h-[44px] text-sm text-neutral-800 dark:text-neutral-200 bg-transparent focus:outline-none focus:border-red-500 placeholder:text-neutral-400'
 
 const textareaCls =
-  'w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg p-2 text-sm text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-neutral-800 resize-none'
+  'w-full max-w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg p-2 text-sm text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-neutral-800 resize-none'
 
 const textareaErrorCls =
-  'w-full mt-1 border border-red-500 rounded-lg p-2 text-sm text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-red-500 resize-none'
+  'w-full max-w-full mt-1 border border-red-500 rounded-lg p-2 text-sm text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-red-500 resize-none'
 
 function clampGrid(n) {
   const v = Math.max(1, Number(n) || 1)
   return Math.min(50, v)
+}
+
+/** Mini PC seçiliyse katalogdaki ilk kaydı hesaplamaya bağlar; değilse işlemci-only. */
+async function resolveMiniPcFields(hasMiniPc) {
+  if (!hasMiniPc) return { hasMiniPc: false, miniPcId: null }
+  try {
+    const res = await apiFetch(`${API_URL}/api/hardware/mini-pcs`)
+    if (!res.ok) return { hasMiniPc: true, miniPcId: null }
+    const list = await res.json()
+    const id = Array.isArray(list) && list[0]?.id ? Number(list[0].id) : null
+    return { hasMiniPc: true, miniPcId: Number.isFinite(id) ? id : null }
+  } catch {
+    return { hasMiniPc: true, miniPcId: null }
+  }
 }
 
 export default function ExportModal({ open, onClose, summary }) {
@@ -238,6 +252,7 @@ export default function ExportModal({ open, onClose, summary }) {
     try {
       const projectName = (customer ? `${customer} - ${summary.modelCode || ''}` : `Taslak - ${belgeNo}`).slice(0, 100)
       const previewImageBase64 = await captureScreenPreview()
+      const miniPc = await resolveMiniPcFields(Boolean(summary.hasMiniPc))
       const res = await apiFetch(`${API_URL}/api/configurations/export-pdf`, {
         method: 'POST',
         auth: true,
@@ -251,6 +266,8 @@ export default function ExportModal({ open, onClose, summary }) {
           rows: clampGrid(summary.rows),
           assemblyType: model.productType || 'CABINET',
           modulesPerCard: 0,
+          hasMiniPc: miniPc.hasMiniPc,
+          miniPcId: miniPc.miniPcId,
           phone: compactPhone(phone) || null,
           email: email.trim() || null,
           address: address.trim() || null,
@@ -288,7 +305,7 @@ export default function ExportModal({ open, onClose, summary }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `Profesyonel_Rapor_${summary.modelCode || belgeNo}.pdf`
+      a.download = `Musteri_Rapor_${summary.modelCode || belgeNo}.pdf`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -324,6 +341,8 @@ export default function ExportModal({ open, onClose, summary }) {
          * "Tekliflerim → Düzenle" tasarımı bundan birebir açıyor.
          */
         configJson: summary.tasarim ? JSON.stringify(summary.tasarim) : null,
+        hasMiniPc: miniPc.hasMiniPc,
+        miniPcId: miniPc.miniPcId,
       }
       const sendQuote = (body) =>
         apiFetch(`${API_URL}/api/quotes`, {
@@ -364,6 +383,8 @@ export default function ExportModal({ open, onClose, summary }) {
             rows: clampGrid(summary.rows),
             assemblyType: model.productType || 'CABINET',
             modulesPerCard: 0,
+            hasMiniPc: miniPc.hasMiniPc,
+            miniPcId: miniPc.miniPcId,
           }),
         }).catch((e) => console.error('Proje kaydı gönderilemedi (PDF yine de indirildi):', e))
       }
@@ -378,14 +399,14 @@ export default function ExportModal({ open, onClose, summary }) {
   }
 
   return (
-    <div id="export-modal-root" className="fixed inset-0 z-50 bg-[#001334]/45 flex items-center justify-center p-3 sm:p-4" onClick={onClose}>
+    <div id="export-modal-root" className="fixed inset-0 z-50 bg-[#001334]/45 flex items-center justify-center p-0 sm:p-4" onClick={onClose}>
       <div
-        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-md max-h-[92vh] overflow-y-auto p-7 relative shadow-2xl"
+        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[calc(100%-2rem)] mx-4 md:mx-auto md:max-w-xl max-h-[90vh] overflow-y-auto p-5 sm:p-7 relative shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-5">
           <h2 className="text-lg font-bold m-0">{t('pdf.professional')}</h2>
-          <button type="button" onClick={onClose} aria-label={t('exp.close')} className="text-neutral-500 dark:text-neutral-400 hover:text-brand">
+          <button type="button" onClick={onClose} aria-label={t('exp.close')} className="text-neutral-500 dark:text-neutral-400 hover:text-brand inline-flex items-center justify-center min-h-[44px] min-w-[44px] shrink-0">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
               <line x1="6" y1="6" x2="18" y2="18" />
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -494,7 +515,7 @@ export default function ExportModal({ open, onClose, summary }) {
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 accent-brand" />
           {t('exp.consent')}
         </label>
-        <button type="button" onClick={() => setPrivacyOpen(true)} className="block text-[11px] text-brand hover:underline mb-6 ml-6">
+        <button type="button" onClick={() => setPrivacyOpen(true)} className="block text-[11px] text-brand hover:underline mb-6 ml-6 min-h-[44px]">
           {t('privacy.readMore')}
         </button>
 
@@ -515,11 +536,11 @@ export default function ExportModal({ open, onClose, summary }) {
           </p>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <button
             type="submit"
             disabled={!hazir || busy}
-            className={`flex-1 rounded-full py-3 text-sm font-semibold transition-colors ${
+            className={`flex-1 rounded-full py-3 min-h-[44px] text-sm font-semibold transition-colors w-full sm:w-auto ${
               hazir && !busy ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
           >
@@ -530,7 +551,7 @@ export default function ExportModal({ open, onClose, summary }) {
             disabled={!hazir || busy}
             onClick={handleExcelExport}
             title={t('exp.csvHint')}
-            className={`rounded-full px-4 py-3 text-sm font-semibold border transition-colors ${
+            className={`rounded-full px-4 py-3 min-h-[44px] text-sm font-semibold border transition-colors w-full sm:w-auto ${
               hazir && !busy
                 ? 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-brand hover:text-brand'
                 : 'border-neutral-200 dark:border-[#242b36] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'

@@ -7,6 +7,7 @@ import { API_URL, apiFetch } from '../apiClient.js'
 import { queryClient } from '../queryClient.js'
 import { TESTER_ROLE_ENABLED } from '../featureFlags.js'
 import { useSession } from '../SessionContext.jsx'
+import HardwareCatalogSection from './HardwareCatalogSection.jsx'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
@@ -14,7 +15,7 @@ import { useSession } from '../SessionContext.jsx'
  *
  * Gruplar:
  *  - Genel:   Dashboard (özet + analitik)
- *  - Ürün:    Modeller, Seriler
+ *  - Ürün:    Modeller, Seriler, Donanım (güç kaynağı, mini PC, patch, alıcı kart, işlemci + işçilik)
  *  - Satış:   Teklifler, Kayıtlı Projeler
  *  - Sistem:  Sohbet Kayıtları, Geri Bildirimler, Kullanıcılar
  *
@@ -43,6 +44,7 @@ const TAB_GROUPS = [
     items: [
       { key: 'cabins', label: 'Modeller' },
       { key: 'series', label: 'Seriler' },
+      { key: 'hardware', label: 'Donanım' },
     ],
   },
   {
@@ -82,12 +84,12 @@ function StatusBadge({ status }) {
 function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null
   return (
-    <div className="flex items-center gap-2 px-5 py-3 border-t border-neutral-100 dark:border-[#242b36] text-sm">
-      <button type="button" disabled={page <= 1} onClick={() => onChange(page - 1)} className="px-2 py-1 rounded border border-neutral-200 dark:border-[#39414f] disabled:opacity-40">
+    <div className="flex flex-wrap items-center gap-2 px-4 sm:px-5 py-3 border-t border-neutral-100 dark:border-[#242b36] text-sm">
+      <button type="button" disabled={page <= 1} onClick={() => onChange(page - 1)} className="px-3 py-2 min-h-[44px] rounded border border-neutral-200 dark:border-[#39414f] disabled:opacity-40">
         ← Önceki
       </button>
       <span className="text-neutral-500 dark:text-neutral-400">Sayfa {page} / {totalPages}</span>
-      <button type="button" disabled={page >= totalPages} onClick={() => onChange(page + 1)} className="px-2 py-1 rounded border border-neutral-200 dark:border-[#39414f] disabled:opacity-40">
+      <button type="button" disabled={page >= totalPages} onClick={() => onChange(page + 1)} className="px-3 py-2 min-h-[44px] rounded border border-neutral-200 dark:border-[#39414f] disabled:opacity-40">
         Sonraki →
       </button>
     </div>
@@ -98,25 +100,25 @@ function Pagination({ page, totalPages, onChange }) {
 function ConfirmDialog({ open, title, body, confirmLabel = 'Sil', onConfirm, onCancel }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[90] bg-[#001334]/45 flex items-center justify-center p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-[90] bg-[#001334]/45 flex items-center justify-center p-0 sm:p-4" onClick={onCancel}>
       <div
-        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-neutral-200 dark:border-[#2c333f]"
+        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[calc(100%-2rem)] mx-4 md:mx-auto md:max-w-sm p-4 md:p-6 shadow-2xl border border-neutral-200 dark:border-[#2c333f] max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-bold m-0 text-neutral-900 dark:text-neutral-100">{title}</h3>
         <p className="text-sm text-neutral-600 dark:text-neutral-300 m-0 mt-2 leading-relaxed">{body}</p>
-        <div className="flex items-center justify-end gap-2 mt-5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 mt-5">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 py-2 text-sm font-semibold hover:bg-neutral-50 dark:hover:bg-[#1b2029]"
+            className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 py-2 min-h-[44px] text-sm font-semibold hover:bg-neutral-50 dark:hover:bg-[#1b2029] w-full sm:w-auto"
           >
             Vazgeç
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-full bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-700"
+            className="rounded-full bg-red-600 text-white px-4 py-2 min-h-[44px] text-sm font-semibold hover:bg-red-700 w-full sm:w-auto"
           >
             {confirmLabel}
           </button>
@@ -168,7 +170,7 @@ function MultiCheck({ label, options, value, onChange }) {
               key={o}
               type="button"
               onClick={() => toggle(o)}
-              className={`text-xs rounded-full px-2.5 py-1 border transition-colors ${
+              className={`text-xs rounded-full px-3 py-2 min-h-[44px] border transition-colors ${
                 on ? 'bg-brand border-brand text-white' : 'bg-white dark:bg-[#161a21] border-neutral-300 dark:border-[#39414f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-[#4a5364]'
               }`}
             >
@@ -240,7 +242,7 @@ function Field({ label, hint, children }) {
 }
 
 const inputCls =
-  'w-full border border-neutral-300 rounded-lg px-2.5 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-brand'
+  'w-full max-w-full border border-neutral-300 rounded-lg px-2.5 py-2 min-h-[44px] text-sm text-neutral-800 focus:outline-none focus:border-brand'
 
 function Banner({ message }) {
   if (!message) return null
@@ -300,7 +302,7 @@ function GirisEkrani() {
   }
 
   const inputClass =
-    'w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-brand'
+    'w-full max-w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 min-h-[44px] text-sm bg-transparent focus:outline-none focus:border-brand'
 
   return (
     <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans flex items-center justify-center px-6">
@@ -340,7 +342,7 @@ function GirisEkrani() {
           <button
             type="submit"
             disabled={deneniyor || !email || !parola}
-            className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50 transition-colors"
+            className="w-full mt-1 rounded-lg bg-brand text-white text-sm font-semibold py-2.5 min-h-[44px] hover:bg-brand-dark disabled:opacity-50 transition-colors"
           >
             {deneniyor ? 'Kontrol ediliyor…' : 'Giriş'}
           </button>
@@ -352,7 +354,7 @@ function GirisEkrani() {
             window.history.replaceState(null, '', window.location.pathname + window.location.search)
             window.dispatchEvent(new Event('hashchange'))
           }}
-          className="w-full mt-3 text-[13px] text-brand dark:text-brand-light hover:underline"
+          className="w-full mt-3 text-[13px] text-brand dark:text-brand-light hover:underline min-h-[44px] inline-flex items-center justify-center"
         >
           ← Konfigüratöre dön
         </button>
@@ -962,13 +964,13 @@ export default function AdminPanel() {
 
   const downloadConfigPdf = async (c) => {
     try {
-      const res = await apiFetch(`${API_URL}/api/configurations/${c.id}/pdf`, { auth: true })
+      const res = await apiFetch(`${API_URL}/api/configurations/${c.id}/pdf?kind=admin`, { auth: true })
       if (!res.ok) throw new Error('PDF indirilemedi.')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `Proje_${c.id}_${c.projectName || ''}.pdf`
+      a.download = `Ic_Rapor_${c.id}_${c.projectName || ''}.pdf`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -1014,7 +1016,7 @@ export default function AdminPanel() {
         onConfirm={confirm?.onConfirm}
       />
 
-      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
+      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <BrandMark
           title="Yönetim Paneli"
           subtitle={
@@ -1028,11 +1030,11 @@ export default function AdminPanel() {
              yalnızca logo kalıyor (bkz. BrandMark → hideTextOnMobile). */
           hideTextOnMobile
         />
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 shrink-0 w-full sm:w-auto">
           <button
             type="button"
             onClick={oturumDustu}
-            className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+            className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 min-h-[44px] inline-flex items-center"
           >
             Çıkış
           </button>
@@ -1042,7 +1044,7 @@ export default function AdminPanel() {
               window.history.replaceState(null, '', window.location.pathname + window.location.search)
               window.dispatchEvent(new Event('hashchange'))
             }}
-            className="text-sm text-brand dark:text-brand-light hover:underline"
+            className="text-sm text-brand dark:text-brand-light hover:underline min-h-[44px] inline-flex items-center"
           >
             ← Konfigüratöre dön
           </button>
@@ -1074,7 +1076,7 @@ export default function AdminPanel() {
         kendi grubundan kopup yanlış sekmenin üstünde kalıyor, gruplama
         anlatmak yerine yanıltıyordu.
       */}
-      <div className="bg-white dark:bg-[#121821] border-b border-neutral-200 dark:border-[#2a3342] px-4 sm:px-8">
+      <div className="bg-white dark:bg-[#121821] border-b border-neutral-200 dark:border-[#2a3342] px-4 sm:px-8 w-full">
         <div className="flex flex-wrap items-end gap-x-1 lg:gap-6">
           {TAB_GROUPS.map((group, gi) => (
             <div key={group.label} className="flex flex-wrap items-end lg:gap-1">
@@ -1089,7 +1091,7 @@ export default function AdminPanel() {
                       key={t.key}
                       type="button"
                       onClick={() => setTab(t.key)}
-                      className={`whitespace-nowrap px-2 lg:px-3 xl:px-4 py-2 lg:py-2.5 text-[13px] lg:text-sm font-medium border-b-2 -mb-px transition-colors ${
+                      className={`whitespace-nowrap px-2 lg:px-3 xl:px-4 py-2 lg:py-2.5 min-h-[44px] text-[13px] lg:text-sm font-medium border-b-2 -mb-px transition-colors ${
                         tab === t.key
                           ? 'border-[#2962ad] text-[#2962ad] dark:text-[#9db9dc]'
                           : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
@@ -1105,11 +1107,11 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      <div className="px-8 py-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 w-full max-w-full overflow-x-hidden">
         {apiError && (
           <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {apiError}
-            <button type="button" onClick={load} className="ml-3 underline">Tekrar dene</button>
+            <button type="button" onClick={load} className="ml-3 underline min-h-[44px] inline-flex items-center">Tekrar dene</button>
           </div>
         )}
 
@@ -1120,7 +1122,7 @@ export default function AdminPanel() {
             {dashboardLoading && !dashboard && <p className="text-sm text-neutral-500 dark:text-neutral-400">Yükleniyor…</p>}
             {dashboard && (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   {[
                     { label: 'Toplam Teklif', value: dashboard.totalQuotes, go: 'quotes' },
                     { label: 'Beklemede', value: dashboard.pendingQuotes, go: 'quotes' },
@@ -1131,7 +1133,7 @@ export default function AdminPanel() {
                       key={s.label}
                       type="button"
                       onClick={() => setTab(s.go)}
-                      className="text-left bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-4 hover:border-brand transition-colors"
+                      className="text-left bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-4 hover:border-brand transition-colors min-h-[44px] w-full max-w-full"
                     >
                       <div className="text-2xl font-bold">{s.value}</div>
                       <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{s.label}</div>
@@ -1142,10 +1144,11 @@ export default function AdminPanel() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 bg-white dark:bg-[#161a21]">
                     <h3 className="text-sm font-bold m-0 mb-3">Hızlı işlemler</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => setTab('cabins')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Modeller</button>
-                      <button type="button" onClick={() => setTab('quotes')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Teklifler</button>
-                      <button type="button" onClick={() => setTab('users')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-1.5 text-[13px] font-semibold hover:border-brand">Kullanıcılar</button>
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                      <button type="button" onClick={() => setTab('cabins')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Modeller</button>
+                      <button type="button" onClick={() => setTab('hardware')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Donanım</button>
+                      <button type="button" onClick={() => setTab('quotes')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Teklifler</button>
+                      <button type="button" onClick={() => setTab('users')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Kullanıcılar</button>
                     </div>
                   </div>
                   <div className="border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 bg-white dark:bg-[#161a21]">
@@ -1161,6 +1164,7 @@ export default function AdminPanel() {
                     <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
                       <h3 className="text-sm font-bold m-0">En çok konfigüre edilen modeller</h3>
                     </div>
+                    <div className="overflow-x-auto w-full">
                     <table className="w-full text-sm">
                       <tbody>
                         {(dashboard.topModels || []).map((m) => (
@@ -1174,12 +1178,14 @@ export default function AdminPanel() {
                         )}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                   <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-                    <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] flex items-center justify-between">
+                    <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <h3 className="text-sm font-bold m-0">SSS önerisi (cevaplanamayan sorular)</h3>
-                      <button type="button" onClick={() => setTab('chatlogs')} className="text-xs text-brand hover:underline">Loglar</button>
+                      <button type="button" onClick={() => setTab('chatlogs')} className="text-xs text-brand hover:underline min-h-[44px] inline-flex items-center">Loglar</button>
                     </div>
+                    <div className="overflow-x-auto w-full">
                     <table className="w-full text-sm">
                       <tbody>
                         {(dashboard.faqSuggestions || []).map((f, i) => (
@@ -1193,6 +1199,7 @@ export default function AdminPanel() {
                         )}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               </>
@@ -1211,7 +1218,7 @@ export default function AdminPanel() {
                   {editingId ? `Model düzenle (#${editingId})` : 'Yeni model ekle'}
                 </h2>
 
-                <div className="flex gap-1.5 mb-5">
+                <div className="flex flex-col md:flex-row flex-wrap gap-2 mb-5">
                   {[
                     { id: 'basic', label: 'Temel' },
                     { id: 'tech', label: 'Teknik' },
@@ -1221,7 +1228,7 @@ export default function AdminPanel() {
                       key={s.id}
                       type="button"
                       onClick={() => setFormSection(s.id)}
-                      className={`px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${
+                      className={`px-3.5 py-2 min-h-[44px] rounded-lg text-[13px] font-semibold transition-colors w-full md:w-auto ${
                         formSection === s.id
                           ? 'bg-brand text-white'
                           : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#1f2530]'
@@ -1233,7 +1240,7 @@ export default function AdminPanel() {
                 </div>
 
                 <div className={formSection === 'basic' ? '' : 'hidden'}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                   <Field label="Model Kodu" hint="Örn: Q30H15B13V3 Outdoor Panel, 550012949A Indoor Panel">
                     <input value={form.modelCode} onChange={(e) => set('modelCode', e.target.value)} className={inputCls} placeholder="ör. LED-P1.25" />
                   </Field>
@@ -1269,7 +1276,7 @@ export default function AdminPanel() {
                           key={p.v}
                           type="button"
                           onClick={() => set('productType', p.v)}
-                          className={`text-left rounded-xl border-2 px-4 py-3 transition-colors ${
+                          className={`text-left rounded-xl border-2 px-4 py-3 min-h-[44px] transition-colors ${
                             on
                               ? 'btn-selected'
                               : 'border-neutral-200 dark:border-[#2c333f] hover:border-brand/40'
@@ -1284,7 +1291,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* --- Fiyat ve panel kartı (Configurations hesap motoruna girdi) --- */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                   <Field label="Fiyat (USD)" hint="Birim fiyat ABD doları cinsinden. Kayıtlı proje toplamı bu değerle hesaplanır.">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 shrink-0">$</span>
@@ -1306,7 +1313,7 @@ export default function AdminPanel() {
                 </div>
 
                 <div className={formSection === 'tech' ? '' : 'hidden'}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                   <Field label="Genişlik (mm)">
                     <input type="number" value={form.widthMm} onChange={(e) => set('widthMm', e.target.value)} className={inputCls} />
                   </Field>
@@ -1322,25 +1329,25 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Piksel — ölçü ÷ pitch tam bölünmeli */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
                   <Field label="Piksel Genişlik">
                     <input type="number" value={form.pixelWidth} onChange={(e) => set('pixelWidth', e.target.value)} className={inputCls} />
                   </Field>
                   <Field label="Piksel Yükseklik">
                     <input type="number" value={form.pixelHeight} onChange={(e) => set('pixelHeight', e.target.value)} className={inputCls} />
                   </Field>
-                  <div className="col-span-2 flex items-end">
+                  <div className="col-span-1 sm:col-span-2 lg:col-span-2 flex items-end">
                     <div className={`text-xs rounded-lg px-3 py-2 w-full ${pxWhole ? 'bg-neutral-100 dark:bg-[#222833] text-neutral-600 dark:text-neutral-400' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
                       Ölçü ÷ pitch = <strong>{Number.isFinite(pxW) ? pxW.toFixed(2) : '—'}</strong> × <strong>{Number.isFinite(pxH) ? pxH.toFixed(2) : '—'}</strong>
                       {!pxWhole && ' — tam bölünmüyor, gerçek bir kabinde bu değerler tam sayı olmalı.'}
-                      <button type="button" onClick={applyCalculatedPixels} className="ml-2 underline">
+                      <button type="button" onClick={applyCalculatedPixels} className="ml-2 underline min-h-[44px] inline-flex items-center">
                         hesaplanan değeri uygula
                       </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                   <Field label="Parlaklık (nit)">
                     <input type="number" value={form.brightnessNits} onChange={(e) => set('brightnessNits', e.target.value)} className={inputCls} />
                   </Field>
@@ -1355,7 +1362,7 @@ export default function AdminPanel() {
                   </Field>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
                   <Field label="İzleme Mesafesi (m)" hint="Boş bırakılırsa pitch × 2,5 ile hesaplanır">
                     <input type="number" step="0.1" value={form.viewingDistanceM} onChange={(e) => set('viewingDistanceM', e.target.value)} className={inputCls} />
                   </Field>
@@ -1386,12 +1393,12 @@ export default function AdminPanel() {
                       />
                     ))}
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
                     <Field label="IP sınıfı" hint="İç 20/30 · dış 65. Boş = sihirbaz IP elemez">
                       <input type="number" min="10" max="69" value={form.ipRating} onChange={(e) => set('ipRating', e.target.value)} className={inputCls} placeholder="30" />
                     </Field>
                     <div className="flex items-end pb-1">
-                      <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
+                      <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer min-h-[44px]">
                         <input
                           type="checkbox"
                           checked={Boolean(form.featured)}
@@ -1409,7 +1416,7 @@ export default function AdminPanel() {
                   <p className="text-xs text-neutral-400 dark:text-neutral-500 m-0 mb-4">
                     Görsel adresi model kartında, bileşen kodları sayfa altındaki "Bileşenler" bölümünde gösterilir.
                   </p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="col-span-2 md:col-span-3">
                       <Field label="Ürün Görseli Adresi" hint="Boş bırakılırsa genel bir ekran ikonu gösterilir">
                         <input value={form.imageUrl} onChange={(e) => set('imageUrl', e.target.value)} className={inputCls} placeholder="https://... veya /urun-gorseli.jpg" />
@@ -1431,19 +1438,19 @@ export default function AdminPanel() {
                 </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <button
                     type="button"
                     onClick={save}
                     disabled={saving}
-                    className="rounded-full bg-brand text-white text-sm font-semibold px-6 py-2.5 hover:bg-brand-dark disabled:bg-neutral-300"
+                    className="rounded-full bg-brand text-white text-sm font-semibold px-6 py-2.5 min-h-[44px] hover:bg-brand-dark disabled:bg-neutral-300 w-full sm:w-auto"
                   >
                     {saving ? 'Kaydediliyor…' : editingId ? 'Güncelle' : 'Ekle'}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setForm(null); setEditingId(null) }}
-                    className="rounded-full border border-neutral-300 dark:border-[#39414f] text-sm px-6 py-2.5 hover:bg-neutral-50 dark:hover:bg-[#1b2029]"
+                    className="rounded-full border border-neutral-300 dark:border-[#39414f] text-sm px-6 py-2.5 min-h-[44px] hover:bg-neutral-50 dark:hover:bg-[#1b2029] w-full sm:w-auto"
                   >
                     Vazgeç
                   </button>
@@ -1452,8 +1459,8 @@ export default function AdminPanel() {
             )}
 
             <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-col md:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+                <div className="flex flex-col md:flex-row flex-wrap items-stretch md:items-center gap-2 md:gap-3">
                   <span className="text-sm text-neutral-600 dark:text-neutral-400 mr-1">
                     {loading
                       ? 'Yükleniyor…'
@@ -1468,7 +1475,7 @@ export default function AdminPanel() {
                       key={f.v}
                       type="button"
                       onClick={() => setProductTypeFilter(f.v)}
-                      className={`rounded-full px-3 py-1 text-[12px] font-semibold border transition-colors ${
+                      className={`rounded-full px-3 py-2 min-h-[44px] text-[12px] font-semibold border transition-colors ${
                         productTypeFilter === f.v
                           ? 'btn-selected border'
                           : 'border-neutral-300 dark:border-[#39414f] text-neutral-600 dark:text-neutral-300'
@@ -1483,14 +1490,14 @@ export default function AdminPanel() {
                     type="button"
                     onClick={startNew}
                     disabled={!!apiError}
-                    className="rounded-full bg-brand text-white text-sm font-semibold px-5 py-2 hover:bg-brand-dark disabled:bg-neutral-300 shrink-0"
+                    className="rounded-full bg-brand text-white text-sm font-semibold px-5 py-2 min-h-[44px] hover:bg-brand-dark disabled:bg-neutral-300 shrink-0 w-full sm:w-auto"
                   >
                     + Yeni model ekle
                   </button>
                 )}
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto w-full">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                     <tr>
@@ -1515,8 +1522,8 @@ export default function AdminPanel() {
                         <td className="px-4 py-2.5">{c.weightKg} kg</td>
                         <td className="px-4 py-2.5 whitespace-nowrap">{money(c.price)}</td>
                         <td className="px-4 py-2.5 whitespace-nowrap text-right">
-                          <button type="button" onClick={() => startEdit(c)} className="text-brand dark:text-brand-light hover:underline mr-3">Düzenle</button>
-                          <button type="button" onClick={() => remove(c)} className="text-red-600 hover:underline">Sil</button>
+                          <button type="button" onClick={() => startEdit(c)} className="text-brand dark:text-brand-light hover:underline mr-3 inline-flex items-center min-h-[44px] px-2">Düzenle</button>
+                          <button type="button" onClick={() => remove(c)} className="text-red-600 hover:underline inline-flex items-center min-h-[44px] px-2">Sil</button>
                         </td>
                       </tr>
                     ))}
@@ -1540,6 +1547,11 @@ export default function AdminPanel() {
           </>
         )}
 
+        {/* ================= DONANIM + İŞÇİLİK ================= */}
+        {tab === 'hardware' && (
+          <HardwareCatalogSection oturumDustu={oturumDustu} askConfirm={askConfirm} />
+        )}
+
         {/* ================= SERİLER ================= */}
         {tab === 'series' && (
           <>
@@ -1556,11 +1568,11 @@ export default function AdminPanel() {
                     <input value={seriesForm.description} onChange={(e) => setSeriesForm((f) => ({ ...f, description: e.target.value }))} className={inputCls} />
                   </Field>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button type="button" onClick={saveSeries} disabled={seriesSaving || !seriesForm.name} className="rounded-full bg-brand text-white text-sm font-semibold px-6 py-2.5 hover:bg-brand-dark disabled:bg-neutral-300">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <button type="button" onClick={saveSeries} disabled={seriesSaving || !seriesForm.name} className="rounded-full bg-brand text-white text-sm font-semibold px-6 py-2.5 min-h-[44px] hover:bg-brand-dark disabled:bg-neutral-300 w-full sm:w-auto">
                     {seriesSaving ? 'Kaydediliyor…' : seriesForm.id ? 'Güncelle' : 'Ekle'}
                   </button>
-                  <button type="button" onClick={() => setSeriesForm(null)} className="rounded-full border border-neutral-300 dark:border-[#39414f] text-sm px-6 py-2.5 hover:bg-neutral-50 dark:hover:bg-[#1b2029]">
+                  <button type="button" onClick={() => setSeriesForm(null)} className="rounded-full border border-neutral-300 dark:border-[#39414f] text-sm px-6 py-2.5 min-h-[44px] hover:bg-neutral-50 dark:hover:bg-[#1b2029] w-full sm:w-auto">
                     Vazgeç
                   </button>
                 </div>
@@ -1568,17 +1580,17 @@ export default function AdminPanel() {
             )}
 
             <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
                 <span className="text-sm text-neutral-600 dark:text-neutral-400">
                   {loading ? 'Yükleniyor…' : `${seriesList.length} seri kayıtlı`}
                 </span>
                 {!seriesForm && (
-                  <button type="button" onClick={startNewSeries} disabled={!!apiError} className="rounded-full bg-brand text-white text-sm font-semibold px-5 py-2 hover:bg-brand-dark disabled:bg-neutral-300">
+                  <button type="button" onClick={startNewSeries} disabled={!!apiError} className="rounded-full bg-brand text-white text-sm font-semibold px-5 py-2 min-h-[44px] hover:bg-brand-dark disabled:bg-neutral-300 w-full sm:w-auto">
                     + Yeni seri ekle
                   </button>
                 )}
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto w-full">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                     <tr>
@@ -1597,11 +1609,11 @@ export default function AdminPanel() {
                           <td className="px-4 py-2.5 text-neutral-500 dark:text-neutral-400">{s.description || '—'}</td>
                           <td className="px-4 py-2.5">{cabinCount}</td>
                           <td className="px-4 py-2.5 whitespace-nowrap text-right">
-                            <button type="button" onClick={() => startEditSeries(s)} className="text-brand dark:text-brand-light hover:underline mr-3">Düzenle</button>
+                            <button type="button" onClick={() => startEditSeries(s)} className="text-brand dark:text-brand-light hover:underline mr-3 inline-flex items-center min-h-[44px] px-2">Düzenle</button>
                             <button
                               type="button"
                               onClick={() => removeSeries(s)}
-                              className={cabinCount > 0 ? 'text-neutral-300 dark:text-neutral-600 cursor-not-allowed' : 'text-red-600 hover:underline'}
+                              className={cabinCount > 0 ? 'text-neutral-300 dark:text-neutral-600 cursor-not-allowed inline-flex items-center min-h-[44px] px-2' : 'text-red-600 hover:underline inline-flex items-center min-h-[44px] px-2'}
                               title={cabinCount > 0 ? 'Bu seriye bağlı modeller var; önce onları taşıyın veya silin.' : undefined}
                             >
                               Sil
@@ -1625,7 +1637,7 @@ export default function AdminPanel() {
         {/* ================= TEKLİFLER ================= */}
         {tab === 'quotes' && (
           <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
               <span className="text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
                 {quotesLoading ? 'Yükleniyor…' : `${quotesTotalCount} teklif kaydı`}
               </span>
@@ -1634,13 +1646,13 @@ export default function AdminPanel() {
                 onChange={(e) => setQuotesSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && loadQuotes(1, quotesSearch)}
                 placeholder="Ad, telefon, e-posta veya model ara…"
-                className="flex-1 max-w-xs border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-1.5 text-sm bg-transparent focus:outline-none focus:border-brand"
+                className="w-full md:flex-1 md:max-w-xs border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 min-h-[44px] text-sm bg-transparent focus:outline-none focus:border-brand"
               />
-              <button type="button" onClick={() => loadQuotes(1, quotesSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap">Ara</button>
-              <button type="button" onClick={() => loadQuotes(quotesPage, quotesSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap">Yenile</button>
+              <button type="button" onClick={() => loadQuotes(1, quotesSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap min-h-[44px] inline-flex items-center">Ara</button>
+              <button type="button" onClick={() => loadQuotes(quotesPage, quotesSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap min-h-[44px] inline-flex items-center">Yenile</button>
             </div>
             {quotesError && <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{quotesError}</div>}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto w-full">
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                   <tr>
@@ -1662,12 +1674,12 @@ export default function AdminPanel() {
                       <td className="px-4 py-2.5">{q.columns ?? '—'} × {q.rows ?? '—'}</td>
                       <td className="px-4 py-2.5">{q.resolution || '—'}</td>
                       <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
                           <StatusBadge status={q.status || 'Beklemede'} />
                           <select
                             value={q.status || 'Beklemede'}
                             onChange={(e) => updateQuoteStatus(q, e.target.value)}
-                            className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-2 py-1 bg-transparent"
+                            className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-3 py-2 min-h-[44px] bg-transparent max-w-full"
                           >
                             {STATUS_OPTIONS_QUOTE.map((s) => <option key={s} value={s}>{s}</option>)}
                           </select>
@@ -1675,7 +1687,7 @@ export default function AdminPanel() {
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{dt(q.createdAt)}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-right">
-                        <button type="button" onClick={() => removeQuote(q)} className="text-red-600 hover:underline">Sil</button>
+                        <button type="button" onClick={() => removeQuote(q)} className="text-red-600 hover:underline inline-flex items-center min-h-[44px] px-2">Sil</button>
                       </td>
                     </tr>
                   ))}
@@ -1694,20 +1706,20 @@ export default function AdminPanel() {
         {/* ================= SOHBET KAYITLARI ================= */}
         {tab === 'chatlogs' && (
           <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
               <span className="text-sm text-neutral-600 dark:text-neutral-400">
                 {chatLoading ? 'Yükleniyor…' : `${chatLogs.length} kayıt`} — Asistana sorulan sorular
               </span>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 cursor-pointer">
+              <div className="flex flex-col md:flex-row md:items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 cursor-pointer min-h-[44px]">
                   <input type="checkbox" checked={onlyUnanswered} onChange={(e) => setOnlyUnanswered(e.target.checked)} />
                   Yalnızca cevaplanamayanlar
                 </label>
-                <button type="button" onClick={() => loadChatLogs(onlyUnanswered)} className="text-sm text-brand dark:text-brand-light hover:underline">Yenile</button>
+                <button type="button" onClick={() => loadChatLogs(onlyUnanswered)} className="text-sm text-brand dark:text-brand-light hover:underline min-h-[44px] inline-flex items-center">Yenile</button>
               </div>
             </div>
             {chatError && <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{chatError}</div>}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto w-full">
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                   <tr>
@@ -1748,20 +1760,20 @@ export default function AdminPanel() {
         {/* ================= GERİ BİLDİRİMLER ================= */}
         {tab === 'feedback' && (
           <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
               <span className="text-sm text-neutral-600 dark:text-neutral-400">
                 {feedbackLoading ? 'Yükleniyor…' : `${feedback.length} bildirim`} — Kullanıcıların gönderdiği hata notları
               </span>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 cursor-pointer">
+              <div className="flex flex-col md:flex-row md:items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 cursor-pointer min-h-[44px]">
                   <input type="checkbox" checked={onlyOpenFeedback} onChange={(e) => setOnlyOpenFeedback(e.target.checked)} />
                   Yalnızca açık olanlar
                 </label>
-                <button type="button" onClick={() => loadFeedback(onlyOpenFeedback)} className="text-sm text-brand dark:text-brand-light hover:underline">Yenile</button>
+                <button type="button" onClick={() => loadFeedback(onlyOpenFeedback)} className="text-sm text-brand dark:text-brand-light hover:underline min-h-[44px] inline-flex items-center">Yenile</button>
               </div>
             </div>
             {feedbackError && <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{feedbackError}</div>}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto w-full">
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                   <tr>
@@ -1786,7 +1798,7 @@ export default function AdminPanel() {
                           type="button"
                           onClick={() => setFeedbackResolved(f, !f.resolved)}
                           title="Durumu değiştir"
-                          className={`rounded-full px-2 py-0.5 text-xs ${f.resolved
+                          className={`rounded-full px-3 py-2 min-h-[44px] text-xs ${f.resolved
                             ? 'bg-green-50 text-green-700 border border-green-200'
                             : 'bg-amber-50 text-amber-800 border border-amber-200'}`}
                         >
@@ -1795,7 +1807,7 @@ export default function AdminPanel() {
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{dt(f.createdAt)}</td>
                       <td className="px-4 py-2.5 text-right">
-                        <button type="button" onClick={() => removeFeedback(f)} className="text-red-600 hover:underline">Sil</button>
+                        <button type="button" onClick={() => removeFeedback(f)} className="text-red-600 hover:underline inline-flex items-center min-h-[44px] px-2">Sil</button>
                       </td>
                     </tr>
                   ))}
@@ -1816,7 +1828,7 @@ export default function AdminPanel() {
         {/* ================= KAYITLI PROJELER ================= */}
         {tab === 'configs' && (
           <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
               <span className="text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
                 {configsLoading ? 'Yükleniyor…' : `${configsTotalCount} kayıtlı proje`}
               </span>
@@ -1825,13 +1837,13 @@ export default function AdminPanel() {
                 onChange={(e) => setConfigsSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && loadConfigs(1, configsSearch)}
                 placeholder="Proje adı veya müşteri ara…"
-                className="flex-1 max-w-xs border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-1.5 text-sm bg-transparent focus:outline-none focus:border-brand"
+                className="w-full md:flex-1 md:max-w-xs border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 min-h-[44px] text-sm bg-transparent focus:outline-none focus:border-brand"
               />
-              <button type="button" onClick={() => loadConfigs(1, configsSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap">Ara</button>
-              <button type="button" onClick={() => loadConfigs(configsPage, configsSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap">Yenile</button>
+              <button type="button" onClick={() => loadConfigs(1, configsSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap min-h-[44px] inline-flex items-center">Ara</button>
+              <button type="button" onClick={() => loadConfigs(configsPage, configsSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap min-h-[44px] inline-flex items-center">Yenile</button>
             </div>
             {configsError && <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{configsError}</div>}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto w-full">
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                   <tr>
@@ -1854,12 +1866,12 @@ export default function AdminPanel() {
                       <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{c.recommendedProcessor || '—'}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap">{money(c.totalPrice)}</td>
                       <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
                           <StatusBadge status={c.status || 'Taslak'} />
                           <select
                             value={c.status || 'Taslak'}
                             onChange={(e) => updateConfigStatus(c, e.target.value)}
-                            className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-2 py-1 bg-transparent"
+                            className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-3 py-2 min-h-[44px] bg-transparent max-w-full"
                           >
                             {STATUS_OPTIONS_CONFIG.map((s) => <option key={s} value={s}>{s}</option>)}
                           </select>
@@ -1867,8 +1879,8 @@ export default function AdminPanel() {
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{dt(c.createdAt)}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-right">
-                        <button type="button" onClick={() => downloadConfigPdf(c)} className="text-brand dark:text-brand-light hover:underline mr-3">PDF</button>
-                        <button type="button" onClick={() => removeConfig(c)} className="text-red-600 hover:underline">Sil</button>
+                        <button type="button" onClick={() => downloadConfigPdf(c)} className="text-brand dark:text-brand-light hover:underline mr-3 inline-flex items-center min-h-[44px] px-2">PDF</button>
+                        <button type="button" onClick={() => removeConfig(c)} className="text-red-600 hover:underline inline-flex items-center min-h-[44px] px-2">Sil</button>
                       </td>
                     </tr>
                   ))}
@@ -1904,20 +1916,20 @@ export default function AdminPanel() {
                   <option value="Admin">Admin</option>
                 </select>
               </Field>
-              <button type="submit" disabled={userSaving} className="rounded-full bg-brand text-white text-sm font-semibold px-4 py-2.5 hover:bg-brand-dark disabled:opacity-50">
+              <button type="submit" disabled={userSaving} className="rounded-full bg-brand text-white text-sm font-semibold px-4 py-2.5 min-h-[44px] hover:bg-brand-dark disabled:opacity-50 w-full md:w-auto">
                 {userSaving ? 'Ekleniyor…' : '+ Kullanıcı ekle'}
               </button>
             </form>
 
             <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
                 <span className="text-sm text-neutral-600 dark:text-neutral-400">
                   {usersLoading ? 'Yükleniyor…' : `${users.length} kullanıcı`}
                 </span>
-                <button type="button" onClick={loadUsers} className="text-sm text-brand dark:text-brand-light hover:underline">Yenile</button>
+                <button type="button" onClick={loadUsers} className="text-sm text-brand dark:text-brand-light hover:underline min-h-[44px] inline-flex items-center">Yenile</button>
               </div>
               {usersError && <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{usersError}</div>}
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto w-full">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                     <tr>
@@ -1936,7 +1948,7 @@ export default function AdminPanel() {
                           <select
                             value={u.role}
                             onChange={(e) => updateUserRole(u, e.target.value)}
-                            className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-2 py-1 bg-transparent"
+                            className="text-xs border border-neutral-200 dark:border-[#39414f] rounded-full px-3 py-2 min-h-[44px] bg-transparent max-w-full"
                           >
                             <option value="Admin">Admin</option>
                             <option value="Dealer">Dealer</option>
@@ -1945,7 +1957,7 @@ export default function AdminPanel() {
                         </td>
                         <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{dt(u.createdAt)}</td>
                         <td className="px-4 py-2.5 text-right">
-                          <button type="button" onClick={() => removeUser(u)} className="text-red-600 hover:underline">Sil</button>
+                          <button type="button" onClick={() => removeUser(u)} className="text-red-600 hover:underline inline-flex items-center min-h-[44px] px-2">Sil</button>
                         </td>
                       </tr>
                     ))}
