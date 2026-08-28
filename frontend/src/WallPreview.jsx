@@ -523,9 +523,9 @@ function StepBtn({ dir, onClick, disabled }) {
        * burada fazla yer kaplıyor ve etiketin üstüne biniyordu. 34 piksel
        * hem parmakla rahat basılıyor hem ölçüyü kapatmıyor.
        */
-      className={`w-[34px] h-[34px] min-h-[34px] min-w-[34px] p-2 flex items-center justify-center ${disabled ? 'text-neutral-300' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#1b2029]'}`}
+      className={`w-[28px] h-[28px] min-h-[28px] min-w-[28px] p-1.5 flex items-center justify-center ${disabled ? 'text-neutral-300' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#1b2029]'}`}
     >
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
         {dir === 'plus' && <line x1="12" y1="6" x2="12" y2="18" />}
         <line x1="6" y1="12" x2="18" y2="12" />
       </svg>
@@ -1230,7 +1230,28 @@ export default function WallPreview({
           </div>
 
           {showMeasurements && (
-            <>
+            /*
+             * ÖLÇÜLER TASARIMLA BİRLİKTE GİDİYOR.
+             *
+             * Dört köşe yerleşiminde ekran fotoğraftaki yüzeye taşınıyor ama
+             * etiketler ve +/- düğmeleri tuvalin ortasında kalıyordu — ölçü
+             * bir yerde, ekran başka yerde. Ölçü katmanı, dörtgenin merkezi
+             * ile tasarım kutusunun merkezi arasındaki fark kadar kaydırılıyor.
+             * Etiketler DÖNDÜRÜLMÜYOR: onlar arayüz, mekânın parçası değil.
+             */
+            <div
+              style={{
+                transform: kose
+                  ? `translate(${(
+                      kose.reduce((t, k) => t + k.x, 0) / 4 -
+                      screenW / 2
+                    ).toFixed(1)}px, ${(
+                      kose.reduce((t, k) => t + k.y, 0) / 4 -
+                      screenH / 2
+                    ).toFixed(1)}px)`
+                  : undefined,
+              }}
+            >
               {/* Noktalı ölçü kılavuz çizgileri */}
               <VL left={0} top={-32} height={32} />
               <VL left={marginXpx} top={-32} height={marginYpx + screenH + 32} />
@@ -1288,7 +1309,7 @@ export default function WallPreview({
                 </text>
               </svg>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
