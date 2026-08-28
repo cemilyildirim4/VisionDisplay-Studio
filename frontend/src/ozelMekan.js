@@ -26,6 +26,7 @@ import { nesneHaritasi } from './nesneBul.js'
 import { derinlikHaritasi } from './derinlikBul.js'
 import { ekranYuzeyiBul } from './dortgenBul.js'
 import { duzlemBolgesiBul } from './duzlemBolge.js'
+import { mevcutEkranYuzeyi } from './ekranYuzeyi.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
 export const VARSAYILAN_ALAN_M = 4
@@ -104,7 +105,22 @@ export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_
    * duruyor; perspektifli yerleşim artık manuel dört köşe kipiyle yapılıyor
    * — orada sonuç kesin ve kullanıcının denetiminde.
    */
-  const yuzey = null
+  /*
+   * ÖNCE MEVCUT EKRAN YÜZEYİ.
+   *
+   * Boş alan araması gökyüzünü en temiz bölge sanıyor; oysa fotoğrafta
+   * gerçek bir LED ekran/billboard varsa tasarımın yeri kesinlikle
+   * orasıdır. Nesne tanıma kaba yeri veriyor, kenar araması da kasanın
+   * İÇ hattını — yani aktif gösterim yüzeyini — çıkarıyor.
+   */
+  let yuzey = null
+  if (nesneler?.ekranKutusu) {
+    try {
+      yuzey = mevcutEkranYuzeyi(tuval, { ekranKutusu: nesneler.ekranKutusu })
+    } catch {
+      yuzey = null
+    }
+  }
 
   let yer = null
   try {

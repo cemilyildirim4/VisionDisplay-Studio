@@ -630,11 +630,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * ekranı ortada bırakmak ve manuel seçimi önermek doğru.
      */
     const yuzey = kayit?.yuzey
-    if (yuzey && yuzey.skor >= 60) {
+    if (yuzey) {
       setHedefKose(yuzey.koseler)
       setKoseKipi(false)
     } else {
+      /*
+       * BULAMADIYSA HİÇBİR YERE KOYMA.
+       *
+       * Eskiden bu durumda "en boş alan" seçiliyordu ve o alan çoğu zaman
+       * gökyüzü oluyordu — algoritma için en temiz, en büyük, en engelsiz
+       * bölge orası. Ama gökyüzü ekran asılacak bir yüzey değil. Yanlış yere
+       * koymaktansa kullanıcıya sormak doğru: manuel dört köşe kipi açılıyor.
+       */
       setHedefKose(null)
+      koseKipiAc()
     }
 
     const sayim = kayit?.nesneSayimi
@@ -648,17 +657,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     } else {
       setOzelNesneler(null)
     }
-    setOzelUyari(
-      yuzey && yuzey.skor >= 75
-        ? t(yuzey.tur === 'existing-led-screen' ? 'scene.screenFound' : 'scene.surfaceFound')
-        : yuzey && yuzey.skor >= 60
-          ? t('scene.surfaceWeak')
-          : kayit.guven > 0.25
-            ? saglam
-              ? t('scene.angleFound')
-              : t('scene.angleWeak')
-            : t('scene.weakSuggest'),
-    )
+    setOzelUyari(yuzey ? t('scene.screenSurface') : t('scene.noSurface'))
   }
 
   /* Öneriyi tazele: ölçü ya da alan genişliği değişmiş olabilir. */
