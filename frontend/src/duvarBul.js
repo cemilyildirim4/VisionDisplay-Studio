@@ -112,10 +112,16 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
    * duvar birbirinden ayırt edilemiyor. Ayıran şey RENK: gökyüzü —gündüz de
    * alacakaranlıkta da— mavi baskındır, duvar değildir.
    */
-  const mavilik = new Float32Array(W * H)
+  const gokMaske = new Float32Array(W * H)
   for (let i = 0, p = 0; i < gri.length; i++, p += 4) {
     gri[i] = 0.299 * veri[p] + 0.587 * veri[p + 1] + 0.114 * veri[p + 2]
-    mavilik[i] = veri[p + 2] - veri[p]
+    /*
+     * Gökyüzü maskesi PİKSEL PİKSEL. Önce adayın ortalama maviliğine
+     * bakıyordum; duvarın üst kenarına oturan bir aday, yarısı gökyüzü olsa
+     * bile ortalamada eşiği geçemiyor ve ekran havada asılı kalıyordu.
+     * Şimdi ölçüt şu: adayın kaçta kaçı gökyüzü?
+     */
+    gokMaske[i] = veri[p + 2] - veri[p] > 25 ? 1 : 0
   }
 
   // 2) Komşu farkı: sağdaki ve alttaki pikselle
@@ -141,7 +147,7 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
    */
   const tk = toplamTablosu(kareler(gri), W, H)
   /* Mavilik toplam tablosu — gökyüzü elemesi için (yalnızca fotoğraf kipi). */
-  const tm = fotograf ? toplamTablosu(mavilik, W, H) : null
+  const tm = fotograf ? toplamTablosu(gokMaske, W, H) : null
 
   /*
    * NESNE HARİTASI çözümleme ölçüsüne getiriliyor ve toplam tablosu
@@ -177,6 +183,8 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
    * boş dönüyordu).
    */
   const duzlemOnbellek = new Map()
+  /* Aday havuzu — araTur'dan ÖNCE tanımlı olmalı (bkz. önbellek notu). */
+  let adaylar = []
   const adimSayisi = 5 // ölçek basamağı
 
   /*
@@ -267,6 +275,7 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
   function araTur(carpan, ekranSart) {
   const esik = esikTemel * carpan
   let enIyi = null
+  adaylar = []
   for (let s = 0; s < adimSayisi; s++) {
     const genislikOran = EN_KUCUK_ORAN + ((EN_BUYUK_ORAN - EN_KUCUK_ORAN) * s) / (adimSayisi - 1)
     const pw = Math.round(W * genislikOran)
@@ -278,7 +287,16 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
       for (let x = 0; x + pw <= W; x += adim) {
         const alan = pw * ph
         const duzluk = dikdortgenToplami(tg, W, x, y, pw, ph) / alan
-        if (duzluk > esik) continue
+        /*
+         * GÖRÜNTÜ EŞİĞİ YALNIZCA DERİNLİK YOKKEN.
+         *
+         * Gradyan "burası düz mü" sorusunun tahminiydi ve yüzeyin ÜSTÜNDE
+         * resim olduğunda yanılıyor: yayın yapan bir LED ekran, afişli bir
+         * pano, desenli bir duvar — hepsi hareketli görünüp eleniyordu.
+         * Oysa müşterinin fotoğrafındaki en doğru yer çoğu zaman tam da
+         * orası. Derinlik varken aynı soruya geometri cevap veriyor.
+         */
+        if (!derinlik && duzluk > esik) continue
 
         /*
          * FOTOĞRAFTA ELEME — LED ekran nereye KONMAZ.
@@ -303,9 +321,9 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
            * aranmıyor, çünkü orada mavi bir şey büyük ihtimalle su, halı ya
            * da boyalı bir yüzeydir — hepsi ekran konabilecek yerlerdir.
            */
-          if (tm && (y + ph / 2) / H < 0.58) {
-            const mavi = dikdortgenToplami(tm, W, x, y, pw, ph) / (pw * ph)
-            if (mavi > 10) continue
+          if (tm && (y + ph / 2) / H < 0.75) {
+            const gok = dikdortgenToplami(tm, W, x, y, pw, ph) / (pw * ph)
+            if (gok > 0.12) continue
           }
 
           // Tavan şeridi ve kadrajın en dibi
@@ -344,6 +362,15 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
             const d = duzlemDegeri(x, y, pw, ph)
             if (d.artik > 0.09) continue
             if (d.onundeki > 0.22) continue
+            /*
+             * YATAY YÜZEY DEĞİL, DİKEY YÜZEY ARANIYOR.
+             *
+             * Düzlemin dikey eğimi zeminde ve tavanda çok büyük, duvarda
+             * neredeyse sıfır. Ölçtüm (şehir meydanı): duvar 0,03 — zemin
+             * 2,79. Ekran yere yatırılmaz; bu ayrım zemin çizgisi
+             * tahmininden çok daha güvenilir.
+             */
+            if (Math.abs(d.egimY) * H > 0.7) continue
           }
         }
 
@@ -400,12 +427,16 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
          * neredeyse tamamen açılıyor.
          */
         const enCokParlaklik = fotograf && cerceve > 0.25 ? 253 : 240
-        if (parlaklik < enAzParlaklik || parlaklik > enCokParlaklik) continue
+        if (!derinlik && (parlaklik < enAzParlaklik || parlaklik > enCokParlaklik)) continue
 
         // Renk saçılımı: E[x²] − E[x]²
         const kareOrt = dikdortgenToplami(tk, W, x, y, pw, ph) / alan
         const sacilim = Math.sqrt(Math.max(0, kareOrt - parlaklik * parlaklik))
-        if (sacilim > 46) continue // içinde koyu/açık iki ayrı şey var demektir
+        /*
+         * Renk saçılımı da aynı sebeple yalnızca derinliksiz durumda:
+         * üstünde fotoğraf olan bir ekranın saçılımı doğal olarak yüksektir.
+         */
+        if (!derinlik && sacilim > 46) continue
 
         /*
          * PUAN.
@@ -483,7 +514,12 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
         const acikAgirlik = fotograf ? 0.9 : 2.2
 
         const puan =
-          (1 - duzluk / esik) * 3 +
+          /*
+           * Görüntü düzlüğünün ağırlığı derinlik varken düşük: aydınlatma
+           * lekeleri, panel derzleri ve yansımalar gradyanı yükseltiyor ama
+           * yüzeyin düzlüğüyle ilgisi yok. Karar geometride.
+           */
+          (1 - duzluk / esik) * (derinlik ? 0.5 : 3) +
           (1 - Math.min(1, sacilim / 46)) * 1.6 +
           acikRenk * acikAgirlik +
           genislikOran * 1.4 +
@@ -492,10 +528,20 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
           cerceve * 3 +
           mevcutEkran * 2.6 +
           zeminYakinlik * 0.8 +
-          geometrikDuzluk * 3.5
+          geometrikDuzluk * 5
 
-        if (!enIyi || puan > enIyi.puan) {
-          enIyi = { x, y, w: pw, h: ph, duzluk, sacilim, parlaklik, puan }
+        const aday = { x, y, w: pw, h: ph, duzluk, sacilim, parlaklik, puan }
+        if (!enIyi || puan > enIyi.puan) enIyi = aday
+        /*
+         * En iyi birkaç aday saklanıyor. Tek bir kazanan yetmiyor: kazanan
+         * çoğu zaman küçük ve kenarda kalmış bir düz parça oluyor, oysa
+         * doğru cevap en BÜYÜK temiz yüzey. Hangisinin daha büyük olduğu
+         * ancak büyütme adımından sonra belli oluyor.
+         */
+        adaylar.push(aday)
+        if (adaylar.length > 400) {
+          adaylar.sort((m, n) => n.puan - m.puan)
+          adaylar.length = 60
         }
       }
     }
@@ -518,7 +564,46 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
    * kendi en/boy oranındaki dikdörtgen bu alanın tam ortasına, alana sığan en
    * büyük ölçüde yerleştiriliyor.
    */
-  const kutu = bosAlaniBul(enIyi)
+  /*
+   * EN BÜYÜK TEMİZ YÜZEY. En iyi puanlı birkaç aday tek tek büyütülüyor;
+   * kazanan, büyüdükten sonraki ALANI ve kadrajdaki yeri en iyi olan.
+   * Ölçtüm: şehir meydanı fotoğrafında tek kazananla gidildiğinde soldaki
+   * bina cephesinin küçük bir parçası seçiliyordu; oysa kadrajın ortasında
+   * boş ve çok daha geniş bir duvar var.
+   */
+  const enIyiler = [...adaylar].sort((m, n) => n.puan - m.puan).slice(0, 12)
+  if (!enIyiler.includes(enIyi)) enIyiler.push(enIyi)
+  let kutu = null
+  let kutuPuani = -Infinity
+  for (const a of enIyiler) {
+    const k = bosAlaniBul(a)
+    const alanOran = (k.w * k.h) / (W * H)
+    const mX = (k.x + k.w / 2) / W
+    const mY = (k.y + k.h / 2) / H
+    const orta = 1 - Math.min(1, Math.abs(mX - 0.5) / 0.5)
+    const goz = 1 - Math.min(1, Math.abs(mY - 0.45) / 0.5)
+    /* Tasarımın oranı bu alana sığıyor mu — sığmayan alan işe yaramaz. */
+    const sigan = Math.min(k.w * 0.94, k.h * 0.94 * oran) / W
+    /*
+     * KAMERAYA BAKAN YÜZEY YEĞLENİR.
+     *
+     * Düzlemin eğimi, yüzeyin ne kadar yandan görüldüğünü söylüyor: karşıdan
+     * görünen bir duvarda eğim sıfıra yakın, keskin açıyla giden bir bina
+     * cephesinde büyük. İkisi de düz ve boş; ama ekran karşıdan görünene
+     * konur — yandan bakılan bir yüzeye konan ekran şerit gibi görünür.
+     * (Ölçtüm: şehir meydanında soldaki bina cephesi bu ölçüt olmadan
+     * ortadaki geniş duvarı yenip seçiliyordu.)
+     */
+    const egim = derinlik ? duzlemDegeri(k.x, k.y, k.w, k.h) : null
+    const cephe = egim ? 1 - Math.min(1, (Math.abs(egim.egimX) * W) / 0.12) : 0.5
+    const p =
+      alanOran * 2.4 + sigan * 2.2 + orta * 1.6 + goz * 0.7 + cephe * 3 + a.puan * 0.12
+    if (p > kutuPuani) {
+      kutuPuani = p
+      kutu = k
+    }
+  }
+  if (!kutu) kutu = bosAlaniBul(enIyi)
 
   function bosAlaniBul(a) {
     const esik = esikTemel * turCarpani
@@ -528,10 +613,26 @@ export function uygunYuzeyBul(kaynak, oran, secenekler = {}) {
     const seritUygun = (sx, sy, sw, sh) => {
       if (sx < kenarPay || sy < 0 || sx + sw > W - kenarPay || sy + sh > H) return false
       if (sw <= 0 || sh <= 0) return false
-      const g = dikdortgenToplami(tg, W, sx, sy, sw, sh) / (sw * sh)
-      if (g > esik) return false
+      if (derinlik) {
+        /* Şeridin YÜZEYE ait olup olmadığı geometriyle sınanıyor. */
+        const d = duzlemDegeri(sx, sy, Math.max(4, sw), Math.max(4, sh))
+        if (d.artik > 0.09 || d.onundeki > 0.22) return false
+      } else {
+        const g = dikdortgenToplami(tg, W, sx, sy, sw, sh) / (sw * sh)
+        if (g > esik) return false
+      }
       if (te && dikdortgenToplami(te, W, sx, sy, sw, sh) / (sw * sh) > 0.02) return false
       if (fotograf && zeminOran != null && (sy + sh) / H > zeminOran + 0.04) return false
+      /*
+       * GÖKYÜZÜNE BÜYÜME. Aday pencerede gökyüzü zaten eleniyordu ama BÜYÜTME
+       * adımında bu sınama yoktu: duvarın üstünde bulunan iyi bir alan, gökyüzü
+       * derinlikte kusursuz bir düzlem olduğu için yukarı doğru göğe kadar
+       * büyüyor, sonra "ortala" dendiğinde tasarım havada kalıyordu. Ölçtüm:
+       * şehir meydanı fotoğrafında seçilen alan y=0,02'den başlıyordu.
+       */
+      if (tm && dikdortgenToplami(tm, W, sx, sy, sw, sh) / (sw * sh) > 0.25) return false
+      /* Tavan şeridi ve kadrajın en dibi — adaylarda olduğu gibi. */
+      if (fotograf && (sy / H < 0.06 || (sy + sh) / H > 0.97)) return false
       return true
     }
     let buyudu = true
