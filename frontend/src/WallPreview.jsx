@@ -518,9 +518,14 @@ function StepBtn({ dir, onClick, disabled }) {
       onClick={onClick}
       disabled={disabled}
       aria-label={dir === 'plus' ? 'Artır' : 'Azalt'}
-      className={`w-11 h-11 min-h-[44px] min-w-[44px] p-3 flex items-center justify-center ${disabled ? 'text-neutral-300' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#1b2029]'}`}
+      /*
+       * Ölçü etiketlerinin yanında duruyorlar; 44 piksellik dokunma hedefi
+       * burada fazla yer kaplıyor ve etiketin üstüne biniyordu. 34 piksel
+       * hem parmakla rahat basılıyor hem ölçüyü kapatmıyor.
+       */
+      className={`w-[34px] h-[34px] min-h-[34px] min-w-[34px] p-2 flex items-center justify-center ${disabled ? 'text-neutral-300' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#1b2029]'}`}
     >
-      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
         {dir === 'plus' && <line x1="12" y1="6" x2="12" y2="18" />}
         <line x1="6" y1="12" x2="18" y2="12" />
       </svg>
@@ -1253,7 +1258,7 @@ export default function WallPreview({
               {/* Üstteki +/- : Sütun (ekran genişliği) */}
               <div
                 data-pdf-gizle className="absolute flex items-stretch rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
-                style={{ left: marginXpx + screenW / 2, top: -64 - sahnePayPx, transform: 'translateX(-50%)' }}
+                style={{ left: marginXpx + screenW / 2, top: -74 - sahnePayPx, transform: 'translateX(-50%)' }}
               >
                 <StepBtn dir="minus" onClick={() => onColsChange?.(Math.max(1, nCols - 1))} disabled={nCols <= 1} />
                 <div className="w-px bg-neutral-200 dark:bg-[#2c333f]" />
@@ -1265,7 +1270,7 @@ export default function WallPreview({
                 data-pdf-gizle className="absolute flex flex-col rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
                 /* Telefonda kabın dışına düşüp tıklanamaz hale geliyordu: sağ
                    kenarın içinde kalacak şekilde sınırlanıyor. */
-                style={{ left: Math.min(wallW + 44 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 34)), top: marginYpx + screenH / 2, transform: 'translateY(-50%)' }}
+                style={{ left: Math.min(wallW + 46 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 34)), top: marginYpx + screenH / 2, transform: 'translateY(-50%)' }}
               >
                 <StepBtn dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
                 <div className="h-px bg-neutral-200 dark:bg-[#2c333f]" />
