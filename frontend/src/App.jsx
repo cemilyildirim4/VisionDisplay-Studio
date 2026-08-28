@@ -1111,28 +1111,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const ilerleme =
       (izlemeMesafesi - OTO_EN_AZ_M) / (OTO_EN_COK_M - OTO_EN_AZ_M)
     const zoom = 1.22 - ilerleme * 0.38
-    const taban = Math.max(0.84, Math.min(1.22, zoom))
-
-    /*
-     * KÜÇÜK TASARIMDA KAMERA YAKLAŞIYOR.
-     *
-     * Ölçek gerçek olunca 1 m'lik bir ekran 33 metrelik meydanda haklı olarak
-     * minicik kalıyor. Doğru çözüm ekranı büyütmek değil — o yalan olurdu —
-     * kamerayı yaklaştırmak: arka plan da tasarım da aynı oranda büyüyor,
-     * ikisinin birbirine oranı, yani ölçü doğruluğu, hiç değişmiyor.
-     *
-     * Hedef: tasarım kadrajın enine göre ~%55'ini, boyuna göre ~%50'sini
-     * bulsun. Üst sınır 2,4: ötesinde fotoğrafın çözünürlüğü yetmiyor.
-     */
-    const yer = fotoSahne?.dosya ? fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h) : null
-    if (yer?.pxPerM > 0 && tasarimWm > 0 && tasarimHm > 0 && tuvalBoyut.w > 0) {
-      const w = tasarimWm * yer.pxPerM * taban
-      const h = tasarimHm * yer.pxPerM * taban
-      const gerekli = Math.min((tuvalBoyut.w * 0.55) / w, (tuvalBoyut.h * 0.5) / h)
-      return taban * Math.max(1, Math.min(2.4, gerekli))
-    }
-    return taban
-  }, [fotoSahne, izlemeMesafesi, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm])
+    return Math.max(0.84, Math.min(1.22, zoom))
+  }, [fotoSahne, izlemeMesafesi, ozelMesafeM])
 
   /*
    * FOTOĞRAFLI MEKÂNDA ÇİZİM ÖLÇEĞİ.
@@ -1161,17 +1141,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * Bedeli: ekran artık fotoğraftaki panelin metre karşılığına kilitli değil.
      * Kendi fotoğrafında ölçek yine gerçek (mesafeden hesaplanıyor).
      */
-    /*
-     * TUVALE SIĞDIRMA KURALI KALDIRILDI — ÖLÇEK YİNE GERÇEK.
-     *
-     * Bir ara bu iki sahnede ölçeği tuvalden alıyordum ("her mekânda aynı
-     * boyda görünsün"). Bedeli ağırdı: 2,88 m'lik bir ekran 18 metrelik taş
-     * duvarın önünde 10 metre gibi duruyor, duvara yaslanmıyor, havada
-     * asılı görünüyordu. Amaç fotogerçekçi bir önizleme olduğu için ölçek
-     * artık sahnenin kendi kalibrasyonundan (panel genişliği / panelEnM)
-     * geliyor; küçük tasarımların görünürlüğü ise sahnenin kendiliğinden
-     * yakınlaşmasıyla çözülüyor (bkz. sahneYakinlik).
-     */
+    if (fotoSahne?.dosya && fotoSahne.id !== 'ozel') {
+      /*
+       * İç/dış mekân sahneleriyle AYNI kural: ölçek duvarın metre ölçüsünden
+       * sığdırılıyor (salonOlcek). Böylece dört mekânda ve arka plansız
+       * tuvalde tasarım aynı boyda görünüyor.
+       */
+      return salonOlcek(tuvalBoyut.w, tuvalBoyut.h, mekanDuvarWm, mekanDuvarHm)
+    }
     if (!fotoSahne?.dosya || !(ekranWm > 0) || !(ekranHm > 0)) return null
     const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
     if (!yer?.pxPerM) return null
