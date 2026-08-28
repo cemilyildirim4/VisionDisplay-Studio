@@ -148,6 +148,13 @@ export default function PanoFoto({
     return Math.min(ekranAlt, kutuUst + Math.max(0, Math.min(1, ny)) * ekranHpx)
   })()
 
+  /*
+   * Fotoğraf tuvali doldurmuyorsa (uzaklaşma) kenar tamamlama devreye giriyor.
+   * Yarım piksellik yuvarlama farkları için küçük bir pay bırakılıyor.
+   */
+  const kenarDoldur =
+    yer.genislik * yakinlik < tuvalW - 1 || yer.yukseklik * yakinlik < tuvalH - 1
+
   const tabanY = ekranAlt + direk + kaideH
   const metal = 'linear-gradient(180deg, #3a3f47 0%, #23272d 42%, #14171b 100%)'
   const yanDestek = ekranWpx / pxPerM > 2.5
@@ -164,6 +171,36 @@ export default function PanoFoto({
       )}
       {sahne.dosya && (
         <>
+          {/*
+            KENAR TAMAMLAMA.
+
+            Uzaklaşınca fotoğraf küçülüyor ve kenarlarda boş şerit kalıyor —
+            elimizde o karenin gösterdiğinden fazlası yok. Boşluğu, fotoğrafın
+            KENDİSİNİN tuvali kaplayacak kadar büyütülmüş ve bulanıklaştırılmış
+            bir kopyasıyla dolduruyoruz: renkler ve ışık sürüyor, kadraj bir
+            yerde bitmiş gibi durmuyor.
+
+            Bu bir üretim (outpainting) değil, mevcut pikselleri uzatma. Gerçek
+            yapay zekâ tamamlaması için görüntünün bir sunucuya gönderilmesi
+            gerekir; burada fotoğraf cihazdan çıkmıyor.
+          */}
+          {kenarDoldur && (
+            <img
+              src={sahne.dosya}
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                filter: 'blur(26px) saturate(0.9) brightness(0.82)',
+                transform: 'scale(1.12)',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
           <img
             src={sahne.dosya}
             alt=""
