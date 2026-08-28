@@ -1121,15 +1121,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * kamerayı yaklaştırmak: arka plan da tasarım da aynı oranda büyüyor,
      * ikisinin birbirine oranı, yani ölçü doğruluğu, hiç değişmiyor.
      *
-     * Hedef: tasarım kadrajın enine göre ~%55'ini, boyuna göre ~%50'sini
-     * bulsun. Üst sınır 2,4: ötesinde fotoğrafın çözünürlüğü yetmiyor.
+     * Hedef ölçülü: kadrajın enine göre ~%45'i. Üst sınır 1,3 — bir ara 2,4
+     * idi ve küçük tasarımlarda kamera fotoğrafın içine dalıp kadrajı
+     * tanınmaz hâle getiriyordu. Ölçek zaten gerçek; yakınlaşma sadece
+     * küçük ekranı görünür tutmak için hafif bir dokunuş.
      */
     const yer = fotoSahne?.dosya ? fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h) : null
     if (yer?.pxPerM > 0 && tasarimWm > 0 && tasarimHm > 0 && tuvalBoyut.w > 0) {
       const w = tasarimWm * yer.pxPerM * taban
       const h = tasarimHm * yer.pxPerM * taban
-      const gerekli = Math.min((tuvalBoyut.w * 0.55) / w, (tuvalBoyut.h * 0.5) / h)
-      return taban * Math.max(1, Math.min(2.4, gerekli))
+      const gerekli = Math.min((tuvalBoyut.w * 0.45) / w, (tuvalBoyut.h * 0.45) / h)
+      return taban * Math.max(1, Math.min(1.3, gerekli))
     }
     return taban
   }, [fotoSahne, izlemeMesafesi, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm])
