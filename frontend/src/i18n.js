@@ -369,6 +369,26 @@ const dict = {
     en: 'Analysing the photo: finding objects and angle…',
     ar: 'يتم تحليل الصورة: البحث عن الأجسام والزاوية…',
   },
+  'scene.scanning': { tr: 'Uygun ekran alanları bulunuyor…', en: 'Looking for suitable screen areas…', ar: 'يتم البحث عن مناطق شاشة مناسبة…' },
+  'scene.screenFound': {
+    tr: 'Mevcut LED ekran algılandı — tasarım bu yüzeye yerleştirildi.',
+    en: 'An existing LED screen was detected — the design was placed on it.',
+    ar: 'تم اكتشاف شاشة LED موجودة — تم وضع التصميم عليها.',
+  },
+  'scene.surfaceFound': {
+    tr: 'Uygun bir yüzey bulundu — tasarım bu yüzeye oturtuldu.',
+    en: 'A suitable surface was found — the design was fitted to it.',
+    ar: 'تم العثور على سطح مناسب — تم تركيب التصميم عليه.',
+  },
+  'scene.surfaceWeak': {
+    tr: 'Yüzey tam güvenilir değil. Köşeleri elle düzeltebilirsiniz.',
+    en: 'The surface is not fully reliable. You can adjust the corners by hand.',
+    ar: 'السطح غير موثوق تمامًا. يمكنك ضبط الزوايا يدويًا.',
+  },
+  'scene.cornersManual': { tr: 'Manuel dört köşe seçimi', en: 'Manual four-corner selection', ar: 'اختيار الزوايا الأربع يدويًا' },
+  'scene.cornersHint': { tr: 'Ekranın dört köşesini işaretleyin', en: 'Mark the four corners of the screen', ar: 'حدد الزوايا الأربع للشاشة' },
+  'scene.cornersOff': { tr: 'Dört köşe yerleşimini kapat', en: 'Turn off four-corner placement', ar: 'إيقاف وضع الزوايا الأربع' },
+  'scene.cornersReset': { tr: 'Yerleşimi sıfırla', en: 'Reset placement', ar: 'إعادة ضبط الموضع' },
   'scene.objectsFound': { tr: 'Fotoğrafta görülenler:', en: 'Found in the photo:', ar: 'ما تم العثور عليه في الصورة:' },
   'scene.angleWeak': {
     tr: 'Fotoğrafta belirgin bir açı bulunamadı; ekran karşıdan kondu. Yön verebilirsiniz.',

@@ -29,6 +29,7 @@ import {
 } from './sahneler.js'
 import { ozelMekanKaydi, MEKAN_TURLERI, MEKAN_EN_COK_MB, VARSAYILAN_ALAN_M } from './ozelMekan.js'
 import { SINIF_ADLARI } from './nesneBul.js'
+import KoseSecici from './KoseSecici.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
@@ -336,6 +337,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [ozelInceleniyor, setOzelInceleniyor] = useState(false)
   /* Modelin fotoğrafta gördükleri — arayüzde adlarıyla yazılıyor. */
   const [ozelNesneler, setOzelNesneler] = useState(null)
+  /*
+   * HEDEF DÖRTGEN — tasarımın oturacağı yüzeyin dört köşesi.
+   *
+   * FOTOĞRAFA GÖRE 0–1 oranlı tutuluyor: pencere boyutlandığında ya da
+   * telefon yan çevrildiğinde yüzey fotoğrafın neresindeyse orada kalıyor.
+   * null ise eski davranış (ortalama + sürükleme) geçerli.
+   */
+  const [hedefKose, setHedefKose] = useState(null)
+  /* Kullanıcı köşeleri elle düzeltiyor mu? */
+  const [koseKipi, setKoseKipi] = useState(false)
   /* Kiosk ayakları — duvara asılan ekranda ayak olmaz, kapatılabiliyor. */
   /*
    * Kiosk ayagi VARSAYILAN OLARAK YOK. Ekranlarin cogu duvara ya da bir
@@ -610,6 +621,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * olduğu için doğru varsayılan bu.
      */
 
+    /*
+     * YÜZEY BULUNDUYSA HEDEF ODUR.
+     *
+     * Skor eşikleri: 75 üstü kendiliğinden uygulanıyor, 60–74 arası
+     * uygulanıyor ama kullanıcıya "elle düzeltebilirsiniz" deniyor,
+     * altındaysa hiç dokunulmuyor — yanlış bir yüzeye yapıştırmaktansa
+     * ekranı ortada bırakmak ve manuel seçimi önermek doğru.
+     */
+    const yuzey = kayit?.yuzey
+    if (yuzey && yuzey.skor >= 60) {
+      setHedefKose(yuzey.koseler)
+      setKoseKipi(false)
+    } else {
+      setHedefKose(null)
+    }
+
     const sayim = kayit?.nesneSayimi
     if (sayim) {
       const toplam = Object.values(sayim).reduce((a, b) => a + b, 0) || 1
@@ -622,11 +649,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setOzelNesneler(null)
     }
     setOzelUyari(
-      kayit.guven > 0.25
-        ? saglam
-          ? t('scene.angleFound')
-          : t('scene.angleWeak')
-        : t('scene.weakSuggest'),
+      yuzey && yuzey.skor >= 75
+        ? t(yuzey.tur === 'existing-led-screen' ? 'scene.screenFound' : 'scene.surfaceFound')
+        : yuzey && yuzey.skor >= 60
+          ? t('scene.surfaceWeak')
+          : kayit.guven > 0.25
+            ? saglam
+              ? t('scene.angleFound')
+              : t('scene.angleWeak')
+            : t('scene.weakSuggest'),
     )
   }
 
@@ -1153,6 +1184,63 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * dikdörtgenin içinde kalıyor. Kiosk fotoğraftan uzunsa ortalanıyor —
    * yarısını göstermektense tamamını göstermek daha faydalı.
    */
+  /*
+   * HEDEF DÖRTGENİN TUVALDEKİ KARŞILIĞI.
+   *
+   * Köşeler fotoğrafa göre oranlı; fotoğrafın tuvaldeki yerleşimi
+   * (fotoYerlesim) ile piksele çevriliyor, sonra TASARIM KUTUSUNUN sol
+   * üstüne göre yazılıyor — homografi kutunun kendi köşelerini hedefe
+   * eşliyor (bkz. homografi.js).
+   */
+  const koseTuval = (() => {
+    if (!hedefKose || !fotoYer || !cizimOlcek) return null
+    const dw = tasarimWm * cizimOlcek
+    const dh = tasarimHm * cizimOlcek
+    if (!(dw > 0) || !(dh > 0)) return null
+    const solUst = { x: tuvalBoyut.w / 2 - dw / 2, y: tuvalBoyut.h / 2 - dh / 2 }
+    return hedefKose.map((k) => ({
+      x: fotoYer.sol + k.x * fotoYer.genislik - solUst.x,
+      y: fotoYer.ust + k.y * fotoYer.yukseklik - solUst.y,
+    }))
+  })()
+
+  /*
+   * Köşelerin TUVALDEKİ mutlak yeri — manuel tutamaklar bunu kullanıyor.
+   * (Ekranın dönüşümü için gereken, tasarım kutusuna göre olan sürüm
+   * `koseTuval`; ikisi aynı noktalar, farklı başnokta.)
+   */
+  const koseMutlak = (() => {
+    if (!hedefKose || !fotoYer) return null
+    return hedefKose.map((k) => ({
+      x: fotoYer.sol + k.x * fotoYer.genislik,
+      y: fotoYer.ust + k.y * fotoYer.yukseklik,
+    }))
+  })()
+
+  /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
+  const koseleriYaz = (noktalar) => {
+    if (!fotoYer?.genislik || !fotoYer?.yukseklik) return
+    setHedefKose(
+      noktalar.map((k) => ({
+        x: (k.x - fotoYer.sol) / fotoYer.genislik,
+        y: (k.y - fotoYer.ust) / fotoYer.yukseklik,
+      })),
+    )
+  }
+
+  /* Manuel kip açılırken elde bir dörtgen yoksa fotoğrafın ortasında biri kurulur. */
+  const koseKipiAc = () => {
+    if (!hedefKose) {
+      setHedefKose([
+        { x: 0.3, y: 0.3 },
+        { x: 0.7, y: 0.3 },
+        { x: 0.7, y: 0.7 },
+        { x: 0.3, y: 0.7 },
+      ])
+    }
+    setKoseKipi(true)
+  }
+
   const mekanKayma = (() => {
     if (!surukleAktif) return null
     const x = elleKayma.x + oneriKaymasi
@@ -1363,7 +1451,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
               ekranSekli={ekranSekli}
               ayakOrani={ayakOrani}
-              yon={mekanYon}
+              yon={koseTuval ? null : mekanYon}
+              kioskGizle={!!koseTuval}
               /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
               yakinlik={sahneYakinlik}
               kayma={mekanKayma}
@@ -1394,9 +1483,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               hideRegions={isVideoWall}
               sahneVar={scene !== 'none'}
               sahnePayPx={sahnePayPx}
-              kayma={mekanKayma}
-              tutamak={surukleAktif ? etkinTutamak : null}
-              yon={surukleAktif ? mekanYon : null}
+              kose={koseTuval}
+              /*
+               * Dört köşe hedefi varken sürükleme ve açı kapalı: yerleşimi
+               * artık dörtgen belirliyor, ikisi birbiriyle yarışmamalı.
+               */
+              kayma={koseTuval ? null : mekanKayma}
+              tutamak={surukleAktif && !koseTuval ? etkinTutamak : null}
+              yon={surukleAktif && !koseTuval ? mekanYon : null}
               sahneOlcekVarsayilan={sahneOlcekVarsayilan}
               onPxPerM={setCizimOlcek}
             />
@@ -1424,6 +1518,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 </button>
               </div>
             </div>
+          )}
+
+          {/*
+            MANUEL DÖRT KÖŞE KATMANI — tuvalin üstünde.
+            Otomatik bulma her fotoğrafta doğru sonuç veremez; kesin sonucu
+            kullanıcının kendi işaretlediği dört köşe verir.
+          */}
+          {koseKipi && koseMutlak && (
+            <KoseSecici
+              koseler={koseMutlak}
+              onDegis={koseleriYaz}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+            />
           )}
         </main>
 
@@ -2013,6 +2121,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         decimals={1}
                       />
                     </div>
+                    {/*
+                      DÖRT KÖŞE — otomatik bulunanı düzeltmek ya da yüzeyi
+                      elle işaretlemek için. Güvenilir omurga bu: otomatik
+                      tespit iyi bir başlangıç noktası, kesin sonuç elle.
+                    */}
+                    <button
+                      type="button"
+                      onClick={() => (koseKipi ? setKoseKipi(false) : koseKipiAc())}
+                      className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                    >
+                      {koseKipi ? t('scene.cornersOff') : t('scene.cornersManual')}
+                    </button>
+                    {koseKipi && (
+                      <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('scene.cornersHint')}
+                      </p>
+                    )}
+                    {hedefKose && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHedefKose(null)
+                          setKoseKipi(false)
+                        }}
+                        className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        {t('scene.cornersReset')}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => oneriyiTazele()}

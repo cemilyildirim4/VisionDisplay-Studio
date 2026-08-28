@@ -24,6 +24,7 @@ import { uygunYuzeyBul, zeminCizgisiBul } from './duvarBul.js'
 import { perspektifAcisi } from './aciBul.js'
 import { nesneHaritasi } from './nesneBul.js'
 import { derinlikHaritasi } from './derinlikBul.js'
+import { ekranYuzeyiBul } from './dortgenBul.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
 export const VARSAYILAN_ALAN_M = 4
@@ -94,6 +95,21 @@ export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_
     derinlik = null
   }
 
+  /*
+   * EKRAN YÜZEYİ ARAMA (dortgenBul.js).
+   *
+   * Boş duvar aramasından farklı bir soru: fotoğrafta dört köşeli, düz bir
+   * YÜZEY var mı — billboard, totem, vitrin ekranı, pano? Varsa tasarımın
+   * gideceği yer orasıdır ve dört köşesi bilindiği için perspektifi de
+   * birebir eşlenebiliyor.
+   */
+  let yuzey = null
+  try {
+    yuzey = ekranYuzeyiBul(tuval, { derinlik, nesneler, oran: enBoy })
+  } catch {
+    yuzey = null
+  }
+
   let yer = null
   try {
     yer = uygunYuzeyBul(tuval, enBoy, { fotograf: true, zeminOran, nesneler, derinlik })
@@ -161,6 +177,8 @@ export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_
     nesneSayimi: nesneler ? nesneler.sayim : null,
     modelCalisti: !!nesneler,
     derinlikCalisti: !!derinlik,
+    /** Bulunan ekran yüzeyi: dört köşe (0–1) + skor. */
+    yuzey,
   }
 }
 

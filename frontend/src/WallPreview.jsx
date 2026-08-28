@@ -6,6 +6,7 @@ import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_S
 import { videoSrcFor } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { yonDonusumu } from './hooks/useYon.js'
+import { koseDonusumu } from './homografi.js'
 
 /**
  * Çalışma alanı önizlemesi.
@@ -671,6 +672,14 @@ export default function WallPreview({
    */
   yon = null,
   /*
+   * DÖRT KÖŞE HEDEFİ (px, tasarım kutusunun sol üstüne göre).
+   *
+   * Verilirse ekran, açı yerine gerçek bir homografiyle bu dörtgene
+   * oturtuluyor: yamuk bir billboard yüzeyine birebir eşleme. İçerik DOM
+   * ağacında kaldığı için video oynamaya devam ediyor.
+   */
+  kose = null,
+  /*
    * Sahnenin duvarının gerçek ölçüsü, { w, h } metre. Verilirse ÇİZİM ÖLÇEĞİ
    * buna sabitlenir: mekânın duvarı 6 m ise 3 m'lik ekran yarısını kaplar.
    * Ölçek hissini veren şey bu — yoksa her ekran aynı büyüklükte görünüyordu.
@@ -916,7 +925,17 @@ export default function WallPreview({
               className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative ${kavisPayiM > 0 ? 'overflow-visible' : 'overflow-hidden'}`}
             >
               {/* Ekranlar şeridi (ortalanmış, alta hizalı) */}
-              <div style={{ position: 'absolute', left: marginXpx, top: stripTop, width: totalWpx, height: maxHpx }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: marginXpx,
+                  top: stripTop,
+                  width: totalWpx,
+                  height: maxHpx,
+                  transform: koseDonusumu(totalWpx, maxHpx, kose) || undefined,
+                  transformOrigin: '0 0',
+                }}
+              >
                 {/* z0: Tek içerik katmanı — tüm şeride yayılır, ekran şekline kırpılır */}
                 {useSingle && (
                   <div
@@ -1176,6 +1195,19 @@ export default function WallPreview({
           }}
         >
           <div style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} flex items-center justify-center`}>
+            {/*
+              Dört köşe hedefi varken dönüşüm EKRAN KUTUSUNA uygulanıyor:
+              duvar kutusu tasarımdan büyük olabiliyor, homografi ise tam
+              tasarımın dört köşesini hedefe eşlemek zorunda.
+            */}
+            <div
+              style={{
+                width: screenW,
+                height: screenH,
+                transform: koseDonusumu(screenW, screenH, kose) || undefined,
+                transformOrigin: '0 0',
+              }}
+            >
             <Screen
               wPx={screenW}
               hPx={screenH}
@@ -1189,6 +1221,7 @@ export default function WallPreview({
               hideRegions={hideRegions}
               curveAmount={curveAmount}
             />
+            </div>
           </div>
 
           {showMeasurements && (

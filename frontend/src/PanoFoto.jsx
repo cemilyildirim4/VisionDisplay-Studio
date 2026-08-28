@@ -45,6 +45,11 @@ export default function PanoFoto({
   ayakOrani = 0.5,
   /* Ekrana verilen aci (bkz. hooks/useYon.js) — govde de ayni acida durur. */
   yon = null,
+  /*
+   * Dort kose kipinde kiosk cizilmiyor: ekran mevcut bir yuzeye (bilbord,
+   * pano, vitrin) oturtuluyor; onun onune bir de totem koymak yanlis olur.
+   */
+  kioskGizle = false,
   kayma = null,
   /* Ayaklar (direk + kaide) gizlenebiliyor; kasa ve gölge her hâlükârda kalır. */
   ayakVar = true,
@@ -67,7 +72,7 @@ export default function PanoFoto({
    * 6 m lik bir ekranda yarim metrelik bir cerceve olurdu. Direk ve kaide
    * ise gercek metre - mekanin kendi olceginden (yer.pxPerM) turuyor.
    */
-  const kiosk = sahne.kiosk && ekranWpx > 0 && ekranHpx > 0
+  const kiosk = sahne.kiosk && !kioskGizle && ekranWpx > 0 && ekranHpx > 0
   // Ekran arka planla birlikte olceklendigi icin kiosk govdesi de ayni oranda
   const pxPerM = (yer.pxPerM || 1) * yakinlik
   const kasa = Math.max(3, Math.min(14, ekranWpx * 0.014))

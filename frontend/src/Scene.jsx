@@ -41,6 +41,7 @@ export default function Scene({
   ekranSekli,
   ayakOrani = 0.5,
   yon = null,
+  kioskGizle = false,
   yakinlik = 1,
   kayma = null,
   /* Kullanicinin kendi fotografi — sahneler.js listesinde yok, disaridan gelir */
@@ -67,6 +68,7 @@ export default function Scene({
         ekranSekli={ekranSekli}
         ayakOrani={ayakOrani}
         yon={yon}
+        kioskGizle={kioskGizle}
         kayma={kayma}
         ayakVar={ayakVar}
       />
