@@ -165,9 +165,20 @@ export function icDortgen(koseler, tasarimWm, tasarimHm, yuzeyWm) {
   if (!(enPx > 0) || !(boyPx > 0)) return koseler
   const yuzeyHm = yuzeyWm * (boyPx / enPx)
 
-  /* Tasarım yüzeyden büyükse taşırmıyor: en fazla yüzeyin tamamını kaplar. */
-  const fw = Math.min(1, tasarimWm / yuzeyWm)
-  const fh = Math.min(1, tasarimHm / yuzeyHm)
+  /*
+   * TASARIM YÜZEYDEN BÜYÜK OLABİLİR.
+   *
+   * Önce yüzeye zorla sığdırıyordum (en fazla %100). Sonuç yanlıştı: 20
+   * metrelik bir ekran, algılanan 5 metrelik panele hapsolup küçücük
+   * görünüyordu — üstelik o panel çoğu zaman bilbordun yalnızca bir parçası.
+   * Gerçekte 20 m lik ekran 5 m lik panoya sığmaz; büyük görünmesi doğru
+   * bilgidir. Yüzeyin MERKEZİ ve PERSPEKTİFİ korunuyor, ölçü serbest.
+   *
+   * Üst sınır yalnızca uç durumlar için: yüzeyin altı katından fazlası
+   * kadraja da sığmıyor, çizim anlamını yitiriyor.
+   */
+  const fw = Math.min(6, tasarimWm / yuzeyWm)
+  const fh = Math.min(6, tasarimHm / yuzeyHm)
   const u0 = (1 - fw) / 2
   const v0 = (1 - fh) / 2
   const n = [
