@@ -376,9 +376,9 @@ const dict = {
     ar: 'تم اكتشاف سطح شاشة LED. تم وضع التصميم عليه بالمنظور.',
   },
   'scene.noSurface': {
-    tr: 'Uygun bir ekran yüzeyi güvenle algılanamadı. Lütfen hedef ekranın dört iç köşesini işaretleyin.',
-    en: 'No screen surface could be detected reliably. Please mark the four inner corners of the target screen.',
-    ar: 'لم يتم اكتشاف سطح شاشة موثوق. يرجى تحديد الزوايا الداخلية الأربع للشاشة.',
+    tr: 'Ekran yüzeyi bulunamadı; en uygun alana kondu. Köşeleri elle düzeltebilirsiniz.',
+    en: 'No screen surface found; placed on the most suitable area. You can adjust the corners.',
+    ar: 'لم يتم العثور على سطح شاشة؛ تم وضعه في المنطقة الأنسب. يمكنك ضبط الزوايا.',
   },
   'scene.screenFound': {
     tr: 'Mevcut LED ekran algılandı — tasarım bu yüzeye yerleştirildi.',

@@ -635,15 +635,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setKoseKipi(false)
     } else {
       /*
-       * BULAMADIYSA HİÇBİR YERE KOYMA.
+       * EKRAN YÜZEYİ BULUNAMADIYSA: önerilen yere koy, MANUEL KİPİ AÇMA.
        *
-       * Eskiden bu durumda "en boş alan" seçiliyordu ve o alan çoğu zaman
-       * gökyüzü oluyordu — algoritma için en temiz, en büyük, en engelsiz
-       * bölge orası. Ama gökyüzü ekran asılacak bir yüzey değil. Yanlış yere
-       * koymaktansa kullanıcıya sormak doğru: manuel dört köşe kipi açılıyor.
+       * Bir ara burada manuel dört köşe kipini kendiliğinden açıyordum; ekran
+       * tanınmayan her fotoğrafta düğmeye basmak dört tutamak çıkarıyordu ve
+       * düğme işini yapmamış oluyordu. Düğmenin sözü "önerilen yere koy" —
+       * bir şey yapmalı. Bu durumda kamera oturtmadaki gibi en uygun alana
+       * konuyor; köşeleri düzeltmek isteyen ayrı düğmeyle manuel kipe geçiyor.
        */
       setHedefKose(null)
-      koseKipiAc()
+      setKoseKipi(false)
     }
 
     const sayim = kayit?.nesneSayimi
