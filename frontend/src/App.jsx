@@ -894,6 +894,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     [selectedModel, width, height],
   )
 
+  /*
+   * L TİPİ EKRANDA KİOSK ÇİZİLMİYOR.
+   *
+   * L ekran köşeye giydirilen bir yüzey: iki duvarı ya da bir sütunu
+   * sarıyor. Altına kasa, direk ve kaide çizmek yanlış bir ürün gösteriyordu
+   * — o gövde dik dörtgen bir totem varsayıyor ve L'nin çıkıntısıyla
+   * çakışıyor. Bu yüzden L varken mekân yalnızca ekranı çiziyor.
+   */
+  const lTipiVar = cokluAktif
+    ? screens.some((s) => (s.type || 'flat') === 'lshape')
+    : (screenType || 'flat') === 'lshape'
+
   const ekranSekli = useMemo(() => {
     if (!(tasarimWm > 0) || !(tasarimHm > 0)) return null
     // Tek ekranda da tür bilgisi var; çoklu ekranda her ekranın kendi türü
@@ -1574,7 +1586,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               ekranSekli={ekranSekli}
               ayakOrani={ayakOrani}
               yon={koseTuval ? null : mekanYon}
-              kioskGizle={!!koseTuval}
+              kioskGizle={!!koseTuval || lTipiVar}
               /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
               olcuGoster={showMeasurements}
               /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */

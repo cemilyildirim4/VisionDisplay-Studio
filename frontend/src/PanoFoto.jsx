@@ -269,9 +269,9 @@ export default function PanoFoto({
                     tuvalin içine sıkıştırılıyor.
                   */
                   left: Math.max(
-                    92,
+                    54,
                     Math.min(
-                      tuvalW - 92,
+                      tuvalW - 54,
                       tuvalW / 2 + (yer.sol + o.x * yer.genislik - tuvalW / 2) * yakinlik,
                     ),
                   ),
@@ -284,14 +284,22 @@ export default function PanoFoto({
                   ),
                   transform: 'translate(-50%, -50%)',
                   transformOrigin: 'center',
-                  fontSize: 9,
-                  lineHeight: 1.1,
-                  padding: '2px 5px',
-                  borderRadius: 5,
+                  /*
+                    Etiketler bilgi notu, süs değil: küçük, tek satır ve yarı
+                    saydam. Kutu yerine hap biçimi ve hafif bulanık zemin,
+                    fotoğrafın üstünde daha az yer kaplıyor.
+                  */
+                  fontSize: 8.5,
+                  fontWeight: 500,
+                  lineHeight: 1,
+                  padding: '3px 7px',
+                  borderRadius: 999,
                   whiteSpace: 'nowrap',
-                  background: 'rgba(17,20,26,0.62)',
-                  color: 'rgba(255,255,255,0.92)',
-                  letterSpacing: '0.02em',
+                  background: 'rgba(17,20,26,0.42)',
+                  backdropFilter: 'blur(3px)',
+                  WebkitBackdropFilter: 'blur(3px)',
+                  color: 'rgba(255,255,255,0.86)',
+                  letterSpacing: '0.03em',
                 }}
               >
                 {o.etiket}

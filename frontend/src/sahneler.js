@@ -92,10 +92,10 @@ export const SAHNELER = [
      * birlikte ölçekleniyor.
      */
     olculer: [
-      { etiket: 'Arka duvar 12,0 × 4,5 m', x: 0.19, y: 0.28 },
-      { etiket: 'Duvar hizasında genişlik ≈ 21 m', x: 0.8, y: 0.55 },
-      { etiket: 'Kameradan duvara ≈ 19 m', x: 0.2, y: 0.8 },
-      { etiket: 'Görünen zemin derinliği ≈ 14 m', x: 0.78, y: 0.9 },
+      { etiket: 'Duvar 12 × 4,5 m', x: 0.19, y: 0.28 },
+      { etiket: 'Genişlik ~21 m', x: 0.82, y: 0.55 },
+      { etiket: 'Mesafe ~19 m', x: 0.18, y: 0.82 },
+      { etiket: 'Derinlik ~14 m', x: 0.82, y: 0.92 },
     ],
   },
   {
@@ -142,10 +142,10 @@ export const SAHNELER = [
      *  • Kamera ~1,6 m yükseklikte → görünen döşeme derinliği ≈ 25 m.
      */
     olculer: [
-      { etiket: 'Taş duvar 18,0 × 4,0 m', x: 0.17, y: 0.5 },
-      { etiket: 'Duvar hizasında genişlik ≈ 33 m', x: 0.81, y: 0.5 },
-      { etiket: 'Kameradan duvara ≈ 30 m', x: 0.2, y: 0.82 },
-      { etiket: 'Görünen döşeme derinliği ≈ 25 m', x: 0.78, y: 0.92 },
+      { etiket: 'Duvar 18 × 4 m', x: 0.17, y: 0.5 },
+      { etiket: 'Genişlik ~33 m', x: 0.84, y: 0.5 },
+      { etiket: 'Mesafe ~30 m', x: 0.18, y: 0.84 },
+      { etiket: 'Derinlik ~25 m', x: 0.84, y: 0.93 },
     ],
   },
   {
