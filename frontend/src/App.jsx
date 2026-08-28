@@ -377,6 +377,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * çizmemek en az varsayım içeren seçenek.
    */
   const [kioskTipi, setKioskTipi] = useState('duvar')
+  /*
+   * KİOSK GÖVDESİ ÇİZİLSİN Mİ?
+   *
+   * Ekran kimi zaman doğrudan duvara/panoya monteli gösteriliyor, kimi zaman
+   * bir kiosk gövdesiyle. Tip listesi ancak gövde varken anlamlı; kapalıyken
+   * gizleniyor ki panel gereksiz seçenekle dolmasın.
+   */
+  const [kioskVar, setKioskVar] = useState(true)
   /* Yere basan tipler: dikey yerleşimde zemine oturma bunlara uygulanıyor. */
   const ayakVar = kioskTipi !== 'duvar'
   /*
@@ -1586,7 +1594,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               ekranSekli={ekranSekli}
               ayakOrani={ayakOrani}
               yon={koseTuval ? null : mekanYon}
-              kioskGizle={!!koseTuval || lTipiVar}
+              kioskGizle={!!koseTuval || lTipiVar || !kioskVar}
               /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
               olcuGoster={showMeasurements}
               /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
@@ -2141,11 +2149,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {hasModel && (
             <>
               {/*
-                Ekran ayarlarının ikinci yarısı. Ekran türü, sütun ve satır sol
-                panelde; bunlar sığmadığı için buraya alındı. Kendi başlığı var
-                ki başlıksız bir "Çözünürlük" bloğuyla başlamasın.
+                "Ekran Ayarları" BAŞLIĞI KALDIRILDI.
+
+                Çözünürlük ve İçerik sol panele taşındıktan sonra bu panelde
+                yalnızca Mini PC ve mekân işleri kaldı; başlık altındaki
+                içeriği artık anlatmıyordu.
               */}
-              <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('screen.settings')}</h2>
 
 {/*
                 ÇÖZÜNÜRLÜK: seçilebilen bir ayar değil, HESAPLANAN bir sonuç.
@@ -2439,9 +2448,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 */}
                 {surukleAktif && (
                   <div className="mt-2">
-                    <div className="text-[14px] text-neutral-600 dark:text-neutral-400 mb-1">
-                      {t('scene.kioskType')}
+                    <div className="flex items-center justify-between gap-3 mb-1.5">
+                      <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
+                        {t('scene.kiosk')}
+                      </span>
+                      <div className="flex rounded-lg border border-neutral-200 dark:border-[#2c333f] overflow-hidden">
+                        {[true, false].map((v) => (
+                          <button
+                            key={String(v)}
+                            type="button"
+                            onClick={() => setKioskVar(v)}
+                            className={`py-1.5 px-3 text-[13px] font-medium transition-colors ${
+                              kioskVar === v
+                                ? 'bg-brand text-white'
+                                : 'text-neutral-600 dark:text-neutral-400 hover:text-brand'
+                            }`}
+                          >
+                            {t(v ? 'scene.kioskOn' : 'scene.kioskOff')}
+                          </button>
+                        ))}
+                      </div>
                     </div>
+                    {kioskVar && (
+                      <div className="text-[14px] text-neutral-600 dark:text-neutral-400 mb-1">
+                        {t('scene.kioskType')}
+                      </div>
+                    )}
+                    {kioskVar && (
                     <div className="grid grid-cols-2 gap-1.5">
                       {[
                         ['duvar', 'scene.kioskWall'],
@@ -2464,6 +2497,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         </button>
                       ))}
                     </div>
+                    )}
                   </div>
                 )}
 
