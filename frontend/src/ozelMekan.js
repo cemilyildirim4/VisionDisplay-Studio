@@ -25,6 +25,7 @@ import { perspektifAcisi } from './aciBul.js'
 import { nesneHaritasi } from './nesneBul.js'
 import { derinlikHaritasi } from './derinlikBul.js'
 import { ekranYuzeyiBul } from './dortgenBul.js'
+import { duzlemBolgesiBul } from './duzlemBolge.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
 export const VARSAYILAN_ALAN_M = 4
@@ -96,23 +97,26 @@ export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_
   }
 
   /*
-   * EKRAN YÜZEYİ ARAMA (dortgenBul.js).
+   * OTOMATİK YÜZEY TARAMASI ÖNERİDEN ÇIKARILDI.
    *
-   * Boş duvar aramasından farklı bir soru: fotoğrafta dört köşeli, düz bir
-   * YÜZEY var mı — billboard, totem, vitrin ekranı, pano? Varsa tasarımın
-   * gideceği yer orasıdır ve dört köşesi bilindiği için perspektifi de
-   * birebir eşlenebiliyor.
+   * Kullanıcı "Önerilen yere koy" düğmesinin KAMERADA OTURT ile aynı
+   * davranmasını istedi. Yüzey tarayıcıları (dortgenBul.js, duzlemBolge.js)
+   * duruyor; perspektifli yerleşim artık manuel dört köşe kipiyle yapılıyor
+   * — orada sonuç kesin ve kullanıcının denetiminde.
    */
-  let yuzey = null
-  try {
-    yuzey = ekranYuzeyiBul(tuval, { derinlik, nesneler, oran: enBoy })
-  } catch {
-    yuzey = null
-  }
+  const yuzey = null
 
   let yer = null
   try {
-    yer = uygunYuzeyBul(tuval, enBoy, { fotograf: true, zeminOran, nesneler, derinlik })
+    /*
+     * KAMERA OTURTMA İLE BİREBİR AYNI ÇAĞRI (bkz. Oturtma.jsx):
+     * uygunYuzeyBul(kare, tasarım oranı) — fazladan ölçüt yok.
+     *
+     * Fotoğrafa özgü ek ölçütler (zemin/gökyüzü elemesi, nesne maskesi,
+     * derinlik düzlemi) duvarBul.js içinde duruyor ve seçeneklerle açılıyor;
+     * burada kullanılmıyorlar.
+     */
+    yer = uygunYuzeyBul(tuval, enBoy)
   } catch {
     yer = null // okunamayan görüntü: öneri yok, orta kullanılır
   }
@@ -179,6 +183,42 @@ export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_
     derinlikCalisti: !!derinlik,
     /** Bulunan ekran yüzeyi: dört köşe (0–1) + skor. */
     yuzey,
+  }
+}
+
+/** Bir maskeyi başka bir ölçüye taşır (en yakın komşu). */
+function olcekle(veri, kw, kh, hw, hh) {
+  if (!veri) return null
+  const c = new Float32Array(hw * hh)
+  for (let y = 0; y < hh; y++) {
+    const sy = Math.min(kh - 1, Math.floor((y / hh) * kh))
+    for (let x = 0; x < hw; x++) {
+      const sx = Math.min(kw - 1, Math.floor((x / hw) * kw))
+      c[y * hw + x] = veri[sy * kw + sx]
+    }
+  }
+  return c
+}
+
+/**
+ * Gökyüzü maskesi: mavi baskın pikseller. Düzlem araması için gerekli,
+ * çünkü gökyüzü derinlikte kusursuz bir düzlemdir ve en büyük bölge olur.
+ */
+function gokMaskesi(tuval, w, h) {
+  try {
+    const c = document.createElement("canvas")
+    c.width = w
+    c.height = h
+    const ctx = c.getContext("2d", { willReadFrequently: true })
+    ctx.drawImage(tuval, 0, 0, w, h)
+    const d = ctx.getImageData(0, 0, w, h).data
+    const m = new Float32Array(w * h)
+    for (let i = 0, p = 0; i < m.length; i++, p += 4) {
+      m[i] = d[p + 2] - d[p] > 25 ? 1 : 0
+    }
+    return m
+  } catch {
+    return null
   }
 }
 

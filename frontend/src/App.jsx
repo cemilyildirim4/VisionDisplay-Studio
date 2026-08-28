@@ -1132,8 +1132,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     ayarla: yonuAyarla,
     tutamak: yonTutamak,
   } = useYon()
-  const [yonKipi, setYonKipi] = useState('tasi') // tasi | dondur
-  const etkinTutamak = yonKipi === 'dondur' ? yonTutamak : mekanTutamak
+  /* Fare her zaman TAŞIR; yön verme yerine dört köşe yerleşimi kullanılıyor. */
+  const etkinTutamak = mekanTutamak
 
   /*
    * Kioskun zemine oturmasi icin gereken sabit dikey kayma. Kullanicinin
@@ -2243,49 +2243,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 )}
 
                 {/*
-                  FARE KİPİ — taşı / yön ver.
-                  Yön verme, karşıdan çekilmemiş fotoğraflar için: ekran
-                  duvarın açısına döndürülünce yamuk görünür ve mekâna oturur.
+                  YÖN VER KALDIRILDI — yerini dört köşe yerleşimi aldı.
+                  Tek açıyla döndürmek yamuk bir yüzeye tam oturmuyordu; dört
+                  köşe hem kesin hem kullanıcının denetiminde. Sürükleyerek
+                  taşıma eskisi gibi açık.
                 */}
-                {surukleAktif && (
-                  <div className="mt-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[15px] text-neutral-600 dark:text-neutral-400">
-                        {t('scene.handle')}
-                      </span>
-                      <div className="flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
-                        {['tasi', 'dondur'].map((k) => (
-                          <button
-                            key={k}
-                            type="button"
-                            onClick={() => setYonKipi(k)}
-                            className={`px-3 py-1.5 text-[14px] transition-colors ${
-                              yonKipi === k
-                                ? 'btn-selected'
-                                : 'text-neutral-600 dark:text-neutral-400 hover:text-brand'
-                            }`}
-                          >
-                            {t(k === 'tasi' ? 'scene.handleMove' : 'scene.handleTurn')}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {yonKipi === 'dondur' && (
-                      <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('scene.turnHint')}
-                      </p>
-                    )}
-                    {mekanDondu && (
-                      <button
-                        type="button"
-                        onClick={yonuSifirla}
-                        className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                      >
-                        {t('scene.turnReset')}
-                      </button>
-                    )}
-                  </div>
-                )}
+
 
                 {/*
                   ORTALA — yalnızca ekran mekân içinde taşınmışken görünür.
