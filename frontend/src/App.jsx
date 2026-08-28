@@ -363,7 +363,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kiosk ayagi VARSAYILAN OLARAK YOK. Ekranlarin cogu duvara ya da bir
    * panoya montelidir; ayak isteyen tek dugmeyle ekliyor.
    */
-  const [ayakVar, setAyakVar] = useState(false)
+  /*
+   * KIOSK TİPİ: duvar | totem | ciftAyak | askili
+   * Varsayılan duvara monte — ekranların çoğu öyle kuruluyor ve gövde
+   * çizmemek en az varsayım içeren seçenek.
+   */
+  const [kioskTipi, setKioskTipi] = useState('duvar')
+  /* Yere basan tipler: dikey yerleşimde zemine oturma bunlara uygulanıyor. */
+  const ayakVar = kioskTipi === 'totem' || kioskTipi === 'ciftAyak'
   /*
    * İZLEME MESAFESİ — mekânda ekrana kaç metreden bakıldığı.
    *
@@ -1538,7 +1545,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               yakinlik={sahneYakinlik}
               kayma={mekanKayma}
               ozelSahne={ozelSahne}
-              ayakVar={ayakVar}
+              kioskTipi={kioskTipi}
             />
           )}
 
@@ -2322,19 +2329,40 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 )}
 
                 {/*
-                  KIOSK AYAĞI — yalnızca fotoğraflı mekânda.
-                  Duvara asılan bir ekranın ayağı olmaz; zorla çizilen direk o
-                  tasarımı yanlış gösterir. Kapatılınca ekranın dibi doğrudan
-                  zemine oturuyor, kasa ve gölge yerinde kalıyor.
+                  KIOSK TİPİ — yalnızca fotoğraflı mekânda.
+
+                  Aynı ekran gerçekte farklı biçimlerde kuruluyor; müşteriye
+                  gösterilecek görüntü de buna göre değişmeli. Varsayılan
+                  duvara monte: ekranların çoğu öyle kuruluyor ve gövde
+                  çizmemek en az varsayım içeren seçenek.
                 */}
                 {surukleAktif && (
-                  <button
-                    type="button"
-                    onClick={() => setAyakVar((v) => !v)}
-                    className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                  >
-                    {ayakVar ? t('scene.legsRemove') : t('scene.legsAdd')}
-                  </button>
+                  <div className="mt-2">
+                    <div className="text-[14px] text-neutral-600 dark:text-neutral-400 mb-1">
+                      {t('scene.kioskType')}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        ['duvar', 'scene.kioskWall'],
+                        ['totem', 'scene.kioskTotem'],
+                        ['ciftAyak', 'scene.kioskTwin'],
+                        ['askili', 'scene.kioskHang'],
+                      ].map(([tip, anahtar]) => (
+                        <button
+                          key={tip}
+                          type="button"
+                          onClick={() => setKioskTipi(tip)}
+                          className={`py-1.5 px-2 rounded-lg text-[13px] font-medium border transition-colors ${
+                            kioskTipi === tip
+                              ? 'btn-selected border-transparent'
+                              : 'border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
+                          }`}
+                        >
+                          {t(anahtar)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 {/*

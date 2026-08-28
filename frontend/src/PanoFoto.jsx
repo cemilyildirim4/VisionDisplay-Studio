@@ -55,8 +55,11 @@ export default function PanoFoto({
    */
   kioskGizle = false,
   kayma = null,
-  /* Ayaklar (direk + kaide) gizlenebiliyor; kasa ve gölge her hâlükârda kalır. */
-  ayakVar = true,
+  /*
+   * KIOSK TİPİ: duvar | totem | ciftAyak | askili
+   * Eski  yerine geçti; yere basan tipler totem ve ciftAyak.
+   */
+  kioskTipi = 'duvar',
 }) {
   const yer = fotoYerlesim(sahne, tuvalW, tuvalH)
   if (!yer) return null
@@ -357,35 +360,43 @@ export default function PanoFoto({
           />
 
           {/*
-            AYAKLAR — kullanıcı gizleyebilir. Duvara asılan bir ekranın ayağı
-            olmaz; zorla çizilen direk o tasarımı yanlış gösterir. Gizlenince
-            ekranın dibi doğrudan zemine oturuyor (bkz. zeminOturmaKaymasi).
+            KIOSK TİPİ.
+
+            Aynı ekran gerçekte farklı biçimlerde kurulur ve müşteriye
+            gösterilecek görüntü buna göre değişir:
+              • duvar   — montaj, gövde yok (varsayılan)
+              • totem   — tek merkezî direk + kaide
+              • ciftAyak— iki yan ayak + geniş kaide (büyük ekranlarda kullanılır)
+              • askili  — tavandan iki askı çubuğu
+
+            Zemine oturma yalnızca yere basan tiplerde geçerli; duvara monte ve
+            askılı ekranın dibi zemine değmez (bkz. App.jsx `ayakVar`).
           */}
-          {ayakVar && (
+          {(kioskTipi === 'totem' || kioskTipi === 'ciftAyak') && (
             <>
-            {/* --- tasiyici direk(ler) --- */}
-            <div
-              style={{
-                position: 'absolute',
-                left: ayakX - direkW / 2,
-                top: direkUst,
-                width: direkW,
-                height: direk + (ekranAlt - direkUst),
-                background: metal,
-              }}
-            />
-            {yanDestek &&
-              [-0.3, 0.3].map((k) => (
+            {kioskTipi === 'totem' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: ayakX - direkW / 2,
+                  top: direkUst,
+                  width: direkW,
+                  height: direk + (ekranAlt - direkUst),
+                  background: metal,
+                }}
+              />
+            )}
+            {kioskTipi === 'ciftAyak' &&
+              [-0.32, 0.32].map((k) => (
                 <div
                   key={k}
                   style={{
                     position: 'absolute',
-                    left: ayakX + k * ekranWpx - direkW * 0.31,
-                    top: ekranAlt,
-                    width: direkW * 0.62,
-                    height: direk,
+                    left: ayakX + k * ekranWpx - direkW * 0.34,
+                    top: direkUst,
+                    width: direkW * 0.68,
+                    height: direk + (ekranAlt - direkUst),
                     background: metal,
-                    opacity: 0.92,
                   }}
                 />
               ))}
@@ -394,9 +405,9 @@ export default function PanoFoto({
             <div
               style={{
                 position: 'absolute',
-                left: ayakX - (yanDestek ? 0.39 : 0.22) * ekranWpx,
+                left: ayakX - (kioskTipi === 'ciftAyak' ? 0.42 : 0.22) * ekranWpx,
                 top: ekranAlt + direk,
-                width: (yanDestek ? 0.78 : 0.44) * ekranWpx,
+                width: (kioskTipi === 'ciftAyak' ? 0.84 : 0.44) * ekranWpx,
                 height: kaideH,
                 background: 'linear-gradient(180deg, #2a2e34 0%, #171a1e 60%, #0d0f12 100%)',
                 borderRadius: Math.max(1, kaideH * 0.15),
@@ -406,7 +417,28 @@ export default function PanoFoto({
             </>
           )}
 
-          {/* --- zemin golgesi --- */}
+          {/* --- tavandan askı: iki çubuk, ekranın üstünden kadrajın üstüne --- */}
+          {kioskTipi === 'askili' &&
+            [-0.34, 0.34].map((k) => {
+              const ust = tuvalH / 2 - ekranHpx / 2 - kasa
+              return (
+                <div
+                  key={k}
+                  style={{
+                    position: 'absolute',
+                    left: ayakX + k * ekranWpx - direkW * 0.18,
+                    top: Math.max(0, ust - Math.max(24, ekranHpx * 0.45)),
+                    width: Math.max(2, direkW * 0.36),
+                    height: Math.min(ust, Math.max(24, ekranHpx * 0.45)),
+                    background: metal,
+                    opacity: 0.95,
+                  }}
+                />
+              )
+            })}
+
+          {/* --- zemin golgesi: yalnızca yere basan tiplerde --- */}
+          {kioskTipi !== 'askili' && (
           <div
             style={{
               position: 'absolute',
@@ -418,6 +450,7 @@ export default function PanoFoto({
                 'radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0) 74%)',
             }}
           />
+          )}
         </div>
       )}
     </div>
