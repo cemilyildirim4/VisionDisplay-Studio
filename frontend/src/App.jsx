@@ -1673,7 +1673,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             ADAY KARELER — manuel köşe kipi kapalıyken gösteriliyor; ikisi
             birden açık olsaydı tutamaklar karelerin altında kalırdı.
           */}
-          {!koseKipi && adayTuval && (
+          {/*
+            ÖLÇÜLER GİZLİYKEN YERLEŞİM KATMANLARI DA GİZLİ.
+
+            "Ölçüleri gizle" temiz bir görüntü almak için kullanılıyor —
+            ekran görüntüsü, PDF, müşteriye gösterme. Ölçü etiketleri gidip
+            köşe tutamakları ve aday kareler ekranın üstünde kalınca amaç
+            gerçekleşmiyordu.
+          */}
+          {showMeasurements && !koseKipi && adayTuval && (
             <AdaySecici
               adaylar={adayTuval}
               tuvalW={tuvalBoyut.w}
@@ -1689,7 +1697,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             />
           )}
 
-          {koseKipi && koseMutlak && (
+          {showMeasurements && koseKipi && koseMutlak && (
             <KoseSecici
               koseler={koseMutlak}
               onDegis={koseleriYaz}
