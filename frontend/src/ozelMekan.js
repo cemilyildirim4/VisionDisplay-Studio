@@ -27,6 +27,7 @@ import { derinlikHaritasi } from './derinlikBul.js'
 import { ekranYuzeyiBul } from './dortgenBul.js'
 import { duzlemBolgesiBul } from './duzlemBolge.js'
 import { mevcutEkranYuzeyi } from './ekranYuzeyi.js'
+import { adaylariBul } from './adayYuzeyler.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
 /**
@@ -147,6 +148,18 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
     }
   }
 
+  /*
+   * ADAY KARELER. Tek bir 'en iyi yer' seçmek yerine uygun yüzeylerin hepsi
+   * çıkarılıyor; kullanıcı fotoğrafın üstünde birine tıklayarak tasarımı oraya
+   * taşıyor (bkz. adayYuzeyler.js).
+   */
+  let adaylar = []
+  try {
+    adaylar = adaylariBul(tuval, { nesneler, derinlik, yuzey, oran: enBoy, zeminOran })
+  } catch {
+    adaylar = yuzey ? [{ koseler: yuzey.koseler, skor: 100, tur: 'screen' }] : []
+  }
+
   let yer = null
   try {
     /*
@@ -235,6 +248,8 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
     derinlikCalisti: !!derinlik,
     /** Bulunan ekran yüzeyi: dört köşe (0–1) + skor. */
     yuzey,
+    /** Tıklanabilir aday yerleşim kareleri (0–1 köşeler). */
+    adaylar,
   }
 }
 

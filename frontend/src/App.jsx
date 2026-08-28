@@ -36,6 +36,7 @@ import {
 } from './ozelMekan.js'
 import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
+import AdaySecici from './AdaySecici.jsx'
 import { icDortgen } from './homografi.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
@@ -358,6 +359,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [hedefKose, setHedefKose] = useState(null)
   /* Kullanıcı köşeleri elle düzeltiyor mu? */
   const [koseKipi, setKoseKipi] = useState(false)
+  /*
+   * ADAY KARELER — fotoğrafta yerleştirmeye uygun bulunan yüzeyler.
+   * Tek bir tahmine mahkûm kalmamak için hepsi gösteriliyor; kullanıcı
+   * birine tıklayınca tasarım oraya oturuyor (bkz. adayYuzeyler.js).
+   */
+  const [adaylar, setAdaylar] = useState([])
+  const [adayKipi, setAdayKipi] = useState(false)
   /* Kiosk ayakları — duvara asılan ekranda ayak olmaz, kapatılabiliyor. */
   /*
    * Kiosk ayagi VARSAYILAN OLARAK YOK. Ekranlarin cogu duvara ya da bir
@@ -647,6 +655,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * altındaysa hiç dokunulmuyor — yanlış bir yüzeye yapıştırmaktansa
      * ekranı ortada bırakmak ve manuel seçimi önermek doğru.
      */
+    const bulunan = Array.isArray(kayit?.adaylar) ? kayit.adaylar : []
+    setAdaylar(bulunan)
+    /* Birden çok seçenek varsa kareler açılıyor: seçim kullanıcının. */
+    setAdayKipi(bulunan.length > 1)
+
     const yuzey = kayit?.yuzey
     if (yuzey) {
       setHedefKose(yuzey.koseler)
@@ -1300,6 +1313,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }))
   })()
 
+  /* ADAY KARELERİN TUVALDEKİ KARŞILIĞI — köşelerle birebir aynı dönüşüm. */
+  const adayTuval = (() => {
+    if (!adayKipi || !adaylar.length || !fotoYer) return null
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    const z = sahneYakinlik || 1
+    return adaylar.map((a) => ({
+      ...a,
+      koseler: a.koseler.map((k) => ({
+        x: mX + (fotoYer.sol + k.x * fotoYer.genislik - mX) * z,
+        y: mY + (fotoYer.ust + k.y * fotoYer.yukseklik - mY) * z,
+      })),
+    }))
+  })()
+
   /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
   const koseleriYaz = (noktalar) => {
     if (!fotoYer?.genislik || !fotoYer?.yukseklik) return
@@ -1613,6 +1641,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Otomatik bulma her fotoğrafta doğru sonuç veremez; kesin sonucu
             kullanıcının kendi işaretlediği dört köşe verir.
           */}
+          {/*
+            ADAY KARELER — manuel köşe kipi kapalıyken gösteriliyor; ikisi
+            birden açık olsaydı tutamaklar karelerin altında kalırdı.
+          */}
+          {!koseKipi && adayTuval && (
+            <AdaySecici
+              adaylar={adayTuval}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+              onSec={(a) => {
+                const i = adayTuval.indexOf(a)
+                const ham = adaylar[i]
+                if (!ham) return
+                setHedefKose(ham.koseler)
+                setAdayKipi(false)
+                setOzelUyari(null)
+              }}
+            />
+          )}
+
           {koseKipi && koseMutlak && (
             <KoseSecici
               koseler={koseMutlak}
@@ -2251,6 +2299,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       >
                         {t('scene.cornersReset')}
                       </button>
+                    )}
+                    {/*
+                      UYGUN YERLER — tek tahmin yerine seçenek listesi:
+                      kareleri gör, birine tıkla, tasarım oraya gitsin.
+                    */}
+                    {adaylar.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setAdayKipi((v) => !v)}
+                        className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        {adayKipi ? t('scene.spotsOff') : t('scene.spots')}
+                      </button>
+                    )}
+                    {adayKipi && adaylar.length > 0 && (
+                      <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('scene.spotsHint')}
+                      </p>
                     )}
                     <button
                       type="button"

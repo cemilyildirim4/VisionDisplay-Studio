@@ -418,6 +418,13 @@ const dict = {
   'scene.customAdd': { tr: 'Fotoğraf ekle', en: 'Add photo', ar: 'إضافة صورة' },
   'scene.customChange': { tr: 'Fotoğrafı değiştir', en: 'Change photo', ar: 'تغيير الصورة' },
   'scene.suggest': { tr: 'Önerilen yere koy', en: 'Use suggested spot', ar: 'ضعه في المكان المقترح' },
+  'scene.spots': { tr: 'Uygun yerleri göster', en: 'Show suitable spots', ar: 'إظهار الأماكن المناسبة' },
+  'scene.spotsOff': { tr: 'Kareleri gizle', en: 'Hide spots', ar: 'إخفاء الأماكن' },
+  'scene.spotsHint': {
+    tr: 'Fotoğraftaki karelerden birine tıklayın; tasarım o yüzeye, o açıyla yerleşir.',
+    en: 'Tap one of the frames on the photo; the design snaps to that surface and angle.',
+    ar: 'اضغط على أحد الإطارات في الصورة؛ سيوضع التصميم على ذلك السطح بزاويته.',
+  },
   'scene.photoDistance': { tr: 'Fotoğraf kaç metreden çekildi?', en: 'From how many metres was the photo taken?', ar: 'من كم مترًا التقطت الصورة؟' },
   'scene.photoDistanceHint': {
     tr: 'Kamera ile ekranın olacağı yer arasındaki yaklaşık mesafe. Ölçek buradan hesaplanıyor.',
