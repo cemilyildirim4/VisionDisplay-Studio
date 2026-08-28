@@ -123,6 +123,62 @@ export function dortgenGecerli(koseler, enAzAlan = 400) {
   return true
 }
 
+/**
+ * Dörtgenin İÇİNDEKİ bir nokta.
+ *
+ * (u,v) birim karedeki konum: (0,0) sol üst, (1,1) sağ alt. Yüzeyin kendi
+ * düzleminde ölçü yapabilmek için gerekli.
+ */
+export function dortgenNoktasi(koseler, u, v) {
+  const H = birimKaredenHomografi(koseler)
+  if (!H) return null
+  const [a, b, c, d, e, f, g, h] = H
+  const payda = g * u + h * v + 1
+  if (Math.abs(payda) < EPS) return null
+  return {
+    x: (a * u + b * v + c) / payda,
+    y: (d * u + e * v + f) / payda,
+  }
+}
+
+/**
+ * Yüzeyin İÇİNE, gerçek ölçüsüne göre yerleşen alt dörtgen.
+ *
+ * Tasarımı yüzeyin tamamına yaymak yanlıştı: 4 metrelik bir ekran da, 12
+ * metrelik bir ekran da panoyu tamamen dolduruyor ve fotoğraftan fotoğrafa
+ * ölçü hissi tutmuyordu — kullanıcının "aşırı fark var" dediği şey buydu.
+ *
+ * Artık yüzeyin gerçek genişliği biliniyor (kullanıcı "bu alan kaç metre?"
+ * ile veriyor; fotoğrafın ölçeği bu) ve tasarım o ölçeğe göre yüzeyin içine
+ * oturuyor. Yüzeyin gerçek YÜKSEKLİĞİ dörtgenin piksel en/boy oranından
+ * türetiliyor: karşıdan görünen yüzeylerde doğru, çok eğik olanlarda yaklaşık.
+ */
+export function icDortgen(koseler, tasarimWm, tasarimHm, yuzeyWm) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return koseler
+  if (!(tasarimWm > 0) || !(tasarimHm > 0) || !(yuzeyWm > 0)) return koseler
+  const enUst = Math.hypot(koseler[1].x - koseler[0].x, koseler[1].y - koseler[0].y)
+  const enAlt = Math.hypot(koseler[2].x - koseler[3].x, koseler[2].y - koseler[3].y)
+  const boySol = Math.hypot(koseler[3].x - koseler[0].x, koseler[3].y - koseler[0].y)
+  const boySag = Math.hypot(koseler[2].x - koseler[1].x, koseler[2].y - koseler[1].y)
+  const enPx = (enUst + enAlt) / 2
+  const boyPx = (boySol + boySag) / 2
+  if (!(enPx > 0) || !(boyPx > 0)) return koseler
+  const yuzeyHm = yuzeyWm * (boyPx / enPx)
+
+  /* Tasarım yüzeyden büyükse taşırmıyor: en fazla yüzeyin tamamını kaplar. */
+  const fw = Math.min(1, tasarimWm / yuzeyWm)
+  const fh = Math.min(1, tasarimHm / yuzeyHm)
+  const u0 = (1 - fw) / 2
+  const v0 = (1 - fh) / 2
+  const n = [
+    dortgenNoktasi(koseler, u0, v0),
+    dortgenNoktasi(koseler, u0 + fw, v0),
+    dortgenNoktasi(koseler, u0 + fw, v0 + fh),
+    dortgenNoktasi(koseler, u0, v0 + fh),
+  ]
+  return n.some((k) => !k) ? koseler : n
+}
+
 /** Köşe listesinin merkezi. */
 export function dortgenMerkezi(koseler) {
   const n = koseler.length || 1

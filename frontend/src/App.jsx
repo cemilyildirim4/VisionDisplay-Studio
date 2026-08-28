@@ -30,6 +30,7 @@ import {
 import { ozelMekanKaydi, MEKAN_TURLERI, MEKAN_EN_COK_MB, VARSAYILAN_ALAN_M } from './ozelMekan.js'
 import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
+import { icDortgen } from './homografi.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
@@ -1198,10 +1199,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const dh = tasarimHm * cizimOlcek
     if (!(dw > 0) || !(dh > 0)) return null
     const solUst = { x: tuvalBoyut.w / 2 - dw / 2, y: tuvalBoyut.h / 2 - dh / 2 }
-    return hedefKose.map((k) => ({
-      x: fotoYer.sol + k.x * fotoYer.genislik - solUst.x,
-      y: fotoYer.ust + k.y * fotoYer.yukseklik - solUst.y,
+    const tuvalKose = hedefKose.map((k) => ({
+      x: fotoYer.sol + k.x * fotoYer.genislik,
+      y: fotoYer.ust + k.y * fotoYer.yukseklik,
     }))
+    /*
+     * ÖLÇEK: yüzeyin gerçek genişliği "Bu alan kaç metre?" değeri.
+     *
+     * Tasarım yüzeyin tamamına yayılmıyor; o ölçeğe göre içine oturuyor.
+     * Böylece 4 m'lik bir ekran her fotoğrafta 4 m gibi görünüyor —
+     * bir karede panoyu doldurup ötekinde köşede kalmıyor.
+     *
+     * Manuel dört köşede de aynı kural: kullanıcının işaretlediği alan
+     * ozelAlanM metre kabul ediliyor.
+     */
+    const olcekli = icDortgen(tuvalKose, tasarimWm, tasarimHm, ozelAlanM)
+    return olcekli.map((k) => ({ x: k.x - solUst.x, y: k.y - solUst.y }))
   })()
 
   /*
