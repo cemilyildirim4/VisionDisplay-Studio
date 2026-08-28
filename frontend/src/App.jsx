@@ -1532,6 +1532,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               ayakOrani={ayakOrani}
               yon={koseTuval ? null : mekanYon}
               kioskGizle={!!koseTuval}
+              /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
+              olcuGoster={showMeasurements}
               /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
               yakinlik={sahneYakinlik}
               kayma={mekanKayma}

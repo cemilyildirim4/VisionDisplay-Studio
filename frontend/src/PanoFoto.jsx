@@ -34,6 +34,8 @@ export default function PanoFoto({
   yakinlik = 1,
   /* Çizim ölçeği (px/m) — gövde ölçüleri buradan; ekranla aynı ölçekte kalsın. */
   cizimOlcek = 0,
+  /* Mekânın gerçek ölçü etiketleri gösterilsin mi (Ölçüleri göster/gizle). */
+  olcuGoster = false,
   /*
    * EKRANIN DIS HATTI (0..1 aralikta noktalar, App.jsx).
    *
@@ -227,6 +229,60 @@ export default function PanoFoto({
               willChange: 'transform',
             }}
           />
+          {/*
+            MEKÂNIN GERÇEK ÖLÇÜLERİ.
+
+            Sahne kayıtlarındaki `olculer` (bkz. sahneler.js) fotoğrafın
+            üstüne küçük etiketler olarak yazılıyor. Konumlar kaynak görselin
+            0–1 aralığında olduğu için fotoğrafla birlikte kayıyor ve
+            ölçekleniyor; yakınlık uygulanınca etiketler de yerinde kalıyor.
+
+            Ölçüler YAKLAŞIKTIR: fotoğraftaki bilinen referanslardan (panel
+            genişliği, tavan yüksekliği, kapı boyu) ve görüş açısı kabulünden
+            türetildi. Sahne ayarlarının dayanağı bunlar.
+          */}
+          {olcuGoster &&
+            Array.isArray(sahne.olculer) &&
+            sahne.olculer.map((o) => (
+              <span
+                key={o.etiket}
+                style={{
+                  position: 'absolute',
+                  /*
+                    Fotoğraf yakınlaştığında (cover) etiket kadrajın dışına
+                    düşüp yarım görünüyordu; konum yakınlığa göre hesaplanıp
+                    tuvalin içine sıkıştırılıyor.
+                  */
+                  left: Math.max(
+                    92,
+                    Math.min(
+                      tuvalW - 92,
+                      tuvalW / 2 + (yer.sol + o.x * yer.genislik - tuvalW / 2) * yakinlik,
+                    ),
+                  ),
+                  top: Math.max(
+                    14,
+                    Math.min(
+                      tuvalH - 14,
+                      tuvalH / 2 + (yer.ust + o.y * yer.yukseklik - tuvalH / 2) * yakinlik,
+                    ),
+                  ),
+                  transform: 'translate(-50%, -50%)',
+                  transformOrigin: 'center',
+                  fontSize: 9,
+                  lineHeight: 1.1,
+                  padding: '2px 5px',
+                  borderRadius: 5,
+                  whiteSpace: 'nowrap',
+                  background: 'rgba(17,20,26,0.62)',
+                  color: 'rgba(255,255,255,0.92)',
+                  letterSpacing: '0.02em',
+                }}
+              >
+                {o.etiket}
+              </span>
+            ))}
+
           {/*
         FOTOĞRAFTAKİ LED YÜZEYİNİ KAPATAN MASKE — yalnızca `maskeli` sahnelerde.
         Panonun kendi ekranı olan fotoğraflarda gerekli; düz duvar gibi temiz

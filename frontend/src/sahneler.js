@@ -76,6 +76,27 @@ export const SAHNELER = [
     zeminY: 646,
     panelEnM: 4,
     maskeli: false, // fotografta kendi LED yuzeyi yok
+    /*
+     * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
+     *
+     * Nereden çıktı:
+     *  • Arka duvar 960 piksel; tavan yüksekliği tipik bir AVM koridorunda
+     *    4,5 m ve duvar 360 piksel → duvar hizasında 1 m ≈ 80 piksel.
+     *    960 / 80 ≈ 12 m genişlik.
+     *  • Duvar kadrajın %57'sini kaplıyor → duvar hizasında kadraj ≈ 21 m.
+     *    Yatay görüş açısı ~58° kabulüyle kamera mesafesi ≈ 21 / 1,11 ≈ 19 m.
+     *  • Kamera ~1,5 m yükseklikte; kadrajın alt kenarı zemine ~5 m ötede
+     *    değiyor → görünen zemin derinliği ≈ 19 − 5 ≈ 14 m.
+     *
+     * Konumlar kaynak görselin 0–1 aralığında; etiketler fotoğrafla
+     * birlikte ölçekleniyor.
+     */
+    olculer: [
+      { etiket: 'Arka duvar 12,0 × 4,5 m', x: 0.19, y: 0.28 },
+      { etiket: 'Duvar hizasında genişlik ≈ 21 m', x: 0.8, y: 0.55 },
+      { etiket: 'Kameradan duvara ≈ 19 m', x: 0.2, y: 0.8 },
+      { etiket: 'Görünen zemin derinliği ≈ 14 m', x: 0.78, y: 0.9 },
+    ],
   },
   {
     /*
@@ -109,6 +130,23 @@ export const SAHNELER = [
     zeminY: 740,
     panelEnM: 4,
     maskeli: false,
+    /*
+     * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
+     *
+     * Nereden çıktı:
+     *  • Taş duvar 12 panelden oluşuyor, panel genişliği ~1,5 m → ≈ 18 m.
+     *    905 piksel / 18 m → duvar hizasında 1 m ≈ 50 piksel.
+     *  • Duvar yüksekliği 200 piksel → ≈ 4 m (giriş kapısı ~2,2 m ile tutarlı).
+     *  • Duvar kadrajın %54'ünü kaplıyor → duvar hizasında kadraj ≈ 33 m,
+     *    kamera mesafesi ≈ 33 / 1,11 ≈ 30 m.
+     *  • Kamera ~1,6 m yükseklikte → görünen döşeme derinliği ≈ 25 m.
+     */
+    olculer: [
+      { etiket: 'Taş duvar 18,0 × 4,0 m', x: 0.17, y: 0.5 },
+      { etiket: 'Duvar hizasında genişlik ≈ 33 m', x: 0.81, y: 0.5 },
+      { etiket: 'Kameradan duvara ≈ 30 m', x: 0.2, y: 0.82 },
+      { etiket: 'Görünen döşeme derinliği ≈ 25 m', x: 0.78, y: 0.92 },
+    ],
   },
   {
     id: 'foto',
