@@ -1069,7 +1069,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * pikseller secilir. Formule eklenen tek sart bu.
    */
   const OTO_EN_AZ_M = 3
+  /* Otomatik mesafenin üst sınırı — varsayılan kadraj bununla kuruluyor. */
   const OTO_EN_COK_M = 22
+  /*
+   * ELLE AYARDA ÜST SINIR 60 m.
+   *
+   * 22 metrede arka plan küçülmeyi bırakıyordu: sebebi, fotoğrafın küçülünce
+   * kenarlarda boş şerit bırakmasıydı. O boşluk artık fotoğrafın kendisinin
+   * büyütülüp bulanıklaştırılmış kopyasıyla dolduruluyor (bkz. PanoFoto
+   * "KENAR TAMAMLAMA"), dolayısıyla sınırı tutmanın karşılığı kalmadı;
+   * kullanıcı 60 metreye kadar gerçekten uzaklaşabiliyor. Otomatik mesafe
+   * ise 22'de kalıyor ki varsayılan görünüm değişmesin.
+   */
+  const ZOOM_EN_COK_M = 60
   const otoIzlemeM = useMemo(() => {
     const baskin = Math.max(tasarimWm, tasarimHm)
     const modelin = viewingDistanceFor(selectedModel, cols, rows) || 0
@@ -1109,9 +1121,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return Math.max(0.55, Math.min(3, z))
     }
     const ilerleme =
-      (izlemeMesafesi - OTO_EN_AZ_M) / (OTO_EN_COK_M - OTO_EN_AZ_M)
-    const zoom = 1.22 - ilerleme * 0.38
-    const taban = Math.max(0.84, Math.min(1.22, zoom))
+      (izlemeMesafesi - OTO_EN_AZ_M) / (ZOOM_EN_COK_M - OTO_EN_AZ_M)
+    /*
+     * 3 m'de 1,22 (kameranın ekrana girdiği en yakın hâl), 60 m'de 0,50
+     * (kadraj küçülüp kenarları bulanık tamamlamaya bırakan en uzak hâl).
+     * Alt sınır 0,84 idi; kenar tamamlama gelince kaldırıldı.
+     */
+    const zoom = 1.22 - ilerleme * 0.72
+    const taban = Math.max(0.5, Math.min(1.22, zoom))
 
     /*
      * KÜÇÜK TASARIMDA KAMERA YAKLAŞIYOR.
