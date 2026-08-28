@@ -69,6 +69,7 @@ export default function Scene({
         ayakOrani={ayakOrani}
         yon={yon}
         kioskGizle={kioskGizle}
+        cizimOlcek={pxPerM}
         kayma={kayma}
         ayakVar={ayakVar}
       />

@@ -1080,6 +1080,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ölçekte değil; ama görünmeyen bir ekranın ölçeği de bir işe yaramıyor.
    */
   const fotoOlcek = (() => {
+    /*
+     * HAZIR FOTOĞRAFLI MEKÂNLAR (AVM koridoru, şehir meydanı) ÖLÇEĞİ
+     * TUVALDEN ALIYOR.
+     *
+     * Bu iki sahnede ölçek fotoğrafın kendi kalibrasyonundan geliyordu; sonuç
+     * olarak aynı tasarım, arka plansız tuvale ve öteki mekânlara göre belirgin
+     * biçimde küçük görünüyordu. Kullanıcı bütün mekânlarda aynı büyüklüğü
+     * istedi: null dönünce WallPreview kendi sığdırma kuralını uyguluyor —
+     * yani arka plansız tasarım ekranıyla birebir aynı boy.
+     *
+     * Bedeli: ekran artık fotoğraftaki panelin metre karşılığına kilitli değil.
+     * Kendi fotoğrafında ölçek yine gerçek (mesafeden hesaplanıyor).
+     */
+    if (fotoSahne?.dosya && fotoSahne.id !== 'ozel') {
+      /*
+       * İç/dış mekân sahneleriyle AYNI kural: ölçek duvarın metre ölçüsünden
+       * sığdırılıyor (salonOlcek). Böylece dört mekânda ve arka plansız
+       * tuvalde tasarım aynı boyda görünüyor.
+       */
+      return salonOlcek(tuvalBoyut.w, tuvalBoyut.h, mekanDuvarWm, mekanDuvarHm)
+    }
     if (!fotoSahne?.dosya || !(ekranWm > 0) || !(ekranHm > 0)) return null
     const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
     if (!yer?.pxPerM) return null

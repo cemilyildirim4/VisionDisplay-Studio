@@ -32,6 +32,8 @@ export default function PanoFoto({
   ekranWpx = 0,
   ekranHpx = 0,
   yakinlik = 1,
+  /* Çizim ölçeği (px/m) — gövde ölçüleri buradan; ekranla aynı ölçekte kalsın. */
+  cizimOlcek = 0,
   /*
    * EKRANIN DIS HATTI (0..1 aralikta noktalar, App.jsx).
    *
@@ -74,7 +76,7 @@ export default function PanoFoto({
    */
   const kiosk = sahne.kiosk && !kioskGizle && ekranWpx > 0 && ekranHpx > 0
   // Ekran arka planla birlikte olceklendigi icin kiosk govdesi de ayni oranda
-  const pxPerM = (yer.pxPerM || 1) * yakinlik
+  const pxPerM = cizimOlcek > 0 ? cizimOlcek : (yer.pxPerM || 1) * yakinlik
   const kasa = Math.max(3, Math.min(14, ekranWpx * 0.014))
   const ekranHm = ekranHpx / pxPerM
   const { direkM, kaideM } = govdeOlculeri(ekranHm)
