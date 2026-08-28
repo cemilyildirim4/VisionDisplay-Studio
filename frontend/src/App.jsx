@@ -1981,35 +1981,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
             </>
           )}
-          </Sigdir>
-        </aside>
 
-
-        {/* SAĞ: Panel */}
-        <aside className="yatay-panel yatay-panel-ayar w-full min-w-0 lg:w-[340px] shrink-0 order-3 lg:order-3 border-t lg:border-t-0 lg:border-l border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
-          <Sigdir className="flex flex-col gap-2">
-
-          {/* ---- ADIM 4: İçerik ---- */}
+          {/*
+            ÇÖZÜNÜRLÜK ve İÇERİK SOL PANELDE.
+            İkisi de ekranın kendi özelliği — model, duvar ve kabin ayarlarının
+            devamı. Sağ panel mekân ve yerleştirme işleriyle dolduğu için bu iki
+            blok buraya alındı; içerikleri değişmedi.
+          */}
           {hasModel && (
             <>
-              {/*
-                Ekran ayarlarının ikinci yarısı. Ekran türü, sütun ve satır sol
-                panelde; bunlar sığmadığı için buraya alındı. Kendi başlığı var
-                ki başlıksız bir "Çözünürlük" bloğuyla başlamasın.
-              */}
-              <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('screen.settings')}</h2>
-
-{/*
-                ÇÖZÜNÜRLÜK: seçilebilen bir ayar değil, HESAPLANAN bir sonuç.
-                Eskiden burada FHD/UHD düğmeleri vardı; bunlar ekrana gönderilen
-                sinyalin standardıydı, ekranın kendi çözünürlüğü değil. Kullanıcı
-                "çözünürlük" başlığı altında ekranının kaç piksel olduğunu
-                görmeyi bekliyor — o değer de kabin sayısıyla birlikte değişiyor.
-
-                Değer Teknik Özellikler'deki "Optik Parametre → Çözünürlük"
-                satırıyla AYNI kaynaktan (computeSpecs) geliyor; iki yerde ayrı
-                formül tutulmuyor, ayrı state de yok.
-              */}
               {!isVideoWall && ekranCozunurlugu && (
                 <div className="mb-2">
                   <div className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('res.heading')}</div>
@@ -2019,41 +1999,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   >
                     {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)} px
                   </div>
-                </div>
-              )}
-
-
-              {/*
-                S-KUTU YEDEKLİLİĞİ ALANI KALDIRILDI (ikinci kez — bkz. 7944640).
-                Bir dal birleşmesiyle geri gelmişti. sboxRedundancy state'i
-                duruyor ('no'): Teknik Özellikler'deki bileşen listesi, donanım
-                hesabı ve kayıtlı teklifler hâlâ onu okuyor.
-              */}
-
-              {/* Mini PC — opsiyonel görüntü kaynağı; kapalıysa yalnızca işlemci */}
-              {!isVideoWall && (
-                <div className="mb-3">
-                  <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-neutral-200 dark:border-[#2c333f] p-3 hover:border-brand/40 transition-colors min-h-[44px]">
-                    <input
-                      type="checkbox"
-                      checked={hasMiniPc}
-                      onChange={(e) => setHasMiniPc(e.target.checked)}
-                      className="mt-1 h-4 w-4 shrink-0 accent-[#2962ad]"
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-[15px] font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">
-                        {t('minipc.heading')}
-                      </span>
-                      <span className="inline-block mt-1.5 text-[11px] font-medium rounded-full px-2 py-0.5 bg-neutral-100 dark:bg-[#222833] text-neutral-600 dark:text-neutral-300">
-                        {t('minipc.hint')}
-                      </span>
-                      {!hasMiniPc && (
-                        <span className="block mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                          {t('minipc.offHint')}
-                        </span>
-                      )}
-                    </span>
-                  </label>
                 </div>
               )}
 
@@ -2169,6 +2114,76 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {t('content.hint')}
                 </p>
               </div>
+            </>
+          )}
+
+          </Sigdir>
+        </aside>
+
+
+        {/* SAĞ: Panel */}
+        <aside className="yatay-panel yatay-panel-ayar w-full min-w-0 lg:w-[340px] shrink-0 order-3 lg:order-3 border-t lg:border-t-0 lg:border-l border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
+          <Sigdir className="flex flex-col gap-2">
+
+          {/* ---- ADIM 4: İçerik ---- */}
+          {hasModel && (
+            <>
+              {/*
+                Ekran ayarlarının ikinci yarısı. Ekran türü, sütun ve satır sol
+                panelde; bunlar sığmadığı için buraya alındı. Kendi başlığı var
+                ki başlıksız bir "Çözünürlük" bloğuyla başlamasın.
+              */}
+              <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('screen.settings')}</h2>
+
+{/*
+                ÇÖZÜNÜRLÜK: seçilebilen bir ayar değil, HESAPLANAN bir sonuç.
+                Eskiden burada FHD/UHD düğmeleri vardı; bunlar ekrana gönderilen
+                sinyalin standardıydı, ekranın kendi çözünürlüğü değil. Kullanıcı
+                "çözünürlük" başlığı altında ekranının kaç piksel olduğunu
+                görmeyi bekliyor — o değer de kabin sayısıyla birlikte değişiyor.
+
+                Değer Teknik Özellikler'deki "Optik Parametre → Çözünürlük"
+                satırıyla AYNI kaynaktan (computeSpecs) geliyor; iki yerde ayrı
+                formül tutulmuyor, ayrı state de yok.
+              */}
+              
+
+
+              {/*
+                S-KUTU YEDEKLİLİĞİ ALANI KALDIRILDI (ikinci kez — bkz. 7944640).
+                Bir dal birleşmesiyle geri gelmişti. sboxRedundancy state'i
+                duruyor ('no'): Teknik Özellikler'deki bileşen listesi, donanım
+                hesabı ve kayıtlı teklifler hâlâ onu okuyor.
+              */}
+
+              {/* Mini PC — opsiyonel görüntü kaynağı; kapalıysa yalnızca işlemci */}
+              {!isVideoWall && (
+                <div className="mb-3">
+                  <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-neutral-200 dark:border-[#2c333f] p-3 hover:border-brand/40 transition-colors min-h-[44px]">
+                    <input
+                      type="checkbox"
+                      checked={hasMiniPc}
+                      onChange={(e) => setHasMiniPc(e.target.checked)}
+                      className="mt-1 h-4 w-4 shrink-0 accent-[#2962ad]"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-[15px] font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">
+                        {t('minipc.heading')}
+                      </span>
+                      <span className="inline-block mt-1.5 text-[11px] font-medium rounded-full px-2 py-0.5 bg-neutral-100 dark:bg-[#222833] text-neutral-600 dark:text-neutral-300">
+                        {t('minipc.hint')}
+                      </span>
+                      {!hasMiniPc && (
+                        <span className="block mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                          {t('minipc.offHint')}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              
 
               {/*
                 MEKÂN — ekranın arkasına çizilen oda.
