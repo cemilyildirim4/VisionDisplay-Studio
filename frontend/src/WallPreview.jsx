@@ -486,11 +486,25 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
  */
 const ETIKET_EN_AZ = 50
 
-function SegH({ w, label, muted }) {
+/**
+ * Yatay ölçü etiketi.
+ *
+ * `yazi`: punto tasarımın ekrandaki büyüklüğüne göre değişiyor. Sabit punto,
+ * küçük bir tasarımda etiketi ekranın kendisinden büyük gösteriyordu.
+ *
+ * KIRPMA YOK: etiket ait olduğu bölmeden geniş olabilir, taşan kısım görünür
+ * kalır. Eskiden `overflow-hidden` + `text-ellipsis` vardı ve dar bölmelerde
+ * yazı yarım görünüyordu — "0,16 m" yerine yalnızca "0".
+ */
+function SegH({ w, label, muted, yazi = 11 }) {
+  const dolgu = `${Math.round(yazi * 0.35)}px ${Math.round(yazi * 0.5)}px`
   return (
-    <div style={{ width: w }} className="flex items-center justify-center shrink-0">
+    <div style={{ width: w }} className="flex items-center justify-center shrink-0 overflow-visible">
       {(!muted || w >= ETIKET_EN_AZ) && (
-        <span className={`text-[10px] sm:text-[11px] leading-none px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
+        <span
+          style={{ fontSize: yazi, padding: dolgu }}
+          className={`leading-none rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}
+        >
           {label}
         </span>
       )}
@@ -498,11 +512,16 @@ function SegH({ w, label, muted }) {
   )
 }
 
-function SegV({ h, label, muted }) {
+/** Dikey ölçü etiketi — kurallar SegH ile aynı. */
+function SegV({ h, label, muted, yazi = 11 }) {
+  const dolgu = `${Math.round(yazi * 0.5)}px ${Math.round(yazi * 0.35)}px`
   return (
-    <div style={{ height: h }} className="flex items-center justify-center shrink-0">
+    <div style={{ height: h }} className="flex items-center justify-center shrink-0 overflow-visible">
       {(!muted || h >= ETIKET_EN_AZ) && (
-        <span style={{ writingMode: 'vertical-rl' }} className={`text-[10px] sm:text-[11px] leading-none px-1 py-1.5 rounded-lg whitespace-nowrap max-h-[40vh] overflow-hidden ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
+        <span
+          style={{ writingMode: 'vertical-rl', fontSize: yazi, padding: dolgu }}
+          className={`leading-none rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}
+        >
           {label}
         </span>
       )}
@@ -1188,6 +1207,8 @@ export default function WallPreview({
    * tasarımda kaybolmuyor.
    */
   const olcuBoy = Math.max(18, Math.min(32, Math.round(Math.min(screenW, screenH) / 5)))
+  /* Etiket puntosu da tasarımla birlikte: düğme boyunun ~%38'i. */
+  const olcuYazi = Math.max(8, Math.min(12, Math.round(olcuBoy * 0.38)))
   const marginXpx = Math.max(0, (wallW - screenW) / 2)
   const marginYpx = Math.max(0, (wallH - screenH) / 2)
   const marginXm = Math.max(0, (wallWm - screenWm) / 2)
@@ -1279,16 +1300,16 @@ export default function WallPreview({
 
               {/* Üst ölçü etiketleri */}
               <div style={{ position: 'absolute', top: -30 - sahnePayPx, left: 0, width: wallW, height: 24, display: 'flex' }}>
-                <SegH w={marginXpx} label={fmtU(marginXm)} muted />
-                <SegH w={screenW} label={fmtU(screenWm)} />
-                <SegH w={marginXpx} label={fmtU(marginXm)} muted />
+                <SegH w={marginXpx} label={fmtU(marginXm)} muted yazi={olcuYazi} />
+                <SegH w={screenW} label={fmtU(screenWm)} yazi={olcuYazi} />
+                <SegH w={marginXpx} label={fmtU(marginXm)} muted yazi={olcuYazi} />
               </div>
 
               {/* Sağ ölçü etiketleri */}
               <div style={{ position: 'absolute', left: Math.min(wallW + 10 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
-                <SegV h={marginYpx} label={fmtU(marginYm)} muted />
-                <SegV h={screenH} label={fmtU(screenHm)} />
-                <SegV h={marginYpx} label={fmtU(marginYm)} muted />
+                <SegV h={marginYpx} label={fmtU(marginYm)} muted yazi={olcuYazi} />
+                <SegV h={screenH} label={fmtU(screenHm)} yazi={olcuYazi} />
+                <SegV h={marginYpx} label={fmtU(marginYm)} muted yazi={olcuYazi} />
               </div>
 
               {/* Üstteki +/- : Sütun (ekran genişliği) */}
