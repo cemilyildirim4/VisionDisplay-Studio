@@ -1044,13 +1044,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * modul hesabi ve icerik orani hicbir sekilde etkilenmiyor.
    */
   const sahneYakinlik = useMemo(() => {
-    // Kendi fotoğrafı kırpılmadan gösteriliyor; orada yakınlaştırma yok.
-    if (fotoSahne?.tamGorunsun) return 1
+    /*
+     * KENDİ FOTOĞRAFI: yakınlık ÇEKİM MESAFESİNDEN.
+     *
+     * Mesafeyi değiştirmek kamerayı ileri geri götürmek demek; o zaman
+     * yalnızca tasarım değil, arka plan da yakınlaşıp uzaklaşmalı.
+     * z = referans mesafe / seçilen mesafe: 15 m referansında 7,5 m
+     * seçilirse görüntü iki katına çıkıyor.
+     *
+     * SINIR: uzaklaşırken fotoğraf küçülüyor ve kenarlarda boşluk kalıyor
+     * — elimizde o kareden fazlası yok, uydurmak yerine olanı gösteriyoruz.
+     * Bu yüzden 0,55 altına inmiyor.
+     */
+    if (fotoSahne?.tamGorunsun) {
+      const z = VARSAYILAN_MESAFE_M / Math.max(1, ozelMesafeM)
+      return Math.max(0.55, Math.min(3, z))
+    }
     const ilerleme =
       (izlemeMesafesi - OTO_EN_AZ_M) / (OTO_EN_COK_M - OTO_EN_AZ_M)
     const zoom = 1.22 - ilerleme * 0.38
     return Math.max(0.84, Math.min(1.22, zoom))
-  }, [fotoSahne, izlemeMesafesi])
+  }, [fotoSahne, izlemeMesafesi, ozelMesafeM])
 
   /*
    * FOTOĞRAFLI MEKÂNDA ÇİZİM ÖLÇEĞİ.
@@ -1209,9 +1223,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const dh = tasarimHm * cizimOlcek
     if (!(dw > 0) || !(dh > 0)) return null
     const solUst = { x: tuvalBoyut.w / 2 - dw / 2, y: tuvalBoyut.h / 2 - dh / 2 }
+    /*
+     * Fotoğraf yakınlaştıkça yüzey de kadrajda büyüyüp yer değiştiriyor;
+     * köşeler aynı dönüşümden geçiyor. Ölçek merkezi PanoFoto ile aynı:
+     * panelin merkezi, yani tuvalin ortası.
+     */
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    const z = sahneYakinlik || 1
     const tuvalKose = hedefKose.map((k) => ({
-      x: fotoYer.sol + k.x * fotoYer.genislik,
-      y: fotoYer.ust + k.y * fotoYer.yukseklik,
+      x: mX + (fotoYer.sol + k.x * fotoYer.genislik - mX) * z,
+      y: mY + (fotoYer.ust + k.y * fotoYer.yukseklik - mY) * z,
     }))
     /*
      * ÖLÇEK ÇEKİM MESAFESİNDEN.
@@ -1241,19 +1263,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const koseMutlak = (() => {
     if (!hedefKose || !fotoYer) return null
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    const z = sahneYakinlik || 1
     return hedefKose.map((k) => ({
-      x: fotoYer.sol + k.x * fotoYer.genislik,
-      y: fotoYer.ust + k.y * fotoYer.yukseklik,
+      x: mX + (fotoYer.sol + k.x * fotoYer.genislik - mX) * z,
+      y: mY + (fotoYer.ust + k.y * fotoYer.yukseklik - mY) * z,
     }))
   })()
 
   /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
   const koseleriYaz = (noktalar) => {
     if (!fotoYer?.genislik || !fotoYer?.yukseklik) return
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    const z = sahneYakinlik || 1
     setHedefKose(
       noktalar.map((k) => ({
-        x: (k.x - fotoYer.sol) / fotoYer.genislik,
-        y: (k.y - fotoYer.ust) / fotoYer.yukseklik,
+        x: (mX + (k.x - mX) / z - fotoYer.sol) / fotoYer.genislik,
+        y: (mY + (k.y - mY) / z - fotoYer.ust) / fotoYer.yukseklik,
       })),
     )
   }
@@ -2153,12 +2181,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             metre ettiği değişiyor. O yüzden sadece ölçek
                             güncelleniyor — sonuç anında görünüyor.
                           */
+                          /* Ölçek sabit; mesafe yalnızca yakınlığı değiştiriyor. */
                           setOzelMesafeM(v)
-                          setOzelSahne((s) =>
-                            s
-                              ? { ...s, panelEnM: Math.max(0.2, (s.yerW ?? 0.32) * kadrajGenisligi(v)) }
-                              : s,
-                          )
                         }}
                         min={1}
                         max={300}

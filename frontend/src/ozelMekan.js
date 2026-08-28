@@ -194,10 +194,13 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
       y1: Math.round(merkezY + yariH),
     },
     /*
-     * Önerilen alanın gerçek genişliği: kadrajın kapsadığı genişliğin,
-     * alanın kadrajdaki payı kadarı. Ölçek tek bir yerden geliyor.
+     * Önerilen alanın gerçek genişliği — REFERANS mesafeye göre, sabit.
+     *
+     * Mesafenin etkisi buradan değil, arka planın yakınlığından geliyor
+     * (bkz. App.jsx `sahneYakinlik`). İkisi birden mesafeye bağlansaydı
+     * ölçü iki kez değişir, tasarım mesafeyle karesel küçülürdü.
      */
-    panelEnM: Math.max(0.2, (yer ? yer.w : 0.32) * kadrajGenisligi(mesafeM)),
+    panelEnM: Math.max(0.2, (yer ? yer.w : 0.32) * kadrajGenisligi(VARSAYILAN_MESAFE_M)),
     /** Önerilen alanın kadrajdaki genişlik payı (0–1) — ölçek buradan. */
     yerW: yer ? yer.w : 0.32,
     /** Kadrajın kapsadığı genişlik (metre) — yerleşim ölçeği. */
