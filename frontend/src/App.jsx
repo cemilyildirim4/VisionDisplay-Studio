@@ -370,7 +370,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [kioskTipi, setKioskTipi] = useState('duvar')
   /* Yere basan tipler: dikey yerleşimde zemine oturma bunlara uygulanıyor. */
-  const ayakVar = kioskTipi === 'totem' || kioskTipi === 'ciftAyak'
+  const ayakVar = kioskTipi !== 'duvar'
   /*
    * İZLEME MESAFESİ — mekânda ekrana kaç metreden bakıldığı.
    *
@@ -2344,9 +2344,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     <div className="grid grid-cols-2 gap-1.5">
                       {[
                         ['duvar', 'scene.kioskWall'],
+                        ['dokunmatik', 'scene.kioskTouch'],
                         ['totem', 'scene.kioskTotem'],
-                        ['ciftAyak', 'scene.kioskTwin'],
-                        ['askili', 'scene.kioskHang'],
+                        ['masa', 'scene.kioskTable'],
+                        ['disMekan', 'scene.kioskOutdoor'],
                       ].map(([tip, anahtar]) => (
                         <button
                           key={tip}

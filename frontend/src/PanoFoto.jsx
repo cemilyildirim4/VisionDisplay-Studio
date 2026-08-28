@@ -56,8 +56,8 @@ export default function PanoFoto({
   kioskGizle = false,
   kayma = null,
   /*
-   * KIOSK TİPİ: duvar | totem | ciftAyak | askili
-   * Eski  yerine geçti; yere basan tipler totem ve ciftAyak.
+   * KIOSK TİPİ: duvar | dokunmatik | totem | masa | disMekan
+   * Ürün ailesiyle aynı adlar; duvar dışındaki tipler yere basıyor.
    */
   kioskTipi = 'duvar',
 }) {
@@ -162,7 +162,19 @@ export default function PanoFoto({
   const kenarDoldur =
     yer.genislik * yakinlik < tuvalW - 1 || yer.yukseklik * yakinlik < tuvalH - 1
 
-  const tabanY = ekranAlt + direk + kaideH
+  /*
+   * TİPE GÖRE GÖVDE YÜKSEKLİKLERİ (metre).
+   *  • dokunmatik kabin: 0,95 m — işlem yüzeyi el hizasında olsun diye.
+   *  • dış mekân kabini: 0,80 m — kasa daha alçak, ağırlık merkezi aşağıda.
+   *  • masa ayağı: 0,75 m — standart masa yüksekliği.
+   * Ekran zaten kendi yüksekliğinde çizildiği için bunlar onun ALTINA
+   * ekleniyor; toplam yükseklik gerçeğe yakın kalıyor.
+   */
+  const kabinM = kioskTipi === 'dokunmatik' ? 0.95 : kioskTipi === 'disMekan' ? 0.8 : kioskTipi === 'totem' ? 0.35 : 0
+  const kabinH = kabinM * pxPerM
+  const masaAyakH = kioskTipi === 'masa' ? 0.75 * pxPerM : 0
+
+  const tabanY = ekranAlt + kabinH + masaAyakH + kaideH
   const metal = 'linear-gradient(180deg, #3a3f47 0%, #23272d 42%, #14171b 100%)'
   const yanDestek = ekranWpx / pxPerM > 2.5
 
@@ -360,85 +372,130 @@ export default function PanoFoto({
           />
 
           {/*
-            KIOSK TİPİ.
+            KIOSK TİPLERİ — ürün ailesiyle aynı adlar.
 
-            Aynı ekran gerçekte farklı biçimlerde kurulur ve müşteriye
-            gösterilecek görüntü buna göre değişir:
-              • duvar   — montaj, gövde yok (varsayılan)
-              • totem   — tek merkezî direk + kaide
-              • ciftAyak— iki yan ayak + geniş kaide (büyük ekranlarda kullanılır)
-              • askili  — tavandan iki askı çubuğu
+              • dokunmatik — ekranın altında işlem/klavye kabini; sipariş,
+                bilet ve bilgi kioskları böyle. Kabin yüksekliği gerçek ölçüden
+                (0,95 m) hesaplanıyor.
+              • totem      — ekranı içine alan, zemine kadar inen dik kolon.
+              • masa       — yatay konumlanan masa; ekranın altında tabla eteği
+                ve iki yanda ayak. Masa yüksekliği 0,75 m.
+              • disMekan   — kalın koruma kasası + üstte güneşlik, sağlam ayak.
+              • duvar      — gövde yok; montaj ya da askı.
 
-            Zemine oturma yalnızca yere basan tiplerde geçerli; duvara monte ve
-            askılı ekranın dibi zemine değmez (bkz. App.jsx `ayakVar`).
+            Ölçüler metreden geliyor (pxPerM), yani mekânın ölçeğiyle birlikte
+            büyüyüp küçülüyor. Zemine oturma yalnızca yere basan tiplerde.
           */}
-          {(kioskTipi === 'totem' || kioskTipi === 'ciftAyak') && (
+          {(kioskTipi === 'dokunmatik' || kioskTipi === 'disMekan') && (
             <>
-            {kioskTipi === 'totem' && (
+              {/* Gövde kabini: ekranın altında, ekranla aynı genişlikte */}
               <div
                 style={{
                   position: 'absolute',
-                  left: ayakX - direkW / 2,
-                  top: direkUst,
-                  width: direkW,
-                  height: direk + (ekranAlt - direkUst),
+                  left: ayakX - ekranWpx * (kioskTipi === 'disMekan' ? 0.34 : 0.42),
+                  top: ekranAlt,
+                  width: ekranWpx * (kioskTipi === 'disMekan' ? 0.68 : 0.84),
+                  height: Math.max(6, kabinH),
                   background: metal,
+                  borderRadius: Math.max(2, kasa * 0.4),
                 }}
               />
-            )}
-            {kioskTipi === 'ciftAyak' &&
-              [-0.32, 0.32].map((k) => (
+              {/* Dokunmatikte öne eğik işlem yüzeyi — kabinin üst kısmında */}
+              {kioskTipi === 'dokunmatik' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: ayakX - ekranWpx * 0.32,
+                    top: ekranAlt + Math.max(3, kabinH * 0.12),
+                    width: ekranWpx * 0.64,
+                    height: Math.max(3, kabinH * 0.22),
+                    background: 'linear-gradient(180deg, #4a515b 0%, #2b3038 100%)',
+                    borderRadius: Math.max(1, kasa * 0.3),
+                    opacity: 0.95,
+                  }}
+                />
+              )}
+              {/* Dış mekânda üstte güneşlik/yağmurluk */}
+              {kioskTipi === 'disMekan' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: tuvalW / 2 - ekranWpx / 2 - kasa * 2.2,
+                    top: tuvalH / 2 - ekranHpx / 2 - kasa * 2.6,
+                    width: ekranWpx + kasa * 4.4,
+                    height: Math.max(3, kasa * 1.6),
+                    background: 'linear-gradient(180deg, #454b55 0%, #22262c 100%)',
+                    borderRadius: Math.max(1, kasa * 0.4),
+                  }}
+                />
+              )}
+            </>
+          )}
+
+          {/* --- totem: ekranı içine alan dik kolon --- */}
+          {kioskTipi === 'totem' && (
+            <div
+              style={{
+                position: 'absolute',
+                left: tuvalW / 2 - (ekranWpx * 1.18) / 2,
+                top: tuvalH / 2 - ekranHpx / 2 - kasa * 2.4,
+                width: ekranWpx * 1.18,
+                height: ekranHpx + kasa * 2.4 + kabinH,
+                background: metal,
+                borderRadius: Math.max(3, kasa * 0.9),
+                zIndex: -1,
+              }}
+            />
+          )}
+
+          {/* --- masa tipi: tabla eteği ve iki yanda ayak --- */}
+          {kioskTipi === 'masa' && (
+            <>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: ayakX - ekranWpx * 0.54,
+                  top: ekranAlt,
+                  width: ekranWpx * 1.08,
+                  height: Math.max(4, kasa * 1.4),
+                  background: 'linear-gradient(180deg, #3d434c 0%, #23272d 100%)',
+                  borderRadius: Math.max(2, kasa * 0.4),
+                }}
+              />
+              {[-0.42, 0.42].map((k) => (
                 <div
                   key={k}
                   style={{
                     position: 'absolute',
-                    left: ayakX + k * ekranWpx - direkW * 0.34,
-                    top: direkUst,
-                    width: direkW * 0.68,
-                    height: direk + (ekranAlt - direkUst),
+                    left: ayakX + k * ekranWpx - direkW * 0.3,
+                    top: ekranAlt + Math.max(4, kasa * 1.4),
+                    width: direkW * 0.6,
+                    height: Math.max(6, masaAyakH),
                     background: metal,
                   }}
                 />
               ))}
+            </>
+          )}
 
-            {/* --- kaide --- */}
+          {/* --- yere basan tiplerde kaide --- */}
+          {(kioskTipi === 'dokunmatik' || kioskTipi === 'totem' || kioskTipi === 'disMekan') && (
             <div
               style={{
                 position: 'absolute',
-                left: ayakX - (kioskTipi === 'ciftAyak' ? 0.42 : 0.22) * ekranWpx,
-                top: ekranAlt + direk,
-                width: (kioskTipi === 'ciftAyak' ? 0.84 : 0.44) * ekranWpx,
+                left: ayakX - (kioskTipi === 'totem' ? 0.66 : 0.5) * ekranWpx,
+                top: ekranAlt + kabinH,
+                width: (kioskTipi === 'totem' ? 1.32 : 1) * ekranWpx,
                 height: kaideH,
                 background: 'linear-gradient(180deg, #2a2e34 0%, #171a1e 60%, #0d0f12 100%)',
                 borderRadius: Math.max(1, kaideH * 0.15),
                 boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
               }}
             />
-            </>
           )}
 
-          {/* --- tavandan askı: iki çubuk, ekranın üstünden kadrajın üstüne --- */}
-          {kioskTipi === 'askili' &&
-            [-0.34, 0.34].map((k) => {
-              const ust = tuvalH / 2 - ekranHpx / 2 - kasa
-              return (
-                <div
-                  key={k}
-                  style={{
-                    position: 'absolute',
-                    left: ayakX + k * ekranWpx - direkW * 0.18,
-                    top: Math.max(0, ust - Math.max(24, ekranHpx * 0.45)),
-                    width: Math.max(2, direkW * 0.36),
-                    height: Math.min(ust, Math.max(24, ekranHpx * 0.45)),
-                    background: metal,
-                    opacity: 0.95,
-                  }}
-                />
-              )
-            })}
-
           {/* --- zemin golgesi: yalnızca yere basan tiplerde --- */}
-          {kioskTipi !== 'askili' && (
+          {kioskTipi !== 'duvar' && (
           <div
             style={{
               position: 'absolute',
