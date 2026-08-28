@@ -1206,11 +1206,29 @@ export default function WallPreview({
    * biri, 18–32 piksel arasında. Küçük tasarımda ekranı bastırmıyor, büyük
    * tasarımda kaybolmuyor.
    */
-  const olcuBoy = Math.max(18, Math.min(32, Math.round(Math.min(screenW, screenH) / 5)))
-  /* Etiket puntosu da tasarımla birlikte: düğme boyunun ~%38'i. */
-  const olcuYazi = Math.max(8, Math.min(12, Math.round(olcuBoy * 0.38)))
   const marginXpx = Math.max(0, (wallW - screenW) / 2)
   const marginYpx = Math.max(0, (wallH - screenH) / 2)
+
+  /*
+   * ÖLÇÜNÜN DAYANDIĞI KUTU.
+   *
+   * Dört köşe kipinde ekran, tasarım kutusundan farklı büyüklükte bir
+   * dörtgene oturuyor. Etiketleri tasarım kutusuna göre yerleştirmek
+   * onları dörtgenin üstüne düşürüyordu; ölçünün dayanağı artık ekranın
+   * GÖRÜNEN kutusu.
+   */
+  const gorunenKutu = kose
+    ? {
+        x: marginXpx + Math.min(...kose.map((k) => k.x)),
+        y: marginYpx + Math.min(...kose.map((k) => k.y)),
+        w: Math.max(...kose.map((k) => k.x)) - Math.min(...kose.map((k) => k.x)),
+        h: Math.max(...kose.map((k) => k.y)) - Math.min(...kose.map((k) => k.y)),
+      }
+    : { x: marginXpx, y: marginYpx, w: screenW, h: screenH }
+
+  const olcuBoy = Math.max(16, Math.min(30, Math.round(Math.min(gorunenKutu.w, gorunenKutu.h) / 5)))
+  /* Etiket puntosu da tasarımla birlikte: düğme boyunun ~%38'i. */
+  const olcuYazi = Math.max(7, Math.min(10, Math.round(olcuBoy * 0.34)))
   const marginXm = Math.max(0, (wallWm - screenWm) / 2)
   const marginYm = Math.max(0, (wallHm - screenHm) / 2)
 
@@ -1275,19 +1293,7 @@ export default function WallPreview({
              * ile tasarım kutusunun merkezi arasındaki fark kadar kaydırılıyor.
              * Etiketler DÖNDÜRÜLMÜYOR: onlar arayüz, mekânın parçası değil.
              */
-            <div
-              style={{
-                transform: kose
-                  ? `translate(${(
-                      kose.reduce((t, k) => t + k.x, 0) / 4 -
-                      screenW / 2
-                    ).toFixed(1)}px, ${(
-                      kose.reduce((t, k) => t + k.y, 0) / 4 -
-                      screenH / 2
-                    ).toFixed(1)}px)`
-                  : undefined,
-              }}
-            >
+            <div>
               {/* Noktalı ölçü kılavuz çizgileri */}
               <VL left={0} top={-32} height={32} />
               <VL left={marginXpx} top={-32} height={marginYpx + screenH + 32} />
@@ -1299,23 +1305,36 @@ export default function WallPreview({
               <HL top={wallH} left={wallW} width={40} />
 
               {/* Üst ölçü etiketleri */}
-              <div style={{ position: 'absolute', top: -30 - sahnePayPx, left: 0, width: wallW, height: 24, display: 'flex' }}>
-                <SegH w={marginXpx} label={fmtU(marginXm)} muted yazi={olcuYazi} />
-                <SegH w={screenW} label={fmtU(screenWm)} yazi={olcuYazi} />
-                <SegH w={marginXpx} label={fmtU(marginXm)} muted yazi={olcuYazi} />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: gorunenKutu.y - olcuYazi * 2.2 - sahnePayPx,
+                  left: gorunenKutu.x,
+                  width: gorunenKutu.w,
+                  display: 'flex',
+                }}
+              >
+                <SegH w={gorunenKutu.w} label={fmtU(screenWm)} yazi={olcuYazi} />
               </div>
 
               {/* Sağ ölçü etiketleri */}
-              <div style={{ position: 'absolute', left: Math.min(wallW + 10 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
-                <SegV h={marginYpx} label={fmtU(marginYm)} muted yazi={olcuYazi} />
-                <SegV h={screenH} label={fmtU(screenHm)} yazi={olcuYazi} />
-                <SegV h={marginYpx} label={fmtU(marginYm)} muted yazi={olcuYazi} />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: gorunenKutu.x + gorunenKutu.w + olcuYazi * 0.8 + sahnePayPx,
+                  top: gorunenKutu.y,
+                  height: gorunenKutu.h,
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <SegV h={gorunenKutu.h} label={fmtU(screenHm)} yazi={olcuYazi} />
               </div>
 
               {/* Üstteki +/- : Sütun (ekran genişliği) */}
               <div
                 data-pdf-gizle className="absolute flex items-stretch rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
-                style={{ left: marginXpx + screenW / 2, top: -(olcuBoy + 40) - sahnePayPx, transform: 'translateX(-50%)' }}
+                style={{ left: gorunenKutu.x + gorunenKutu.w / 2, top: gorunenKutu.y - olcuBoy - olcuYazi * 2.6 - sahnePayPx, transform: 'translateX(-50%)' }}
               >
                 <StepBtn boy={olcuBoy} dir="minus" onClick={() => onColsChange?.(Math.max(1, nCols - 1))} disabled={nCols <= 1} />
                 <div className="w-px bg-neutral-200 dark:bg-[#2c333f]" />
@@ -1327,7 +1346,8 @@ export default function WallPreview({
                 data-pdf-gizle className="absolute flex flex-col rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
                 /* Telefonda kabın dışına düşüp tıklanamaz hale geliyordu: sağ
                    kenarın içinde kalacak şekilde sınırlanıyor. */
-                style={{ left: Math.min(wallW + 46 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 34)), top: marginYpx + screenH / 2, transform: 'translateY(-50%)' }}
+                style={{ /* Etiketin genişliği kadar daha dışarıda: hap etiketin üstüne binmesin. */
+                  left: gorunenKutu.x + gorunenKutu.w + olcuYazi * 4.6 + sahnePayPx, top: gorunenKutu.y + gorunenKutu.h / 2, transform: 'translateY(-50%)' }}
               >
                 <StepBtn boy={olcuBoy} dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
                 <div className="h-px bg-neutral-200 dark:bg-[#2c333f]" />
