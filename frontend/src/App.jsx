@@ -2142,8 +2142,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <Stepper
                         value={ozelMesafeM}
                         onChange={(v) => {
-                          setOzelAlanM(v)
-                          oneriyiTazele(v)
+                          /*
+                            MESAFE DEĞİŞİNCE MODELLERİ YENİDEN ÇALIŞTIRMA.
+
+                            Önce her adımda tüm çözümleme (nesne tanıma +
+                            derinlik, ~4 sn) baştan koşuyordu; üstelik burada
+                            artık var olmayan bir işlev çağrılıyordu ve değer
+                            hiç değişmiyordu. Mesafe yalnızca ÖLÇEĞİ belirliyor:
+                            yüzeyin fotoğraftaki payı aynı kalıyor, o payın kaç
+                            metre ettiği değişiyor. O yüzden sadece ölçek
+                            güncelleniyor — sonuç anında görünüyor.
+                          */
+                          setOzelMesafeM(v)
+                          setOzelSahne((s) =>
+                            s
+                              ? { ...s, panelEnM: Math.max(0.2, (s.yerW ?? 0.32) * kadrajGenisligi(v)) }
+                              : s,
+                          )
                         }}
                         min={1}
                         max={300}

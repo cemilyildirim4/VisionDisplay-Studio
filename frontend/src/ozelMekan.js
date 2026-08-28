@@ -198,6 +198,8 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
      * alanın kadrajdaki payı kadarı. Ölçek tek bir yerden geliyor.
      */
     panelEnM: Math.max(0.2, (yer ? yer.w : 0.32) * kadrajGenisligi(mesafeM)),
+    /** Önerilen alanın kadrajdaki genişlik payı (0–1) — ölçek buradan. */
+    yerW: yer ? yer.w : 0.32,
     /** Kadrajın kapsadığı genişlik (metre) — yerleşim ölçeği. */
     kadrajM: kadrajGenisligi(mesafeM),
     maskeli: false,

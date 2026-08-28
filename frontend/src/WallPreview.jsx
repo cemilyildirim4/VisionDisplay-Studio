@@ -511,21 +511,24 @@ function SegV({ h, label, muted }) {
 }
 
 // Duvar boyutu +/- butonu
-function StepBtn({ dir, onClick, disabled }) {
+/**
+ * Ölçü +/- düğmesi.
+ *
+ * `boy`: tasarımın ekrandaki büyüklüğüne göre değişiyor. Sabit boy iki yönde
+ * de yanlıştı — küçük bir tasarımda düğmeler ekranı bastırıyor, büyük bir
+ * tasarımda kaybolup gidiyordu.
+ */
+function StepBtn({ dir, onClick, disabled, boy = 28 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       aria-label={dir === 'plus' ? 'Artır' : 'Azalt'}
-      /*
-       * Ölçü etiketlerinin yanında duruyorlar; 44 piksellik dokunma hedefi
-       * burada fazla yer kaplıyor ve etiketin üstüne biniyordu. 34 piksel
-       * hem parmakla rahat basılıyor hem ölçüyü kapatmıyor.
-       */
-      className={`w-[28px] h-[28px] min-h-[28px] min-w-[28px] p-1.5 flex items-center justify-center ${disabled ? 'text-neutral-300' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#1b2029]'}`}
+      style={{ width: boy, height: boy }}
+      className={`flex items-center justify-center ${disabled ? 'text-neutral-300' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#1b2029]'}`}
     >
-      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
+      <svg viewBox="0 0 24 24" width={Math.round(boy * 0.4)} height={Math.round(boy * 0.4)} fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
         {dir === 'plus' && <line x1="12" y1="6" x2="12" y2="18" />}
         <line x1="6" y1="12" x2="18" y2="12" />
       </svg>
@@ -1179,6 +1182,12 @@ export default function WallPreview({
 
   const screenWm = Math.min(wallWm, nCols * cw)
   const screenHm = Math.min(wallHm, nRows * ch)
+  /*
+   * Ölçü düğmelerinin boyu tasarımla birlikte: ekranın kısa kenarının beşte
+   * biri, 18–32 piksel arasında. Küçük tasarımda ekranı bastırmıyor, büyük
+   * tasarımda kaybolmuyor.
+   */
+  const olcuBoy = Math.max(18, Math.min(32, Math.round(Math.min(screenW, screenH) / 5)))
   const marginXpx = Math.max(0, (wallW - screenW) / 2)
   const marginYpx = Math.max(0, (wallH - screenH) / 2)
   const marginXm = Math.max(0, (wallWm - screenWm) / 2)
@@ -1229,6 +1238,12 @@ export default function WallPreview({
             </div>
           </div>
 
+          {/*
+            Ölçü düğmelerinin boyu tasarımla birlikte değişiyor: ekranın kısa
+            kenarının beşte biri, 18–34 piksel arasında. Küçük tasarımda
+            küçülüp ekranı kapatmıyor, büyük tasarımda kaybolmuyor.
+          */}
+          {/* eslint-disable-next-line no-unused-vars */}
           {showMeasurements && (
             /*
              * ÖLÇÜLER TASARIMLA BİRLİKTE GİDİYOR.
@@ -1279,11 +1294,11 @@ export default function WallPreview({
               {/* Üstteki +/- : Sütun (ekran genişliği) */}
               <div
                 data-pdf-gizle className="absolute flex items-stretch rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
-                style={{ left: marginXpx + screenW / 2, top: -74 - sahnePayPx, transform: 'translateX(-50%)' }}
+                style={{ left: marginXpx + screenW / 2, top: -(olcuBoy + 40) - sahnePayPx, transform: 'translateX(-50%)' }}
               >
-                <StepBtn dir="minus" onClick={() => onColsChange?.(Math.max(1, nCols - 1))} disabled={nCols <= 1} />
+                <StepBtn boy={olcuBoy} dir="minus" onClick={() => onColsChange?.(Math.max(1, nCols - 1))} disabled={nCols <= 1} />
                 <div className="w-px bg-neutral-200 dark:bg-[#2c333f]" />
-                <StepBtn dir="plus" onClick={() => onColsChange?.(Math.min(colsMax, nCols + 1))} disabled={nCols >= colsMax} />
+                <StepBtn boy={olcuBoy} dir="plus" onClick={() => onColsChange?.(Math.min(colsMax, nCols + 1))} disabled={nCols >= colsMax} />
               </div>
 
               {/* Sağdaki +/- : Satır (ekran yüksekliği) */}
@@ -1293,9 +1308,9 @@ export default function WallPreview({
                    kenarın içinde kalacak şekilde sınırlanıyor. */
                 style={{ left: Math.min(wallW + 46 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 34)), top: marginYpx + screenH / 2, transform: 'translateY(-50%)' }}
               >
-                <StepBtn dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
+                <StepBtn boy={olcuBoy} dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
                 <div className="h-px bg-neutral-200 dark:bg-[#2c333f]" />
-                <StepBtn dir="plus" onClick={() => onRowsChange?.(Math.min(rowsMax, nRows + 1))} disabled={nRows >= rowsMax} />
+                <StepBtn boy={olcuBoy} dir="plus" onClick={() => onRowsChange?.(Math.min(rowsMax, nRows + 1))} disabled={nRows >= rowsMax} />
               </div>
 
               {/* İzleme mesafesi çizgisi — mekân sahnesi açıkken gizlenir.
