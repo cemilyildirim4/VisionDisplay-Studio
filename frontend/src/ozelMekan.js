@@ -29,6 +29,31 @@ import { duzlemBolgesiBul } from './duzlemBolge.js'
 import { mevcutEkranYuzeyi } from './ekranYuzeyi.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
+/**
+ * Varsayılan çekim mesafesi (metre) — tipik bir dış mekân karesi.
+ * Kullanıcı değiştirdiğinde bütün ölçek onunla birlikte değişiyor.
+ */
+export const VARSAYILAN_MESAFE_M = 15
+
+/**
+ * KADRAJ GENİŞLİĞİ = 2·mesafe·tan(görüş açısı/2).
+ *
+ * Telefon ve fotoğraf makinelerinin tipik yatay görüş açısı ~58°;
+ * bu da kadrajın, mesafenin yaklaşık 1,11 katı kadar bir genişliği
+ * kapsaması demek. Yani 20 metreden çekilmiş bir karede soldan sağa
+ * yaklaşık 22 metre görünüyor.
+ *
+ * Bu bir varsayım: fotoğrafın odak uzaklığı bilinmiyor (EXIF çoğu
+ * ekran görüntüsünde yok). Ama tek bir sayı sorup ölçeği ondan
+ * türetmek, her fotoğrafta başka bir ölçek kullanmaktan iyi.
+ */
+export const KADRAJ_KATSAYISI = 1.11
+
+export function kadrajGenisligi(mesafeM) {
+  return Math.max(0.5, (Number(mesafeM) || VARSAYILAN_MESAFE_M) * KADRAJ_KATSAYISI)
+}
+
+/** Geriye dönük: eski çağrılar için varsayılan alan genişliği. */
 export const VARSAYILAN_ALAN_M = 4
 
 /** Kabul edilen dosya türleri. */
@@ -43,9 +68,9 @@ export const MEKAN_EN_COK_MB = 60
  * @param {string} url    blob adresi
  * @param {HTMLImageElement} gorsel yüklenmiş görsel
  * @param {number} oran   tasarımın en/boy oranı — öneri buna göre aranır
- * @param {number} alanM  önerilen alanın gerçek genişliği (metre)
+ * @param {number} mesafeM  fotoğrafın çekildiği mesafe (metre)
  */
-export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
+export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MESAFE_M) {
   const W = gorsel.naturalWidth
   const H = gorsel.naturalHeight
   if (!W || !H) return null
@@ -168,7 +193,13 @@ export async function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_
       x1: Math.round(merkezX + yariW),
       y1: Math.round(merkezY + yariH),
     },
-    panelEnM: alanM,
+    /*
+     * Önerilen alanın gerçek genişliği: kadrajın kapsadığı genişliğin,
+     * alanın kadrajdaki payı kadarı. Ölçek tek bir yerden geliyor.
+     */
+    panelEnM: Math.max(0.2, (yer ? yer.w : 0.32) * kadrajGenisligi(mesafeM)),
+    /** Kadrajın kapsadığı genişlik (metre) — yerleşim ölçeği. */
+    kadrajM: kadrajGenisligi(mesafeM),
     maskeli: false,
     kiosk: true,
     /* Kırpma ve yakınlaştırma yok: fotoğrafın tamamı görünür. */

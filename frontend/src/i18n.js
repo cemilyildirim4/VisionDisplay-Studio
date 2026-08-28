@@ -412,6 +412,12 @@ const dict = {
   'scene.customAdd': { tr: 'Fotoğraf ekle', en: 'Add photo', ar: 'إضافة صورة' },
   'scene.customChange': { tr: 'Fotoğrafı değiştir', en: 'Change photo', ar: 'تغيير الصورة' },
   'scene.suggest': { tr: 'Önerilen yere koy', en: 'Use suggested spot', ar: 'ضعه في المكان المقترح' },
+  'scene.photoDistance': { tr: 'Fotoğraf kaç metreden çekildi?', en: 'From how many metres was the photo taken?', ar: 'من كم مترًا التقطت الصورة؟' },
+  'scene.photoDistanceHint': {
+    tr: 'Kamera ile ekranın olacağı yer arasındaki yaklaşık mesafe. Ölçek buradan hesaplanıyor.',
+    en: 'Approximate distance between the camera and where the screen will stand. The scale comes from this.',
+    ar: 'المسافة التقريبية بين الكاميرا وموضع الشاشة. يُحسب المقياس من هذا.',
+  },
   'scene.customWidth': { tr: 'Bu alan kaç metre?', en: 'How wide is this area?', ar: 'كم عرض هذه المنطقة؟' },
   'scene.weakSuggest': {
     tr: 'Uygun bir yüzey bulunamadı; ekran ortaya kondu. Sürükleyerek taşıyabilirsiniz.',

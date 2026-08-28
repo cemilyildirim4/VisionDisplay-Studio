@@ -27,7 +27,13 @@ import {
   oneriYatayKaymasi,
   oneriDikeyKaymasi,
 } from './sahneler.js'
-import { ozelMekanKaydi, MEKAN_TURLERI, MEKAN_EN_COK_MB, VARSAYILAN_ALAN_M } from './ozelMekan.js'
+import {
+  ozelMekanKaydi,
+  MEKAN_TURLERI,
+  MEKAN_EN_COK_MB,
+  VARSAYILAN_MESAFE_M,
+  kadrajGenisligi,
+} from './ozelMekan.js'
 import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
 import { icDortgen } from './homografi.js'
@@ -332,7 +338,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * tarayıcıda kalıyor — içerik görselinde olduğu gibi.
    */
   const [ozelSahne, setOzelSahne] = useState(null)
-  const [ozelAlanM, setOzelAlanM] = useState(VARSAYILAN_ALAN_M)
+  /*
+   * FOTOĞRAFIN ÇEKİM MESAFESİ — bütün yerleşimin ölçeği buradan geliyor.
+   * Kadrajın kapsadığı genişlik mesafenin ~1,11 katı (bkz. ozelMekan.js).
+   */
+  const [ozelMesafeM, setOzelMesafeM] = useState(VARSAYILAN_MESAFE_M)
   const [ozelUyari, setOzelUyari] = useState(null)
   /* Model çalışırken kullanıcı beklediğini bilsin — birkaç saniye sürüyor. */
   const [ozelInceleniyor, setOzelInceleniyor] = useState(false)
@@ -575,7 +585,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setOzelUyari(null)
       let kayit = null
       try {
-        kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelAlanM)
+        kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM)
       } finally {
         setOzelInceleniyor(false)
       }
@@ -663,7 +673,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /* Öneriyi tazele: ölçü ya da alan genişliği değişmiş olabilir. */
-  const oneriyiTazele = (alanM = ozelAlanM) => {
+  const oneriyiTazele = (alanM = ozelMesafeM) => {
     if (!ozelSahne) return
     const gorsel = new Image()
     gorsel.onload = async () => {
@@ -1204,16 +1214,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       y: fotoYer.ust + k.y * fotoYer.yukseklik,
     }))
     /*
-     * ÖLÇEK: yüzeyin gerçek genişliği "Bu alan kaç metre?" değeri.
+     * ÖLÇEK ÇEKİM MESAFESİNDEN.
      *
-     * Tasarım yüzeyin tamamına yayılmıyor; o ölçeğe göre içine oturuyor.
-     * Böylece 4 m'lik bir ekran her fotoğrafta 4 m gibi görünüyor —
-     * bir karede panoyu doldurup ötekinde köşede kalmıyor.
+     * Kadrajın kapsadığı genişlik = mesafe × 1,11 (bkz. ozelMekan.js). Yüzeyin
+     * gerçek genişliği de kadrajdaki payı kadarı: yarısını kaplıyorsa kadrajın
+     * yarısı kadar metre. Tasarım bu ölçeğe göre yüzeyin içine oturuyor —
+     * yüzeye yayılmıyor. Böylece 4 m'lik bir ekran her fotoğrafta 4 metre
+     * gibi görünüyor.
      *
-     * Manuel dört köşede de aynı kural: kullanıcının işaretlediği alan
-     * ozelAlanM metre kabul ediliyor.
+     * Manuel dört köşede de aynı kural geçerli.
      */
-    const olcekli = icDortgen(tuvalKose, tasarimWm, tasarimHm, ozelAlanM)
+    const yuzeyPayi =
+      (Math.hypot(tuvalKose[1].x - tuvalKose[0].x, tuvalKose[1].y - tuvalKose[0].y) +
+        Math.hypot(tuvalKose[2].x - tuvalKose[3].x, tuvalKose[2].y - tuvalKose[3].y)) /
+      2 /
+      Math.max(1, fotoYer.genislik)
+    const yuzeyWm = Math.max(0.2, yuzeyPayi * kadrajGenisligi(ozelMesafeM))
+    const olcekli = icDortgen(tuvalKose, tasarimWm, tasarimHm, yuzeyWm)
     return olcekli.map((k) => ({ x: k.x - solUst.x, y: k.y - solUst.y }))
   })()
 
@@ -2120,20 +2137,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   <div className="mt-2 border border-neutral-200 dark:border-[#2c333f] rounded-lg p-2.5">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
-                        {t('scene.customWidth')}
+                        {t('scene.photoDistance')}
                       </span>
                       <Stepper
-                        value={ozelAlanM}
+                        value={ozelMesafeM}
                         onChange={(v) => {
                           setOzelAlanM(v)
                           oneriyiTazele(v)
                         }}
-                        min={0.5}
-                        max={40}
-                        step={0.5}
-                        decimals={1}
+                        min={1}
+                        max={300}
+                        step={1}
+                        decimals={0}
                       />
                     </div>
+                    <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                      {t('scene.photoDistanceHint')}
+                    </p>
                     {/*
                       DÖRT KÖŞE — otomatik bulunanı düzeltmek ya da yüzeyi
                       elle işaretlemek için. Güvenilir omurga bu: otomatik
