@@ -674,7 +674,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * bir şey yapmalı. Bu durumda kamera oturtmadaki gibi en uygun alana
        * konuyor; köşeleri düzeltmek isteyen ayrı düğmeyle manuel kipe geçiyor.
        */
-      setHedefKose(null)
+      /*
+       * ADAY VARSA EN İYİSİNE OTUR.
+       *
+       * Yüzey bulunamadığında tasarımı kadrajın ortasında bırakıyordum;
+       * ekran hiçbir şeyin üstünde durmuyor, havada asılı görünüyordu.
+       * Artık en yüksek puanlı aday kareye oturuyor — kullanıcı isterse
+       * diğer karelerden birine tıklayıp taşıyor.
+       */
+      setHedefKose(bulunan[0]?.koseler || null)
       setKoseKipi(false)
     }
 
@@ -1543,7 +1551,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           Artik hepsi tek ekranda; alanlar iki panele bolunerek kaydirma
           gerekmeden sigiyor.
         */}
-        <main ref={tuvalRef} id="pdf-onizleme" className="yatay-onizleme order-1 lg:order-2 grow-0 shrink-0 basis-auto h-[62vh] min-w-0 relative overflow-hidden bg-[#f4f4f4] dark:bg-[#232830] lg:flex-1 lg:h-auto lg:min-h-0">
+        <main ref={tuvalRef} id="pdf-onizleme" className={(adayKipi ? 'aday-secim ' : '') + "yatay-onizleme order-1 lg:order-2 grow-0 shrink-0 basis-auto h-[62vh] min-w-0 relative overflow-hidden bg-[#f4f4f4] dark:bg-[#232830] lg:flex-1 lg:h-auto lg:min-h-0"}>
 
           {/*
             Mekân sahnesi — her şeyin arkasında (z-0). Ortası kasıtlı boştur,

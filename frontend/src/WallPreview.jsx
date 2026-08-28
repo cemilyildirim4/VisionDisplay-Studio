@@ -921,7 +921,12 @@ export default function WallPreview({
     const maskePolygon = seritMaskePolygon(placed, maxHpx)
 
     return (
-      <div ref={containerRef} className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0">
+      <div
+      ref={containerRef}
+      /* Aday kareler açıkken bu katman soluyor; kareler fotoğrafın üstünde okunur kalıyor. */
+      data-tasarim-katman
+      className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0"
+    >
         <div dir="ltr" className="flex items-end gap-3 sm:gap-6 max-w-full">
          {showHumanM && (
   <HumanSilhouette height={humanH} showMeasure={showMeasurements} />

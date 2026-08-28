@@ -297,3 +297,9 @@ html, body {
   overflow-x: hidden;
   max-width: 100vw;
 }
+
+/* Aday kareler açıkken tasarım katmanı soluyor: kareler ve fotoğraf okunur kalsın. */
+#pdf-onizleme.aday-secim [data-tasarim-katman] {
+  opacity: 0.35;
+  transition: opacity 0.15s ease;
+}
