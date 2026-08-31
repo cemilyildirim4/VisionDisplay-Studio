@@ -27,11 +27,15 @@
 const COZUMLEME_W = 160
 
 /** Bir karede kabul edilen en yüksek gökyüzü ve eşya payı. */
-const GOK_SINIRI = 0.3
-const ENGEL_SINIRI = 0.22
+const GOK_SINIRI = 0.12
+const ENGEL_SINIRI = 0.08
+
+/** Aday sayılabilmesi için gereken en düşük puan. */
+const PUAN_ESIGI = 62
 
 /** Aynı yerin iki kez önerilmemesi için en az merkez ayrımı (kadraj payı). */
-const AYRIM = 0.13
+/* 0,13 iken aynı pano üzerine dört ayrı kare düşüyordu; 0,20 ile seçenekler ayrışıyor. */
+const AYRIM = 0.2
 
 /**
  * Fotoğraftaki aday yerleşim yüzeylerini çıkarır.
@@ -53,7 +57,7 @@ export function adaylariBul(tuval, sec = {}) {
     yuzey = null,
     oran = 16 / 9,
     zeminOran = null,
-    enCok = 6,
+    enCok = 5,
   } = sec
 
   const sonuc = []
@@ -98,8 +102,16 @@ export function adaylariBul(tuval, sec = {}) {
         const x1 = Math.round(x0 + kwPx)
         const y1 = Math.round(y0 + khPx)
 
-        /* Zemin çizgisinin altına sarkan kare elenir. */
-        if (zeminOran != null && y1 / H > zeminOran + 0.05) continue
+        /*
+         * ZEMİN VE ALT ŞERİT ELEMESİ.
+         *
+         * Kullanıcının bilbord fotoğrafında yol, araçlar ve korkuluk üzerine
+         * kareler öneriliyordu: derinlikte yol da düz bir yüzeydir. Kural
+         * netleşti: zemin çizgisinin altı ve kadrajın alt beşte biri
+         * yerleştirilebilir yüzey sayılmıyor — oralar yürüme/araç alanı.
+         */
+        if (zeminOran != null && y1 / H > zeminOran) continue
+        if (y0 / H > 0.72) continue
 
         let gokSay = 0
         let engelSay = 0
@@ -123,10 +135,18 @@ export function adaylariBul(tuval, sec = {}) {
           duzlem = duzlemUydur(der, W, Math.round(x0), Math.round(y0), x1, y1)
           if (!duzlem) continue
           duzluk = Math.max(0, 1 - (duzlem.artik / derYayilim) * 26)
-          /* Yatay yüzey (zemin/tavan): dikey eğim baskınsa ekran asılmaz. */
+          /*
+           * YATAY YÜZEY (zemin, yol, tavan) ELENİYOR.
+           *
+           * Dik bir duvarda derinlik yukarıdan aşağıya neredeyse sabittir;
+           * zeminde ise sürekli değişir. Eşik 0,55'ten 0,22'ye çekildi:
+           * yol yüzeyleri o aralıkta kalıp aday olabiliyordu.
+           */
           const dikeyEgim = Math.abs(duzlem.b) * H
           const yatayEgim = Math.abs(duzlem.a) * W
-          if (dikeyEgim > derYayilim * 0.55 && dikeyEgim > yatayEgim * 2.2) continue
+          if (dikeyEgim > derYayilim * 0.22 && dikeyEgim > yatayEgim) continue
+          /* Çok dalgalı bölge (ağaç, kalabalık cephe) yüzey değildir. */
+          if (duzluk < 0.35) continue
         }
 
         const skor =
@@ -147,8 +167,17 @@ export function adaylariBul(tuval, sec = {}) {
 
   ham.sort((a, b) => b.skor - a.skor)
 
+  /*
+   * PUANI DÜŞÜK ADAY GÖSTERİLMİYOR.
+   *
+   * Listeyi altıya tamamlamak için zayıf adayları da göstermek zarar
+   * veriyordu: kullanıcı yolun üzerindeki kareyi görüp "saçma" diyor.
+   * Az ama doğru seçenek, çok ama şüpheli seçenekten iyi.
+   */
+  const elenmis = ham.filter((a) => a.skor >= PUAN_ESIGI)
+
   const merkezler = sonuc.map((a) => dortgenMerkez(a.koseler))
-  for (const a of ham) {
+  for (const a of elenmis) {
     if (sonuc.length >= enCok) break
     if (merkezler.some((m) => Math.hypot(m.x - a.merkez.x, m.y - a.merkez.y) < AYRIM)) continue
     merkezler.push(a.merkez)

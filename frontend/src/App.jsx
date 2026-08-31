@@ -37,7 +37,7 @@ import {
 import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
 import AdaySecici from './AdaySecici.jsx'
-import { icDortgen } from './homografi.js'
+import { icDortgen, sigdirDortgen } from './homografi.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
@@ -357,6 +357,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * null ise eski davranış (ortalama + sürükleme) geçerli.
    */
   const [hedefKose, setHedefKose] = useState(null)
+  /*
+   * HEDEFİN TÜRÜ.
+   *
+   * 'screen' ise fotoğrafta gerçek bir LED ekran/pano bulunmuş demektir;
+   * tasarım o yüzeyin İÇİNE, oranı korunarak sığdırılıyor. Metre hesabı
+   * orada geçersiz: panonun kaç metre olduğunu bilmiyoruz, ama sınırlarını
+   * biliyoruz ve kullanıcının beklediği şey ekranın içini doldurmak.
+   */
+  const [hedefTur, setHedefTur] = useState(null)
   /* Kullanıcı köşeleri elle düzeltiyor mu? */
   const [koseKipi, setKoseKipi] = useState(false)
   /*
@@ -672,6 +681,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const yuzey = kayit?.yuzey
     if (yuzey) {
       setHedefKose(yuzey.koseler)
+      setHedefTur('screen')
       setKoseKipi(false)
     } else {
       /*
@@ -692,6 +702,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * diğer karelerden birine tıklayıp taşıyor.
        */
       setHedefKose(bulunan[0]?.koseler || null)
+      setHedefTur(bulunan[0]?.tur || null)
       setKoseKipi(false)
     }
 
@@ -1415,7 +1426,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       2 /
       Math.max(1, fotoYer.genislik)
     const yuzeyWm = Math.max(0.2, yuzeyPayi * kadrajGenisligi(ozelMesafeM))
-    const olcekli = icDortgen(tuvalKose, tasarimWm, tasarimHm, yuzeyWm)
+    const olcekli =
+      hedefTur === 'screen'
+        ? sigdirDortgen(tuvalKose, tasarimWm / tasarimHm)
+        : icDortgen(tuvalKose, tasarimWm, tasarimHm, yuzeyWm)
     return olcekli.map((k) => ({ x: k.x - solUst.x, y: k.y - solUst.y }))
   })()
 
@@ -1464,6 +1478,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     )
   }
 
+  /* Elle köşe seçimi ekranın kendi sınırlarını kullanır; oranı orada kullanıcı kurar. */
   /* Manuel kip açılırken elde bir dörtgen yoksa fotoğrafın ortasında biri kurulur. */
   const koseKipiAc = () => {
     if (!hedefKose) {
@@ -1785,6 +1800,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 const ham = adaylar[i]
                 if (!ham) return
                 setHedefKose(ham.koseler)
+                setHedefTur(ham.tur || null)
                 setAdayKipi(false)
                 setOzelUyari(null)
               }}
@@ -2439,6 +2455,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         type="button"
                         onClick={() => {
                           setHedefKose(null)
+                          setHedefTur(null)
                           setKoseKipi(false)
                         }}
                         className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"

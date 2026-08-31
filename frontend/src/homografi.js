@@ -190,6 +190,40 @@ export function icDortgen(koseler, tasarimWm, tasarimHm, yuzeyWm) {
   return n.some((k) => !k) ? koseler : n
 }
 
+
+/**
+ * Dörtgenin İÇİNE, TASARIMIN EN/BOY ORANIYLA sığdırılmış alt dörtgen.
+ *
+ * Fotoğrafta gerçek bir LED ekran varsa doğru hedef odur: tasarım o yüzeyin
+ * dışına taşmamalı, ekranın kendi alanını doldurmalı. Metre hesabı burada
+ * geçersiz — ekranın fotoğraftaki gerçek ölçüsünü bilmiyoruz, ama sınırlarını
+ * biliyoruz. Bu yüzden oran korunarak İÇİNE sığdırılıyor (contain).
+ */
+export function sigdirDortgen(koseler, oran) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return koseler
+  if (!(oran > 0)) return koseler
+  const enUst = Math.hypot(koseler[1].x - koseler[0].x, koseler[1].y - koseler[0].y)
+  const enAlt = Math.hypot(koseler[2].x - koseler[3].x, koseler[2].y - koseler[3].y)
+  const boySol = Math.hypot(koseler[3].x - koseler[0].x, koseler[3].y - koseler[0].y)
+  const boySag = Math.hypot(koseler[2].x - koseler[1].x, koseler[2].y - koseler[1].y)
+  const enPx = (enUst + enAlt) / 2
+  const boyPx = (boySol + boySag) / 2
+  if (!(enPx > 0) || !(boyPx > 0)) return koseler
+  const yuzeyOran = enPx / boyPx
+  /* Tasarım yüzeyden genişse enine, darsa boyuna oturuyor. */
+  const fw = oran >= yuzeyOran ? 1 : oran / yuzeyOran
+  const fh = oran >= yuzeyOran ? yuzeyOran / oran : 1
+  const u0 = (1 - fw) / 2
+  const v0 = (1 - fh) / 2
+  const n = [
+    dortgenNoktasi(koseler, u0, v0),
+    dortgenNoktasi(koseler, u0 + fw, v0),
+    dortgenNoktasi(koseler, u0 + fw, v0 + fh),
+    dortgenNoktasi(koseler, u0, v0 + fh),
+  ]
+  return n.some((k) => !k) ? koseler : n
+}
+
 /** Köşe listesinin merkezi. */
 export function dortgenMerkezi(koseler) {
   const n = koseler.length || 1
