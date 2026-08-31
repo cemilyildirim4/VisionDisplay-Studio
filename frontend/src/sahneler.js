@@ -183,7 +183,12 @@ export const SAHNELER = [
      * Taş duvar: 905 piksel geniş, üst kenarı 410 (duvarın üstündeki koyu
      * ızgara bandı görselden kaldırıldı; artık duvarın hemen üstü gökyüzü).
      */
-    duvarKutu: { x0: 384, y0: 410, x1: 1289, y1: 642 },
+    /*
+     * Taş duvar: üst kenarı ızgara bandının altında (410), alt kenarı çalı
+     * şeridinin üstünde (586) — görsel orijinal hâline döndürüldü, ızgara ve
+     * çalılar yerinde.
+     */
+    duvarKutu: { x0: 384, y0: 410, x1: 1289, y1: 586 },
     maskeli: false,
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
