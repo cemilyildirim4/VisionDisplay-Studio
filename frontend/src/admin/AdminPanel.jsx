@@ -8,6 +8,7 @@ import { queryClient } from '../queryClient.js'
 import { TESTER_ROLE_ENABLED } from '../featureFlags.js'
 import { useSession } from '../SessionContext.jsx'
 import HardwareCatalogSection from './HardwareCatalogSection.jsx'
+import LaborMultiplierSection from './LaborMultiplierSection.jsx'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
@@ -15,7 +16,7 @@ import HardwareCatalogSection from './HardwareCatalogSection.jsx'
  *
  * Gruplar:
  *  - Genel:   Dashboard (özet + analitik)
- *  - Ürün:    Modeller, Seriler, Donanım (güç kaynağı, mini PC, patch, alıcı kart, işlemci + işçilik)
+ *  - Ürün:    Modeller, Seriler, Donanım, İşçilik Çarpanı
  *  - Satış:   Teklifler, Kayıtlı Projeler
  *  - Sistem:  Sohbet Kayıtları, Geri Bildirimler, Kullanıcılar
  *
@@ -45,6 +46,7 @@ const TAB_GROUPS = [
       { key: 'cabins', label: 'Modeller' },
       { key: 'series', label: 'Seriler' },
       { key: 'hardware', label: 'Donanım' },
+      { key: 'labor', label: 'İşçilik Çarpanı' },
     ],
   },
   {
@@ -63,6 +65,15 @@ const TAB_GROUPS = [
     ],
   },
 ]
+
+const ADMIN_TAB_KEYS = TAB_GROUPS.flatMap((g) => g.items.map((t) => t.key))
+
+function parseAdminTabFromHash() {
+  const raw = window.location.hash || ''
+  const q = raw.includes('?') ? raw.slice(raw.indexOf('?') + 1) : ''
+  const tab = new URLSearchParams(q).get('tab')
+  return ADMIN_TAB_KEYS.includes(tab) ? tab : 'dashboard'
+}
 
 const STATUS_OPTIONS_QUOTE = ['Beklemede', 'Onaylandı', 'Reddedildi']
 const STATUS_OPTIONS_CONFIG = ['Taslak', 'Beklemede', 'Onaylandı', 'Reddedildi']
@@ -397,7 +408,7 @@ function GirisEkrani() {
 export default function AdminPanel() {
   const { isAdmin, session, logout, displayName, email } = useSession()
   const girisYapildi = isAdmin && !!session?.accessToken
-  const [tab, setTab] = useState('dashboard')
+  const [tab, setTab] = useState(parseAdminTabFromHash)
   const [formSection, setFormSection] = useState('basic') // basic | tech | parts
   const [confirm, setConfirm] = useState(null) // { title, body, onConfirm }
 
@@ -1013,6 +1024,21 @@ export default function AdminPanel() {
     }
   }
 
+  const goTab = useCallback((key) => {
+    const next = ADMIN_TAB_KEYS.includes(key) ? key : 'dashboard'
+    setTab(next)
+    const hash = next === 'dashboard' ? '#yonetim' : `#yonetim?tab=${next}`
+    if (window.location.hash !== hash) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`)
+    }
+  }, [])
+
+  useEffect(() => {
+    const onHash = () => setTab(parseAdminTabFromHash())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   // Sekme değişince ilgili veriyi getir
   useEffect(() => {
     if (!girisYapildi) return
@@ -1123,7 +1149,7 @@ export default function AdminPanel() {
                     <button
                       key={t.key}
                       type="button"
-                      onClick={() => setTab(t.key)}
+                      onClick={() => goTab(t.key)}
                       className={`whitespace-nowrap px-2 lg:px-3 xl:px-4 py-2 lg:py-2.5 min-h-[44px] text-[13px] lg:text-sm font-medium border-b-2 -mb-px transition-colors ${
                         tab === t.key
                           ? 'border-[#2962ad] text-[#2962ad] dark:text-[#9db9dc]'
@@ -1165,7 +1191,7 @@ export default function AdminPanel() {
                     <button
                       key={s.label}
                       type="button"
-                      onClick={() => setTab(s.go)}
+                      onClick={() => goTab(s.go)}
                       className="text-left bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-4 hover:border-brand transition-colors min-h-[44px] w-full max-w-full"
                     >
                       <div className="text-2xl font-bold">{s.value}</div>
@@ -1178,10 +1204,11 @@ export default function AdminPanel() {
                   <div className="border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 bg-white dark:bg-[#161a21]">
                     <h3 className="text-sm font-bold m-0 mb-3">Hızlı işlemler</h3>
                     <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-                      <button type="button" onClick={() => setTab('cabins')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Modeller</button>
-                      <button type="button" onClick={() => setTab('hardware')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Donanım</button>
-                      <button type="button" onClick={() => setTab('quotes')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Teklifler</button>
-                      <button type="button" onClick={() => setTab('users')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Kullanıcılar</button>
+                      <button type="button" onClick={() => goTab('cabins')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Modeller</button>
+                      <button type="button" onClick={() => goTab('hardware')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Donanım</button>
+                      <button type="button" onClick={() => goTab('labor')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">İşçilik Çarpanı</button>
+                      <button type="button" onClick={() => goTab('quotes')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Teklifler</button>
+                      <button type="button" onClick={() => goTab('users')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Kullanıcılar</button>
                     </div>
                   </div>
                   <div className="border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 bg-white dark:bg-[#161a21]">
@@ -1216,7 +1243,7 @@ export default function AdminPanel() {
                   <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
                     <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <h3 className="text-sm font-bold m-0">SSS önerisi (cevaplanamayan sorular)</h3>
-                      <button type="button" onClick={() => setTab('chatlogs')} className="text-xs text-brand hover:underline min-h-[44px] inline-flex items-center">Loglar</button>
+                      <button type="button" onClick={() => goTab('chatlogs')} className="text-xs text-brand hover:underline min-h-[44px] inline-flex items-center">Loglar</button>
                     </div>
                     <div className="overflow-x-auto w-full">
                     <table className="w-full text-sm">
@@ -1587,9 +1614,14 @@ export default function AdminPanel() {
           </>
         )}
 
-        {/* ================= DONANIM + İŞÇİLİK ================= */}
+        {/* ================= DONANIM ================= */}
         {tab === 'hardware' && (
           <HardwareCatalogSection oturumDustu={oturumDustu} askConfirm={askConfirm} />
+        )}
+
+        {/* ================= İŞÇİLİK ÇARPANI ================= */}
+        {tab === 'labor' && (
+          <LaborMultiplierSection oturumDustu={oturumDustu} />
         )}
 
         {/* ================= SERİLER ================= */}
