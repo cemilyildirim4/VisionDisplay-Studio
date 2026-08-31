@@ -1473,10 +1473,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const duvarDibiKaymasi = () => {
     const tasarimYariH = (tasarimHm * (cizimOlcek || 0)) / 2
-    /* Esneyen duvarda hiza duvarın kendi alt kenarı. */
-    if (fotoSahne?.duvarKutu && mekanDuvarHm > 0 && cizimOlcek > 0) {
-      return (mekanDuvarHm * cizimOlcek) / 2 - tasarimYariH
-    }
+    /*
+     * ESNEYEN DUVARDA TASARIM HER ZAMAN DUVARI ORTALIYOR.
+     *
+     * Bir ara alt kenara hizalıyordum; ölçü ya da kabin sayısı değişince
+     * ekran duvarın içinde aşağı yukarı kayıyordu. Duvar tuvalin ortasında
+     * çizildiği için sıfır kayma = duvarın tam ortası; ölçü ne olursa olsun
+     * ekran ortada kalıyor.
+     */
+    if (fotoSahne?.duvarKutu) return 0
     if (!fotoYer?.panelHpx || fotoYer.sigdir) return 0
     const z = sahneYakinlik || 1
     return (fotoYer.panelHpx / 2) * z - tasarimYariH
