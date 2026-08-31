@@ -1162,16 +1162,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const alanW = Math.max(180, tuvalBoyut.w - 150)
       const alanH = Math.max(140, tuvalBoyut.h - 150)
       /*
-       * Sığdırma bir ÜST SINIR, çarpan değil: mesafeyle daha da uzaklaşmak
-       * serbest kalsın diye. (Çarpan olarak uygulandığında mesafe hiçbir şeyi
-       * değiştirmiyordu: yakınlık tamamen sığdırmadan geliyordu.)
+       * MESAFE HER ZAMAN İŞ GÖRMELİ.
+       *
+       * Sığdırma sınırını üst sınır olarak uygulayınca, büyük tasarımlarda
+       * yakınlık hep o sınıra takılıyor ve mesafe düğmesi hiçbir şeyi
+       * değiştirmiyordu (kullanıcının gördüğü hata buydu).
+       *
+       * Çözüm: sığdırma OTOMATİK MESAFEDEKİ kadrajı belirliyor; elle seçilen
+       * mesafe ise bunun ÜZERİNE oran olarak biniyor. Otomatik mesafede
+       * tasarım kadraja tam oturuyor, uzaklaştıkça küçülüyor, yaklaştıkça
+       * büyüyüp kadrajı taşıyor — gerçekte de öyle olur.
        */
-      const enCokYakinlik = Math.min(alanW / (tasarimWm * yer.pxPerM), alanH / (tasarimHm * yer.pxPerM))
+      const sigan = Math.min(alanW / (tasarimWm * yer.pxPerM), alanH / (tasarimHm * yer.pxPerM))
       const buyut = Math.min(1.3, Math.max(1, Math.min((alanW * 0.9) / w, (alanH * 0.9) / h)))
-      return Math.min(taban * buyut, enCokYakinlik)
+      const otoIlerleme = (otoIzlemeM - OTO_EN_AZ_M) / (ZOOM_EN_COK_M - OTO_EN_AZ_M)
+      const tabanOto = Math.max(0.5, Math.min(1.22, 1.22 - otoIlerleme * 0.72))
+      const oran = tabanOto > 0 ? taban / tabanOto : 1
+      return Math.min(sigan, sigan * buyut) * Math.max(0.3, Math.min(1.8, oran))
     }
     return taban
-  }, [fotoSahne, izlemeMesafesi, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm])
+  }, [fotoSahne, izlemeMesafesi, otoIzlemeM, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm])
 
   /*
    * FOTOĞRAFLI MEKÂNDA ÇİZİM ÖLÇEĞİ.
