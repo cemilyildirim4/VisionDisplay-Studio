@@ -800,7 +800,12 @@ export default function WallPreview({
     // Silüet duvarla aynı satırda olduğu için genişliği de hesaba katılır.
     const showHumanM = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005
     const humanWmM = showHumanM ? HUMAN_HEIGHT_M * HUMAN_FIG_W_RATIO : 0
-    const sahnePayM = showMeasurements ? 150 : 48
+    /*
+     * PAY ÖLÇÜLERE GÖRE DEĞİŞMİYOR (bkz. tek ekran dalındaki aynı sabit).
+     * Değişince "Ölçüleri gizle" tasarımı büyütüyordu; oysa gizlemek bir
+     * görünüm anahtarı, ölçek değil.
+     */
+    const sahnePayM = 150
     // Dar ekranda yan pay en az 152 (76 + 76): satır artır/azalt düğmesi ve ölçü
     // etiketleri telefonun dışına düşmesin — bkz. tek ekran dalındaki aynı hesap.
     const yanPay = sahneVar ? (dar ? Math.max(sahnePayM, 152) : sahnePayM) : dar ? 152 : 180
@@ -1112,7 +1117,16 @@ export default function WallPreview({
    * açıksa etiketler duvarın dışında duruyor ve tuvalin dışına taşıp
    * kırpılıyordu. Ölçüler açıkken onlara da yer ayrılıyor.
    */
-  const sahnePay = showMeasurements ? 150 : 48
+  /*
+   * PAY SABİT — ÖLÇÜLERE BAĞLI DEĞİL.
+   *
+   * Ölçüler açıkken 150, kapalıyken 48 px pay ayrılıyordu; sığdırma hesabı bu
+   * paya baktığı için "Ölçüleri gizle" düğmesi tasarımı büyütüyordu. Ölçek
+   * mekânın kalibrasyonundan gelmeli, etiketlerin görünür olup olmamasından
+   * değil. Doğru olan büyük pay: etiketler açıldığında kırpılmıyor ve ekran
+   * iki durumda da aynı boyda kalıyor.
+   */
+  const sahnePay = 150
   /*
    * Dar ekran payı 88 iken (44 sol + 44 sağ) SAĞ taraf yetmiyordu: ölçü
    * etiketi + boşluk + satır artır/azalt düğmesi yaklaşık 76 px istiyor.
