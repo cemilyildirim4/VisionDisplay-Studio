@@ -651,6 +651,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         if (eski?.dosya?.startsWith('blob:')) URL.revokeObjectURL(eski.dosya)
         return kayit
       })
+      /*
+       * BAŞLANGIÇ MESAFESİ TASARIMA GÖRE.
+       *
+       * Varsayılan 15 m her fotoğrafa uymuyordu; kullanıcı da elle 1 m gibi
+       * bir değer bırakınca tasarım kareyi taşıyordu. Bir ekranı bütün olarak
+       * görebilmek için kabaca genişliğinin 1,6 katı kadar geriden bakmak
+       * gerekir; kadraj = mesafe × 1,11 olduğundan bu, ekranın kadrajın
+       * ~%70'ini kaplaması demek. 2–120 m arasına sıkıştırılıyor.
+       */
+      setOzelMesafeM((eski) => {
+        const onerilen = Math.max(2, Math.min(120, Math.round(tasarimWm * 1.6)))
+        return eski === VARSAYILAN_MESAFE_M ? onerilen : eski
+      })
       setScene('ozel')
       mekaniOrtala()
       oneriyiUygula(kayit)
@@ -1425,8 +1438,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * genişliği bu metreye bölününce 1 metrenin piksel karşılığı çıkıyor.
      * Fotoğraf artık ölçeklenmediği için yakınlık çarpanı yok.
      */
+    /*
+     * ÇEKİM MESAFESİ ÇOK KÜÇÜKSE ÇİZİM SINIRLANIR.
+     *
+     * 1 metre yazıldığında kadraj 1,11 m ediyor; 2,76 m'lik bir tasarım
+     * kareyi baştan aşağı kaplayıp fotoğrafı görünmez hâle getiriyordu.
+     * Ölçü hesabı doğru ama gösterilen şey işe yaramıyor. Bu yüzden çizim
+     * kadrajın 1,4 katıyla sınırlı; sığmadığı zaten uyarıyla söyleniyor
+     * (bkz. scene.doesNotFit).
+     */
     const gercek = fotoSahne.tamGorunsun
-      ? yer.genislik / kadrajGenisligi(ozelMesafeM)
+      ? Math.min(
+          yer.genislik / kadrajGenisligi(ozelMesafeM),
+          (yer.genislik * 1.4) / Math.max(0.1, tasarimWm),
+          (yer.yukseklik * 1.4) / Math.max(0.1, tasarimHm),
+        )
       : duvarOlcegi * sahneYakinlik
     /*
      * HAZIR SAHNEDE KIRPMA YOK.
