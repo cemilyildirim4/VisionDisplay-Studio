@@ -384,7 +384,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * bir kiosk gövdesiyle. Tip listesi ancak gövde varken anlamlı; kapalıyken
    * gizleniyor ki panel gereksiz seçenekle dolmasın.
    */
-  const [kioskVar, setKioskVar] = useState(true)
+  /* Varsayılan: gövde YOK — ekranların çoğu duvara/panoya monteli. */
+  const [kioskVar, setKioskVar] = useState(false)
   /* Yere basan tipler: dikey yerleşimde zemine oturma bunlara uygulanıyor. */
   const ayakVar = kioskTipi !== 'duvar'
   /*
