@@ -48,6 +48,8 @@ export default function Scene({
   /* Kullanicinin kendi fotografi — sahneler.js listesinde yok, disaridan gelir */
   ozelSahne = null,
   kioskTipi = 'duvar',
+  duvarWmEtiket = 0,
+  duvarHmEtiket = 0,
 }) {
   // Fotoğraflı mekânlar sahneler.js'te tanımlı; yeni eklemek için orası yeterli
   const sahne = id === 'ozel' ? ozelSahne : sahneBul(id)
@@ -74,6 +76,8 @@ export default function Scene({
         olcuGoster={olcuGoster}
         kayma={kayma}
         kioskTipi={kioskTipi}
+        duvarWmEtiket={duvarWmEtiket}
+        duvarHmEtiket={duvarHmEtiket}
       />
     )
 

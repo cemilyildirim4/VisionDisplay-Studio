@@ -1227,10 +1227,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * tanınmaz hâle getiriyordu. Ölçek zaten gerçek; yakınlaşma sadece
      * küçük ekranı görünür tutmak için hafif bir dokunuş.
      */
-    const yer = fotoSahne?.dosya ? fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h) : null
-    if (yer?.pxPerM > 0 && tasarimWm > 0 && tasarimHm > 0 && tuvalBoyut.w > 0) {
-      const w = tasarimWm * yer.pxPerM * taban
-      const h = tasarimHm * yer.pxPerM * taban
+    const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
+    /* Ölçek duvar payından geliyorsa yakınlık hesabı da onu kullanmalı. */
+    const olcekBirim =
+      yer && fotoSahne?.duvarPayW > 0 && mekanDuvarWm > 0
+        ? (yer.genislik * fotoSahne.duvarPayW) / mekanDuvarWm
+        : yer?.pxPerM
+    if (olcekBirim > 0 && tasarimWm > 0 && tasarimHm > 0 && tuvalBoyut.w > 0) {
+      const w = tasarimWm * olcekBirim * taban
+      const h = tasarimHm * olcekBirim * taban
       /*
        * SIĞMIYORSA KAMERA GERİ ÇEKİLİR — TASARIM KÜÇÜLTÜLMEZ.
        *
@@ -1256,7 +1261,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * tasarım kadraja tam oturuyor, uzaklaştıkça küçülüyor, yaklaştıkça
        * büyüyüp kadrajı taşıyor — gerçekte de öyle olur.
        */
-      const sigan = Math.min(alanW / (tasarimWm * yer.pxPerM), alanH / (tasarimHm * yer.pxPerM))
+      const sigan = Math.min(alanW / (tasarimWm * olcekBirim), alanH / (tasarimHm * olcekBirim))
       const buyut = Math.min(1.3, Math.max(1, Math.min((alanW * 0.9) / w, (alanH * 0.9) / h)))
       const otoIlerleme = (otoIzlemeM - OTO_EN_AZ_M) / (ZOOM_EN_COK_M - OTO_EN_AZ_M)
       const tabanOto = Math.max(0.5, Math.min(1.22, 1.22 - otoIlerleme * 0.72))
@@ -1271,7 +1276,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return Math.max(0.3, Math.min(2.2, kadraj * Math.max(0.3, Math.min(1.8, oran))))
     }
     return taban
-  }, [fotoSahne, izlemeMesafesi, otoIzlemeM, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm])
+  }, [fotoSahne, izlemeMesafesi, otoIzlemeM, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm, mekanDuvarWm])
 
   /*
    * FOTOĞRAFLI MEKÂNDA ÇİZİM ÖLÇEĞİ.
@@ -1324,7 +1329,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * ise ekranin gercek metre karsiligi. Olcu etiketleri, surukleme ve
      * arayuz bundan etkilenmiyor.)
      */
-    const gercek = yer.pxPerM * sahneYakinlik
+    /*
+     * ÖLÇEK DUVARIN KENDİSİNDEN.
+     *
+     * Sahnede duvarPayW alani varsa (AVM koridoru, şehir meydanı) fotoğraftaki
+     * arka duvar, KULLANICININ girdiği duvar genişliği sayılıyor. Duvar
+     * ölçüsünü değiştirmek fotoğraftaki duvarın metre karşılığını
+     * değiştiriyor: 12 m yazınca duvar 12 m'lik, 6 m yazınca 6 m'lik bir
+     * duvar gibi davranıyor ve tasarım ona göre ölçekleniyor — çizilmiş
+     * iç/dış mekân sahnelerindeki davranışın aynısı.
+     */
+    const duvarOlcegi =
+      fotoSahne.duvarPayW > 0 && mekanDuvarWm > 0
+        ? (yer.genislik * fotoSahne.duvarPayW) / mekanDuvarWm
+        : yer.pxPerM
+    const gercek = duvarOlcegi * sahneYakinlik
     /*
      * HAZIR SAHNEDE KIRPMA YOK.
      *
@@ -1801,6 +1820,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               kioskGizle={!!koseTuval || lTipiVar || !kioskVar}
               /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
               olcuGoster={showMeasurements}
+              /* Duvar etiketi kullanıcının kendi ölçüsünü yazıyor */
+              duvarWmEtiket={mekanDuvarWm}
+              duvarHmEtiket={mekanDuvarHm}
               /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
               yakinlik={sahneYakinlik}
               kayma={mekanKayma}
