@@ -169,8 +169,11 @@ export const SAHNELER = [
     panelEnM: 6,
     /* Taş duvar 905 piksel / 1672 piksel (bkz. AVM koridorundaki not). */
     duvarPayW: 0.541,
-    /* Taş duvar: 905 × 200 piksel, kadrajın ortasında (bkz. AVM notu). */
-    duvarKutu: { x0: 384, y0: 372, x1: 1289, y1: 572 },
+    /*
+     * Taş duvar: 905 piksel geniş, üst kenarı 410 (duvarın üstündeki koyu
+     * ızgara bandı görselden kaldırıldı; artık duvarın hemen üstü gökyüzü).
+     */
+    duvarKutu: { x0: 384, y0: 410, x1: 1289, y1: 610 },
     maskeli: false,
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
