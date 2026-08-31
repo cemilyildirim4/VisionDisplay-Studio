@@ -1147,8 +1147,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (yer?.pxPerM > 0 && tasarimWm > 0 && tasarimHm > 0 && tuvalBoyut.w > 0) {
       const w = tasarimWm * yer.pxPerM * taban
       const h = tasarimHm * yer.pxPerM * taban
-      const gerekli = Math.min((tuvalBoyut.w * 0.45) / w, (tuvalBoyut.h * 0.45) / h)
-      return taban * Math.max(1, Math.min(1.3, gerekli))
+      /*
+       * SIĞMIYORSA KAMERA GERİ ÇEKİLİR — TASARIM KÜÇÜLTÜLMEZ.
+       *
+       * Eskiden tasarım tuvale sığmadığında ÖLÇEK kırpılıyordu (bkz. fotoOlcek).
+       * Sonuç: arka plan mesafeyle küçülürken tasarım sığdırma sınırında
+       * takılı kalıyor, 18 m'lik ekran 18 m'lik duvarı aşıyordu. Doğrusu
+       * ikisini birlikte küçültmek: kadraj geri çekilir, oran korunur.
+       *
+       * Pay 150 px: WallPreview'in sahne modunda ayırdığı kenar payıyla aynı
+       * (bkz. WallPreview `sahnePay`), yoksa orada ikinci bir kırpma olur.
+       */
+      const alanW = Math.max(180, tuvalBoyut.w - 150)
+      const alanH = Math.max(140, tuvalBoyut.h - 150)
+      /*
+       * Sığdırma bir ÜST SINIR, çarpan değil: mesafeyle daha da uzaklaşmak
+       * serbest kalsın diye. (Çarpan olarak uygulandığında mesafe hiçbir şeyi
+       * değiştirmiyordu: yakınlık tamamen sığdırmadan geliyordu.)
+       */
+      const enCokYakinlik = Math.min(alanW / (tasarimWm * yer.pxPerM), alanH / (tasarimHm * yer.pxPerM))
+      const buyut = Math.min(1.3, Math.max(1, Math.min((alanW * 0.9) / w, (alanH * 0.9) / h)))
+      return Math.min(taban * buyut, enCokYakinlik)
     }
     return taban
   }, [fotoSahne, izlemeMesafesi, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm])
@@ -1205,6 +1224,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * arayuz bundan etkilenmiyor.)
      */
     const gercek = yer.pxPerM * sahneYakinlik
+    /*
+     * HAZIR SAHNEDE KIRPMA YOK.
+     *
+     * Sığdırma işini artık kamera yapıyor (bkz. sahneYakinlik): tasarım
+     * kadraja sığmıyorsa arka planla BİRLİKTE küçülüyor. Burada ayrıca
+     * kırpmak, tam da kullanıcının gördüğü hatayı üretiyordu — arka plan
+     * uzaklaşırken tasarım olduğu yerde kalıyordu.
+     */
+    if (!fotoSahne.tamGorunsun) return gercek
     // Fotoğrafın tuvalde görünen kısmı: sığdırılmışta bantlar dışında kalan alan
     const alanW = Math.min(tuvalBoyut.w, yer.genislik * sahneYakinlik)
     const alanH = Math.min(tuvalBoyut.h, yer.yukseklik * sahneYakinlik)

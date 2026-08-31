@@ -74,7 +74,16 @@ export const SAHNELER = [
      * geliyor. Fotografin kendi zemin dokusu da tam bu hizada basliyor.
      */
     zeminY: 646,
-    panelEnM: 4,
+    /*
+     * PANEL DÜZLEMİ = DUVAR DÜZLEMİ.
+     *
+     * Panel 440 piksel genişliğinde ve 4 m sayılıyordu; bu 110 piksel/m
+     * demek, yani ekran duvardan belirgin biçimde ÖNDE duruyor kabul
+     * ediliyordu. Sonuç: 12 m'lik bir tasarım, 12 m'lik arka duvardan
+     * yarı yarıya büyük görünüyordu. Ekran duvara asılıyor; ölçek de
+     * duvarın ölçeği olmalı: duvar hizasında 80 piksel/m, 440 / 80 = 5,5 m.
+     */
+    panelEnM: 5.5,
     maskeli: false, // fotografta kendi LED yuzeyi yok
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
@@ -128,7 +137,13 @@ export const SAHNELER = [
      * basladigi yer 640 - kiosk artik dosemeye basiyor.
      */
     zeminY: 740,
-    panelEnM: 4,
+    /*
+     * PANEL DÜZLEMİ = TAŞ DUVAR DÜZLEMİ (bkz. AVM koridorundaki aynı not).
+     * Panel 300 piksel; duvar hizasında 1 m ≈ 50 piksel → 300 / 50 = 6 m.
+     * Önceki 4 m değeri ekranı duvarın 1,5 kat önüne koyuyordu ve 18 m'lik
+     * tasarım 18 m'lik duvarı aşıyordu.
+     */
+    panelEnM: 6,
     maskeli: false,
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).

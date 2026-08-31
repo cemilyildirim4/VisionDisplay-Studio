@@ -839,12 +839,18 @@ export default function WallPreview({
       return Math.max(enBuyuk, derinlik)
     }, 0)
 
-    const pxPerM = Math.min(
-      availW / (wallWm + humanWmM),
-      availH / (wallHm + kavisPayiM),
-      sahneVar ? Infinity : 280,
-      sahneOlcek,
-    )
+    /*
+     * SAHNE ÖLÇEĞİ VERİLDİYSE BİREBİR UYULUR (bkz. tek ekran dalı).
+     * Tuvale sığdırma işini sahne kendisi yapıyor: sığmayan tasarımda kamera
+     * geri çekiliyor, ölçek kırpılmıyor.
+     */
+    const pxPerM = Number.isFinite(sahneOlcek)
+      ? sahneOlcek
+      : Math.min(
+          availW / (wallWm + humanWmM),
+          availH / (wallHm + kavisPayiM),
+          sahneVar ? Infinity : 280,
+        )
     olcekRef.current = pxPerM
     const wallW = wallWm * pxPerM
     const wallH = wallHm * pxPerM
@@ -1165,7 +1171,18 @@ export default function WallPreview({
   const sigdirWm = sahneVar ? Math.min(wallWm, Math.max(1, cols) * cw) : wallWm + humanWm
   const sigdirHm = sahneVar ? Math.min(wallHm, Math.max(1, rows) * ch) : wallHm
   // Ust sinir yalnizca sahne YOKKEN — bkz. cok ekranli daldaki ayni hesap
-  const basePxPerM = Math.min(availW / sigdirWm, availH / sigdirHm, sahneVar ? Infinity : 340, sahneOlcek)
+  /*
+   * SAHNE ÖLÇEĞİ VERİLDİYSE BİREBİR UYULUR.
+   *
+   * Eskiden burada tuvale sığdırma da hesaba katılıyordu (min). Sonuç: arka
+   * plan mesafeyle küçülürken tasarım sığdırma sınırında takılı kalıyor,
+   * 18 m'lik ekran 18 m'lik duvarı aşıyordu. Sığdırmayı artık sahne yapıyor:
+   * tasarım kadraja sığmıyorsa kamera geri çekiliyor (bkz. App sahneYakinlik),
+   * yani arka plan ve tasarım BİRLİKTE küçülüyor; oran hiç bozulmuyor.
+   */
+  const basePxPerM = Number.isFinite(sahneOlcek)
+    ? sahneOlcek
+    : Math.min(availW / sigdirWm, availH / sigdirHm, sahneVar ? Infinity : 340)
 
   const curveKPre =
     screenType === 'curved' || screenType === 'curvedIn'
