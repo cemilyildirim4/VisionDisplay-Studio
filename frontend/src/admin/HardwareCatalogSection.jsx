@@ -56,18 +56,6 @@ const KINDS = [
       { key: 'powerDrawWatt', label: 'Güç', format: (v) => `${v} W` },
     ],
   },
-  {
-    key: 'modules',
-    label: 'LED Modül',
-    api: 'cabinets',
-    columns: [
-      { key: 'pixelPitchMm', label: 'Pitch', format: (v) => `${v} mm` },
-      { key: 'sizeMm', label: 'Ölçü (mm)', format: (_, item) => `${item.widthMm} × ${item.heightMm}` },
-      { key: 'sizePx', label: 'Piksel', format: (_, item) => `${item.pixelWidth} × ${item.pixelHeight}` },
-      { key: 'brightnessNits', label: 'Parlaklık', format: (v) => `${v} nit` },
-      { key: 'powerMaxWatts', label: 'Maks. güç', format: (v) => `${v} W` },
-    ],
-  },
 ]
 
 const BLANKS = {
@@ -115,20 +103,6 @@ const BLANKS = {
     ethernetPortCount: 0,
     inputPortsInfo: '',
     powerDrawWatt: 0,
-  },
-  modules: {
-    name: '',
-    model: '',
-    price: 0,
-    pixelPitchMm: 2.5,
-    widthMm: 320,
-    heightMm: 160,
-    widthPx: 128,
-    heightPx: 64,
-    brightnessNits: 800,
-    refreshRateHz: 3840,
-    maxPowerWatt: 32,
-    typicalPowerWatt: 11,
   },
 }
 
@@ -192,23 +166,6 @@ function toForm(kind, item) {
       heatDissipationBtu: item.heatDissipationBtu ?? 0,
     }
   }
-  if (kind === 'modules') {
-    return {
-      ...BLANKS[kind],
-      name: item.name || item.modelCode || '',
-      model: item.modelCode ?? '',
-      price: item.price ?? 0,
-      pixelPitchMm: item.pixelPitchMm ?? 0,
-      widthMm: item.widthMm ?? 0,
-      heightMm: item.heightMm ?? 0,
-      widthPx: item.pixelWidth ?? 0,
-      heightPx: item.pixelHeight ?? 0,
-      brightnessNits: item.brightnessNits ?? 0,
-      refreshRateHz: item.refreshRateHz ?? 0,
-      maxPowerWatt: item.powerMaxWatts ?? 0,
-      typicalPowerWatt: item.powerTypicalWatts ?? 0,
-    }
-  }
   return { ...BLANKS[kind], ...item, name: item.name ?? '', model: item.model ?? '' }
 }
 
@@ -265,36 +222,6 @@ function toHardwarePayload(kind, form) {
     }
   }
   return base
-}
-
-function stripCabinForPut(cabin) {
-  if (!cabin) return {}
-  const { series, createdAt, id, ...rest } = cabin
-  return rest
-}
-
-function toModulePayload(form, existing, seriesId) {
-  const modelCode = (form.model || form.name || '').trim()
-  return {
-    ...stripCabinForPut(existing),
-    seriesId: existing?.seriesId ?? seriesId ?? 1,
-    category: existing?.category || 'led',
-    productType: 'MODULE',
-    defaultModulesPerCard: existing?.defaultModulesPerCard || 10,
-    name: form.name || null,
-    modelCode,
-    price: Number(form.price),
-    pixelPitchMm: Number(form.pixelPitchMm),
-    widthMm: Number(form.widthMm),
-    heightMm: Number(form.heightMm),
-    pixelWidth: Number(form.widthPx),
-    pixelHeight: Number(form.heightPx),
-    brightnessNits: Number(form.brightnessNits),
-    refreshRateHz: Number(form.refreshRateHz),
-    powerMaxWatts: Number(form.maxPowerWatt),
-    powerTypicalWatts: Number(form.typicalPowerWatt),
-    depthMm: existing?.depthMm ?? 0,
-  }
 }
 
 function TypeFields({ kind, modal, setModal }) {
@@ -401,45 +328,12 @@ function TypeFields({ kind, modal, setModal }) {
     )
   }
 
-  if (kind === 'modules') {
-    return (
-      <>
-        <Field label="Piksel aralığı (mm)">
-          <input type="number" min="0" step="0.01" value={modal.pixelPitchMm} onChange={num('pixelPitchMm')} className={inputCls} />
-        </Field>
-        <Field label="Genişlik (mm)">
-          <input type="number" min="0" step="1" value={modal.widthMm} onChange={num('widthMm')} className={inputCls} />
-        </Field>
-        <Field label="Yükseklik (mm)">
-          <input type="number" min="0" step="1" value={modal.heightMm} onChange={num('heightMm')} className={inputCls} />
-        </Field>
-        <Field label="Piksel genişlik (px)">
-          <input type="number" min="0" step="1" value={modal.widthPx} onChange={num('widthPx')} className={inputCls} />
-        </Field>
-        <Field label="Piksel yükseklik (px)">
-          <input type="number" min="0" step="1" value={modal.heightPx} onChange={num('heightPx')} className={inputCls} />
-        </Field>
-        <Field label="Parlaklık (nit)">
-          <input type="number" min="0" step="1" value={modal.brightnessNits} onChange={num('brightnessNits')} className={inputCls} />
-        </Field>
-        <Field label="Yenileme hızı (Hz)">
-          <input type="number" min="0" step="1" value={modal.refreshRateHz} onChange={num('refreshRateHz')} className={inputCls} />
-        </Field>
-        <Field label="Maks. güç (Watt)">
-          <input type="number" min="0" step="0.01" value={modal.maxPowerWatt} onChange={num('maxPowerWatt')} className={inputCls} />
-        </Field>
-        <Field label="Tipik güç (Watt)">
-          <input type="number" min="0" step="0.01" value={modal.typicalPowerWatt} onChange={num('typicalPowerWatt')} className={inputCls} />
-        </Field>
-      </>
-    )
-  }
-
   return null
 }
 
 /**
- * Donanım kataloğu (6 parça, tipe özel form) + sistem işçilik çarpanı ($USD/m²).
+ * Donanım kataloğu (5 parça, tipe özel form) + sistem işçilik çarpanı ($USD/m²).
+ * LED modül / kabin yalnızca Modeller sekmesinden eklenir.
  */
 export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
   const [kind, setKind] = useState('power-supplies')
@@ -448,8 +342,6 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
   const [message, setMessage] = useState(null)
   const [modal, setModal] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [seriesId, setSeriesId] = useState(1)
-  const [cabinCache, setCabinCache] = useState({})
 
   const [labor, setLabor] = useState('')
   const [laborSaved, setLaborSaved] = useState(null)
@@ -463,11 +355,7 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
   const loadItems = useCallback(async () => {
     setLoading(true)
     try {
-      const url =
-        kindMeta.api === 'cabinets'
-          ? `${API_URL}/api/cabinets?productType=MODULE`
-          : `${API_URL}/api/hardware/${kind}`
-      const res = await apiFetch(url, { auth: true })
+      const res = await apiFetch(`${API_URL}/api/hardware/${kind}`, { auth: true })
       if (res.status === 401) {
         oturumDustu()
         return
@@ -475,17 +363,12 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
       if (!res.ok) throw new Error('Liste alınamadı.')
       const data = await res.json()
       setItems(Array.isArray(data) ? data : [])
-      if (kindMeta.api === 'cabinets') {
-        const map = {}
-        for (const c of data) map[c.id] = c
-        setCabinCache(map)
-      }
     } catch (e) {
       setMessage({ type: 'err', text: e.message })
     } finally {
       setLoading(false)
     }
-  }, [kind, kindMeta.api, oturumDustu])
+  }, [kind, oturumDustu])
 
   const loadLabor = useCallback(async () => {
     try {
@@ -511,19 +394,6 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
   useEffect(() => {
     loadLabor()
   }, [loadLabor])
-
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const res = await apiFetch(`${API_URL}/api/cabinets/series`, { auth: true })
-        if (!res.ok) return
-        const list = await res.json()
-        if (Array.isArray(list) && list[0]?.id) setSeriesId(list[0].id)
-      } catch {
-        /* seri yoksa varsayılan 1 */
-      }
-    })()
-  }, [])
 
   const saveLabor = async () => {
     const value = Number(labor)
@@ -563,22 +433,14 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
     setSaving(true)
     setMessage(null)
     try {
-      const isModule = kindMeta.api === 'cabinets'
-      const url = isModule
-        ? modal.id
-          ? `${API_URL}/api/cabinets/${modal.id}`
-          : `${API_URL}/api/cabinets`
-        : modal.id
-          ? `${API_URL}/api/hardware/${kind}/${modal.id}`
-          : `${API_URL}/api/hardware/${kind}`
-      const body = isModule
-        ? toModulePayload(modal, cabinCache[modal.id], seriesId)
-        : toHardwarePayload(kind, modal)
+      const url = modal.id
+        ? `${API_URL}/api/hardware/${kind}/${modal.id}`
+        : `${API_URL}/api/hardware/${kind}`
       const res = await apiFetch(url, {
         method: modal.id ? 'PUT' : 'POST',
         auth: true,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(toHardwarePayload(kind, modal)),
       })
       if (res.status === 401) {
         oturumDustu()
@@ -599,17 +461,16 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
   }
 
   const removeItem = (item) => {
-    const display = item.name || item.modelCode || `#${item.id}`
+    const display = item.name || `#${item.id}`
     askConfirm(
       `${kindMeta.label} sil`,
       `"${display}" kalıcı olarak silinecek. Bu işlem geri alınamaz.`,
       async () => {
         try {
-          const url =
-            kindMeta.api === 'cabinets'
-              ? `${API_URL}/api/cabinets/${item.id}`
-              : `${API_URL}/api/hardware/${kind}/${item.id}`
-          const res = await apiFetch(url, { method: 'DELETE', auth: true })
+          const res = await apiFetch(`${API_URL}/api/hardware/${kind}/${item.id}`, {
+            method: 'DELETE',
+            auth: true,
+          })
           if (res.status === 401) {
             oturumDustu()
             return
@@ -629,8 +490,8 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
 
   const laborDirty = laborSaved !== null && Number(labor) !== Number(laborSaved)
 
-  const itemName = (item) => item.name || item.modelCode || '—'
-  const itemModel = (item) => item.model || item.modelCode || '—'
+  const itemName = (item) => item.name || '—'
+  const itemModel = (item) => item.model || '—'
 
   return (
     <div>
@@ -779,7 +640,7 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
                   value={modal.name}
                   onChange={(e) => setModal((m) => ({ ...m, name: e.target.value }))}
                   className={inputCls}
-                  placeholder={kind === 'modules' ? 'ör. Indoor P2.5' : 'ör. MeanWell 200W'}
+                  placeholder="ör. MeanWell 200W"
                 />
               </Field>
               <Field label="Model">
@@ -787,7 +648,6 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
                   value={modal.model}
                   onChange={(e) => setModal((m) => ({ ...m, model: e.target.value }))}
                   className={inputCls}
-                  placeholder={kind === 'modules' ? 'ör. P2.5-320x160' : ''}
                 />
               </Field>
               <Field label="Fiyat ($USD)">

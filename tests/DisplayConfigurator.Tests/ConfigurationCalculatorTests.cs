@@ -49,10 +49,13 @@ public class ConfigurationCalculatorTests
         Assert.Equal("800x600", result.TotalResolution);
         Assert.Equal(0.48, result.TotalPixelsMpx, 2);
 
-        // Montaj tipi kabinden geliyor (DTO'da belirtilmedi) → CABINET,
-        // her kabin kendi alıcı kartına sahip olduğundan 12 kart.
+        // Montaj tipi yalnızca künye; alıcı kart artık kabin/modül-başına değil
+        // piksel kapasitesine göre. 12 modül → PSU ceil(12/6)=2.
+        // 800x600 = 480.000 px, katalog kartı yok → 650.000 tavanı → 1 alıcı kart.
         Assert.Equal("CABINET", result.AssemblyType);
-        Assert.Equal(12, result.ReceivingCardCount);
+        Assert.Equal(1, result.ReceivingCardCount);
+        Assert.Equal(2, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
+        Assert.Equal(0, result.HardwareBreakdown.Single(x => x.Key == "patchCable").Quantity);
 
         // 800x600 = 480.000 piksel, tek RJ45 portu (max 650.000) yeterli.
         Assert.Equal(1, result.RequiredRj45Ports);
@@ -81,24 +84,34 @@ public class ConfigurationCalculatorTests
     }
 
     [Fact]
-    public void Calculate_ModuleAssemblyType_AlicKartSayisiniModulBasinaHesaplar()
+    public void Calculate_AlicKartPikselKapasitesineGoreMinimumAdetDoner()
     {
         var cabin = SampleCabinet();
         var dto = new CreateConfigurationDto
         {
-            ProjectName = "Modül Testi",
+            ProjectName = "Alıcı Kart",
             CabinId = 1,
             Cols = 6,
-            Rows = 10, // 60 modül
+            Rows = 10, // 60 modül, 1200x2000 = 2.400.000 px
             AssemblyType = "MODULE",
-            ModulesPerCard = 10,
+        };
+        var hardware = new HardwareCatalogItems
+        {
+            ReceivingCard = new ReceivingCard
+            {
+                Name = "Nova A5s",
+                Price = 40m,
+                MaxPixelWidth = 512,
+                MaxPixelHeight = 512, // 262.144 px/kart → ceil(2.4e6/262144)=10
+            },
         };
 
-        var result = ConfigurationCalculator.Calculate(dto, cabin);
+        var result = ConfigurationCalculator.Calculate(dto, cabin, hardware);
 
-        Assert.Equal("MODULE", result.AssemblyType);
-        // 60 modül / 10 modül-per-kart = 6 alıcı kart.
-        Assert.Equal(6, result.ReceivingCardCount);
+        Assert.Equal(10, result.ReceivingCardCount);
+        Assert.Equal(9, result.HardwareBreakdown.Single(x => x.Key == "patchCable").Quantity);
+        Assert.Equal(10, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity); // ceil(60/6)
+        Assert.Equal(60, result.HardwareBreakdown.Single(x => x.Key == "module").Quantity);
     }
 
     [Fact]
@@ -227,11 +240,12 @@ public class ConfigurationCalculatorTests
 
         var result = ConfigurationCalculator.Calculate(dto, cabin, hardware);
 
-        // Modül 7,2 kW; η=0,9 → 7,2 / 0,9 = 8 kW. PSU 12 × 80 $ = 960 $.
+        // 12 modül × 600 W = 7,2 kW; η=0,9 → 8 kW. PSU ceil(12/6)=2 × 80 $ = 160 $.
         Assert.Equal(8.00m, result.TotalMaxPowerKw);
         Assert.Equal(2.67m, result.TotalAvgPowerKw); // 2400 / 0.9 = 2666.6… → 2.67 kW
-        Assert.Equal(960m, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").LineTotal);
-        Assert.Equal(12960m, result.HardwareSubtotal);
+        Assert.Equal(160m, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").LineTotal);
+        Assert.Equal(2, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
+        Assert.Equal(12160m, result.HardwareSubtotal);
 
         // Modül ısı = 7200 × 3.412 = 24566.4; toplam BTU = (8000 × 3.412) + 24566.4
         Assert.Equal(24566.4m, result.ModuleHeatDissipationBtu);
@@ -256,6 +270,42 @@ public class ConfigurationCalculatorTests
         Assert.Equal(3m, result.ScreenAreaM2);
         Assert.Equal(150m, result.LaborCost);
         Assert.Equal(12150m, result.TotalPrice);
+    }
+
+    [Fact]
+    public void CountPowerSupplies_AltiModuldeBirPsu()
+    {
+        Assert.Equal(1, ConfigurationCalculator.CountPowerSupplies(1));
+        Assert.Equal(1, ConfigurationCalculator.CountPowerSupplies(6));
+        Assert.Equal(2, ConfigurationCalculator.CountPowerSupplies(7));
+        Assert.Equal(2, ConfigurationCalculator.CountPowerSupplies(12));
+        Assert.Equal(10, ConfigurationCalculator.CountPowerSupplies(60));
+    }
+
+    [Fact]
+    public void CountPatchCables_DaisyChainAlicKartEksiBir()
+    {
+        Assert.Equal(0, ConfigurationCalculator.CountPatchCables(0));
+        Assert.Equal(0, ConfigurationCalculator.CountPatchCables(1));
+        Assert.Equal(5, ConfigurationCalculator.CountPatchCables(6));
+    }
+
+    [Fact]
+    public void CountProcessors_PortVeMpxTavaninaGoreAdetDoner()
+    {
+        var proc = new Processor
+        {
+            Name = "VX1000",
+            MaxPixelCapacityMpx = 6.5m,
+            EthernetPortCount = 10,
+        };
+
+        int qty = ConfigurationCalculator.CountProcessors(3_000_000, proc, out int ports);
+        Assert.Equal(1, qty);
+        Assert.True(ports >= 1);
+
+        int many = ConfigurationCalculator.CountProcessors(20_000_000, proc, out _);
+        Assert.True(many >= 2);
     }
 
     [Fact]
