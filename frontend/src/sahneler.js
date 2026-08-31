@@ -99,7 +99,8 @@ export const SAHNELER = [
      * Duvar 1080 piksel geniş (1672'nin %65'i) — ölçüldü: x 300–1380 arası
      * düz kaplama, iki yanda vitrinler başlıyor.
      */
-    duvarPayW: 0.646,
+    /* Kolonsuz duvar: 925 piksel / 1672 piksel. */
+    duvarPayW: 0.553,
     /*
      * DUVARIN FOTOĞRAFTAKİ DİKDÖRTGENİ (kaynak piksel).
      *
@@ -116,7 +117,12 @@ export const SAHNELER = [
      * değerler (286–646) duvarın dışına taşıyordu; ekran duvarın ortasına
      * değil, zemine sarkmış gibi duruyordu.
      */
-    duvarKutu: { x0: 300, y0: 178, x1: 1380, y1: 520 },
+    /*
+     * KOLONLAR HARİÇ. x 300–1380 iken tasarım sağdaki ve soldaki kolonların
+     * üzerine taşıyordu; düz kaplama ölçüldü: 365–1290 arası. Kolonların
+     * ışık şeritleri de dışarıda kaldı.
+     */
+    duvarKutu: { x0: 365, y0: 178, x1: 1290, y1: 520 },
     maskeli: false, // fotografta kendi LED yuzeyi yok
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
