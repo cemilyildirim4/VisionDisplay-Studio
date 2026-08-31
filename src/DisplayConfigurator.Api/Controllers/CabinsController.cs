@@ -268,6 +268,7 @@ public class CabinsController : ControllerBase
     {
         cabin.SeriesId = input.SeriesId;
         cabin.Category = input.Category;
+        cabin.Name = string.IsNullOrWhiteSpace(input.Name) ? null : input.Name.Trim();
         cabin.ModelCode = input.ModelCode.Trim();
         cabin.ProductType = input.ProductType;
         cabin.DefaultModulesPerCard = input.DefaultModulesPerCard;

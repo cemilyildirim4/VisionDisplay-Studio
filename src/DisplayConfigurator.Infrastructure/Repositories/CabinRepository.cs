@@ -12,6 +12,7 @@ public class CabinRepository : ICabinRepository
         c.id AS Id,
         c.series_id AS SeriesId,
         c.category AS Category,
+        c.name AS Name,
         c.model_code AS ModelCode,
         c.product_type AS ProductType,
         c.default_modules_per_card AS DefaultModulesPerCard,
@@ -126,7 +127,7 @@ public class CabinRepository : ICabinRepository
         const string sql = @"
             INSERT INTO cabins
             (
-                series_id, category, model_code, product_type, default_modules_per_card, price,
+                series_id, category, name, model_code, product_type, default_modules_per_card, price,
                 pixel_pitch_mm, width_mm, height_mm, depth_mm, weight_kg,
                 pixel_width, pixel_height, brightness_nits, refresh_rate_hz,
                 power_typical_watts, power_max_watts, viewing_distance_m, size_inch, bezel_mm,
@@ -138,7 +139,7 @@ public class CabinRepository : ICabinRepository
             )
             VALUES
             (
-                @SeriesId, @Category, @ModelCode, @ProductType, @DefaultModulesPerCard, @Price,
+                @SeriesId, @Category, @Name, @ModelCode, @ProductType, @DefaultModulesPerCard, @Price,
                 @PixelPitchMm, @WidthMm, @HeightMm, @DepthMm, @WeightKg,
                 @PixelWidth, @PixelHeight, @BrightnessNits, @RefreshRateHz,
                 @PowerTypicalWatts, @PowerMaxWatts, @ViewingDistanceM, @SizeInch, @BezelMm,
@@ -162,6 +163,7 @@ public class CabinRepository : ICabinRepository
             UPDATE cabins SET
                 series_id = @SeriesId,
                 category = @Category,
+                name = @Name,
                 model_code = @ModelCode,
                 product_type = @ProductType,
                 default_modules_per_card = @DefaultModulesPerCard,

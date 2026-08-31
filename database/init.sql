@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS public.cabins
     series_id integer,
     category character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'led'::character varying,
     model_code character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    name character varying(150) COLLATE pg_catalog."default",
     -- product_type: CABINET (kabin) | MODULE (tekli panel / indoor-outdoor-flexible)
     product_type character varying(20) COLLATE pg_catalog."default" DEFAULT 'CABINET'::character varying,
     default_modules_per_card integer DEFAULT 10,
@@ -93,9 +94,10 @@ CREATE TABLE IF NOT EXISTS public.power_supplies
     name character varying(150) COLLATE pg_catalog."default" NOT NULL,
     model character varying(100) COLLATE pg_catalog."default",
     price numeric(12,2) NOT NULL DEFAULT 0,
-    power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
-    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
+    output_voltage numeric(8,2) NOT NULL DEFAULT 0,
+    max_power_output_watt numeric(10,2) NOT NULL DEFAULT 0,
     efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
+    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT power_supplies_pkey PRIMARY KEY (id)
 );
@@ -106,9 +108,11 @@ CREATE TABLE IF NOT EXISTS public.mini_pcs
     name character varying(150) COLLATE pg_catalog."default" NOT NULL,
     model character varying(100) COLLATE pg_catalog."default",
     price numeric(12,2) NOT NULL DEFAULT 0,
+    cpu_ram_info character varying(200) COLLATE pg_catalog."default",
+    storage character varying(120) COLLATE pg_catalog."default",
+    operating_system character varying(80) COLLATE pg_catalog."default",
+    max_supported_resolution character varying(40) COLLATE pg_catalog."default",
     power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
-    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
-    efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT mini_pcs_pkey PRIMARY KEY (id)
 );
@@ -119,9 +123,9 @@ CREATE TABLE IF NOT EXISTS public.patch_cables
     name character varying(150) COLLATE pg_catalog."default" NOT NULL,
     model character varying(100) COLLATE pg_catalog."default",
     price numeric(12,2) NOT NULL DEFAULT 0,
-    power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
-    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
-    efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
+    cable_type character varying(80) COLLATE pg_catalog."default",
+    length_meters numeric(8,2) NOT NULL DEFAULT 0,
+    connector_type character varying(80) COLLATE pg_catalog."default",
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT patch_cables_pkey PRIMARY KEY (id)
 );
@@ -132,9 +136,10 @@ CREATE TABLE IF NOT EXISTS public.receiving_cards
     name character varying(150) COLLATE pg_catalog."default" NOT NULL,
     model character varying(100) COLLATE pg_catalog."default",
     price numeric(12,2) NOT NULL DEFAULT 0,
+    max_pixel_width integer NOT NULL DEFAULT 0,
+    max_pixel_height integer NOT NULL DEFAULT 0,
+    hub_port_count integer NOT NULL DEFAULT 0,
     power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
-    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
-    efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT receiving_cards_pkey PRIMARY KEY (id)
 );
@@ -145,9 +150,10 @@ CREATE TABLE IF NOT EXISTS public.processors
     name character varying(150) COLLATE pg_catalog."default" NOT NULL,
     model character varying(100) COLLATE pg_catalog."default",
     price numeric(12,2) NOT NULL DEFAULT 0,
+    max_pixel_capacity_mpx numeric(10,2) NOT NULL DEFAULT 0,
+    ethernet_port_count integer NOT NULL DEFAULT 0,
+    input_ports_info character varying(250) COLLATE pg_catalog."default",
     power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
-    heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
-    efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT processors_pkey PRIMARY KEY (id)
 );
