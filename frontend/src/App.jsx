@@ -1188,8 +1188,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const buyut = Math.min(1.3, Math.max(1, Math.min((alanW * 0.9) / w, (alanH * 0.9) / h)))
       const otoIlerleme = (otoIzlemeM - OTO_EN_AZ_M) / (ZOOM_EN_COK_M - OTO_EN_AZ_M)
       const tabanOto = Math.max(0.5, Math.min(1.22, 1.22 - otoIlerleme * 0.72))
+      /*
+       * KADRAJ = otomatik mesafedeki yakınlık, gerekiyorsa sığdırma kadar
+       * KISILMIŞ hâli. `sigan` bir üst sınır; tek başına kullanılınca küçük
+       * tasarımlarda (1 × 1 m) yakınlık 28-44 katına fırlıyor ve sahne
+       * tanınmaz oluyordu — bir kez öyle oldu, sınır o yüzden burada.
+       */
+      const kadraj = Math.min(sigan, tabanOto * buyut)
       const oran = tabanOto > 0 ? taban / tabanOto : 1
-      return Math.min(sigan, sigan * buyut) * Math.max(0.3, Math.min(1.8, oran))
+      return Math.max(0.3, Math.min(2.2, kadraj * Math.max(0.3, Math.min(1.8, oran))))
     }
     return taban
   }, [fotoSahne, izlemeMesafesi, otoIzlemeM, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm])
