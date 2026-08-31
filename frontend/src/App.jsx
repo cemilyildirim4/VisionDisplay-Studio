@@ -378,6 +378,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    *     onun açısıyla oturur; küçükse içinde kalır, büyükse taşar.
    */
   const [ekranDoldur, setEkranDoldur] = useState(true)
+  /* Tasarım hiçbir yüzeye sığmıyorsa gösterilen uyarı (bkz. scene.doesNotFit). */
+  const [sigmazUyari, setSigmazUyari] = useState(null)
+  /* yuzeyOlcusu aşağıda tanımlı; öneri işlevi ondan önce geldiği için ref. */
+  const yuzeyOlcusuRef = useRef(null)
   /*
    * oneriyiUygula, ölçü güncellemesinden ÖNCE tanımlanıyor (çizim ölçeği
    * ondan sonra hesaplanıyor). Bu yüzden işlev bir ref üzerinden çağrılıyor;
@@ -722,9 +726,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * Artık en yüksek puanlı aday kareye oturuyor — kullanıcı isterse
        * diğer karelerden birine tıklayıp taşıyor.
        */
-      setHedefKose(bulunan[0]?.koseler || null)
-      setHedefTur(bulunan[0]?.tur || null)
+      /*
+       * TASARIMIN SIĞDIĞI YÜZEY SEÇİLİYOR.
+       *
+       * En yüksek puanlı aday her zaman doğru hedef değil: 10 metrelik bir
+       * tasarım, 3 metrelik bir duvar parçasına oturtulunca oraya sıkışmak
+       * yerine kadrajı basıyordu. Artık önce ölçüsü YETEN yüzeyler aranıyor;
+       * hiçbiri yetmiyorsa en büyüğü kullanılıyor ve kullanıcıya sığmadığı,
+       * o yüzeye en fazla kaç metrelik bir ekranın gireceğiyle birlikte
+       * söyleniyor (bkz. scene.doesNotFit).
+       */
+      const olculu = bulunan.map((ad) => ({
+        ad,
+        olcu: yuzeyOlcusuRef.current?.(ad.koseler, kayit?.kaynak, ozelMesafeM) || null,
+      }))
+      const sigan = olculu.filter(
+        (o) => o.olcu && o.olcu.wm >= tasarimWm * 0.98 && o.olcu.hm >= tasarimHm * 0.98,
+      )
+      const enBuyuk = olculu
+        .filter((o) => o.olcu)
+        .sort((x, y) => y.olcu.wm * y.olcu.hm - x.olcu.wm * x.olcu.hm)[0]
+      const secilen = sigan[0]?.ad || enBuyuk?.ad || bulunan[0] || null
+      setHedefKose(secilen?.koseler || null)
+      setHedefTur(secilen?.tur || null)
       setKoseKipi(false)
+      if (!sigan.length && enBuyuk?.olcu) {
+        setSigmazUyari(
+          `${t('scene.doesNotFit')} ${enBuyuk.olcu.wm.toFixed(1).replace('.', ',')} × ${enBuyuk.olcu.hm
+            .toFixed(1)
+            .replace('.', ',')} m`,
+        )
+      } else {
+        setSigmazUyari(null)
+      }
     }
 
     const sayim = kayit?.nesneSayimi
@@ -834,6 +868,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * dörtgenin fotoğraf pikselindeki en/boy oranından çıkıyor.
    */
   const yuzeyOlcusu = (koseler, kaynak, mesafeM) => {
+    /* Ölçü hesabı tek yerde; öneri akışı buna ref üzerinden ulaşıyor. */
     if (!Array.isArray(koseler) || koseler.length !== 4 || !kaynak?.w || !kaynak?.h) return null
     const px = koseler.map((k) => ({ x: k.x * kaynak.w, y: k.y * kaynak.h }))
     const en =
@@ -846,6 +881,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const wm = (en / kaynak.w) * kadrajGenisligi(mesafeM)
     return { wm, hm: wm * (boy / en) }
   }
+
+  yuzeyOlcusuRef.current = yuzeyOlcusu
 
   /* Tasarımı panonun ölçüsüne getirir ve kabin sayısını yeniden dağıtır. */
   const olculeriPanoyaUydur = (koseler) => olculeriPanoyaUydurIle(koseler, ozelSahne?.kaynak)
@@ -2739,6 +2776,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {!ozelInceleniyor && ozelNesneler && (
                       <p className="mt-2 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                         {t('scene.objectsFound')} {ozelNesneler.join(', ')}
+                      </p>
+                    )}
+                    {sigmazUyari && (
+                      <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                        {sigmazUyari}
                       </p>
                     )}
                     {ozelUyari && (
