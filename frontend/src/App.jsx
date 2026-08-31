@@ -1200,10 +1200,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * — elimizde o kareden fazlası yok, uydurmak yerine olanı gösteriyoruz.
      * Bu yüzden 0,55 altına inmiyor.
      */
-    if (fotoSahne?.tamGorunsun) {
-      const z = VARSAYILAN_MESAFE_M / Math.max(1, ozelMesafeM)
-      return Math.max(0.55, Math.min(3, z))
-    }
+    /*
+     * KULLANICININ KENDİ FOTOĞRAFI SABİT DURUYOR.
+     *
+     * Mesafe değişince fotoğrafı da yakınlaştırıp uzaklaştırıyordum; kadraj
+     * her adımda büyüyüp küçüldüğü için kullanıcı neye baktığını
+     * kaybediyordu. Artık fotoğraf hiç ölçeklenmiyor: mesafe yalnızca
+     * ÖLÇEĞİ belirliyor, yani tasarımın o karede kaç piksel ettiğini
+     * (kadraj genişliği = mesafe × 1,11 — bkz. ozelMekan.js).
+     */
+    if (fotoSahne?.tamGorunsun) return 1
     /*
      * DUVARI ESNEYEN SAHNELERDE YAKINLAŞTIRMA YOK.
      *
@@ -1360,7 +1366,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       fotoSahne.duvarPayW > 0 && mekanDuvarWm > 0
         ? (yer.genislik * fotoSahne.duvarPayW) / mekanDuvarWm
         : yer.pxPerM
-    const gercek = duvarOlcegi * sahneYakinlik
+    /*
+     * KENDİ FOTOĞRAFINDA ÖLÇEK DOĞRUDAN MESAFEDEN.
+     *
+     * Kadrajın kapsadığı genişlik = mesafe × 1,11. Fotoğrafın tuvaldeki
+     * genişliği bu metreye bölününce 1 metrenin piksel karşılığı çıkıyor.
+     * Fotoğraf artık ölçeklenmediği için yakınlık çarpanı yok.
+     */
+    const gercek = fotoSahne.tamGorunsun
+      ? yer.genislik / kadrajGenisligi(ozelMesafeM)
+      : duvarOlcegi * sahneYakinlik
     /*
      * HAZIR SAHNEDE KIRPMA YOK.
      *
