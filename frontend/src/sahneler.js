@@ -100,7 +100,8 @@ export const SAHNELER = [
      * düz kaplama, iki yanda vitrinler başlıyor.
      */
     /* Kolonsuz duvar: 925 piksel / 1672 piksel. */
-    duvarPayW: 0.553,
+    /* Kolonsuz duvar: 948 piksel / 1672 piksel. */
+    duvarPayW: 0.567,
     /*
      * DUVARIN FOTOĞRAFTAKİ DİKDÖRTGENİ (kaynak piksel).
      *
@@ -122,7 +123,13 @@ export const SAHNELER = [
      * üzerine taşıyordu; düz kaplama ölçüldü: 365–1290 arası. Kolonların
      * ışık şeritleri de dışarıda kaldı.
      */
-    duvarKutu: { x0: 365, y0: 178, x1: 1290, y1: 520 },
+    /*
+     * Kolonların İÇ kenarları ölçüldü: soldaki ışık şeridi 364 piksele kadar,
+     * duvar 372'de başlıyor; sağdaki şerit 1324, duvar 1320'de bitiyor.
+     * Önce sağ kenarı 1290 yazmıştım; duvar 30 piksel dar kalıyor ve tasarım
+     * duvarın ortasına göre sola kaymış görünüyordu.
+     */
+    duvarKutu: { x0: 372, y0: 178, x1: 1320, y1: 520 },
     maskeli: false, // fotografta kendi LED yuzeyi yok
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
