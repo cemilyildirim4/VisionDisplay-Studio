@@ -4,18 +4,19 @@ using DisplayConfigurator.Domain.Entities;
 namespace DisplayConfigurator.Application.Engine;
 
 /// <summary>
-/// LED ekran / video duvarı yapılandırma HESAPLAMA MOTORU.
+/// LED ekran yapılandırma HESAPLAMA MOTORU.
 ///
-/// Bilerek ConfigurationService'ten ayrı, saf (side-effect'siz, veritabanı/HTTP
-/// bağımlılığı olmayan) statik bir sınıfa taşındı: bu sayede motor, gerçek bir
-/// Postgres bağlantısı veya repository mock'lamaya ihtiyaç duymadan doğrudan
-/// birim testlerle (bkz. DisplayConfigurator.Tests) doğrulanabilir.
-/// ConfigurationService artık bu sınıfı çağıran ince bir sarmalayıcıdır.
+/// Kabin başına 1 PSU / 1 alıcı kart varsayımı yoktur. Adetler seçilen
+/// modülün ölçüleri ve donanım katalog kapasitelerine göre türetilir.
+/// Saf (side-effect'siz) statik sınıf — birim testlerle doğrudan doğrulanır.
 /// </summary>
 public static class ConfigurationCalculator
 {
-    // 1 RJ45 portu standartta güvenli sınır olarak max 550.000 - 650.000 piksel taşır.
+    /// <summary>1 RJ45 portunun güvenli piksel tavanı.</summary>
     public const int MaxPixelsPerPort = 650000;
+
+    /// <summary>Bir güç kaynağı en fazla bu kadar modül besler.</summary>
+    public const int ModulesPerPowerSupply = 6;
 
     /// <summary>Watt → BTU/saat dönüşüm katsayısı.</summary>
     public const decimal WattsToBtu = 3.412m;
@@ -28,73 +29,50 @@ public static class ConfigurationCalculator
         Cabin cabin,
         HardwareCatalogItems? hardware)
     {
-        // DTO zaten [Range(1,50)] ile sınırlı, ama servis doğrudan (validasyon
-        // atlanarak) çağrılırsa 0/negatif ızgara sıfıra bölme veya anlamsız
-        // sonuç üretmesin diye burada da güvenceye alınıyor.
         if (dto.Cols <= 0 || dto.Rows <= 0)
             throw new ArgumentException("Sütun ve satır sayısı 0'dan büyük olmalıdır.");
+        if (cabin.WidthMm <= 0 || cabin.HeightMm <= 0)
+            throw new ArgumentException("Modül genişliği ve yüksekliği 0'dan büyük olmalıdır.");
 
-        int totalUnits = dto.Cols * dto.Rows; // Toplam Kabin veya Modül sayısı
+        var hw = hardware ?? new HardwareCatalogItems();
 
-        int totalWidthMm = dto.Cols * cabin.WidthMm;
-        int totalHeightMm = dto.Rows * cabin.HeightMm;
-        int totalResW = dto.Cols * cabin.PixelWidth;
-        int totalResH = dto.Rows * cabin.PixelHeight;
+        // 1. MODÜL: ekran mm / modül mm
+        int screenWidthMm = dto.Cols * cabin.WidthMm;
+        int screenHeightMm = dto.Rows * cabin.HeightMm;
+        int horizontalModules = CountHorizontalModules(screenWidthMm, cabin.WidthMm);
+        int verticalModules = CountVerticalModules(screenHeightMm, cabin.HeightMm);
+        int totalModules = horizontalModules * verticalModules;
 
-        // `long` ile çarpılıp güvenli aralıkta olduğu doğrulanıyor; aksi halde
-        // (örn. hatalı/aşırı büyük piksel değeri girilmiş bir kabin modeli)
-        // int taşması sessizce yanlış (hatta negatif) bir piksel sayısına yol açardı.
+        int totalResW = horizontalModules * cabin.PixelWidth;
+        int totalResH = verticalModules * cabin.PixelHeight;
+
         long totalPixelsLong = (long)totalResW * totalResH;
         if (totalPixelsLong > int.MaxValue)
             throw new ArgumentException("Seçilen ızgara boyutu çok büyük — toplam piksel sayısı hesaplama sınırını aşıyor.");
         int totalPixels = (int)totalPixelsLong;
         string totalResolution = $"{totalResW}x{totalResH}";
 
-        // 1. MONTAJ TİPİ VE ALICI KART HESABI
         string assemblyType = !string.IsNullOrWhiteSpace(dto.AssemblyType)
             ? dto.AssemblyType
-            : cabin.ProductType; // DTO'dan gelmezse veri tabanındaki varsayılanı al
+            : (string.IsNullOrWhiteSpace(cabin.ProductType) ? "MODULE" : cabin.ProductType);
 
         int modulesPerCard = dto.ModulesPerCard > 0
             ? dto.ModulesPerCard
             : (cabin.DefaultModulesPerCard > 0 ? cabin.DefaultModulesPerCard : 10);
 
-        int receivingCardCount;
-
-        if (assemblyType.Equals("MODULE", StringComparison.OrdinalIgnoreCase))
-        {
-            // Modül sistemi: Örn: 60 Modül / 10 = 6 Alıcı Kart
-            receivingCardCount = (int)Math.Ceiling((double)totalUnits / modulesPerCard);
-        }
-        else
-        {
-            // Kabinli sistem: Her kabinde 1 kart var varsayılır
-            receivingCardCount = totalUnits;
-        }
-
-        // 2. RJ45 PORT HESABI VE İŞLEMCİ SEÇİM MANTIĞI
-        int requiredPorts = (int)Math.Ceiling((double)totalPixels / MaxPixelsPerPort);
-        if (requiredPorts < 1) requiredPorts = 1;
-
-        string recommendedProcessor = DetermineProcessor(totalPixels, requiredPorts);
-        int processorQty = requiredPorts > 16
-            ? (int)Math.Ceiling(requiredPorts / 16.0)
-            : 1;
-
-        // 3. DONANIM KIRILIMI (6 kalem)
-        var hw = hardware ?? new HardwareCatalogItems();
-        int moduleQty = totalUnits;
-        int powerSupplyQty = totalUnits; // kabin/modül başına 1 PSU
-        int receivingCardQty = receivingCardCount;
-        int patchCableQty = receivingCardCount;
+        // 2–5. DONANIM ADET KURALLARI
+        int powerSupplyQty = CountPowerSupplies(totalModules);
+        int receivingCardQty = CountReceivingCards(totalResW, totalResH, totalPixels, hw.ReceivingCard);
+        int patchCableQty = CountPatchCables(receivingCardQty);
+        int processorQty = CountProcessors(totalPixels, hw.Processor, out int requiredPorts);
         int miniPcQty = dto.HasMiniPc ? 1 : 0;
+
+        string recommendedProcessor = DisplayName(hw.Processor, DetermineProcessor(totalPixels, requiredPorts));
 
         var breakdown = new List<HardwareLineItemDto>
         {
-            Line("module", !string.IsNullOrWhiteSpace(cabin.ModelCode) ? cabin.ModelCode : "Modül",
-                moduleQty, cabin.Price),
-            Line("processor", DisplayName(hw.Processor, recommendedProcessor),
-                processorQty, hw.Processor?.Price ?? 0m),
+            Line("module", ModuleDisplayName(cabin), totalModules, cabin.Price),
+            Line("processor", recommendedProcessor, processorQty, hw.Processor?.Price ?? 0m),
             Line("powerSupply", DisplayName(hw.PowerSupply, "Güç Kaynağı"),
                 powerSupplyQty, hw.PowerSupply?.Price ?? 0m),
             Line("miniPc", DisplayName(hw.MiniPc, "Mini PC"),
@@ -107,14 +85,13 @@ public static class ConfigurationCalculator
 
         decimal hardwareSubtotal = Math.Round(breakdown.Sum(x => x.LineTotal), 2);
 
-        // 4. GÜÇ VE ISI
         decimal maxWattsPerUnit = cabin.PowerMaxWatts;
         decimal avgWattsPerUnit = cabin.PowerTypicalWatts > 0
             ? cabin.PowerTypicalWatts
             : maxWattsPerUnit * 0.35m;
 
-        decimal moduleMaxWatts = totalUnits * maxWattsPerUnit;
-        decimal moduleAvgWatts = totalUnits * avgWattsPerUnit;
+        decimal moduleMaxWatts = totalModules * maxWattsPerUnit;
+        decimal moduleAvgWatts = totalModules * avgWattsPerUnit;
 
         decimal efficiency = hw.PowerSupply is { EfficiencyRatio: > 0 }
             ? hw.PowerSupply.EfficiencyRatio
@@ -126,17 +103,16 @@ public static class ConfigurationCalculator
         decimal maxPowerKw = Math.Round(totalMaxWatts / 1000m, 2);
         decimal avgPowerKw = Math.Round(totalAvgWatts / 1000m, 2);
         decimal moduleHeatBtu = Math.Round(moduleMaxWatts * WattsToBtu, 2);
-        decimal totalWeightKg = Math.Round(totalUnits * (cabin.WeightKg ?? 0m), 2);
+        decimal totalWeightKg = Math.Round(totalModules * (cabin.WeightKg ?? 0m), 2);
 
-        // 5. İŞÇİLİK VE ADMIN FİYATI
-        decimal widthM = totalWidthMm / 1000m;
-        decimal heightM = totalHeightMm / 1000m;
+        decimal widthM = screenWidthMm / 1000m;
+        decimal heightM = screenHeightMm / 1000m;
         decimal screenAreaM2 = Math.Round(widthM * heightM, 4);
         decimal laborMultiplier = dto.LaborCostMultiplier ?? 1m;
         decimal laborCost = Math.Round(screenAreaM2 * laborMultiplier, 2);
         decimal adminTotal = Math.Round(hardwareSubtotal + laborCost, 2);
 
-        string aspectRatio = CalculateAspectRatio(totalWidthMm, totalHeightMm);
+        string aspectRatio = CalculateAspectRatio(screenWidthMm, screenHeightMm);
         bool isFullHd = totalResW >= 1920 && totalResH >= 1080;
         bool is4K = totalResW >= 3840 && totalResH >= 2160;
 
@@ -145,16 +121,16 @@ public static class ConfigurationCalculator
             ProjectName = string.IsNullOrWhiteSpace(dto.ProjectName) ? "Taslak Proje" : dto.ProjectName,
             CustomerName = string.IsNullOrWhiteSpace(dto.CustomerName) ? "Müşteri Belirtilmedi" : dto.CustomerName,
             CabinId = dto.CabinId,
-            CabinModelName = !string.IsNullOrWhiteSpace(cabin.ModelCode) ? cabin.ModelCode : "Standart Model",
+            CabinModelName = ModuleDisplayName(cabin),
             AssemblyType = assemblyType,
             ModulesPerCard = modulesPerCard,
-            ReceivingCardCount = receivingCardCount,
+            ReceivingCardCount = receivingCardQty,
             RequiredRj45Ports = requiredPorts,
             RecommendedProcessor = recommendedProcessor,
-            Cols = dto.Cols,
-            Rows = dto.Rows,
-            TotalWidthMm = totalWidthMm,
-            TotalHeightMm = totalHeightMm,
+            Cols = horizontalModules,
+            Rows = verticalModules,
+            TotalWidthMm = screenWidthMm,
+            TotalHeightMm = screenHeightMm,
             TotalResolution = totalResolution,
             TotalWeightKg = totalWeightKg,
             TotalMaxPowerKw = maxPowerKw,
@@ -182,6 +158,88 @@ public static class ConfigurationCalculator
             Revision = 1,
             CreatedAt = DateTime.UtcNow,
         };
+    }
+
+    /// <summary>Yatay modül = ekran genişliği / modül genişliği (yukarı yuvarlanır).</summary>
+    public static int CountHorizontalModules(int screenWidthMm, int moduleWidthMm) =>
+        Math.Max(1, (int)Math.Ceiling(screenWidthMm / (double)Math.Max(1, moduleWidthMm)));
+
+    /// <summary>Dikey modül = ekran yüksekliği / modül yüksekliği (yukarı yuvarlanır).</summary>
+    public static int CountVerticalModules(int screenHeightMm, int moduleHeightMm) =>
+        Math.Max(1, (int)Math.Ceiling(screenHeightMm / (double)Math.Max(1, moduleHeightMm)));
+
+    /// <summary>Güç kaynağı adedi = ceil(toplam modül / 6).</summary>
+    public static int CountPowerSupplies(int totalModules) =>
+        Math.Max(1, (int)Math.Ceiling(Math.Max(0, totalModules) / (double)ModulesPerPowerSupply));
+
+    /// <summary>
+    /// Alıcı kart: toplam çözünürlük (px) / kart MaxPixelCapacity (W×H).
+    /// Katalog yoksa port başına 650.000 piksel tavanı kullanılır.
+    /// </summary>
+    public static int CountReceivingCards(int totalResW, int totalResH, int totalPixels, ReceivingCard? card)
+    {
+        long capacity = 0;
+        if (card != null)
+        {
+            int capW = Math.Max(0, card.MaxPixelWidth);
+            int capH = Math.Max(0, card.MaxPixelHeight);
+            if (capW > 0 && capH > 0)
+                capacity = (long)capW * capH;
+            else if (capW > 0)
+                capacity = capW;
+            else if (capH > 0)
+                capacity = capH;
+        }
+
+        if (capacity <= 0)
+            capacity = MaxPixelsPerPort;
+
+        int byPixels = Math.Max(1, (int)Math.Ceiling(Math.Max(0, totalPixels) / (double)capacity));
+
+        if (card is { MaxPixelWidth: > 0, MaxPixelHeight: > 0 } && totalResW > 0 && totalResH > 0)
+        {
+            int byWidth = (int)Math.Ceiling(totalResW / (double)card.MaxPixelWidth);
+            int byHeight = (int)Math.Ceiling(totalResH / (double)card.MaxPixelHeight);
+            return Math.Max(byPixels, Math.Max(1, Math.Max(byWidth, byHeight)));
+        }
+
+        return byPixels;
+    }
+
+    /// <summary>Patch = max(0, alıcı kart − 1) (daisy-chain).</summary>
+    public static int CountPatchCables(int receivingCardCount) =>
+        Math.Max(0, receivingCardCount - 1);
+
+    /// <summary>
+    /// İşlemci adedi: toplam piksel, port başı bütçe ve işlemcinin port/Mpx tavanı.
+    /// </summary>
+    public static int CountProcessors(int totalPixels, Processor? processor, out int requiredPorts)
+    {
+        int portsOnUnit = processor is { EthernetPortCount: > 0 }
+            ? processor.EthernetPortCount
+            : 16;
+
+        long pixelsPerPort = MaxPixelsPerPort;
+        if (processor is { MaxPixelCapacityMpx: > 0 } && portsOnUnit > 0)
+        {
+            long fromCapacity = (long)(processor.MaxPixelCapacityMpx * 1_000_000m / portsOnUnit);
+            if (fromCapacity > 0)
+                pixelsPerPort = Math.Min(MaxPixelsPerPort, fromCapacity);
+        }
+
+        requiredPorts = Math.Max(1, (int)Math.Ceiling(Math.Max(0, totalPixels) / (double)pixelsPerPort));
+
+        int byPorts = (int)Math.Ceiling(requiredPorts / (double)portsOnUnit);
+
+        int byPixels = 1;
+        if (processor is { MaxPixelCapacityMpx: > 0 })
+        {
+            long procCap = (long)(processor.MaxPixelCapacityMpx * 1_000_000m);
+            if (procCap > 0)
+                byPixels = (int)Math.Ceiling(totalPixels / (double)procCap);
+        }
+
+        return Math.Max(1, Math.Max(byPorts, byPixels));
     }
 
     /// <summary>
@@ -222,6 +280,13 @@ public static class ConfigurationCalculator
             LineTotal = Math.Round(quantity * unitPrice, 2),
         };
 
+    private static string ModuleDisplayName(Cabin cabin)
+    {
+        if (!string.IsNullOrWhiteSpace(cabin.Name)) return cabin.Name;
+        if (!string.IsNullOrWhiteSpace(cabin.ModelCode)) return cabin.ModelCode;
+        return "Modül";
+    }
+
     private static string DisplayName(HardwareComponent? component, string fallback)
     {
         if (component == null) return fallback;
@@ -230,39 +295,21 @@ public static class ConfigurationCalculator
         return fallback;
     }
 
-    // --- NOVASTAR İŞLEMCİ SEÇİM SİMÜLASYONU ---
     public static string DetermineProcessor(int totalPixels, int requiredPorts)
     {
-        // 60 modül örneğimizde (P2.5 128x64px -> ~491k piksel):
-        // TB40 hem piksel kapasitesini (1.3M) hem de port ihtiyacını (<= 2 Port) karşılar.
         if (totalPixels <= 1300000 && requiredPorts <= 2)
-        {
             return "NovaStar TB40 (2 Port / Multi-Card)";
-        }
         if (totalPixels <= 2300000 && requiredPorts <= 2)
-        {
             return "NovaStar TB60 (2 Port)";
-        }
         if (requiredPorts <= 4 && totalPixels <= 2600000)
-        {
             return "NovaStar VX400 (4 Port)";
-        }
         if (requiredPorts <= 6 && totalPixels <= 3900000)
-        {
             return "NovaStar VX600 (6 Port)";
-        }
         if (requiredPorts <= 10 && totalPixels <= 6500000)
-        {
             return "NovaStar VX1000 (10 Port)";
-        }
         if (requiredPorts <= 16)
-        {
             return "NovaStar MCTRL4K (16 Port / 4K Pro)";
-        }
 
-        // Eskiden 16 portun üzerinde de sessizce MCTRL4K öneriliyordu — oysa tek
-        // işlemci fiziksel port sınırını aşınca birden fazla işlemci (senkron
-        // "cascading" bağlantı) gerekir. Bunu açıkça belirtiyoruz.
         int unitsNeeded = (int)Math.Ceiling(requiredPorts / 16.0);
         return $"NovaStar MCTRL4K x{unitsNeeded} (senkronize çoklu işlemci — {requiredPorts} port gerekli)";
     }
