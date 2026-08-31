@@ -7,8 +7,9 @@ using QuestPDF.Fluent;
 namespace DisplayConfigurator.Infrastructure.Services;
 
 /// <summary>
-/// İki rapor formatı: <see cref="PdfReportKind.Client"/> (fiyatsız teknik özet)
-/// ve <see cref="PdfReportKind.Admin"/> (6 kalem döküm + işçilik + güç/ısı).
+/// İki rapor formatı: <see cref="PdfReportKind.Client"/> (teknik özet + nihai toplam;
+/// kalem fiyatları ve işçilik hesabı yok) ve <see cref="PdfReportKind.Admin"/>
+/// (6 kalem döküm + işçilik + güç/ısı).
 /// </summary>
 public class PdfReportService : IPdfReportService
 {

@@ -8,7 +8,7 @@ using QuestPDF.Infrastructure;
 namespace DisplayConfigurator.Infrastructure.Pdf;
 
 /// <summary>
-/// Profesyonel PDF: müşteri (fiyatsız teknik özet) veya admin (donanım + işçilik dökümü).
+/// Profesyonel PDF: müşteri (teknik özet + nihai toplam) veya admin (donanım + işçilik dökümü).
 /// </summary>
 public class ProfessionalReportDocument : IDocument
 {
@@ -522,7 +522,33 @@ public class ProfessionalReportDocument : IDocument
             {
                 column.Item().Element(c => ComposeAdminHardware(c, areaM2, maxW, avgW, avgBtu));
             }
+            else
+            {
+                column.Item().Element(ComposeClientTotalPrice);
+            }
         });
+    }
+
+    /// <summary>
+    /// Müşteri raporunda yalnızca nihai satış tutarı. Birim fiyat, kalem dökümü
+    /// ve işçilik çarpanı bu belgede yok; onlar admin raporunda kalır.
+    /// </summary>
+    private void ComposeClientTotalPrice(IContainer container)
+    {
+        container.PaddingTop(14).Border(1.5f).BorderColor(BrandBlue)
+            .Background(Color.FromHex("#eef3f9")).Padding(12).Row(row =>
+            {
+                row.RelativeItem().AlignMiddle().Column(c =>
+                {
+                    c.Item().Text("NİHAİ TOPLAM SATIŞ FİYATI")
+                        .FontSize(8).Bold().FontColor(Colors.Grey.Darken1);
+                    c.Item().PaddingTop(2).Text("Total Amount / Price")
+                        .FontSize(7.5f).FontColor(Colors.Grey.Medium);
+                });
+                row.AutoItem().AlignRight().AlignMiddle()
+                    .Text($"${_config.TotalPrice:N2}")
+                    .FontSize(20).Bold().FontColor(BrandBlue);
+            });
     }
 
     private void ComposeAdminHardware(IContainer container, double areaM2, double maxW, double avgW, double avgBtu)
@@ -723,7 +749,7 @@ public class ProfessionalReportDocument : IDocument
             {
                 row.RelativeItem().Text(_isAdmin
                         ? "Masaüstü Bilişim Teknolojileri — Vision Display Studio. İÇ RAPOR — fiyat ve donanım dökümü müşteri belgesinde yer almaz."
-                        : "Masaüstü Bilişim Teknolojileri — Vision Display Studio. Müşteri raporu — simülasyon amaçlı belgedir.")
+                        : "Masaüstü Bilişim Teknolojileri — Vision Display Studio. Müşteri raporu — nihai toplam satış fiyatı içerir; kalem dökümü bu belgede yer almaz.")
                     .FontSize(7.5f).FontColor(Colors.Grey.Medium);
                 row.ConstantItem(70).AlignRight().Text(t =>
                 {
