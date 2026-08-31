@@ -23,8 +23,15 @@ export function BrandMark({
   hideTextOnMobile = false,
 }) {
   const logoH = size === 'lg' ? 'h-11 sm:h-12' : size === 'sm' ? 'h-7' : 'h-8 sm:h-9'
+  /*
+   * TELEFONDA DA LOGONUN YANINDA.
+   *
+   * Dar ekranda blok alt alta diziliyordu: logo üstte, yazı altında. Yazının
+   * kendi iki satırı (firma adı + sayfa adı) zaten var; logodan da ayrılınca
+   * antet üç satıra çıkıp yer kaplıyordu. Artık her ölçüde yan yana.
+   */
   return (
-    <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-4 min-w-0 w-full max-w-full">
+    <div className="flex flex-row flex-nowrap items-center gap-2.5 sm:gap-4 min-w-0 w-full max-w-full">
       <img
         src={BRAND.logoSrc}
         alt={BRAND.company}
@@ -35,7 +42,7 @@ export function BrandMark({
           darkOnDark ? 'bg-white/20 h-9' : 'bg-neutral-200 dark:bg-[#2c333f] h-8'
         }`}
       />
-      <div className={`yatay-gizle min-w-0 w-full sm:w-auto max-w-full ${hideTextOnMobile ? 'hidden sm:block' : ''}`}>
+      <div className={`yatay-gizle min-w-0 w-auto max-w-full ${hideTextOnMobile ? 'hidden sm:block' : ''}`}>
         {showCompany && (
           <p
             className={`m-0 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] truncate ${
