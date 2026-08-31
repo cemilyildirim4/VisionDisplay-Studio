@@ -65,7 +65,7 @@ export function adaylariBul(tuval, sec = {}) {
   const sonuc = []
   /* Fotoğrafta gerçek bir ekran varsa hep birinci sıra: en doğru hedef odur. */
   if (yuzey?.koseler?.length === 4) {
-    sonuc.push({ koseler: yuzey.koseler, skor: 100, tur: 'screen' })
+    sonuc.push({ koseler: yuzey.koseler, skor: 100, tur: 'screen', etiket: 'Mevcut ekran yüzeyi' })
   }
 
   const kw = tuval.width || tuval.naturalWidth
@@ -248,7 +248,7 @@ export function adaylariBul(tuval, sec = {}) {
       if (!(oranDeg > 0.3) || !(oranDeg < 5)) continue
       if (!enIyi || alan > enIyi.alan) enIyi = { koseler: bulunan.koseler, alan }
     }
-    if (enIyi) sonuc.push({ koseler: enIyi.koseler, skor: 100, tur: 'screen' })
+    if (enIyi) sonuc.push({ koseler: enIyi.koseler, skor: 92, tur: 'screen', etiket: 'Fotoğraftaki pano' })
   }
 
   /*
@@ -265,7 +265,16 @@ export function adaylariBul(tuval, sec = {}) {
     if (sonuc.length >= enCok) break
     if (merkezler.some((m) => Math.hypot(m.x - a.merkez.x, m.y - a.merkez.y) < AYRIM)) continue
     merkezler.push(a.merkez)
-    sonuc.push({ koseler: a.koseler, skor: Math.round(a.skor), tur: a.tur })
+    sonuc.push({
+      koseler: a.koseler,
+      skor: Math.round(a.skor),
+      tur: a.tur,
+      /*
+       * Kullanıcıya "3 numaralı kare" demek yetmiyor; nerede olduğunu da
+       * söylemek gerekiyor. Ad, karenin kadrajdaki yerinden türetiliyor.
+       */
+      etiket: yuzeyAdi(a.merkez),
+    })
   }
   return sonuc
 }
@@ -390,6 +399,13 @@ function dortgenEnBoy(k) {
   const en = (Math.hypot(k[1].x - k[0].x, k[1].y - k[0].y) + Math.hypot(k[2].x - k[3].x, k[2].y - k[3].y)) / 2
   const boy = (Math.hypot(k[3].x - k[0].x, k[3].y - k[0].y) + Math.hypot(k[2].x - k[1].x, k[2].y - k[1].y)) / 2
   return boy > 0 ? en / boy : 0
+}
+
+/** Adayın kadrajdaki yerine göre okunur bir ad. */
+function yuzeyAdi(merkez) {
+  const yatay = merkez.x < 0.36 ? 'Sol' : merkez.x > 0.64 ? 'Sağ' : 'Orta'
+  const dikey = merkez.y < 0.38 ? 'üst' : merkez.y > 0.62 ? 'alt' : ''
+  return `${yatay}${dikey ? ' ' + dikey : ''} duvar`
 }
 
 function dortgenMerkez(k) {

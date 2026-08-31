@@ -1589,6 +1589,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }))
   })()
 
+  /*
+   * BİR ADAYI UYGULA — kareye tıklayınca da listeden seçince de burası.
+   *
+   * Puanı düşük adayda otomatik uygulama yapılmıyor: yüzey sınırları belirsizken
+   * kesin bir yerleşim göstermek kullanıcıyı yanıltıyor. Onun yerine uyarı
+   * veriliyor ve manuel dört köşe öneriliyor (bkz. GUVEN_ESIGI).
+   */
+  const GUVEN_ESIGI = 70
+  const adayiUygula = (aday) => {
+    if (!aday) return
+    setHedefKose(aday.koseler)
+    setHedefTur(aday.tur || null)
+    setAdayKipi(false)
+    if (aday.tur === 'screen' && ekranDoldur) {
+      const yeni = olculeriPanoyaUydur(aday.koseler)
+      setOzelUyari(
+        yeni
+          ? `${t('scene.fillResized')} ${yeni.w.toFixed(2).replace('.', ',')} × ${yeni.h
+              .toFixed(2)
+              .replace('.', ',')} m`
+          : null,
+      )
+    } else if ((aday.skor || 0) < GUVEN_ESIGI) {
+      setOzelUyari(t('scene.lowConfidence'))
+    } else {
+      setOzelUyari(null)
+    }
+  }
+
   /* ADAY KARELERİN TUVALDEKİ KARŞILIĞI — köşelerle birebir aynı dönüşüm. */
   const adayTuval = (() => {
     if (!adayKipi || !adaylar.length || !fotoYer) return null
@@ -1938,26 +1967,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               adaylar={adayTuval}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
-              onSec={(a) => {
-                const i = adayTuval.indexOf(a)
-                const ham = adaylar[i]
-                if (!ham) return
-                setHedefKose(ham.koseler)
-                setHedefTur(ham.tur || null)
-                setAdayKipi(false)
-                if (ham.tur === 'screen' && ekranDoldur) {
-                  const yeni = olculeriPanoyaUydur(ham.koseler)
-                  setOzelUyari(
-                    yeni
-                      ? `${t('scene.fillResized')} ${yeni.w.toFixed(2).replace('.', ',')} × ${yeni.h
-                          .toFixed(2)
-                          .replace('.', ',')} m`
-                      : null,
-                  )
-                } else {
-                  setOzelUyari(null)
-                }
-              }}
+              onSec={(a) => adayiUygula(adaylar[adayTuval.indexOf(a)])}
             />
           )}
 
@@ -2677,6 +2687,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         {t('scene.spotsHint')}
                       </p>
                     )}
+                    {/*
+                      PUANLI ADAY LİSTESİ.
+
+                      Fotoğrafın üstündeki kareler nereyi gösterdiğini söylüyor,
+                      bu liste NEDEN önerildiğini: yüzeyin adı ve 100 üzerinden
+                      puanı. Kullanıcı hem kareye hem satıra tıklayabiliyor.
+                    */}
+                    {adayKipi &&
+                      adaylar.map((aday, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => adayiUygula(aday)}
+                          className="mt-1.5 w-full flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                        >
+                          <span className="truncate">
+                            {i + 1}. {aday.etiket || t('scene.spots')}
+                            {i === 0 ? ` · ${t('scene.recommended')}` : ''}
+                          </span>
+                          <span className="tabular-nums shrink-0">{aday.skor}/100</span>
+                        </button>
+                      ))}
                     <button
                       type="button"
                       onClick={() => oneriyiTazele()}
