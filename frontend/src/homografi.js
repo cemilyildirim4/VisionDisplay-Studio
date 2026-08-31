@@ -211,8 +211,14 @@ export function sigdirDortgen(koseler, oran) {
   if (!(enPx > 0) || !(boyPx > 0)) return koseler
   const yuzeyOran = enPx / boyPx
   /* Tasarım yüzeyden genişse enine, darsa boyuna oturuyor. */
-  const fw = oran >= yuzeyOran ? 1 : oran / yuzeyOran
-  const fh = oran >= yuzeyOran ? yuzeyOran / oran : 1
+  /*
+   * MONTAJ PAYI: ekran yüzeyin kenarına sıfır dayanmıyor. Gerçek bir montajda
+   * kasa, braket ve derz için pay bırakılır; görselde de yüzeye yapışık bir
+   * dikdörtgen sahte duruyor.
+   */
+  const pay = 0.96
+  const fw = (oran >= yuzeyOran ? 1 : oran / yuzeyOran) * pay
+  const fh = (oran >= yuzeyOran ? yuzeyOran / oran : 1) * pay
   const u0 = (1 - fw) / 2
   const v0 = (1 - fh) / 2
   const n = [

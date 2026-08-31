@@ -24,6 +24,39 @@
 
 import { fotoYerlesim, govdeOlculeri } from './sahneler.js'
 import { yonDonusumu } from './hooks/useYon.js'
+import DuvarDilim from './DuvarDilim.jsx'
+
+/**
+ * ÖLÇÜ ETİKETİNİN METNİ.
+ *
+ * Duvar ölçüsü artık kullanıcıdan geliyor (bkz. sahneler.js duvarPayW):
+ * fotoğraftaki duvar, girilen genişlik kadar sayılıyor. O yüzden kadraj
+ * genişliği, kamera mesafesi ve görünen derinlik de sabit yazı olamaz —
+ * hepsi duvardan türüyor:
+ *   kadraj  = duvar / duvarın kadrajdaki payı
+ *   mesafe  = kadraj / 1,11  (yatay görüş açısı ~58° kabulü)
+ *   derinlik= mesafe − kameranın önündeki ölü mesafe (~%26)
+ */
+function etiketMetni(o, sahne, duvarWm, duvarHm) {
+  if (!o.tur && !o.duvarOlcusu) return o.etiket
+  if (o.duvarOlcusu) {
+    return duvarWm > 0 ? `${o.etiket} ${bicimM(duvarWm)} × ${bicimM(duvarHm)} m` : o.etiket
+  }
+  const pay = sahne?.duvarPayW || 0
+  if (!(pay > 0) || !(duvarWm > 0)) return o.etiket
+  const kadraj = duvarWm / pay
+  const mesafe = kadraj / 1.11
+  if (o.tur === 'kadraj') return `${o.etiket} ~${bicimM(kadraj)} m`
+  if (o.tur === 'mesafe') return `${o.etiket} ~${bicimM(mesafe)} m`
+  if (o.tur === 'derinlik') return `${o.etiket} ~${bicimM(mesafe * 0.74)} m`
+  return o.etiket
+}
+
+/** 12 → "12", 4,5 → "4,5" */
+function bicimM(v) {
+  const n = Math.round((Number(v) || 0) * 10) / 10
+  return String(n).replace('.', ',')
+}
 
 export default function PanoFoto({
   sahne,
@@ -54,6 +87,8 @@ export default function PanoFoto({
    * pano, vitrin) oturtuluyor; onun onune bir de totem koymak yanlis olur.
    */
   kioskGizle = false,
+  duvarWmEtiket = 0,
+  duvarHmEtiket = 0,
   kayma = null,
   /*
    * KIOSK TİPİ: duvar | dokunmatik | totem | masa | disMekan
@@ -82,6 +117,12 @@ export default function PanoFoto({
   const kiosk = sahne.kiosk && !kioskGizle && ekranWpx > 0 && ekranHpx > 0
   // Ekran arka planla birlikte olceklendigi icin kiosk govdesi de ayni oranda
   const pxPerM = cizimOlcek > 0 ? cizimOlcek : (yer.pxPerM || 1) * yakinlik
+  /*
+   * Duvarı esneterek çizme koşulu: sahne bunu destekliyor ve elde geçerli bir
+   * duvar ölçüsü var. Yoksa fotoğraf eskisi gibi tek parça çiziliyor.
+   */
+  const dilimliDuvar =
+    !!sahne.duvarKutu && duvarWmEtiket > 0 && duvarHmEtiket > 0 && pxPerM > 0
   const kasa = Math.max(3, Math.min(14, ekranWpx * 0.014))
   const ekranHm = ekranHpx / pxPerM
   const { direkM, kaideM } = govdeOlculeri(ekranHm)
@@ -220,6 +261,25 @@ export default function PanoFoto({
               }}
             />
           )}
+          {/*
+            DUVARI ESNEYEN SAHNE.
+
+            Sahnede duvarKutu tanımlıysa (AVM koridoru, şehir meydanı)
+            fotoğraf dokuz dilim çiziliyor: duvar, kullanıcının girdiği
+            ölçüye göre büyüyüp küçülüyor, çevresi yerinde kalıyor. Aksi
+            hâlde eski davranış — fotoğraf tek parça ve yakınlıkla ölçekli.
+          */}
+          {dilimliDuvar ? (
+            <DuvarDilim
+              sahne={sahne}
+              kutu={sahne.duvarKutu}
+              tuvalW={tuvalW}
+              tuvalH={tuvalH}
+              duvarWpx={duvarWmEtiket * pxPerM}
+              duvarHpx={duvarHmEtiket * pxPerM}
+              disOlcek={yer.s}
+            />
+          ) : (
           <img
             src={sahne.dosya}
             alt=""
@@ -244,6 +304,7 @@ export default function PanoFoto({
               willChange: 'transform',
             }}
           />
+          )}
           {/*
             MEKÂNIN GERÇEK ÖLÇÜLERİ.
 
@@ -302,7 +363,12 @@ export default function PanoFoto({
                   letterSpacing: '0.03em',
                 }}
               >
-                {o.etiket}
+                {/*
+                  Duvar etiketi sahnenin sabit ölçüsünü değil, KULLANICININ
+                  girdiği duvar ölçüsünü yazıyor: fotoğraftaki duvar artık
+                  o ölçüyü temsil ediyor (bkz. sahneler.js duvarPayW).
+                */}
+                {etiketMetni(o, sahne, duvarWmEtiket, duvarHmEtiket)}
               </span>
             ))}
 

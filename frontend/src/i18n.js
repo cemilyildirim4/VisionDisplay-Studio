@@ -426,6 +426,9 @@ const dict = {
   'scene.customAdd': { tr: 'Fotoğraf ekle', en: 'Add photo', ar: 'إضافة صورة' },
   'scene.customChange': { tr: 'Fotoğrafı değiştir', en: 'Change photo', ar: 'تغيير الصورة' },
   'scene.suggest': { tr: 'Önerilen yere koy', en: 'Use suggested spot', ar: 'ضعه في المكان المقترح' },
+  'scene.doesNotFit': { tr: 'Tasarım bu fotoğraftaki yüzeylere sığmıyor. En büyük uygun alan yaklaşık:', en: 'The design does not fit any surface in this photo. Largest available area is about:', ar: 'لا يتسع التصميم في أي سطح بهذه الصورة. أكبر مساحة متاحة تقريبًا:' },
+  'scene.recommended': { tr: 'önerilen', en: 'recommended', ar: 'موصى به' },
+  'scene.lowConfidence': { tr: 'Bu yüzeyin sınırları net değil. Yerleşimi kontrol edin, gerekirse dört köşeyi elle işaretleyin.', en: 'This surface is not clearly bounded. Check the placement, or mark the four corners manually.', ar: 'حدود هذا السطح غير واضحة. تحقق من الموضع أو حدد الزوايا الأربع يدويًا.' },
   'scene.spots': { tr: 'Uygun yerleri göster', en: 'Show suitable spots', ar: 'إظهار الأماكن المناسبة' },
   'scene.spotsOff': { tr: 'Kareleri gizle', en: 'Hide spots', ar: 'إخفاء الأماكن' },
   'scene.spotsHint': {

@@ -84,6 +84,39 @@ export const SAHNELER = [
      * duvarın ölçeği olmalı: duvar hizasında 80 piksel/m, 440 / 80 = 5,5 m.
      */
     panelEnM: 5.5,
+    /*
+     * DUVARIN KADRAJDAKİ PAYI (0–1).
+     *
+     * Ölçek artık buradan geliyor: fotoğraftaki arka duvar, KULLANICININ
+     * girdiği duvar genişliği kadar sayılıyor. Böylece "Duvar 12 m" yerine
+     * "Duvar 6 m" yazınca fotoğraftaki duvar da 6 metrelik bir duvar gibi
+     * davranıyor ve tasarım ona göre büyüyüp küçülüyor — çizilmiş iç/dış
+     * mekân sahnelerindeki davranışın aynısı.
+     *
+     * 960 piksel / 1672 piksel = 0,574.
+     */
+    /*
+     * Duvar 1080 piksel geniş (1672'nin %65'i) — ölçüldü: x 300–1380 arası
+     * düz kaplama, iki yanda vitrinler başlıyor.
+     */
+    duvarPayW: 0.646,
+    /*
+     * DUVARIN FOTOĞRAFTAKİ DİKDÖRTGENİ (kaynak piksel).
+     *
+     * Kullanıcı duvar ölçüsünü değiştirince fotoğrafın tamamı yakınlaşmıyor;
+     * yalnızca BU dikdörtgen esniyor (dokuz dilim / 9-slice). Sağdaki ve
+     * soldaki mağaza vitrinleri, tavan ve zemin olduğu gibi kalıyor — tıpkı
+     * çizilmiş iç mekânda duvarın büyüyüp küçülmesi gibi.
+     *
+     * Duvar 960 piksel geniş (kadrajın %57'si), 360 piksel yüksek (4,5 m).
+     */
+    /*
+     * Duvarın gerçek dikdörtgeni ÖLÇÜLDÜ: üstte tavan kaplamasının bittiği
+     * hiza 178, altta duvarın zemine indiği süpürgelik gölgesi 520. Önceki
+     * değerler (286–646) duvarın dışına taşıyordu; ekran duvarın ortasına
+     * değil, zemine sarkmış gibi duruyordu.
+     */
+    duvarKutu: { x0: 300, y0: 178, x1: 1380, y1: 520 },
     maskeli: false, // fotografta kendi LED yuzeyi yok
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
@@ -101,10 +134,10 @@ export const SAHNELER = [
      * birlikte ölçekleniyor.
      */
     olculer: [
-      { etiket: 'Duvar 12 × 4,5 m', x: 0.19, y: 0.28 },
-      { etiket: 'Genişlik ~21 m', x: 0.82, y: 0.55 },
-      { etiket: 'Mesafe ~19 m', x: 0.18, y: 0.82 },
-      { etiket: 'Derinlik ~14 m', x: 0.82, y: 0.92 },
+      { etiket: 'Duvar', duvarOlcusu: true, x: 0.19, y: 0.28 },
+      { etiket: 'Genişlik', tur: 'kadraj', x: 0.82, y: 0.55 },
+      { etiket: 'Mesafe', tur: 'mesafe', x: 0.18, y: 0.82 },
+      { etiket: 'Derinlik', tur: 'derinlik', x: 0.82, y: 0.92 },
     ],
   },
   {
@@ -144,6 +177,13 @@ export const SAHNELER = [
      * tasarım 18 m'lik duvarı aşıyordu.
      */
     panelEnM: 6,
+    /* Taş duvar 905 piksel / 1672 piksel (bkz. AVM koridorundaki not). */
+    duvarPayW: 0.541,
+    /*
+     * Taş duvar: 905 piksel geniş, üst kenarı 410 (duvarın üstündeki koyu
+     * ızgara bandı görselden kaldırıldı; artık duvarın hemen üstü gökyüzü).
+     */
+    duvarKutu: { x0: 384, y0: 410, x1: 1289, y1: 642 },
     maskeli: false,
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
@@ -157,10 +197,10 @@ export const SAHNELER = [
      *  • Kamera ~1,6 m yükseklikte → görünen döşeme derinliği ≈ 25 m.
      */
     olculer: [
-      { etiket: 'Duvar 18 × 4 m', x: 0.17, y: 0.5 },
-      { etiket: 'Genişlik ~33 m', x: 0.84, y: 0.5 },
-      { etiket: 'Mesafe ~30 m', x: 0.18, y: 0.84 },
-      { etiket: 'Derinlik ~25 m', x: 0.84, y: 0.93 },
+      { etiket: 'Duvar', duvarOlcusu: true, x: 0.17, y: 0.5 },
+      { etiket: 'Genişlik', tur: 'kadraj', x: 0.84, y: 0.5 },
+      { etiket: 'Mesafe', tur: 'mesafe', x: 0.18, y: 0.84 },
+      { etiket: 'Derinlik', tur: 'derinlik', x: 0.84, y: 0.93 },
     ],
   },
   {

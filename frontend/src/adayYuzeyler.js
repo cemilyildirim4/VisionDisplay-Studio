@@ -65,7 +65,7 @@ export function adaylariBul(tuval, sec = {}) {
   const sonuc = []
   /* Fotoğrafta gerçek bir ekran varsa hep birinci sıra: en doğru hedef odur. */
   if (yuzey?.koseler?.length === 4) {
-    sonuc.push({ koseler: yuzey.koseler, skor: 100, tur: 'screen' })
+    sonuc.push({ koseler: yuzey.koseler, skor: 100, tur: 'screen', etiket: 'Mevcut ekran yüzeyi' })
   }
 
   const kw = tuval.width || tuval.naturalWidth
@@ -231,6 +231,16 @@ export function adaylariBul(tuval, sec = {}) {
         bulunan = null
       }
       if (!bulunan || bulunan.kaba || bulunan.skor < 70) continue
+      /*
+       * BOZUK DÖRTGEN ELENİYOR.
+       *
+       * Kenar araması bazen panonun bir kenarını yakalayıp öbür kenarı
+       * binanın hattından alıyordu; sonuç, bir köşesi yukarı fırlamış kama
+       * gibi bir dörtgen oluyordu (kullanıcının gönderdiği bilbord örneği).
+       * Gerçek bir dikdörtgenin perspektif izdüşümünde karşılıklı kenarlar
+       * birbirine yakın uzunlukta kalır ve köşeler ~90°'den çok sapmaz.
+       */
+      if (!makulDortgen(bulunan.koseler)) continue
       const alan = dortgenAlanOran(bulunan.koseler)
       /*
        * PANO OLMA ŞARTLARI.
@@ -248,7 +258,7 @@ export function adaylariBul(tuval, sec = {}) {
       if (!(oranDeg > 0.3) || !(oranDeg < 5)) continue
       if (!enIyi || alan > enIyi.alan) enIyi = { koseler: bulunan.koseler, alan }
     }
-    if (enIyi) sonuc.push({ koseler: enIyi.koseler, skor: 100, tur: 'screen' })
+    if (enIyi) sonuc.push({ koseler: enIyi.koseler, skor: 92, tur: 'screen', etiket: 'Fotoğraftaki pano' })
   }
 
   /*
@@ -265,7 +275,16 @@ export function adaylariBul(tuval, sec = {}) {
     if (sonuc.length >= enCok) break
     if (merkezler.some((m) => Math.hypot(m.x - a.merkez.x, m.y - a.merkez.y) < AYRIM)) continue
     merkezler.push(a.merkez)
-    sonuc.push({ koseler: a.koseler, skor: Math.round(a.skor), tur: a.tur })
+    sonuc.push({
+      koseler: a.koseler,
+      skor: Math.round(a.skor),
+      tur: a.tur,
+      /*
+       * Kullanıcıya "3 numaralı kare" demek yetmiyor; nerede olduğunu da
+       * söylemek gerekiyor. Ad, karenin kadrajdaki yerinden türetiliyor.
+       */
+      etiket: yuzeyAdi(a.merkez),
+    })
   }
   return sonuc
 }
@@ -375,6 +394,39 @@ function olcekle(veri, kw, kh, hw, hh) {
   return c
 }
 
+/**
+ * Dörtgen, bir dikdörtgenin makul bir perspektif izdüşümü olabilir mi?
+ *
+ * İki ölçüt: karşılıklı kenar uzunluklarının oranı ve köşe açıları. Aşırı
+ * kama biçimleri (bir kenarı ötekinin üç katı) fotoğrafta gerçek bir yüzeye
+ * karşılık gelmiyor; onları göstermek yanlış yerleşim demek.
+ */
+function makulDortgen(k) {
+  const uz = (a, b) => Math.hypot(k[b].x - k[a].x, k[b].y - k[a].y)
+  const ust = uz(0, 1)
+  const alt = uz(3, 2)
+  const sol = uz(0, 3)
+  const sag = uz(1, 2)
+  if (!(ust > 0) || !(alt > 0) || !(sol > 0) || !(sag > 0)) return false
+  const yatayOran = Math.max(ust, alt) / Math.min(ust, alt)
+  const dikeyOran = Math.max(sol, sag) / Math.min(sol, sag)
+  if (yatayOran > 1.9 || dikeyOran > 1.9) return false
+  /* Köşe açıları: 55°–125° dışına çıkan bir köşe, düzlemsel yüzey değildir. */
+  for (let i = 0; i < 4; i++) {
+    const o = k[i]
+    const a = k[(i + 3) % 4]
+    const b = k[(i + 1) % 4]
+    const v1 = { x: a.x - o.x, y: a.y - o.y }
+    const v2 = { x: b.x - o.x, y: b.y - o.y }
+    const n1 = Math.hypot(v1.x, v1.y)
+    const n2 = Math.hypot(v2.x, v2.y)
+    if (!(n1 > 0) || !(n2 > 0)) return false
+    const aci = (Math.acos(Math.max(-1, Math.min(1, (v1.x * v2.x + v1.y * v2.y) / (n1 * n2)))) * 180) / Math.PI
+    if (aci < 55 || aci > 125) return false
+  }
+  return true
+}
+
 /** Dörtgenin alanı (0–1 birim karede). */
 function dortgenAlanOran(k) {
   return Math.abs(
@@ -390,6 +442,13 @@ function dortgenEnBoy(k) {
   const en = (Math.hypot(k[1].x - k[0].x, k[1].y - k[0].y) + Math.hypot(k[2].x - k[3].x, k[2].y - k[3].y)) / 2
   const boy = (Math.hypot(k[3].x - k[0].x, k[3].y - k[0].y) + Math.hypot(k[2].x - k[1].x, k[2].y - k[1].y)) / 2
   return boy > 0 ? en / boy : 0
+}
+
+/** Adayın kadrajdaki yerine göre okunur bir ad. */
+function yuzeyAdi(merkez) {
+  const yatay = merkez.x < 0.36 ? 'Sol' : merkez.x > 0.64 ? 'Sağ' : 'Orta'
+  const dikey = merkez.y < 0.38 ? 'üst' : merkez.y > 0.62 ? 'alt' : ''
+  return `${yatay}${dikey ? ' ' + dikey : ''} duvar`
 }
 
 function dortgenMerkez(k) {

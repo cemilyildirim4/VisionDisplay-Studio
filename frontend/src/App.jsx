@@ -378,6 +378,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    *     onun açısıyla oturur; küçükse içinde kalır, büyükse taşar.
    */
   const [ekranDoldur, setEkranDoldur] = useState(true)
+  /* Tasarım hiçbir yüzeye sığmıyorsa gösterilen uyarı (bkz. scene.doesNotFit). */
+  const [sigmazUyari, setSigmazUyari] = useState(null)
+  /* yuzeyOlcusu aşağıda tanımlı; öneri işlevi ondan önce geldiği için ref. */
+  const yuzeyOlcusuRef = useRef(null)
   /*
    * oneriyiUygula, ölçü güncellemesinden ÖNCE tanımlanıyor (çizim ölçeği
    * ondan sonra hesaplanıyor). Bu yüzden işlev bir ref üzerinden çağrılıyor;
@@ -722,9 +726,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * Artık en yüksek puanlı aday kareye oturuyor — kullanıcı isterse
        * diğer karelerden birine tıklayıp taşıyor.
        */
-      setHedefKose(bulunan[0]?.koseler || null)
-      setHedefTur(bulunan[0]?.tur || null)
+      /*
+       * TASARIMIN SIĞDIĞI YÜZEY SEÇİLİYOR.
+       *
+       * En yüksek puanlı aday her zaman doğru hedef değil: 10 metrelik bir
+       * tasarım, 3 metrelik bir duvar parçasına oturtulunca oraya sıkışmak
+       * yerine kadrajı basıyordu. Artık önce ölçüsü YETEN yüzeyler aranıyor;
+       * hiçbiri yetmiyorsa en büyüğü kullanılıyor ve kullanıcıya sığmadığı,
+       * o yüzeye en fazla kaç metrelik bir ekranın gireceğiyle birlikte
+       * söyleniyor (bkz. scene.doesNotFit).
+       */
+      const olculu = bulunan.map((ad) => ({
+        ad,
+        olcu: yuzeyOlcusuRef.current?.(ad.koseler, kayit?.kaynak, ozelMesafeM) || null,
+      }))
+      const sigan = olculu.filter(
+        (o) => o.olcu && o.olcu.wm >= tasarimWm * 0.98 && o.olcu.hm >= tasarimHm * 0.98,
+      )
+      const enBuyuk = olculu
+        .filter((o) => o.olcu)
+        .sort((x, y) => y.olcu.wm * y.olcu.hm - x.olcu.wm * x.olcu.hm)[0]
+      const secilen = sigan[0]?.ad || enBuyuk?.ad || bulunan[0] || null
+      setHedefKose(secilen?.koseler || null)
+      setHedefTur(secilen?.tur || null)
       setKoseKipi(false)
+      if (!sigan.length && enBuyuk?.olcu) {
+        setSigmazUyari(
+          `${t('scene.doesNotFit')} ${enBuyuk.olcu.wm.toFixed(1).replace('.', ',')} × ${enBuyuk.olcu.hm
+            .toFixed(1)
+            .replace('.', ',')} m`,
+        )
+      } else {
+        setSigmazUyari(null)
+      }
     }
 
     const sayim = kayit?.nesneSayimi
@@ -834,6 +868,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * dörtgenin fotoğraf pikselindeki en/boy oranından çıkıyor.
    */
   const yuzeyOlcusu = (koseler, kaynak, mesafeM) => {
+    /* Ölçü hesabı tek yerde; öneri akışı buna ref üzerinden ulaşıyor. */
     if (!Array.isArray(koseler) || koseler.length !== 4 || !kaynak?.w || !kaynak?.h) return null
     const px = koseler.map((k) => ({ x: k.x * kaynak.w, y: k.y * kaynak.h }))
     const en =
@@ -846,6 +881,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const wm = (en / kaynak.w) * kadrajGenisligi(mesafeM)
     return { wm, hm: wm * (boy / en) }
   }
+
+  yuzeyOlcusuRef.current = yuzeyOlcusu
 
   /* Tasarımı panonun ölçüsüne getirir ve kabin sayısını yeniden dağıtır. */
   const olculeriPanoyaUydur = (koseler) => olculeriPanoyaUydurIle(koseler, ozelSahne?.kaynak)
@@ -1200,10 +1237,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * — elimizde o kareden fazlası yok, uydurmak yerine olanı gösteriyoruz.
      * Bu yüzden 0,55 altına inmiyor.
      */
-    if (fotoSahne?.tamGorunsun) {
-      const z = VARSAYILAN_MESAFE_M / Math.max(1, ozelMesafeM)
-      return Math.max(0.55, Math.min(3, z))
-    }
+    /*
+     * KULLANICININ KENDİ FOTOĞRAFI SABİT DURUYOR.
+     *
+     * Mesafe değişince fotoğrafı da yakınlaştırıp uzaklaştırıyordum; kadraj
+     * her adımda büyüyüp küçüldüğü için kullanıcı neye baktığını
+     * kaybediyordu. Artık fotoğraf hiç ölçeklenmiyor: mesafe yalnızca
+     * ÖLÇEĞİ belirliyor, yani tasarımın o karede kaç piksel ettiğini
+     * (kadraj genişliği = mesafe × 1,11 — bkz. ozelMekan.js).
+     */
+    if (fotoSahne?.tamGorunsun) return 1
+    /*
+     * DUVARI ESNEYEN SAHNELERDE YAKINLAŞTIRMA YOK.
+     *
+     * Orada ölçüyü duvarın kendisi taşıyor: duvar büyüyüp küçülüyor, mekân
+     * yerinde kalıyor. Fotoğrafı ayrıca yakınlaştırmak ikinci bir ölçek
+     * demek olurdu ve kullanıcının istemediği şey tam olarak buydu.
+     */
+    if (fotoSahne?.duvarKutu) return 1
     const ilerleme =
       (izlemeMesafesi - OTO_EN_AZ_M) / (ZOOM_EN_COK_M - OTO_EN_AZ_M)
     /*
@@ -1227,10 +1278,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * tanınmaz hâle getiriyordu. Ölçek zaten gerçek; yakınlaşma sadece
      * küçük ekranı görünür tutmak için hafif bir dokunuş.
      */
-    const yer = fotoSahne?.dosya ? fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h) : null
-    if (yer?.pxPerM > 0 && tasarimWm > 0 && tasarimHm > 0 && tuvalBoyut.w > 0) {
-      const w = tasarimWm * yer.pxPerM * taban
-      const h = tasarimHm * yer.pxPerM * taban
+    const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
+    /* Ölçek duvar payından geliyorsa yakınlık hesabı da onu kullanmalı. */
+    const olcekBirim =
+      yer && fotoSahne?.duvarPayW > 0 && mekanDuvarWm > 0
+        ? (yer.genislik * fotoSahne.duvarPayW) / mekanDuvarWm
+        : yer?.pxPerM
+    if (olcekBirim > 0 && tasarimWm > 0 && tasarimHm > 0 && tuvalBoyut.w > 0) {
+      const w = tasarimWm * olcekBirim * taban
+      const h = tasarimHm * olcekBirim * taban
       /*
        * SIĞMIYORSA KAMERA GERİ ÇEKİLİR — TASARIM KÜÇÜLTÜLMEZ.
        *
@@ -1256,7 +1312,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * tasarım kadraja tam oturuyor, uzaklaştıkça küçülüyor, yaklaştıkça
        * büyüyüp kadrajı taşıyor — gerçekte de öyle olur.
        */
-      const sigan = Math.min(alanW / (tasarimWm * yer.pxPerM), alanH / (tasarimHm * yer.pxPerM))
+      const sigan = Math.min(alanW / (tasarimWm * olcekBirim), alanH / (tasarimHm * olcekBirim))
       const buyut = Math.min(1.3, Math.max(1, Math.min((alanW * 0.9) / w, (alanH * 0.9) / h)))
       const otoIlerleme = (otoIzlemeM - OTO_EN_AZ_M) / (ZOOM_EN_COK_M - OTO_EN_AZ_M)
       const tabanOto = Math.max(0.5, Math.min(1.22, 1.22 - otoIlerleme * 0.72))
@@ -1271,7 +1327,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return Math.max(0.3, Math.min(2.2, kadraj * Math.max(0.3, Math.min(1.8, oran))))
     }
     return taban
-  }, [fotoSahne, izlemeMesafesi, otoIzlemeM, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm])
+  }, [fotoSahne, izlemeMesafesi, otoIzlemeM, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm, mekanDuvarWm])
 
   /*
    * FOTOĞRAFLI MEKÂNDA ÇİZİM ÖLÇEĞİ.
@@ -1311,6 +1367,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * geliyor; küçük tasarımların görünürlüğü ise sahnenin kendiliğinden
      * yakınlaşmasıyla çözülüyor (bkz. sahneYakinlik).
      */
+    /*
+     * DUVARI ESNEYEN SAHNE: ölçek duvarın tuvale sığdırılmasından geliyor —
+     * çizilmiş iç/dış mekânla birebir aynı kural (salonOlcek). Böylece 6 m
+     * duvar da 18 m duvar da kadraja oturuyor, tasarım duvara göre ölçekli
+     * kalıyor.
+     */
+    if (fotoSahne?.duvarKutu && mekanDuvarWm > 0 && mekanDuvarHm > 0) {
+      return salonOlcek(tuvalBoyut.w, tuvalBoyut.h, mekanDuvarWm, mekanDuvarHm)
+    }
     if (!fotoSahne?.dosya || !(ekranWm > 0) || !(ekranHm > 0)) return null
     const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
     if (!yer?.pxPerM) return null
@@ -1324,7 +1389,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * ise ekranin gercek metre karsiligi. Olcu etiketleri, surukleme ve
      * arayuz bundan etkilenmiyor.)
      */
-    const gercek = yer.pxPerM * sahneYakinlik
+    /*
+     * ÖLÇEK DUVARIN KENDİSİNDEN.
+     *
+     * Sahnede duvarPayW alani varsa (AVM koridoru, şehir meydanı) fotoğraftaki
+     * arka duvar, KULLANICININ girdiği duvar genişliği sayılıyor. Duvar
+     * ölçüsünü değiştirmek fotoğraftaki duvarın metre karşılığını
+     * değiştiriyor: 12 m yazınca duvar 12 m'lik, 6 m yazınca 6 m'lik bir
+     * duvar gibi davranıyor ve tasarım ona göre ölçekleniyor — çizilmiş
+     * iç/dış mekân sahnelerindeki davranışın aynısı.
+     */
+    const duvarOlcegi =
+      fotoSahne.duvarPayW > 0 && mekanDuvarWm > 0
+        ? (yer.genislik * fotoSahne.duvarPayW) / mekanDuvarWm
+        : yer.pxPerM
+    /*
+     * KENDİ FOTOĞRAFINDA ÖLÇEK DOĞRUDAN MESAFEDEN.
+     *
+     * Kadrajın kapsadığı genişlik = mesafe × 1,11. Fotoğrafın tuvaldeki
+     * genişliği bu metreye bölününce 1 metrenin piksel karşılığı çıkıyor.
+     * Fotoğraf artık ölçeklenmediği için yakınlık çarpanı yok.
+     */
+    const gercek = fotoSahne.tamGorunsun
+      ? yer.genislik / kadrajGenisligi(ozelMesafeM)
+      : duvarOlcegi * sahneYakinlik
     /*
      * HAZIR SAHNEDE KIRPMA YOK.
      *
@@ -1436,9 +1524,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * de aynı oranla ölçekleniyor.
    */
   const duvarDibiKaymasi = () => {
+    const tasarimYariH = (tasarimHm * (cizimOlcek || 0)) / 2
+    /*
+     * ESNEYEN DUVARDA TASARIM HER ZAMAN DUVARI ORTALIYOR.
+     *
+     * Bir ara alt kenara hizalıyordum; ölçü ya da kabin sayısı değişince
+     * ekran duvarın içinde aşağı yukarı kayıyordu. Duvar tuvalin ortasında
+     * çizildiği için sıfır kayma = duvarın tam ortası; ölçü ne olursa olsun
+     * ekran ortada kalıyor.
+     */
+    if (fotoSahne?.duvarKutu) return 0
     if (!fotoYer?.panelHpx || fotoYer.sigdir) return 0
     const z = sahneYakinlik || 1
-    const tasarimYariH = (tasarimHm * (cizimOlcek || 0)) / 2
     return (fotoYer.panelHpx / 2) * z - tasarimYariH
   }
   const oturmaKaymasi = !surukleAktif
@@ -1543,6 +1640,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       y: mY + (fotoYer.ust + k.y * fotoYer.yukseklik - mY) * z,
     }))
   })()
+
+  /*
+   * BİR ADAYI UYGULA — kareye tıklayınca da listeden seçince de burası.
+   *
+   * Puanı düşük adayda otomatik uygulama yapılmıyor: yüzey sınırları belirsizken
+   * kesin bir yerleşim göstermek kullanıcıyı yanıltıyor. Onun yerine uyarı
+   * veriliyor ve manuel dört köşe öneriliyor (bkz. GUVEN_ESIGI).
+   */
+  const GUVEN_ESIGI = 70
+  const adayiUygula = (aday) => {
+    if (!aday) return
+    setHedefKose(aday.koseler)
+    setHedefTur(aday.tur || null)
+    setAdayKipi(false)
+    if (aday.tur === 'screen' && ekranDoldur) {
+      const yeni = olculeriPanoyaUydur(aday.koseler)
+      setOzelUyari(
+        yeni
+          ? `${t('scene.fillResized')} ${yeni.w.toFixed(2).replace('.', ',')} × ${yeni.h
+              .toFixed(2)
+              .replace('.', ',')} m`
+          : null,
+      )
+    } else if ((aday.skor || 0) < GUVEN_ESIGI) {
+      setOzelUyari(t('scene.lowConfidence'))
+    } else {
+      setOzelUyari(null)
+    }
+  }
 
   /* ADAY KARELERİN TUVALDEKİ KARŞILIĞI — köşelerle birebir aynı dönüşüm. */
   const adayTuval = (() => {
@@ -1801,6 +1927,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               kioskGizle={!!koseTuval || lTipiVar || !kioskVar}
               /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
               olcuGoster={showMeasurements}
+              /* Duvar etiketi kullanıcının kendi ölçüsünü yazıyor */
+              duvarWmEtiket={mekanDuvarWm}
+              duvarHmEtiket={mekanDuvarHm}
               /* Fotografli mekanda arka plan bu oranda yakinlasip uzaklasiyor */
               yakinlik={sahneYakinlik}
               kayma={mekanKayma}
@@ -1890,26 +2019,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               adaylar={adayTuval}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
-              onSec={(a) => {
-                const i = adayTuval.indexOf(a)
-                const ham = adaylar[i]
-                if (!ham) return
-                setHedefKose(ham.koseler)
-                setHedefTur(ham.tur || null)
-                setAdayKipi(false)
-                if (ham.tur === 'screen' && ekranDoldur) {
-                  const yeni = olculeriPanoyaUydur(ham.koseler)
-                  setOzelUyari(
-                    yeni
-                      ? `${t('scene.fillResized')} ${yeni.w.toFixed(2).replace('.', ',')} × ${yeni.h
-                          .toFixed(2)
-                          .replace('.', ',')} m`
-                      : null,
-                  )
-                } else {
-                  setOzelUyari(null)
-                }
-              }}
+              onSec={(a) => adayiUygula(adaylar[adayTuval.indexOf(a)])}
             />
           )}
 
@@ -2629,6 +2739,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         {t('scene.spotsHint')}
                       </p>
                     )}
+                    {/*
+                      PUANLI ADAY LİSTESİ.
+
+                      Fotoğrafın üstündeki kareler nereyi gösterdiğini söylüyor,
+                      bu liste NEDEN önerildiğini: yüzeyin adı ve 100 üzerinden
+                      puanı. Kullanıcı hem kareye hem satıra tıklayabiliyor.
+                    */}
+                    {adayKipi &&
+                      adaylar.map((aday, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => adayiUygula(aday)}
+                          className="mt-1.5 w-full flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                        >
+                          <span className="truncate">
+                            {i + 1}. {aday.etiket || t('scene.spots')}
+                            {i === 0 ? ` · ${t('scene.recommended')}` : ''}
+                          </span>
+                          <span className="tabular-nums shrink-0">{aday.skor}/100</span>
+                        </button>
+                      ))}
                     <button
                       type="button"
                       onClick={() => oneriyiTazele()}
@@ -2644,6 +2776,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {!ozelInceleniyor && ozelNesneler && (
                       <p className="mt-2 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                         {t('scene.objectsFound')} {ozelNesneler.join(', ')}
+                      </p>
+                    )}
+                    {sigmazUyari && (
+                      <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                        {sigmazUyari}
                       </p>
                     )}
                     {ozelUyari && (
