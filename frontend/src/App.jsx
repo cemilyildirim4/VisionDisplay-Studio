@@ -747,7 +747,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const enBuyuk = olculu
         .filter((o) => o.olcu)
         .sort((x, y) => y.olcu.wm * y.olcu.hm - x.olcu.wm * x.olcu.hm)[0]
-      const secilen = sigan[0]?.ad || enBuyuk?.ad || bulunan[0] || null
+      /*
+       * FOTOĞRAFTAKİ EKRAN HER ZAMAN ÖNCELİKLİ.
+       *
+       * Sığma kuralını tek başına uygulayınca, tasarım panodan büyük olduğunda
+       * öneri başka bir duvara atlıyordu; kullanıcı ise numaralı listede
+       * "Fotoğraftaki pano" yazarken tasarımı başka yerde görüyordu. Pano
+       * varsa hedef odur; sığmıyorsa yerleşim yine orada kalır, sığmadığı
+       * ayrıca yazılır.
+       */
+      const pano = bulunan.find((ad) => ad.tur === 'screen')
+      const secilen = pano || sigan[0]?.ad || enBuyuk?.ad || bulunan[0] || null
       setHedefKose(secilen?.koseler || null)
       setHedefTur(secilen?.tur || null)
       setKoseKipi(false)
@@ -773,7 +783,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     } else {
       setOzelNesneler(null)
     }
-    setOzelUyari(yuzey ? t('scene.screenSurface') : t('scene.noSurface'))
+    /* Mesaj, gerçekten kullanılan hedefe göre: pano mu, boş yüzey mi? */
+    setOzelUyari(
+      yuzey || bulunan.some((ad) => ad.tur === 'screen')
+        ? t('scene.screenSurface')
+        : t('scene.noSurface'),
+    )
   }
 
   /* Öneriyi tazele: ölçü ya da alan genişliği değişmiş olabilir. */

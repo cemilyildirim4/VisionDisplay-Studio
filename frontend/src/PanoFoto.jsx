@@ -244,23 +244,43 @@ export default function PanoFoto({
             yapay zekâ tamamlaması için görüntünün bir sunucuya gönderilmesi
             gerekir; burada fotoğraf cihazdan çıkmıyor.
           */}
-          {kenarDoldur && (
-            <img
-              src={sahne.dosya}
-              alt=""
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                filter: 'blur(26px) saturate(0.9) brightness(0.82)',
-                transform: 'scale(1.12)',
-                pointerEvents: 'none',
-              }}
-            />
-          )}
+          {kenarDoldur &&
+            /*
+             * AYNALI TAMAMLAMA — bulanık dolgu kaldırıldı.
+             *
+             * Bulanık kopya, kadrajın bittiğini gizlemiyor; sadece kirli bir
+             * çerçeve gibi duruyordu. Onun yerine fotoğrafın kendisi kenardan
+             * AYNALANARAK uzatılıyor: dikişte pikseller birebir aynı olduğu
+             * için ek görünmüyor, mimari çizgiler kenarda doğal biçimde
+             * devam ediyor. Sekiz kopya: dört kenar + dört köşe.
+             */
+            [
+              { sx: -1, sy: 1, dx: -1, dy: 0 },
+              { sx: -1, sy: 1, dx: 1, dy: 0 },
+              { sx: 1, sy: -1, dx: 0, dy: -1 },
+              { sx: 1, sy: -1, dx: 0, dy: 1 },
+              { sx: -1, sy: -1, dx: -1, dy: -1 },
+              { sx: -1, sy: -1, dx: 1, dy: -1 },
+              { sx: -1, sy: -1, dx: -1, dy: 1 },
+              { sx: -1, sy: -1, dx: 1, dy: 1 },
+            ].map((k, i) => (
+              <img
+                key={i}
+                src={sahne.dosya}
+                alt=""
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  left: yer.sol + k.dx * yer.genislik,
+                  top: yer.ust + k.dy * yer.yukseklik,
+                  width: yer.genislik,
+                  height: yer.yukseklik,
+                  maxWidth: 'none',
+                  transform: `scale(${k.sx}, ${k.sy})`,
+                  pointerEvents: 'none',
+                }}
+              />
+            ))}
           {/*
             DUVARI ESNEYEN SAHNE.
 

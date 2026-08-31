@@ -99,7 +99,8 @@ export const SAHNELER = [
      * Duvar 1080 piksel geniş (1672'nin %65'i) — ölçüldü: x 300–1380 arası
      * düz kaplama, iki yanda vitrinler başlıyor.
      */
-    duvarPayW: 0.646,
+    /* Kolonsuz duvar: 925 piksel / 1672 piksel. */
+    duvarPayW: 0.553,
     /*
      * DUVARIN FOTOĞRAFTAKİ DİKDÖRTGENİ (kaynak piksel).
      *
@@ -116,7 +117,12 @@ export const SAHNELER = [
      * değerler (286–646) duvarın dışına taşıyordu; ekran duvarın ortasına
      * değil, zemine sarkmış gibi duruyordu.
      */
-    duvarKutu: { x0: 300, y0: 178, x1: 1380, y1: 520 },
+    /*
+     * KOLONLAR HARİÇ. x 300–1380 iken tasarım sağdaki ve soldaki kolonların
+     * üzerine taşıyordu; düz kaplama ölçüldü: 365–1290 arası. Kolonların
+     * ışık şeritleri de dışarıda kaldı.
+     */
+    duvarKutu: { x0: 365, y0: 178, x1: 1290, y1: 520 },
     maskeli: false, // fotografta kendi LED yuzeyi yok
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
@@ -183,7 +189,12 @@ export const SAHNELER = [
      * Taş duvar: 905 piksel geniş, üst kenarı 410 (duvarın üstündeki koyu
      * ızgara bandı görselden kaldırıldı; artık duvarın hemen üstü gökyüzü).
      */
-    duvarKutu: { x0: 384, y0: 410, x1: 1289, y1: 642 },
+    /*
+     * Taş duvar: üst kenarı ızgara bandının altında (410), alt kenarı çalı
+     * şeridinin üstünde (586) — görsel orijinal hâline döndürüldü, ızgara ve
+     * çalılar yerinde.
+     */
+    duvarKutu: { x0: 384, y0: 410, x1: 1289, y1: 586 },
     maskeli: false,
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
