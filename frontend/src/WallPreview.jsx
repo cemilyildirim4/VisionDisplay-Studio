@@ -5,6 +5,8 @@ import { viewingDistanceFor } from './viewingDistance.js'
 import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, L_KIRILMA_PCT } from './content.js'
 import { videoSrcFor } from './videoContent.js'
 import { useLang } from './useLang.js'
+import { yonDonusumu } from './hooks/useYon.js'
+import { koseDonusumu } from './homografi.js'
 
 /**
  * Çalışma alanı önizlemesi.
@@ -484,11 +486,25 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
  */
 const ETIKET_EN_AZ = 50
 
-function SegH({ w, label, muted }) {
+/**
+ * Yatay ölçü etiketi.
+ *
+ * `yazi`: punto tasarımın ekrandaki büyüklüğüne göre değişiyor. Sabit punto,
+ * küçük bir tasarımda etiketi ekranın kendisinden büyük gösteriyordu.
+ *
+ * KIRPMA YOK: etiket ait olduğu bölmeden geniş olabilir, taşan kısım görünür
+ * kalır. Eskiden `overflow-hidden` + `text-ellipsis` vardı ve dar bölmelerde
+ * yazı yarım görünüyordu — "0,16 m" yerine yalnızca "0".
+ */
+function SegH({ w, label, muted, yazi = 11 }) {
+  const dolgu = `${Math.round(yazi * 0.35)}px ${Math.round(yazi * 0.5)}px`
   return (
-    <div style={{ width: w }} className="flex items-center justify-center shrink-0">
+    <div style={{ width: w }} className="flex items-center justify-center shrink-0 overflow-visible">
       {(!muted || w >= ETIKET_EN_AZ) && (
-        <span className={`text-[10px] sm:text-[11px] leading-none px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
+        <span
+          style={{ fontSize: yazi, padding: dolgu }}
+          className={`leading-none rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}
+        >
           {label}
         </span>
       )}
@@ -496,11 +512,16 @@ function SegH({ w, label, muted }) {
   )
 }
 
-function SegV({ h, label, muted }) {
+/** Dikey ölçü etiketi — kurallar SegH ile aynı. */
+function SegV({ h, label, muted, yazi = 11 }) {
+  const dolgu = `${Math.round(yazi * 0.5)}px ${Math.round(yazi * 0.35)}px`
   return (
-    <div style={{ height: h }} className="flex items-center justify-center shrink-0">
+    <div style={{ height: h }} className="flex items-center justify-center shrink-0 overflow-visible">
       {(!muted || h >= ETIKET_EN_AZ) && (
-        <span style={{ writingMode: 'vertical-rl' }} className={`text-[10px] sm:text-[11px] leading-none px-1 py-1.5 rounded-lg whitespace-nowrap max-h-[40vh] overflow-hidden ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}>
+        <span
+          style={{ writingMode: 'vertical-rl', fontSize: yazi, padding: dolgu }}
+          className={`leading-none rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}
+        >
           {label}
         </span>
       )}
@@ -509,16 +530,24 @@ function SegV({ h, label, muted }) {
 }
 
 // Duvar boyutu +/- butonu
-function StepBtn({ dir, onClick, disabled }) {
+/**
+ * Ölçü +/- düğmesi.
+ *
+ * `boy`: tasarımın ekrandaki büyüklüğüne göre değişiyor. Sabit boy iki yönde
+ * de yanlıştı — küçük bir tasarımda düğmeler ekranı bastırıyor, büyük bir
+ * tasarımda kaybolup gidiyordu.
+ */
+function StepBtn({ dir, onClick, disabled, boy = 28 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       aria-label={dir === 'plus' ? 'Artır' : 'Azalt'}
-      className={`w-11 h-11 min-h-[44px] min-w-[44px] p-3 flex items-center justify-center ${disabled ? 'text-neutral-300' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#1b2029]'}`}
+      style={{ width: boy, height: boy }}
+      className={`flex items-center justify-center ${disabled ? 'text-neutral-300' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#1b2029]'}`}
     >
-      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+      <svg viewBox="0 0 24 24" width={Math.round(boy * 0.4)} height={Math.round(boy * 0.4)} fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
         {dir === 'plus' && <line x1="12" y1="6" x2="12" y2="18" />}
         <line x1="6" y1="12" x2="18" y2="12" />
       </svg>
@@ -662,6 +691,22 @@ export default function WallPreview({
   kayma = null,
   tutamak = null,
   /*
+   * EKRANA VERILEN ACI (bkz. hooks/useYon.js).
+   *
+   * Yalnizca EKRAN KUTUSUNA uygulaniyor; olcu etiketleri ve +/- dugmeleri
+   * disarida kaliyor. Onlar mekanin degil arayuzun parcasi, dondurulunce
+   * okunmaz oluyorlardi.
+   */
+  yon = null,
+  /*
+   * DÖRT KÖŞE HEDEFİ (px, tasarım kutusunun sol üstüne göre).
+   *
+   * Verilirse ekran, açı yerine gerçek bir homografiyle bu dörtgene
+   * oturtuluyor: yamuk bir billboard yüzeyine birebir eşleme. İçerik DOM
+   * ağacında kaldığı için video oynamaya devam ediyor.
+   */
+  kose = null,
+  /*
    * Sahnenin duvarının gerçek ölçüsü, { w, h } metre. Verilirse ÇİZİM ÖLÇEĞİ
    * buna sabitlenir: mekânın duvarı 6 m ise 3 m'lik ekran yarısını kaplar.
    * Ölçek hissini veren şey bu — yoksa her ekran aynı büyüklükte görünüyordu.
@@ -755,7 +800,12 @@ export default function WallPreview({
     // Silüet duvarla aynı satırda olduğu için genişliği de hesaba katılır.
     const showHumanM = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005
     const humanWmM = showHumanM ? HUMAN_HEIGHT_M * HUMAN_FIG_W_RATIO : 0
-    const sahnePayM = showMeasurements ? 150 : 48
+    /*
+     * PAY ÖLÇÜLERE GÖRE DEĞİŞMİYOR (bkz. tek ekran dalındaki aynı sabit).
+     * Değişince "Ölçüleri gizle" tasarımı büyütüyordu; oysa gizlemek bir
+     * görünüm anahtarı, ölçek değil.
+     */
+    const sahnePayM = 150
     // Dar ekranda yan pay en az 152 (76 + 76): satır artır/azalt düğmesi ve ölçü
     // etiketleri telefonun dışına düşmesin — bkz. tek ekran dalındaki aynı hesap.
     const yanPay = sahneVar ? (dar ? Math.max(sahnePayM, 152) : sahnePayM) : dar ? 152 : 180
@@ -789,12 +839,18 @@ export default function WallPreview({
       return Math.max(enBuyuk, derinlik)
     }, 0)
 
-    const pxPerM = Math.min(
-      availW / (wallWm + humanWmM),
-      availH / (wallHm + kavisPayiM),
-      sahneVar ? Infinity : 280,
-      sahneOlcek,
-    )
+    /*
+     * SAHNE ÖLÇEĞİ VERİLDİYSE BİREBİR UYULUR (bkz. tek ekran dalı).
+     * Tuvale sığdırma işini sahne kendisi yapıyor: sığmayan tasarımda kamera
+     * geri çekiliyor, ölçek kırpılmıyor.
+     */
+    const pxPerM = Number.isFinite(sahneOlcek)
+      ? sahneOlcek
+      : Math.min(
+          availW / (wallWm + humanWmM),
+          availH / (wallHm + kavisPayiM),
+          sahneVar ? Infinity : 280,
+        )
     olcekRef.current = pxPerM
     const wallW = wallWm * pxPerM
     const wallH = wallHm * pxPerM
@@ -876,12 +932,30 @@ export default function WallPreview({
     const maskePolygon = seritMaskePolygon(placed, maxHpx)
 
     return (
-      <div ref={containerRef} className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0">
+      <div
+      ref={containerRef}
+      /* Aday kareler açıkken bu katman soluyor; kareler fotoğrafın üstünde okunur kalıyor. */
+      data-tasarim-katman
+      className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0"
+    >
         <div dir="ltr" className="flex items-end gap-3 sm:gap-6 max-w-full">
          {showHumanM && (
   <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
 )}
-          <div className="relative">
+          {/*
+            ÇOKLU EKRANDA DA SÜRÜKLEME.
+            Kayma yalnızca tek ekran dalına uygulanıyordu; çoklu ekranda kiosk
+            gövdesi (PanoFoto) zemine iniyor, ekran ise tuvalin ortasında asılı
+            kalıyordu — ikisi birbirinden kopuyordu.
+          */}
+          <div
+            className="relative"
+            {...(tutamak || {})}
+            style={{
+              transform: kayma ? `translate(${kayma.x}px, ${kayma.y}px)` : undefined,
+              ...(tutamak ? tutamak.style : null),
+            }}
+          >
             {/* Sınırlayıcı duvar */}
             {/*
               Kavis VARSA kutu kırpmaz. Kavisli ekranın tuvali kendi şeridinden
@@ -890,11 +964,21 @@ export default function WallPreview({
               dalında ekran bu kutunun içinde olmadığı için sorun görülmüyordu.
             */}
             <div
-              style={{ width: wallW, height: wallH }}
+              style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }}
               className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative ${kavisPayiM > 0 ? 'overflow-visible' : 'overflow-hidden'}`}
             >
               {/* Ekranlar şeridi (ortalanmış, alta hizalı) */}
-              <div style={{ position: 'absolute', left: marginXpx, top: stripTop, width: totalWpx, height: maxHpx }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: marginXpx,
+                  top: stripTop,
+                  width: totalWpx,
+                  height: maxHpx,
+                  transform: koseDonusumu(totalWpx, maxHpx, kose) || undefined,
+                  transformOrigin: '0 0',
+                }}
+              >
                 {/* z0: Tek içerik katmanı — tüm şeride yayılır, ekran şekline kırpılır */}
                 {useSingle && (
                   <div
@@ -1039,7 +1123,16 @@ export default function WallPreview({
    * açıksa etiketler duvarın dışında duruyor ve tuvalin dışına taşıp
    * kırpılıyordu. Ölçüler açıkken onlara da yer ayrılıyor.
    */
-  const sahnePay = showMeasurements ? 150 : 48
+  /*
+   * PAY SABİT — ÖLÇÜLERE BAĞLI DEĞİL.
+   *
+   * Ölçüler açıkken 150, kapalıyken 48 px pay ayrılıyordu; sığdırma hesabı bu
+   * paya baktığı için "Ölçüleri gizle" düğmesi tasarımı büyütüyordu. Ölçek
+   * mekânın kalibrasyonundan gelmeli, etiketlerin görünür olup olmamasından
+   * değil. Doğru olan büyük pay: etiketler açıldığında kırpılmıyor ve ekran
+   * iki durumda da aynı boyda kalıyor.
+   */
+  const sahnePay = 150
   /*
    * Dar ekran payı 88 iken (44 sol + 44 sağ) SAĞ taraf yetmiyordu: ölçü
    * etiketi + boşluk + satır artır/azalt düğmesi yaklaşık 76 px istiyor.
@@ -1078,7 +1171,18 @@ export default function WallPreview({
   const sigdirWm = sahneVar ? Math.min(wallWm, Math.max(1, cols) * cw) : wallWm + humanWm
   const sigdirHm = sahneVar ? Math.min(wallHm, Math.max(1, rows) * ch) : wallHm
   // Ust sinir yalnizca sahne YOKKEN — bkz. cok ekranli daldaki ayni hesap
-  const basePxPerM = Math.min(availW / sigdirWm, availH / sigdirHm, sahneVar ? Infinity : 340, sahneOlcek)
+  /*
+   * SAHNE ÖLÇEĞİ VERİLDİYSE BİREBİR UYULUR.
+   *
+   * Eskiden burada tuvale sığdırma da hesaba katılıyordu (min). Sonuç: arka
+   * plan mesafeyle küçülürken tasarım sığdırma sınırında takılı kalıyor,
+   * 18 m'lik ekran 18 m'lik duvarı aşıyordu. Sığdırmayı artık sahne yapıyor:
+   * tasarım kadraja sığmıyorsa kamera geri çekiliyor (bkz. App sahneYakinlik),
+   * yani arka plan ve tasarım BİRLİKTE küçülüyor; oran hiç bozulmuyor.
+   */
+  const basePxPerM = Number.isFinite(sahneOlcek)
+    ? sahneOlcek
+    : Math.min(availW / sigdirWm, availH / sigdirHm, sahneVar ? Infinity : 340)
 
   const curveKPre =
     screenType === 'curved' || screenType === 'curvedIn'
@@ -1133,8 +1237,34 @@ export default function WallPreview({
 
   const screenWm = Math.min(wallWm, nCols * cw)
   const screenHm = Math.min(wallHm, nRows * ch)
+  /*
+   * Ölçü düğmelerinin boyu tasarımla birlikte: ekranın kısa kenarının beşte
+   * biri, 18–32 piksel arasında. Küçük tasarımda ekranı bastırmıyor, büyük
+   * tasarımda kaybolmuyor.
+   */
   const marginXpx = Math.max(0, (wallW - screenW) / 2)
   const marginYpx = Math.max(0, (wallH - screenH) / 2)
+
+  /*
+   * ÖLÇÜNÜN DAYANDIĞI KUTU.
+   *
+   * Dört köşe kipinde ekran, tasarım kutusundan farklı büyüklükte bir
+   * dörtgene oturuyor. Etiketleri tasarım kutusuna göre yerleştirmek
+   * onları dörtgenin üstüne düşürüyordu; ölçünün dayanağı artık ekranın
+   * GÖRÜNEN kutusu.
+   */
+  const gorunenKutu = kose
+    ? {
+        x: marginXpx + Math.min(...kose.map((k) => k.x)),
+        y: marginYpx + Math.min(...kose.map((k) => k.y)),
+        w: Math.max(...kose.map((k) => k.x)) - Math.min(...kose.map((k) => k.x)),
+        h: Math.max(...kose.map((k) => k.y)) - Math.min(...kose.map((k) => k.y)),
+      }
+    : { x: marginXpx, y: marginYpx, w: screenW, h: screenH }
+
+  const olcuBoy = Math.max(16, Math.min(30, Math.round(Math.min(gorunenKutu.w, gorunenKutu.h) / 5)))
+  /* Etiket puntosu da tasarımla birlikte: düğme boyunun ~%38'i. */
+  const olcuYazi = Math.max(7, Math.min(10, Math.round(olcuBoy * 0.34)))
   const marginXm = Math.max(0, (wallWm - screenWm) / 2)
   const marginYm = Math.max(0, (wallHm - screenHm) / 2)
 
@@ -1153,7 +1283,20 @@ export default function WallPreview({
             ...(tutamak ? tutamak.style : null),
           }}
         >
-          <div style={{ width: wallW, height: wallH }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} flex items-center justify-center`}>
+          <div style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} flex items-center justify-center`}>
+            {/*
+              Dört köşe hedefi varken dönüşüm EKRAN KUTUSUNA uygulanıyor:
+              duvar kutusu tasarımdan büyük olabiliyor, homografi ise tam
+              tasarımın dört köşesini hedefe eşlemek zorunda.
+            */}
+            <div
+              style={{
+                width: screenW,
+                height: screenH,
+                transform: koseDonusumu(screenW, screenH, kose) || undefined,
+                transformOrigin: '0 0',
+              }}
+            >
             <Screen
               wPx={screenW}
               hPx={screenH}
@@ -1167,10 +1310,26 @@ export default function WallPreview({
               hideRegions={hideRegions}
               curveAmount={curveAmount}
             />
+            </div>
           </div>
 
+          {/*
+            Ölçü düğmelerinin boyu tasarımla birlikte değişiyor: ekranın kısa
+            kenarının beşte biri, 18–34 piksel arasında. Küçük tasarımda
+            küçülüp ekranı kapatmıyor, büyük tasarımda kaybolmuyor.
+          */}
+          {/* eslint-disable-next-line no-unused-vars */}
           {showMeasurements && (
-            <>
+            /*
+             * ÖLÇÜLER TASARIMLA BİRLİKTE GİDİYOR.
+             *
+             * Dört köşe yerleşiminde ekran fotoğraftaki yüzeye taşınıyor ama
+             * etiketler ve +/- düğmeleri tuvalin ortasında kalıyordu — ölçü
+             * bir yerde, ekran başka yerde. Ölçü katmanı, dörtgenin merkezi
+             * ile tasarım kutusunun merkezi arasındaki fark kadar kaydırılıyor.
+             * Etiketler DÖNDÜRÜLMÜYOR: onlar arayüz, mekânın parçası değil.
+             */
+            <div>
               {/* Noktalı ölçü kılavuz çizgileri */}
               <VL left={0} top={-32} height={32} />
               <VL left={marginXpx} top={-32} height={marginYpx + screenH + 32} />
@@ -1182,27 +1341,40 @@ export default function WallPreview({
               <HL top={wallH} left={wallW} width={40} />
 
               {/* Üst ölçü etiketleri */}
-              <div style={{ position: 'absolute', top: -30 - sahnePayPx, left: 0, width: wallW, height: 24, display: 'flex' }}>
-                <SegH w={marginXpx} label={fmtU(marginXm)} muted />
-                <SegH w={screenW} label={fmtU(screenWm)} />
-                <SegH w={marginXpx} label={fmtU(marginXm)} muted />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: gorunenKutu.y - olcuYazi * 2.2 - sahnePayPx,
+                  left: gorunenKutu.x,
+                  width: gorunenKutu.w,
+                  display: 'flex',
+                }}
+              >
+                <SegH w={gorunenKutu.w} label={fmtU(screenWm)} yazi={olcuYazi} />
               </div>
 
               {/* Sağ ölçü etiketleri */}
-              <div style={{ position: 'absolute', left: Math.min(wallW + 10 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
-                <SegV h={marginYpx} label={fmtU(marginYm)} muted />
-                <SegV h={screenH} label={fmtU(screenHm)} />
-                <SegV h={marginYpx} label={fmtU(marginYm)} muted />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: gorunenKutu.x + gorunenKutu.w + olcuYazi * 0.8 + sahnePayPx,
+                  top: gorunenKutu.y,
+                  height: gorunenKutu.h,
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <SegV h={gorunenKutu.h} label={fmtU(screenHm)} yazi={olcuYazi} />
               </div>
 
               {/* Üstteki +/- : Sütun (ekran genişliği) */}
               <div
                 data-pdf-gizle className="absolute flex items-stretch rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
-                style={{ left: marginXpx + screenW / 2, top: -64 - sahnePayPx, transform: 'translateX(-50%)' }}
+                style={{ left: gorunenKutu.x + gorunenKutu.w / 2, top: gorunenKutu.y - olcuBoy - olcuYazi * 2.6 - sahnePayPx, transform: 'translateX(-50%)' }}
               >
-                <StepBtn dir="minus" onClick={() => onColsChange?.(Math.max(1, nCols - 1))} disabled={nCols <= 1} />
+                <StepBtn boy={olcuBoy} dir="minus" onClick={() => onColsChange?.(Math.max(1, nCols - 1))} disabled={nCols <= 1} />
                 <div className="w-px bg-neutral-200 dark:bg-[#2c333f]" />
-                <StepBtn dir="plus" onClick={() => onColsChange?.(Math.min(colsMax, nCols + 1))} disabled={nCols >= colsMax} />
+                <StepBtn boy={olcuBoy} dir="plus" onClick={() => onColsChange?.(Math.min(colsMax, nCols + 1))} disabled={nCols >= colsMax} />
               </div>
 
               {/* Sağdaki +/- : Satır (ekran yüksekliği) */}
@@ -1210,11 +1382,12 @@ export default function WallPreview({
                 data-pdf-gizle className="absolute flex flex-col rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
                 /* Telefonda kabın dışına düşüp tıklanamaz hale geliyordu: sağ
                    kenarın içinde kalacak şekilde sınırlanıyor. */
-                style={{ left: Math.min(wallW + 44 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 34)), top: marginYpx + screenH / 2, transform: 'translateY(-50%)' }}
+                style={{ /* Etiketin genişliği kadar daha dışarıda: hap etiketin üstüne binmesin. */
+                  left: gorunenKutu.x + gorunenKutu.w + olcuYazi * 4.6 + sahnePayPx, top: gorunenKutu.y + gorunenKutu.h / 2, transform: 'translateY(-50%)' }}
               >
-                <StepBtn dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
+                <StepBtn boy={olcuBoy} dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
                 <div className="h-px bg-neutral-200 dark:bg-[#2c333f]" />
-                <StepBtn dir="plus" onClick={() => onRowsChange?.(Math.min(rowsMax, nRows + 1))} disabled={nRows >= rowsMax} />
+                <StepBtn boy={olcuBoy} dir="plus" onClick={() => onRowsChange?.(Math.min(rowsMax, nRows + 1))} disabled={nRows >= rowsMax} />
               </div>
 
               {/* İzleme mesafesi çizgisi — mekân sahnesi açıkken gizlenir.
@@ -1228,7 +1401,7 @@ export default function WallPreview({
                 </text>
               </svg>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>

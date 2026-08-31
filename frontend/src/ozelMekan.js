@@ -21,8 +21,40 @@
  */
 
 import { uygunYuzeyBul, zeminCizgisiBul } from './duvarBul.js'
+import { perspektifAcisi } from './aciBul.js'
+import { nesneHaritasi } from './nesneBul.js'
+import { derinlikHaritasi } from './derinlikBul.js'
+import { ekranYuzeyiBul } from './dortgenBul.js'
+import { duzlemBolgesiBul } from './duzlemBolge.js'
+import { mevcutEkranYuzeyi } from './ekranYuzeyi.js'
+import { adaylariBul } from './adayYuzeyler.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
+/**
+ * Varsayılan çekim mesafesi (metre) — tipik bir dış mekân karesi.
+ * Kullanıcı değiştirdiğinde bütün ölçek onunla birlikte değişiyor.
+ */
+export const VARSAYILAN_MESAFE_M = 15
+
+/**
+ * KADRAJ GENİŞLİĞİ = 2·mesafe·tan(görüş açısı/2).
+ *
+ * Telefon ve fotoğraf makinelerinin tipik yatay görüş açısı ~58°;
+ * bu da kadrajın, mesafenin yaklaşık 1,11 katı kadar bir genişliği
+ * kapsaması demek. Yani 20 metreden çekilmiş bir karede soldan sağa
+ * yaklaşık 22 metre görünüyor.
+ *
+ * Bu bir varsayım: fotoğrafın odak uzaklığı bilinmiyor (EXIF çoğu
+ * ekran görüntüsünde yok). Ama tek bir sayı sorup ölçeği ondan
+ * türetmek, her fotoğrafta başka bir ölçek kullanmaktan iyi.
+ */
+export const KADRAJ_KATSAYISI = 1.11
+
+export function kadrajGenisligi(mesafeM) {
+  return Math.max(0.5, (Number(mesafeM) || VARSAYILAN_MESAFE_M) * KADRAJ_KATSAYISI)
+}
+
+/** Geriye dönük: eski çağrılar için varsayılan alan genişliği. */
 export const VARSAYILAN_ALAN_M = 4
 
 /** Kabul edilen dosya türleri. */
@@ -37,9 +69,9 @@ export const MEKAN_EN_COK_MB = 60
  * @param {string} url    blob adresi
  * @param {HTMLImageElement} gorsel yüklenmiş görsel
  * @param {number} oran   tasarımın en/boy oranı — öneri buna göre aranır
- * @param {number} alanM  önerilen alanın gerçek genişliği (metre)
+ * @param {number} mesafeM  fotoğrafın çekildiği mesafe (metre)
  */
-export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
+export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MESAFE_M) {
   const W = gorsel.naturalWidth
   const H = gorsel.naturalHeight
   if (!W || !H) return null
@@ -55,8 +87,89 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
   tuval.getContext('2d').drawImage(gorsel, 0, 0)
 
   const enBoy = oran > 0 ? oran : 16 / 9
+
+  /*
+   * Zemin çizgisi ÖNCE bulunuyor: yüzey araması onu bir sınır olarak
+   * kullanıyor (ekran zeminin altına konmaz). Eskiden sonra bulunuyordu ve
+   * yalnızca kioskun oturacağı yeri belirliyordu.
+   */
+  let zeminOran = null
+  try {
+    zeminOran = zeminCizgisiBul(tuval)
+  } catch {
+    zeminOran = null
+  }
+
+  /*
+   * (eski tarayıcı, kesik bağlantı) sessizce eski sezgisel ölçütlere
+   * dönülüyor — özellik kaybolur, uygulama durmaz.
+   */
+  let nesneler = null
+  try {
+    nesneler = await nesneHaritasi(tuval)
+  } catch (e) {
+    nesneler = null
+  }
+
+  /*
+   * DERİNLİK. Nesne tanıma 'ne olduğunu', derinlik 'nerede ve ne biçimde
+   * olduğunu' söylüyor. Yerleştirmenin asıl ölçütü ikincisi: düz bir yüzey
+   * mi, önünde bir şey var mı. İkisi de olmazsa eski sezgisel ölçütler.
+   */
+  let derinlik = null
+  try {
+    derinlik = await derinlikHaritasi(tuval)
+  } catch {
+    derinlik = null
+  }
+
+  /*
+   * OTOMATİK YÜZEY TARAMASI ÖNERİDEN ÇIKARILDI.
+   *
+   * Kullanıcı "Önerilen yere koy" düğmesinin KAMERADA OTURT ile aynı
+   * davranmasını istedi. Yüzey tarayıcıları (dortgenBul.js, duzlemBolge.js)
+   * duruyor; perspektifli yerleşim artık manuel dört köşe kipiyle yapılıyor
+   * — orada sonuç kesin ve kullanıcının denetiminde.
+   */
+  /*
+   * ÖNCE MEVCUT EKRAN YÜZEYİ.
+   *
+   * Boş alan araması gökyüzünü en temiz bölge sanıyor; oysa fotoğrafta
+   * gerçek bir LED ekran/billboard varsa tasarımın yeri kesinlikle
+   * orasıdır. Nesne tanıma kaba yeri veriyor, kenar araması da kasanın
+   * İÇ hattını — yani aktif gösterim yüzeyini — çıkarıyor.
+   */
+  let yuzey = null
+  if (nesneler?.ekranKutusu) {
+    try {
+      yuzey = mevcutEkranYuzeyi(tuval, { ekranKutusu: nesneler.ekranKutusu })
+    } catch {
+      yuzey = null
+    }
+  }
+
+  /*
+   * ADAY KARELER. Tek bir 'en iyi yer' seçmek yerine uygun yüzeylerin hepsi
+   * çıkarılıyor; kullanıcı fotoğrafın üstünde birine tıklayarak tasarımı oraya
+   * taşıyor (bkz. adayYuzeyler.js).
+   */
+  let adaylar = []
+  try {
+    adaylar = adaylariBul(tuval, { nesneler, derinlik, yuzey, oran: enBoy, zeminOran })
+  } catch {
+    adaylar = yuzey ? [{ koseler: yuzey.koseler, skor: 100, tur: 'screen' }] : []
+  }
+
   let yer = null
   try {
+    /*
+     * KAMERA OTURTMA İLE BİREBİR AYNI ÇAĞRI (bkz. Oturtma.jsx):
+     * uygunYuzeyBul(kare, tasarım oranı) — fazladan ölçüt yok.
+     *
+     * Fotoğrafa özgü ek ölçütler (zemin/gökyüzü elemesi, nesne maskesi,
+     * derinlik düzlemi) duvarBul.js içinde duruyor ve seçeneklerle açılıyor;
+     * burada kullanılmıyorlar.
+     */
     yer = uygunYuzeyBul(tuval, enBoy)
   } catch {
     yer = null // okunamayan görüntü: öneri yok, orta kullanılır
@@ -93,7 +206,18 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
       x1: Math.round(merkezX + yariW),
       y1: Math.round(merkezY + yariH),
     },
-    panelEnM: alanM,
+    /*
+     * Önerilen alanın gerçek genişliği — REFERANS mesafeye göre, sabit.
+     *
+     * Mesafenin etkisi buradan değil, arka planın yakınlığından geliyor
+     * (bkz. App.jsx `sahneYakinlik`). İkisi birden mesafeye bağlansaydı
+     * ölçü iki kez değişir, tasarım mesafeyle karesel küçülürdü.
+     */
+    panelEnM: Math.max(0.2, (yer ? yer.w : 0.32) * kadrajGenisligi(VARSAYILAN_MESAFE_M)),
+    /** Önerilen alanın kadrajdaki genişlik payı (0–1) — ölçek buradan. */
+    yerW: yer ? yer.w : 0.32,
+    /** Kadrajın kapsadığı genişlik (metre) — yerleşim ölçeği. */
+    kadrajM: kadrajGenisligi(mesafeM),
     maskeli: false,
     kiosk: true,
     /* Kırpma ve yakınlaştırma yok: fotoğrafın tamamı görünür. */
@@ -109,9 +233,68 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
      * Her hâlükârda panelin altında kalmak zorunda: ekranın içinden geçen bir
      * zemin çizgisi kiosku duvarın içine gömerdi.
      */
-    zeminY: zeminY(tuval, H, merkezY + yariH, yer),
+    zeminY: zeminY(zeminOran, H, merkezY + yariH, yer),
     /** Öneri ne kadar güvenilir — arayüz zayıf öneriyi kullanıcıya söyler. */
     guven: yer ? yer.guven : 0,
+    /*
+     * BAKIŞ AÇISI (derece) — fotoğrafın kaçış noktasından ölçülüyor.
+     * Öneri uygulanınca ekran bu açıya çevriliyor; kullanıcı isterse elle
+     * değiştirebiliyor. Bkz. aciBul.js.
+     */
+    aci: aciOlc(tuval),
+    /** Modelin fotoğrafta gördüğü nesneler — arayüz bunu kullanıcıya yazıyor. */
+    nesneSayimi: nesneler ? nesneler.sayim : null,
+    modelCalisti: !!nesneler,
+    derinlikCalisti: !!derinlik,
+    /** Bulunan ekran yüzeyi: dört köşe (0–1) + skor. */
+    yuzey,
+    /** Tıklanabilir aday yerleşim kareleri (0–1 köşeler). */
+    adaylar,
+  }
+}
+
+/** Bir maskeyi başka bir ölçüye taşır (en yakın komşu). */
+function olcekle(veri, kw, kh, hw, hh) {
+  if (!veri) return null
+  const c = new Float32Array(hw * hh)
+  for (let y = 0; y < hh; y++) {
+    const sy = Math.min(kh - 1, Math.floor((y / hh) * kh))
+    for (let x = 0; x < hw; x++) {
+      const sx = Math.min(kw - 1, Math.floor((x / hw) * kw))
+      c[y * hw + x] = veri[sy * kw + sx]
+    }
+  }
+  return c
+}
+
+/**
+ * Gökyüzü maskesi: mavi baskın pikseller. Düzlem araması için gerekli,
+ * çünkü gökyüzü derinlikte kusursuz bir düzlemdir ve en büyük bölge olur.
+ */
+function gokMaskesi(tuval, w, h) {
+  try {
+    const c = document.createElement("canvas")
+    c.width = w
+    c.height = h
+    const ctx = c.getContext("2d", { willReadFrequently: true })
+    ctx.drawImage(tuval, 0, 0, w, h)
+    const d = ctx.getImageData(0, 0, w, h).data
+    const m = new Float32Array(w * h)
+    for (let i = 0, p = 0; i < m.length; i++, p += 4) {
+      m[i] = d[p + 2] - d[p] > 25 ? 1 : 0
+    }
+    return m
+  } catch {
+    return null
+  }
+}
+
+/** Bakış açısı ölçümü — okunamayan görüntüde sessizce vazgeçilir. */
+function aciOlc(tuval) {
+  try {
+    return perspektifAcisi(tuval)
+  } catch {
+    return null
   }
 }
 
@@ -119,13 +302,7 @@ export function ozelMekanKaydi(url, gorsel, oran, alanM = VARSAYILAN_ALAN_M) {
  * Zemin çizgisi: önce fotoğraftan, olmazsa önerilen alanın altından.
  * Panelin altında kalması güvence altına alınıyor.
  */
-function zeminY(tuval, H, panelAlt, yer) {
-  let oran = null
-  try {
-    oran = zeminCizgisiBul(tuval)
-  } catch {
-    oran = null
-  }
+function zeminY(oran, H, panelAlt, yer) {
   const bulunan = oran != null ? oran * H : yer ? (yer.y + yer.h) * H : panelAlt
   return Math.round(Math.max(panelAlt + 2, Math.min(H - 2, bulunan)))
 }

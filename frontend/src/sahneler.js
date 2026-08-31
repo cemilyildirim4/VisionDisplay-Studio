@@ -74,8 +74,38 @@ export const SAHNELER = [
      * geliyor. Fotografin kendi zemin dokusu da tam bu hizada basliyor.
      */
     zeminY: 646,
-    panelEnM: 4,
+    /*
+     * PANEL DÜZLEMİ = DUVAR DÜZLEMİ.
+     *
+     * Panel 440 piksel genişliğinde ve 4 m sayılıyordu; bu 110 piksel/m
+     * demek, yani ekran duvardan belirgin biçimde ÖNDE duruyor kabul
+     * ediliyordu. Sonuç: 12 m'lik bir tasarım, 12 m'lik arka duvardan
+     * yarı yarıya büyük görünüyordu. Ekran duvara asılıyor; ölçek de
+     * duvarın ölçeği olmalı: duvar hizasında 80 piksel/m, 440 / 80 = 5,5 m.
+     */
+    panelEnM: 5.5,
     maskeli: false, // fotografta kendi LED yuzeyi yok
+    /*
+     * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
+     *
+     * Nereden çıktı:
+     *  • Arka duvar 960 piksel; tavan yüksekliği tipik bir AVM koridorunda
+     *    4,5 m ve duvar 360 piksel → duvar hizasında 1 m ≈ 80 piksel.
+     *    960 / 80 ≈ 12 m genişlik.
+     *  • Duvar kadrajın %57'sini kaplıyor → duvar hizasında kadraj ≈ 21 m.
+     *    Yatay görüş açısı ~58° kabulüyle kamera mesafesi ≈ 21 / 1,11 ≈ 19 m.
+     *  • Kamera ~1,5 m yükseklikte; kadrajın alt kenarı zemine ~5 m ötede
+     *    değiyor → görünen zemin derinliği ≈ 19 − 5 ≈ 14 m.
+     *
+     * Konumlar kaynak görselin 0–1 aralığında; etiketler fotoğrafla
+     * birlikte ölçekleniyor.
+     */
+    olculer: [
+      { etiket: 'Duvar 12 × 4,5 m', x: 0.19, y: 0.28 },
+      { etiket: 'Genişlik ~21 m', x: 0.82, y: 0.55 },
+      { etiket: 'Mesafe ~19 m', x: 0.18, y: 0.82 },
+      { etiket: 'Derinlik ~14 m', x: 0.82, y: 0.92 },
+    ],
   },
   {
     /*
@@ -107,8 +137,31 @@ export const SAHNELER = [
      * basladigi yer 640 - kiosk artik dosemeye basiyor.
      */
     zeminY: 740,
-    panelEnM: 4,
+    /*
+     * PANEL DÜZLEMİ = TAŞ DUVAR DÜZLEMİ (bkz. AVM koridorundaki aynı not).
+     * Panel 300 piksel; duvar hizasında 1 m ≈ 50 piksel → 300 / 50 = 6 m.
+     * Önceki 4 m değeri ekranı duvarın 1,5 kat önüne koyuyordu ve 18 m'lik
+     * tasarım 18 m'lik duvarı aşıyordu.
+     */
+    panelEnM: 6,
     maskeli: false,
+    /*
+     * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
+     *
+     * Nereden çıktı:
+     *  • Taş duvar 12 panelden oluşuyor, panel genişliği ~1,5 m → ≈ 18 m.
+     *    905 piksel / 18 m → duvar hizasında 1 m ≈ 50 piksel.
+     *  • Duvar yüksekliği 200 piksel → ≈ 4 m (giriş kapısı ~2,2 m ile tutarlı).
+     *  • Duvar kadrajın %54'ünü kaplıyor → duvar hizasında kadraj ≈ 33 m,
+     *    kamera mesafesi ≈ 33 / 1,11 ≈ 30 m.
+     *  • Kamera ~1,6 m yükseklikte → görünen döşeme derinliği ≈ 25 m.
+     */
+    olculer: [
+      { etiket: 'Duvar 18 × 4 m', x: 0.17, y: 0.5 },
+      { etiket: 'Genişlik ~33 m', x: 0.84, y: 0.5 },
+      { etiket: 'Mesafe ~30 m', x: 0.18, y: 0.84 },
+      { etiket: 'Derinlik ~25 m', x: 0.84, y: 0.93 },
+    ],
   },
   {
     id: 'foto',
@@ -325,4 +378,17 @@ export function zeminOturmaKaymasi(
 export function oneriYatayKaymasi(yer, tuvalW) {
   if (!yer?.sigdir) return 0
   return yer.merkezXpx - tuvalW / 2
+}
+
+/**
+ * Onerilen yere gitmek icin gereken DIKEY kayma.
+ *
+ * Yalnizca ekran DUVARA ASILI oldugunda (kiosk ayaklari gizli) kullaniliyor.
+ * Ayakli kioskun dikey yerini zemin belirler — havada duramaz. Ayak yoksa
+ * boyle bir zorunluluk kalmiyor ve ekran, modelin onerdigi yukseklige,
+ * ornegin odada zaten asili duran ekranin hizasina konabiliyor.
+ */
+export function oneriDikeyKaymasi(yer, tuvalH) {
+  if (!yer?.sigdir) return 0
+  return yer.merkezYpx - tuvalH / 2
 }

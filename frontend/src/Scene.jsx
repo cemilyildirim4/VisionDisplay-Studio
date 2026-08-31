@@ -39,11 +39,15 @@ export default function Scene({
   duvarWm,
   duvarHm,
   ekranSekli,
+  ayakOrani = 0.5,
+  yon = null,
+  kioskGizle = false,
+  olcuGoster = false,
   yakinlik = 1,
   kayma = null,
   /* Kullanicinin kendi fotografi — sahneler.js listesinde yok, disaridan gelir */
   ozelSahne = null,
-  ayakVar = true,
+  kioskTipi = 'duvar',
 }) {
   // Fotoğraflı mekânlar sahneler.js'te tanımlı; yeni eklemek için orası yeterli
   const sahne = id === 'ozel' ? ozelSahne : sahneBul(id)
@@ -62,8 +66,14 @@ export default function Scene({
         ekranWpx={ekranWpx}
         ekranHpx={ekranHpx}
         yakinlik={yakinlik}
+        ekranSekli={ekranSekli}
+        ayakOrani={ayakOrani}
+        yon={yon}
+        kioskGizle={kioskGizle}
+        cizimOlcek={pxPerM}
+        olcuGoster={olcuGoster}
         kayma={kayma}
-        ayakVar={ayakVar}
+        kioskTipi={kioskTipi}
       />
     )
 
