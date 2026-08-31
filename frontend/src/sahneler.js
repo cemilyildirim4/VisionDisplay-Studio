@@ -95,7 +95,11 @@ export const SAHNELER = [
      *
      * 960 piksel / 1672 piksel = 0,574.
      */
-    duvarPayW: 0.574,
+    /*
+     * Duvar 1080 piksel geniş (1672'nin %65'i) — ölçüldü: x 300–1380 arası
+     * düz kaplama, iki yanda vitrinler başlıyor.
+     */
+    duvarPayW: 0.646,
     /*
      * DUVARIN FOTOĞRAFTAKİ DİKDÖRTGENİ (kaynak piksel).
      *
@@ -106,7 +110,13 @@ export const SAHNELER = [
      *
      * Duvar 960 piksel geniş (kadrajın %57'si), 360 piksel yüksek (4,5 m).
      */
-    duvarKutu: { x0: 356, y0: 286, x1: 1316, y1: 646 },
+    /*
+     * Duvarın gerçek dikdörtgeni ÖLÇÜLDÜ: üstte tavan kaplamasının bittiği
+     * hiza 178, altta duvarın zemine indiği süpürgelik gölgesi 520. Önceki
+     * değerler (286–646) duvarın dışına taşıyordu; ekran duvarın ortasına
+     * değil, zemine sarkmış gibi duruyordu.
+     */
+    duvarKutu: { x0: 300, y0: 178, x1: 1380, y1: 520 },
     maskeli: false, // fotografta kendi LED yuzeyi yok
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
