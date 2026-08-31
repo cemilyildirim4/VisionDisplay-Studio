@@ -23,6 +23,8 @@
  * bir dörtgen oluyor. Düzlem çıkmazsa kare dik dörtgen kalıyor.
  */
 
+import { mevcutEkranYuzeyi } from './ekranYuzeyi.js'
+
 /** Çözümleme genişliği — hızlı ve yeterli. */
 const COZUMLEME_W = 160
 
@@ -168,6 +170,88 @@ export function adaylariBul(tuval, sec = {}) {
   ham.sort((a, b) => b.skor - a.skor)
 
   /*
+   * PANO/EKRAN ARAMASI — NESNE MODELİ YETMEDİĞİNDE.
+   *
+   * Nesne tanıma modeli Pascal-VOC sınıflarını biliyor; orada "televizyon"
+   * var ama BİLBORD yok. Açık hava panolarında bu yüzden hiç ekran
+   * bulunamıyor, oysa kullanıcının beklediği tam olarak o: fotoğraftaki
+   * mevcut panonun içine yerleşmek.
+   *
+   * Çare geometri: en güçlü birkaç adayın çevresinde kenar araması yapılıyor
+   * (ekranYuzeyi.js). Dört kenarı da güçlü, çerçevesi belirgin bir dikdörtgen
+   * çıkarsa orası bir gösterim yüzeyidir — türü 'screen' oluyor ve tasarım
+   * oraya oturuyor.
+   */
+  if (!sonuc.length) {
+    /*
+     * ARAMA KUTULARI: en güçlü adayların BİRLEŞİMİ ve kadrajın ortası.
+     *
+     * Tek tek adaylarla arandığında panonun yalnızca bir şeridi bulunuyordu
+     * (aday kutusu panonun bir parçasıydı, Hough da o parçanın kenarlarını
+     * gördü). Birleşim kutusu bütün panoyu kapsıyor; kazanan, dört kenarı
+     * güçlü olanlar arasında EN BÜYÜK alanlı dörtgen oluyor.
+     */
+    const kutular = []
+    const iyiler = ham.slice(0, 4)
+    if (iyiler.length) {
+      const xs = iyiler.flatMap((a) => a.koseler.map((k) => k.x))
+      const ys = iyiler.flatMap((a) => a.koseler.map((k) => k.y))
+      kutular.push({
+        x: Math.min(...xs),
+        y: Math.min(...ys),
+        w: Math.max(...xs) - Math.min(...xs),
+        h: Math.max(...ys) - Math.min(...ys),
+      })
+    }
+    /*
+     * KADRAJIN TAMAMINI ARAMA KUTUSU YAPMIYORUZ.
+     *
+     * Denendi: Hough o zaman bina cephelerinin hatlarını birleştirip
+     * kadrajın yarısını kaplayan yamuk bir dörtgen üretti. Arama, adayların
+     * bulunduğu bölgeyle sınırlı kalmalı.
+     */
+    for (const a of iyiler) {
+      const xs = a.koseler.map((k) => k.x)
+      const ys = a.koseler.map((k) => k.y)
+      kutular.push({
+        x: Math.min(...xs),
+        y: Math.min(...ys),
+        w: Math.max(...xs) - Math.min(...xs),
+        h: Math.max(...ys) - Math.min(...ys),
+      })
+    }
+
+    let enIyi = null
+    for (const kutu of kutular) {
+      if (!(kutu.w > 0.08) || !(kutu.h > 0.05)) continue
+      let bulunan = null
+      try {
+        bulunan = mevcutEkranYuzeyi(tuval, { ekranKutusu: kutu })
+      } catch {
+        bulunan = null
+      }
+      if (!bulunan || bulunan.kaba || bulunan.skor < 70) continue
+      const alan = dortgenAlanOran(bulunan.koseler)
+      /*
+       * PANO OLMA ŞARTLARI.
+       *  • kadrajın %3'ünden büyük, %45'inden küçük olmalı — daha büyüğü
+       *    artık "sahnenin kendisi"dir, pano değil;
+       *  • kenarlara yapışmamalı: gerçek bir pano fotoğrafın içinde durur.
+       */
+      if (!(alan > 0.03) || alan > 0.45) continue
+      const kx = bulunan.koseler.map((k) => k.x)
+      const ky = bulunan.koseler.map((k) => k.y)
+      if (Math.min(...kx) < 0.02 || Math.max(...kx) > 0.98) continue
+      if (Math.min(...ky) < 0.02 || Math.max(...ky) > 0.98) continue
+      /* Şerit gibi ince dörtgen pano değildir; en/boy 0,3–5 arasında olmalı. */
+      const oranDeg = dortgenEnBoy(bulunan.koseler)
+      if (!(oranDeg > 0.3) || !(oranDeg < 5)) continue
+      if (!enIyi || alan > enIyi.alan) enIyi = { koseler: bulunan.koseler, alan }
+    }
+    if (enIyi) sonuc.push({ koseler: enIyi.koseler, skor: 100, tur: 'screen' })
+  }
+
+  /*
    * PUANI DÜŞÜK ADAY GÖSTERİLMİYOR.
    *
    * Listeyi altıya tamamlamak için zayıf adayları da göstermek zarar
@@ -289,6 +373,23 @@ function olcekle(veri, kw, kh, hw, hh) {
     }
   }
   return c
+}
+
+/** Dörtgenin alanı (0–1 birim karede). */
+function dortgenAlanOran(k) {
+  return Math.abs(
+    k.reduce((t, p, i) => {
+      const n = k[(i + 1) % 4]
+      return t + (p.x * n.y - n.x * p.y)
+    }, 0) / 2,
+  )
+}
+
+/** Dörtgenin en/boy oranı (yaklaşık, kenar uzunluklarından). */
+function dortgenEnBoy(k) {
+  const en = (Math.hypot(k[1].x - k[0].x, k[1].y - k[0].y) + Math.hypot(k[2].x - k[3].x, k[2].y - k[3].y)) / 2
+  const boy = (Math.hypot(k[3].x - k[0].x, k[3].y - k[0].y) + Math.hypot(k[2].x - k[1].x, k[2].y - k[1].y)) / 2
+  return boy > 0 ? en / boy : 0
 }
 
 function dortgenMerkez(k) {

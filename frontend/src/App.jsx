@@ -366,6 +366,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * biliyoruz ve kullanıcının beklediği şey ekranın içini doldurmak.
    */
   const [hedefTur, setHedefTur] = useState(null)
+  /*
+   * EKRANI DOLDUR / GERÇEK ÖLÇÜ.
+   *
+   * Fotoğrafta mevcut bir LED ekran bulunduğunda iki farklı beklenti var:
+   *   • "Ekranı doldur" — tasarım o panonun alanını kaplasın. Bu durumda
+   *     tasarımın METRE ÖLÇÜSÜ de panonun ölçüsüne güncelleniyor (fotoğraf
+   *     ölçeğinden hesaplanıyor) ve kullanıcıya yazılıyor; yoksa çizilen
+   *     boyutla paneldeki sayılar birbirini tutmuyordu.
+   *   • "Gerçek ölçü" — tasarım kendi ölçüsünde kalır, panonun merkezine
+   *     onun açısıyla oturur; küçükse içinde kalır, büyükse taşar.
+   */
+  const [ekranDoldur, setEkranDoldur] = useState(true)
+  /*
+   * oneriyiUygula, ölçü güncellemesinden ÖNCE tanımlanıyor (çizim ölçeği
+   * ondan sonra hesaplanıyor). Bu yüzden işlev bir ref üzerinden çağrılıyor;
+   * aksi halde tanımlanmadan kullanılmış olurdu (bu dosyada üç kez başımıza
+   * geldi, bkz. koseTuval ve duzlemOnbellek notları).
+   */
+  const olculeriPanoyaUydurRef = useRef(null)
   /* Kullanıcı köşeleri elle düzeltiyor mu? */
   const [koseKipi, setKoseKipi] = useState(false)
   /*
@@ -683,6 +702,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setHedefKose(yuzey.koseler)
       setHedefTur('screen')
       setKoseKipi(false)
+      /* Doldur kipinde ölçüler de panonun ölçüsüne çekiliyor (bkz. ekranDoldur). */
+      if (ekranDoldur) olculeriPanoyaUydurRef.current?.(yuzey.koseler, kayit)
     } else {
       /*
        * EKRAN YÜZEYİ BULUNAMADIYSA: önerilen yere koy, MANUEL KİPİ AÇMA.
@@ -803,6 +824,57 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setOrientation(dikeySec ? 'portrait' : 'landscape')
     setCols(kazanan.cols)
     setRows(kazanan.rows)
+  }
+
+  /*
+   * PANONUN GERÇEK ÖLÇÜSÜ (metre) — fotoğrafın ölçeğinden.
+   *
+   * Kadrajın kapsadığı genişlik = çekim mesafesi × 1,11 (bkz. ozelMekan.js).
+   * Yüzeyin kadrajdaki payı da onun metre karşılığını veriyor. Yükseklik,
+   * dörtgenin fotoğraf pikselindeki en/boy oranından çıkıyor.
+   */
+  const yuzeyOlcusu = (koseler, kaynak, mesafeM) => {
+    if (!Array.isArray(koseler) || koseler.length !== 4 || !kaynak?.w || !kaynak?.h) return null
+    const px = koseler.map((k) => ({ x: k.x * kaynak.w, y: k.y * kaynak.h }))
+    const en =
+      (Math.hypot(px[1].x - px[0].x, px[1].y - px[0].y) +
+        Math.hypot(px[2].x - px[3].x, px[2].y - px[3].y)) / 2
+    const boy =
+      (Math.hypot(px[3].x - px[0].x, px[3].y - px[0].y) +
+        Math.hypot(px[2].x - px[1].x, px[2].y - px[1].y)) / 2
+    if (!(en > 0) || !(boy > 0)) return null
+    const wm = (en / kaynak.w) * kadrajGenisligi(mesafeM)
+    return { wm, hm: wm * (boy / en) }
+  }
+
+  /* Tasarımı panonun ölçüsüne getirir ve kabin sayısını yeniden dağıtır. */
+  const olculeriPanoyaUydur = (koseler) => olculeriPanoyaUydurIle(koseler, ozelSahne?.kaynak)
+  const olculeriPanoyaUydurIle = (koseler, kaynak) => {
+    const olcu = yuzeyOlcusu(koseler, kaynak, ozelMesafeM)
+    if (!olcu || !(olcu.wm > 0.1) || !(olcu.hm > 0.1)) return null
+    const w = Math.min(20, Math.round(olcu.wm * 100) / 100)
+    const h = Math.min(20, Math.round(olcu.hm * 100) / 100)
+    setWidth(w)
+    setHeight(h)
+    if (selectedModel) {
+      const { yatay, dikey } = yerlesimSecenekleri(selectedModel, w, h)
+      const dikeySec = dikey.led > yatay.led || (dikey.led === yatay.led && portrait)
+      const kazanan = dikeySec ? dikey : yatay
+      setOrientation(dikeySec ? 'portrait' : 'landscape')
+      setCols(kazanan.cols)
+      setRows(kazanan.rows)
+    }
+    return { w, h }
+  }
+  olculeriPanoyaUydurRef.current = (koseler, kayit) => {
+    const olcu = olculeriPanoyaUydurIle(koseler, kayit?.kaynak || ozelSahne?.kaynak)
+    setOzelUyari(
+      olcu
+        ? `${t('scene.fillResized')} ${olcu.w.toFixed(2).replace('.', ',')} × ${olcu.h
+            .toFixed(2)
+            .replace('.', ',')} m`
+        : t('scene.screenSurface'),
+    )
   }
 
   const hasModel = !!selectedModel
@@ -1434,7 +1506,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       Math.max(1, fotoYer.genislik)
     const yuzeyWm = Math.max(0.2, yuzeyPayi * kadrajGenisligi(ozelMesafeM))
     const olcekli =
-      hedefTur === 'screen'
+      hedefTur === 'screen' && ekranDoldur
         ? sigdirDortgen(tuvalKose, tasarimWm / tasarimHm)
         : icDortgen(tuvalKose, tasarimWm, tasarimHm, yuzeyWm)
     return olcekli.map((k) => ({ x: k.x - solUst.x, y: k.y - solUst.y }))
@@ -1809,7 +1881,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 setHedefKose(ham.koseler)
                 setHedefTur(ham.tur || null)
                 setAdayKipi(false)
-                setOzelUyari(null)
+                if (ham.tur === 'screen' && ekranDoldur) {
+                  const yeni = olculeriPanoyaUydur(ham.koseler)
+                  setOzelUyari(
+                    yeni
+                      ? `${t('scene.fillResized')} ${yeni.w.toFixed(2).replace('.', ',')} × ${yeni.h
+                          .toFixed(2)
+                          .replace('.', ',')} m`
+                      : null,
+                  )
+                } else {
+                  setOzelUyari(null)
+                }
               }}
             />
           )}
@@ -2470,6 +2553,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         {t('scene.cornersReset')}
                       </button>
                     )}
+                    {/*
+                      EKRANI DOLDUR / GERÇEK ÖLÇÜ — yalnızca fotoğrafta
+                      mevcut bir ekran bulunduğunda anlamlı.
+                    */}
+                    {hedefTur === 'screen' && (
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
+                          {t('scene.fillMode')}
+                        </span>
+                        <div className="flex rounded-lg border border-neutral-200 dark:border-[#2c333f] overflow-hidden">
+                          {[true, false].map((v) => (
+                            <button
+                              key={String(v)}
+                              type="button"
+                              onClick={() => {
+                                setEkranDoldur(v)
+                                if (v && hedefKose) {
+                                  const yeni = olculeriPanoyaUydur(hedefKose)
+                                  setOzelUyari(
+                                    yeni
+                                      ? `${t('scene.fillResized')} ${yeni.w
+                                          .toFixed(2)
+                                          .replace('.', ',')} × ${yeni.h.toFixed(2).replace('.', ',')} m`
+                                      : null,
+                                  )
+                                } else {
+                                  setOzelUyari(t('scene.realSizeOn'))
+                                }
+                              }}
+                              className={`py-1.5 px-3 text-[13px] font-medium transition-colors ${
+                                ekranDoldur === v
+                                  ? 'bg-brand text-white'
+                                  : 'text-neutral-600 dark:text-neutral-400 hover:text-brand'
+                              }`}
+                            >
+                              {t(v ? 'scene.fillScreen' : 'scene.realSize')}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/*
                       UYGUN YERLER — tek tahmin yerine seçenek listesi:
                       kareleri gör, birine tıkla, tasarım oraya gitsin.
