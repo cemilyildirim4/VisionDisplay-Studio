@@ -182,7 +182,7 @@ export const SAHNELER = [
      * calilarin uzerinde duruyormus gibi gorunuyordu. Kaldirim taslarinin
      * basladigi yer 640 - kiosk artik dosemeye basiyor.
      */
-    zeminY: 740,
+    zeminY: 700,
     /*
      * PANEL DÜZLEMİ = TAŞ DUVAR DÜZLEMİ (bkz. AVM koridorundaki aynı not).
      * Panel 300 piksel; duvar hizasında 1 m ≈ 50 piksel → 300 / 50 = 6 m.
@@ -191,7 +191,8 @@ export const SAHNELER = [
      */
     panelEnM: 6,
     /* Taş duvar 905 piksel / 1672 piksel (bkz. AVM koridorundaki not). */
-    duvarPayW: 0.541,
+    /* Duvar 922 piksel / 1672 piksel. */
+    duvarPayW: 0.551,
     /*
      * Taş duvar: 905 piksel geniş, üst kenarı 410 (duvarın üstündeki koyu
      * ızgara bandı görselden kaldırıldı; artık duvarın hemen üstü gökyüzü).
@@ -201,7 +202,11 @@ export const SAHNELER = [
      * şeridinin üstünde (586) — görsel orijinal hâline döndürüldü, ızgara ve
      * çalılar yerinde.
      */
-    duvarKutu: { x0: 384, y0: 410, x1: 1289, y1: 586 },
+    /*
+     * Görsel Rabia tarafından yenilendi (düz duvar, çalılar yok). Kenarlar
+     * yeniden ölçüldü: duvar x 384–1306, y 410–590; altında doğrudan döşeme.
+     */
+    duvarKutu: { x0: 384, y0: 410, x1: 1306, y1: 590 },
     maskeli: false,
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
