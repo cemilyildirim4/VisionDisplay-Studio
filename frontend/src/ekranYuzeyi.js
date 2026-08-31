@@ -176,11 +176,117 @@ export function mevcutEkranYuzeyi(kaynak, sec = {}) {
     }
   }
 
+  /*
+   * KENARA OTURTMA.
+   *
+   * Hough en güçlü hattı veriyor ama bu hat panonun gerçek kenarından birkaç
+   * piksel içeride ya da dışarıda kalabiliyor; sonuçta tasarım panonun
+   * içinde hafifçe sola/sağa kaymış görünüyordu. Burada her kenar kendi
+   * normali boyunca kaydırılıp kenar enerjisinin en yüksek olduğu yere
+   * oturtuluyor — dört kenar birbirinden bağımsız.
+   */
+  const oturtulmus = kenaraOturt(enIyi.koseler, mag, W, H)
+
   return {
-    koseler: enIyi.koseler.map((k) => ({ x: k.x / W, y: k.y / H })),
+    koseler: oturtulmus.map((k) => ({ x: k.x / W, y: k.y / H })),
     skor: Math.max(0, Math.min(100, enIyi.skor)),
     tur: 'existing-led-screen',
   }
+}
+
+/**
+ * Dörtgenin dört kenarını, kenar enerjisinin en yüksek olduğu yere kaydırır.
+ *
+ * Her kenar kendi normali boyunca ±%4 aralıkta taranıyor; kenar boyunca
+ * toplanan gradyan en yüksek olan konum kazanıyor. Köşeler kaydırılan iki
+ * kenarın kesişiminden yeniden kuruluyor, böylece dörtgen bozulmuyor.
+ */
+function kenaraOturt(k, mag, W, H) {
+  const merkez = {
+    x: (k[0].x + k[1].x + k[2].x + k[3].x) / 4,
+    y: (k[0].y + k[1].y + k[2].y + k[3].y) / 4,
+  }
+  const kenarlar = [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 0],
+  ]
+  const enerji = (a, b) => {
+    let t = 0
+    const n = 40
+    for (let i = 0; i <= n; i++) {
+      const x = Math.round(a.x + (b.x - a.x) * (i / n))
+      const y = Math.round(a.y + (b.y - a.y) * (i / n))
+      if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) continue
+      let en = 0
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const v = mag[(y + dy) * W + (x + dx)]
+          if (v > en) en = v
+        }
+      }
+      t += en
+    }
+    return t
+  }
+
+  const yeni = kenarlar.map(([i, j]) => {
+    const a = k[i]
+    const b = k[j]
+    /* Kenarın dış normali: merkezden uzaklaşan yön. */
+    const ox = (a.x + b.x) / 2 - merkez.x
+    const oy = (a.y + b.y) / 2 - merkez.y
+    const n = Math.hypot(ox, oy) || 1
+    const nx = ox / n
+    const ny = oy / n
+    const uzunluk = Math.hypot(b.x - a.x, b.y - a.y)
+    const menzil = Math.max(3, uzunluk * 0.04)
+    let enIyiKay = 0
+    let enIyiDeger = -1
+    for (let d = -menzil; d <= menzil; d += 1) {
+      const e = enerji({ x: a.x + nx * d, y: a.y + ny * d }, { x: b.x + nx * d, y: b.y + ny * d })
+      if (e > enIyiDeger) {
+        enIyiDeger = e
+        enIyiKay = d
+      }
+    }
+    return {
+      a: { x: a.x + nx * enIyiKay, y: a.y + ny * enIyiKay },
+      b: { x: b.x + nx * enIyiKay, y: b.y + ny * enIyiKay },
+    }
+  })
+
+  /* Komşu kenarların kesişimi yeni köşeyi veriyor. */
+  const kesisim = (p1, p2, p3, p4) => {
+    const a1 = p2.y - p1.y
+    const b1 = p1.x - p2.x
+    const c1 = a1 * p1.x + b1 * p1.y
+    const a2 = p4.y - p3.y
+    const b2 = p3.x - p4.x
+    const c2 = a2 * p3.x + b2 * p3.y
+    const det = a1 * b2 - a2 * b1
+    if (Math.abs(det) < 1e-6) return null
+    return { x: (b2 * c1 - b1 * c2) / det, y: (a1 * c2 - a2 * c1) / det }
+  }
+
+  const sonuc = []
+  for (let i = 0; i < 4; i++) {
+    const onceki = yeni[(i + 3) % 4]
+    const simdiki = yeni[i]
+    const nokta = kesisim(onceki.a, onceki.b, simdiki.a, simdiki.b)
+    if (!nokta || !Number.isFinite(nokta.x) || !Number.isFinite(nokta.y)) return k
+    sonuc.push(nokta)
+  }
+  /* Oturtma dörtgeni bozduysa (aşırı kayma) eski hâli korunuyor. */
+  const alanEski = Math.abs(
+    k.reduce((t, p, i) => t + (p.x * k[(i + 1) % 4].y - k[(i + 1) % 4].x * p.y), 0) / 2,
+  )
+  const alanYeni = Math.abs(
+    sonuc.reduce((t, p, i) => t + (p.x * sonuc[(i + 1) % 4].y - sonuc[(i + 1) % 4].x * p.y), 0) / 2,
+  )
+  if (!(alanYeni > alanEski * 0.7) || alanYeni > alanEski * 1.4) return k
+  return sonuc
 }
 
 /* ------------------------------------------------------------------ */
