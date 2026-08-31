@@ -303,6 +303,11 @@ const dict = {
   // ---------- Yapılandırma ----------
   'conf.heading': { tr: 'Yapılandırma', en: 'Configuration', ar: 'التهيئة' },
   'conf.fitToWall': { tr: 'Duvara sığdır', en: 'Fit to wall', ar: 'ملاءمة الجدار' },
+  'conf.layoutHorizontal': { tr: 'Yatay', en: 'Landscape', ar: 'أفقي' },
+  'conf.layoutVertical': { tr: 'Dikey', en: 'Portrait', ar: 'عمودي' },
+  'conf.layoutGrid': { tr: 'Dizilim', en: 'Layout', ar: 'تخطيط' },
+  'conf.layoutPixels': { tr: 'Piksel', en: 'Pixels', ar: 'بكسل' },
+  'conf.maxCapacity': { tr: 'Maksimum Kapasite', en: 'Maximum Capacity', ar: 'أقصى سعة' },
 
   // ---------- S-Kutu ----------
   'sbox.heading': { tr: 'S-Kutu Yedekliliği', en: 'S-Box Redundancy', ar: 'تكرار S-Box' },
