@@ -11,7 +11,7 @@ import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
 import { BrandMark, BrandStripe } from './BrandChrome.jsx'
-import ProductTypeBadge from './ProductTypeBadge.jsx'
+import YerlesimKartlari from './YerlesimKartlari.jsx'
 import ProfileMenu from './ProfileMenu.jsx'
 import ChatHelp from './ChatHelp.jsx'
 import Scene, { PANO_ID, SALON_ID, CEPHE_ID } from './Scene.jsx'
@@ -202,8 +202,8 @@ function yerlesimSecenekleri(m, genislikM, yukseklikM) {
   const hesapla = (kabinWmm, kabinHmm) => {
     const c = Math.max(1, Math.floor(genislikM / (kabinWmm / 1000) + EPSILON))
     const r = Math.max(1, Math.floor(yukseklikM / (kabinHmm / 1000) + EPSILON))
-    // Kabin başına LED = piksel sayısı; dönmekle değişmez, yalnızca yer değiştirir.
-    return { cols: c, rows: r, led: c * r * (m.pixelWidth || 0) * (m.pixelHeight || 0) }
+    // Kabin başına piksel; dönmekle değişmez, yalnızca yer değiştirir.
+    return { cols: c, rows: r, piksel: c * r * (m.pixelWidth || 0) * (m.pixelHeight || 0) }
   }
   return { yatay: hesapla(gW, gH), dikey: hesapla(gH, gW) }
 }
@@ -852,12 +852,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
     const { yatay, dikey } = yerlesimSecenekleri(m, width, height)
 
-    const dikeySec = dikey.led > yatay.led || (dikey.led === yatay.led && portrait)
+    const dikeySec = dikey.piksel > yatay.piksel || (dikey.piksel === yatay.piksel && portrait)
     const kazanan = dikeySec ? dikey : yatay
 
     setOrientation(dikeySec ? 'portrait' : 'landscape')
     setCols(kazanan.cols)
     setRows(kazanan.rows)
+  }
+
+  const uygulaYerlesim = (yon, veri) => {
+    setOrientation(yon)
+    setCols(veri.cols)
+    setRows(veri.rows)
   }
 
   /*
@@ -895,7 +901,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHeight(h)
     if (selectedModel) {
       const { yatay, dikey } = yerlesimSecenekleri(selectedModel, w, h)
-      const dikeySec = dikey.led > yatay.led || (dikey.led === yatay.led && portrait)
+      const dikeySec = dikey.piksel > yatay.piksel || (dikey.piksel === yatay.piksel && portrait)
       const kazanan = dikeySec ? dikey : yatay
       setOrientation(dikeySec ? 'portrait' : 'landscape')
       setCols(kazanan.cols)
@@ -918,16 +924,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const category = selectedModel?.category || 'led'
   const isVideoWall = category === 'videowall'
   /*
-   * DİKEY YERLEŞİM HER MODELDE — AMA DÜĞMESİ YOK.
+   * DİKEY YERLEŞİM HER MODELDE.
    *
    * LED kabin ve paneller de dikey kurulabiliyor (asansör holü, vitrin
-   * kolonu, tabela); mekanizma zaten geneldi, yalnızca video duvarına
-   * kilitliydi. Kilidi kalktı.
-   *
-   * Kullanıcıya ayrı bir Yatay/Dikey düğmesi SUNULMUYOR: "Duvara sığdır"
-   * iki yerleşimi de hesaplayıp çok LED olanı zaten kendisi seçiyor
-   * (bkz. fitToWall). Aynı kararı bir de elle sordurmak gereksiz.
-   * Video duvarında Oryantasyon denetimi eskisi gibi duruyor.
+   * kolonu, tabela). Kullanıcı yatay/dikey kartından birini seçer; "Duvara
+   * sığdır" hâlâ piksel sayısı yüksek olanı otomatik uygular.
    */
   const portrait = orientation === 'portrait'
   // Portre modunda ekran 90° döner: kabin en/boy ve piksel değerleri takas edilir
@@ -1012,11 +1013,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * L yoksa null döner ve mekân eskisi gibi dikdörtgen kasa çizer.
    */
   /*
-   * GEÇİCİ BİLGİ SATIRI.
-   *
-   * "Duvara sığdır" kararını arka planda veriyor; bu satır kararın
-   * dayanağını (iki yerleşimin LED sayısı) görünür kılıyor. Doğrulama
-   * bitince kaldırılacak — hesabın kendisi yerinde kalır.
+   * Duvara sığan yatay/dikey dizilim seçenekleri.
+   * Kartlara tıklanınca oryantasyon + sütun/satır uygulanır.
    */
   const yerlesimBilgisi = useMemo(
     () => yerlesimSecenekleri(selectedModel, width, height),
@@ -2193,16 +2191,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {t('conf.fitToWall')}
                 </button>
                 {yerlesimBilgisi && (
-                  <div className="mt-2 text-[15px] leading-snug text-neutral-500 dark:text-neutral-400 tabular-nums">
-                    <div>
-                      Yatay: {yerlesimBilgisi.yatay.cols}×{yerlesimBilgisi.yatay.rows} kabin ·{' '}
-                      {yerlesimBilgisi.yatay.led.toLocaleString('tr-TR')} LED
-                    </div>
-                    <div>
-                      Dikey: {yerlesimBilgisi.dikey.cols}×{yerlesimBilgisi.dikey.rows} kabin ·{' '}
-                      {yerlesimBilgisi.dikey.led.toLocaleString('tr-TR')} LED
-                    </div>
-                  </div>
+                  <YerlesimKartlari
+                    t={t}
+                    secenekler={yerlesimBilgisi}
+                    orientation={orientation}
+                    onSelect={uygulaYerlesim}
+                  />
                 )}
               </div>
 
@@ -2263,7 +2257,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <Segmented
                         buyuk
                         value={orientation}
-                        onChange={setOrientation}
+                        onChange={(v) => {
+                          const veri = v === 'portrait' ? yerlesimBilgisi?.dikey : yerlesimBilgisi?.yatay
+                          if (veri) uygulaYerlesim(v, veri)
+                          else setOrientation(v)
+                        }}
                         options={[
                           { v: 'landscape', l: t('screen.landscape') },
                           { v: 'portrait', l: t('screen.portrait') },
