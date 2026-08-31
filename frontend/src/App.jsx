@@ -1425,10 +1425,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * "Ortala" düğmesi ekranı doğrudan duvara hizalıyor.
    */
   const duvaraHizali = surukleAktif && !kioskVar
+  /*
+   * DUVARIN DİBİNE HİZALAMA.
+   *
+   * Ortalamak yetmiyordu: ekran duvarın ortasında havada asılı gibi
+   * duruyordu. Gerçekte bir cephe ekranı duvarın tabanına yakın kurulur.
+   * Bu yüzden ekranın ALT kenarı, mekânın panelinin alt kenarına
+   * getiriliyor (panel = sahnede ekran için kalibre edilmiş duvar alanı).
+   * Yakınlık tuvalin merkezine göre uygulandığı için panelin yarı yüksekliği
+   * de aynı oranla ölçekleniyor.
+   */
+  const duvarDibiKaymasi = () => {
+    if (!fotoYer?.panelHpx || fotoYer.sigdir) return 0
+    const z = sahneYakinlik || 1
+    const tasarimYariH = (tasarimHm * (cizimOlcek || 0)) / 2
+    return (fotoYer.panelHpx / 2) * z - tasarimYariH
+  }
   const oturmaKaymasi = !surukleAktif
     ? 0
     : duvaraHizali
-      ? (fotoYer?.sigdir ? oneriDikeyKaymasi(fotoYer, tuvalBoyut.h) : 0)
+      ? (fotoYer?.sigdir ? oneriDikeyKaymasi(fotoYer, tuvalBoyut.h) : duvarDibiKaymasi())
       : duvaraAsili
       ? oneriDikeyKaymasi(fotoYer, tuvalBoyut.h)
       : zeminOturmaKaymasi(
