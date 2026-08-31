@@ -1204,6 +1204,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const z = VARSAYILAN_MESAFE_M / Math.max(1, ozelMesafeM)
       return Math.max(0.55, Math.min(3, z))
     }
+    /*
+     * DUVARI ESNEYEN SAHNELERDE YAKINLAŞTIRMA YOK.
+     *
+     * Orada ölçüyü duvarın kendisi taşıyor: duvar büyüyüp küçülüyor, mekân
+     * yerinde kalıyor. Fotoğrafı ayrıca yakınlaştırmak ikinci bir ölçek
+     * demek olurdu ve kullanıcının istemediği şey tam olarak buydu.
+     */
+    if (fotoSahne?.duvarKutu) return 1
     const ilerleme =
       (izlemeMesafesi - OTO_EN_AZ_M) / (ZOOM_EN_COK_M - OTO_EN_AZ_M)
     /*
@@ -1316,6 +1324,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * geliyor; küçük tasarımların görünürlüğü ise sahnenin kendiliğinden
      * yakınlaşmasıyla çözülüyor (bkz. sahneYakinlik).
      */
+    /*
+     * DUVARI ESNEYEN SAHNE: ölçek duvarın tuvale sığdırılmasından geliyor —
+     * çizilmiş iç/dış mekânla birebir aynı kural (salonOlcek). Böylece 6 m
+     * duvar da 18 m duvar da kadraja oturuyor, tasarım duvara göre ölçekli
+     * kalıyor.
+     */
+    if (fotoSahne?.duvarKutu && mekanDuvarWm > 0 && mekanDuvarHm > 0) {
+      return salonOlcek(tuvalBoyut.w, tuvalBoyut.h, mekanDuvarWm, mekanDuvarHm)
+    }
     if (!fotoSahne?.dosya || !(ekranWm > 0) || !(ekranHm > 0)) return null
     const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
     if (!yer?.pxPerM) return null
@@ -1455,9 +1472,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * de aynı oranla ölçekleniyor.
    */
   const duvarDibiKaymasi = () => {
+    const tasarimYariH = (tasarimHm * (cizimOlcek || 0)) / 2
+    /* Esneyen duvarda hiza duvarın kendi alt kenarı. */
+    if (fotoSahne?.duvarKutu && mekanDuvarHm > 0 && cizimOlcek > 0) {
+      return (mekanDuvarHm * cizimOlcek) / 2 - tasarimYariH
+    }
     if (!fotoYer?.panelHpx || fotoYer.sigdir) return 0
     const z = sahneYakinlik || 1
-    const tasarimYariH = (tasarimHm * (cizimOlcek || 0)) / 2
     return (fotoYer.panelHpx / 2) * z - tasarimYariH
   }
   const oturmaKaymasi = !surukleAktif

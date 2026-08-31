@@ -24,6 +24,7 @@
 
 import { fotoYerlesim, govdeOlculeri } from './sahneler.js'
 import { yonDonusumu } from './hooks/useYon.js'
+import DuvarDilim from './DuvarDilim.jsx'
 
 /**
  * ÖLÇÜ ETİKETİNİN METNİ.
@@ -116,6 +117,12 @@ export default function PanoFoto({
   const kiosk = sahne.kiosk && !kioskGizle && ekranWpx > 0 && ekranHpx > 0
   // Ekran arka planla birlikte olceklendigi icin kiosk govdesi de ayni oranda
   const pxPerM = cizimOlcek > 0 ? cizimOlcek : (yer.pxPerM || 1) * yakinlik
+  /*
+   * Duvarı esneterek çizme koşulu: sahne bunu destekliyor ve elde geçerli bir
+   * duvar ölçüsü var. Yoksa fotoğraf eskisi gibi tek parça çiziliyor.
+   */
+  const dilimliDuvar =
+    !!sahne.duvarKutu && duvarWmEtiket > 0 && duvarHmEtiket > 0 && pxPerM > 0
   const kasa = Math.max(3, Math.min(14, ekranWpx * 0.014))
   const ekranHm = ekranHpx / pxPerM
   const { direkM, kaideM } = govdeOlculeri(ekranHm)
@@ -254,6 +261,25 @@ export default function PanoFoto({
               }}
             />
           )}
+          {/*
+            DUVARI ESNEYEN SAHNE.
+
+            Sahnede duvarKutu tanımlıysa (AVM koridoru, şehir meydanı)
+            fotoğraf dokuz dilim çiziliyor: duvar, kullanıcının girdiği
+            ölçüye göre büyüyüp küçülüyor, çevresi yerinde kalıyor. Aksi
+            hâlde eski davranış — fotoğraf tek parça ve yakınlıkla ölçekli.
+          */}
+          {dilimliDuvar ? (
+            <DuvarDilim
+              sahne={sahne}
+              kutu={sahne.duvarKutu}
+              tuvalW={tuvalW}
+              tuvalH={tuvalH}
+              duvarWpx={duvarWmEtiket * pxPerM}
+              duvarHpx={duvarHmEtiket * pxPerM}
+              disOlcek={yer.s}
+            />
+          ) : (
           <img
             src={sahne.dosya}
             alt=""
@@ -278,6 +304,7 @@ export default function PanoFoto({
               willChange: 'transform',
             }}
           />
+          )}
           {/*
             MEKÂNIN GERÇEK ÖLÇÜLERİ.
 

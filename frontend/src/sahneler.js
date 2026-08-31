@@ -96,6 +96,17 @@ export const SAHNELER = [
      * 960 piksel / 1672 piksel = 0,574.
      */
     duvarPayW: 0.574,
+    /*
+     * DUVARIN FOTOĞRAFTAKİ DİKDÖRTGENİ (kaynak piksel).
+     *
+     * Kullanıcı duvar ölçüsünü değiştirince fotoğrafın tamamı yakınlaşmıyor;
+     * yalnızca BU dikdörtgen esniyor (dokuz dilim / 9-slice). Sağdaki ve
+     * soldaki mağaza vitrinleri, tavan ve zemin olduğu gibi kalıyor — tıpkı
+     * çizilmiş iç mekânda duvarın büyüyüp küçülmesi gibi.
+     *
+     * Duvar 960 piksel geniş (kadrajın %57'si), 360 piksel yüksek (4,5 m).
+     */
+    duvarKutu: { x0: 356, y0: 286, x1: 1316, y1: 646 },
     maskeli: false, // fotografta kendi LED yuzeyi yok
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
@@ -158,6 +169,8 @@ export const SAHNELER = [
     panelEnM: 6,
     /* Taş duvar 905 piksel / 1672 piksel (bkz. AVM koridorundaki not). */
     duvarPayW: 0.541,
+    /* Taş duvar: 905 × 200 piksel, kadrajın ortasında (bkz. AVM notu). */
+    duvarKutu: { x0: 384, y0: 372, x1: 1289, y1: 572 },
     maskeli: false,
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
