@@ -8,6 +8,8 @@ public class CabinInputDto
 {
     public int SeriesId { get; set; }
     public string Category { get; set; } = "led";
+    /// <summary>Görünen ad (özellikle MODULE). Boş bırakılabilir.</summary>
+    public string? Name { get; set; }
     public string ModelCode { get; set; } = string.Empty;
 
     /// <summary>

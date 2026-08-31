@@ -14,6 +14,9 @@ public class Cabin
     /// <summary>"led" veya "videowall" — model seçme ekranındaki sekmeleri belirler.</summary>
     public string Category { get; set; } = "led";
 
+    /// <summary>Katalog görünen adı (LED modül formu). Boşsa ModelCode kullanılır.</summary>
+    public string? Name { get; set; }
+
     public string ModelCode { get; set; } = string.Empty;
 
     // --- Configurations/PDF özelliği için korunan alanlar ---

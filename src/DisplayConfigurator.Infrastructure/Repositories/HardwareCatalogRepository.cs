@@ -8,96 +8,153 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
 {
     private readonly IDbConnectionFactory _connectionFactory;
 
-    private const string SelectColumns = @"
-        id AS Id,
-        name AS Name,
-        model AS Model,
-        price AS Price,
-        power_draw_watt AS PowerDrawWatt,
-        heat_dissipation_btu AS HeatDissipationBTU,
-        efficiency_ratio AS EfficiencyRatio,
-        created_at AS CreatedAt";
-
     public HardwareCatalogRepository(IDbConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
     }
 
-    public Task<IEnumerable<PowerSupply>> GetPowerSuppliesAsync() => QueryAllAsync<PowerSupply>("power_supplies");
-    public Task<PowerSupply?> GetPowerSupplyByIdAsync(int id) => QueryByIdAsync<PowerSupply>("power_supplies", id);
-    public Task<PowerSupply> CreatePowerSupplyAsync(PowerSupply item) => CreateAsync(item, "power_supplies");
-    public Task<bool> UpdatePowerSupplyAsync(PowerSupply item) => UpdateAsync(item, "power_supplies");
+    public Task<IEnumerable<PowerSupply>> GetPowerSuppliesAsync() =>
+        QueryAllAsync<PowerSupply>("power_supplies", PowerSupplyColumns);
+    public Task<PowerSupply?> GetPowerSupplyByIdAsync(int id) =>
+        QueryByIdAsync<PowerSupply>("power_supplies", PowerSupplyColumns, id);
+    public Task<PowerSupply> CreatePowerSupplyAsync(PowerSupply item) =>
+        CreateAsync(item, "power_supplies",
+            "(name, model, price, output_voltage, max_power_output_watt, efficiency_ratio, heat_dissipation_btu, created_at)",
+            "(@Name, @Model, @Price, @OutputVoltage, @MaxPowerOutputWatt, @EfficiencyRatio, @HeatDissipationBtu, NOW())");
+    public Task<bool> UpdatePowerSupplyAsync(PowerSupply item) =>
+        UpdateAsync(item, "power_supplies", @"
+                name = @Name, model = @Model, price = @Price,
+                output_voltage = @OutputVoltage, max_power_output_watt = @MaxPowerOutputWatt,
+                efficiency_ratio = @EfficiencyRatio, heat_dissipation_btu = @HeatDissipationBtu");
     public Task<bool> DeletePowerSupplyAsync(int id) => DeleteAsync("power_supplies", id);
     public Task<int> CountPowerSupplyReferencesAsync(int id) => CountReferencesAsync("power_supply_id", id);
 
-    public Task<IEnumerable<MiniPc>> GetMiniPcsAsync() => QueryAllAsync<MiniPc>("mini_pcs");
-    public Task<MiniPc?> GetMiniPcByIdAsync(int id) => QueryByIdAsync<MiniPc>("mini_pcs", id);
-    public Task<MiniPc> CreateMiniPcAsync(MiniPc item) => CreateAsync(item, "mini_pcs");
-    public Task<bool> UpdateMiniPcAsync(MiniPc item) => UpdateAsync(item, "mini_pcs");
+    public Task<IEnumerable<MiniPc>> GetMiniPcsAsync() =>
+        QueryAllAsync<MiniPc>("mini_pcs", MiniPcColumns);
+    public Task<MiniPc?> GetMiniPcByIdAsync(int id) =>
+        QueryByIdAsync<MiniPc>("mini_pcs", MiniPcColumns, id);
+    public Task<MiniPc> CreateMiniPcAsync(MiniPc item) =>
+        CreateAsync(item, "mini_pcs",
+            "(name, model, price, cpu_ram_info, storage, operating_system, max_supported_resolution, power_draw_watt, created_at)",
+            "(@Name, @Model, @Price, @CpuRamInfo, @Storage, @OperatingSystem, @MaxSupportedResolution, @PowerDrawWatt, NOW())");
+    public Task<bool> UpdateMiniPcAsync(MiniPc item) =>
+        UpdateAsync(item, "mini_pcs", @"
+                name = @Name, model = @Model, price = @Price,
+                cpu_ram_info = @CpuRamInfo, storage = @Storage, operating_system = @OperatingSystem,
+                max_supported_resolution = @MaxSupportedResolution, power_draw_watt = @PowerDrawWatt");
     public Task<bool> DeleteMiniPcAsync(int id) => DeleteAsync("mini_pcs", id);
     public Task<int> CountMiniPcReferencesAsync(int id) => CountReferencesAsync("mini_pc_id", id);
 
-    public Task<IEnumerable<PatchCable>> GetPatchCablesAsync() => QueryAllAsync<PatchCable>("patch_cables");
-    public Task<PatchCable?> GetPatchCableByIdAsync(int id) => QueryByIdAsync<PatchCable>("patch_cables", id);
-    public Task<PatchCable> CreatePatchCableAsync(PatchCable item) => CreateAsync(item, "patch_cables");
-    public Task<bool> UpdatePatchCableAsync(PatchCable item) => UpdateAsync(item, "patch_cables");
+    public Task<IEnumerable<PatchCable>> GetPatchCablesAsync() =>
+        QueryAllAsync<PatchCable>("patch_cables", PatchCableColumns);
+    public Task<PatchCable?> GetPatchCableByIdAsync(int id) =>
+        QueryByIdAsync<PatchCable>("patch_cables", PatchCableColumns, id);
+    public Task<PatchCable> CreatePatchCableAsync(PatchCable item) =>
+        CreateAsync(item, "patch_cables",
+            "(name, model, price, cable_type, length_meters, connector_type, created_at)",
+            "(@Name, @Model, @Price, @CableType, @LengthMeters, @ConnectorType, NOW())");
+    public Task<bool> UpdatePatchCableAsync(PatchCable item) =>
+        UpdateAsync(item, "patch_cables", @"
+                name = @Name, model = @Model, price = @Price,
+                cable_type = @CableType, length_meters = @LengthMeters, connector_type = @ConnectorType");
     public Task<bool> DeletePatchCableAsync(int id) => DeleteAsync("patch_cables", id);
     public Task<int> CountPatchCableReferencesAsync(int id) => CountReferencesAsync("patch_cable_id", id);
 
-    public Task<IEnumerable<ReceivingCard>> GetReceivingCardsAsync() => QueryAllAsync<ReceivingCard>("receiving_cards");
-    public Task<ReceivingCard?> GetReceivingCardByIdAsync(int id) => QueryByIdAsync<ReceivingCard>("receiving_cards", id);
-    public Task<ReceivingCard> CreateReceivingCardAsync(ReceivingCard item) => CreateAsync(item, "receiving_cards");
-    public Task<bool> UpdateReceivingCardAsync(ReceivingCard item) => UpdateAsync(item, "receiving_cards");
+    public Task<IEnumerable<ReceivingCard>> GetReceivingCardsAsync() =>
+        QueryAllAsync<ReceivingCard>("receiving_cards", ReceivingCardColumns);
+    public Task<ReceivingCard?> GetReceivingCardByIdAsync(int id) =>
+        QueryByIdAsync<ReceivingCard>("receiving_cards", ReceivingCardColumns, id);
+    public Task<ReceivingCard> CreateReceivingCardAsync(ReceivingCard item) =>
+        CreateAsync(item, "receiving_cards",
+            "(name, model, price, max_pixel_width, max_pixel_height, hub_port_count, power_draw_watt, created_at)",
+            "(@Name, @Model, @Price, @MaxPixelWidth, @MaxPixelHeight, @HubPortCount, @PowerDrawWatt, NOW())");
+    public Task<bool> UpdateReceivingCardAsync(ReceivingCard item) =>
+        UpdateAsync(item, "receiving_cards", @"
+                name = @Name, model = @Model, price = @Price,
+                max_pixel_width = @MaxPixelWidth, max_pixel_height = @MaxPixelHeight,
+                hub_port_count = @HubPortCount, power_draw_watt = @PowerDrawWatt");
     public Task<bool> DeleteReceivingCardAsync(int id) => DeleteAsync("receiving_cards", id);
     public Task<int> CountReceivingCardReferencesAsync(int id) => CountReferencesAsync("receiving_card_id", id);
 
-    public Task<IEnumerable<Processor>> GetProcessorsAsync() => QueryAllAsync<Processor>("processors");
-    public Task<Processor?> GetProcessorByIdAsync(int id) => QueryByIdAsync<Processor>("processors", id);
-    public Task<Processor> CreateProcessorAsync(Processor item) => CreateAsync(item, "processors");
-    public Task<bool> UpdateProcessorAsync(Processor item) => UpdateAsync(item, "processors");
+    public Task<IEnumerable<Processor>> GetProcessorsAsync() =>
+        QueryAllAsync<Processor>("processors", ProcessorColumns);
+    public Task<Processor?> GetProcessorByIdAsync(int id) =>
+        QueryByIdAsync<Processor>("processors", ProcessorColumns, id);
+    public Task<Processor> CreateProcessorAsync(Processor item) =>
+        CreateAsync(item, "processors",
+            "(name, model, price, max_pixel_capacity_mpx, ethernet_port_count, input_ports_info, power_draw_watt, created_at)",
+            "(@Name, @Model, @Price, @MaxPixelCapacityMpx, @EthernetPortCount, @InputPortsInfo, @PowerDrawWatt, NOW())");
+    public Task<bool> UpdateProcessorAsync(Processor item) =>
+        UpdateAsync(item, "processors", @"
+                name = @Name, model = @Model, price = @Price,
+                max_pixel_capacity_mpx = @MaxPixelCapacityMpx, ethernet_port_count = @EthernetPortCount,
+                input_ports_info = @InputPortsInfo, power_draw_watt = @PowerDrawWatt");
     public Task<bool> DeleteProcessorAsync(int id) => DeleteAsync("processors", id);
     public Task<int> CountProcessorReferencesAsync(int id) => CountReferencesAsync("processor_id", id);
 
-    private async Task<IEnumerable<T>> QueryAllAsync<T>(string table)
+    private const string CommonColumns = @"
+        id AS Id,
+        name AS Name,
+        model AS Model,
+        price AS Price,
+        created_at AS CreatedAt";
+
+    private const string PowerSupplyColumns = CommonColumns + @",
+        output_voltage AS OutputVoltage,
+        max_power_output_watt AS MaxPowerOutputWatt,
+        efficiency_ratio AS EfficiencyRatio,
+        heat_dissipation_btu AS HeatDissipationBtu";
+
+    private const string MiniPcColumns = CommonColumns + @",
+        cpu_ram_info AS CpuRamInfo,
+        storage AS Storage,
+        operating_system AS OperatingSystem,
+        max_supported_resolution AS MaxSupportedResolution,
+        power_draw_watt AS PowerDrawWatt";
+
+    private const string PatchCableColumns = CommonColumns + @",
+        cable_type AS CableType,
+        length_meters AS LengthMeters,
+        connector_type AS ConnectorType";
+
+    private const string ReceivingCardColumns = CommonColumns + @",
+        max_pixel_width AS MaxPixelWidth,
+        max_pixel_height AS MaxPixelHeight,
+        hub_port_count AS HubPortCount,
+        power_draw_watt AS PowerDrawWatt";
+
+    private const string ProcessorColumns = CommonColumns + @",
+        max_pixel_capacity_mpx AS MaxPixelCapacityMpx,
+        ethernet_port_count AS EthernetPortCount,
+        input_ports_info AS InputPortsInfo,
+        power_draw_watt AS PowerDrawWatt";
+
+    private async Task<IEnumerable<T>> QueryAllAsync<T>(string table, string columns)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
-        var sql = $"SELECT {SelectColumns} FROM {table} ORDER BY name, id";
-        return await connection.QueryAsync<T>(sql);
+        return await connection.QueryAsync<T>($"SELECT {columns} FROM {table} ORDER BY name, id");
     }
 
-    private async Task<T?> QueryByIdAsync<T>(string table, int id)
+    private async Task<T?> QueryByIdAsync<T>(string table, string columns, int id)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
-        var sql = $"SELECT {SelectColumns} FROM {table} WHERE id = @Id";
-        return await connection.QuerySingleOrDefaultAsync<T>(sql, new { Id = id });
+        return await connection.QuerySingleOrDefaultAsync<T>(
+            $"SELECT {columns} FROM {table} WHERE id = @Id", new { Id = id });
     }
 
-    private async Task<T> CreateAsync<T>(T item, string table) where T : HardwareComponent
+    private async Task<T> CreateAsync<T>(T item, string table, string cols, string vals) where T : HardwareComponent
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
-        var sql = $@"
-            INSERT INTO {table}
-                (name, model, price, power_draw_watt, heat_dissipation_btu, efficiency_ratio, created_at)
-            VALUES
-                (@Name, @Model, @Price, @PowerDrawWatt, @HeatDissipationBTU, @EfficiencyRatio, NOW())
-            RETURNING id;";
-        item.Id = await connection.ExecuteScalarAsync<int>(sql, item);
+        item.Id = await connection.ExecuteScalarAsync<int>(
+            $"INSERT INTO {table} {cols} VALUES {vals} RETURNING id;", item);
         return item;
     }
 
-    private async Task<bool> UpdateAsync<T>(T item, string table) where T : HardwareComponent
+    private async Task<bool> UpdateAsync<T>(T item, string table, string setClause) where T : HardwareComponent
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
-        var sql = $@"
-            UPDATE {table} SET
-                name = @Name,
-                model = @Model,
-                price = @Price,
-                power_draw_watt = @PowerDrawWatt,
-                heat_dissipation_btu = @HeatDissipationBTU,
-                efficiency_ratio = @EfficiencyRatio
-            WHERE id = @Id";
-        var rows = await connection.ExecuteAsync(sql, item);
+        var rows = await connection.ExecuteAsync(
+            $"UPDATE {table} SET {setClause} WHERE id = @Id", item);
         return rows > 0;
     }
 

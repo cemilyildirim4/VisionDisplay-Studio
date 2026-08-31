@@ -187,6 +187,7 @@ const BLANK = {
   seriesId: 1,
   category: 'led',
   modelCode: '',
+  name: '',
   productType: 'CABINET',
   defaultModulesPerCard: 10,
   price: 0,
@@ -435,6 +436,7 @@ export default function AdminPanel() {
       seriesId: c.seriesId,
       category: c.category,
       modelCode: c.modelCode,
+      name: c.name ?? '',
       productType: c.productType || 'CABINET',
       defaultModulesPerCard: c.defaultModulesPerCard ?? 10,
       price: c.price ?? 0,
@@ -491,6 +493,7 @@ export default function AdminPanel() {
       const body = {
         seriesId: Number(form.seriesId),
         category: form.category,
+        name: form.name || null,
         modelCode: form.modelCode,
         productType: form.productType,
         defaultModulesPerCard: Number(form.defaultModulesPerCard),
@@ -1241,6 +1244,9 @@ export default function AdminPanel() {
 
                 <div className={formSection === 'basic' ? '' : 'hidden'}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <Field label="Ad" hint="Katalogda görünen ad; boşsa model kodu kullanılır">
+                    <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputCls} placeholder="ör. Indoor P2.5 Modül" />
+                  </Field>
                   <Field label="Model Kodu" hint="Örn: Q30H15B13V3 Outdoor Panel, 550012949A Indoor Panel">
                     <input value={form.modelCode} onChange={(e) => set('modelCode', e.target.value)} className={inputCls} placeholder="ör. LED-P1.25" />
                   </Field>
@@ -1366,12 +1372,16 @@ export default function AdminPanel() {
                   <Field label="İzleme Mesafesi (m)" hint="Boş bırakılırsa pitch × 2,5 ile hesaplanır">
                     <input type="number" step="0.1" value={form.viewingDistanceM} onChange={(e) => set('viewingDistanceM', e.target.value)} className={inputCls} />
                   </Field>
-                  <Field label="Panel Boyutu (inç)" hint="Yalnızca video duvarı">
-                    <input type="number" value={form.sizeInch} onChange={(e) => set('sizeInch', e.target.value)} className={inputCls} disabled={form.category !== 'videowall'} />
-                  </Field>
-                  <Field label="Çerçeve (mm)" hint="Yalnızca video duvarı">
-                    <input type="number" step="0.01" value={form.bezelMm} onChange={(e) => set('bezelMm', e.target.value)} className={inputCls} disabled={form.category !== 'videowall'} />
-                  </Field>
+                  {form.category === 'videowall' && form.productType !== 'MODULE' && (
+                    <>
+                      <Field label="Panel Boyutu (inç)" hint="Yalnızca video duvarı">
+                        <input type="number" value={form.sizeInch} onChange={(e) => set('sizeInch', e.target.value)} className={inputCls} />
+                      </Field>
+                      <Field label="Çerçeve (mm)" hint="Yalnızca video duvarı">
+                        <input type="number" step="0.01" value={form.bezelMm} onChange={(e) => set('bezelMm', e.target.value)} className={inputCls} />
+                      </Field>
+                    </>
+                  )}
                 </div>
                 </div>
 

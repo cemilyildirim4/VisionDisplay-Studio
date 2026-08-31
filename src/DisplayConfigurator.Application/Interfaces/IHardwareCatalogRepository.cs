@@ -4,6 +4,7 @@ namespace DisplayConfigurator.Application.Interfaces;
 
 /// <summary>
 /// Güç kaynağı, mini PC, patch kablosu, alıcı kart ve işlemci katalog CRUD.
+/// Her tipin kendi sütun kümesi vardır.
 /// </summary>
 public interface IHardwareCatalogRepository
 {
