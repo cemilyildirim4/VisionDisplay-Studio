@@ -1324,9 +1324,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kilitlidir.
    */
   const duvaraAsili = surukleAktif && !ayakVar && !!fotoYer?.sigdir
+  /*
+   * KİOSK GÖVDESİ YOKSA EKRAN DUVARA HİZALANIR.
+   *
+   * Zemine oturtma, yerde duran bir kiosk içindir: kaide zemin çizgisine
+   * basar. Gövde kapalıyken ekran duvara/panoya monteli demektir; o zaman
+   * doğru hiza mekânın kendi paneli, yani duvarın hizasıdır. Hazır
+   * sahnelerde (AVM koridoru, şehir meydanı) fotoğraf zaten panelin merkezi
+   * tuvalin merkezine gelecek biçimde yerleştiği için kayma sıfır kalıyor:
+   * "Ortala" düğmesi ekranı doğrudan duvara hizalıyor.
+   */
+  const duvaraHizali = surukleAktif && !kioskVar
   const oturmaKaymasi = !surukleAktif
     ? 0
-    : duvaraAsili
+    : duvaraHizali
+      ? (fotoYer?.sigdir ? oneriDikeyKaymasi(fotoYer, tuvalBoyut.h) : 0)
+      : duvaraAsili
       ? oneriDikeyKaymasi(fotoYer, tuvalBoyut.h)
       : zeminOturmaKaymasi(
           fotoSahne,
