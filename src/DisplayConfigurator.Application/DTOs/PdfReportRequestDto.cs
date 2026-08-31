@@ -8,15 +8,6 @@ namespace DisplayConfigurator.Application.DTOs;
 /// </summary>
 public class PdfReportRequestDto : CreateConfigurationDto
 {
-    [RequiredFilled, StringLength(150, ErrorMessage = "Müşteri adı en fazla 150 karakter olabilir.")]
-    public new string? CustomerName { get; set; }
-
-    [ContactPhone, StringLength(50)]
-    public string? Phone { get; set; }
-
-    [ContactEmail, StringLength(150)]
-    public string? Email { get; set; }
-
     [RequiredFilled, StringLength(500)]
     public string? Address { get; set; }
 
@@ -31,15 +22,6 @@ public class PdfReportRequestDto : CreateConfigurationDto
 
     [StringLength(4000)]
     public string? ScreensSummary { get; set; }
-
-    [Range(0, 1000)]
-    public decimal? WallWidthM { get; set; }
-
-    [Range(0, 1000)]
-    public decimal? WallHeightM { get; set; }
-
-    [StringLength(20)]
-    public string? ScreenMode { get; set; }
 
     /// <summary>data:image/...;base64,... veya ham base64. En fazla ~6 MB çözülür.</summary>
     public string? PreviewImageBase64 { get; set; }

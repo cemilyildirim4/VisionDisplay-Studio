@@ -82,4 +82,9 @@ public class Quote
     public PatchCable? PatchCable { get; set; }
     public ReceivingCard? ReceivingCard { get; set; }
     public Processor? Processor { get; set; }
+
+    /// <summary>JSON’da <c>customer.name</c> / phone / email. Dapper bu alanı sütundan okumaz.</summary>
+    public CustomerInfo Customer => new(CustomerName, Phone, Email);
 }
+
+public readonly record struct CustomerInfo(string? Name, string? Phone, string? Email);

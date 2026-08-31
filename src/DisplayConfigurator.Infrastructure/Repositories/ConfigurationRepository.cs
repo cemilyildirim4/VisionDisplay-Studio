@@ -16,7 +16,12 @@ public class ConfigurationRepository : IConfigurationRepository
     private const string SelectColumns = @"
         cfg.id AS Id,
         cfg.title AS ProjectName,
-        cfg.customer_name AS CustomerName,
+        COALESCE(NULLIF(TRIM(cfg.customer_name), ''), NULLIF(TRIM(u.display_name), '')) AS CustomerName,
+        cfg.phone AS Phone,
+        COALESCE(NULLIF(TRIM(cfg.email), ''), NULLIF(TRIM(u.email), '')) AS Email,
+        cfg.wall_width_m AS WallWidthM,
+        cfg.wall_height_m AS WallHeightM,
+        cfg.screen_mode AS ScreenMode,
         cfg.cabin_id AS CabinId,
         cfg.assembly_type AS AssemblyType,
         cfg.modules_per_card AS ModulesPerCard,
@@ -58,10 +63,10 @@ public class ConfigurationRepository : IConfigurationRepository
 
         var hasSearch = !string.IsNullOrWhiteSpace(query.Search);
         var whereClause = hasSearch
-            ? "WHERE cfg.title ILIKE @Search OR cfg.customer_name ILIKE @Search"
+            ? "WHERE cfg.title ILIKE @Search OR cfg.customer_name ILIKE @Search OR cfg.phone ILIKE @Search OR cfg.email ILIKE @Search OR u.display_name ILIKE @Search OR u.email ILIKE @Search"
             : string.Empty;
 
-        var countSql = $"SELECT COUNT(1) FROM configurations cfg {whereClause}";
+        var countSql = $"SELECT COUNT(1) FROM configurations cfg LEFT JOIN users u ON cfg.user_id = u.id {whereClause}";
         var dataSql = $@"
             SELECT
                 {SelectColumns},
@@ -70,6 +75,7 @@ public class ConfigurationRepository : IConfigurationRepository
                 cab.price AS Price
             FROM configurations cfg
             LEFT JOIN cabins cab ON cfg.cabin_id = cab.id
+            LEFT JOIN users u ON cfg.user_id = u.id
             {whereClause}
             ORDER BY cfg.created_at DESC
             OFFSET @Offset LIMIT @PageSize";
@@ -104,6 +110,7 @@ public class ConfigurationRepository : IConfigurationRepository
             SELECT {SelectColumns}, cab.id AS Id, cab.model_code AS ModelCode, cab.price AS Price
             FROM configurations cfg
             LEFT JOIN cabins cab ON cfg.cabin_id = cab.id
+            LEFT JOIN users u ON cfg.user_id = u.id
             WHERE cfg.user_id = @UserId
             ORDER BY cfg.created_at DESC";
 
@@ -121,6 +128,7 @@ public class ConfigurationRepository : IConfigurationRepository
             SELECT {SelectColumns}, cab.id AS Id, cab.model_code AS ModelCode, cab.price AS Price
             FROM configurations cfg
             LEFT JOIN cabins cab ON cfg.cabin_id = cab.id
+            LEFT JOIN users u ON cfg.user_id = u.id
             WHERE cfg.id = @Id";
 
         var result = await connection.QueryAsync<Configuration, Cabin, Configuration>(
@@ -141,7 +149,12 @@ public class ConfigurationRepository : IConfigurationRepository
             INSERT INTO configurations 
             (
                 title, 
-                customer_name, 
+                customer_name,
+                phone,
+                email,
+                wall_width_m,
+                wall_height_m,
+                screen_mode,
                 cabin_id, 
                 assembly_type,
                 modules_per_card,
@@ -175,7 +188,12 @@ public class ConfigurationRepository : IConfigurationRepository
             VALUES 
             (
                 @ProjectName, 
-                @CustomerName, 
+                @CustomerName,
+                @Phone,
+                @Email,
+                @WallWidthM,
+                @WallHeightM,
+                @ScreenMode,
                 @CabinId, 
                 @AssemblyType,
                 @ModulesPerCard,

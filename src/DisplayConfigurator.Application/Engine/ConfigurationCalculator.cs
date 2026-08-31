@@ -119,7 +119,9 @@ public static class ConfigurationCalculator
         return new ConfigurationResponseDto
         {
             ProjectName = string.IsNullOrWhiteSpace(dto.ProjectName) ? "Taslak Proje" : dto.ProjectName,
-            CustomerName = string.IsNullOrWhiteSpace(dto.CustomerName) ? "Müşteri Belirtilmedi" : dto.CustomerName,
+            CustomerName = string.IsNullOrWhiteSpace(dto.Customer?.Name)
+                ? (string.IsNullOrWhiteSpace(dto.CustomerName) ? "Müşteri Belirtilmedi" : dto.CustomerName)
+                : dto.Customer.Name,
             CabinId = dto.CabinId,
             CabinModelName = ModuleDisplayName(cabin),
             AssemblyType = assemblyType,

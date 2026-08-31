@@ -11,6 +11,24 @@ public class CreateConfigurationDto
     [StringLength(150, ErrorMessage = "Müşteri adı en fazla 150 karakter olabilir.")]
     public string? CustomerName { get; set; }
 
+    /// <summary>İç içe müşteri nesnesi (<c>customer.name</c> / phone / email). Kök alanlardan öncelikli değil; boş kök alanları doldurur.</summary>
+    public CustomerContactDto? Customer { get; set; }
+
+    [StringLength(50)]
+    public string? Phone { get; set; }
+
+    [StringLength(150)]
+    public string? Email { get; set; }
+
+    [Range(0, 1000)]
+    public decimal? WallWidthM { get; set; }
+
+    [Range(0, 1000)]
+    public decimal? WallHeightM { get; set; }
+
+    [StringLength(20)]
+    public string? ScreenMode { get; set; }
+
     [Range(1, int.MaxValue, ErrorMessage = "Geçerli bir kabin seçilmelidir.")]
     public int CabinId { get; set; }
 

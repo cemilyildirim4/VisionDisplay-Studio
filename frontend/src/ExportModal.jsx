@@ -375,9 +375,14 @@ export default function ExportModal({ open, onClose, summary }) {
           method: 'POST',
           auth: true,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+            body: JSON.stringify({
             projectName,
             customerName: customer || null,
+            phone: compactPhone(phone) || null,
+            email: email.trim() || null,
+            wallWidthM: Number(summary.width) || null,
+            wallHeightM: Number(summary.height) || null,
+            screenMode: summary.screenMode || 'single',
             cabinId: model.id,
             cols: clampGrid(summary.cols),
             rows: clampGrid(summary.rows),

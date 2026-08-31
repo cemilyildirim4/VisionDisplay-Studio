@@ -10,35 +10,39 @@ public class QuoteRepository : IQuoteRepository
     private readonly IDbConnectionFactory _connectionFactory;
 
     private const string SelectColumns = @"
-        id AS Id,
-        customer_name AS CustomerName,
-        phone AS Phone,
-        email AS Email,
-        address AS Address,
-        message AS Message,
-        model_code AS ModelCode,
-        wall_width_m AS WallWidthM,
-        wall_height_m AS WallHeightM,
-        screen_mode AS ScreenMode,
-        ""columns"" AS Columns,
-        ""rows"" AS Rows,
-        screen_type AS ScreenType,
-        resolution AS Resolution,
-        screens_summary AS ScreensSummary,
-        config_json AS ConfigJson,
-        status AS Status,
-        revision AS Revision,
-        admin_note AS AdminNote,
-        user_id AS UserId,
-        has_mini_pc AS HasMiniPc,
-        labor_cost_multiplier AS LaborCostMultiplier,
-        cabin_id AS CabinId,
-        power_supply_id AS PowerSupplyId,
-        mini_pc_id AS MiniPcId,
-        patch_cable_id AS PatchCableId,
-        receiving_card_id AS ReceivingCardId,
-        processor_id AS ProcessorId,
-        created_at AS CreatedAt";
+        q.id AS Id,
+        COALESCE(NULLIF(TRIM(q.customer_name), ''), NULLIF(TRIM(u.display_name), '')) AS CustomerName,
+        q.phone AS Phone,
+        COALESCE(NULLIF(TRIM(q.email), ''), NULLIF(TRIM(u.email), '')) AS Email,
+        q.address AS Address,
+        q.message AS Message,
+        q.model_code AS ModelCode,
+        q.wall_width_m AS WallWidthM,
+        q.wall_height_m AS WallHeightM,
+        q.screen_mode AS ScreenMode,
+        q.""columns"" AS Columns,
+        q.""rows"" AS Rows,
+        q.screen_type AS ScreenType,
+        q.resolution AS Resolution,
+        q.screens_summary AS ScreensSummary,
+        q.config_json AS ConfigJson,
+        q.status AS Status,
+        q.revision AS Revision,
+        q.admin_note AS AdminNote,
+        q.user_id AS UserId,
+        q.has_mini_pc AS HasMiniPc,
+        q.labor_cost_multiplier AS LaborCostMultiplier,
+        q.cabin_id AS CabinId,
+        q.power_supply_id AS PowerSupplyId,
+        q.mini_pc_id AS MiniPcId,
+        q.patch_cable_id AS PatchCableId,
+        q.receiving_card_id AS ReceivingCardId,
+        q.processor_id AS ProcessorId,
+        q.created_at AS CreatedAt";
+
+    private const string FromQuotes = @"
+        FROM quotes q
+        LEFT JOIN users u ON q.user_id = u.id";
 
     public QuoteRepository(IDbConnectionFactory connectionFactory)
     {
@@ -51,15 +55,15 @@ public class QuoteRepository : IQuoteRepository
 
         var hasSearch = !string.IsNullOrWhiteSpace(query.Search);
         var whereClause = hasSearch
-            ? "WHERE customer_name ILIKE @Search OR phone ILIKE @Search OR email ILIKE @Search OR model_code ILIKE @Search"
+            ? "WHERE q.customer_name ILIKE @Search OR q.phone ILIKE @Search OR q.email ILIKE @Search OR q.model_code ILIKE @Search OR u.display_name ILIKE @Search OR u.email ILIKE @Search"
             : string.Empty;
 
-        var countSql = $"SELECT COUNT(1) FROM quotes {whereClause}";
+        var countSql = $"SELECT COUNT(1) {FromQuotes} {whereClause}";
         var dataSql = $@"
             SELECT {SelectColumns}
-            FROM quotes
+            {FromQuotes}
             {whereClause}
-            ORDER BY created_at DESC
+            ORDER BY q.created_at DESC
             OFFSET @Offset LIMIT @PageSize";
 
         var parameters = new
@@ -84,7 +88,7 @@ public class QuoteRepository : IQuoteRepository
     public async Task<IEnumerable<Quote>> GetByUserIdAsync(int userId)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
-        var sql = $"SELECT {SelectColumns} FROM quotes WHERE user_id = @UserId ORDER BY created_at DESC";
+        var sql = $"SELECT {SelectColumns} {FromQuotes} WHERE q.user_id = @UserId ORDER BY q.created_at DESC";
         return await connection.QueryAsync<Quote>(sql, new { UserId = userId });
     }
 

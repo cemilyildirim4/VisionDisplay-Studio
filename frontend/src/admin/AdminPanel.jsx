@@ -80,6 +80,36 @@ function StatusBadge({ status }) {
   return <span className={`rounded-full px-2 py-0.5 text-xs border whitespace-nowrap ${cls}`}>{status || '—'}</span>
 }
 
+/** Müşteri adı / telefon / e-posta — kök alan, iç içe `customer` nesnesi veya JSON. */
+function contactOf(row) {
+  const nested = row?.customer && typeof row.customer === 'object' ? row.customer : {}
+  let fromJson = {}
+  if (row?.configJson) {
+    try {
+      const parsed = JSON.parse(row.configJson)
+      fromJson = parsed?.customer && typeof parsed.customer === 'object' ? parsed.customer : {}
+    } catch {
+      fromJson = {}
+    }
+  }
+  const name = row?.customerName || nested.name || nested.Name || fromJson.name || ''
+  const phone = row?.phone || nested.phone || nested.Phone || fromJson.phone || ''
+  const email = row?.email || nested.email || nested.Email || fromJson.email || ''
+  return { name, phone, email }
+}
+
+function wallOf(row) {
+  const w = row?.wallWidthM ?? row?.totalWidthM
+  const h = row?.wallHeightM ?? row?.totalHeightM
+  if (w == null && h == null) return '—'
+  const fmt = (n) => (n == null || n === '' ? '—' : Number(n).toFixed(2))
+  return `${fmt(w)} × ${fmt(h)}`
+}
+
+function layoutOf(row) {
+  return row?.screenMode === 'multi' ? 'Çoklu' : 'Tekli'
+}
+
 /** Sayfalama kontrolleri — teklif/proje listeleri büyüdükçe tek seferde tüm veriyi çekmemek için. */
 function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null
@@ -672,7 +702,7 @@ export default function AdminPanel() {
   const removeQuote = (q) => {
     askConfirm(
       'Teklifi sil',
-      `"${q.customerName || 'İsimsiz'}" teklifi kalıcı olarak silinecek.`,
+      `"${contactOf(q).name || q.customerName || 'İsimsiz'}" teklifi kalıcı olarak silinecek.`,
       async () => {
         try {
           const res = await apiFetch(`${API_URL}/api/quotes/${q.id}`, { method: 'DELETE', auth: true })
@@ -1666,23 +1696,24 @@ export default function AdminPanel() {
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                   <tr>
-                    {['ID', 'Müşteri', 'Telefon', 'E-posta', 'Model', 'Duvar (m)', 'Düzen', 'Sütun×Satır', 'Çözünürlük', 'Durum', 'Tarih', ''].map((h) => (
+                    {['ID', 'Müşteri', 'Telefon', 'E-posta', 'Model', 'Duvar (m)', 'Düzen', 'Sütun×Satır', 'Durum', 'Tarih', ''].map((h) => (
                       <th key={h} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {quotes.map((q) => (
+                  {quotes.map((q) => {
+                    const who = contactOf(q)
+                    return (
                     <tr key={q.id} className="border-t border-neutral-100 dark:border-[#242b36] hover:bg-neutral-50 dark:hover:bg-[#1b2029] align-top">
                       <td className="px-4 py-2.5 text-neutral-400 dark:text-neutral-500">{q.id}</td>
-                      <td className="px-4 py-2.5 font-medium">{q.customerName || '—'}</td>
-                      <td className="px-4 py-2.5">{q.phone || '—'}</td>
-                      <td className="px-4 py-2.5">{q.email || '—'}</td>
+                      <td className="px-4 py-2.5 font-medium">{who.name || '—'}</td>
+                      <td className="px-4 py-2.5">{who.phone || '—'}</td>
+                      <td className="px-4 py-2.5">{who.email || '—'}</td>
                       <td className="px-4 py-2.5">{q.modelCode || '—'}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">{q.wallWidthM ?? '—'} × {q.wallHeightM ?? '—'}</td>
-                      <td className="px-4 py-2.5">{q.screenMode === 'multi' ? 'Çoklu' : 'Tekli'}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">{wallOf(q)}</td>
+                      <td className="px-4 py-2.5">{layoutOf(q)}</td>
                       <td className="px-4 py-2.5">{q.columns ?? '—'} × {q.rows ?? '—'}</td>
-                      <td className="px-4 py-2.5">{q.resolution || '—'}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
                           <StatusBadge status={q.status || 'Beklemede'} />
@@ -1700,10 +1731,11 @@ export default function AdminPanel() {
                         <button type="button" onClick={() => removeQuote(q)} className="text-red-600 hover:underline inline-flex items-center min-h-[44px] px-2">Sil</button>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                   {!quotesLoading && quotes.length === 0 && (
                     <tr>
-                      <td colSpan={12} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">Henüz teklif talebi yok.</td>
+                      <td colSpan={11} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">Henüz teklif talebi yok.</td>
                     </tr>
                   )}
                 </tbody>
@@ -1846,7 +1878,7 @@ export default function AdminPanel() {
                 value={configsSearch}
                 onChange={(e) => setConfigsSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && loadConfigs(1, configsSearch)}
-                placeholder="Proje adı veya müşteri ara…"
+                placeholder="Proje adı, müşteri, telefon veya e-posta ara…"
                 className="w-full md:flex-1 md:max-w-xs border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 min-h-[44px] text-sm bg-transparent focus:outline-none focus:border-brand"
               />
               <button type="button" onClick={() => loadConfigs(1, configsSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap min-h-[44px] inline-flex items-center">Ara</button>
@@ -1857,23 +1889,25 @@ export default function AdminPanel() {
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                   <tr>
-                    {['ID', 'Proje', 'Müşteri', 'Model', 'Sütun×Satır', 'Çözünürlük', 'Alıcı Kart', 'RJ45', 'İşlemci', 'Fiyat (USD)', 'Durum', 'Tarih', ''].map((h) => (
+                    {['ID', 'Proje', 'Müşteri', 'Telefon', 'E-posta', 'Model', 'Duvar (m)', 'Düzen', 'Sütun×Satır', 'Fiyat (USD)', 'Durum', 'Tarih', ''].map((h) => (
                       <th key={h} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {configs.map((c) => (
+                  {configs.map((c) => {
+                    const who = contactOf(c)
+                    return (
                     <tr key={c.id} className="border-t border-neutral-100 dark:border-[#242b36] hover:bg-neutral-50 dark:hover:bg-[#1b2029]">
                       <td className="px-4 py-2.5 text-neutral-400 dark:text-neutral-500">{c.id}</td>
                       <td className="px-4 py-2.5 font-medium">{c.projectName}</td>
-                      <td className="px-4 py-2.5">{c.customerName || '—'}</td>
+                      <td className="px-4 py-2.5">{who.name || '—'}</td>
+                      <td className="px-4 py-2.5">{who.phone || '—'}</td>
+                      <td className="px-4 py-2.5">{who.email || '—'}</td>
                       <td className="px-4 py-2.5">{c.cabinModelName || '—'}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">{wallOf(c)}</td>
+                      <td className="px-4 py-2.5">{layoutOf(c)}</td>
                       <td className="px-4 py-2.5">{c.cols} × {c.rows}</td>
-                      <td className="px-4 py-2.5">{c.totalResolution || '—'}</td>
-                      <td className="px-4 py-2.5">{c.receivingCardCount}</td>
-                      <td className="px-4 py-2.5">{c.requiredRj45Ports}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{c.recommendedProcessor || '—'}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap">{money(c.totalPrice)}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
@@ -1893,7 +1927,8 @@ export default function AdminPanel() {
                         <button type="button" onClick={() => removeConfig(c)} className="text-red-600 hover:underline inline-flex items-center min-h-[44px] px-2">Sil</button>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                   {!configsLoading && configs.length === 0 && (
                     <tr>
                       <td colSpan={13} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">Henüz kayıtlı proje yok.</td>

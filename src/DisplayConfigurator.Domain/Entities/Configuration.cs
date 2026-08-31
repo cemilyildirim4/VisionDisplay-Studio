@@ -5,6 +5,12 @@ public class Configuration
     public int Id { get; set; }
     public string ProjectName { get; set; } = string.Empty;
     public string? CustomerName { get; set; }
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public decimal? WallWidthM { get; set; }
+    public decimal? WallHeightM { get; set; }
+    /// <summary>"single" veya "multi"</summary>
+    public string? ScreenMode { get; set; }
     public int CabinId { get; set; }
     
     // YENİ: CABINET veya MODULE
