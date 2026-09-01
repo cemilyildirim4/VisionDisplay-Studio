@@ -136,7 +136,20 @@ export function perspektifAcisi(kaynak) {
   const uyum = 1 - Math.min(1, sacilim * 1.2)
   const guven = Math.max(0, Math.min(1, 0.35 * cizgiPayi + 0.65 * uyum))
 
-  return { yaw: +yaw.toFixed(1), tilt: +tilt.toFixed(1), guven: +guven.toFixed(2), kacisX }
+  /*
+   * KAÇIŞ NOKTASI 0–1 ORANLI DA DÖNÜYOR.
+   *
+   * Yerleştirme motoru ekranın dört köşesini bu noktaya göre hizalıyor:
+   * üst ve alt kenarlar kaçış noktasına doğru yakınsıyor, böylece ekran
+   * yüzeyle aynı düzlemde duruyor (bkz. homografi.js perspektifeOturt).
+   */
+  return {
+    yaw: +yaw.toFixed(1),
+    tilt: +tilt.toFixed(1),
+    guven: +guven.toFixed(2),
+    kacisX,
+    kacis: { x: kacisX / W, y: kacisY / H },
+  }
 }
 
 function bos(guven = 0.25) {

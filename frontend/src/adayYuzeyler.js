@@ -26,6 +26,7 @@
 import { mevcutEkranYuzeyi } from './ekranYuzeyi.js'
 import { parlakEkranKutusu } from './parlakEkran.js'
 import { SINIF } from './mekanHaritasi.js'
+import { perspektifeOturt } from './homografi.js'
 
 /** Çözümleme genişliği — hızlı ve yeterli. */
 const COZUMLEME_W = 160
@@ -62,6 +63,8 @@ export function adaylariBul(tuval, sec = {}) {
     oran = 16 / 9,
     zeminOran = null,
     harita = null,
+    /* Sahnenin kaçış noktası (0–1) ve güveni — bkz. aciBul.js */
+    aci = null,
     enCok = 5,
   } = sec
 
@@ -236,7 +239,21 @@ export function adaylariBul(tuval, sec = {}) {
           skor,
           yasakPay,
           merkez: { x: (x0 + x1) / 2 / W, y: (y0 + y1) / 2 / H },
-          koseler: koseleriKur(x0, y0, x1, y1, duzlem, W, H),
+          /*
+           * KENARLAR SAHNENİN PERSPEKTİFİNE OTURUYOR.
+           *
+           * Derinlikten türeyen yamukluk kabaca doğru ama sahnenin kaçış
+           * çizgilerini izlemiyordu; ekran havada dönmüş gibi duruyordu.
+           * Kaçış noktası ölçülebildiyse üst/alt kenarlar ona yakınsıyor,
+           * yan kenarlar düşey kalıyor. Merkez ve ölçü değişmiyor.
+           */
+          koseler: aci?.kacis
+            ? perspektifeOturt(
+                koseleriKur(x0, y0, x1, y1, duzlem, W, H),
+                aci.kacis,
+                Math.min(1, (aci.guven || 0) * 1.2),
+              )
+            : koseleriKur(x0, y0, x1, y1, duzlem, W, H),
           tur: 'surface',
         })
       }
@@ -366,7 +383,12 @@ export function adaylariBul(tuval, sec = {}) {
        *    artık "sahnenin kendisi"dir, pano değil;
        *  • kenarlara yapışmamalı: gerçek bir pano fotoğrafın içinde durur.
        */
-      if (!(alan > 0.03) || alan > 0.45) continue
+      /*
+       * Üst sınır 0,45 iken kadrajın yarısını kaplayan yamuk birleştirmeler
+       * geçiyordu (bina hatları + pano kenarı). Gerçek panolar kadrajın
+       * %3–30'u arasında kalıyor.
+       */
+      if (!(alan > 0.03) || alan > 0.3) continue
       const kx = bulunan.koseler.map((k) => k.x)
       const ky = bulunan.koseler.map((k) => k.y)
       if (Math.min(...kx) < 0.02 || Math.max(...kx) > 0.98) continue

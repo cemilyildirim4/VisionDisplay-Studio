@@ -172,7 +172,16 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
 
   let adaylar = []
   try {
-    adaylar = adaylariBul(tuval, { nesneler, derinlik, yuzey, oran: enBoy, zeminOran, harita })
+    adaylar = adaylariBul(tuval, {
+      nesneler,
+      derinlik,
+      yuzey,
+      oran: enBoy,
+      zeminOran,
+      harita,
+      /* Kaçış noktası: aday kenarlarını sahnenin perspektifine oturtuyor. */
+      aci: aciOlc(tuval),
+    })
   } catch {
     adaylar = yuzey ? [{ koseler: yuzey.koseler, skor: 100, tur: 'screen' }] : []
   }

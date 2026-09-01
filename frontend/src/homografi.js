@@ -230,6 +230,65 @@ export function sigdirDortgen(koseler, oran) {
   return n.some((k) => !k) ? koseler : n
 }
 
+
+/**
+ * DÖRTGENİ SAHNENİN PERSPEKTİFİNE OTURTUR.
+ *
+ * Derinlikten türetilen yamukluk kabaca doğru ama kenarlar sahnenin gerçek
+ * kaçış çizgilerini izlemiyordu; ekran havada hafifçe dönmüş gibi
+ * görünüyordu. Burada dörtgenin MERKEZİ ve ÖLÇÜSÜ korunuyor, yalnızca
+ * kenarlar yeniden kuruluyor:
+ *
+ *   • üst ve alt kenarlar kaçış noktasına doğru uzanan doğrular üzerinde,
+ *   • sol ve sağ kenarlar düşey,
+ *   • köşeler bu doğruların kesişiminden.
+ *
+ * Kaçış noktası çok uzaktaysa (kadraja neredeyse paralel bakış) dörtgen
+ * dikdörtgen kalıyor. Güven düşükse düzeltme oranla karıştırılıyor: yanlış
+ * ölçümle ekranı eğmektense düz bırakmak doğru.
+ */
+export function perspektifeOturt(koseler, kacis, guven = 1) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return koseler
+  if (!kacis || !Number.isFinite(kacis.x) || !Number.isFinite(kacis.y)) return koseler
+  const cx = (koseler[0].x + koseler[1].x + koseler[2].x + koseler[3].x) / 4
+  const cy = (koseler[0].y + koseler[1].y + koseler[2].y + koseler[3].y) / 4
+  const en =
+    (Math.hypot(koseler[1].x - koseler[0].x, koseler[1].y - koseler[0].y) +
+      Math.hypot(koseler[2].x - koseler[3].x, koseler[2].y - koseler[3].y)) / 2
+  const boy =
+    (Math.hypot(koseler[3].x - koseler[0].x, koseler[3].y - koseler[0].y) +
+      Math.hypot(koseler[2].x - koseler[1].x, koseler[2].y - koseler[1].y)) / 2
+  if (!(en > 0) || !(boy > 0)) return koseler
+
+  const solX = cx - en / 2
+  const sagX = cx + en / 2
+  /* Kaçış noktası kutunun on katından uzaksa kenarlar zaten paralel. */
+  if (Math.abs(kacis.x - cx) > en * 10) return koseler
+
+  /* Bir doğru üzerinde verilen x'teki y: iki noktadan geçen doğru. */
+  const yDegeri = (p, q, x) => {
+    if (Math.abs(q.x - p.x) < 1e-9) return p.y
+    return p.y + ((q.y - p.y) * (x - p.x)) / (q.x - p.x)
+  }
+  const ustNokta = { x: cx, y: cy - boy / 2 }
+  const altNokta = { x: cx, y: cy + boy / 2 }
+  const yeni = [
+    { x: solX, y: yDegeri(ustNokta, kacis, solX) },
+    { x: sagX, y: yDegeri(ustNokta, kacis, sagX) },
+    { x: sagX, y: yDegeri(altNokta, kacis, sagX) },
+    { x: solX, y: yDegeri(altNokta, kacis, solX) },
+  ]
+  if (yeni.some((k) => !Number.isFinite(k.x) || !Number.isFinite(k.y))) return koseler
+  if (!dortgenGecerli(yeni, 0)) return koseler
+
+  /* Güvene göre karıştır: 1 tam düzeltme, 0 dokunma. */
+  const g = Math.max(0, Math.min(1, guven))
+  return koseler.map((k, i) => ({
+    x: k.x + (yeni[i].x - k.x) * g,
+    y: k.y + (yeni[i].y - k.y) * g,
+  }))
+}
+
 /** Köşe listesinin merkezi. */
 export function dortgenMerkezi(koseler) {
   const n = koseler.length || 1
