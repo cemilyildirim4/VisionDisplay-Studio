@@ -276,6 +276,17 @@ export function adaylariBul(tuval, sec = {}) {
           : koseleriKur(x0, y0, x1, y1, duzlem, W, H)
         if (sonKoseler.some((k) => k.x < 0.005 || k.x > 0.995 || k.y < 0.005 || k.y > 0.995)) continue
 
+        /*
+         * HER ADAY GERÇEK YÜZEYİNE OTURUYOR.
+         *
+         * Tarama penceresi düzgün bir dikdörtgen; gerçek duvar parçası ise
+         * kolonla, pencereyle, tabelayla kesiliyor. Aday, merkezindeki
+         * yüzeyin devam ettiği yere kadar daraltılıyor — böylece kare
+         * gerçekten yerleştirilebilir alanı gösteriyor ve tasarım onun
+         * ortasına oturunca hizalama da doğru oluyor.
+         */
+        const oturmus = panoyaOturt(tuval, sonKoseler)
+
         ham.push({
           skor,
           yasakPay,
@@ -288,7 +299,7 @@ export function adaylariBul(tuval, sec = {}) {
            * Kaçış noktası ölçülebildiyse üst/alt kenarlar ona yakınsıyor,
            * yan kenarlar düşey kalıyor. Merkez ve ölçü değişmiyor.
            */
-          koseler: sonKoseler,
+          koseler: oturmus,
           tur: 'surface',
         })
       }
@@ -481,6 +492,12 @@ export function adaylariBul(tuval, sec = {}) {
   const elenmis = ham.filter((a) => a.skor >= PUAN_ESIGI && (a.yasakPay || 0) <= 0.25)
 
   const merkezler = sonuc.map((a) => dortgenMerkez(a.koseler))
+  const ekle = (a) => {
+    if (sonuc.length >= enCok) return
+    if (merkezler.some((m) => Math.hypot(m.x - a.merkez.x, m.y - a.merkez.y) < AYRIM)) return
+    merkezler.push(a.merkez)
+    sonuc.push({ koseler: a.koseler, skor: Math.round(a.skor), tur: a.tur, etiket: a.etiket })
+  }
   for (const a of elenmis) {
     if (sonuc.length >= enCok) break
     if (merkezler.some((m) => Math.hypot(m.x - a.merkez.x, m.y - a.merkez.y) < AYRIM)) continue
@@ -496,6 +513,22 @@ export function adaylariBul(tuval, sec = {}) {
       etiket: yuzeyAdi(a.merkez),
     })
   }
+  /*
+   * YEDEK TUR — HER FOTOĞRAFA EN AZ BİRKAÇ SEÇENEK.
+   *
+   * Sıkı ölçütler bazı karelerde (düz boyalı bir duvar, dokusu az bir
+   * cephe) hiç aday bırakmıyordu; kullanıcı fotoğrafını ekleyip boş liste
+   * görüyordu. Böyle durumda eleme gevşetiliyor: puan eşiği ve harita
+   * kuralı uygulanmadan en iyi kareler alınıyor. Yasak sınıflar (zemin,
+   * gökyüzü, kapı, nesne) yine dışarıda: yalnızca eşik düşüyor.
+   */
+  if (sonuc.length < 2) {
+    for (const a of ham) {
+      if ((a.yasakPay || 0) > 0.4) continue
+      ekle({ ...a, etiket: a.etiket || yuzeyAdi(a.merkez) })
+    }
+  }
+
   return sonuc
 }
 
@@ -581,8 +614,20 @@ function gokMaskesi(tuval, w, h) {
     const d = ctx.getImageData(0, 0, w, h).data
     const m = new Float32Array(w * h)
     for (let i = 0, p = 0; i < m.length; i++, p += 4) {
-      m[i] = d[p + 2] - d[p] > 25 ? 1 : 0
+      /* Gökyüzü hem MAVİ hem AYDINLIK olur; loş mavi-gri duvar değil. */
+      m[i] = d[p + 2] - d[p] > 25 && d[p + 2] > 120 ? 1 : 0
     }
+    /*
+     * İÇ MEKÂNDA GÖKYÜZÜ YOKTUR.
+     *
+     * Mavi-gri boyalı bir duvar da maviye kayıyor ve "gökyüzü" sayılıp
+     * bütün adayları eliyordu (boş oda fotoğrafında hiç öneri çıkmamasının
+     * sebebi buydu). Gerçek gökyüzü kadrajın ÜST KENARINA değer; üst
+     * satırın en az beşte biri mavi değilse maske tümden yok sayılıyor.
+     */
+    let ustSay = 0
+    for (let x = 0; x < w; x++) if (m[x] > 0.5) ustSay++
+    if (ustSay < w * 0.2) return new Float32Array(w * h)
     return m
   } catch {
     return null

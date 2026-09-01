@@ -82,9 +82,11 @@ export function mekanHaritasi(tuval, sec = {}) {
   const sinif = new Uint8Array(N)
   const parlak = new Float32Array(N)
   const mavilik = new Float32Array(N)
+  const aydinlik = new Float32Array(N)
   for (let i = 0, p = 0; i < N; i++, p += 4) {
     parlak[i] = (d[p] + d[p + 1] + d[p + 2]) / 3
     mavilik[i] = d[p + 2] - d[p]
+    aydinlik[i] = d[p + 2]
   }
 
   const engel = nesneler?.engel ? olcek(nesneler.engel, nesneler.w, nesneler.h, W, H) : null
@@ -161,6 +163,15 @@ export function mekanHaritasi(tuval, sec = {}) {
     return { ax: sx / n, ay: sy / n }
   }
 
+  /*
+   * GÖKYÜZÜ VAR MI? Üst kenarın beşte biri mavi ve aydınlık değilse bu
+   * fotoğrafta gökyüzü yoktur (iç mekân); mavi-gri duvarlar yanlışlıkla
+   * gökyüzü sayılmasın.
+   */
+  let ustMavi = 0
+  for (let x = 0; x < W; x++) if (mavilik[x] > 25 && aydinlik[x] > 120) ustMavi++
+  const gokVar = ustMavi > W * 0.2
+
   const sayim = {}
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
@@ -169,7 +180,7 @@ export function mekanHaritasi(tuval, sec = {}) {
 
       if (engel && engel[i] > 0.5) {
         s = SINIF.ENGEL
-      } else if (mavilik[i] > 25 && y < H * 0.62) {
+      } else if (gokVar && mavilik[i] > 25 && aydinlik[i] > 120 && y < H * 0.62) {
         s = SINIF.GOK
       } else {
         const e = egim(x, y)
