@@ -128,7 +128,7 @@ export function duzlemAdaylari(sec = {}) {
      */
     const dikeyEgim = Math.abs(b.b) * H
     const yatayEgim = Math.abs(b.a) * W
-    if (dikeyEgim > yayilim * 0.2 && dikeyEgim > yatayEgim * 1.2) continue
+    if (dikeyEgim > yayilim * 0.14 && dikeyEgim > yatayEgim) continue
 
     const maske = new Uint8Array(W * H)
     for (const i of b.piksel) maske[i] = 1
@@ -136,34 +136,37 @@ export function duzlemAdaylari(sec = {}) {
     const dik = enBuyukDikdortgen(maske, W, H, oran)
     if (!dik) continue
     const { x0, y0, x1, y1 } = dik
+    /*
+     * UFUK ALTI YERLEŞTİRİLMEZ.
+     *
+     * Zemin ve masa üstü düzlemleri bazen dik yüzey gibi görünüyor (parlak
+     * mermer, cilalı masa). Ama hepsi ufkun ALTINDA kalıyor: ekranın merkezi
+     * kadrajın alt üçte birindeyse orası duvar değil, yerdir.
+     */
+    if ((y0 + y1) / 2 > H * 0.66) continue
+
     const alanPay = ((x1 - x0) * (y1 - y0)) / (W * H)
     if (alanPay < 0.012) continue
 
-    /* Perspektif: kenar yükseklikleri kendi ters derinlikleriyle ölçekleniyor. */
     const cx = (x0 + x1) / 2
     const cy = (y0 + y1) / 2
-    const yariH = (y1 - y0) / 2
-    const zc = b.a * cx + b.b * cy + b.c
-    const zl = b.a * x0 + b.b * cy + b.c
-    const zr = b.a * x1 + b.b * cy + b.c
-    let koseler
-    if (zc > 1e-6 && zl > 1e-6 && zr > 1e-6) {
-      const sl = Math.max(0.72, Math.min(1.38, zl / zc))
-      const sr = Math.max(0.72, Math.min(1.38, zr / zc))
-      koseler = [
-        { x: x0 / W, y: (cy - yariH * sl) / H },
-        { x: x1 / W, y: (cy - yariH * sr) / H },
-        { x: x1 / W, y: (cy + yariH * sr) / H },
-        { x: x0 / W, y: (cy + yariH * sl) / H },
-      ]
-    } else {
-      koseler = [
-        { x: x0 / W, y: y0 / H },
-        { x: x1 / W, y: y0 / H },
-        { x: x1 / W, y: y1 / H },
-        { x: x0 / W, y: y1 / H },
-      ]
-    }
+
+    /*
+     * ÖLÇÜLMEYEN AÇI UYGULANMIYOR.
+     *
+     * Kenar yüksekliklerini derinlik eğiminden ölçekliyordum; derinlik
+     * modelinin küçük hataları bu adımda büyüyüp ekranı havada yatmış gibi
+     * gösteriyordu (kullanıcının iki örneğindeki hata buydu). Perspektif
+     * ancak GERÇEKTEN ölçüldüğünde uygulanır: fotoğraftaki bir panonun dört
+     * kenarı bulunduğunda. Boş bir duvar parçasında ise dikdörtgen, kadrajla
+     * hizalı çiziliyor — duvara yaslanmış, düz duran bir ekran.
+     */
+    const koseler = [
+      { x: x0 / W, y: y0 / H },
+      { x: x1 / W, y: y0 / H },
+      { x: x1 / W, y: y1 / H },
+      { x: x0 / W, y: y1 / H },
+    ]
     if (koseler.some((k) => k.x < 0.004 || k.x > 0.996 || k.y < 0.004 || k.y > 0.996)) continue
 
     const merkezX = cx / W

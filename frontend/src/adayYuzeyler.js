@@ -278,12 +278,16 @@ export function adaylariBul(tuval, sec = {}) {
          */
         const dik = koseleriKur(x0, y0, x1, y1, duzlem, W, H)
         const egimYerel = yerelEgim(tuval, x0 / W, y0 / H, x1 / W, y1 / H)
-        const sonKoseler =
-          egimYerel != null
-            ? egimleKur(dik, egimYerel)
-            : aci?.kacis
-              ? perspektifeOturt(dik, aci.kacis, Math.min(1, (aci.guven || 0) * 1.2))
-              : dik
+        /*
+         * EĞİM UYGULANMIYOR (bkz. duzlemAdaylar.js'teki aynı not).
+         *
+         * Yerel kenar eğimi de kaçış noktası da tahmin; ikisi de yanılınca
+         * ekran havada dönmüş görünüyordu. Boş yüzeyde ekran kadrajla hizalı
+         * çiziliyor. Perspektif yalnızca fotoğraftaki panonun ölçülen dört
+         * kenarından geliyor.
+         */
+        void egimYerel
+        const sonKoseler = dik
         if (sonKoseler.some((k) => k.x < 0.005 || k.x > 0.995 || k.y < 0.005 || k.y > 0.995)) continue
 
         /*
