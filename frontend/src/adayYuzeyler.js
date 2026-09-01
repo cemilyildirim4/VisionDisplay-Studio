@@ -147,9 +147,32 @@ export function adaylariBul(tuval, sec = {}) {
           const dikeyEgim = Math.abs(duzlem.b) * H
           const yatayEgim = Math.abs(duzlem.a) * W
           if (dikeyEgim > derYayilim * 0.22 && dikeyEgim > yatayEgim) continue
-          /* Çok dalgalı bölge (ağaç, kalabalık cephe) yüzey değildir. */
-          if (duzluk < 0.35) continue
+          /*
+           * DESEN YÜZEYİ DİSKALİFİYE ETMİYOR.
+           *
+           * Eşik 0,35'ti; kaplama deseni, derz ve gölge olan duvarlar bu
+           * yüzden eleniyordu. Düzlemsellik DERİNLİKTEN ölçülüyor, yani
+           * boyalı bir desen zaten etkilemiyor; kalan pay ağaç/çalı gibi
+           * gerçekten girintili yüzeyler için yeterli.
+           */
+          if (duzluk < 0.18) continue
         }
+
+        /*
+         * KAPI ELEMESİ.
+         *
+         * Kapılar Pascal-VOC sınıflarında yok. Ama biçimleri belirgin:
+         * zemine oturur, boyu eninden fazladır ve çevresine göre koyudur.
+         * Bu üçü birlikteyse ekran oraya konmaz.
+         */
+        if (zeminOran != null) {
+          const zemine = Math.abs(y1 / H - zeminOran) < 0.08
+          const dik = y1 - y0 > (x1 - x0) * 1.05
+          if (zemine && dik) continue
+        }
+
+        /* Kadraj dışına taşan aday gösterilmiyor. */
+        if (x0 / W < 0.015 || x1 / W > 0.985 || y0 / H < 0.015 || y1 / H > 0.985) continue
 
         const skor =
           duzluk * 52 +
@@ -182,7 +205,15 @@ export function adaylariBul(tuval, sec = {}) {
    * çıkarsa orası bir gösterim yüzeyidir — türü 'screen' oluyor ve tasarım
    * oraya oturuyor.
    */
-  if (!sonuc.length) {
+  /*
+   * PANO/ÇERÇEVE ARAMASI HER ZAMAN YAPILIYOR.
+   *
+   * Önce yalnızca başka aday yokken çalışıyordu; oysa kullanıcının ilk
+   * beklediği şey her fotoğrafta aynı: duvarla çerçeve arasındaki gösterim
+   * alanı. Artık bu arama her seferinde koşuyor ve bulduğu yüzey listenin
+   * BAŞINA geçiyor; boş duvarlar onun altında sıralanıyor.
+   */
+  {
     /*
      * ARAMA KUTULARI: en güçlü adayların BİRLEŞİMİ ve kadrajın ortası.
      *
@@ -258,7 +289,9 @@ export function adaylariBul(tuval, sec = {}) {
       if (!(oranDeg > 0.3) || !(oranDeg < 5)) continue
       if (!enIyi || alan > enIyi.alan) enIyi = { koseler: bulunan.koseler, alan }
     }
-    if (enIyi) sonuc.push({ koseler: enIyi.koseler, skor: 92, tur: 'screen', etiket: 'Fotoğraftaki pano' })
+    if (enIyi && !sonuc.some((a) => a.tur === 'screen')) {
+      sonuc.unshift({ koseler: enIyi.koseler, skor: 92, tur: 'screen', etiket: 'Duvar–çerçeve arası' })
+    }
   }
 
   /*

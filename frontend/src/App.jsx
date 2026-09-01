@@ -1449,8 +1449,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const gercek = fotoSahne.tamGorunsun
       ? Math.min(
           yer.genislik / kadrajGenisligi(ozelMesafeM),
-          (yer.genislik * 1.4) / Math.max(0.1, tasarimWm),
-          (yer.yukseklik * 1.4) / Math.max(0.1, tasarimHm),
+          /* Tasarım fotoğrafın dışına taşmıyor: 1,4 kat iken kadrajı aşıyordu. */
+          (yer.genislik * 0.98) / Math.max(0.1, tasarimWm),
+          (yer.yukseklik * 0.98) / Math.max(0.1, tasarimHm),
         )
       : duvarOlcegi * sahneYakinlik
     /*
