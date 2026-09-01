@@ -36,7 +36,8 @@ const GOK_SINIRI = 0.12
 const ENGEL_SINIRI = 0.08
 
 /** Aday sayılabilmesi için gereken en düşük puan. */
-const PUAN_ESIGI = 62
+/* Puanlama ölçütleri çeşitlenince tipik puanlar düştü; eşik buna göre. */
+const PUAN_ESIGI = 54
 
 /** Aynı yerin iki kez önerilmemesi için en az merkez ayrımı (kadraj payı). */
 /* 0,13 iken aynı pano üzerine dört ayrı kare düşüyordu; 0,20 ile seçenekler ayrışıyor. */
@@ -110,7 +111,8 @@ export function adaylariBul(tuval, sec = {}) {
   const ORANLAR = [16 / 9, 1, 9 / 16]
   const ham = []
 
-  for (const [payIdx, pay] of [0.52, 0.38, 0.27, 0.19].entries()) {
+  /* 0,19 tarandığında avuç içi kadar kareler öneriliyordu; kaldırıldı. */
+  for (const [payIdx, pay] of [0.52, 0.4, 0.3].entries()) {
     const enBoy = ORANLAR[payIdx % ORANLAR.length]
     const kwPx = pay * W
     const khPx = kwPx / enBoy
@@ -239,13 +241,26 @@ export function adaylariBul(tuval, sec = {}) {
         /* Kadraj dışına taşan aday gösterilmiyor. */
         if (x0 / W < 0.015 || x1 / W > 0.985 || y0 / H < 0.015 || y1 / H > 0.985) continue
 
+        /*
+         * SIRALAMA ÖLÇÜTLERİ.
+         *
+         * Düzlemsellik ve temizlik yetmiyordu: kadrajın kıyısındaki, göz
+         * hizasının çok üstünde/altındaki alanlar da yüksek puan alıyordu.
+         * İki ölçüt eklendi: MERKEZE yakınlık (bakışın doğal olarak gittiği
+         * yer) ve GÖZ HİZASI (kadrajın orta bandı).
+         */
+        const merkezXo = (x0 + x1) / 2 / W
+        const merkezYo = (y0 + y1) / 2 / H
+        const merkezlik = 1 - Math.min(1, Math.abs(merkezXo - 0.5) * 2)
+        const gozHizasi = 1 - Math.min(1, Math.abs(merkezYo - 0.45) * 2.4)
         const skor =
-          duzluk * 44 +
-          (1 - engelPay) * 18 +
-          (1 - gokPay) * 10 +
-          pay * 22 +
-          /* Haritada temiz duvar olması ayrıca puan getiriyor. */
-          (harita ? duvarPay * 16 : 8)
+          duzluk * 36 +
+          (1 - engelPay) * 14 +
+          (1 - gokPay) * 8 +
+          pay * 18 +
+          merkezlik * 10 +
+          gozHizasi * 8 +
+          (harita ? duvarPay * 14 : 7)
 
         /*
          * SON DENETİM: perspektif düzeltmesinden SONRA da dörtgen kadrajın

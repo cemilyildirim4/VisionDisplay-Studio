@@ -177,8 +177,18 @@ export function icDortgen(koseler, tasarimWm, tasarimHm, yuzeyWm) {
    * Üst sınır yalnızca uç durumlar için: yüzeyin altı katından fazlası
    * kadraja da sığmıyor, çizim anlamını yitiriyor.
    */
-  const fw = Math.min(6, tasarimWm / yuzeyWm)
-  const fh = Math.min(6, tasarimHm / yuzeyHm)
+  /*
+   * ORAN KORUNUYOR.
+   *
+   * fw ve fh ayrı ayrı hesaplanınca, yüzeyin en/boy oranı tasarımınkinden
+   * farklıysa tasarım eziliyor ya da geriliyordu. Artık tek ölçek: tasarımın
+   * kendi oranı yüzey düzleminde birebir kalıyor, yalnızca yüzeyin
+   * perspektifi uygulanıyor.
+   */
+  const olcek = Math.min(6, Math.max(tasarimWm / yuzeyWm, tasarimHm / yuzeyHm))
+  const oranDuzelt = (tasarimWm / tasarimHm) / (yuzeyWm / yuzeyHm)
+  const fw = olcek * Math.min(1, oranDuzelt)
+  const fh = olcek * Math.min(1, 1 / oranDuzelt)
   const u0 = (1 - fw) / 2
   const v0 = (1 - fh) / 2
   const n = [

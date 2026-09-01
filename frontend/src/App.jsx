@@ -375,7 +375,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * hedef dörtgeni KENDİ MERKEZİ etrafında çeviriyor: yüzeyin perspektifi
    * korunuyor, ekran yalnızca o düzlemde dönüyor.
    */
-  const [mekanDonusDeg, setMekanDonusDeg] = useState(0)
+  /* (Döndürme kaldırıldı: ekranı yüzeyin düzleminden çıkarıyordu.) */
   /*
    * EKRANI DOLDUR / GERÇEK ÖLÇÜ.
    *
@@ -395,7 +395,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * değişmiyor. Arka plan eklemek bir görselleştirme adımı, yapılandırmayı
    * değiştiren bir adım değil.
    */
-  const [ekranDoldur, setEkranDoldur] = useState(false)
+  /* ("Doldur" kipi kaldırıldı: tasarımın ölçüsünü değiştiriyordu.) */
   /* Tasarım hiçbir yüzeye sığmıyorsa gösterilen uyarı (bkz. scene.doesNotFit). */
   const [sigmazUyari, setSigmazUyari] = useState(null)
   /* yuzeyOlcusu aşağıda tanımlı; öneri işlevi ondan önce geldiği için ref. */
@@ -729,8 +729,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     const bulunan = Array.isArray(kayit?.adaylar) ? kayit.adaylar : []
     setAdaylar(bulunan)
-    /* Birden çok seçenek varsa kareler açılıyor: seçim kullanıcının. */
-    setAdayKipi(bulunan.length > 1)
+    /*
+     * Tek aday kalsa bile kare gösteriliyor: kullanıcı nereye konduğunu
+     * görüyor ve isterse manuel köşelerle düzeltiyor.
+     */
+    setAdayKipi(bulunan.length > 0)
 
     const yuzey = kayit?.yuzey
     if (yuzey) {
@@ -1685,10 +1688,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       2 /
       Math.max(1, fotoYer.genislik)
     const yuzeyWm = Math.max(0.2, yuzeyPayi * kadrajGenisligi(ozelMesafeM))
-    const olcekli =
-      hedefTur === 'screen' && ekranDoldur
-        ? sigdirDortgen(tuvalKose, tasarimWm / tasarimHm)
-        : icDortgen(tuvalKose, tasarimWm, tasarimHm, yuzeyWm)
+    /*
+     * TASARIMIN ŞEKLİ VE ÖLÇÜSÜ DEĞİŞMİYOR.
+     *
+     * "Doldur" kipi tasarımı panonun alanına göre büyütüp küçültüyordu;
+     * kullanıcı bunu istemedi. Yerleşim artık her zaman gerçek ölçüde:
+     * tasarım kendi metre karşılığında, kendi oranıyla, yüzeyin merkezine
+     * ve perspektifine oturuyor.
+     */
+    const olcekli = icDortgen(tuvalKose, tasarimWm, tasarimHm, yuzeyWm)
 
     /*
      * TAŞIMA VE DÖNDÜRME DÖRT KÖŞEYE DE UYGULANIYOR.
@@ -1702,8 +1710,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       x: k.x + (elleKayma?.x || 0),
       y: k.y + (elleKayma?.y || 0),
     }))
-    const donuk = dortgeniDondur(kaydirilmis, tasimaAcik ? mekanDonusDeg : 0)
-    return donuk.map((k) => ({ x: k.x - solUst.x, y: k.y - solUst.y }))
+    /*
+     * TASARIMIN TAMAMI EKRANDA KALIYOR.
+     *
+     * Yüzey kadrajın kenarına yakınsa dörtgenin bir kısmı dışarı taşıyordu.
+     * Önce içeri kaydırılıyor; hâlâ sığmıyorsa merkezine göre küçültülüyor.
+     * Kullanıcı sonrasında dilediği yere sürükleyebiliyor.
+     */
+    return ekranaSigdir(kaydirilmis, tuvalBoyut).map((k) => ({
+      x: k.x - solUst.x,
+      y: k.y - solUst.y,
+    }))
   })()
 
   /*
@@ -1722,18 +1739,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }))
   })()
 
-  /* Dörtgeni kendi merkezi etrafında döndürür (derece). */
-  function dortgeniDondur(koseler, derece) {
-    if (!derece) return koseler
-    const r = (derece * Math.PI) / 180
-    const cx = koseler.reduce((t, k) => t + k.x, 0) / koseler.length
-    const cy = koseler.reduce((t, k) => t + k.y, 0) / koseler.length
-    const cos = Math.cos(r)
-    const sin = Math.sin(r)
-    return koseler.map((k) => ({
-      x: cx + (k.x - cx) * cos - (k.y - cy) * sin,
-      y: cy + (k.x - cx) * sin + (k.y - cy) * cos,
-    }))
+  /*
+   * Dörtgeni tuvalin içine alır: önce kaydırır, gerekiyorsa merkezine göre
+   * küçültür. Oran korunuyor — tek çarpanla ölçekleniyor.
+   */
+  function ekranaSigdir(koseler, tuval) {
+    if (!koseler?.length || !tuval?.w || !tuval?.h) return koseler
+    const pay = 6
+    let k = koseler
+    const kutu = (q) => ({
+      x0: Math.min(...q.map((p) => p.x)),
+      x1: Math.max(...q.map((p) => p.x)),
+      y0: Math.min(...q.map((p) => p.y)),
+      y1: Math.max(...q.map((p) => p.y)),
+    })
+    let b = kutu(k)
+    const olcek = Math.min(
+      1,
+      (tuval.w - pay * 2) / Math.max(1, b.x1 - b.x0),
+      (tuval.h - pay * 2) / Math.max(1, b.y1 - b.y0),
+    )
+    if (olcek < 1) {
+      const cx = (b.x0 + b.x1) / 2
+      const cy = (b.y0 + b.y1) / 2
+      k = k.map((p) => ({ x: cx + (p.x - cx) * olcek, y: cy + (p.y - cy) * olcek }))
+      b = kutu(k)
+    }
+    let dx = 0
+    let dy = 0
+    if (b.x0 < pay) dx = pay - b.x0
+    else if (b.x1 > tuval.w - pay) dx = tuval.w - pay - b.x1
+    if (b.y0 < pay) dy = pay - b.y0
+    else if (b.y1 > tuval.h - pay) dy = tuval.h - pay - b.y1
+    return dx || dy ? k.map((p) => ({ x: p.x + dx, y: p.y + dy })) : k
   }
 
   /*
@@ -1749,10 +1787,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefKose(aday.koseler)
     setHedefTur(aday.tur || null)
     setAdayKipi(false)
-    if (aday.tur === 'screen' && ekranDoldur) {
-      /* Ölçü değişmiyor; yalnızca çizim panonun içine sığdırılıyor. */
-      setOzelUyari(t('scene.fillNote'))
-    } else if ((aday.skor || 0) < GUVEN_ESIGI) {
+    if ((aday.skor || 0) < GUVEN_ESIGI) {
       setOzelUyari(t('scene.lowConfidence'))
     } else {
       setOzelUyari(null)
@@ -2777,69 +2812,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       Ekranı bulunduğu düzlemde kendi merkezi etrafında
                       çeviriyor; taşıma zaten fareyle sürükleyerek yapılıyor.
                     */}
-                    {tasimaAcik && (
-                    <div className="mt-2 flex items-center justify-between gap-3">
-                      <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
-                        {t('scene.rotate')}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="range"
-                          min={-45}
-                          max={45}
-                          step={0.5}
-                          value={mekanDonusDeg}
-                          onChange={(e) => setMekanDonusDeg(Number(e.target.value))}
-                          className="w-28 accent-[#2962ad]"
-                          aria-label={t('scene.rotate')}
-                        />
-                        <span className="text-[13px] tabular-nums w-12 text-right text-neutral-600 dark:text-neutral-400">
-                          {mekanDonusDeg.toFixed(1).replace('.', ',')}°
-                        </span>
-                      </div>
-                    </div>
-                    )}
-                    {tasimaAcik && mekanDonusDeg !== 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setMekanDonusDeg(0)}
-                        className="mt-1.5 w-full py-1.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                      >
-                        {t('scene.rotateReset')}
-                      </button>
-                    )}
-
                     {/*
-                      EKRANI DOLDUR / GERÇEK ÖLÇÜ — yalnızca fotoğrafta
-                      mevcut bir ekran bulunduğunda anlamlı.
-                    */}
-                    {hedefTur === 'screen' && (
-                      <div className="mt-2 flex items-center justify-between gap-3">
-                        <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
-                          {t('scene.fillMode')}
-                        </span>
-                        <div className="flex rounded-lg border border-neutral-200 dark:border-[#2c333f] overflow-hidden">
-                          {[true, false].map((v) => (
-                            <button
-                              key={String(v)}
-                              type="button"
-                              onClick={() => {
-                                setEkranDoldur(v)
-                                setOzelUyari(v ? t('scene.fillNote') : t('scene.realSizeOn'))
-                              }}
-                              className={`py-1.5 px-3 text-[13px] font-medium transition-colors ${
-                                ekranDoldur === v
-                                  ? 'bg-brand text-white'
-                                  : 'text-neutral-600 dark:text-neutral-400 hover:text-brand'
-                              }`}
-                            >
-                              {t(v ? 'scene.fillScreen' : 'scene.realSize')}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                      DÖNDÜRME VE "DOLDUR" KALDIRILDI.
 
+                      Döndürme, ekranı yüzeyin düzleminden çıkarıyordu;
+                      doldurma ise tasarımın ölçüsünü değiştiriyordu.
+                      İkisi de kullanıcının istemediği şeydi: yerleşim artık
+                      her zaman gerçek ölçüde ve yüzeyin kendi perspektifinde.
+                    */}
                     {/*
                       UYGUN YERLER — tek tahmin yerine seçenek listesi:
                       kareleri gör, birine tıkla, tasarım oraya gitsin.
