@@ -73,6 +73,34 @@ export const MEKAN_EN_COK_MB = 60
  * @param {number} oran   tasarımın en/boy oranı — öneri buna göre aranır
  * @param {number} mesafeM  fotoğrafın çekildiği mesafe (metre)
  */
+/*
+ * ÇÖZÜMLEME ÖNBELLEĞİ.
+ *
+ * Aynı fotoğraf ikinci kez eklendiğinde ya da öneri tazelendiğinde analiz
+ * baştan koşuyordu; sonuç, aradaki ayar değişikliklerine göre kayabiliyordu.
+ * Artık görselin kendi pikselleri anahtar: aynı fotoğraf her zaman aynı
+ * yüzeyleri veriyor. (Ölçek ve mesafe bu önbelleğin dışında; onlar zaten
+ * yalnızca çizimi etkiliyor.)
+ */
+const cozumlemeOnbellek = new Map()
+
+/** Görselin kaba parmak izi: 32×32 gri örnekten toplam. */
+function gorselAnahtari(gorsel) {
+  try {
+    const c = document.createElement('canvas')
+    c.width = 32
+    c.height = 32
+    const g = c.getContext('2d', { willReadFrequently: true })
+    g.drawImage(gorsel, 0, 0, 32, 32)
+    const d = g.getImageData(0, 0, 32, 32).data
+    let a = ''
+    for (let i = 0; i < d.length; i += 16) a += String.fromCharCode(65 + ((d[i] >> 4) % 26))
+    return a
+  } catch {
+    return null
+  }
+}
+
 export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MESAFE_M) {
   const W = gorsel.naturalWidth
   const H = gorsel.naturalHeight
@@ -83,6 +111,9 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    * yerleşim genişliğidir ve doğru değeri vermez. Bu yüzden bir tuvale
    * çiziliyor.
    */
+  const anahtar = gorselAnahtari(gorsel)
+  const onbellek = anahtar ? cozumlemeOnbellek.get(anahtar) : null
+
   const tuval = document.createElement('canvas')
   tuval.width = W
   tuval.height = H
@@ -95,22 +126,26 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    * kullanıyor (ekran zeminin altına konmaz). Eskiden sonra bulunuyordu ve
    * yalnızca kioskun oturacağı yeri belirliyordu.
    */
-  let zeminOran = null
-  try {
-    zeminOran = zeminCizgisiBul(tuval)
-  } catch {
-    zeminOran = null
+  let zeminOran = onbellek ? onbellek.zeminOran : null
+  if (!onbellek) {
+    try {
+      zeminOran = zeminCizgisiBul(tuval)
+    } catch {
+      zeminOran = null
+    }
   }
 
   /*
    * (eski tarayıcı, kesik bağlantı) sessizce eski sezgisel ölçütlere
    * dönülüyor — özellik kaybolur, uygulama durmaz.
    */
-  let nesneler = null
-  try {
-    nesneler = await nesneHaritasi(tuval)
-  } catch (e) {
-    nesneler = null
+  let nesneler = onbellek ? onbellek.nesneler : null
+  if (!onbellek) {
+    try {
+      nesneler = await nesneHaritasi(tuval)
+    } catch (e) {
+      nesneler = null
+    }
   }
 
   /*
@@ -118,11 +153,13 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    * olduğunu' söylüyor. Yerleştirmenin asıl ölçütü ikincisi: düz bir yüzey
    * mi, önünde bir şey var mı. İkisi de olmazsa eski sezgisel ölçütler.
    */
-  let derinlik = null
-  try {
-    derinlik = await derinlikHaritasi(tuval)
-  } catch {
-    derinlik = null
+  let derinlik = onbellek ? onbellek.derinlik : null
+  if (!onbellek) {
+    try {
+      derinlik = await derinlikHaritasi(tuval)
+    } catch {
+      derinlik = null
+    }
   }
 
   /*
@@ -141,8 +178,8 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    * orasıdır. Nesne tanıma kaba yeri veriyor, kenar araması da kasanın
    * İÇ hattını — yani aktif gösterim yüzeyini — çıkarıyor.
    */
-  let yuzey = null
-  if (nesneler?.ekranKutusu) {
+  let yuzey = onbellek ? onbellek.yuzey : null
+  if (!onbellek && nesneler?.ekranKutusu) {
     try {
       yuzey = mevcutEkranYuzeyi(tuval, { ekranKutusu: nesneler.ekranKutusu })
     } catch {
@@ -159,7 +196,8 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    * MEKÂN HARİTASI — her pikselin ne olduğu (duvar, zemin, tavan, gökyüzü,
    * cam, ekran, kapı, nesne). Yerleştirme kararları buna dayanıyor.
    */
-  let harita = null
+  let harita = onbellek ? onbellek.harita : null
+  if (!onbellek) {
   try {
     harita = mekanHaritasi(tuval, {
       nesneler,
@@ -169,8 +207,10 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
   } catch {
     harita = null
   }
+  }
 
-  let adaylar = []
+  let adaylar = onbellek ? onbellek.adaylar : []
+  if (!onbellek) {
   try {
     adaylar = adaylariBul(tuval, {
       nesneler,
@@ -184,6 +224,16 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
     })
   } catch {
     adaylar = yuzey ? [{ koseler: yuzey.koseler, skor: 100, tur: 'screen' }] : []
+  }
+  }
+
+  /* Sonuç önbelleğe yazılıyor: aynı fotoğraf her seferinde aynı yüzeyler. */
+  if (anahtar && !onbellek) {
+    cozumlemeOnbellek.set(anahtar, { zeminOran, nesneler, derinlik, yuzey, harita, adaylar })
+    /* Bellek şişmesin: en fazla altı fotoğraf tutuluyor. */
+    if (cozumlemeOnbellek.size > 6) {
+      cozumlemeOnbellek.delete(cozumlemeOnbellek.keys().next().value)
+    }
   }
 
   let yer = null

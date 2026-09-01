@@ -280,6 +280,15 @@ export function perspektifeOturt(koseler, kacis, guven = 1) {
   ]
   if (yeni.some((k) => !Number.isFinite(k.x) || !Number.isFinite(k.y))) return koseler
   if (!dortgenGecerli(yeni, 0)) return koseler
+  /*
+   * AŞIRI EĞİLME YOK. Kaçış noktası ölçümü şaştığında kenarlar kutunun
+   * boyunun katı kadar kayabiliyor ve ekran havada dönmüş görünüyordu.
+   * Kenar uçlarının dikey kayması, kutu boyunun çeyreğiyle sınırlı.
+   */
+  const sinir = boy * 0.25
+  for (let i = 0; i < 4; i++) {
+    if (Math.abs(yeni[i].y - koseler[i].y) > sinir) return koseler
+  }
 
   /* Güvene göre karıştır: 1 tam düzeltme, 0 dokunma. */
   const g = Math.max(0, Math.min(1, guven))

@@ -96,10 +96,22 @@ export function adaylariBul(tuval, sec = {}) {
     derYayilim = Math.max(1e-6, enCokD - enAz)
   }
 
-  const enBoy = oran > 0 ? oran : 16 / 9
+  /*
+   * ADAYLAR TASARIMDAN BAĞIMSIZ.
+   *
+   * Tarama penceresi tasarımın en/boy oranını kullanıyordu; bu yüzden aynı
+   * fotoğraf, tasarım ölçüsü değişince başka yerler öneriyordu — kullanıcının
+   * "ikinci kez eklediğimde farklı yerlere koyuyor" dediği hata buydu.
+   * Artık sabit üç oranla taranıyor (yatay, kare, dikey); tasarım sonradan
+   * seçilen yüzeyin içine oturuyor. Böylece aynı fotoğraf her seferinde aynı
+   * adayları veriyor.
+   */
+  void oran
+  const ORANLAR = [16 / 9, 1, 9 / 16]
   const ham = []
 
-  for (const pay of [0.52, 0.38, 0.27, 0.19]) {
+  for (const [payIdx, pay] of [0.52, 0.38, 0.27, 0.19].entries()) {
+    const enBoy = ORANLAR[payIdx % ORANLAR.length]
     const kwPx = pay * W
     const khPx = kwPx / enBoy
     if (khPx > H * 0.92 || khPx < 6 || kwPx < 8) continue
@@ -235,6 +247,20 @@ export function adaylariBul(tuval, sec = {}) {
           /* Haritada temiz duvar olması ayrıca puan getiriyor. */
           (harita ? duvarPay * 16 : 8)
 
+        /*
+         * SON DENETİM: perspektif düzeltmesinden SONRA da dörtgen kadrajın
+         * içinde kalmalı. Önceki denetim düzeltme öncesi kutuya bakıyordu;
+         * eğilen kenar kadraj dışına çıkabiliyordu.
+         */
+        const sonKoseler = aci?.kacis
+          ? perspektifeOturt(
+              koseleriKur(x0, y0, x1, y1, duzlem, W, H),
+              aci.kacis,
+              Math.min(1, (aci.guven || 0) * 1.2),
+            )
+          : koseleriKur(x0, y0, x1, y1, duzlem, W, H)
+        if (sonKoseler.some((k) => k.x < 0.005 || k.x > 0.995 || k.y < 0.005 || k.y > 0.995)) continue
+
         ham.push({
           skor,
           yasakPay,
@@ -247,13 +273,7 @@ export function adaylariBul(tuval, sec = {}) {
            * Kaçış noktası ölçülebildiyse üst/alt kenarlar ona yakınsıyor,
            * yan kenarlar düşey kalıyor. Merkez ve ölçü değişmiyor.
            */
-          koseler: aci?.kacis
-            ? perspektifeOturt(
-                koseleriKur(x0, y0, x1, y1, duzlem, W, H),
-                aci.kacis,
-                Math.min(1, (aci.guven || 0) * 1.2),
-              )
-            : koseleriKur(x0, y0, x1, y1, duzlem, W, H),
+          koseler: sonKoseler,
           tur: 'surface',
         })
       }
