@@ -14,7 +14,18 @@ export default function AdaySecici({ adaylar, tuvalW, tuvalH, onSec }) {
   if (!adaylar?.length) return null
 
   return (
-    <div data-pdf-gizle className="absolute inset-0 z-20" style={{ touchAction: 'none' }}>
+    /*
+      KATMAN TIKLAMALARI YUTMUYOR.
+
+      Kapsayıcı tüm tuvali kaplıyordu ve pointer olaylarını yakalıyordu; bu
+      yüzden kareler açıkken tasarım sürüklenemiyordu. Artık yalnızca
+      karelerin kendisi tıklanabilir.
+    */
+    <div
+      data-pdf-gizle
+      className="absolute inset-0 z-20 pointer-events-none"
+      style={{ touchAction: 'none' }}
+    >
       <svg width={tuvalW} height={tuvalH} className="absolute inset-0">
         {adaylar.map((a, i) => {
           const nokta = a.koseler.map((k) => `${k.x},${k.y}`).join(' ')
@@ -23,20 +34,31 @@ export default function AdaySecici({ adaylar, tuvalW, tuvalH, onSec }) {
           /* İlk sıra fotoğraftaki gerçek ekran ise ayırt edilsin. */
           const vurgu = a.tur === 'screen'
           return (
-            <g
-              key={i}
-              onClick={() => onSec(a)}
-              style={{ cursor: 'pointer' }}
-              className="aday-kare"
-            >
+            /*
+              TIKLAMA YALNIZCA NUMARA ROZETİNDE.
+
+              Dörtgenin tamamı tıklanabilir olduğunda tasarımın üstünü
+              kaplıyor ve sürükleyerek taşımayı engelliyordu. Kare artık
+              yalnızca gösterge; seçim numaraya (ya da paneldeki listeye)
+              tıklayarak yapılıyor.
+            */
+            <g key={i} className="aday-kare">
               <polygon
                 points={nokta}
+                style={{ pointerEvents: 'none' }}
                 fill={vurgu ? 'rgba(41,98,173,0.26)' : 'rgba(41,98,173,0.12)'}
                 stroke={vurgu ? '#2962ad' : '#5b8fd6'}
                 strokeWidth={vurgu ? 3 : 2}
                 strokeDasharray={vurgu ? '' : '6 4'}
               />
-              <circle cx={mx} cy={my} r="14" fill="#2962ad" />
+              <circle
+                cx={mx}
+                cy={my}
+                r="14"
+                fill="#2962ad"
+                onClick={() => onSec(a)}
+                style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+              />
               <text
                 x={mx}
                 y={my + 5}
@@ -44,6 +66,8 @@ export default function AdaySecici({ adaylar, tuvalW, tuvalH, onSec }) {
                 fontSize="14"
                 fontWeight="700"
                 fill="#fff"
+                onClick={() => onSec(a)}
+                style={{ cursor: 'pointer', pointerEvents: 'auto' }}
               >
                 {i + 1}
               </text>

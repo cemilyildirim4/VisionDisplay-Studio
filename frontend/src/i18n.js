@@ -412,6 +412,8 @@ const dict = {
   },
   'scene.on': { tr: 'Açık', en: 'On', ar: 'مفعّل' },
   'scene.off': { tr: 'Kapalı', en: 'Off', ar: 'معطّل' },
+  'scene.rotate': { tr: 'Döndür', en: 'Rotate', ar: 'تدوير' },
+  'scene.rotateReset': { tr: 'Döndürmeyi sıfırla', en: 'Reset rotation', ar: 'إعادة ضبط التدوير' },
   'scene.fillMode': { tr: 'Mevcut ekran', en: 'Existing screen', ar: 'الشاشة الحالية' },
   'scene.fillScreen': { tr: 'Doldur', en: 'Fill', ar: 'ملء' },
   'scene.realSize': { tr: 'Gerçek ölçü', en: 'Real size', ar: 'المقاس الحقيقي' },

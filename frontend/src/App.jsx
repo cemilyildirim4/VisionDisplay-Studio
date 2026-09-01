@@ -368,6 +368,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [hedefTur, setHedefTur] = useState(null)
   /*
+   * ELLE DÖNDÜRME (derece).
+   *
+   * Dört köşe yerleşimi geldiğinde döndürme kaldırılmıştı; ama arka plan
+   * varken kullanıcı her zaman taşıyıp döndürebilmek istiyor. Döndürme
+   * hedef dörtgeni KENDİ MERKEZİ etrafında çeviriyor: yüzeyin perspektifi
+   * korunuyor, ekran yalnızca o düzlemde dönüyor.
+   */
+  const [mekanDonusDeg, setMekanDonusDeg] = useState(0)
+  /*
    * EKRANI DOLDUR / GERÇEK ÖLÇÜ.
    *
    * Fotoğrafta mevcut bir LED ekran bulunduğunda iki farklı beklenti var:
@@ -1670,7 +1679,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       hedefTur === 'screen' && ekranDoldur
         ? sigdirDortgen(tuvalKose, tasarimWm / tasarimHm)
         : icDortgen(tuvalKose, tasarimWm, tasarimHm, yuzeyWm)
-    return olcekli.map((k) => ({ x: k.x - solUst.x, y: k.y - solUst.y }))
+
+    /*
+     * TAŞIMA VE DÖNDÜRME DÖRT KÖŞEYE DE UYGULANIYOR.
+     *
+     * Dört köşe hedefi varken sürükleme kapalıydı: kayma yalnızca kutuya
+     * uygulanıyordu, köşelere değil. Artık ikisi de köşelerin üstünde:
+     * sürükleme kaymayı ekliyor, döndürme dörtgeni kendi merkezinde
+     * çeviriyor. Yüzeyin perspektifi bozulmuyor.
+     */
+    const kaydirilmis = olcekli.map((k) => ({
+      x: k.x + (elleKayma?.x || 0),
+      y: k.y + (elleKayma?.y || 0),
+    }))
+    const donuk = dortgeniDondur(kaydirilmis, mekanDonusDeg)
+    return donuk.map((k) => ({ x: k.x - solUst.x, y: k.y - solUst.y }))
   })()
 
   /*
@@ -1688,6 +1711,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       y: mY + (fotoYer.ust + k.y * fotoYer.yukseklik - mY) * z,
     }))
   })()
+
+  /* Dörtgeni kendi merkezi etrafında döndürür (derece). */
+  function dortgeniDondur(koseler, derece) {
+    if (!derece) return koseler
+    const r = (derece * Math.PI) / 180
+    const cx = koseler.reduce((t, k) => t + k.x, 0) / koseler.length
+    const cy = koseler.reduce((t, k) => t + k.y, 0) / koseler.length
+    const cos = Math.cos(r)
+    const sin = Math.sin(r)
+    return koseler.map((k) => ({
+      x: cx + (k.x - cx) * cos - (k.y - cy) * sin,
+      y: cy + (k.x - cx) * sin + (k.y - cy) * cos,
+    }))
+  }
 
   /*
    * BİR ADAYI UYGULA — kareye tıklayınca da listeden seçince de burası.
@@ -2008,7 +2045,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * artık dörtgen belirliyor, ikisi birbiriyle yarışmamalı.
                */
               kayma={koseTuval ? null : mekanKayma}
-              tutamak={surukleAktif && !koseTuval ? etkinTutamak : null}
+              /*
+               * Sürükleme tutamağı arka plan varken HER ZAMAN açık; dört köşe
+               * hedefi varken kayma köşelere uygulanıyor (bkz. koseTuval).
+               */
+              tutamak={surukleAktif ? etkinTutamak : null}
               yon={surukleAktif && !koseTuval ? mekanYon : null}
               sahneOlcekVarsayilan={sahneOlcekVarsayilan}
               onPxPerM={setCizimOlcek}
@@ -2721,6 +2762,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         {t('scene.cornersReset')}
                       </button>
                     )}
+                    {/*
+                      DÖNDÜRME — arka plan varken her zaman açık.
+                      Ekranı bulunduğu düzlemde kendi merkezi etrafında
+                      çeviriyor; taşıma zaten fareyle sürükleyerek yapılıyor.
+                    */}
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
+                        {t('scene.rotate')}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min={-45}
+                          max={45}
+                          step={0.5}
+                          value={mekanDonusDeg}
+                          onChange={(e) => setMekanDonusDeg(Number(e.target.value))}
+                          className="w-28 accent-[#2962ad]"
+                          aria-label={t('scene.rotate')}
+                        />
+                        <span className="text-[13px] tabular-nums w-12 text-right text-neutral-600 dark:text-neutral-400">
+                          {mekanDonusDeg.toFixed(1).replace('.', ',')}°
+                        </span>
+                      </div>
+                    </div>
+                    {mekanDonusDeg !== 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setMekanDonusDeg(0)}
+                        className="mt-1.5 w-full py-1.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        {t('scene.rotateReset')}
+                      </button>
+                    )}
+
                     {/*
                       EKRANI DOLDUR / GERÇEK ÖLÇÜ — yalnızca fotoğrafta
                       mevcut bir ekran bulunduğunda anlamlı.
