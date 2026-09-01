@@ -197,13 +197,6 @@ export default function PanoFoto({
   })()
 
   /*
-   * Fotoğraf tuvali doldurmuyorsa (uzaklaşma) kenar tamamlama devreye giriyor.
-   * Yarım piksellik yuvarlama farkları için küçük bir pay bırakılıyor.
-   */
-  const kenarDoldur =
-    yer.genislik * yakinlik < tuvalW - 1 || yer.yukseklik * yakinlik < tuvalH - 1
-
-  /*
    * TİPE GÖRE GÖVDE YÜKSEKLİKLERİ (metre).
    *  • dokunmatik kabin: 0,95 m — işlem yüzeyi el hizasında olsun diye.
    *  • dış mekân kabini: 0,80 m — kasa daha alçak, ağırlık merkezi aşağıda.
@@ -244,43 +237,14 @@ export default function PanoFoto({
             yapay zekâ tamamlaması için görüntünün bir sunucuya gönderilmesi
             gerekir; burada fotoğraf cihazdan çıkmıyor.
           */}
-          {kenarDoldur &&
-            /*
-             * AYNALI TAMAMLAMA — bulanık dolgu kaldırıldı.
-             *
-             * Bulanık kopya, kadrajın bittiğini gizlemiyor; sadece kirli bir
-             * çerçeve gibi duruyordu. Onun yerine fotoğrafın kendisi kenardan
-             * AYNALANARAK uzatılıyor: dikişte pikseller birebir aynı olduğu
-             * için ek görünmüyor, mimari çizgiler kenarda doğal biçimde
-             * devam ediyor. Sekiz kopya: dört kenar + dört köşe.
-             */
-            [
-              { sx: -1, sy: 1, dx: -1, dy: 0 },
-              { sx: -1, sy: 1, dx: 1, dy: 0 },
-              { sx: 1, sy: -1, dx: 0, dy: -1 },
-              { sx: 1, sy: -1, dx: 0, dy: 1 },
-              { sx: -1, sy: -1, dx: -1, dy: -1 },
-              { sx: -1, sy: -1, dx: 1, dy: -1 },
-              { sx: -1, sy: -1, dx: -1, dy: 1 },
-              { sx: -1, sy: -1, dx: 1, dy: 1 },
-            ].map((k, i) => (
-              <img
-                key={i}
-                src={sahne.dosya}
-                alt=""
-                aria-hidden="true"
-                style={{
-                  position: 'absolute',
-                  left: yer.sol + k.dx * yer.genislik,
-                  top: yer.ust + k.dy * yer.yukseklik,
-                  width: yer.genislik,
-                  height: yer.yukseklik,
-                  maxWidth: 'none',
-                  transform: `scale(${k.sx}, ${k.sy})`,
-                  pointerEvents: 'none',
-                }}
-              />
-            ))}
+          {/*
+            KENAR TAMAMLAMA KALDIRILDI.
+*
+            Önce bulanık kopya, sonra aynalı uzatma denendi; ikisi de
+            fotoğrafın bittiği yeri gizlemek yerine yapay bir çerçeve gibi
+            durdu. Artık boşlukta sahnenin kendi düz zemini görünüyor —
+            kadrajın nerede bittiği dürüstçe belli oluyor.
+          */}
           {/*
             DUVARI ESNEYEN SAHNE.
 
