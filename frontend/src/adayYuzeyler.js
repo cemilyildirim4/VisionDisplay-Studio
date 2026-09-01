@@ -26,6 +26,7 @@
 import { mevcutEkranYuzeyi } from './ekranYuzeyi.js'
 import { parlakEkranKutusu } from './parlakEkran.js'
 import { SINIF } from './mekanHaritasi.js'
+import { duzlemAdaylari } from './duzlemAdaylar.js'
 import { perspektifeOturt } from './homografi.js'
 
 /** Çözümleme genişliği — hızlı ve yeterli. */
@@ -318,6 +319,49 @@ export function adaylariBul(tuval, sec = {}) {
           tur: 'surface',
         })
       }
+    }
+  }
+
+  /*
+   * DÜZLEM TABANLI ADAYLAR — asıl üretici.
+   *
+   * Sabit oranlı pencere taraması sahnenin yapısını bilmiyor; her yeni
+   * fotoğrafta eşik ayarı istiyordu. Düzlem üreticisi (duzlemAdaylar.js)
+   * derinlikten gerçek yüzeyleri çıkarıp her yüzeyin engelsiz en büyük
+   * dikdörtgenini veriyor: kolonun iki yanı ayrı yüzey olduğu için ekran
+   * ikisinin üstüne oturamıyor, zemin ve tavan zaten eleniyor.
+   *
+   * Pencere taraması yedek olarak duruyor: derinlik modeli yüklenemezse
+   * (eski cihaz, kesik bağlantı) sistem yine de aday üretiyor.
+   */
+  if (derinlik?.veri) {
+    let yasakMaske = null
+    if (harita) {
+      yasakMaske = new Float32Array(harita.w * harita.h)
+      for (let i = 0; i < yasakMaske.length; i++) {
+        const sv = harita.sinif[i]
+        const yerlestirilebilir = sv === SINIF.DUVAR || sv === SINIF.EKRAN || sv === SINIF.CAM || sv === SINIF.BILINMEYEN
+        yasakMaske[i] = yerlestirilebilir ? 0 : 1
+      }
+    }
+    let duzlemler = []
+    try {
+      duzlemler = duzlemAdaylari({
+        derinlik,
+        engel: nesneler?.engel || null,
+        engelW: nesneler?.w || 0,
+        engelH: nesneler?.h || 0,
+        yasak: yasakMaske,
+        yasakW: harita?.w || 0,
+        yasakH: harita?.h || 0,
+        oran: 16 / 9,
+        enCok,
+      })
+    } catch {
+      duzlemler = []
+    }
+    for (const d of duzlemler) {
+      ham.push({ ...d, yasakPay: 0 })
     }
   }
 
