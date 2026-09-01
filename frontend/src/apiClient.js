@@ -174,6 +174,20 @@ async function isNonRetriableAppError(response) {
  * init.auth true ise istek oturum jetonuyla imzalanır; jeton eskimişse
  * (401) bir kez tazelenip istek tekrarlanır.
  */
+/*
+ * BETA KAPISI DİNLEYİCİSİ.
+ *
+ * Sunucu beta modundayken yazma uçları 403 + code:"BETA_INVITE_REQUIRED"
+ * döndürüyor. Uygulama bunu görüp davet kodu ekranını açabilsin diye tek bir
+ * dinleyici tutuluyor; API katmanı arayüzü tanımıyor, yalnızca haber veriyor.
+ */
+/*
+ * Haber tek bir geri çağrı yerine DOM OLAYIYLA veriliyor: tek slotlu
+ * dinleyicide, aynı olaya birden çok yerin abone olması gerektiğinde ya da
+ * modül iki kez yüklendiğinde bildirim sessizce kayboluyordu.
+ */
+export const DAVET_OLAYI = 'vds:davet-gerekli'
+
 export async function apiFetch(input, init = {}) {
   const maxRetries = init.retry ?? DEFAULT_RETRIES
   const { retry: _r, auth = false, ...fetchInit } = init
@@ -211,6 +225,18 @@ export async function apiFetch(input, init = {}) {
 
       try {
         let res = await fetch(url, { ...fetchInit, signal: controller.signal })
+
+        /* Beta kapısı: kod isteniyor. Yanıt gövdesi tüketilmiyor, kopyası okunuyor. */
+        if (res.status === 403 && typeof window !== 'undefined') {
+          try {
+            const veri = await res.clone().json()
+            if (veri?.code === 'BETA_INVITE_REQUIRED') {
+              window.dispatchEvent(new CustomEvent(DAVET_OLAYI, { detail: veri }))
+            }
+          } catch {
+            /* JSON değilse beta kapısı değildir */
+          }
+        }
 
         // Jeton eskimişse bir kez tazeleyip aynı isteği tekrarla. Yalnızca
         // imzalı isteklerde ve tek sefer: tazelemeden sonra da 401 geliyorsa

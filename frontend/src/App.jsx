@@ -38,6 +38,9 @@ import {
 import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
 import AdaySecici from './AdaySecici.jsx'
+import DavetKapisi from './DavetKapisi.jsx'
+import { DAVET_OLAYI } from './apiClient.js'
+import { useSession } from './SessionContext.jsx'
 import { icDortgen, sigdirDortgen } from './homografi.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
@@ -212,6 +215,8 @@ function yerlesimSecenekleri(m, genislikM, yukseklikM) {
 // Tema Root.jsx'te kuruluyor (yönetim ekranı da aynı temayı kullansın diye)
 function App({ theme, onToggleTheme: temaDegistir }) {
   const { t, lang, setLang } = useLang()
+  /* Davet kodu doğrulanınca misafir jetonu buraya yazılıyor. */
+  const { setSessionData } = useSession()
   const [width, setWidth] = useState(0)
   const [height, setHeight] = useState(0)
 
@@ -408,6 +413,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const olculeriPanoyaUydurRef = useRef(null)
   /* Kullanıcı köşeleri elle düzeltiyor mu? */
+  /*
+   * BETA DAVET KAPISI.
+   *
+   * Sunucu beta modundaysa yazma uçları davet kodu istiyor; API katmanı bunu
+   * haber veriyor, biz de kod ekranını açıyoruz. Kapı kapalıyken (varsayılan)
+   * bu ekran hiç görünmüyor.
+   */
+  const [davetAcik, setDavetAcik] = useState(false)
+  useEffect(() => {
+    /* API katmanı beta kapısını görürse kod ekranı açılıyor. */
+    const ac = () => setDavetAcik(true)
+    window.addEventListener(DAVET_OLAYI, ac)
+    return () => window.removeEventListener(DAVET_OLAYI, ac)
+  }, [])
+
   const [koseKipi, setKoseKipi] = useState(false)
   /*
    * ADAY KARELER — fotoğrafta yerleştirmeye uygun bulunan yüzeyler.
@@ -2160,6 +2180,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             />
           )}
         </main>
+
+        {/*
+          BETA DAVET KAPISI — yalnızca sunucu kod istediğinde açılır.
+          Kod doğrulanınca 24 saatlik misafir jetonu oturuma yazılıyor ve
+          kullanıcı kaldığı yerden devam ediyor.
+        */}
+        <DavetKapisi
+          acik={davetAcik}
+          onKapat={() => setDavetAcik(false)}
+          onJeton={(veri) =>
+            setSessionData({
+              accessToken: veri.accessToken,
+              role: veri.role || 'Guest',
+              displayName: 'Misafir',
+            })
+          }
+        />
 
         {/*
           yatay-sag: telefon yatayken iki panel TEK kaydırma sütunu olur; normalde

@@ -62,6 +62,15 @@ const TAB_GROUPS = [
       { key: 'chatlogs', label: 'Sohbet Kayıtları' },
       { key: 'feedback', label: 'Geri Bildirimler' },
       { key: 'users', label: 'Kullanıcılar' },
+      /*
+       * DAVET KODLARI GERİ GELDİ.
+       *
+       * Sekme bir ara kaldırılmıştı: kodu girecek bir ekran olmadığı için
+       * üretilen kod hiçbir yerde kullanılamıyordu. Artık ziyaretçi
+       * tarafında kod girme ekranı da var (DavetKapisi.jsx), yani kod
+       * gerçekten işe yarıyor. Sunucu tarafı hiç kaldırılmamıştı.
+       */
+      { key: 'invites', label: 'Davet Kodları' },
     ],
   },
 ]
@@ -915,6 +924,67 @@ export default function AdminPanel() {
   const [userForm, setUserForm] = useState({ email: '', password: '', displayName: '', role: 'Dealer' })
   const [userSaving, setUserSaving] = useState(false)
 
+  /* ---- Davet kodları ---- */
+  const [invites, setInvites] = useState([])
+  const [invitesLoading, setInvitesLoading] = useState(false)
+  const [invitesError, setInvitesError] = useState(null)
+  const [inviteForm, setInviteForm] = useState({ code: '', maxUses: 1, expiresAt: '' })
+  const [inviteSaving, setInviteSaving] = useState(false)
+
+  const loadInvites = useCallback(async () => {
+    setInvitesLoading(true)
+    setInvitesError(null)
+    try {
+      const res = await apiFetch(API_URL + "/api/invite-codes", { auth: true })
+      if (res.status === 401) { oturumDustu(); return }
+      if (!res.ok) throw new Error('Davet kodları alınamadı.')
+      setInvites(await res.json())
+    } catch (e) {
+      setInvitesError(e.message)
+    } finally {
+      setInvitesLoading(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const createInvite = async (e) => {
+    e.preventDefault()
+    setInviteSaving(true)
+    setInvitesError(null)
+    try {
+      const res = await apiFetch(API_URL + "/api/invite-codes", {
+        method: 'POST',
+        auth: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: inviteForm.code.trim() || null,
+          maxUses: Number(inviteForm.maxUses) || 1,
+          expiresAt: inviteForm.expiresAt ? new Date(inviteForm.expiresAt).toISOString() : null,
+        }),
+      })
+      if (res.status === 401) { oturumDustu(); return }
+      if (!res.ok) throw new Error('Davet kodu oluşturulamadı.')
+      setInviteForm({ code: '', maxUses: 1, expiresAt: '' })
+      await loadInvites()
+    } catch (e2) {
+      setInvitesError(e2.message)
+    } finally {
+      setInviteSaving(false)
+    }
+  }
+
+  const deleteInvite = async (id) => {
+    if (!window.confirm('Bu davet kodu silinsin mi?')) return
+    try {
+      const res = await apiFetch(API_URL + "/api/invite-codes/" + id, { method: "DELETE", auth: true })
+      if (res.status === 401) { oturumDustu(); return }
+      if (!res.ok && res.status !== 204) throw new Error('Davet kodu silinemedi.')
+      await loadInvites()
+    } catch (e) {
+      setInvitesError(e.message)
+    }
+  }
+
   const loadUsers = useCallback(async () => {
     setUsersLoading(true)
     setUsersError(null)
@@ -1045,6 +1115,7 @@ export default function AdminPanel() {
     if (tab === 'feedback') loadFeedback(onlyOpenFeedback)
     if (tab === 'configs') loadConfigs(1, '')
     if (tab === 'users') loadUsers()
+    if (tab === 'invites') loadInvites()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, girisYapildi])
 
@@ -1968,6 +2039,65 @@ export default function AdminPanel() {
         )}
 
         {/* ================= KULLANICILAR ================= */}
+        {tab === 'invites' && (
+          <div className="flex flex-col gap-5">
+            <form onSubmit={createInvite} className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+              <Field label="Kod (boş bırakılırsa üretilir)">
+                <input value={inviteForm.code} onChange={(e) => setInviteForm((f) => ({ ...f, code: e.target.value }))} placeholder="ör. MASAUSTU25" className={inputCls} />
+              </Field>
+              <Field label="Kullanım hakkı">
+                <input type="number" min={1} value={inviteForm.maxUses} onChange={(e) => setInviteForm((f) => ({ ...f, maxUses: e.target.value }))} className={inputCls} />
+              </Field>
+              <Field label="Son kullanma (isteğe bağlı)">
+                <input type="date" value={inviteForm.expiresAt} onChange={(e) => setInviteForm((f) => ({ ...f, expiresAt: e.target.value }))} className={inputCls} />
+              </Field>
+              <button type="submit" disabled={inviteSaving} className="rounded-full bg-brand text-white text-sm font-semibold px-4 py-2.5 min-h-[44px] hover:bg-brand-dark disabled:opacity-50 w-full md:w-auto">
+                {inviteSaving ? 'Ekleniyor…' : '+ Kod üret'}
+              </button>
+            </form>
+
+            <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+                <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                  {invitesLoading ? 'Yükleniyor…' : invites.length + ' kod'}
+                </span>
+                <button type="button" onClick={loadInvites} className="text-sm text-brand dark:text-brand-light hover:underline min-h-[44px] inline-flex items-center">Yenile</button>
+              </div>
+              {invitesError && <div className="px-5 py-3 text-sm text-red-600 dark:text-red-400">{invitesError}</div>}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400">
+                    <tr>
+                      <th className="text-left px-5 py-3 font-medium">Kod</th>
+                      <th className="text-left px-5 py-3 font-medium">Kullanım</th>
+                      <th className="text-left px-5 py-3 font-medium">Son kullanma</th>
+                      <th className="px-5 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invites.map((k) => (
+                      <tr key={k.id} className="border-t border-neutral-100 dark:border-[#242b36]">
+                        <td className="px-5 py-3 font-mono tracking-wider">{k.code}</td>
+                        <td className="px-5 py-3 tabular-nums">{(k.usedCount ?? 0) + " / " + k.maxUses}</td>
+                        <td className="px-5 py-3">{k.expiresAt ? new Date(k.expiresAt).toLocaleDateString('tr-TR') : '—'}</td>
+                        <td className="px-5 py-3 text-right">
+                          <button type="button" onClick={() => deleteInvite(k.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Sil</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {!invitesLoading && invites.length === 0 && (
+                      <tr><td colSpan={4} className="px-5 py-6 text-center text-neutral-500 dark:text-neutral-400">Henüz kod yok.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <p className="px-5 py-3 text-[13px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-[#242b36]">
+                Kodlar yalnızca beta kapısı açıkken (sunucuda BETA_ENABLED=true) sorulur. Kapı kapalıyken site herkese açıktır, kodlar beklemede kalır.
+              </p>
+            </div>
+          </div>
+        )}
+
         {tab === 'users' && (
           <div className="flex flex-col gap-5">
             <form onSubmit={createUser} className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
