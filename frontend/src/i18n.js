@@ -415,6 +415,7 @@ const dict = {
   'scene.fillMode': { tr: 'Mevcut ekran', en: 'Existing screen', ar: 'الشاشة الحالية' },
   'scene.fillScreen': { tr: 'Doldur', en: 'Fill', ar: 'ملء' },
   'scene.realSize': { tr: 'Gerçek ölçü', en: 'Real size', ar: 'المقاس الحقيقي' },
+  'scene.fillNote': { tr: 'Tasarım panonun içine sığdırıldı. Girdiğiniz ölçüler değişmedi; görünen boyut panoya göredir.', en: 'The design is fitted inside the panel. Your entered dimensions are unchanged; the drawn size follows the panel.', ar: 'تم احتواء التصميم داخل اللوحة. لم تتغير الأبعاد المدخلة.' },
   'scene.fillResized': { tr: 'Panoyu doldurmak için ölçüler güncellendi:', en: 'Dimensions updated to fill the panel:', ar: 'تم تحديث الأبعاد لملء اللوحة:' },
   'scene.realSizeOn': { tr: 'Tasarım kendi gerçek ölçüsünde çiziliyor; panonun merkezine oturuyor.', en: 'The design is drawn at its real size, centred on the panel.', ar: 'يُرسم التصميم بمقاسه الحقيقي في وسط اللوحة.' },
   'scene.kiosk': { tr: 'Kiosk gövdesi', en: 'Kiosk body', ar: 'هيكل الكشك' },

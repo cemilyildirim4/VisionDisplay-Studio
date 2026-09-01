@@ -378,7 +378,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    *   • "Gerçek ölçü" — tasarım kendi ölçüsünde kalır, panonun merkezine
    *     onun açısıyla oturur; küçükse içinde kalır, büyükse taşar.
    */
-  const [ekranDoldur, setEkranDoldur] = useState(true)
+  /*
+   * VARSAYILAN: GERÇEK ÖLÇÜ.
+   *
+   * "Doldur" artık yalnızca ÇİZİMİ panonun içine sığdırıyor; kullanıcının
+   * girdiği genişlik/yükseklik ve kabin sayısı hiçbir koşulda kendiliğinden
+   * değişmiyor. Arka plan eklemek bir görselleştirme adımı, yapılandırmayı
+   * değiştiren bir adım değil.
+   */
+  const [ekranDoldur, setEkranDoldur] = useState(false)
   /* Tasarım hiçbir yüzeye sığmıyorsa gösterilen uyarı (bkz. scene.doesNotFit). */
   const [sigmazUyari, setSigmazUyari] = useState(null)
   /* yuzeyOlcusu aşağıda tanımlı; öneri işlevi ondan önce geldiği için ref. */
@@ -720,8 +728,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setHedefKose(yuzey.koseler)
       setHedefTur('screen')
       setKoseKipi(false)
-      /* Doldur kipinde ölçüler de panonun ölçüsüne çekiliyor (bkz. ekranDoldur). */
-      if (ekranDoldur) olculeriPanoyaUydurRef.current?.(yuzey.koseler, kayit)
+      /* Ölçüler kullanıcıya ait: burada hiçbir şey değiştirilmiyor. */
     } else {
       /*
        * EKRAN YÜZEYİ BULUNAMADIYSA: önerilen yere koy, MANUEL KİPİ AÇMA.
@@ -1696,14 +1703,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefTur(aday.tur || null)
     setAdayKipi(false)
     if (aday.tur === 'screen' && ekranDoldur) {
-      const yeni = olculeriPanoyaUydur(aday.koseler)
-      setOzelUyari(
-        yeni
-          ? `${t('scene.fillResized')} ${yeni.w.toFixed(2).replace('.', ',')} × ${yeni.h
-              .toFixed(2)
-              .replace('.', ',')} m`
-          : null,
-      )
+      /* Ölçü değişmiyor; yalnızca çizim panonun içine sığdırılıyor. */
+      setOzelUyari(t('scene.fillNote'))
     } else if ((aday.skor || 0) < GUVEN_ESIGI) {
       setOzelUyari(t('scene.lowConfidence'))
     } else {
@@ -2736,18 +2737,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               type="button"
                               onClick={() => {
                                 setEkranDoldur(v)
-                                if (v && hedefKose) {
-                                  const yeni = olculeriPanoyaUydur(hedefKose)
-                                  setOzelUyari(
-                                    yeni
-                                      ? `${t('scene.fillResized')} ${yeni.w
-                                          .toFixed(2)
-                                          .replace('.', ',')} × ${yeni.h.toFixed(2).replace('.', ',')} m`
-                                      : null,
-                                  )
-                                } else {
-                                  setOzelUyari(t('scene.realSizeOn'))
-                                }
+                                setOzelUyari(v ? t('scene.fillNote') : t('scene.realSizeOn'))
                               }}
                               className={`py-1.5 px-3 text-[13px] font-medium transition-colors ${
                                 ekranDoldur === v
