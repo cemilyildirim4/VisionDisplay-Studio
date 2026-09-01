@@ -74,7 +74,12 @@ public class ConfigurationService : IConfigurationService
         var entity = new Configuration
         {
             ProjectName = responseDto.ProjectName,
-            CustomerName = responseDto.CustomerName,
+            CustomerName = FirstNonEmpty(dto.Customer?.Name, dto.CustomerName),
+            Phone = FirstNonEmpty(dto.Customer?.Phone, dto.Phone),
+            Email = FirstNonEmpty(dto.Customer?.Email, dto.Email),
+            WallWidthM = dto.WallWidthM,
+            WallHeightM = dto.WallHeightM,
+            ScreenMode = dto.ScreenMode,
             CabinId = dto.CabinId,
             AssemblyType = responseDto.AssemblyType,
             ModulesPerCard = responseDto.ModulesPerCard,
@@ -165,6 +170,11 @@ public class ConfigurationService : IConfigurationService
     {
         ProjectName = entity.ProjectName,
         CustomerName = entity.CustomerName,
+        Phone = entity.Phone,
+        Email = entity.Email,
+        WallWidthM = entity.WallWidthM,
+        WallHeightM = entity.WallHeightM,
+        ScreenMode = entity.ScreenMode,
         CabinId = entity.CabinId,
         Cols = entity.Cols,
         Rows = entity.Rows,
@@ -260,7 +270,12 @@ public class ConfigurationService : IConfigurationService
         {
             Id = c.Id,
             ProjectName = string.IsNullOrWhiteSpace(c.ProjectName) ? "Taslak Proje" : c.ProjectName,
-            CustomerName = string.IsNullOrWhiteSpace(c.CustomerName) ? "Müşteri Belirtilmedi" : c.CustomerName,
+            CustomerName = string.IsNullOrWhiteSpace(c.CustomerName) ? null : c.CustomerName,
+            Phone = c.Phone,
+            Email = c.Email,
+            WallWidthM = c.WallWidthM,
+            WallHeightM = c.WallHeightM,
+            ScreenMode = c.ScreenMode,
             UserId = c.UserId,
             CabinId = c.CabinId,
             CabinModelName = cabin?.ModelCode ?? c.Cabin?.ModelCode ?? "Bilinmeyen Model",
@@ -297,4 +312,7 @@ public class ConfigurationService : IConfigurationService
             CreatedAt = c.CreatedAt
         };
     }
+
+    private static string? FirstNonEmpty(string? a, string? b) =>
+        !string.IsNullOrWhiteSpace(a) ? a : (!string.IsNullOrWhiteSpace(b) ? b : null);
 }

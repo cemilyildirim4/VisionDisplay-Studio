@@ -8,6 +8,7 @@ import { queryClient } from '../queryClient.js'
 import { TESTER_ROLE_ENABLED } from '../featureFlags.js'
 import { useSession } from '../SessionContext.jsx'
 import HardwareCatalogSection from './HardwareCatalogSection.jsx'
+import LaborMultiplierSection from './LaborMultiplierSection.jsx'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
@@ -15,7 +16,7 @@ import HardwareCatalogSection from './HardwareCatalogSection.jsx'
  *
  * Gruplar:
  *  - Genel:   Dashboard (özet + analitik)
- *  - Ürün:    Modeller, Seriler, Donanım (güç kaynağı, mini PC, patch, alıcı kart, işlemci + işçilik)
+ *  - Ürün:    Modeller, Seriler, Donanım, İşçilik Çarpanı
  *  - Satış:   Teklifler, Kayıtlı Projeler
  *  - Sistem:  Sohbet Kayıtları, Geri Bildirimler, Kullanıcılar
  *
@@ -45,6 +46,7 @@ const TAB_GROUPS = [
       { key: 'cabins', label: 'Modeller' },
       { key: 'series', label: 'Seriler' },
       { key: 'hardware', label: 'Donanım' },
+      { key: 'labor', label: 'İşçilik Çarpanı' },
     ],
   },
   {
@@ -64,6 +66,15 @@ const TAB_GROUPS = [
   },
 ]
 
+const ADMIN_TAB_KEYS = TAB_GROUPS.flatMap((g) => g.items.map((t) => t.key))
+
+function parseAdminTabFromHash() {
+  const raw = window.location.hash || ''
+  const q = raw.includes('?') ? raw.slice(raw.indexOf('?') + 1) : ''
+  const tab = new URLSearchParams(q).get('tab')
+  return ADMIN_TAB_KEYS.includes(tab) ? tab : 'dashboard'
+}
+
 const STATUS_OPTIONS_QUOTE = ['Beklemede', 'Onaylandı', 'Reddedildi']
 const STATUS_OPTIONS_CONFIG = ['Taslak', 'Beklemede', 'Onaylandı', 'Reddedildi']
 
@@ -78,6 +89,36 @@ function StatusBadge({ status }) {
       ? 'bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-[#222833] dark:text-neutral-300 dark:border-[#39414f]'
       : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800'
   return <span className={`rounded-full px-2 py-0.5 text-xs border whitespace-nowrap ${cls}`}>{status || '—'}</span>
+}
+
+/** Müşteri adı / telefon / e-posta — kök alan, iç içe `customer` nesnesi veya JSON. */
+function contactOf(row) {
+  const nested = row?.customer && typeof row.customer === 'object' ? row.customer : {}
+  let fromJson = {}
+  if (row?.configJson) {
+    try {
+      const parsed = JSON.parse(row.configJson)
+      fromJson = parsed?.customer && typeof parsed.customer === 'object' ? parsed.customer : {}
+    } catch {
+      fromJson = {}
+    }
+  }
+  const name = row?.customerName || nested.name || nested.Name || fromJson.name || ''
+  const phone = row?.phone || nested.phone || nested.Phone || fromJson.phone || ''
+  const email = row?.email || nested.email || nested.Email || fromJson.email || ''
+  return { name, phone, email }
+}
+
+function wallOf(row) {
+  const w = row?.wallWidthM ?? row?.totalWidthM
+  const h = row?.wallHeightM ?? row?.totalHeightM
+  if (w == null && h == null) return '—'
+  const fmt = (n) => (n == null || n === '' ? '—' : Number(n).toFixed(2))
+  return `${fmt(w)} × ${fmt(h)}`
+}
+
+function layoutOf(row) {
+  return row?.screenMode === 'multi' ? 'Çoklu' : 'Tekli'
 }
 
 /** Sayfalama kontrolleri — teklif/proje listeleri büyüdükçe tek seferde tüm veriyi çekmemek için. */
@@ -367,7 +408,7 @@ function GirisEkrani() {
 export default function AdminPanel() {
   const { isAdmin, session, logout, displayName, email } = useSession()
   const girisYapildi = isAdmin && !!session?.accessToken
-  const [tab, setTab] = useState('dashboard')
+  const [tab, setTab] = useState(parseAdminTabFromHash)
   const [formSection, setFormSection] = useState('basic') // basic | tech | parts
   const [confirm, setConfirm] = useState(null) // { title, body, onConfirm }
 
@@ -672,7 +713,7 @@ export default function AdminPanel() {
   const removeQuote = (q) => {
     askConfirm(
       'Teklifi sil',
-      `"${q.customerName || 'İsimsiz'}" teklifi kalıcı olarak silinecek.`,
+      `"${contactOf(q).name || q.customerName || 'İsimsiz'}" teklifi kalıcı olarak silinecek.`,
       async () => {
         try {
           const res = await apiFetch(`${API_URL}/api/quotes/${q.id}`, { method: 'DELETE', auth: true })
@@ -983,6 +1024,21 @@ export default function AdminPanel() {
     }
   }
 
+  const goTab = useCallback((key) => {
+    const next = ADMIN_TAB_KEYS.includes(key) ? key : 'dashboard'
+    setTab(next)
+    const hash = next === 'dashboard' ? '#yonetim' : `#yonetim?tab=${next}`
+    if (window.location.hash !== hash) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`)
+    }
+  }, [])
+
+  useEffect(() => {
+    const onHash = () => setTab(parseAdminTabFromHash())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   // Sekme değişince ilgili veriyi getir
   useEffect(() => {
     if (!girisYapildi) return
@@ -1093,7 +1149,7 @@ export default function AdminPanel() {
                     <button
                       key={t.key}
                       type="button"
-                      onClick={() => setTab(t.key)}
+                      onClick={() => goTab(t.key)}
                       className={`whitespace-nowrap px-2 lg:px-3 xl:px-4 py-2 lg:py-2.5 min-h-[44px] text-[13px] lg:text-sm font-medium border-b-2 -mb-px transition-colors ${
                         tab === t.key
                           ? 'border-[#2962ad] text-[#2962ad] dark:text-[#9db9dc]'
@@ -1135,7 +1191,7 @@ export default function AdminPanel() {
                     <button
                       key={s.label}
                       type="button"
-                      onClick={() => setTab(s.go)}
+                      onClick={() => goTab(s.go)}
                       className="text-left bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-4 hover:border-brand transition-colors min-h-[44px] w-full max-w-full"
                     >
                       <div className="text-2xl font-bold">{s.value}</div>
@@ -1148,10 +1204,11 @@ export default function AdminPanel() {
                   <div className="border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 bg-white dark:bg-[#161a21]">
                     <h3 className="text-sm font-bold m-0 mb-3">Hızlı işlemler</h3>
                     <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-                      <button type="button" onClick={() => setTab('cabins')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Modeller</button>
-                      <button type="button" onClick={() => setTab('hardware')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Donanım</button>
-                      <button type="button" onClick={() => setTab('quotes')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Teklifler</button>
-                      <button type="button" onClick={() => setTab('users')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Kullanıcılar</button>
+                      <button type="button" onClick={() => goTab('cabins')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Modeller</button>
+                      <button type="button" onClick={() => goTab('hardware')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Donanım</button>
+                      <button type="button" onClick={() => goTab('labor')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">İşçilik Çarpanı</button>
+                      <button type="button" onClick={() => goTab('quotes')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Teklifler</button>
+                      <button type="button" onClick={() => goTab('users')} className="rounded-full border border-neutral-300 dark:border-[#39414f] px-3.5 py-2 min-h-[44px] text-[13px] font-semibold hover:border-brand">Kullanıcılar</button>
                     </div>
                   </div>
                   <div className="border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 bg-white dark:bg-[#161a21]">
@@ -1186,7 +1243,7 @@ export default function AdminPanel() {
                   <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">
                     <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <h3 className="text-sm font-bold m-0">SSS önerisi (cevaplanamayan sorular)</h3>
-                      <button type="button" onClick={() => setTab('chatlogs')} className="text-xs text-brand hover:underline min-h-[44px] inline-flex items-center">Loglar</button>
+                      <button type="button" onClick={() => goTab('chatlogs')} className="text-xs text-brand hover:underline min-h-[44px] inline-flex items-center">Loglar</button>
                     </div>
                     <div className="overflow-x-auto w-full">
                     <table className="w-full text-sm">
@@ -1557,9 +1614,14 @@ export default function AdminPanel() {
           </>
         )}
 
-        {/* ================= DONANIM + İŞÇİLİK ================= */}
+        {/* ================= DONANIM ================= */}
         {tab === 'hardware' && (
           <HardwareCatalogSection oturumDustu={oturumDustu} askConfirm={askConfirm} />
+        )}
+
+        {/* ================= İŞÇİLİK ÇARPANI ================= */}
+        {tab === 'labor' && (
+          <LaborMultiplierSection oturumDustu={oturumDustu} />
         )}
 
         {/* ================= SERİLER ================= */}
@@ -1666,23 +1728,24 @@ export default function AdminPanel() {
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                   <tr>
-                    {['ID', 'Müşteri', 'Telefon', 'E-posta', 'Model', 'Duvar (m)', 'Düzen', 'Sütun×Satır', 'Çözünürlük', 'Durum', 'Tarih', ''].map((h) => (
+                    {['ID', 'Müşteri', 'Telefon', 'E-posta', 'Model', 'Duvar (m)', 'Düzen', 'Sütun×Satır', 'Durum', 'Tarih', ''].map((h) => (
                       <th key={h} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {quotes.map((q) => (
+                  {quotes.map((q) => {
+                    const who = contactOf(q)
+                    return (
                     <tr key={q.id} className="border-t border-neutral-100 dark:border-[#242b36] hover:bg-neutral-50 dark:hover:bg-[#1b2029] align-top">
                       <td className="px-4 py-2.5 text-neutral-400 dark:text-neutral-500">{q.id}</td>
-                      <td className="px-4 py-2.5 font-medium">{q.customerName || '—'}</td>
-                      <td className="px-4 py-2.5">{q.phone || '—'}</td>
-                      <td className="px-4 py-2.5">{q.email || '—'}</td>
+                      <td className="px-4 py-2.5 font-medium">{who.name || '—'}</td>
+                      <td className="px-4 py-2.5">{who.phone || '—'}</td>
+                      <td className="px-4 py-2.5">{who.email || '—'}</td>
                       <td className="px-4 py-2.5">{q.modelCode || '—'}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">{q.wallWidthM ?? '—'} × {q.wallHeightM ?? '—'}</td>
-                      <td className="px-4 py-2.5">{q.screenMode === 'multi' ? 'Çoklu' : 'Tekli'}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">{wallOf(q)}</td>
+                      <td className="px-4 py-2.5">{layoutOf(q)}</td>
                       <td className="px-4 py-2.5">{q.columns ?? '—'} × {q.rows ?? '—'}</td>
-                      <td className="px-4 py-2.5">{q.resolution || '—'}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
                           <StatusBadge status={q.status || 'Beklemede'} />
@@ -1700,10 +1763,11 @@ export default function AdminPanel() {
                         <button type="button" onClick={() => removeQuote(q)} className="text-red-600 hover:underline inline-flex items-center min-h-[44px] px-2">Sil</button>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                   {!quotesLoading && quotes.length === 0 && (
                     <tr>
-                      <td colSpan={12} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">Henüz teklif talebi yok.</td>
+                      <td colSpan={11} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">Henüz teklif talebi yok.</td>
                     </tr>
                   )}
                 </tbody>
@@ -1846,7 +1910,7 @@ export default function AdminPanel() {
                 value={configsSearch}
                 onChange={(e) => setConfigsSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && loadConfigs(1, configsSearch)}
-                placeholder="Proje adı veya müşteri ara…"
+                placeholder="Proje adı, müşteri, telefon veya e-posta ara…"
                 className="w-full md:flex-1 md:max-w-xs border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 min-h-[44px] text-sm bg-transparent focus:outline-none focus:border-brand"
               />
               <button type="button" onClick={() => loadConfigs(1, configsSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap min-h-[44px] inline-flex items-center">Ara</button>
@@ -1857,23 +1921,25 @@ export default function AdminPanel() {
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
                   <tr>
-                    {['ID', 'Proje', 'Müşteri', 'Model', 'Sütun×Satır', 'Çözünürlük', 'Alıcı Kart', 'RJ45', 'İşlemci', 'Fiyat (USD)', 'Durum', 'Tarih', ''].map((h) => (
+                    {['ID', 'Proje', 'Müşteri', 'Telefon', 'E-posta', 'Model', 'Duvar (m)', 'Düzen', 'Sütun×Satır', 'Fiyat (USD)', 'Durum', 'Tarih', ''].map((h) => (
                       <th key={h} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {configs.map((c) => (
+                  {configs.map((c) => {
+                    const who = contactOf(c)
+                    return (
                     <tr key={c.id} className="border-t border-neutral-100 dark:border-[#242b36] hover:bg-neutral-50 dark:hover:bg-[#1b2029]">
                       <td className="px-4 py-2.5 text-neutral-400 dark:text-neutral-500">{c.id}</td>
                       <td className="px-4 py-2.5 font-medium">{c.projectName}</td>
-                      <td className="px-4 py-2.5">{c.customerName || '—'}</td>
+                      <td className="px-4 py-2.5">{who.name || '—'}</td>
+                      <td className="px-4 py-2.5">{who.phone || '—'}</td>
+                      <td className="px-4 py-2.5">{who.email || '—'}</td>
                       <td className="px-4 py-2.5">{c.cabinModelName || '—'}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">{wallOf(c)}</td>
+                      <td className="px-4 py-2.5">{layoutOf(c)}</td>
                       <td className="px-4 py-2.5">{c.cols} × {c.rows}</td>
-                      <td className="px-4 py-2.5">{c.totalResolution || '—'}</td>
-                      <td className="px-4 py-2.5">{c.receivingCardCount}</td>
-                      <td className="px-4 py-2.5">{c.requiredRj45Ports}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-neutral-500 dark:text-neutral-400">{c.recommendedProcessor || '—'}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap">{money(c.totalPrice)}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
@@ -1893,7 +1959,8 @@ export default function AdminPanel() {
                         <button type="button" onClick={() => removeConfig(c)} className="text-red-600 hover:underline inline-flex items-center min-h-[44px] px-2">Sil</button>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                   {!configsLoading && configs.length === 0 && (
                     <tr>
                       <td colSpan={13} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500">Henüz kayıtlı proje yok.</td>

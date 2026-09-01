@@ -332,8 +332,9 @@ function TypeFields({ kind, modal, setModal }) {
 }
 
 /**
- * Donanım kataloğu (5 parça, tipe özel form) + sistem işçilik çarpanı ($USD/m²).
+ * Donanım kataloğu (5 parça, tipe özel form).
  * LED modül / kabin yalnızca Modeller sekmesinden eklenir.
+ * İşçilik çarpanı ana menüdeki ayrı sekmede yönetilir.
  */
 export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
   const [kind, setKind] = useState('power-supplies')
@@ -342,11 +343,6 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
   const [message, setMessage] = useState(null)
   const [modal, setModal] = useState(null)
   const [saving, setSaving] = useState(false)
-
-  const [labor, setLabor] = useState('')
-  const [laborSaved, setLaborSaved] = useState(null)
-  const [laborSaving, setLaborSaving] = useState(false)
-  const [laborMessage, setLaborMessage] = useState(null)
 
   const kindMeta = KINDS.find((k) => k.key === kind) ?? KINDS[0]
   const extraCols = kindMeta.columns
@@ -370,64 +366,9 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
     }
   }, [kind, oturumDustu])
 
-  const loadLabor = useCallback(async () => {
-    try {
-      const res = await apiFetch(`${API_URL}/api/settings/labor-cost-multiplier`, { auth: true })
-      if (res.status === 401) {
-        oturumDustu()
-        return
-      }
-      if (!res.ok) throw new Error('İşçilik çarpanı alınamadı.')
-      const body = await res.json()
-      const value = Number(body.value)
-      setLabor(Number.isFinite(value) ? String(value) : '1')
-      setLaborSaved(Number.isFinite(value) ? value : 1)
-    } catch (e) {
-      setLaborMessage({ type: 'err', text: e.message })
-    }
-  }, [oturumDustu])
-
   useEffect(() => {
     loadItems()
   }, [loadItems])
-
-  useEffect(() => {
-    loadLabor()
-  }, [loadLabor])
-
-  const saveLabor = async () => {
-    const value = Number(labor)
-    if (!Number.isFinite(value) || value < 0) {
-      setLaborMessage({ type: 'err', text: 'İşçilik çarpanı 0 veya daha büyük bir sayı olmalı.' })
-      return
-    }
-    setLaborSaving(true)
-    setLaborMessage(null)
-    try {
-      const res = await apiFetch(`${API_URL}/api/settings/labor-cost-multiplier`, {
-        method: 'PUT',
-        auth: true,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value }),
-      })
-      if (res.status === 401) {
-        oturumDustu()
-        return
-      }
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.message || 'Kaydedilemedi.')
-      }
-      const body = await res.json()
-      setLaborSaved(Number(body.value))
-      setLabor(String(body.value))
-      setLaborMessage({ type: 'ok', text: 'İşçilik çarpanı güncellendi.' })
-    } catch (e) {
-      setLaborMessage({ type: 'err', text: e.message })
-    } finally {
-      setLaborSaving(false)
-    }
-  }
 
   const saveItem = async () => {
     setSaving(true)
@@ -488,47 +429,11 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
     )
   }
 
-  const laborDirty = laborSaved !== null && Number(labor) !== Number(laborSaved)
-
   const itemName = (item) => item.name || '—'
   const itemModel = (item) => item.model || '—'
 
   return (
     <div>
-      <Banner message={laborMessage} />
-      <div className="mb-6 bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5">
-        <h2 className="text-sm font-bold m-0 mb-1">İşçilik çarpanı</h2>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 m-0 mb-4">
-          Yeni teklif ve kayıtlı projelerde ekran alanı (m²) bu değerle çarpılır. Birim: $USD / m².
-        </p>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 max-w-xl">
-          <div className="flex-1">
-            <Field label="İşçilik ($USD / m²)" hint="Örn. 50 → 10 m² duvar için 500 USD işçilik">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 shrink-0">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={labor}
-                  onChange={(e) => setLabor(e.target.value)}
-                  className={inputCls}
-                />
-                <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 shrink-0 whitespace-nowrap">USD / m²</span>
-              </div>
-            </Field>
-          </div>
-          <button
-            type="button"
-            onClick={saveLabor}
-            disabled={laborSaving || !laborDirty}
-            className="rounded-full bg-brand text-white text-sm font-semibold px-5 py-2.5 min-h-[44px] hover:bg-brand-dark disabled:bg-neutral-300 w-full sm:w-auto shrink-0"
-          >
-            {laborSaving ? 'Kaydediliyor…' : 'Çarpanı kaydet'}
-          </button>
-        </div>
-      </div>
-
       <Banner message={message} />
 
       <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden">

@@ -14,6 +14,9 @@ public class QuoteInputDto
     [StringLength(150)]
     public string? CustomerName { get; set; }
 
+    /// <summary>İç içe müşteri (<c>customer.name</c> vb.). Kök alanlar boşsa buradan alınır.</summary>
+    public CustomerContactDto? Customer { get; set; }
+
     [ContactPhone(AllowEmpty = true), StringLength(50)]
     public string? Phone { get; set; }
 

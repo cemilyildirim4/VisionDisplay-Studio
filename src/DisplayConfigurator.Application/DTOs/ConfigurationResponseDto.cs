@@ -5,6 +5,20 @@ public class ConfigurationResponseDto
     public int Id { get; set; }
     public string ProjectName { get; set; } = string.Empty;
     public string? CustomerName { get; set; }
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public decimal? WallWidthM { get; set; }
+    public decimal? WallHeightM { get; set; }
+    public string? ScreenMode { get; set; }
+
+    /// <summary>Tablo/JSON için iç içe müşteri: <c>customer.name</c>, <c>customer.phone</c>, <c>customer.email</c>.</summary>
+    public CustomerContactDto Customer => new()
+    {
+        Name = CustomerName,
+        Phone = Phone,
+        Email = Email,
+    };
+
     /// <summary>Kaydeden kullanıcı; yoksa (eski/misafir kayıt) yalnızca Admin okuyabilir.</summary>
     public int? UserId { get; set; }
     public int CabinId { get; set; }

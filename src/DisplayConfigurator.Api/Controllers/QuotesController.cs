@@ -70,9 +70,9 @@ public class QuotesController : ControllerBase
 
         var quote = new Quote
         {
-            CustomerName = input.CustomerName,
-            Phone = input.Phone,
-            Email = input.Email,
+            CustomerName = FirstNonEmpty(input.Customer?.Name, input.CustomerName),
+            Phone = FirstNonEmpty(input.Customer?.Phone, input.Phone),
+            Email = FirstNonEmpty(input.Customer?.Email, input.Email),
             Address = input.Address,
             Message = input.Message,
             ModelCode = input.ModelCode,
@@ -138,9 +138,12 @@ public class QuotesController : ControllerBase
     }
 
     private static bool HasCustomerPii(QuoteInputDto input) =>
-        !string.IsNullOrWhiteSpace(input.CustomerName)
-        || !string.IsNullOrWhiteSpace(input.Phone)
-        || !string.IsNullOrWhiteSpace(input.Email)
+        !string.IsNullOrWhiteSpace(FirstNonEmpty(input.Customer?.Name, input.CustomerName))
+        || !string.IsNullOrWhiteSpace(FirstNonEmpty(input.Customer?.Phone, input.Phone))
+        || !string.IsNullOrWhiteSpace(FirstNonEmpty(input.Customer?.Email, input.Email))
         || !string.IsNullOrWhiteSpace(input.Address)
         || !string.IsNullOrWhiteSpace(input.Message);
+
+    private static string? FirstNonEmpty(string? a, string? b) =>
+        !string.IsNullOrWhiteSpace(a) ? a : (!string.IsNullOrWhiteSpace(b) ? b : null);
 }
