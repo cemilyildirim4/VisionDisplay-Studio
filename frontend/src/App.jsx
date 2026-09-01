@@ -39,7 +39,7 @@ import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
 import AdaySecici from './AdaySecici.jsx'
 import DavetKapisi from './DavetKapisi.jsx'
-import AciSecici from './AciSecici.jsx'
+
 import { DAVET_OLAYI } from './apiClient.js'
 import { useSession } from './SessionContext.jsx'
 import { icDortgen, sigdirDortgen } from './homografi.js'
@@ -436,7 +436,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ölçecek bir şey yok. Bu yüzden açıyı kullanıcı veriyor: kipi açıp
    * tuvalde sürüklüyor (yatay → yana çevirme, dikey → öne/arkaya yatırma).
    */
-  const [aciKipi, setAciKipi] = useState(false)
+  /* (Serbest sürükleme kipi kaldırıldı: hazır açılar daha kolay.) */
   const [elleAci, setElleAci] = useState({ yaw: 0, tilt: 0 })
 
   const [koseKipi, setKoseKipi] = useState(false)
@@ -1761,7 +1761,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * olduğu gibi bırakılıyor — kontrol kullanıcıda.
      */
     const elleMudahale =
-      mekanTasindi || koseKipi || aciKipi || elleAci.yaw !== 0 || elleAci.tilt !== 0
+      mekanTasindi || koseKipi || elleAci.yaw !== 0 || elleAci.tilt !== 0
     const son = elleMudahale ? acili : ekranaSigdir(acili, tuvalBoyut)
     return son.map((k) => ({
       x: k.x - solUst.x,
@@ -2228,18 +2228,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             />
           )}
 
-          {/*
-            ELLE AÇI KATMANI — kip açıkken tuvalde sürükleme açıyı veriyor.
-          */}
-          {aciKipi && (
-            <AciSecici
-              yaw={elleAci.yaw}
-              tilt={elleAci.tilt}
-              onDegis={setElleAci}
-              tuvalW={tuvalBoyut.w}
-              tuvalH={tuvalBoyut.h}
-            />
-          )}
 
           {showMeasurements && koseKipi && koseMutlak && (
             <KoseSecici
@@ -2892,26 +2880,66 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       tespit iyi bir başlangıç noktası, kesin sonuç elle.
                     */}
                     {/*
-                      AÇIYI ELLE AYARLA — kip açıkken tuvalde sürükleyerek
-                      yatay/dikey dönme veriliyor.
+                      BAKIŞ AÇISI — HAZIR SEÇENEKLER.
+
+                      Önce serbest sürükleme vardı; iki eksenli ve hassas
+                      olduğu için kullanıcı istediği açıyı tutturamıyordu.
+                      Şimdi tek tıkla seçilen beş bakış var: karşıdan,
+                      hafif/çok soldan, hafif/çok sağdan. Yükseklik ayrı bir
+                      satırda; ikisi birleşince tipik montaj görünümlerinin
+                      hepsi çıkıyor.
                     */}
-                    <button
-                      type="button"
-                      onClick={() => setAciKipi((v) => !v)}
-                      className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                    >
-                      {aciKipi ? t('scene.angleOff') : t('scene.angleOn')}
-                    </button>
-                    {(elleAci.yaw !== 0 || elleAci.tilt !== 0) && (
-                      <button
-                        type="button"
-                        onClick={() => setElleAci({ yaw: 0, tilt: 0 })
-                        }
-                        className="mt-1.5 w-full py-1.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                      >
-                        {t('scene.angleReset')}
-                      </button>
-                    )}
+                    <div className="mt-2">
+                      <div className="text-[14px] text-neutral-600 dark:text-neutral-400 mb-1">
+                        {t('scene.viewAngle')}
+                      </div>
+                      <div className="grid grid-cols-5 gap-1">
+                        {[
+                          [-32, t('scene.angleFarLeft')],
+                          [-16, t('scene.angleLeft')],
+                          [0, t('scene.angleFront')],
+                          [16, t('scene.angleRight')],
+                          [32, t('scene.angleFarRight')],
+                        ].map(([deger, ad]) => (
+                          <button
+                            key={deger}
+                            type="button"
+                            title={ad}
+                            onClick={() => setElleAci((e) => ({ ...e, yaw: deger }))}
+                            className={`py-1.5 rounded-lg text-[12px] font-medium border transition-colors ${
+                              Math.round(elleAci.yaw) === deger
+                                ? 'btn-selected border-transparent'
+                                : 'border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
+                            }`}
+                          >
+                            {ad}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-3 gap-1 mt-1">
+                        {[
+                          [-12, t('scene.angleAbove')],
+                          [0, t('scene.angleLevel')],
+                          [12, t('scene.angleBelow')],
+                        ].map(([deger, ad]) => (
+                          <button
+                            key={deger}
+                            type="button"
+                            onClick={() => setElleAci((e) => ({ ...e, tilt: deger }))}
+                            className={`py-1.5 rounded-lg text-[12px] font-medium border transition-colors ${
+                              Math.round(elleAci.tilt) === deger
+                                ? 'btn-selected border-transparent'
+                                : 'border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
+                            }`}
+                          >
+                            {ad}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('scene.viewAngleHint')}
+                      </p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => (koseKipi ? setKoseKipi(false) : koseKipiAc())}
