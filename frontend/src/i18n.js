@@ -403,7 +403,7 @@ const dict = {
     ar: 'السطح غير موثوق تمامًا. يمكنك ضبط الزوايا يدويًا.',
   },
   'scene.cornersManual': { tr: 'Manuel dört köşe seçimi', en: 'Manual four-corner selection', ar: 'اختيار الزوايا الأربع يدويًا' },
-  'scene.cornersHint': { tr: 'Ekranın dört köşesini işaretleyin', en: 'Mark the four corners of the screen', ar: 'حدد الزوايا الأربع للشاشة' },
+  'scene.cornersHint': { tr: 'Köşeleri çekerek ekranın yönünü ve açısını ayarlayın; ölçüsü değişmez.', en: 'Drag the corners to set the screen angle; its size stays the same.', ar: 'اسحب الزوايا لضبط زاوية الشاشة؛ مقاسها لا يتغير.' },
   'scene.cornersOff': { tr: 'Dört köşe yerleşimini kapat', en: 'Turn off four-corner placement', ar: 'إيقاف وضع الزوايا الأربع' },
   'scene.cornersReset': { tr: 'Yerleşimi sıfırla', en: 'Reset placement', ar: 'إعادة ضبط الموضع' },
   'scene.objectsFound': { tr: 'Fotoğrafta görülenler:', en: 'Found in the photo:', ar: 'ما تم العثور عليه في الصورة:' },

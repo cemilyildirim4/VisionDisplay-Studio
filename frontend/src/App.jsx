@@ -39,7 +39,6 @@ import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
 import AdaySecici from './AdaySecici.jsx'
 import DavetKapisi from './DavetKapisi.jsx'
-import AciSecici from './AciSecici.jsx'
 
 import { DAVET_OLAYI } from './apiClient.js'
 import { useSession } from './SessionContext.jsx'
@@ -438,13 +437,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * tuvalde sürüklüyor (yatay → yana çevirme, dikey → öne/arkaya yatırma).
    */
   /*
-   * AÇI KİPİ.
+   * AYRI AÇI KİPİ KALDIRILDI.
    *
-   * Hazır açı düğmeleri denendi ve istenmedi; sürükleme geri geldi ama
-   * kolaylaştırıldı (eksen kilidi, yumuşak oran, 2° kademe — bkz.
-   * AciSecici.jsx).
+   * Açı artık dört köşe tutamaklarından veriliyor: kullanıcı zaten
+   * oradan düzeltmeye alışkın ve tek bir denetim, iki ayrı kipten kolay.
    */
-  const [aciKipi, setAciKipi] = useState(false)
   const [elleAci, setElleAci] = useState({ yaw: 0, tilt: 0 })
 
   const [koseKipi, setKoseKipi] = useState(false)
@@ -1769,7 +1766,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * olduğu gibi bırakılıyor — kontrol kullanıcıda.
      */
     const elleMudahale =
-      mekanTasindi || koseKipi || aciKipi || elleAci.yaw !== 0 || elleAci.tilt !== 0
+      mekanTasindi || koseKipi || elleAci.yaw !== 0 || elleAci.tilt !== 0
     const son = elleMudahale ? acili : ekranaSigdir(acili, tuvalBoyut)
     return son.map((k) => ({
       x: k.x - solUst.x,
@@ -1893,6 +1890,49 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       })),
     }))
   })()
+
+  /*
+   * KÖŞEDEN AÇI VERME.
+   *
+   * Köşeyi serbest bırakmak tasarımın ÖLÇÜSÜNÜ bozuyordu: kullanıcı
+   * yön düzeltmek isterken ekran uzayıp kısalıyordu. Artık köşe
+   * hareketi bir AÇI olarak okunuyor —
+   *   • sağ köşeleri sağa çekmek: yüzey sağa dönüyor,
+   *   • sol köşeleri sola çekmek: sola dönüyor,
+   *   • üst köşeleri yukarı çekmek: yukarıdan bakış,
+   *   • alt köşeleri aşağı çekmek: aşağıdan bakış.
+   * Ekranın metre ölçüsü ve oranı sabit kalıyor; yalnızca perspektif
+   * değişiyor. Tuvalin tamamını sürüklemek ise ekranı taşımaya devam
+   * ediyor.
+   */
+  const koselerdenAci = (noktalar) => {
+    if (!koseMutlak || !Array.isArray(noktalar) || noktalar.length !== 4) return
+    /* Hangi köşe oynadı? */
+    let i = -1
+    let enBuyuk = 0
+    for (let k = 0; k < 4; k++) {
+      const d = Math.hypot(noktalar[k].x - koseMutlak[k].x, noktalar[k].y - koseMutlak[k].y)
+      if (d > enBuyuk) {
+        enBuyuk = d
+        i = k
+      }
+    }
+    if (i < 0 || enBuyuk < 0.5) return
+    const dx = noktalar[i].x - koseMutlak[i].x
+    const dy = noktalar[i].y - koseMutlak[i].y
+    const en = Math.max(40, Math.hypot(koseMutlak[1].x - koseMutlak[0].x, koseMutlak[1].y - koseMutlak[0].y))
+    const boy = Math.max(40, Math.hypot(koseMutlak[3].x - koseMutlak[0].x, koseMutlak[3].y - koseMutlak[0].y))
+    /* Kenarın tamamı kadar çekmek ~30° veriyor. */
+    const sagda = i === 1 || i === 2
+    const ustte = i === 0 || i === 1
+    const yawFark = ((sagda ? dx : -dx) / en) * 30
+    const tiltFark = ((ustte ? -dy : dy) / boy) * 30
+    const sinirla = (v) => Math.max(-40, Math.min(40, v))
+    setElleAci((e) => ({
+      yaw: sinirla(e.yaw + yawFark),
+      tilt: sinirla(e.tilt + tiltFark),
+    }))
+  }
 
   /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
   const koseleriYaz = (noktalar) => {
@@ -2237,21 +2277,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
 
-          {/* AÇI KATMANI — kip açıkken tuvalde sürükleyerek açı veriliyor. */}
-          {aciKipi && (
-            <AciSecici
-              yaw={elleAci.yaw}
-              tilt={elleAci.tilt}
-              onDegis={setElleAci}
-              tuvalW={tuvalBoyut.w}
-              tuvalH={tuvalBoyut.h}
-            />
-          )}
 
           {showMeasurements && koseKipi && koseMutlak && (
             <KoseSecici
               koseler={koseMutlak}
-              onDegis={koseleriYaz}
+              onDegis={koselerdenAci}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
             />
@@ -2899,17 +2929,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       tespit iyi bir başlangıç noktası, kesin sonuç elle.
                     */}
                     {/*
-                      AÇI VER — kip açıkken tuvalde sürükleyerek.
-                      Sürükleme eksen kilitli ve 2° kademeli olduğu için
-                      istenen açıyı tutturmak kolay (bkz. AciSecici.jsx).
+                      DÖRT KÖŞE — açı ve yön buradan veriliyor.
+
+                      Köşeyi çekmek ölçüyü değiştirmiyor; hareket bir AÇI
+                      olarak okunuyor (bkz. koselerdenAci). Böylece tek bir
+                      denetimle hem yön hem perspektif ayarlanıyor.
                     */}
                     <button
                       type="button"
-                      onClick={() => setAciKipi((v) => !v)}
+                      onClick={() => (koseKipi ? setKoseKipi(false) : koseKipiAc())}
                       className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                     >
-                      {aciKipi ? t('scene.angleOff') : t('scene.angleOn')}
+                      {koseKipi ? t('scene.cornersOff') : t('scene.cornersManual')}
                     </button>
+                    {koseKipi && (
+                      <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('scene.cornersHint')}
+                      </p>
+                    )}
                     {(elleAci.yaw !== 0 || elleAci.tilt !== 0) && (
                       <button
                         type="button"
