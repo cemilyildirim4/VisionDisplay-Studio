@@ -267,13 +267,22 @@ export function adaylariBul(tuval, sec = {}) {
          * içinde kalmalı. Önceki denetim düzeltme öncesi kutuya bakıyordu;
          * eğilen kenar kadraj dışına çıkabiliyordu.
          */
-        const sonKoseler = aci?.kacis
-          ? perspektifeOturt(
-              koseleriKur(x0, y0, x1, y1, duzlem, W, H),
-              aci.kacis,
-              Math.min(1, (aci.guven || 0) * 1.2),
-            )
-          : koseleriKur(x0, y0, x1, y1, duzlem, W, H)
+        /*
+         * EĞİM ÖNCE YERELDEN, OLMAZSA GENEL KAÇIŞ NOKTASINDAN.
+         *
+         * Karenin içindeki yatay kenarların eğimi ölçülebiliyorsa üst ve
+         * alt kenar o eğimle çiziliyor (yüzey neyse ekran ona paralel).
+         * Ölçülemiyorsa sahnenin kaçış noktası kullanılıyor; o da yoksa
+         * kare düz kalıyor.
+         */
+        const dik = koseleriKur(x0, y0, x1, y1, duzlem, W, H)
+        const egimYerel = yerelEgim(tuval, x0 / W, y0 / H, x1 / W, y1 / H)
+        const sonKoseler =
+          egimYerel != null
+            ? egimleKur(dik, egimYerel)
+            : aci?.kacis
+              ? perspektifeOturt(dik, aci.kacis, Math.min(1, (aci.guven || 0) * 1.2))
+              : dik
         if (sonKoseler.some((k) => k.x < 0.005 || k.x > 0.995 || k.y < 0.005 || k.y > 0.995)) continue
 
         /*
@@ -769,6 +778,92 @@ function panoyaOturt(tuval, koseler) {
     return [nokta(u0, v0), nokta(u1, v0), nokta(u1, v1), nokta(u0, v1)]
   } catch {
     return koseler
+  }
+}
+
+/**
+ * Dörtgenin üst ve alt kenarını verilen eğimle (dy/dx) yeniden çizer.
+ * Merkez ve ölçü korunuyor; yan kenarlar düşey kalıyor.
+ */
+function egimleKur(koseler, egim) {
+  const cx = koseler.reduce((t, k) => t + k.x, 0) / 4
+  const cy = koseler.reduce((t, k) => t + k.y, 0) / 4
+  const en = Math.max(...koseler.map((k) => k.x)) - Math.min(...koseler.map((k) => k.x))
+  const boy = Math.max(...koseler.map((k) => k.y)) - Math.min(...koseler.map((k) => k.y))
+  if (!(en > 0) || !(boy > 0)) return koseler
+  const sol = cx - en / 2
+  const sag = cx + en / 2
+  const ust = cy - boy / 2
+  const alt = cy + boy / 2
+  const dy = (egim * en) / 2
+  return [
+    { x: sol, y: ust - dy },
+    { x: sag, y: ust + dy },
+    { x: sag, y: alt + dy },
+    { x: sol, y: alt - dy },
+  ]
+}
+
+/**
+ * ADAYIN KENDİ BÖLGESİNDEKİ YATAY ÇİZGİLERİN EĞİMİ.
+ *
+ * Eğimi sahnenin GENEL kaçış noktasından almak yanılıyordu: bir vitrinin,
+ * bir kolonun ya da yan duvarın kendi perspektifi kadrajın genelinden
+ * farklı olabiliyor (kullanıcının mağaza fotoğrafında ekran bu yüzden ters
+ * yatmış görünüyordu). Burada eğim, YALNIZCA o karenin içindeki güçlü ve
+ * yataya yakın kenarlardan ölçülüyor: her pikselin gradyan yönünden çıkan
+ * eğimlerin, kenar gücüyle ağırlıklı ortancası.
+ *
+ * Yeterli kenar yoksa null dönüyor ve kare düz (eğimsiz) kalıyor —
+ * uydurma bir eğim vermektense yatay bırakmak doğru.
+ */
+function yerelEgim(tuval, x0, y0, x1, y1) {
+  try {
+    const W = 240
+    const kw = tuval.width || tuval.naturalWidth
+    const kh = tuval.height || tuval.naturalHeight
+    const H = Math.max(1, Math.round((kh * W) / kw))
+    const c = document.createElement('canvas')
+    c.width = W
+    c.height = H
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(tuval, 0, 0, W, H)
+    const d = ctx.getImageData(0, 0, W, H).data
+    const gri = new Float32Array(W * H)
+    for (let i = 0, q = 0; i < gri.length; i++, q += 4) {
+      gri[i] = 0.299 * d[q] + 0.587 * d[q + 1] + 0.114 * d[q + 2]
+    }
+    const ax0 = Math.max(1, Math.round(x0 * W))
+    const ax1 = Math.min(W - 2, Math.round(x1 * W))
+    const ay0 = Math.max(1, Math.round(y0 * H))
+    const ay1 = Math.min(H - 2, Math.round(y1 * H))
+    if (ax1 - ax0 < 6 || ay1 - ay0 < 4) return null
+    const egimler = []
+    for (let y = ay0; y <= ay1; y++) {
+      for (let x = ax0; x <= ax1; x++) {
+        const i = y * W + x
+        const gx = gri[i + 1] - gri[i - 1]
+        const gy = gri[i + W] - gri[i - W]
+        const guc = Math.abs(gx) + Math.abs(gy)
+        if (guc < 24) continue
+        /* Yataya yakın kenar: dikey gradyan baskın. */
+        if (Math.abs(gy) < Math.abs(gx) * 2.2) continue
+        const e = -gx / (gy || 1e-6)
+        if (Math.abs(e) > 0.6) continue
+        egimler.push({ e, guc })
+      }
+    }
+    if (egimler.length < 40) return null
+    egimler.sort((a, b) => a.e - b.e)
+    const toplamGuc = egimler.reduce((t, k) => t + k.guc, 0)
+    let birikim = 0
+    for (const k of egimler) {
+      birikim += k.guc
+      if (birikim >= toplamGuc / 2) return k.e
+    }
+    return egimler[Math.floor(egimler.length / 2)].e
+  } catch {
+    return null
   }
 }
 
