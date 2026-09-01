@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { BrandMark, BrandStripe } from '../BrandChrome.jsx'
+import { BrandMark, BrandStripe, goToConfigurator } from '../BrandChrome.jsx'
 import { BRAND } from '../brand.js'
 import ProductTypeBadge from '../ProductTypeBadge.jsx'
 import { normalizeProductType } from '../productType.js'
@@ -392,10 +392,7 @@ function GirisEkrani() {
 
         <button
           type="button"
-          onClick={() => {
-            window.history.replaceState(null, '', window.location.pathname + window.location.search)
-            window.dispatchEvent(new Event('hashchange'))
-          }}
+          onClick={goToConfigurator}
           className="w-full mt-3 text-[13px] text-brand dark:text-brand-light hover:underline min-h-[44px] inline-flex items-center justify-center"
         >
           ← Konfigüratöre dön
@@ -1099,10 +1096,7 @@ export default function AdminPanel() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              window.history.replaceState(null, '', window.location.pathname + window.location.search)
-              window.dispatchEvent(new Event('hashchange'))
-            }}
+            onClick={goToConfigurator}
             className="text-sm text-brand dark:text-brand-light hover:underline min-h-[44px] inline-flex items-center"
           >
             ← Konfigüratöre dön

@@ -1,4 +1,12 @@
 import { BRAND } from './brand.js'
+import { useLang } from './useLang.js'
+
+/** Hash'i temizleyerek Ekran Konfigüratörü ana görünümüne döner. */
+export function goToConfigurator(e) {
+  e?.preventDefault?.()
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  window.dispatchEvent(new Event('hashchange'))
+}
 
 /**
  * Logo + şirket adı + sayfa başlığı — tüm ana yüzeylerde ortak kurumsal antet.
@@ -22,6 +30,7 @@ export function BrandMark({
    */
   hideTextOnMobile = false,
 }) {
+  const { t } = useLang()
   const logoH = size === 'lg' ? 'h-11 sm:h-12' : size === 'sm' ? 'h-7' : 'h-8 sm:h-9'
   /*
    * TELEFONDA DA LOGONUN YANINDA.
@@ -32,11 +41,18 @@ export function BrandMark({
    */
   return (
     <div className="flex flex-row flex-nowrap items-center gap-2.5 sm:gap-4 min-w-0 w-full max-w-full">
-      <img
-        src={BRAND.logoSrc}
-        alt={BRAND.company}
-        className={`${logoH} w-auto max-w-full shrink-0 brand-logo-enter`}
-      />
+      <a
+        href="/"
+        onClick={goToConfigurator}
+        aria-label={t('app.title')}
+        className="shrink-0 inline-flex items-center min-h-[44px] rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      >
+        <img
+          src={BRAND.logoSrc}
+          alt=""
+          className={`${logoH} w-auto max-w-full shrink-0 brand-logo-enter`}
+        />
+      </a>
       <span
         className={`yatay-gizle hidden sm:block w-px shrink-0 ${
           darkOnDark ? 'bg-white/20 h-9' : 'bg-neutral-200 dark:bg-[#2c333f] h-8'

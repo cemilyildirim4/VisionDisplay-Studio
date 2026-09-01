@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS public.power_supplies
     max_power_output_watt numeric(10,2) NOT NULL DEFAULT 0,
     efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
     heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
+    amperage numeric(8,2) NOT NULL DEFAULT 0,
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT power_supplies_pkey PRIMARY KEY (id)
 );

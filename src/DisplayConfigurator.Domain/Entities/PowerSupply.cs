@@ -14,4 +14,7 @@ public class PowerSupply : HardwareComponent
 
     /// <summary>Isı yayılımı (BTU).</summary>
     public decimal HeatDissipationBtu { get; set; }
+
+    /// <summary>Çıkış akımı (Amper).</summary>
+    public decimal Amperage { get; set; }
 }
