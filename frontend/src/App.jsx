@@ -1569,6 +1569,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * tuvalin merkezine gelecek biçimde yerleştiği için kayma sıfır kalıyor:
    * "Ortala" düğmesi ekranı doğrudan duvara hizalıyor.
    */
+  /*
+   * TAŞIMA VE DÖNDÜRME YALNIZCA KULLANICININ KENDİ FOTOĞRAFINDA.
+   *
+   * AVM koridoru ve şehir meydanında duvar dokuz dilimle esniyor ve tasarım
+   * duvarın ortasına kilitli; oraya kayma ya da dönme eklemek yerleşimi
+   * bozuyordu (ekran duvarın dışına kayıyordu). O iki sahnede yerleşim
+   * sabit kalıyor.
+   */
+  const tasimaAcik = surukleAktif && !fotoSahne?.duvarKutu
+
   const duvaraHizali = surukleAktif && !kioskVar
   /*
    * DUVARIN DİBİNE HİZALAMA.
@@ -1692,7 +1702,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       x: k.x + (elleKayma?.x || 0),
       y: k.y + (elleKayma?.y || 0),
     }))
-    const donuk = dortgeniDondur(kaydirilmis, mekanDonusDeg)
+    const donuk = dortgeniDondur(kaydirilmis, tasimaAcik ? mekanDonusDeg : 0)
     return donuk.map((k) => ({ x: k.x - solUst.x, y: k.y - solUst.y }))
   })()
 
@@ -2049,7 +2059,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * Sürükleme tutamağı arka plan varken HER ZAMAN açık; dört köşe
                * hedefi varken kayma köşelere uygulanıyor (bkz. koseTuval).
                */
-              tutamak={surukleAktif ? etkinTutamak : null}
+              tutamak={tasimaAcik ? etkinTutamak : null}
               yon={surukleAktif && !koseTuval ? mekanYon : null}
               sahneOlcekVarsayilan={sahneOlcekVarsayilan}
               onPxPerM={setCizimOlcek}
@@ -2767,6 +2777,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       Ekranı bulunduğu düzlemde kendi merkezi etrafında
                       çeviriyor; taşıma zaten fareyle sürükleyerek yapılıyor.
                     */}
+                    {tasimaAcik && (
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
                         {t('scene.rotate')}
@@ -2787,7 +2798,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         </span>
                       </div>
                     </div>
-                    {mekanDonusDeg !== 0 && (
+                    )}
+                    {tasimaAcik && mekanDonusDeg !== 0 && (
                       <button
                         type="button"
                         onClick={() => setMekanDonusDeg(0)}
