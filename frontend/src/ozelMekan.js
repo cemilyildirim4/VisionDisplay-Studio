@@ -28,6 +28,8 @@ import { ekranYuzeyiBul } from './dortgenBul.js'
 import { duzlemBolgesiBul } from './duzlemBolge.js'
 import { mevcutEkranYuzeyi } from './ekranYuzeyi.js'
 import { adaylariBul } from './adayYuzeyler.js'
+import { mekanHaritasi, SINIF_ADI } from './mekanHaritasi.js'
+import { parlakEkranKutusu } from './parlakEkran.js'
 
 /** Kullanıcı başka bir şey söylemedikçe önerilen alanın gerçek genişliği. */
 /**
@@ -153,9 +155,24 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    * çıkarılıyor; kullanıcı fotoğrafın üstünde birine tıklayarak tasarımı oraya
    * taşıyor (bkz. adayYuzeyler.js).
    */
+  /*
+   * MEKÂN HARİTASI — her pikselin ne olduğu (duvar, zemin, tavan, gökyüzü,
+   * cam, ekran, kapı, nesne). Yerleştirme kararları buna dayanıyor.
+   */
+  let harita = null
+  try {
+    harita = mekanHaritasi(tuval, {
+      nesneler,
+      derinlik,
+      ekranKutusu: parlakEkranKutusu(tuval),
+    })
+  } catch {
+    harita = null
+  }
+
   let adaylar = []
   try {
-    adaylar = adaylariBul(tuval, { nesneler, derinlik, yuzey, oran: enBoy, zeminOran })
+    adaylar = adaylariBul(tuval, { nesneler, derinlik, yuzey, oran: enBoy, zeminOran, harita })
   } catch {
     adaylar = yuzey ? [{ koseler: yuzey.koseler, skor: 100, tur: 'screen' }] : []
   }
@@ -250,6 +267,13 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
     yuzey,
     /** Tıklanabilir aday yerleşim kareleri (0–1 köşeler). */
     adaylar,
+    /** Mekân haritasında görülenler — arayüz kullanıcıya yazıyor. */
+    mekanOzeti: harita
+      ? Object.entries(harita.sayim)
+          .filter(([s, n]) => SINIF_ADI[s] && n / (harita.w * harita.h) > 0.02)
+          .sort((a, b) => b[1] - a[1])
+          .map(([s]) => SINIF_ADI[s])
+      : null,
   }
 }
 

@@ -25,6 +25,7 @@
 
 import { mevcutEkranYuzeyi } from './ekranYuzeyi.js'
 import { parlakEkranKutusu } from './parlakEkran.js'
+import { SINIF } from './mekanHaritasi.js'
 
 /** Çözümleme genişliği — hızlı ve yeterli. */
 const COZUMLEME_W = 160
@@ -60,6 +61,7 @@ export function adaylariBul(tuval, sec = {}) {
     yuzey = null,
     oran = 16 / 9,
     zeminOran = null,
+    harita = null,
     enCok = 5,
   } = sec
 
@@ -132,6 +134,53 @@ export function adaylariBul(tuval, sec = {}) {
         const engelPay = engelSay / n
         if (gokPay > GOK_SINIRI || engelPay > ENGEL_SINIRI) continue
 
+        /*
+         * MEKÂN HARİTASI DENETİMİ.
+         *
+         * Karenin altında kalan piksellerin ne olduğu tek tek biliniyor.
+         * Kural: en az %85'i DUVAR ya da EKRAN olacak; zemin, tavan,
+         * gökyüzü, kapı ve nesne payı %6'yı geçmeyecek. Böylece "boş
+         * görünen ama aslında zemin/kapı olan" alanlar eleniyor.
+         */
+        let duvarPay = 0
+        let yasakPay = 0
+        if (harita) {
+          const hx0 = Math.round((x0 / W) * harita.w)
+          const hx1 = Math.max(hx0 + 1, Math.round((x1 / W) * harita.w))
+          const hy0 = Math.round((y0 / H) * harita.h)
+          const hy1 = Math.max(hy0 + 1, Math.round((y1 / H) * harita.h))
+          let duvar = 0
+          let yasak = 0
+          let toplam = 0
+          for (let hy = hy0; hy < hy1; hy++) {
+            for (let hx = hx0; hx < hx1; hx++) {
+              const sv = harita.sinif[hy * harita.w + hx]
+              if (sv === SINIF.DUVAR || sv === SINIF.EKRAN || sv === SINIF.CAM) duvar++
+              else if (sv !== SINIF.BILINMEYEN) yasak++
+              toplam++
+            }
+          }
+          duvarPay = toplam ? duvar / toplam : 0
+          yasakPay = toplam ? yasak / toplam : 0
+          /*
+           * HARİTA, ARAMA KUTULARINI DARALTMAMALI.
+           *
+           * Eleme burada yapılınca pano araması için kullanılan aday havuzu
+           * da küçülüyor ve gerçek pano bulunamıyordu. Bu yüzden yasak payı
+           * adayın üstünde taşınıyor; eleme aşağıda, arama kutuları
+           * kurulduktan SONRA yapılıyor.
+           */
+          /*
+           * HARİTA KATI FİLTRE DEĞİL.
+           *
+           * %85 duvar şartı konunca hiçbir aday kalmadı: kural tabanlı harita
+           * duvarın bir kısmını cam/tavan sanabiliyor. Kesin olan tek şey
+           * YASAK sınıflar; onların payı %25'i geçerse aday elenir, kalan
+           * durumda harita yalnızca puanı etkiler.
+           */
+          /* (eleme aşağıda) */
+        }
+
         let duzluk = 0.5
         let duzlem = null
         if (der) {
@@ -176,13 +225,16 @@ export function adaylariBul(tuval, sec = {}) {
         if (x0 / W < 0.015 || x1 / W > 0.985 || y0 / H < 0.015 || y1 / H > 0.985) continue
 
         const skor =
-          duzluk * 52 +
-          (1 - engelPay) * 22 +
-          (1 - gokPay) * 12 +
-          pay * 26
+          duzluk * 44 +
+          (1 - engelPay) * 18 +
+          (1 - gokPay) * 10 +
+          pay * 22 +
+          /* Haritada temiz duvar olması ayrıca puan getiriyor. */
+          (harita ? duvarPay * 16 : 8)
 
         ham.push({
           skor,
+          yasakPay,
           merkez: { x: (x0 + x1) / 2 / W, y: (y0 + y1) / 2 / H },
           koseler: koseleriKur(x0, y0, x1, y1, duzlem, W, H),
           tur: 'surface',
@@ -252,12 +304,22 @@ export function adaylariBul(tuval, sec = {}) {
       })
     }
     /*
-     * KADRAJIN TAMAMINI ARAMA KUTUSU YAPMIYORUZ.
+     * KADRAJIN ORTASI DA BİR ARAMA KUTUSU.
      *
-     * Denendi: Hough o zaman bina cephelerinin hatlarını birleştirip
-     * kadrajın yarısını kaplayan yamuk bir dörtgen üretti. Arama, adayların
-     * bulunduğu bölgeyle sınırlı kalmalı.
+     * Bir ara kaldırmıştım: Hough bina hatlarını birleştirip yamuk dörtgenler
+     * üretiyordu. Ama o zamandan beri üç denetim eklendi — makul dörtgen
+     * (kenar oranı + köşe açısı), alan sınırı (%3–45) ve kenara yapışmama.
+     * Bunlarla birlikte merkez araması güvenli; olmadığında mekân haritası
+     * adayları azaltınca pano hiç bulunamıyordu.
      */
+    kutular.push({ x: 0.1, y: 0.06, w: 0.8, h: 0.72 })
+    /*
+     * Daha dar iki kırpma: geniş kutuda Hough bina hatlarını birleştirip
+     * kadrajın yarısını kaplayan dörtgenler üretebiliyor. Dar kutular panoyu
+     * yalıtıyor; kazanan, geçerli olanlar arasında en büyük alanlı dörtgen.
+     */
+    kutular.push({ x: 0.18, y: 0.12, w: 0.64, h: 0.58 })
+    kutular.push({ x: 0.28, y: 0.18, w: 0.44, h: 0.42 })
     for (const a of iyiler) {
       const xs = a.koseler.map((k) => k.x)
       const ys = a.koseler.map((k) => k.y)
@@ -289,6 +351,14 @@ export function adaylariBul(tuval, sec = {}) {
        * birbirine yakın uzunlukta kalır ve köşeler ~90°'den çok sapmaz.
        */
       if (!makulDortgen(bulunan.koseler)) continue
+      /*
+       * TEKDÜZELİK ŞARTI KALDIRILDI.
+       *
+       * "Panonun içi tekdüzedir" varsayımı yanlış çıktı: yayın yapan bir
+       * ekranın içi manzara, reklam, video olabiliyor — sapma yüksek ve
+       * gerçek pano eleniyordu. Junk dörtgenleri zaten alan sınırı (%45),
+       * kenara yapışmama ve makul dörtgen denetimi eliyor.
+       */
       const alan = dortgenAlanOran(bulunan.koseler)
       /*
        * PANO OLMA ŞARTLARI.
@@ -340,7 +410,7 @@ export function adaylariBul(tuval, sec = {}) {
    * veriyordu: kullanıcı yolun üzerindeki kareyi görüp "saçma" diyor.
    * Az ama doğru seçenek, çok ama şüpheli seçenekten iyi.
    */
-  const elenmis = ham.filter((a) => a.skor >= PUAN_ESIGI)
+  const elenmis = ham.filter((a) => a.skor >= PUAN_ESIGI && (a.yasakPay || 0) <= 0.25)
 
   const merkezler = sonuc.map((a) => dortgenMerkez(a.koseler))
   for (const a of elenmis) {
