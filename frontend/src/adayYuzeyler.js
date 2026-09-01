@@ -24,6 +24,7 @@
  */
 
 import { mevcutEkranYuzeyi } from './ekranYuzeyi.js'
+import { parlakEkranKutusu } from './parlakEkran.js'
 
 /** Çözümleme genişliği — hızlı ve yeterli. */
 const COZUMLEME_W = 160
@@ -223,6 +224,22 @@ export function adaylariBul(tuval, sec = {}) {
      * güçlü olanlar arasında EN BÜYÜK alanlı dörtgen oluyor.
      */
     const kutular = []
+    /*
+     * ÖNCE PARLAK EKRAN/VİTRİN.
+     *
+     * Kenar araması bir dikdörtgenin KENARINI arıyor; oysa çalışan bir ekran
+     * ya da ışıklı vitrin çevresinden en çok İÇİYLE ayrılıyor. AVM'deki dev
+     * kavisli ekran, mağaza vitrini ve yol kenarındaki bilbord bu yolla
+     * bulunuyor; kutusu kenar aramasına başlangıç olarak veriliyor.
+     */
+    let parlak = null
+    try {
+      parlak = parlakEkranKutusu(tuval)
+    } catch {
+      parlak = null
+    }
+    if (parlak) kutular.push(parlak)
+
     const iyiler = ham.slice(0, 4)
     if (iyiler.length) {
       const xs = iyiler.flatMap((a) => a.koseler.map((k) => k.x))
@@ -291,6 +308,28 @@ export function adaylariBul(tuval, sec = {}) {
     }
     if (enIyi && !sonuc.some((a) => a.tur === 'screen')) {
       sonuc.unshift({ koseler: enIyi.koseler, skor: 92, tur: 'screen', etiket: 'Duvar–çerçeve arası' })
+    } else if (parlak && !sonuc.some((a) => a.tur === 'screen')) {
+      /*
+       * Kenar araması tutmadıysa parlak bölgenin KENDİSİ hedef oluyor.
+       * Kasa payı için %5 içeri çekiliyor: tasarım çerçevenin üstüne
+       * binmesin — kullanıcının bildirdiği hata buydu.
+       */
+      const ic = 0.05
+      const x0 = parlak.x + parlak.w * ic
+      const y0 = parlak.y + parlak.h * ic
+      const x1 = parlak.x + parlak.w * (1 - ic)
+      const y1 = parlak.y + parlak.h * (1 - ic)
+      sonuc.unshift({
+        koseler: [
+          { x: x0, y: y0 },
+          { x: x1, y: y0 },
+          { x: x1, y: y1 },
+          { x: x0, y: y1 },
+        ],
+        skor: 88,
+        tur: 'screen',
+        etiket: 'Fotoğraftaki ekran',
+      })
     }
   }
 
