@@ -433,6 +433,17 @@ export function adaylariBul(tuval, sec = {}) {
       if (!(oranDeg > 0.3) || !(oranDeg < 5)) continue
       if (!enIyi || alan > enIyi.alan) enIyi = { koseler: bulunan.koseler, alan }
     }
+    /*
+     * PANONUN GERÇEK YÜZEYİNE OTURTMA.
+     *
+     * Kenar araması dörtgeni panonun biraz dışına taşırabiliyordu; tasarım
+     * o dörtgenin ortasına oturduğu için panoda aşağıda/yukarıda kalmış
+     * görünüyordu. Burada dörtgen, içindeki TEK DÜZE yüzeye (panonun
+     * kendisi) göre daraltılıyor: merkezden dışa doğru renk benzerliği
+     * takip ediliyor, kasa/gökyüzü/yol başlayınca duruluyor.
+     */
+    if (enIyi) enIyi = { ...enIyi, koseler: panoyaOturt(tuval, enIyi.koseler) }
+
     if (enIyi && !sonuc.some((a) => a.tur === 'screen')) {
       sonuc.unshift({ koseler: enIyi.koseler, skor: 92, tur: 'screen', etiket: 'Duvar–çerçeve arası' })
     } else if (parlak && !sonuc.some((a) => a.tur === 'screen')) {
@@ -624,6 +635,96 @@ function makulDortgen(k) {
     if (aci < 55 || aci > 125) return false
   }
   return true
+}
+
+/**
+ * Dörtgeni içindeki tekdüze yüzeye daraltır.
+ *
+ * Merkezden yukarı/aşağı/sağa/sola yürünüyor; renk merkezdeki renkten
+ * belirgin biçimde ayrılınca (kasa, gökyüzü, yol) o kenar orada duruyor.
+ * Sonuç panonun aktif yüzeyi; tasarım da onun ortasına oturuyor.
+ */
+function panoyaOturt(tuval, koseler) {
+  try {
+    const W = 200
+    const kw = tuval.width || tuval.naturalWidth
+    const kh = tuval.height || tuval.naturalHeight
+    const H = Math.max(1, Math.round((kh * W) / kw))
+    const c = document.createElement('canvas')
+    c.width = W
+    c.height = H
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(tuval, 0, 0, W, H)
+    const d = ctx.getImageData(0, 0, W, H).data
+    const renk = (x, y) => {
+      const i = (Math.max(0, Math.min(H - 1, y)) * W + Math.max(0, Math.min(W - 1, x))) * 4
+      return [d[i], d[i + 1], d[i + 2]]
+    }
+    const fark = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2])
+
+    const xs = koseler.map((k) => k.x * W)
+    const ys = koseler.map((k) => k.y * H)
+    const x0 = Math.max(1, Math.min(...xs))
+    const x1 = Math.min(W - 2, Math.max(...xs))
+    const y0 = Math.max(1, Math.min(...ys))
+    const y1 = Math.min(H - 2, Math.max(...ys))
+    if (!(x1 - x0 > 6) || !(y1 - y0 > 6)) return koseler
+    const cx = Math.round((x0 + x1) / 2)
+    const cy = Math.round((y0 + y1) / 2)
+
+    /* Merkezdeki referans renk: 5×5 ortalama. */
+    let r = 0, g = 0, b = 0, n = 0
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const v = renk(cx + dx, cy + dy)
+        r += v[0]; g += v[1]; b += v[2]; n++
+      }
+    }
+    const ref = [r / n, g / n, b / n]
+    const ESIK = 95
+
+    /* Bir yönde yüzeyin bittiği yeri bul (üst üste üç aykırı piksel). */
+    const yuru = (dx, dy, sinir) => {
+      let x = cx
+      let y = cy
+      let aykiri = 0
+      let son = { x, y }
+      for (let adim = 0; adim < sinir; adim++) {
+        x += dx
+        y += dy
+        if (x < x0 || x > x1 || y < y0 || y > y1) break
+        if (fark(renk(x, y), ref) > ESIK) {
+          aykiri++
+          if (aykiri >= 3) break
+        } else {
+          aykiri = 0
+          son = { x, y }
+        }
+      }
+      return son
+    }
+    const sol = yuru(-1, 0, x1 - x0).x
+    const sag = yuru(1, 0, x1 - x0).x
+    const ust = yuru(0, -1, y1 - y0).y
+    const alt = yuru(0, 1, y1 - y0).y
+    if (!(sag - sol > 6) || !(alt - ust > 6)) return koseler
+
+    /* Yeni kutu, eski dörtgenin en az yarısı kadar olmalı. */
+    if ((sag - sol) < (x1 - x0) * 0.45 || (alt - ust) < (y1 - y0) * 0.45) return koseler
+
+    /* Eski dörtgenin perspektifi korunuyor: kutu oranları birim kareye taşınıyor. */
+    const u0 = (sol - x0) / (x1 - x0)
+    const u1 = (sag - x0) / (x1 - x0)
+    const v0 = (ust - y0) / (y1 - y0)
+    const v1 = (alt - y0) / (y1 - y0)
+    const nokta = (u, v) => ({
+      x: koseler[0].x + (koseler[1].x - koseler[0].x) * u + (koseler[3].x - koseler[0].x) * v,
+      y: koseler[0].y + (koseler[1].y - koseler[0].y) * u + (koseler[3].y - koseler[0].y) * v,
+    })
+    return [nokta(u0, v0), nokta(u1, v0), nokta(u1, v1), nokta(u0, v1)]
+  } catch {
+    return koseler
+  }
 }
 
 /** Dörtgenin alanı (0–1 birim karede). */
