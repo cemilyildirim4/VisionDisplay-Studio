@@ -1750,7 +1750,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     /* Elle verilen açı dörtgene burada biniyor (bkz. aciyiUygula). */
     const acili = aciyiUygula(kaydirilmis, elleAci)
-    return ekranaSigdir(acili, tuvalBoyut).map((k) => ({
+
+    /*
+     * SIĞDIRMA YALNIZCA OTOMATİK YERLEŞİMDE.
+     *
+     * "Tasarımın tamamı ekranda kalsın" kuralı otomatik önerinin kalitesi
+     * içindi. Kullanıcı taşırken, açı verirken ya da dört köşeyi elle
+     * çekerken aynı kural onu kısıtlıyordu: ekranı kenara götürmek ya da
+     * bilerek taşırmak mümkün olmuyordu. Elle müdahale varsa dörtgen
+     * olduğu gibi bırakılıyor — kontrol kullanıcıda.
+     */
+    const elleMudahale =
+      mekanTasindi || koseKipi || aciKipi || elleAci.yaw !== 0 || elleAci.tilt !== 0
+    const son = elleMudahale ? acili : ekranaSigdir(acili, tuvalBoyut)
+    return son.map((k) => ({
       x: k.x - solUst.x,
       y: k.y - solUst.y,
     }))
