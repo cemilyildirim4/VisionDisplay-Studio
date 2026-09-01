@@ -48,7 +48,7 @@ import ArView from './ArView.jsx'
 // gömülürse ilk yükleme herkes için ağırlaşır. Bu yüzden "3D Görünüm" düğmesine
 // basılana kadar hiç indirilmez (kod bölme / code-splitting).
 const Scene3D = guvenliLazy(() => import('./Scene3D.jsx'))
-import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, L_KIRILMA_PCT, curveDepthFor, IMAGE_MAX_MB } from './content.js'
+import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, curveDiameterM, curveAmountForDiameter, L_KIRILMA_PCT, curveDepthFor, IMAGE_MAX_MB } from './content.js'
 import { LANGUAGES } from './i18n.js'
 import { useAcilirKonum } from './hooks/useAcilirKonum.js'
 import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
@@ -2374,6 +2374,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       onChange={setCurveAmount}
                       /* Listede iç bükey varsa açı ona göre okunur */
                       icbukey={screens.some((s) => s.type === 'curvedIn')}
+                      genislikM={tasarimWm}
                       coklu
                     />
                   )}
@@ -2427,6 +2428,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           deger={curveAmount}
                           onChange={setCurveAmount}
                           icbukey={screenType === 'curvedIn'}
+                          genislikM={tasarimWm}
                         />
                       )}
                     </div>
@@ -3430,7 +3432,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
  * çiziliyor (2D önizleme, kamera ve 3D sahne aynı değeri okuyor). Çoklu
  * düzende bunu kullanıcıya da söylüyoruz.
  */
-function KavisAyari({ t, deger, onChange, icbukey, coklu = false }) {
+function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 }) {
+  /*
+   * ÇAP, KAVİSİN ASIL ÖLÇÜSÜ.
+   *
+   * Montajcı da müşteri de kavisi çapla konuşuyor ("3 m çapında"); yüzde
+   * bizim iç ölçümüz. Bu yüzden çap doğrudan girilebiliyor ve yüzdeye
+   * çevriliyor; kaydırıcı yerinde kalıyor, ikisi bağlı.
+   */
+  const cap = curveDiameterM(deger, icbukey, genislikM)
   return (
     <div className="mt-3">
       <div className="flex items-center justify-between mb-1">
@@ -3462,6 +3472,34 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false }) {
       <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
         {t('screen.curveArc')}: ≈{curveArcDegrees(deger, icbukey)}°
       </div>
+      {genislikM > 0 && (
+        <>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
+              {t('screen.curveDiameter')}
+            </span>
+            <Stepper
+              value={cap ? Math.round(cap * 100) / 100 : 0}
+              onChange={(v) => onChange(curveAmountForDiameter(v, icbukey, genislikM))}
+              /*
+               * EN KÜÇÜK ÇAP, ÇİZİLEBİLEN EN KESKİN KAVİS.
+               *
+               * Kavis derinliği %100'de genişliğin %13–16'sı ile sınırlı
+               * (bkz. content.js). Daha küçük bir çap girilirse çizim aynı
+               * kalıyor ve alan kullanıcıyı yanıltıyordu; alt sınır artık o
+               * noktadaki gerçek çap.
+               */
+              min={Math.max(0.5, Math.round(((curveDiameterM(100, icbukey, genislikM) || genislikM) * 100)) / 100)}
+              max={200}
+              step={0.1}
+              decimals={2}
+            />
+          </div>
+          <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+            {t('screen.curveDiameterHint')}
+          </p>
+        </>
+      )}
       {coklu && (
         <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
           {t('screen.curveAllScreens')}

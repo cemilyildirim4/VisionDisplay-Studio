@@ -54,6 +54,40 @@ export function curveArcDegrees(curveAmount, concave) {
 }
 
 /**
+ * KAVİS ÇAPI ↔ KAVİS YÜZDESİ.
+ *
+ * Kullanıcı montajı çapla düşünüyor: "3 metre çapında bir silindir".
+ * Yüzde ise derinliği (sagitta) ölçüyor. İkisi aynı geometrinin iki yüzü;
+ * kiriş (ekran genişliği) W, derinlik d ve yarıçap R arasında
+ *
+ *   R = W² / (8d) + d/2        d = R − √(R² − W²/4)
+ *
+ * bağıntısı var. Aşağıdaki iki işlev bu bağıntının iki yönü.
+ */
+
+/** Verilen kavis yüzdesinin karşılığı olan çap (metre). */
+export function curveDiameterM(curveAmount, concave, genislikM) {
+  const W = Number(genislikM) || 0
+  const p = Math.max(0, Math.min(100, curveAmount)) / 100
+  const d = p * curveDepthFor(concave) * W
+  if (!(W > 0) || d <= 0) return null
+  const R = (W * W) / (8 * d) + d / 2
+  return 2 * R
+}
+
+/** Verilen çapın karşılığı olan kavis yüzdesi (0–100). */
+export function curveAmountForDiameter(capM, concave, genislikM) {
+  const W = Number(genislikM) || 0
+  const R = (Number(capM) || 0) / 2
+  if (!(W > 0) || !(R > 0)) return 0
+  /* Çap ekran genişliğinden küçük olamaz: yarım daireden fazlası eğrilemez. */
+  const Rg = Math.max(W / 2, R)
+  const d = Rg - Math.sqrt(Math.max(0, Rg * Rg - (W * W) / 4))
+  const p = d / (curveDepthFor(concave) * W)
+  return Math.max(0, Math.min(100, Math.round(p * 100)))
+}
+
+/**
  * LED panel görünümü — kapalı (görüntüsüz) gerçek panel gibi.
  * Neredeyse siyah yüzey; hafif degrade yalnızca panelin ışığa göre parlamasını taklit eder.
  */

@@ -234,6 +234,8 @@ const dict = {
     en: 'This curve applies to every curved screen in the layout.',
     ar: 'ينطبق هذا الانحناء على كل شاشة منحنية في التخطيط.',
   },
+  'screen.curveDiameter': { tr: 'Kavis çapı (m)', en: 'Curve diameter (m)', ar: 'قطر الانحناء (م)' },
+  'screen.curveDiameterHint': { tr: 'Ekranın üzerinde durduğu dairenin çapı. Küçük çap = daha keskin kavis; en küçük değer ekran genişliğidir.', en: 'Diameter of the circle the screen follows; smaller means a tighter curve.', ar: 'قطر الدائرة التي تتبعها الشاشة؛ الأصغر يعني انحناءً أشد.' },
   'screen.curveArc': { tr: 'Yay açısı', en: 'Arc angle', ar: 'زاوية القوس' },
   'screen.curvedIn': { tr: 'İçe Kavisli', en: 'Concave Curved', ar: 'مقعرة' },
   'screen.lshape': { tr: 'İç L Tipi', en: 'Inner L-Type', ar: 'زاوية داخلية L' },
