@@ -51,7 +51,7 @@ const EN_KUCUK_BOLGE = 0.02
  * @returns {Array<{koseler:Array<{x:number,y:number}>, skor:number, tur:string, etiket:string}>}
  */
 export function duzlemAdaylari(sec = {}) {
-  const { derinlik, engel = null, engelW = 0, engelH = 0, yasak = null, yasakW = 0, yasakH = 0, oran = 16 / 9, enCok = 5 } = sec
+  const { derinlik, engel = null, engelW = 0, engelH = 0, yasak = null, yasakW = 0, yasakH = 0, oran = 16 / 9, enCok = 5, kacis = null } = sec
   if (!derinlik?.veri) return []
 
   const W = Math.min(W_COZ, derinlik.w)
@@ -178,14 +178,30 @@ export function duzlemAdaylari(sec = {}) {
      * İkisi sağlanmıyorsa dikdörtgen kadrajla hizalı kalıyor; kullanıcı
      * dilerse açıyı elle veriyor (bkz. AciSecici.jsx).
      */
-    const uyumIyi = b.artik != null && b.artik < yayilim * 0.02
-    const egikYuzey = Math.abs(b.a) * W > yayilim * 0.06
+    const uyumIyi = b.artik != null && b.artik < yayilim * 0.045
+    const egikYuzey = Math.abs(b.a) * W > yayilim * 0.03
+    /*
+     * İKİ ÖLÇÜM UYUŞUYOR MU?
+     *
+     * Fotoğrafın KAÇIŞ NOKTASI (mimari çizgilerden) ve bu yüzeyin DERİNLİK
+     * EĞİMİ birbirinden bağımsız iki ölçüm. Kaçış noktası sağdaysa sağ kenar
+     * daha uzaktadır; derinlik de bunu söylüyorsa ölçüm gerçektir ve eğim
+     * uygulanır. Söylemiyorsa ikisinden biri yanılıyor demektir — o zaman
+     * ekran düz bırakılıyor (yanlış eğim, havada yatmış bir ekran demek).
+     */
+    let yonUyumu = true
+    if (kacis && Number.isFinite(kacis.x)) {
+      const kacisSagda = kacis.x > cx / W
+      /* Ters derinlik: uzak nokta KÜÇÜK değer. */
+      const sagUzak = b.a * x1 + b.b * cy + b.c < b.a * x0 + b.b * cy + b.c
+      yonUyumu = kacisSagda === sagUzak
+    }
     const yariH = (y1 - y0) / 2
     const zc = b.a * cx + b.b * cy + b.c
     const zl = b.a * x0 + b.b * cy + b.c
     const zr = b.a * x1 + b.b * cy + b.c
     let koseler
-    if (uyumIyi && egikYuzey && zc > 1e-6 && zl > 1e-6 && zr > 1e-6) {
+    if (uyumIyi && egikYuzey && yonUyumu && zc > 1e-6 && zl > 1e-6 && zr > 1e-6) {
       const sl = Math.max(0.7, Math.min(1.42, zl / zc))
       const sr = Math.max(0.7, Math.min(1.42, zr / zc))
       koseler = [

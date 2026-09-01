@@ -360,6 +360,8 @@ export function adaylariBul(tuval, sec = {}) {
         yasakH: harita?.h || 0,
         oran: 16 / 9,
         enCok,
+        /* Fotoğrafın kaçış noktası: eğimin ikinci tanığı. */
+        kacis: aci?.kacis || null,
       })
     } catch {
       duzlemler = []
