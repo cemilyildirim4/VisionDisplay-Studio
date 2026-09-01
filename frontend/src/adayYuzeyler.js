@@ -294,6 +294,12 @@ export function adaylariBul(tuval, sec = {}) {
          * gerçekten yerleştirilebilir alanı gösteriyor ve tasarım onun
          * ortasına oturunca hizalama da doğru oluyor.
          */
+        /*
+         * Kolon/köşe geçen kareler elenir: iki farklı düzlemin üstüne
+         * oturan bir ekran gerçekte kurulamaz.
+         */
+        if (dikeyKesikVar(tuval, x0 / W, y0 / H, x1 / W, y1 / H)) continue
+
         const oturmus = panoyaOturt(tuval, sonKoseler)
 
         ham.push({
@@ -864,6 +870,57 @@ function yerelEgim(tuval, x0, y0, x1, y1) {
     return egimler[Math.floor(egimler.length / 2)].e
   } catch {
     return null
+  }
+}
+
+/**
+ * KARENİN İÇİNDEN DİKEY BİR YAPI GEÇİYOR MU?
+ *
+ * Kolon, duvar köşesi, kapı kasası ve vitrin dikmesi fotoğrafta baştan
+ * aşağı uzanan güçlü bir dikey kenar bırakıyor. Böyle bir kenarın iki
+ * yanı AYNI DÜZLEM DEĞİLDİR; ekranı oraya koymak, yarısı kolonun üstünde
+ * duran bir yerleşim demek (kullanıcının ofis fotoğrafındaki hata buydu).
+ *
+ * Ölçüt: karenin içindeki bir sütunda, satırların en az %70’inde güçlü
+ * dikey kenar varsa orası bir kesiktir. Kenarlara yakın sütunlar hariç —
+ * karenin kendi sınırı zaten bir kenardır.
+ */
+function dikeyKesikVar(tuval, x0, y0, x1, y1) {
+  try {
+    const W = 240
+    const kw = tuval.width || tuval.naturalWidth
+    const kh = tuval.height || tuval.naturalHeight
+    const H = Math.max(1, Math.round((kh * W) / kw))
+    const c = document.createElement("canvas")
+    c.width = W
+    c.height = H
+    const ctx = c.getContext("2d", { willReadFrequently: true })
+    ctx.drawImage(tuval, 0, 0, W, H)
+    const d = ctx.getImageData(0, 0, W, H).data
+    const gri = (x, y) => {
+      const i = (y * W + x) * 4
+      return 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
+    }
+    const ax0 = Math.max(2, Math.round(x0 * W))
+    const ax1 = Math.min(W - 3, Math.round(x1 * W))
+    const ay0 = Math.max(1, Math.round(y0 * H))
+    const ay1 = Math.min(H - 2, Math.round(y1 * H))
+    const gen = ax1 - ax0
+    const boy = ay1 - ay0
+    if (gen < 8 || boy < 6) return false
+    /* Kenara yakın %12 hariç: karenin kendi sınırı sayılmasın. */
+    const pay = Math.max(2, Math.round(gen * 0.12))
+    for (let x = ax0 + pay; x <= ax1 - pay; x++) {
+      let guclu = 0
+      for (let y = ay0; y <= ay1; y++) {
+        const fark = Math.abs(gri(x + 2, y) - gri(x - 2, y))
+        if (fark > 26) guclu++
+      }
+      if (guclu > boy * 0.7) return true
+    }
+    return false
+  } catch {
+    return false
   }
 }
 
