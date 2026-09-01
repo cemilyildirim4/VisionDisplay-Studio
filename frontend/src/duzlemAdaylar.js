@@ -115,7 +115,23 @@ export function duzlemAdaylari(sec = {}) {
         continue
       }
       const son = duzlemUydurPiksel(der, W, piksel) || uyum
-      bolgeler.push({ no, piksel, ...son })
+      /*
+       * UYUM KALİTESİ: düzlemin bölgeye ne kadar oturduğu. Perspektif
+       * ancak bu kalite yüksekken uygulanıyor — ölçüm güvenilir değilse
+       * ekranı eğmek, onu havada yatırmak demek.
+       */
+      let hata = 0
+      let sayac = 0
+      for (let q = 0; q < piksel.length; q += Math.max(1, Math.floor(piksel.length / 500))) {
+        const i = piksel[q]
+        const x = i % W
+        const y = (i / W) | 0
+        const f = der[i] - (son.a * x + son.b * y + son.c)
+        hata += f * f
+        sayac++
+      }
+      const artik = Math.sqrt(hata / Math.max(1, sayac))
+      bolgeler.push({ no, piksel, ...son, artik })
     }
   }
 
@@ -152,21 +168,40 @@ export function duzlemAdaylari(sec = {}) {
     const cy = (y0 + y1) / 2
 
     /*
-     * ÖLÇÜLMEYEN AÇI UYGULANMIYOR.
+     * PERSPEKTİF YALNIZCA ÖLÇÜM GÜVENİLİRSE.
      *
-     * Kenar yüksekliklerini derinlik eğiminden ölçekliyordum; derinlik
-     * modelinin küçük hataları bu adımda büyüyüp ekranı havada yatmış gibi
-     * gösteriyordu (kullanıcının iki örneğindeki hata buydu). Perspektif
-     * ancak GERÇEKTEN ölçüldüğünde uygulanır: fotoğraftaki bir panonun dört
-     * kenarı bulunduğunda. Boş bir duvar parçasında ise dikdörtgen, kadrajla
-     * hizalı çiziliyor — duvara yaslanmış, düz duran bir ekran.
+     * İki şart birlikte aranıyor:
+     *   • düzlem bölgeye İYİ oturmuş olmalı (artık pay küçük) — kötü
+     *     uydurmada eğim gürültüden gelir ve ekranı havada yatırır;
+     *   • yüzey gerçekten EĞİK olmalı (yatay derinlik eğimi belirgin) —
+     *     karşıdan görünen bir duvarda eğim vermek yanlış olur.
+     * İkisi sağlanmıyorsa dikdörtgen kadrajla hizalı kalıyor; kullanıcı
+     * dilerse açıyı elle veriyor (bkz. AciSecici.jsx).
      */
-    const koseler = [
-      { x: x0 / W, y: y0 / H },
-      { x: x1 / W, y: y0 / H },
-      { x: x1 / W, y: y1 / H },
-      { x: x0 / W, y: y1 / H },
-    ]
+    const uyumIyi = b.artik != null && b.artik < yayilim * 0.02
+    const egikYuzey = Math.abs(b.a) * W > yayilim * 0.06
+    const yariH = (y1 - y0) / 2
+    const zc = b.a * cx + b.b * cy + b.c
+    const zl = b.a * x0 + b.b * cy + b.c
+    const zr = b.a * x1 + b.b * cy + b.c
+    let koseler
+    if (uyumIyi && egikYuzey && zc > 1e-6 && zl > 1e-6 && zr > 1e-6) {
+      const sl = Math.max(0.7, Math.min(1.42, zl / zc))
+      const sr = Math.max(0.7, Math.min(1.42, zr / zc))
+      koseler = [
+        { x: x0 / W, y: (cy - yariH * sl) / H },
+        { x: x1 / W, y: (cy - yariH * sr) / H },
+        { x: x1 / W, y: (cy + yariH * sr) / H },
+        { x: x0 / W, y: (cy + yariH * sl) / H },
+      ]
+    } else {
+      koseler = [
+        { x: x0 / W, y: y0 / H },
+        { x: x1 / W, y: y0 / H },
+        { x: x1 / W, y: y1 / H },
+        { x: x0 / W, y: y1 / H },
+      ]
+    }
     if (koseler.some((k) => k.x < 0.004 || k.x > 0.996 || k.y < 0.004 || k.y > 0.996)) continue
 
     const merkezX = cx / W
