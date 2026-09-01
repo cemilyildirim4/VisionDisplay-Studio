@@ -39,6 +39,7 @@ import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
 import AdaySecici from './AdaySecici.jsx'
 import DavetKapisi from './DavetKapisi.jsx'
+import AciSecici from './AciSecici.jsx'
 import { DAVET_OLAYI } from './apiClient.js'
 import { useSession } from './SessionContext.jsx'
 import { icDortgen, sigdirDortgen } from './homografi.js'
@@ -427,6 +428,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     window.addEventListener(DAVET_OLAYI, ac)
     return () => window.removeEventListener(DAVET_OLAYI, ac)
   }, [])
+
+  /*
+   * ELLE AÇI.
+   *
+   * Otomatik açı yalnızca ölçülebildiğinde uygulanıyor; boş duvarda
+   * ölçecek bir şey yok. Bu yüzden açıyı kullanıcı veriyor: kipi açıp
+   * tuvalde sürüklüyor (yatay → yana çevirme, dikey → öne/arkaya yatırma).
+   */
+  const [aciKipi, setAciKipi] = useState(false)
+  const [elleAci, setElleAci] = useState({ yaw: 0, tilt: 0 })
 
   const [koseKipi, setKoseKipi] = useState(false)
   /*
@@ -1737,7 +1748,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * Önce içeri kaydırılıyor; hâlâ sığmıyorsa merkezine göre küçültülüyor.
      * Kullanıcı sonrasında dilediği yere sürükleyebiliyor.
      */
-    return ekranaSigdir(kaydirilmis, tuvalBoyut).map((k) => ({
+    /* Elle verilen açı dörtgene burada biniyor (bkz. aciyiUygula). */
+    const acili = aciyiUygula(kaydirilmis, elleAci)
+    return ekranaSigdir(acili, tuvalBoyut).map((k) => ({
       x: k.x - solUst.x,
       y: k.y - solUst.y,
     }))
@@ -1758,6 +1771,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       y: mY + (fotoYer.ust + k.y * fotoYer.yukseklik - mY) * z,
     }))
   })()
+
+  /*
+   * ELLE AÇIYI DÖRTGENE UYGULAR.
+   *
+   * Yaw: yüzeyi dikey ekseninde çevirmek — yaklaşan kenar uzar, uzaklaşan
+   * kenar kısalır ve içeri çekilir. Tilt: aynısının yatay eksendeki hâli.
+   * Perspektifin kendisi bu iki ölçekten çıkıyor; dörtgen kelebek olmuyor
+   * çünkü ölçekler sınırlı (±42°).
+   */
+  function aciyiUygula(koseler, aci) {
+    if (!aci || (!aci.yaw && !aci.tilt)) return koseler
+    const yaw = (Math.max(-60, Math.min(60, aci.yaw)) * Math.PI) / 180
+    const tilt = (Math.max(-60, Math.min(60, aci.tilt)) * Math.PI) / 180
+    const cx = koseler.reduce((t, k) => t + k.x, 0) / 4
+    const cy = koseler.reduce((t, k) => t + k.y, 0) / 4
+    /* Yakınlaşan kenar büyür: 1 + sin; uzaklaşan küçülür: 1 − sin. */
+    const sagOlcek = 1 - Math.sin(yaw) * 0.5
+    const solOlcek = 1 + Math.sin(yaw) * 0.5
+    const ustOlcek = 1 - Math.sin(tilt) * 0.5
+    const altOlcek = 1 + Math.sin(tilt) * 0.5
+    return koseler.map((k, i) => {
+      const solda = i === 0 || i === 3
+      const ustte = i === 0 || i === 1
+      const dikeyOlcek = solda ? solOlcek : sagOlcek
+      const yatayOlcek = ustte ? ustOlcek : altOlcek
+      return {
+        x: cx + (k.x - cx) * yatayOlcek,
+        y: cy + (k.y - cy) * dikeyOlcek,
+      }
+    })
+  }
 
   /*
    * Dörtgeni tuvalin içine alır: önce kaydırır, gerekiyorsa merkezine göre
@@ -2168,6 +2212,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
               onSec={(a) => adayiUygula(adaylar[adayTuval.indexOf(a)])}
+            />
+          )}
+
+          {/*
+            ELLE AÇI KATMANI — kip açıkken tuvalde sürükleme açıyı veriyor.
+          */}
+          {aciKipi && (
+            <AciSecici
+              yaw={elleAci.yaw}
+              tilt={elleAci.tilt}
+              onDegis={setElleAci}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
             />
           )}
 
@@ -2821,6 +2878,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       elle işaretlemek için. Güvenilir omurga bu: otomatik
                       tespit iyi bir başlangıç noktası, kesin sonuç elle.
                     */}
+                    {/*
+                      AÇIYI ELLE AYARLA — kip açıkken tuvalde sürükleyerek
+                      yatay/dikey dönme veriliyor.
+                    */}
+                    <button
+                      type="button"
+                      onClick={() => setAciKipi((v) => !v)}
+                      className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                    >
+                      {aciKipi ? t('scene.angleOff') : t('scene.angleOn')}
+                    </button>
+                    {(elleAci.yaw !== 0 || elleAci.tilt !== 0) && (
+                      <button
+                        type="button"
+                        onClick={() => setElleAci({ yaw: 0, tilt: 0 })
+                        }
+                        className="mt-1.5 w-full py-1.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        {t('scene.angleReset')}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => (koseKipi ? setKoseKipi(false) : koseKipiAc())}
