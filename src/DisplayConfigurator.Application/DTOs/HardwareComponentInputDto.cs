@@ -15,6 +15,8 @@ public class PowerSupplyInputDto : HardwareComponentInputDto
     /// <summary>0–1 (ör. 0.92 = %92). Form yüzde gönderirse sunucu 100'e böler.</summary>
     public decimal EfficiencyRatio { get; set; } = 1m;
     public decimal HeatDissipationBtu { get; set; }
+    /// <summary>Çıkış akımı (Amper).</summary>
+    public decimal Amperage { get; set; }
 }
 
 public class MiniPcInputDto : HardwareComponentInputDto

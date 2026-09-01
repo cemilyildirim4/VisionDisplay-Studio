@@ -19,13 +19,14 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
         QueryByIdAsync<PowerSupply>("power_supplies", PowerSupplyColumns, id);
     public Task<PowerSupply> CreatePowerSupplyAsync(PowerSupply item) =>
         CreateAsync(item, "power_supplies",
-            "(name, model, price, output_voltage, max_power_output_watt, efficiency_ratio, heat_dissipation_btu, created_at)",
-            "(@Name, @Model, @Price, @OutputVoltage, @MaxPowerOutputWatt, @EfficiencyRatio, @HeatDissipationBtu, NOW())");
+            "(name, model, price, output_voltage, max_power_output_watt, efficiency_ratio, heat_dissipation_btu, amperage, created_at)",
+            "(@Name, @Model, @Price, @OutputVoltage, @MaxPowerOutputWatt, @EfficiencyRatio, @HeatDissipationBtu, @Amperage, NOW())");
     public Task<bool> UpdatePowerSupplyAsync(PowerSupply item) =>
         UpdateAsync(item, "power_supplies", @"
                 name = @Name, model = @Model, price = @Price,
                 output_voltage = @OutputVoltage, max_power_output_watt = @MaxPowerOutputWatt,
-                efficiency_ratio = @EfficiencyRatio, heat_dissipation_btu = @HeatDissipationBtu");
+                efficiency_ratio = @EfficiencyRatio, heat_dissipation_btu = @HeatDissipationBtu,
+                amperage = @Amperage");
     public Task<bool> DeletePowerSupplyAsync(int id) => DeleteAsync("power_supplies", id);
     public Task<int> CountPowerSupplyReferencesAsync(int id) => CountReferencesAsync("power_supply_id", id);
 
@@ -103,7 +104,8 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
         output_voltage AS OutputVoltage,
         max_power_output_watt AS MaxPowerOutputWatt,
         efficiency_ratio AS EfficiencyRatio,
-        heat_dissipation_btu AS HeatDissipationBtu";
+        heat_dissipation_btu AS HeatDissipationBtu,
+        amperage AS Amperage";
 
     private const string MiniPcColumns = CommonColumns + @",
         cpu_ram_info AS CpuRamInfo,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLang } from './useLang.js'
 import { useSession } from './SessionContext.jsx'
-import { BrandMark, BrandStripe } from './BrandChrome.jsx'
+import { BrandMark, BrandStripe, goToConfigurator } from './BrandChrome.jsx'
 import { API_URL, apiFetch } from './apiClient.js'
 import { duzenlemeyeGonder, taslakDolu } from './tasarimTaslagi.js'
 
@@ -354,12 +354,8 @@ export default function ControlCenter() {
       <header className="border-b border-neutral-200/80 dark:border-[#2a3342] bg-white dark:bg-[#121821] w-full px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
         <BrandMark title={t('cc.title')} subtitle={t('app.tagline')} size="lg" />
         <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault()
-            window.history.replaceState(null, '', window.location.pathname + window.location.search)
-            window.dispatchEvent(new Event('hashchange'))
-          }}
+          href="/"
+          onClick={goToConfigurator}
           className="text-[13px] font-semibold text-brand hover:underline shrink-0 inline-flex items-center min-h-[44px] max-w-full"
         >
           ← {t('cc.back')}
@@ -482,11 +478,7 @@ export default function ControlCenter() {
             <div className="mt-4 flex flex-col md:flex-row flex-wrap gap-2 max-w-full">
               <a
                 href="#"
-                onClick={(e) => {
-                  e.preventDefault()
-                  window.history.replaceState(null, '', window.location.pathname + window.location.search)
-                  window.dispatchEvent(new Event('hashchange'))
-                }}
+                onClick={goToConfigurator}
                 className="rounded-full bg-brand text-white px-4 min-h-[44px] py-2.5 text-[13px] font-semibold hover:bg-brand-dark transition-colors inline-flex items-center justify-center w-full md:w-auto max-w-full"
               >
                 {t('cc.quotes.new')}

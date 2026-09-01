@@ -8,6 +8,7 @@ const KINDS = [
     api: 'hardware',
     columns: [
       { key: 'outputVoltage', label: 'Çıkış (V)', format: (v) => `${v} V` },
+      { key: 'amperage', label: 'Amper (A)', format: (v) => (v === null || v === undefined || v === '' ? '—' : `${v} A`) },
       { key: 'maxPowerOutputWatt', label: 'Maks. çıkış', format: (v) => `${v} W` },
       { key: 'efficiencyRatio', label: 'Verim', format: (v) => `${Math.round(Number(v ?? 1) * 100)}%` },
       { key: 'heatDissipationBtu', label: 'Isı (BTU)', format: (v) => v },
@@ -64,6 +65,7 @@ const BLANKS = {
     model: '',
     price: 0,
     outputVoltage: 0,
+    amperage: 0,
     maxPowerOutputWatt: 0,
     efficiencyPercent: 92,
     heatDissipationBtu: 0,
@@ -161,6 +163,7 @@ function toForm(kind, item) {
       model: item.model ?? '',
       price: item.price ?? 0,
       outputVoltage: item.outputVoltage ?? 0,
+      amperage: item.amperage ?? 0,
       maxPowerOutputWatt: item.maxPowerOutputWatt ?? 0,
       efficiencyPercent: Math.round(Number(item.efficiencyRatio ?? 1) * 10000) / 100,
       heatDissipationBtu: item.heatDissipationBtu ?? 0,
@@ -180,6 +183,7 @@ function toHardwarePayload(kind, form) {
     return {
       ...base,
       outputVoltage: Number(form.outputVoltage),
+      amperage: Number(form.amperage),
       maxPowerOutputWatt: Number(form.maxPowerOutputWatt),
       efficiencyRatio: Number.isFinite(pct) ? pct / 100 : 1,
       heatDissipationBtu: Number(form.heatDissipationBtu),
@@ -233,6 +237,9 @@ function TypeFields({ kind, modal, setModal }) {
       <>
         <Field label="Çıkış gerilimi (V)">
           <input type="number" min="0" step="0.1" value={modal.outputVoltage} onChange={num('outputVoltage')} className={inputCls} />
+        </Field>
+        <Field label="Amper (A)">
+          <input type="number" min="0" step="0.01" value={modal.amperage} onChange={num('amperage')} className={inputCls} />
         </Field>
         <Field label="Maks. çıkış gücü (Watt)">
           <input type="number" min="0" step="0.01" value={modal.maxPowerOutputWatt} onChange={num('maxPowerOutputWatt')} className={inputCls} />

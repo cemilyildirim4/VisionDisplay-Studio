@@ -254,6 +254,7 @@ public class HardwareCatalogController : ControllerBase
         if (input.OutputVoltage < 0) return "Çıkış gerilimi negatif olamaz.";
         if (input.MaxPowerOutputWatt < 0) return "Maksimum çıkış gücü negatif olamaz.";
         if (input.HeatDissipationBtu < 0) return "Isı yayılımı negatif olamaz.";
+        if (input.Amperage < 0) return "Amper değeri negatif olamaz.";
         var eta = NormalizeEfficiency(input.EfficiencyRatio);
         if (eta <= 0 || eta > 1)
             return "Verim oranı 0'dan büyük ve en fazla %100 olmalıdır.";
@@ -314,6 +315,7 @@ public class HardwareCatalogController : ControllerBase
         item.MaxPowerOutputWatt = input.MaxPowerOutputWatt;
         item.EfficiencyRatio = NormalizeEfficiency(input.EfficiencyRatio);
         item.HeatDissipationBtu = input.HeatDissipationBtu;
+        item.Amperage = input.Amperage;
         return item;
     }
 
