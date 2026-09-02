@@ -440,6 +440,20 @@ export function adaylariBul(tuval, sec = {}) {
      * Bunlarla birlikte merkez araması güvenli; olmadığında mekân haritası
      * adayları azaltınca pano hiç bulunamıyordu.
      */
+    /*
+     * CAM / VİTRİN BÖLGELERİ DE ARAMA KUTUSU.
+     *
+     * Mağaza vitrini, cam cephe ve çalışan bir ekran mekân haritasında
+     * CAM ya da EKRAN olarak işaretleniyor. Bu bölgelerin çerçevesi
+     * fotoğrafta belirgin bir dikdörtgendir; kenar araması oradan
+     * gerçek dört köşeyi ve perspektifi çıkarabiliyor. Kullanıcının elle
+     * yaptığı yerleşim de tam olarak buydu: tasarım vitrinin kendi
+     * çerçevesine, onun açısıyla oturuyor.
+     */
+    if (harita) {
+      for (const kutu of camBolgeleri(harita)) kutular.push(kutu)
+    }
+
     kutular.push({ x: 0.1, y: 0.06, w: 0.8, h: 0.72 })
     /*
      * Daha dar iki kırpma: geniş kutuda Hough bina hatlarını birleştirip
@@ -972,6 +986,57 @@ function dikeyKesikVar(tuval, x0, y0, x1, y1) {
   } catch {
     return false
   }
+}
+
+/**
+ * Haritadaki CAM ve EKRAN bölgelerinin sınırlayıcı kutuları (0–1).
+ *
+ * Bağlantılı bileşenler taranıyor; kadrajın %2’sinden büyük, en/boy oranı
+ * makul olanlar döndürülüyor. En büyük üç bölge yeterli — kalanı gürültü.
+ */
+function camBolgeleri(harita) {
+  const { w: W, h: H, sinif } = harita
+  const N = W * H
+  const gorulen = new Uint8Array(N)
+  const sonuc = []
+  const yigin = []
+  for (let bas = 0; bas < N; bas++) {
+    if (gorulen[bas]) continue
+    const s0 = sinif[bas]
+    if (s0 !== SINIF.CAM && s0 !== SINIF.EKRAN) continue
+    let x0 = W, y0 = H, x1 = 0, y1 = 0, alan = 0
+    yigin.length = 0
+    yigin.push(bas)
+    gorulen[bas] = 1
+    while (yigin.length) {
+      const i = yigin.pop()
+      const x = i % W
+      const y = (i / W) | 0
+      alan++
+      if (x < x0) x0 = x
+      if (x > x1) x1 = x
+      if (y < y0) y0 = y
+      if (y > y1) y1 = y
+      const komsu = [i - 1, i + 1, i - W, i + W]
+      for (let k = 0; k < 4; k++) {
+        const j = komsu[k]
+        if (j < 0 || j >= N || gorulen[j]) continue
+        if (k < 2 && Math.abs((j % W) - x) !== 1) continue
+        const sj = sinif[j]
+        if (sj !== SINIF.CAM && sj !== SINIF.EKRAN) continue
+        gorulen[j] = 1
+        yigin.push(j)
+      }
+    }
+    const kw = x1 - x0 + 1
+    const kh = y1 - y0 + 1
+    if (alan < N * 0.02) continue
+    const enBoy = kw / kh
+    if (enBoy < 0.2 || enBoy > 6) continue
+    sonuc.push({ alan, x: x0 / W, y: y0 / H, w: kw / W, h: kh / H })
+  }
+  sonuc.sort((a, b) => b.alan - a.alan)
+  return sonuc.slice(0, 3).map(({ x, y, w, h }) => ({ x, y, w, h }))
 }
 
 /** Dörtgenin alanı (0–1 birim karede). */
