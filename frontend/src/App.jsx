@@ -444,6 +444,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [elleAci, setElleAci] = useState({ yaw: 0, tilt: 0 })
 
+  /*
+   * KULLANICININ ÇEKTİĞİ DÖRTGEN.
+   *
+   * Köşe hareketini açıya çevirmeyi denedik; kullanıcı için dolaylı
+   * kaldı. En anlaşılır davranış doğrudan olan: tutulan köşe farenin
+   * gittiği yere gider, ekran da o dört köşeye giydirilir. Tasarımın
+   * panelde yazan metre ölçüsü ve kabin sayısı değişmiyor; değişen
+   * yalnızca fotoğraftaki perspektifi.
+   */
+  const [elleKose, setElleKose] = useState(null)
+
   const [koseKipi, setKoseKipi] = useState(false)
   /*
    * ADAY KARELER — fotoğrafta yerleştirmeye uygun bulunan yüzeyler.
@@ -1690,7 +1701,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * eşliyor (bkz. homografi.js).
    */
   const koseTuval = (() => {
-    if (!hedefKose || !fotoYer || !cizimOlcek) return null
+    if (!fotoYer || !cizimOlcek) return null
+    /* Kullanıcı köşeleri çektiyse çizim doğrudan onlara uyuyor. */
+    if (elleKose) {
+      const dw0 = tasarimWm * cizimOlcek
+      const dh0 = tasarimHm * cizimOlcek
+      const sol0 = tuvalBoyut.w / 2 - dw0 / 2
+      const ust0 = tuvalBoyut.h / 2 - dh0 / 2
+      return elleKose.map((k) => ({ x: k.x - sol0, y: k.y - ust0 }))
+    }
+    if (!hedefKose) return null
     const dw = tasarimWm * cizimOlcek
     const dh = tasarimHm * cizimOlcek
     if (!(dw > 0) || !(dh > 0)) return null
@@ -1766,7 +1786,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * olduğu gibi bırakılıyor — kontrol kullanıcıda.
      */
     const elleMudahale =
-      mekanTasindi || koseKipi || elleAci.yaw !== 0 || elleAci.tilt !== 0
+      mekanTasindi || koseKipi || elleKose || elleAci.yaw !== 0 || elleAci.tilt !== 0
     const son = elleMudahale ? acili : ekranaSigdir(acili, tuvalBoyut)
     return son.map((k) => ({
       x: k.x - solUst.x,
@@ -1913,35 +1933,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * değişiyor. Tuvalin tamamını sürüklemek ise ekranı taşımaya devam
    * ediyor.
    */
-  const koselerdenAci = (noktalar) => {
-    if (!koseMutlak || !Array.isArray(noktalar) || noktalar.length !== 4) return
-    /* Hangi köşe oynadı? */
-    let i = -1
-    let enBuyuk = 0
-    for (let k = 0; k < 4; k++) {
-      const d = Math.hypot(noktalar[k].x - koseMutlak[k].x, noktalar[k].y - koseMutlak[k].y)
-      if (d > enBuyuk) {
-        enBuyuk = d
-        i = k
-      }
-    }
-    if (i < 0 || enBuyuk < 0.5) return
-    const dx = noktalar[i].x - koseMutlak[i].x
-    const dy = noktalar[i].y - koseMutlak[i].y
-    const en = Math.max(40, Math.hypot(koseMutlak[1].x - koseMutlak[0].x, koseMutlak[1].y - koseMutlak[0].y))
-    const boy = Math.max(40, Math.hypot(koseMutlak[3].x - koseMutlak[0].x, koseMutlak[3].y - koseMutlak[0].y))
-    /* Kenarın tamamı kadar çekmek ~30° veriyor. */
-    const sagda = i === 1 || i === 2
-    const ustte = i === 0 || i === 1
-    const yawFark = ((sagda ? dx : -dx) / en) * 30
-    const tiltFark = ((ustte ? -dy : dy) / boy) * 30
-    const sinirla = (v) => Math.max(-40, Math.min(40, v))
-    setElleAci((e) => ({
-      yaw: sinirla(e.yaw + yawFark),
-      tilt: sinirla(e.tilt + tiltFark),
-    }))
+  /*
+   * KÖŞEYİ DOĞRUDAN TAŞI.
+   *
+   * Tutamak nereye bırakılırsa ekranın o köşesi oraya gider; dörtgen
+   * kelebek biçimine girmiyorsa (KoseSecici bunu zaten engelliyor)
+   * hareket olduğu gibi kabul ediliyor. Ekranın METRE ölçüsü ve kabin
+   * sayısı bundan etkilenmiyor — değişen yalnızca fotoğraftaki
+   * perspektif.
+   */
+  const koseleriTasi = (noktalar) => {
+    if (!Array.isArray(noktalar) || noktalar.length !== 4) return
+    setElleKose(noktalar.map((k) => ({ x: k.x, y: k.y })))
   }
-
   /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
   const koseleriYaz = (noktalar) => {
     if (!fotoYer?.genislik || !fotoYer?.yukseklik) return
@@ -1959,6 +1963,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Elle köşe seçimi ekranın kendi sınırlarını kullanır; oranı orada kullanıcı kurar. */
   /* Manuel kip açılırken elde bir dörtgen yoksa fotoğrafın ortasında biri kurulur. */
   const koseKipiAc = () => {
+    /* Tutamaklar çizilen tasarımın köşelerinden başlıyor. */
+    if (!elleKose && koseMutlak) setElleKose(koseMutlak)
     if (!hedefKose) {
       setHedefKose([
         { x: 0.3, y: 0.3 },
@@ -2289,7 +2295,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {showMeasurements && koseKipi && koseMutlak && (
             <KoseSecici
               koseler={koseMutlak}
-              onDegis={koselerdenAci}
+              onDegis={koseleriTasi}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
             />
@@ -2950,6 +2956,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     >
                       {koseKipi ? t('scene.cornersOff') : t('scene.cornersManual')}
                     </button>
+                    {/*
+                      YERLEŞİMİ SIFIRLA — elle çekilen köşeleri ve açıyı
+                      bırakıp otomatik öneriye dönüyor.
+                    */}
+                    {(elleKose || elleAci.yaw !== 0 || elleAci.tilt !== 0 || hedefKose) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setElleKose(null)
+                          setElleAci({ yaw: 0, tilt: 0 })
+                          setKoseKipi(false)
+                          setHedefKose(null)
+                          setHedefTur(null)
+                        }}
+                        className="mt-1.5 w-full py-1.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        {t('scene.cornersReset')}
+                      </button>
+                    )}
                     {koseKipi && (
                       <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                         {t('scene.cornersHint')}
@@ -2958,7 +2983,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {(elleAci.yaw !== 0 || elleAci.tilt !== 0) && (
                       <button
                         type="button"
-                        onClick={() => setElleAci({ yaw: 0, tilt: 0 })}
+                        onClick={() => {
+                          setElleAci({ yaw: 0, tilt: 0 })
+                          setElleKose(null)
+                        }}
                         className="mt-1.5 w-full py-1.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                       >
                         {t('scene.angleReset')}
