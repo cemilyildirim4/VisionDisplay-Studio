@@ -1944,7 +1944,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const koseleriTasi = (noktalar) => {
     if (!Array.isArray(noktalar) || noktalar.length !== 4) return
-    setElleKose(noktalar.map((k) => ({ x: k.x, y: k.y })))
+
+    /*
+     * ÖLÇÜ KİLİTLİ — YALNIZCA YÖN DEĞİŞİYOR.
+     *
+     * Köşeyi serbest bıraktığımızda ekran fotoğrafta büyüyüp küçülebiliyordu;
+     * panelde yazan metre değişmese de görüntü yalan söylüyordu. Artık çekilen
+     * dörtgen, tasarımın piksel ölçüsüne göre yeniden ölçekleniyor: ortalama
+     * kenar uzunlukları tasarımın kendi genişlik/yüksekliğine eşitleniyor,
+     * merkez korunuyor. Geriye kalan tek serbestlik BİÇİM, yani perspektif:
+     * kullanıcı yön veriyor, ölçü sabit kalıyor.
+     */
+    const dw = tasarimWm * (cizimOlcek || 0)
+    const dh = tasarimHm * (cizimOlcek || 0)
+    if (!(dw > 0) || !(dh > 0)) {
+      setElleKose(noktalar.map((k) => ({ x: k.x, y: k.y })))
+      return
+    }
+    const cx = noktalar.reduce((t, k) => t + k.x, 0) / 4
+    const cy = noktalar.reduce((t, k) => t + k.y, 0) / 4
+    const ortEn =
+      (Math.hypot(noktalar[1].x - noktalar[0].x, noktalar[1].y - noktalar[0].y) +
+        Math.hypot(noktalar[2].x - noktalar[3].x, noktalar[2].y - noktalar[3].y)) / 2
+    const ortBoy =
+      (Math.hypot(noktalar[3].x - noktalar[0].x, noktalar[3].y - noktalar[0].y) +
+        Math.hypot(noktalar[2].x - noktalar[1].x, noktalar[2].y - noktalar[1].y)) / 2
+    if (!(ortEn > 1) || !(ortBoy > 1)) return
+    const sx = dw / ortEn
+    const sy = dh / ortBoy
+    setElleKose(
+      noktalar.map((k) => ({ x: cx + (k.x - cx) * sx, y: cy + (k.y - cy) * sy })),
+    )
   }
   /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
   const koseleriYaz = (noktalar) => {
