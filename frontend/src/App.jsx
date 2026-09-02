@@ -1780,14 +1780,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * `koseTuval`; ikisi aynı noktalar, farklı başnokta.)
    */
   const koseMutlak = (() => {
-    if (!hedefKose || !fotoYer) return null
-    const mX = tuvalBoyut.w / 2
-    const mY = tuvalBoyut.h / 2
-    const z = sahneYakinlik || 1
-    return hedefKose.map((k) => ({
-      x: mX + (fotoYer.sol + k.x * fotoYer.genislik - mX) * z,
-      y: mY + (fotoYer.ust + k.y * fotoYer.yukseklik - mY) * z,
-    }))
+    /*
+     * TUTAMAKLAR TAM OLARAK ÇİZİLEN TASARIMIN KÖŞELERİNDE.
+     *
+     * Önce hedef dörtgen (bulunan yüzey) gösteriliyordu; oysa tasarım o
+     * dörtgenin içine kendi metre ölçüsüyle oturuyor ve açı da üstüne
+     * biniyor. İkisi farklı olunca tutamaklar tasarımı çevrelemiyordu —
+     * kullanıcının gördüğü hata buydu. Artık kaynak tek: koseTuval.
+     * (koseTuval tasarım kutusunun sol üstüne göre; burada mutlak tuval
+     * koordinatına çevriliyor.)
+     */
+    if (!koseTuval || !cizimOlcek) return null
+    const dw = tasarimWm * cizimOlcek
+    const dh = tasarimHm * cizimOlcek
+    if (!(dw > 0) || !(dh > 0)) return null
+    const solUst = { x: tuvalBoyut.w / 2 - dw / 2, y: tuvalBoyut.h / 2 - dh / 2 }
+    return koseTuval.map((k) => ({ x: k.x + solUst.x, y: k.y + solUst.y }))
   })()
 
   /*
