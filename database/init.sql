@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS public.cabins
     refresh_rate_hz integer NOT NULL DEFAULT 0,
     power_typical_watts numeric(8,2) NOT NULL DEFAULT 0,
     power_max_watts numeric(8,2) NOT NULL DEFAULT 0,
+    supply_voltage numeric(8,2),
     viewing_distance_m numeric(5,2),
     size_inch integer,
     bezel_mm numeric(5,2),
@@ -99,6 +100,7 @@ CREATE TABLE IF NOT EXISTS public.power_supplies
     efficiency_ratio numeric(6,4) NOT NULL DEFAULT 1.0000,
     heat_dissipation_btu numeric(10,2) NOT NULL DEFAULT 0,
     amperage numeric(8,2) NOT NULL DEFAULT 0,
+    is_active boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT power_supplies_pkey PRIMARY KEY (id)
 );
@@ -114,6 +116,7 @@ CREATE TABLE IF NOT EXISTS public.mini_pcs
     operating_system character varying(80) COLLATE pg_catalog."default",
     max_supported_resolution character varying(40) COLLATE pg_catalog."default",
     power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
+    is_active boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT mini_pcs_pkey PRIMARY KEY (id)
 );
@@ -127,6 +130,7 @@ CREATE TABLE IF NOT EXISTS public.patch_cables
     cable_type character varying(80) COLLATE pg_catalog."default",
     length_meters numeric(8,2) NOT NULL DEFAULT 0,
     connector_type character varying(80) COLLATE pg_catalog."default",
+    is_active boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT patch_cables_pkey PRIMARY KEY (id)
 );
@@ -141,6 +145,7 @@ CREATE TABLE IF NOT EXISTS public.receiving_cards
     max_pixel_height integer NOT NULL DEFAULT 0,
     hub_port_count integer NOT NULL DEFAULT 0,
     power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
+    is_active boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT receiving_cards_pkey PRIMARY KEY (id)
 );
@@ -155,6 +160,7 @@ CREATE TABLE IF NOT EXISTS public.processors
     ethernet_port_count integer NOT NULL DEFAULT 0,
     input_ports_info character varying(250) COLLATE pg_catalog."default",
     power_draw_watt numeric(10,2) NOT NULL DEFAULT 0,
+    is_active boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT processors_pkey PRIMARY KEY (id)
 );

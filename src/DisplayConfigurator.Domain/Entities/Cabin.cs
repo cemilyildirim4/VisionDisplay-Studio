@@ -40,6 +40,9 @@ public class Cabin
     public decimal PowerTypicalWatts { get; set; }
     public decimal PowerMaxWatts { get; set; }
 
+    /// <summary>Modül/kabin besleme gerilimi (V). PSU eşleştirmesinde kullanılır; 0/null ise gerilim süzülmez.</summary>
+    public decimal? SupplyVoltage { get; set; }
+
     /// <summary>En Uygun İzleme Mesafesi (m). Boşsa frontend pitch × 2,5 ile hesaplar.</summary>
     public decimal? ViewingDistanceM { get; set; }
 

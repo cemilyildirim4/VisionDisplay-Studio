@@ -67,7 +67,7 @@ public class ConfigurationService : IConfigurationService
         if (cabin == null)
             throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
 
-        var hardware = await LoadHardwareAsync(dto);
+        var hardware = await LoadHardwareAsync(dto, cabin);
         dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
         var responseDto = CalculateConfigurationDto(dto, cabin, hardware);
 
@@ -100,11 +100,11 @@ public class ConfigurationService : IConfigurationService
             TotalPrice = responseDto.TotalPrice,
             HasMiniPc = dto.HasMiniPc,
             LaborCostMultiplier = dto.LaborCostMultiplier ?? 1m,
-            PowerSupplyId = dto.PowerSupplyId,
-            MiniPcId = dto.MiniPcId,
-            PatchCableId = dto.PatchCableId,
-            ReceivingCardId = dto.ReceivingCardId,
-            ProcessorId = dto.ProcessorId,
+            PowerSupplyId = responseDto.PowerSupplyId,
+            MiniPcId = responseDto.MiniPcId,
+            PatchCableId = responseDto.PatchCableId,
+            ReceivingCardId = responseDto.ReceivingCardId,
+            ProcessorId = responseDto.ProcessorId,
             Status = "Beklemede",
             Revision = 1,
             UserId = userId,
@@ -129,6 +129,17 @@ public class ConfigurationService : IConfigurationService
         return await _configurationRepository.UpdateStatusAsync(id, status);
     }
 
+    public async Task<ConfigurationResponseDto> PreviewAsync(CreateConfigurationDto dto)
+    {
+        var cabin = await _cabinRepository.GetByIdAsync(dto.CabinId);
+        if (cabin == null)
+            throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
+
+        var hardware = await LoadHardwareAsync(dto, cabin);
+        dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
+        return CalculateConfigurationDto(dto, cabin, hardware);
+    }
+
     public async Task<byte[]?> GenerateSpecSheetPdfAsync(int id, PdfReportKind kind = PdfReportKind.Client)
     {
         var entity = await _configurationRepository.GetByIdAsync(id);
@@ -140,7 +151,7 @@ public class ConfigurationService : IConfigurationService
         if (cabin == null) return null;
 
         var dto = ToCreateDto(entity);
-        var hardware = await LoadHardwareAsync(dto);
+        var hardware = await LoadHardwareAsync(dto, cabin);
         dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
         var configDto = CalculateConfigurationDto(dto, cabin, hardware);
         configDto.Id = entity.Id;
@@ -160,7 +171,7 @@ public class ConfigurationService : IConfigurationService
         if (cabin == null)
             throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
 
-        var hardware = await LoadHardwareAsync(dto);
+        var hardware = await LoadHardwareAsync(dto, cabin);
         dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
         var configDto = CalculateConfigurationDto(dto, cabin, hardware);
         return _pdfReportService.Generate(configDto, extras, cabin, kind);
@@ -195,52 +206,48 @@ public class ConfigurationService : IConfigurationService
         HardwareCatalogItems? hardware = null)
         => ConfigurationCalculator.Calculate(dto, cabin, hardware);
 
-    private async Task<HardwareCatalogItems> LoadHardwareAsync(CreateConfigurationDto dto)
+    private async Task<HardwareCatalogItems> LoadHardwareAsync(CreateConfigurationDto dto, Cabin cabin)
     {
-        Processor? processor = null;
-        PowerSupply? powerSupply = null;
-        MiniPc? miniPc = null;
-        PatchCable? patchCable = null;
-        ReceivingCard? receivingCard = null;
-
-        if (dto.ProcessorId is > 0)
+        var snapshot = new HardwareCatalogSnapshot
         {
-            processor = await _hardwareCatalogRepository.GetProcessorByIdAsync(dto.ProcessorId.Value)
-                ?? throw new ArgumentException("Seçilen işlemci bulunamadı.");
-        }
-
-        if (dto.PowerSupplyId is > 0)
-        {
-            powerSupply = await _hardwareCatalogRepository.GetPowerSupplyByIdAsync(dto.PowerSupplyId.Value)
-                ?? throw new ArgumentException("Seçilen güç kaynağı bulunamadı.");
-        }
-
-        if (dto.MiniPcId is > 0)
-        {
-            miniPc = await _hardwareCatalogRepository.GetMiniPcByIdAsync(dto.MiniPcId.Value)
-                ?? throw new ArgumentException("Seçilen mini PC bulunamadı.");
-        }
-
-        if (dto.PatchCableId is > 0)
-        {
-            patchCable = await _hardwareCatalogRepository.GetPatchCableByIdAsync(dto.PatchCableId.Value)
-                ?? throw new ArgumentException("Seçilen patch kablosu bulunamadı.");
-        }
-
-        if (dto.ReceivingCardId is > 0)
-        {
-            receivingCard = await _hardwareCatalogRepository.GetReceivingCardByIdAsync(dto.ReceivingCardId.Value)
-                ?? throw new ArgumentException("Seçilen alıcı kart bulunamadı.");
-        }
-
-        return new HardwareCatalogItems
-        {
-            Processor = processor,
-            PowerSupply = powerSupply,
-            MiniPc = miniPc,
-            PatchCable = patchCable,
-            ReceivingCard = receivingCard,
+            PowerSupplies = (await _hardwareCatalogRepository.GetPowerSuppliesAsync()).ToList(),
+            ReceivingCards = (await _hardwareCatalogRepository.GetReceivingCardsAsync()).ToList(),
+            Processors = (await _hardwareCatalogRepository.GetProcessorsAsync()).ToList(),
+            PatchCables = (await _hardwareCatalogRepository.GetPatchCablesAsync()).ToList(),
+            MiniPcs = (await _hardwareCatalogRepository.GetMiniPcsAsync()).ToList(),
         };
+
+        HardwareCatalogItems? requested = null;
+        if (dto.PowerSupplyId is > 0 || dto.ReceivingCardId is > 0 || dto.ProcessorId is > 0
+            || dto.PatchCableId is > 0 || dto.MiniPcId is > 0)
+        {
+            requested = new HardwareCatalogItems
+            {
+                PowerSupply = dto.PowerSupplyId is > 0
+                    ? await _hardwareCatalogRepository.GetPowerSupplyByIdAsync(dto.PowerSupplyId.Value)
+                        ?? throw new ArgumentException("Seçilen güç kaynağı bulunamadı.")
+                    : null,
+                ReceivingCard = dto.ReceivingCardId is > 0
+                    ? await _hardwareCatalogRepository.GetReceivingCardByIdAsync(dto.ReceivingCardId.Value)
+                        ?? throw new ArgumentException("Seçilen alıcı kart bulunamadı.")
+                    : null,
+                Processor = dto.ProcessorId is > 0
+                    ? await _hardwareCatalogRepository.GetProcessorByIdAsync(dto.ProcessorId.Value)
+                        ?? throw new ArgumentException("Seçilen işlemci bulunamadı.")
+                    : null,
+                PatchCable = dto.PatchCableId is > 0
+                    ? await _hardwareCatalogRepository.GetPatchCableByIdAsync(dto.PatchCableId.Value)
+                        ?? throw new ArgumentException("Seçilen patch kablosu bulunamadı.")
+                    : null,
+                MiniPc = dto.MiniPcId is > 0
+                    ? await _hardwareCatalogRepository.GetMiniPcByIdAsync(dto.MiniPcId.Value)
+                        ?? throw new ArgumentException("Seçilen mini PC bulunamadı.")
+                    : null,
+            };
+        }
+
+        var demand = HardwareMatcher.DemandFrom(cabin, dto.Cols, dto.Rows);
+        return HardwareMatcher.Match(demand, dto.HasMiniPc, snapshot, requested);
     }
 
     private static ConfigurationResponseDto MapToResponseDto(Configuration c, Cabin? cabin = null)

@@ -303,6 +303,7 @@ public class HardwareCatalogController : ControllerBase
         item.Name = input.Name.Trim();
         item.Model = string.IsNullOrWhiteSpace(input.Model) ? null : input.Model.Trim();
         item.Price = input.Price;
+        item.IsActive = input.IsActive;
     }
 
     private static string? TrimOrNull(string? value) =>

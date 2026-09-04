@@ -6,17 +6,14 @@ namespace DisplayConfigurator.Application.Engine;
 /// <summary>
 /// LED ekran yapılandırma HESAPLAMA MOTORU.
 ///
-/// Kabin başına 1 PSU / 1 alıcı kart varsayımı yoktur. Adetler seçilen
-/// modülün ölçüleri ve donanım katalog kapasitelerine göre türetilir.
+/// Donanım adetleri ve fiyatları veritabanındaki gerçek katalog kayıtlarından
+/// gelir. Katalog parçası yoksa jenerik modele düşülmez; <see cref="HardwareMatchException"/>.
 /// Saf (side-effect'siz) statik sınıf — birim testlerle doğrudan doğrulanır.
 /// </summary>
 public static class ConfigurationCalculator
 {
-    /// <summary>1 RJ45 portunun güvenli piksel tavanı.</summary>
+    /// <summary>1 RJ45 portunun güvenli piksel tavanı (işlemci port bütçesi).</summary>
     public const int MaxPixelsPerPort = 650000;
-
-    /// <summary>Bir güç kaynağı en fazla bu kadar modül besler.</summary>
-    public const int ModulesPerPowerSupply = 6;
 
     /// <summary>Watt → BTU/saat dönüşüm katsayısı.</summary>
     public const decimal WattsToBtu = 3.412m;
@@ -36,7 +33,6 @@ public static class ConfigurationCalculator
 
         var hw = hardware ?? new HardwareCatalogItems();
 
-        // 1. MODÜL: ekran mm / modül mm
         int screenWidthMm = dto.Cols * cabin.WidthMm;
         int screenHeightMm = dto.Rows * cabin.HeightMm;
         int horizontalModules = CountHorizontalModules(screenWidthMm, cabin.WidthMm);
@@ -60,49 +56,75 @@ public static class ConfigurationCalculator
             ? dto.ModulesPerCard
             : (cabin.DefaultModulesPerCard > 0 ? cabin.DefaultModulesPerCard : 10);
 
-        // 2–5. DONANIM ADET KURALLARI
-        int powerSupplyQty = CountPowerSupplies(totalModules);
+        decimal maxWattsPerUnit = cabin.PowerMaxWatts;
+        decimal avgWattsPerUnit = cabin.PowerTypicalWatts > 0
+            ? cabin.PowerTypicalWatts
+            : maxWattsPerUnit * 0.35m;
+        decimal moduleMaxWatts = totalModules * maxWattsPerUnit;
+        decimal moduleAvgWatts = totalModules * avgWattsPerUnit;
+        decimal? moduleVoltage = cabin.SupplyVoltage is > 0 ? cabin.SupplyVoltage : null;
+
+        if (hw.PowerSupply == null)
+            throw new HardwareMatchException(
+                "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
+        if (hw.ReceivingCard == null)
+            throw new HardwareMatchException(
+                "Seçilen konfigürasyon için veritabanında uygun Alıcı Kart bulunamadı.");
+        if (hw.Processor == null)
+            throw new HardwareMatchException(
+                "Seçilen konfigürasyon için veritabanında uygun İşlemci bulunamadı.");
+
+        int powerSupplyQty = CountPowerSupplies(moduleMaxWatts, hw.PowerSupply, moduleVoltage);
+        if (powerSupplyQty <= 0)
+            throw new HardwareMatchException(
+                "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
+
         int receivingCardQty = CountReceivingCards(totalResW, totalResH, totalPixels, hw.ReceivingCard);
         int patchCableQty = CountPatchCables(receivingCardQty);
         int processorQty = CountProcessors(totalPixels, hw.Processor, out int requiredPorts);
         int miniPcQty = dto.HasMiniPc ? 1 : 0;
 
-        string recommendedProcessor = DisplayName(hw.Processor, DetermineProcessor(totalPixels, requiredPorts));
+        if (patchCableQty > 0 && hw.PatchCable == null)
+            throw new HardwareMatchException(
+                "Seçilen konfigürasyon için veritabanında uygun Patch Kablosu bulunamadı.");
+        if (miniPcQty > 0 && hw.MiniPc == null)
+            throw new HardwareMatchException(
+                "Seçilen konfigürasyon için veritabanında uygun Mini PC bulunamadı.");
+
+        string recommendedProcessor = DisplayName(hw.Processor, hw.Processor.Name);
 
         var breakdown = new List<HardwareLineItemDto>
         {
             Line("module", ModuleDisplayName(cabin), totalModules, cabin.Price),
-            Line("processor", recommendedProcessor, processorQty, hw.Processor?.Price ?? 0m),
+            Line("processor", recommendedProcessor, processorQty, hw.Processor.Price),
             Line("powerSupply", DisplayName(hw.PowerSupply, "Güç Kaynağı"),
-                powerSupplyQty, hw.PowerSupply?.Price ?? 0m),
+                powerSupplyQty, hw.PowerSupply.Price),
             Line("miniPc", DisplayName(hw.MiniPc, "Mini PC"),
                 miniPcQty, hw.MiniPc?.Price ?? 0m),
             Line("patchCable", DisplayName(hw.PatchCable, "Patch Kablosu"),
                 patchCableQty, hw.PatchCable?.Price ?? 0m),
             Line("receivingCard", DisplayName(hw.ReceivingCard, "Alıcı Kart"),
-                receivingCardQty, hw.ReceivingCard?.Price ?? 0m),
+                receivingCardQty, hw.ReceivingCard.Price),
         };
 
         decimal hardwareSubtotal = Math.Round(breakdown.Sum(x => x.LineTotal), 2);
 
-        decimal maxWattsPerUnit = cabin.PowerMaxWatts;
-        decimal avgWattsPerUnit = cabin.PowerTypicalWatts > 0
-            ? cabin.PowerTypicalWatts
-            : maxWattsPerUnit * 0.35m;
-
-        decimal moduleMaxWatts = totalModules * maxWattsPerUnit;
-        decimal moduleAvgWatts = totalModules * avgWattsPerUnit;
-
-        decimal efficiency = hw.PowerSupply is { EfficiencyRatio: > 0 }
+        decimal efficiency = hw.PowerSupply.EfficiencyRatio > 0
             ? hw.PowerSupply.EfficiencyRatio
             : 1m;
 
-        decimal totalMaxWatts = ApplyPsuLosses(moduleMaxWatts, efficiency);
-        decimal totalAvgWatts = ApplyPsuLosses(moduleAvgWatts, efficiency);
+        decimal accessoryWatts =
+            receivingCardQty * hw.ReceivingCard.PowerDrawWatt
+            + processorQty * hw.Processor.PowerDrawWatt
+            + miniPcQty * (hw.MiniPc?.PowerDrawWatt ?? 0m);
+
+        decimal totalMaxWatts = ApplyPsuLosses(moduleMaxWatts + accessoryWatts, efficiency);
+        decimal totalAvgWatts = ApplyPsuLosses(moduleAvgWatts + accessoryWatts, efficiency);
 
         decimal maxPowerKw = Math.Round(totalMaxWatts / 1000m, 2);
         decimal avgPowerKw = Math.Round(totalAvgWatts / 1000m, 2);
-        decimal moduleHeatBtu = Math.Round(moduleMaxWatts * WattsToBtu, 2);
+        decimal moduleHeatBtu = Math.Round(
+            moduleMaxWatts * WattsToBtu + powerSupplyQty * hw.PowerSupply.HeatDissipationBtu, 2);
         decimal totalWeightKg = Math.Round(totalModules * (cabin.WeightKg ?? 0m), 2);
 
         decimal widthM = screenWidthMm / 1000m;
@@ -146,15 +168,13 @@ public static class ConfigurationCalculator
             ScreenAreaM2 = screenAreaM2,
             LaborCost = laborCost,
             HardwareSubtotal = hardwareSubtotal,
-            PowerSupplyId = dto.PowerSupplyId,
-            MiniPcId = dto.MiniPcId,
-            PatchCableId = dto.PatchCableId,
-            ReceivingCardId = dto.ReceivingCardId,
-            ProcessorId = dto.ProcessorId,
+            PowerSupplyId = hw.PowerSupply.Id,
+            MiniPcId = hw.MiniPc?.Id,
+            PatchCableId = hw.PatchCable?.Id,
+            ReceivingCardId = hw.ReceivingCard.Id,
+            ProcessorId = hw.Processor.Id,
             HardwareBreakdown = breakdown,
-            PsuEfficiencyRatio = hw.PowerSupply is { EfficiencyRatio: > 0 }
-                ? hw.PowerSupply.EfficiencyRatio
-                : null,
+            PsuEfficiencyRatio = efficiency,
             TotalPrice = adminTotal,
             Status = "Beklemede",
             Revision = 1,
@@ -170,35 +190,40 @@ public static class ConfigurationCalculator
     public static int CountVerticalModules(int screenHeightMm, int moduleHeightMm) =>
         Math.Max(1, (int)Math.Ceiling(screenHeightMm / (double)Math.Max(1, moduleHeightMm)));
 
-    /// <summary>Güç kaynağı adedi = ceil(toplam modül / 6).</summary>
-    public static int CountPowerSupplies(int totalModules) =>
-        Math.Max(1, (int)Math.Ceiling(Math.Max(0, totalModules) / (double)ModulesPerPowerSupply));
+    /// <summary>
+    /// Güç kaynağı adedi: toplam modül watt / PSU çıkış kapasitesi (Watt ve Amper).
+    /// Kapasite yoksa 0 — çağıran hata üretir.
+    /// </summary>
+    public static int CountPowerSupplies(decimal moduleMaxWatts, PowerSupply psu, decimal? moduleVoltage = null)
+    {
+        decimal capacity = HardwareMatcher.EffectiveWattCapacity(psu);
+        if (capacity <= 0) return 0;
+
+        int byWatt = (int)Math.Ceiling((double)Math.Max(0, moduleMaxWatts) / (double)capacity);
+        int byAmp = 1;
+        decimal voltage = moduleVoltage is > 0 ? moduleVoltage.Value : psu.OutputVoltage;
+        if (psu.Amperage > 0 && voltage > 0 && moduleMaxWatts > 0)
+        {
+            decimal totalAmps = moduleMaxWatts / voltage;
+            byAmp = (int)Math.Ceiling((double)totalAmps / (double)psu.Amperage);
+        }
+
+        return Math.Max(1, Math.Max(byWatt, byAmp));
+    }
 
     /// <summary>
-    /// Alıcı kart: toplam çözünürlük (px) / kart MaxPixelCapacity (W×H).
-    /// Katalog yoksa port başına 650.000 piksel tavanı kullanılır.
+    /// Alıcı kart: toplam çözünürlük (px) / kart piksel kapasitesi (W×H).
+    /// Kapasitesi 0 olan kart kullanılamaz (0 döner).
     /// </summary>
     public static int CountReceivingCards(int totalResW, int totalResH, int totalPixels, ReceivingCard? card)
     {
-        long capacity = 0;
-        if (card != null)
-        {
-            int capW = Math.Max(0, card.MaxPixelWidth);
-            int capH = Math.Max(0, card.MaxPixelHeight);
-            if (capW > 0 && capH > 0)
-                capacity = (long)capW * capH;
-            else if (capW > 0)
-                capacity = capW;
-            else if (capH > 0)
-                capacity = capH;
-        }
-
-        if (capacity <= 0)
-            capacity = MaxPixelsPerPort;
+        if (card == null) return 0;
+        long capacity = HardwareMatcher.PixelCapacity(card);
+        if (capacity <= 0) return 0;
 
         int byPixels = Math.Max(1, (int)Math.Ceiling(Math.Max(0, totalPixels) / (double)capacity));
 
-        if (card is { MaxPixelWidth: > 0, MaxPixelHeight: > 0 } && totalResW > 0 && totalResH > 0)
+        if (card.MaxPixelWidth > 0 && card.MaxPixelHeight > 0 && totalResW > 0 && totalResH > 0)
         {
             int byWidth = (int)Math.Ceiling(totalResW / (double)card.MaxPixelWidth);
             int byHeight = (int)Math.Ceiling(totalResH / (double)card.MaxPixelHeight);
@@ -219,7 +244,7 @@ public static class ConfigurationCalculator
     {
         int portsOnUnit = processor is { EthernetPortCount: > 0 }
             ? processor.EthernetPortCount
-            : 16;
+            : 1;
 
         long pixelsPerPort = MaxPixelsPerPort;
         if (processor is { MaxPixelCapacityMpx: > 0 } && portsOnUnit > 0)

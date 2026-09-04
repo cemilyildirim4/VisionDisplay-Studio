@@ -64,6 +64,7 @@ const BLANKS = {
     name: '',
     model: '',
     price: 0,
+    isActive: true,
     outputVoltage: 0,
     amperage: 0,
     maxPowerOutputWatt: 0,
@@ -74,6 +75,7 @@ const BLANKS = {
     name: '',
     model: '',
     price: 0,
+    isActive: true,
     cpuRamInfo: '',
     storage: '',
     operatingSystem: '',
@@ -84,6 +86,7 @@ const BLANKS = {
     name: '',
     model: '',
     price: 0,
+    isActive: true,
     cableType: '',
     lengthMeters: 0,
     connectorType: '',
@@ -92,6 +95,7 @@ const BLANKS = {
     name: '',
     model: '',
     price: 0,
+    isActive: true,
     maxPixelWidth: 0,
     maxPixelHeight: 0,
     hubPortCount: 0,
@@ -101,6 +105,7 @@ const BLANKS = {
     name: '',
     model: '',
     price: 0,
+    isActive: true,
     maxPixelCapacityMpx: 0,
     ethernetPortCount: 0,
     inputPortsInfo: '',
@@ -162,6 +167,7 @@ function toForm(kind, item) {
       name: item.name ?? '',
       model: item.model ?? '',
       price: item.price ?? 0,
+      isActive: item.isActive !== false,
       outputVoltage: item.outputVoltage ?? 0,
       amperage: item.amperage ?? 0,
       maxPowerOutputWatt: item.maxPowerOutputWatt ?? 0,
@@ -169,7 +175,7 @@ function toForm(kind, item) {
       heatDissipationBtu: item.heatDissipationBtu ?? 0,
     }
   }
-  return { ...BLANKS[kind], ...item, name: item.name ?? '', model: item.model ?? '' }
+  return { ...BLANKS[kind], ...item, name: item.name ?? '', model: item.model ?? '', isActive: item.isActive !== false }
 }
 
 function toHardwarePayload(kind, form) {
@@ -177,6 +183,7 @@ function toHardwarePayload(kind, form) {
     name: form.name,
     model: form.model || null,
     price: Number(form.price),
+    isActive: form.isActive !== false,
   }
   if (kind === 'power-supplies') {
     const pct = Number(form.efficiencyPercent)
@@ -353,7 +360,7 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
 
   const kindMeta = KINDS.find((k) => k.key === kind) ?? KINDS[0]
   const extraCols = kindMeta.columns
-  const colCount = 4 + extraCols.length + 1
+  const colCount = 5 + extraCols.length + 1
 
   const loadItems = useCallback(async () => {
     setLoading(true)
@@ -478,7 +485,7 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
           <table className="w-full text-sm">
             <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400 text-xs">
               <tr>
-                {['ID', 'Ad', 'Model', 'Fiyat (USD)', ...extraCols.map((c) => c.label), ''].map((h, i) => (
+                {['ID', 'Ad', 'Model', 'Fiyat (USD)', 'Aktif', ...extraCols.map((c) => c.label), ''].map((h, i) => (
                   <th key={`${h}-${i}`} className="text-left font-medium px-4 py-2.5 whitespace-nowrap">
                     {h}
                   </th>
@@ -492,6 +499,7 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
                   <td className="px-4 py-2.5 font-medium">{itemName(item)}</td>
                   <td className="px-4 py-2.5 text-neutral-500 dark:text-neutral-400">{itemModel(item)}</td>
                   <td className="px-4 py-2.5 whitespace-nowrap">{money(item.price)}</td>
+                  <td className="px-4 py-2.5">{item.isActive === false ? 'Hayır' : 'Evet'}</td>
                   {extraCols.map((col) => (
                     <td key={col.key} className="px-4 py-2.5 whitespace-nowrap">
                       {col.format ? col.format(item[col.key], item) : dash(item[col.key])}
@@ -575,6 +583,16 @@ export default function HardwareCatalogSection({ oturumDustu, askConfirm }) {
                   />
                   <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 shrink-0">USD</span>
                 </div>
+              </Field>
+              <Field label="Aktif" hint="Pasif parçalar otomatik eşleştirmeye girmez">
+                <label className="flex items-center gap-2 min-h-[44px]">
+                  <input
+                    type="checkbox"
+                    checked={modal.isActive !== false}
+                    onChange={(e) => setModal((m) => ({ ...m, isActive: e.target.checked }))}
+                  />
+                  <span className="text-sm">Katalogda kullanılsın</span>
+                </label>
               </Field>
               <TypeFields kind={kind} modal={modal} setModal={setModal} />
             </div>

@@ -937,6 +937,8 @@ const dict = {
   'sp.heat': { tr: 'Isı Üretimi', en: 'Heat Generation', ar: 'توليد الحرارة' },
   'sp.customerSelection': { tr: 'Müşteri Seçimi', en: 'Customer Selection', ar: 'اختيار العميل' },
   'sp.miniPc': { tr: 'Mini PC', en: 'Mini PC', ar: 'Mini PC' },
+  'sp.matchedHardware': { tr: 'Katalog donanımı', en: 'Catalog hardware', ar: 'عتاد الكتالوج' },
+  'sp.hwMatchError': { tr: 'Uygun donanım bulunamadı', en: 'No matching hardware', ar: 'لا يوجد عتاد مناسب' },
   'sp.package': { tr: 'Toplam paket', en: 'Complete package', ar: 'الحزمة الكاملة' },
   'sp.pkg.module': { tr: 'Modül / Kabin', en: 'Module / Cabinet', ar: 'وحدة / خزانة' },
   'sp.pkg.processor': { tr: 'İşlemci', en: 'Processor', ar: 'المعالج' },

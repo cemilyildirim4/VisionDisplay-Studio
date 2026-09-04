@@ -284,6 +284,7 @@ public class CabinsController : ControllerBase
         cabin.RefreshRateHz = input.RefreshRateHz;
         cabin.PowerTypicalWatts = input.PowerTypicalWatts;
         cabin.PowerMaxWatts = input.PowerMaxWatts;
+        cabin.SupplyVoltage = input.SupplyVoltage;
         cabin.ViewingDistanceM = input.ViewingDistanceM;
         cabin.SizeInch = input.SizeInch;
         cabin.BezelMm = input.BezelMm;

@@ -19,11 +19,11 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
         QueryByIdAsync<PowerSupply>("power_supplies", PowerSupplyColumns, id);
     public Task<PowerSupply> CreatePowerSupplyAsync(PowerSupply item) =>
         CreateAsync(item, "power_supplies",
-            "(name, model, price, output_voltage, max_power_output_watt, efficiency_ratio, heat_dissipation_btu, amperage, created_at)",
-            "(@Name, @Model, @Price, @OutputVoltage, @MaxPowerOutputWatt, @EfficiencyRatio, @HeatDissipationBtu, @Amperage, NOW())");
+            "(name, model, price, is_active, output_voltage, max_power_output_watt, efficiency_ratio, heat_dissipation_btu, amperage, created_at)",
+            "(@Name, @Model, @Price, @IsActive, @OutputVoltage, @MaxPowerOutputWatt, @EfficiencyRatio, @HeatDissipationBtu, @Amperage, NOW())");
     public Task<bool> UpdatePowerSupplyAsync(PowerSupply item) =>
         UpdateAsync(item, "power_supplies", @"
-                name = @Name, model = @Model, price = @Price,
+                name = @Name, model = @Model, price = @Price, is_active = @IsActive,
                 output_voltage = @OutputVoltage, max_power_output_watt = @MaxPowerOutputWatt,
                 efficiency_ratio = @EfficiencyRatio, heat_dissipation_btu = @HeatDissipationBtu,
                 amperage = @Amperage");
@@ -36,11 +36,11 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
         QueryByIdAsync<MiniPc>("mini_pcs", MiniPcColumns, id);
     public Task<MiniPc> CreateMiniPcAsync(MiniPc item) =>
         CreateAsync(item, "mini_pcs",
-            "(name, model, price, cpu_ram_info, storage, operating_system, max_supported_resolution, power_draw_watt, created_at)",
-            "(@Name, @Model, @Price, @CpuRamInfo, @Storage, @OperatingSystem, @MaxSupportedResolution, @PowerDrawWatt, NOW())");
+            "(name, model, price, is_active, cpu_ram_info, storage, operating_system, max_supported_resolution, power_draw_watt, created_at)",
+            "(@Name, @Model, @Price, @IsActive, @CpuRamInfo, @Storage, @OperatingSystem, @MaxSupportedResolution, @PowerDrawWatt, NOW())");
     public Task<bool> UpdateMiniPcAsync(MiniPc item) =>
         UpdateAsync(item, "mini_pcs", @"
-                name = @Name, model = @Model, price = @Price,
+                name = @Name, model = @Model, price = @Price, is_active = @IsActive,
                 cpu_ram_info = @CpuRamInfo, storage = @Storage, operating_system = @OperatingSystem,
                 max_supported_resolution = @MaxSupportedResolution, power_draw_watt = @PowerDrawWatt");
     public Task<bool> DeleteMiniPcAsync(int id) => DeleteAsync("mini_pcs", id);
@@ -52,11 +52,11 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
         QueryByIdAsync<PatchCable>("patch_cables", PatchCableColumns, id);
     public Task<PatchCable> CreatePatchCableAsync(PatchCable item) =>
         CreateAsync(item, "patch_cables",
-            "(name, model, price, cable_type, length_meters, connector_type, created_at)",
-            "(@Name, @Model, @Price, @CableType, @LengthMeters, @ConnectorType, NOW())");
+            "(name, model, price, is_active, cable_type, length_meters, connector_type, created_at)",
+            "(@Name, @Model, @Price, @IsActive, @CableType, @LengthMeters, @ConnectorType, NOW())");
     public Task<bool> UpdatePatchCableAsync(PatchCable item) =>
         UpdateAsync(item, "patch_cables", @"
-                name = @Name, model = @Model, price = @Price,
+                name = @Name, model = @Model, price = @Price, is_active = @IsActive,
                 cable_type = @CableType, length_meters = @LengthMeters, connector_type = @ConnectorType");
     public Task<bool> DeletePatchCableAsync(int id) => DeleteAsync("patch_cables", id);
     public Task<int> CountPatchCableReferencesAsync(int id) => CountReferencesAsync("patch_cable_id", id);
@@ -67,11 +67,11 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
         QueryByIdAsync<ReceivingCard>("receiving_cards", ReceivingCardColumns, id);
     public Task<ReceivingCard> CreateReceivingCardAsync(ReceivingCard item) =>
         CreateAsync(item, "receiving_cards",
-            "(name, model, price, max_pixel_width, max_pixel_height, hub_port_count, power_draw_watt, created_at)",
-            "(@Name, @Model, @Price, @MaxPixelWidth, @MaxPixelHeight, @HubPortCount, @PowerDrawWatt, NOW())");
+            "(name, model, price, is_active, max_pixel_width, max_pixel_height, hub_port_count, power_draw_watt, created_at)",
+            "(@Name, @Model, @Price, @IsActive, @MaxPixelWidth, @MaxPixelHeight, @HubPortCount, @PowerDrawWatt, NOW())");
     public Task<bool> UpdateReceivingCardAsync(ReceivingCard item) =>
         UpdateAsync(item, "receiving_cards", @"
-                name = @Name, model = @Model, price = @Price,
+                name = @Name, model = @Model, price = @Price, is_active = @IsActive,
                 max_pixel_width = @MaxPixelWidth, max_pixel_height = @MaxPixelHeight,
                 hub_port_count = @HubPortCount, power_draw_watt = @PowerDrawWatt");
     public Task<bool> DeleteReceivingCardAsync(int id) => DeleteAsync("receiving_cards", id);
@@ -83,11 +83,11 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
         QueryByIdAsync<Processor>("processors", ProcessorColumns, id);
     public Task<Processor> CreateProcessorAsync(Processor item) =>
         CreateAsync(item, "processors",
-            "(name, model, price, max_pixel_capacity_mpx, ethernet_port_count, input_ports_info, power_draw_watt, created_at)",
-            "(@Name, @Model, @Price, @MaxPixelCapacityMpx, @EthernetPortCount, @InputPortsInfo, @PowerDrawWatt, NOW())");
+            "(name, model, price, is_active, max_pixel_capacity_mpx, ethernet_port_count, input_ports_info, power_draw_watt, created_at)",
+            "(@Name, @Model, @Price, @IsActive, @MaxPixelCapacityMpx, @EthernetPortCount, @InputPortsInfo, @PowerDrawWatt, NOW())");
     public Task<bool> UpdateProcessorAsync(Processor item) =>
         UpdateAsync(item, "processors", @"
-                name = @Name, model = @Model, price = @Price,
+                name = @Name, model = @Model, price = @Price, is_active = @IsActive,
                 max_pixel_capacity_mpx = @MaxPixelCapacityMpx, ethernet_port_count = @EthernetPortCount,
                 input_ports_info = @InputPortsInfo, power_draw_watt = @PowerDrawWatt");
     public Task<bool> DeleteProcessorAsync(int id) => DeleteAsync("processors", id);
@@ -98,6 +98,7 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
         name AS Name,
         model AS Model,
         price AS Price,
+        is_active AS IsActive,
         created_at AS CreatedAt";
 
     private const string PowerSupplyColumns = CommonColumns + @",

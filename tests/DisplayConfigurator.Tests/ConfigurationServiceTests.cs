@@ -1,4 +1,5 @@
 using DisplayConfigurator.Application.DTOs;
+using DisplayConfigurator.Application.Engine;
 using DisplayConfigurator.Domain.Entities;
 using DisplayConfigurator.Infrastructure.Services;
 using DisplayConfigurator.Tests.Fakes;
@@ -14,7 +15,61 @@ namespace DisplayConfigurator.Tests;
 /// </summary>
 public class ConfigurationServiceTests
 {
-    private static ConfigurationService CreateService(out InMemoryCabinRepository cabinRepo, out InMemoryConfigurationRepository configRepo)
+    private static void SeedCatalog(InMemoryHardwareCatalogRepository hw)
+    {
+        hw.PowerSupplies[1] = new PowerSupply
+        {
+            Id = 1,
+            Name = "MeanWell 4000",
+            Price = 0m,
+            IsActive = true,
+            OutputVoltage = 5m,
+            MaxPowerOutputWatt = 4000m,
+            Amperage = 800m,
+            EfficiencyRatio = 1m,
+        };
+        hw.ReceivingCards[1] = new ReceivingCard
+        {
+            Id = 1,
+            Name = "Nova A8s",
+            Price = 0m,
+            IsActive = true,
+            MaxPixelWidth = 1920,
+            MaxPixelHeight = 1080,
+        };
+        hw.Processors[1] = new Processor
+        {
+            Id = 1,
+            Name = "NovaStar VX1000",
+            Price = 0m,
+            IsActive = true,
+            EthernetPortCount = 10,
+            MaxPixelCapacityMpx = 6.5m,
+        };
+        hw.PatchCables[1] = new PatchCable
+        {
+            Id = 1,
+            Name = "Cat6 1m",
+            Price = 0m,
+            IsActive = true,
+            CableType = "Cat6",
+            ConnectorType = "RJ45",
+            LengthMeters = 1m,
+        };
+        hw.MiniPcs[1] = new MiniPc
+        {
+            Id = 1,
+            Name = "OPS Mini",
+            Price = 0m,
+            IsActive = true,
+            MaxSupportedResolution = "3840x2160",
+        };
+    }
+
+    private static ConfigurationService CreateService(
+        out InMemoryCabinRepository cabinRepo,
+        out InMemoryConfigurationRepository configRepo,
+        bool seedHardware = true)
     {
         cabinRepo = new InMemoryCabinRepository();
         configRepo = new InMemoryConfigurationRepository();
@@ -32,11 +87,14 @@ public class ConfigurationServiceTests
             WeightKg = 6.5m,
             PowerTypicalWatts = 200m,
             PowerMaxWatts = 600m,
+            SupplyVoltage = 5m,
         });
+        var hardwareRepo = new InMemoryHardwareCatalogRepository();
+        if (seedHardware) SeedCatalog(hardwareRepo);
         return new ConfigurationService(
             configRepo,
             cabinRepo,
-            new InMemoryHardwareCatalogRepository(),
+            hardwareRepo,
             new InMemorySystemSettingsRepository(),
             new StubPdfReportService());
     }
@@ -91,5 +149,30 @@ public class ConfigurationServiceTests
         var stored = await configRepo.GetByIdAsync(created.Id);
         Assert.Equal("Onaylandı", stored!.Status);
         Assert.Equal(2, stored.Revision); // 1 → 2
+    }
+
+    [Fact]
+    public async Task CreateAsync_KatalogBos_HardwareMatchExceptionFirlatir()
+    {
+        var service = CreateService(out _, out _, seedHardware: false);
+        var dto = new CreateConfigurationDto { ProjectName = "Katalogsuz", CabinId = 1, Cols = 4, Rows = 3 };
+
+        var ex = await Assert.ThrowsAsync<HardwareMatchException>(() => service.CreateAsync(dto));
+        Assert.Contains("Güç Kaynağı", ex.Message);
+    }
+
+    [Fact]
+    public async Task PreviewAsync_GercekKatalogKayitlariniDoner()
+    {
+        var service = CreateService(out _, out _);
+        var dto = new CreateConfigurationDto { ProjectName = "Önizleme", CabinId = 1, Cols = 4, Rows = 3 };
+
+        var result = await service.PreviewAsync(dto);
+
+        Assert.Equal(1, result.PowerSupplyId);
+        Assert.Equal(1, result.ReceivingCardId);
+        Assert.Equal(1, result.ProcessorId);
+        Assert.Contains("VX1000", result.RecommendedProcessor);
+        Assert.Equal(12003m, result.TotalPrice);
     }
 }

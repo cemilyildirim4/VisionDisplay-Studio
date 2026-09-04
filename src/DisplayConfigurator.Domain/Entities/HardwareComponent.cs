@@ -10,5 +10,7 @@ public abstract class HardwareComponent
     public string Name { get; set; } = string.Empty;
     public string? Model { get; set; }
     public decimal Price { get; set; }
+    /// <summary>Pasif kayıtlar eşleştirme motoruna girmez.</summary>
+    public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -8,6 +8,7 @@ public interface IConfigurationService
     Task<IEnumerable<ConfigurationResponseDto>> GetByUserIdAsync(int userId);
     Task<ConfigurationResponseDto?> GetByIdAsync(int id);
     Task<ConfigurationResponseDto> CreateAsync(CreateConfigurationDto dto, int? userId = null);
+    Task<ConfigurationResponseDto> PreviewAsync(CreateConfigurationDto dto);
     Task<byte[]?> GenerateSpecSheetPdfAsync(int id, PdfReportKind kind = PdfReportKind.Client);
     Task<byte[]> GenerateSpecSheetPdfFromDtoAsync(CreateConfigurationDto dto, PdfReportExtras? extras = null, PdfReportKind kind = PdfReportKind.Client);
     Task<bool> DeleteAsync(int id);

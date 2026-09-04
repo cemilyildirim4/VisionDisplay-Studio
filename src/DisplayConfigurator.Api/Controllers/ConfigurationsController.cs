@@ -73,11 +73,11 @@ public class ConfigurationsController : ControllerBase
             var result = await _configurationService.CreateAsync(dto, GetUserId());
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
-        catch (ArgumentException)
+        catch (ArgumentException ex)
         {
             return Problem(
                 title: "Geçersiz istek",
-                detail: "Gönderilen konfigürasyon verisi işlenemedi.",
+                detail: ex.Message,
                 statusCode: StatusCodes.Status400BadRequest);
         }
     }
@@ -133,6 +133,41 @@ public class ConfigurationsController : ControllerBase
         return File(pdfBytes, "application/pdf", fileName);
     }
 
+    /// <summary>
+    /// Konfigüratör önizlemesi: ekran boyutu + modüle göre katalogdan gerçek donanım seçer.
+    /// Kayıt oluşturmaz.
+    /// </summary>
+    [HttpGet("preview")]
+    [ProducesResponseType(typeof(ConfigurationResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ConfigurationResponseDto>> Preview(
+        [FromQuery] int cabinId,
+        [FromQuery] int cols,
+        [FromQuery] int rows,
+        [FromQuery] bool hasMiniPc = false)
+    {
+        try
+        {
+            var dto = new CreateConfigurationDto
+            {
+                ProjectName = "Önizleme",
+                CabinId = cabinId,
+                Cols = cols,
+                Rows = rows,
+                HasMiniPc = hasMiniPc,
+            };
+            var result = await _configurationService.PreviewAsync(dto);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(
+                title: "Donanım eşleşmedi",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+    }
+
     // POST: api/configurations/export-pdf — müşteri raporu (fiyat dökümü yok)
     [Authorize]
     [EnableRateLimiting("write")]
@@ -159,11 +194,11 @@ public class ConfigurationsController : ControllerBase
 
             return File(pdfBytes, "application/pdf", "Musteri_Rapor.pdf");
         }
-        catch (ArgumentException)
+        catch (ArgumentException ex)
         {
             return Problem(
                 title: "Geçersiz PDF isteği",
-                detail: "Gönderilen konfigürasyon verisi işlenemedi.",
+                detail: ex.Message,
                 statusCode: StatusCodes.Status400BadRequest);
         }
         catch (Exception ex)

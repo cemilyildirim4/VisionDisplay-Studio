@@ -6,6 +6,7 @@ public abstract class HardwareComponentInputDto
     public string Name { get; set; } = string.Empty;
     public string? Model { get; set; }
     public decimal Price { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 
 public class PowerSupplyInputDto : HardwareComponentInputDto
