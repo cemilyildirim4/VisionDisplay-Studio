@@ -51,7 +51,9 @@ const KINDS = [
     label: 'İşlemci',
     api: 'hardware',
     columns: [
-      { key: 'maxPixelCapacityMpx', label: 'Kapasite', format: (v) => `${v} Mpx` },
+      { key: 'maxPixelCapacityPerPort', label: 'Port başı piksel (px/port)', format: (v) => (v ? `${Number(v).toLocaleString('tr-TR')} px` : '—') },
+      { key: 'maxPortWidth', label: 'Port maks. genişlik', format: (v) => (v ? `${v} px` : '—') },
+      { key: 'maxPortHeight', label: 'Port maks. yükseklik', format: (v) => (v ? `${v} px` : '—') },
       { key: 'ethernetPortCount', label: 'Ethernet' },
       { key: 'inputPortsInfo', label: 'Giriş portları' },
       { key: 'powerDrawWatt', label: 'Güç', format: (v) => `${v} W` },
@@ -106,7 +108,9 @@ const BLANKS = {
     model: '',
     price: 0,
     isActive: true,
-    maxPixelCapacityMpx: 0,
+    maxPixelCapacityPerPort: 650000,
+    maxPortWidth: 4096,
+    maxPortHeight: 4096,
     ethernetPortCount: 0,
     inputPortsInfo: '',
     powerDrawWatt: 0,
@@ -175,6 +179,18 @@ function toForm(kind, item) {
       heatDissipationBtu: item.heatDissipationBtu ?? 0,
     }
   }
+  if (kind === 'processors') {
+    return {
+      ...BLANKS[kind],
+      ...item,
+      name: item.name ?? '',
+      model: item.model ?? '',
+      isActive: item.isActive !== false,
+      maxPixelCapacityPerPort: Number(item.maxPixelCapacityPerPort) > 0 ? item.maxPixelCapacityPerPort : 650000,
+      maxPortWidth: Number(item.maxPortWidth) > 0 ? item.maxPortWidth : 4096,
+      maxPortHeight: Number(item.maxPortHeight) > 0 ? item.maxPortHeight : 4096,
+    }
+  }
   return { ...BLANKS[kind], ...item, name: item.name ?? '', model: item.model ?? '', isActive: item.isActive !== false }
 }
 
@@ -226,7 +242,9 @@ function toHardwarePayload(kind, form) {
   if (kind === 'processors') {
     return {
       ...base,
-      maxPixelCapacityMpx: Number(form.maxPixelCapacityMpx),
+      maxPixelCapacityPerPort: Number(form.maxPixelCapacityPerPort) || 650000,
+      maxPortWidth: Number(form.maxPortWidth) || 4096,
+      maxPortHeight: Number(form.maxPortHeight) || 4096,
       ethernetPortCount: Number(form.ethernetPortCount),
       inputPortsInfo: form.inputPortsInfo || null,
       powerDrawWatt: Number(form.powerDrawWatt),
@@ -326,8 +344,14 @@ function TypeFields({ kind, modal, setModal }) {
   if (kind === 'processors') {
     return (
       <>
-        <Field label="Maks. piksel kapasitesi (milyon piksel)">
-          <input type="number" min="0" step="0.01" value={modal.maxPixelCapacityMpx} onChange={num('maxPixelCapacityMpx')} className={inputCls} />
+        <Field label="Port başı piksel (px/port)" hint="Varsayılan 650000">
+          <input type="number" min="1" step="1" value={modal.maxPixelCapacityPerPort} onChange={num('maxPixelCapacityPerPort')} className={inputCls} />
+        </Field>
+        <Field label="Port başı maks. genişlik (px)">
+          <input type="number" min="1" step="1" value={modal.maxPortWidth} onChange={num('maxPortWidth')} className={inputCls} />
+        </Field>
+        <Field label="Port başı maks. yükseklik (px)">
+          <input type="number" min="1" step="1" value={modal.maxPortHeight} onChange={num('maxPortHeight')} className={inputCls} />
         </Field>
         <Field label="Ethernet port sayısı">
           <input type="number" min="0" step="1" value={modal.ethernetPortCount} onChange={num('ethernetPortCount')} className={inputCls} />

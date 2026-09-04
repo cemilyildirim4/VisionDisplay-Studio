@@ -61,7 +61,9 @@ public class ConfigurationCalculatorTests
             Name = "NovaStar VX1000",
             Price = 0m,
             EthernetPortCount = 10,
-            MaxPixelCapacityMpx = 6.5m,
+            MaxPixelCapacityPerPort = 650_000,
+            MaxPortWidth = 4096,
+            MaxPortHeight = 4096,
             IsActive = true,
         },
         PatchCable = new PatchCable
@@ -363,12 +365,14 @@ public class ConfigurationCalculatorTests
     }
 
     [Fact]
-    public void CountProcessors_PortVeMpxTavaninaGoreAdetDoner()
+    public void CountProcessors_PortVePikselTavaninaGoreAdetDoner()
     {
         var proc = new Processor
         {
             Name = "VX1000",
-            MaxPixelCapacityMpx = 6.5m,
+            MaxPixelCapacityPerPort = 650_000,
+            MaxPortWidth = 4096,
+            MaxPortHeight = 4096,
             EthernetPortCount = 10,
         };
 
@@ -378,6 +382,35 @@ public class ConfigurationCalculatorTests
 
         int many = ConfigurationCalculator.CountProcessors(20_000_000, proc, out _);
         Assert.True(many >= 2);
+    }
+
+    [Fact]
+    public void CountProcessors_PortGenislikLimiti_EkPortIster()
+    {
+        var twoPort = new Processor
+        {
+            Name = "2-port",
+            EthernetPortCount = 2,
+            MaxPixelCapacityPerPort = 650_000,
+            MaxPortWidth = 4096,
+            MaxPortHeight = 4096,
+        };
+        // 5000×100 = 500.000 px → piksel 1 port; genişlik 5000/4096 → 2 port.
+        int qty = ConfigurationCalculator.CountProcessors(500_000, 5000, 100, twoPort, out int ports);
+        Assert.Equal(2, ports);
+        Assert.Equal(1, qty);
+
+        var onePort = new Processor
+        {
+            Name = "1-port",
+            EthernetPortCount = 1,
+            MaxPixelCapacityPerPort = 650_000,
+            MaxPortWidth = 4096,
+            MaxPortHeight = 4096,
+        };
+        int extra = ConfigurationCalculator.CountProcessors(500_000, 5000, 100, onePort, out int extraPorts);
+        Assert.Equal(2, extraPorts);
+        Assert.Equal(2, extra);
     }
 
     [Fact]

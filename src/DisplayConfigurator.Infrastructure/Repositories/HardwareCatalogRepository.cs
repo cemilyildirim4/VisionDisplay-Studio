@@ -83,12 +83,14 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
         QueryByIdAsync<Processor>("processors", ProcessorColumns, id);
     public Task<Processor> CreateProcessorAsync(Processor item) =>
         CreateAsync(item, "processors",
-            "(name, model, price, is_active, max_pixel_capacity_mpx, ethernet_port_count, input_ports_info, power_draw_watt, created_at)",
-            "(@Name, @Model, @Price, @IsActive, @MaxPixelCapacityMpx, @EthernetPortCount, @InputPortsInfo, @PowerDrawWatt, NOW())");
+            "(name, model, price, is_active, max_pixel_capacity_per_port, max_port_width, max_port_height, ethernet_port_count, input_ports_info, power_draw_watt, created_at)",
+            "(@Name, @Model, @Price, @IsActive, @MaxPixelCapacityPerPort, @MaxPortWidth, @MaxPortHeight, @EthernetPortCount, @InputPortsInfo, @PowerDrawWatt, NOW())");
     public Task<bool> UpdateProcessorAsync(Processor item) =>
         UpdateAsync(item, "processors", @"
                 name = @Name, model = @Model, price = @Price, is_active = @IsActive,
-                max_pixel_capacity_mpx = @MaxPixelCapacityMpx, ethernet_port_count = @EthernetPortCount,
+                max_pixel_capacity_per_port = @MaxPixelCapacityPerPort,
+                max_port_width = @MaxPortWidth, max_port_height = @MaxPortHeight,
+                ethernet_port_count = @EthernetPortCount,
                 input_ports_info = @InputPortsInfo, power_draw_watt = @PowerDrawWatt");
     public Task<bool> DeleteProcessorAsync(int id) => DeleteAsync("processors", id);
     public Task<int> CountProcessorReferencesAsync(int id) => CountReferencesAsync("processor_id", id);
@@ -127,7 +129,9 @@ public class HardwareCatalogRepository : IHardwareCatalogRepository
         power_draw_watt AS PowerDrawWatt";
 
     private const string ProcessorColumns = CommonColumns + @",
-        max_pixel_capacity_mpx AS MaxPixelCapacityMpx,
+        max_pixel_capacity_per_port AS MaxPixelCapacityPerPort,
+        max_port_width AS MaxPortWidth,
+        max_port_height AS MaxPortHeight,
         ethernet_port_count AS EthernetPortCount,
         input_ports_info AS InputPortsInfo,
         power_draw_watt AS PowerDrawWatt";

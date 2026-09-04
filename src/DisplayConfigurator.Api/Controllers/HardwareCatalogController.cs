@@ -292,7 +292,9 @@ public class HardwareCatalogController : ControllerBase
     {
         var err = ValidateBase(input);
         if (err is not null) return err;
-        if (input.MaxPixelCapacityMpx < 0) return "Piksel kapasitesi negatif olamaz.";
+        if (input.MaxPixelCapacityPerPort < 0) return "Port başı piksel kapasitesi negatif olamaz.";
+        if (input.MaxPortWidth < 0 || input.MaxPortHeight < 0)
+            return "Port genişlik/yükseklik negatif olamaz.";
         if (input.EthernetPortCount < 0) return "Ethernet port sayısı negatif olamaz.";
         if (input.PowerDrawWatt < 0) return "Güç çekişi negatif olamaz.";
         return null;
@@ -353,7 +355,11 @@ public class HardwareCatalogController : ControllerBase
     private static Processor Apply(ProcessorInputDto input, Processor item)
     {
         ApplyBase(input, item);
-        item.MaxPixelCapacityMpx = input.MaxPixelCapacityMpx;
+        item.MaxPixelCapacityPerPort = input.MaxPixelCapacityPerPort > 0
+            ? input.MaxPixelCapacityPerPort
+            : 650_000;
+        item.MaxPortWidth = input.MaxPortWidth > 0 ? input.MaxPortWidth : 4096;
+        item.MaxPortHeight = input.MaxPortHeight > 0 ? input.MaxPortHeight : 4096;
         item.EthernetPortCount = input.EthernetPortCount;
         item.InputPortsInfo = TrimOrNull(input.InputPortsInfo);
         item.PowerDrawWatt = input.PowerDrawWatt;

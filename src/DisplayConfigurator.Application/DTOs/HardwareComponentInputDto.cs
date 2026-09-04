@@ -46,7 +46,9 @@ public class ReceivingCardInputDto : HardwareComponentInputDto
 
 public class ProcessorInputDto : HardwareComponentInputDto
 {
-    public decimal MaxPixelCapacityMpx { get; set; }
+    public int MaxPixelCapacityPerPort { get; set; } = 650_000;
+    public int MaxPortWidth { get; set; } = 4096;
+    public int MaxPortHeight { get; set; } = 4096;
     public int EthernetPortCount { get; set; }
     public string? InputPortsInfo { get; set; }
     public decimal PowerDrawWatt { get; set; }

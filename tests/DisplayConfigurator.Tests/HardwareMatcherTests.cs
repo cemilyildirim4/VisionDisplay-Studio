@@ -94,7 +94,9 @@ public class HardwareMatcherTests
                 Price = 900m,
                 IsActive = true,
                 EthernetPortCount = 10,
-                MaxPixelCapacityMpx = 6.5m,
+                MaxPixelCapacityPerPort = 650_000,
+                MaxPortWidth = 4096,
+                MaxPortHeight = 4096,
             },
             new Processor
             {
@@ -103,7 +105,9 @@ public class HardwareMatcherTests
                 Price = 100m,
                 IsActive = true,
                 EthernetPortCount = 1,
-                MaxPixelCapacityMpx = 0.65m,
+                MaxPixelCapacityPerPort = 650_000,
+                MaxPortWidth = 4096,
+                MaxPortHeight = 4096,
             },
         ],
         PatchCables =

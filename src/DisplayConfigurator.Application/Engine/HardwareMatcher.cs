@@ -147,11 +147,13 @@ public static class HardwareMatcher
     public static Processor? SelectProcessor(ScreenDemand demand, IEnumerable<Processor> items)
     {
         var candidates = items
-            .Where(p => p.EthernetPortCount > 0 || p.MaxPixelCapacityMpx > 0)
+            .Where(p => p.EthernetPortCount > 0 || p.MaxPixelCapacityPerPort > 0)
             .Select(p =>
             {
-                int qty = ConfigurationCalculator.CountProcessors(demand.TotalPixels, p, out int ports);
-                return (Item: p, Qty: qty, Ports: ports, Cap: p.MaxPixelCapacityMpx);
+                int qty = ConfigurationCalculator.CountProcessors(
+                    demand.TotalPixels, demand.TotalResW, demand.TotalResH, p, out int ports);
+                long cap = (long)Math.Max(1, p.EthernetPortCount) * ConfigurationCalculator.PixelsPerPort(p);
+                return (Item: p, Qty: qty, Ports: ports, Cap: cap);
             })
             .Where(x => x.Qty > 0)
             .ToList();

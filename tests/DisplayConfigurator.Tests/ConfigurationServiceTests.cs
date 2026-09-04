@@ -44,7 +44,9 @@ public class ConfigurationServiceTests
             Price = 0m,
             IsActive = true,
             EthernetPortCount = 10,
-            MaxPixelCapacityMpx = 6.5m,
+            MaxPixelCapacityPerPort = 650_000,
+            MaxPortWidth = 4096,
+            MaxPortHeight = 4096,
         };
         hw.PatchCables[1] = new PatchCable
         {

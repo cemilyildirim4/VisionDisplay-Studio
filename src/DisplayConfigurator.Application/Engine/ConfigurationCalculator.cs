@@ -81,7 +81,7 @@ public static class ConfigurationCalculator
 
         int receivingCardQty = CountReceivingCards(totalResW, totalResH, totalPixels, hw.ReceivingCard);
         int patchCableQty = CountPatchCables(receivingCardQty);
-        int processorQty = CountProcessors(totalPixels, hw.Processor, out int requiredPorts);
+        int processorQty = CountProcessors(totalPixels, totalResW, totalResH, hw.Processor, out int requiredPorts);
         int miniPcQty = dto.HasMiniPc ? 1 : 0;
 
         if (patchCableQty > 0 && hw.PatchCable == null)
@@ -238,36 +238,50 @@ public static class ConfigurationCalculator
         Math.Max(0, receivingCardCount - 1);
 
     /// <summary>
-    /// İşlemci adedi: toplam piksel, port başı bütçe ve işlemcinin port/Mpx tavanı.
+    /// İşlemci adedi: toplam piksel, port başı kapasite ve port genişlik/yükseklik tavanı.
+    /// Toplam kapasite = EthernetPortCount × MaxPixelCapacityPerPort.
     /// </summary>
     public static int CountProcessors(int totalPixels, Processor? processor, out int requiredPorts)
+        => CountProcessors(totalPixels, totalResW: 0, totalResH: 0, processor, out requiredPorts);
+
+    public static int CountProcessors(
+        int totalPixels,
+        int totalResW,
+        int totalResH,
+        Processor? processor,
+        out int requiredPorts)
     {
         int portsOnUnit = processor is { EthernetPortCount: > 0 }
             ? processor.EthernetPortCount
             : 1;
 
-        long pixelsPerPort = MaxPixelsPerPort;
-        if (processor is { MaxPixelCapacityMpx: > 0 } && portsOnUnit > 0)
-        {
-            long fromCapacity = (long)(processor.MaxPixelCapacityMpx * 1_000_000m / portsOnUnit);
-            if (fromCapacity > 0)
-                pixelsPerPort = Math.Min(MaxPixelsPerPort, fromCapacity);
-        }
+        int pixelsPerPort = PixelsPerPort(processor);
+        int byPixels = Math.Max(1, (int)Math.Ceiling(Math.Max(0, totalPixels) / (double)pixelsPerPort));
 
-        requiredPorts = Math.Max(1, (int)Math.Ceiling(Math.Max(0, totalPixels) / (double)pixelsPerPort));
+        int byWidth = 0;
+        if (processor is { MaxPortWidth: > 0 } && totalResW > 0)
+            byWidth = (int)Math.Ceiling(totalResW / (double)processor.MaxPortWidth);
+
+        int byHeight = 0;
+        if (processor is { MaxPortHeight: > 0 } && totalResH > 0)
+            byHeight = (int)Math.Ceiling(totalResH / (double)processor.MaxPortHeight);
+
+        requiredPorts = Math.Max(1, Math.Max(byPixels, Math.Max(byWidth, byHeight)));
 
         int byPorts = (int)Math.Ceiling(requiredPorts / (double)portsOnUnit);
+        long totalCapacity = (long)portsOnUnit * pixelsPerPort;
+        int byTotalCapacity = totalCapacity > 0
+            ? (int)Math.Ceiling(Math.Max(0, totalPixels) / (double)totalCapacity)
+            : 1;
 
-        int byPixels = 1;
-        if (processor is { MaxPixelCapacityMpx: > 0 })
-        {
-            long procCap = (long)(processor.MaxPixelCapacityMpx * 1_000_000m);
-            if (procCap > 0)
-                byPixels = (int)Math.Ceiling(totalPixels / (double)procCap);
-        }
-
-        return Math.Max(1, Math.Max(byPorts, byPixels));
+        return Math.Max(1, Math.Max(byPorts, byTotalCapacity));
     }
+
+    /// <summary>Port başı piksel; katalog 0 ise 650.000 varsayılanı.</summary>
+    public static int PixelsPerPort(Processor? processor) =>
+        processor is { MaxPixelCapacityPerPort: > 0 }
+            ? processor.MaxPixelCapacityPerPort
+            : MaxPixelsPerPort;
 
     /// <summary>
     /// Toplam Watt = Modül Gücü + (Güç Kaynağı Kayıpları / EfficiencyRatio).
