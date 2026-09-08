@@ -1324,6 +1324,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   /** Yururlukteki mesafe: elle secildiyse o, yoksa otomatik hesap. */
   const izlemeMesafesi = izlemeM != null ? izlemeM : otoIzlemeM
+  /*
+   * FOTOĞRAFTA ÖLÇEK = MESAFE.
+   *
+   * Kendi fotoğrafında kadrajın kaç metre olduğunu yalnızca kamera uzaklığı
+   * söylüyor. Ayrı bir "çekim mesafesi" alanı yerine kullanıcının girdiği
+   * mesafe doğrudan ölçeğe bağlandı: tek sayı, tek yerde.
+   */
+  useEffect(() => {
+    if (scene !== 'ozel' || !ozelSahne) return
+    setOzelMesafeM((onceki) => (Math.abs(onceki - izlemeMesafesi) < 0.01 ? onceki : izlemeMesafesi))
+  }, [scene, ozelSahne, izlemeMesafesi])
 
   /*
    * SAHNE YAKINLIGI — mesafenin arka plana yansimasi.
@@ -2989,42 +3000,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 </button>
 
                 {/*
-                  Kendi fotoğrafında ÖLÇEK fotoğraftan çıkarılamaz: bir duvarın
-                  kaç metre olduğunu görüntü söylemez. Bu yüzden soruluyor.
-                  Kullanıcı değeri değiştirince öneri de tazeleniyor.
+                  ÇEKİM MESAFESİ ARTIK AYRI BİR ALAN DEĞİL.
+
+                  Kendi fotoğrafında ölçeği belirleyen tek sayı vardı ama iki
+                  yerde soruluyordu: burada "fotoğraf kaç metreden çekildi",
+                  aşağıda da "izleme mesafesi". İkisi de aynı şeyi anlatıyor —
+                  kamera ile ekran arasındaki uzaklık. Bu alan kaldırıldı,
+                  değer aşağıdaki MESAFE alanından alınıyor.
                 */}
                 {scene === 'ozel' && ozelSahne && (
                   <div className="mt-2 border border-neutral-200 dark:border-[#2c333f] rounded-lg p-2.5">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
-                        {t('scene.photoDistance')}
-                      </span>
-                      <Stepper
-                        value={ozelMesafeM}
-                        onChange={(v) => {
-                          /*
-                            MESAFE DEĞİŞİNCE MODELLERİ YENİDEN ÇALIŞTIRMA.
-
-                            Önce her adımda tüm çözümleme (nesne tanıma +
-                            derinlik, ~4 sn) baştan koşuyordu; üstelik burada
-                            artık var olmayan bir işlev çağrılıyordu ve değer
-                            hiç değişmiyordu. Mesafe yalnızca ÖLÇEĞİ belirliyor:
-                            yüzeyin fotoğraftaki payı aynı kalıyor, o payın kaç
-                            metre ettiği değişiyor. O yüzden sadece ölçek
-                            güncelleniyor — sonuç anında görünüyor.
-                          */
-                          /* Ölçek sabit; mesafe yalnızca yakınlığı değiştiriyor. */
-                          setOzelMesafeM(v)
-                        }}
-                        min={1}
-                        max={300}
-                        step={1}
-                        decimals={0}
-                      />
-                    </div>
-                    <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                      {t('scene.photoDistanceHint')}
-                    </p>
                     {/*
                       DÖRT KÖŞE — otomatik bulunanı düzeltmek ya da yüzeyi
                       elle işaretlemek için. Güvenilir omurga bu: otomatik
@@ -3146,25 +3131,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <span className="text-[15px] text-neutral-600 dark:text-neutral-400">
                         {t('scene.viewDist')}
                       </span>
-                      {izlemeM == null ? (
+                      {izlemeM == null && !(scene === 'ozel' && ozelSahne) ? (
                         <span className="text-[15px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-200">
                           {izlemeMesafesi.toFixed(1).replace('.', ',')} m
                         </span>
                       ) : (
                         <Stepper
-                          value={izlemeM}
+                          value={izlemeMesafesi}
                           onChange={setIzlemeM}
                           min={1}
-                          max={60}
+                          max={scene === 'ozel' && ozelSahne ? 300 : 60}
                           step={0.5}
                           decimals={1}
                         />
                       )}
                     </div>
                     <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                      {t('scene.viewDistHint')}
+                      {scene === 'ozel' && ozelSahne ? t('scene.photoDistanceHint') : t('scene.viewDistHint')}
                     </p>
-                    <div className="mt-2 flex items-center justify-between gap-3">
+                    {/* Fotoğrafta otomatik mesafe yok: ölçek ondan geliyor. */}
+                    <div className={`mt-2 items-center justify-between gap-3 ${scene === 'ozel' && ozelSahne ? 'hidden' : 'flex'}`}>
                       <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
                         {t('scene.viewDistAuto')}
                       </span>
