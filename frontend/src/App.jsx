@@ -455,6 +455,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yalnızca fotoğraftaki perspektifi.
    */
   const [elleKose, setElleKose] = useState(null)
+  /*
+   * SABİTLENEN KÖŞELER.
+   *
+   * Ölçüyü korumak için dörtgeni her hareketten sonra merkezden yeniden
+   * ölçekliyordum; bu, daha önce yerleştirilmiş köşeleri de oynatıyordu.
+   * Artık kullanıcının dokunduğu köşe SABİTLENİYOR: sonraki düzeltmelerde
+   * yerinden kıpırdamıyor, ölçü düzeltmesi yalnızca dokunulmamış köşelere
+   * uygulanıyor. Üç köşe sabitlendiyse düzeltme hiç yapılmıyor — o noktada
+   * dörtgeni kullanıcı tanımlamış olur.
+   */
+  const [kilitliKose, setKilitliKose] = useState([])
 
   const [koseKipi, setKoseKipi] = useState(false)
   /*
@@ -1952,25 +1963,42 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const koseleriTasi = (noktalar) => {
     if (!Array.isArray(noktalar) || noktalar.length !== 4) return
-
-    /*
-     * ÖLÇÜ KİLİTLİ — YALNIZCA YÖN DEĞİŞİYOR.
-     *
-     * Köşeyi serbest bıraktığımızda ekran fotoğrafta büyüyüp küçülebiliyordu;
-     * panelde yazan metre değişmese de görüntü yalan söylüyordu. Artık çekilen
-     * dörtgen, tasarımın piksel ölçüsüne göre yeniden ölçekleniyor: ortalama
-     * kenar uzunlukları tasarımın kendi genişlik/yüksekliğine eşitleniyor,
-     * merkez korunuyor. Geriye kalan tek serbestlik BİÇİM, yani perspektif:
-     * kullanıcı yön veriyor, ölçü sabit kalıyor.
-     */
-    const dw = tasarimWm * (cizimOlcek || 0)
-    const dh = tasarimHm * (cizimOlcek || 0)
-    if (!(dw > 0) || !(dh > 0)) {
-      setElleKose(noktalar.map((k) => ({ x: k.x, y: k.y })))
+    const oncekiler = elleKose || koseMutlak
+    if (!oncekiler) {
+      setElleKose(noktalar)
       return
     }
-    const cx = noktalar.reduce((t, k) => t + k.x, 0) / 4
-    const cy = noktalar.reduce((t, k) => t + k.y, 0) / 4
+
+    /* Hangi köşe oynadı? */
+    let oynayan = -1
+    let enBuyuk = 0.5
+    for (let i = 0; i < 4; i++) {
+      const d = Math.hypot(noktalar[i].x - oncekiler[i].x, noktalar[i].y - oncekiler[i].y)
+      if (d > enBuyuk) {
+        enBuyuk = d
+        oynayan = i
+      }
+    }
+    if (oynayan < 0) return
+    const kilitli = kilitliKose.includes(oynayan) ? kilitliKose : [...kilitliKose, oynayan]
+    if (kilitli !== kilitliKose) setKilitliKose(kilitli)
+
+    const dw = tasarimWm * (cizimOlcek || 0)
+    const dh = tasarimHm * (cizimOlcek || 0)
+    const serbest = [0, 1, 2, 3].filter((i) => !kilitli.includes(i))
+
+    /*
+     * ÖLÇÜ DÜZELTMESİ YALNIZCA SERBEST KÖŞELERE.
+     *
+     * Sabitlenmiş köşeler olduğu yerde kalıyor; ölçüyü tutturmak için
+     * kalan köşeler, sabitlerin ağırlık merkezine göre ölçekleniyor.
+     * Serbest köşe kalmadıysa (kullanıcı dördünü de yerleştirdiyse)
+     * dörtgen olduğu gibi kabul ediliyor.
+     */
+    if (!(dw > 0) || !(dh > 0) || serbest.length === 0) {
+      setElleKose(noktalar)
+      return
+    }
     const ortEn =
       (Math.hypot(noktalar[1].x - noktalar[0].x, noktalar[1].y - noktalar[0].y) +
         Math.hypot(noktalar[2].x - noktalar[3].x, noktalar[2].y - noktalar[3].y)) / 2
@@ -1980,9 +2008,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!(ortEn > 1) || !(ortBoy > 1)) return
     const sx = dw / ortEn
     const sy = dh / ortBoy
-    setElleKose(
-      noktalar.map((k) => ({ x: cx + (k.x - cx) * sx, y: cy + (k.y - cy) * sy })),
+    /* Ölçekleme merkezi: sabitlenmiş köşelerin ağırlık merkezi. */
+    const mx = kilitli.reduce((t, i) => t + noktalar[i].x, 0) / kilitli.length
+    const my = kilitli.reduce((t, i) => t + noktalar[i].y, 0) / kilitli.length
+    const sonuc = noktalar.map((k, i) =>
+      kilitli.includes(i)
+        ? { x: k.x, y: k.y }
+        : { x: mx + (k.x - mx) * sx, y: my + (k.y - my) * sy },
     )
+    setElleKose(sonuc)
   }
   /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
   const koseleriYaz = (noktalar) => {
@@ -2003,6 +2037,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const koseKipiAc = () => {
     /* Tutamaklar çizilen tasarımın köşelerinden başlıyor. */
     if (!elleKose && koseMutlak) setElleKose(koseMutlak)
+    /* Yeni düzenleme turunda hiçbir köşe sabit değil. */
+    setKilitliKose([])
     if (!hedefKose) {
       setHedefKose([
         { x: 0.3, y: 0.3 },
@@ -3017,6 +3053,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         type="button"
                         onClick={() => {
                           setElleKose(null)
+                          setKilitliKose([])
                           setElleAci({ yaw: 0, tilt: 0 })
                           setKoseKipi(false)
                           setHedefKose(null)
