@@ -2016,6 +2016,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   const mekanKayma = (() => {
     if (!surukleAktif) return null
+    /*
+     * ELLE TAŞIMADA İKİNCİ KISIT YOK.
+     *
+     * Aşağıdaki hesap ekranı fotoğrafın içinde tutuyor; otomatik yerleşim
+     * için doğru, elle taşımada ise kullanıcıyı engelliyordu. Kullanıcı
+     * taşımaya başladıysa kayma olduğu gibi geçiyor (tek güvence
+     * kaymayiSinirla'daki "dörtte biri kadrajda kalsın" kuralı).
+     */
+    if (mekanTasindi) return { x: elleKayma.x + oneriKaymasi, y: elleKayma.y + oturmaKaymasi }
     const x = elleKayma.x + oneriKaymasi
     let y = elleKayma.y + oturmaKaymasi
     const yer = fotoYer

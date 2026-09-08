@@ -81,12 +81,21 @@ export function useSurukleme(pxPerM) {
 export function kaymayiSinirla(ofsetM, pxPerM, sahne, ekranWpx, tabanY) {
   if (!(pxPerM > 0) || !(sahne?.w > 0)) return { x: 0, y: 0 }
 
-  const enCokX = Math.max(0, (sahne.w - ekranWpx) / 2)
+  /*
+   * SINIR GEVŞEDİ — KULLANICI İSTEDİĞİ YERE TAŞIYABİLİYOR.
+   *
+   * Eskiden ekran kadrajın içinde kalmaya zorlanıyordu: yatayda merkezden
+   * yarım ekran, dikeyde kadrajın dörtte biri kadar. Kullanıcı ekranı kenara
+   * ya da kısmen dışarı taşımak istediğinde hareket kilitleniyor, sebebi de
+   * görünmüyordu. Tek kural kaldı: ekranın DÖRTTE BİRİ kadrajda kalsın —
+   * yoksa tasarım tamamen kaybolur ve kullanıcı onu geri bulamaz.
+   */
+  const kalanPay = 0.25
+  const enCokX = Math.max(0, sahne.w / 2 + ekranWpx * (1 - kalanPay))
   const x = Math.max(-enCokX, Math.min(enCokX, ofsetM.x * pxPerM))
 
-  // Taban dikeyde: en yukarıda kadrajın dörtte biri, en aşağıda alt kenar.
-  const yukari = tabanY - sahne.h * 0.25
-  const asagi = sahne.h * 0.98 - tabanY
+  const yukari = tabanY + sahne.h * (1 - kalanPay)
+  const asagi = sahne.h * (1 + kalanPay) - tabanY
   const y = Math.max(-yukari, Math.min(asagi, ofsetM.y * pxPerM))
 
   return { x, y }
