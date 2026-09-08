@@ -58,7 +58,7 @@ function Veri({ label, value, buyuk = false }) {
 function Kart({ baslik, genis = false, vurgulu = false, children }) {
   return (
     <div
-      className={`self-start min-w-0 rounded-xl border px-4 py-3.5 ${genis ? 'sm:col-span-2' : ''} ${
+      className={`flex h-full min-w-0 flex-col rounded-xl border px-4 py-3.5 ${genis ? 'sm:col-span-2' : ''} ${
         vurgulu
           ? 'border-brand/25 bg-brand/[0.06] dark:bg-brand/10'
           : 'border-neutral-200 bg-white dark:border-[#2c333f] dark:bg-[#161a21]'
@@ -70,8 +70,8 @@ function Kart({ baslik, genis = false, vurgulu = false, children }) {
           {baslik}
         </h3>
       </div>
-      <div className="mt-2.5 border-t border-neutral-100 pt-3 dark:border-[#242b36]">
-        <div className={`grid gap-x-6 gap-y-3 ${genis ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>{children}</div>
+      <div className="mt-2.5 flex-1 border-t border-neutral-100 pt-3 dark:border-[#242b36]">
+        <div className={`grid content-start gap-x-6 gap-y-3 ${genis ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>{children}</div>
       </div>
     </div>
   )
@@ -83,9 +83,9 @@ function Kart({ baslik, genis = false, vurgulu = false, children }) {
  * Eskiden kartın ortasında iri bir yazıydı, tıklanabilir görünmüyordu.
  * Artık ok işaretli sade bir satır; davranışı değişmedi.
  */
-function KitKarti({ baslik, eylem }) {
+function KitKarti({ baslik, eylem, genis = false }) {
   return (
-    <div className="self-start min-w-0 rounded-xl border border-neutral-200 bg-white px-4 py-3.5 dark:border-[#2c333f] dark:bg-[#161a21]">
+    <div className={`flex h-full min-w-0 flex-col rounded-xl border border-neutral-200 bg-white px-4 py-3.5 dark:border-[#2c333f] dark:bg-[#161a21] ${genis ? 'sm:col-span-2' : ''}`}>
       <div className="flex items-center gap-2">
         <span className="h-4 w-1 shrink-0 rounded-full bg-brand" />
         <h3 className="m-0 text-[12.5px] font-bold uppercase tracking-[0.06em] text-neutral-700 dark:text-neutral-200">
@@ -105,9 +105,16 @@ function KitKarti({ baslik, eylem }) {
   )
 }
 
-/** Kartların dizildiği ızgara: geniş 4, tablet 2, mobil 1 sütun. */
+/**
+ * Kartların dizildiği ızgara: geniş 4, tablet 2, mobil 1 sütun.
+ *
+ * Kartlar satırın yüksekliğini DOLDURUYOR (items-stretch). Önce içerik
+ * kadar yükseliyorlardı; yan yana duran kısa ve uzun kartlar arasında
+ * boşluklar kalıyor, ızgara dağınık görünüyordu. Kart sırası da satırların
+ * tam dolacağı biçimde seçildi: 1+2+1, 2+1+1, 2+2, 1+1+1+1, 1+1.
+ */
 function Izgara({ children }) {
-  return <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">{children}</div>
+  return <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">{children}</div>
 }
 
 /* ------------------------------------------------------------------ içerik */
@@ -217,19 +224,19 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           </Kart>
         )}
 
-        {has && breakdown.length > 0 && (
-          <Kart baslik={t('sp.matchedHardware')} genis>
-            {breakdown.filter((x) => x.quantity > 0).map((x) => (
-              <Veri key={x.key} label={x.name} value={`${fmt(x.quantity)} ${t('sp.unit')}`} />
-            ))}
-          </Kart>
-        )}
-
         {has && (
           <Kart baslik={t('sp.customerSelection')}>
             <Veri label={t('screen.type')} value={t(`screen.${screenType}`)} />
             <Veri label={t('sbox.heading')} value={sboxRedundancy === 'yes' ? t('common.yes') : t('common.no')} />
             <Veri label={t('sp.miniPc')} value={hasMiniPc ? t('common.yes') : t('common.no')} />
+          </Kart>
+        )}
+
+        {has && breakdown.length > 0 && (
+          <Kart baslik={t('sp.matchedHardware')} genis>
+            {breakdown.filter((x) => x.quantity > 0).map((x) => (
+              <Veri key={x.key} label={x.name} value={`${fmt(x.quantity)} ${t('sp.unit')}`} />
+            ))}
           </Kart>
         )}
 
@@ -275,8 +282,8 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           </Kart>
         )}
 
-        {has && <KitKarti baslik={t('sp.frameKit')} eylem={t('sp.viewQuantity')} />}
-        {has && <KitKarti baslik={t('sp.decoKit')} eylem={t('sp.viewQuantity')} />}
+        {has && <KitKarti genis baslik={t('sp.frameKit')} eylem={t('sp.viewQuantity')} />}
+        {has && <KitKarti genis baslik={t('sp.decoKit')} eylem={t('sp.viewQuantity')} />}
       </Izgara>
     </>
   )
