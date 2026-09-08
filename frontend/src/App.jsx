@@ -53,7 +53,7 @@ import ArView from './ArView.jsx'
 // gömülürse ilk yükleme herkes için ağırlaşır. Bu yüzden "3D Görünüm" düğmesine
 // basılana kadar hiç indirilmez (kod bölme / code-splitting).
 const Scene3D = guvenliLazy(() => import('./Scene3D.jsx'))
-import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, curveDiameterM, curveAmountForDiameter, L_KIRILMA_PCT, curveDepthFor, IMAGE_MAX_MB } from './content.js'
+import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, curveDiameterM, curveAmountForDiameter, L_KIRILMA_PCT, curveDepthFor, IMAGE_MAX_MB, KAVIS_ACI_ADIMI, curveAmountForArc, kavisAciSecenekleri, kavisYuzdesiniOturt } from './content.js'
 import { LANGUAGES } from './i18n.js'
 import { useAcilirKonum } from './hooks/useAcilirKonum.js'
 import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
@@ -3646,21 +3646,40 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 
    * çevriliyor; kaydırıcı yerinde kalıyor, ikisi bağlı.
    */
   const cap = curveDiameterM(deger, icbukey, genislikM)
+  /*
+   * KURULABİLİR AÇILAR.
+   *
+   * Kabin kilitleri yüzünden toplam yay 32°'nin katı olmak zorunda; ara
+   * değerler sahada kurulamıyor. Kaydırıcı artık bu duraklar arasında
+   * geziyor, çap alanı da en yakın durağa oturuyor. Yüzde iç ölçümüz
+   * olarak kalıyor ama kullanıcı artık açıyı seçiyor.
+   */
+  const acilar = kavisAciSecenekleri(icbukey)
+  const aci = curveArcDegrees(deger, icbukey)
+  let durak = 0
+  acilar.forEach((a, i) => { if (Math.abs(a - aci) < Math.abs(acilar[durak] - aci)) durak = i })
+  const acidanYuzde = (a) => Math.round(curveAmountForArc(a, icbukey))
+  /* Açık olmayan bir değerle gelindiyse (eski kayıt, varsayılan) en yakın durağa çekiliyor. */
+  useEffect(() => {
+    const oturmus = kavisYuzdesiniOturt(deger, icbukey)
+    if (oturmus !== deger) onChange(oturmus)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [icbukey])
   return (
     <div className="mt-3">
       <div className="flex items-center justify-between mb-1">
         <span className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
           {t('screen.curveAmount')}
         </span>
-        <span className="text-[16px] font-semibold text-brand">%{deger}</span>
+        <span className="text-[16px] font-semibold text-brand">{acilar[durak]}°</span>
       </div>
       <input
         type="range"
         min={0}
-        max={100}
-        step={5}
-        value={deger}
-        onChange={(e) => onChange(Number(e.target.value))}
+        max={acilar.length - 1}
+        step={1}
+        value={durak}
+        onChange={(e) => onChange(acidanYuzde(acilar[Number(e.target.value)]))}
         aria-label={t('screen.curveAmount')}
         className="w-full accent-[#2962ad] cursor-pointer"
       />
@@ -3675,7 +3694,7 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 
         yüzden kabin sayısı değişince de doğru kalır.
       */}
       <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
-        {t('screen.curveArc')}: ≈{curveArcDegrees(deger, icbukey)}°
+        {t('screen.curveArc')}: {acilar[durak]}° · {KAVIS_ACI_ADIMI}° {t('screen.curveStepNote')}
       </div>
       {genislikM > 0 && (
         <>
@@ -3685,7 +3704,7 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 
             </span>
             <Stepper
               value={cap ? Math.round(cap * 100) / 100 : 0}
-              onChange={(v) => onChange(curveAmountForDiameter(v, icbukey, genislikM))}
+              onChange={(v) => onChange(kavisYuzdesiniOturt(curveAmountForDiameter(v, icbukey, genislikM), icbukey))}
               /*
                * EN KÜÇÜK ÇAP, ÇİZİLEBİLEN EN KESKİN KAVİS.
                *

@@ -237,6 +237,7 @@ const dict = {
   'screen.curveDiameter': { tr: 'Kavis çapı (m)', en: 'Curve diameter (m)', ar: 'قطر الانحناء (م)' },
   'screen.curveDiameterHint': { tr: 'Ekranın üzerinde durduğu dairenin çapı. Küçük çap = daha keskin kavis; en küçük değer ekran genişliğidir.', en: 'Diameter of the circle the screen follows; smaller means a tighter curve.', ar: 'قطر الدائرة التي تتبعها الشاشة؛ الأصغر يعني انحناءً أشد.' },
   'screen.curveArc': { tr: 'Yay açısı', en: 'Arc angle', ar: 'زاوية القوس' },
+  'screen.curveStepNote': { tr: 'adımlarla kurulabilir', en: 'steps only', ar: 'بخطوات فقط' },
   'screen.curvedIn': { tr: 'İçe Kavisli', en: 'Concave Curved', ar: 'مقعرة' },
   'screen.lshape': { tr: 'İç L Tipi', en: 'Inner L-Type', ar: 'زاوية داخلية L' },
   'screen.orientation': { tr: 'Oryantasyon', en: 'Orientation', ar: 'الاتجاه' },

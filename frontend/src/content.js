@@ -183,3 +183,40 @@ export const bezelGapStyle = (cellW, cellH, gapPx, color = BEZEL_COLOR) => ({
  * değeri kullanır; ikisi ayrışırsa çerçeve ekranı tutmaz.
  */
 export const L_KIRILMA_PCT = 10
+
+/*
+ * KAVİS AÇISI 32°'NİN KATLARINDA.
+ *
+ * Kabinler sabit açılı kilitlerle birleştiği için üretimde her yay açısı
+ * kurulamıyor; toplam yay 32°'nin katı olmak zorunda. Yüzde ve çap
+ * alanları kullanıcı için kalıyor, ama ikisi de bu duraklardan birine
+ * oturuyor — arada bir değer seçilemiyor.
+ */
+export const KAVIS_ACI_ADIMI = 32
+
+/** Verilen yay açısının (derece) karşılığı olan kavis yüzdesi. */
+export function curveAmountForArc(aci, concave) {
+  const a = (Number(aci) || 0) * (Math.PI / 180)
+  if (!(a > 0)) return 0
+  /* R = W / (2·sin(θ/2)), W = 1 alınmış hâli. */
+  const R = 1 / (2 * Math.sin(a / 2))
+  const d = R - Math.sqrt(Math.max(0, R * R - 0.25))
+  return Math.max(0, Math.min(100, (d / curveDepthFor(concave)) * 100))
+}
+
+/** Bu kavis türünde kurulabilen yay açıları: 0, 32, 64 … (dereceler). */
+export function kavisAciSecenekleri(concave) {
+  const enCok = curveArcDegrees(100, concave)
+  const liste = []
+  for (let a = 0; a <= enCok; a += KAVIS_ACI_ADIMI) liste.push(a)
+  return liste
+}
+
+/** Yüzdeyi, en yakın kurulabilir açının yüzdesine oturtur. */
+export function kavisYuzdesiniOturt(curveAmount, concave) {
+  const aci = curveArcDegrees(curveAmount, concave)
+  const secenekler = kavisAciSecenekleri(concave)
+  let enYakin = secenekler[0]
+  for (const a of secenekler) if (Math.abs(a - aci) < Math.abs(enYakin - aci)) enYakin = a
+  return Math.round(curveAmountForArc(enYakin, concave))
+}
