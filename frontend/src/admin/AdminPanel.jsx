@@ -9,6 +9,7 @@ import { TESTER_ROLE_ENABLED } from '../featureFlags.js'
 import { useSession } from '../SessionContext.jsx'
 import HardwareCatalogSection from './HardwareCatalogSection.jsx'
 import LaborMultiplierSection from './LaborMultiplierSection.jsx'
+import { mmYazi } from '../birim.js'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
@@ -1654,8 +1655,8 @@ export default function AdminPanel() {
                         <td className="px-4 py-2.5"><ProductTypeBadge productType={c.productType} /></td>
                         <td className="px-4 py-2.5">{c.category === 'videowall' ? 'Video Duvarı' : 'LED'}</td>
                         <td className="px-4 py-2.5 text-neutral-500 dark:text-neutral-400">{c.series?.name || '—'}</td>
-                        <td className="px-4 py-2.5">{c.pixelPitchMm} mm</td>
-                        <td className="px-4 py-2.5 whitespace-nowrap">{c.widthMm} × {c.heightMm} × {c.depthMm}</td>
+                        <td className="px-4 py-2.5">{mmYazi(c.pixelPitchMm)} mm</td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">{mmYazi(c.widthMm)} × {mmYazi(c.heightMm)} × {mmYazi(c.depthMm)}</td>
                         <td className="px-4 py-2.5 whitespace-nowrap">{c.pixelWidth} × {c.pixelHeight}</td>
                         <td className="px-4 py-2.5">{c.weightKg} kg</td>
                         <td className="px-4 py-2.5 whitespace-nowrap">{money(c.price)}</td>

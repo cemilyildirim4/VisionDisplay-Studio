@@ -5,6 +5,7 @@ import { translateOption } from './i18n.js'
 import { baseViewingDistance } from './viewingDistance.js'
 import ProductTypeBadge from './ProductTypeBadge.jsx'
 import { normalizeProductType, PRODUCT_TYPES } from './productType.js'
+import { mmYazi } from './birim.js'
 
 /**
  * Model seçme pop-up'ı ("Yapılandırma için bir model seçin").
@@ -284,9 +285,9 @@ function OptionRow({ filterLabel, option, selected, onToggle }) {
 // "Seç" (choose) akışından bağımsız — birden fazla model işaretlenebilir.
 const COMPARE_ROWS = [
   { key: 'compare.type', get: (c) => (normalizeProductType(c.productType) === PRODUCT_TYPES.MODULE ? 'Panel' : 'Kabin') },
-  { key: 'compare.pitch', get: (c) => (c.pixelPitchMm ? `${c.pixelPitchMm} mm` : '—') },
+  { key: 'compare.pitch', get: (c) => (c.pixelPitchMm ? `${mmYazi(c.pixelPitchMm)} mm` : '—') },
   { key: 'compare.brightness', get: (c) => (c.brightnessNits ? `${c.brightnessNits} nit` : '—') },
-  { key: 'compare.dimensions', get: (c) => `${c.widthMm} × ${c.heightMm} × ${c.depthMm} mm` },
+  { key: 'compare.dimensions', get: (c) => `${mmYazi(c.widthMm)} × ${mmYazi(c.heightMm)} × ${mmYazi(c.depthMm)} mm` },
   { key: 'compare.weight', get: (c) => (c.weightKg ? `${c.weightKg} kg` : '—') },
   { key: 'compare.powerTypical', get: (c) => (c.powerTypicalWatts ? `${c.powerTypicalWatts} W` : '—') },
   { key: 'compare.powerMax', get: (c) => (c.powerMaxWatts ? `${c.powerMaxWatts} W` : '—') },
@@ -451,12 +452,12 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
 
   const rowValues = (c) =>
     tab === 'videowall'
-      ? [c.modelCode, `${c.sizeInch}"`, `${c.bezelMm} mm`, `${c.brightnessNits} nit`, `${c.widthMm} x ${c.heightMm} x ${c.depthMm} mm`]
+      ? [c.modelCode, `${c.sizeInch}"`, `${mmYazi(c.bezelMm)} mm`, `${c.brightnessNits} nit`, `${mmYazi(c.widthMm)} x ${mmYazi(c.heightMm)} x ${mmYazi(c.depthMm)} mm`]
       : [
           c.modelCode,
-          `${c.pixelPitchMm} mm`,
+          `${mmYazi(c.pixelPitchMm)} mm`,
           `${c.brightnessNits} nit`,
-          `${c.widthMm} x ${c.heightMm} x ${c.depthMm} mm`,
+          `${mmYazi(c.widthMm)} x ${mmYazi(c.heightMm)} x ${mmYazi(c.depthMm)} mm`,
           `${c.refreshRateHz} Hz`,
           `${viewingDistance(c)} m`,
         ]

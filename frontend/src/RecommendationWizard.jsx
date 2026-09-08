@@ -3,6 +3,7 @@ import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import { baseViewingDistance } from './viewingDistance.js'
 import { rankCabinets } from './recommendEngine.js'
+import { mmYazi } from './birim.js'
 
 /**
  * ÖNERİ SİHİRBAZI — isteğe bağlı yardımcı katman.
@@ -79,7 +80,7 @@ function RecCard({ rec, badge, why, pickLabel, onPick }) {
             <div className="text-xs text-neutral-500 dark:text-neutral-400">{cab.series.name}</div>
           ) : null}
           <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-            {cab.pixelPitchMm ? `P${cab.pixelPitchMm} · ` : ''}
+            {cab.pixelPitchMm ? `P${mmYazi(cab.pixelPitchMm)} · ` : ''}
             {cab.brightnessNits ? `${cab.brightnessNits} nits · ` : ''}
             {cab.ipRating ? `IP${cab.ipRating} · ` : ''}
             {baseViewingDistance(cab).toFixed(1)} m

@@ -59,6 +59,7 @@ import { useAcilirKonum } from './hooks/useAcilirKonum.js'
 import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { useCabinets } from './hooks/useCabinets.js'
+import { mmYazi } from './birim.js'
 import {
   taslakOlustur,
   taslagiYaz,
@@ -2703,7 +2704,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       başka bir model seçilince kendiliğinden değişir.
                     */}
                     <div className="text-[15px] text-neutral-500 dark:text-neutral-400 mt-1">
-                      {cols} × {kabinWmm} mm = {(cols * kabinWmm).toLocaleString('tr-TR')} mm
+                      {cols} × {mmYazi(kabinWmm)} mm = {mmYazi(cols * kabinWmm)} mm
                     </div>
                   </div>
 
@@ -2714,7 +2715,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <Stepper value={rows} onChange={setRows} min={1} max={rowsMax} />
                     </div>
                     <div className="text-[15px] text-neutral-500 dark:text-neutral-400 mt-1">
-                      {rows} × {kabinHmm} mm = {(rows * kabinHmm).toLocaleString('tr-TR')} mm
+                      {rows} × {mmYazi(kabinHmm)} mm = {mmYazi(rows * kabinHmm)} mm
                     </div>
                   </div>
                 </>
