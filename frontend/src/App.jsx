@@ -2437,7 +2437,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   setCols(1)
                   setRows(1)
                 }}
-                className={`py-2.5 rounded-lg text-[18px] transition-colors ${
+                className={`py-2.5 rounded-lg text-[19px] transition-colors ${
                   screenMode === 'single'
                     ? 'btn-selected border-2'
                     : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
@@ -2448,7 +2448,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               <button
                 type="button"
                 onClick={() => setMultiModalOpen(true)}
-                className={`py-2.5 rounded-lg text-[18px] transition-colors ${
+                className={`py-2.5 rounded-lg text-[19px] transition-colors ${
                   screenMode === 'multi'
                     ? 'btn-selected border-2'
                     : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
@@ -2486,14 +2486,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   <path d="M12 17.4h.01" />
                 </svg>
               </span>
-              <span className="text-[13px] font-semibold leading-tight">{t('wiz.entry')}</span>
+              <span className="text-[15px] font-semibold leading-tight">{t('wiz.entry')}</span>
             </button>
           )}
           {hasModel ? (
             <div className="border border-neutral-200 dark:border-[#2c333f] rounded-lg p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-[16px] text-neutral-400 dark:text-neutral-500 mb-1">{selectedModel.series?.name || t('model.defaultSeries')}</div>
+                  <div className="text-[17px] text-neutral-500 dark:text-neutral-400 mb-1">{selectedModel.series?.name || t('model.defaultSeries')}</div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="text-[28px] font-bold text-neutral-900 dark:text-neutral-100 leading-tight">{selectedModel.modelCode}</div>
                     <ProductTypeBadge productType={selectedModel.productType} size="md" />
@@ -2516,7 +2516,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
-                className="flex items-center gap-1 text-[18px] font-semibold text-neutral-800 dark:text-neutral-200 hover:text-brand"
+                className="flex items-center gap-1 text-[19px] font-semibold text-neutral-800 dark:text-neutral-200 hover:text-brand"
               >
                 {t('model.change')}
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2542,7 +2542,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="w-full h-[150px] border-2 border-dashed border-neutral-300 dark:border-[#39414f] rounded-lg flex flex-col items-center justify-center gap-3 text-neutral-400 dark:text-neutral-500 hover:border-neutral-400 dark:hover:border-[#4a5364] hover:text-neutral-500 transition-colors"
+              className="w-full h-[150px] border-2 border-dashed border-neutral-300 dark:border-[#39414f] rounded-lg flex flex-col items-center justify-center gap-3 text-neutral-500 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-[#4a5364] hover:text-neutral-500 transition-colors"
             >
               <span className="w-9 h-9 rounded-full border-2 border-current flex items-center justify-center">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -2569,11 +2569,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
               {/* Yapılandırma */}
               <div className="mb-2">
-                <div className="text-[18px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('conf.heading')}</div>
+                <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('conf.heading')}</div>
                 <button
                   type="button"
                   onClick={fitToWall}
-                  className="w-full py-2.5 rounded-lg text-[18px] font-medium transition-colors border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand"
+                  className="w-full py-2.5 rounded-lg text-[19px] font-medium transition-colors border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand"
                 >
                   {t('conf.fitToWall')}
                 </button>
@@ -2597,10 +2597,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {screens.map((s, i) => (
                     <div key={i} className="flex items-center justify-between gap-3 py-2 border-b border-neutral-100 dark:border-[#242b36] last:border-b-0">
                       <div>
-                        <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                        <div className="text-[15px] font-medium text-neutral-800 dark:text-neutral-200">
                           {t('screen.label')} {String(i + 1).padStart(2, '0')} ({t(`screen.${s.type}`)})
                         </div>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        <div className="text-[14px] text-neutral-500 dark:text-neutral-400 mt-0.5">
                           {t('screen.columns')} {s.cols} × {t('screen.rows')} {s.rows}
                         </div>
                       </div>
@@ -2610,7 +2610,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   <button
                     type="button"
                     onClick={() => setMultiModalOpen(true)}
-                    className="flex items-center gap-1 text-[18px] font-semibold text-neutral-800 dark:text-neutral-200 hover:text-brand mt-3"
+                    className="flex items-center gap-1 text-[19px] font-semibold text-neutral-800 dark:text-neutral-200 hover:text-brand mt-3"
                   >
                     {t('screen.changeSettings')}
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2641,7 +2641,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {isVideoWall ? (
                     /* Video duvarı: Oryantasyon */
                     <div className="mb-2">
-                      <div className="text-[18px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.orientation')}</div>
+                      <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.orientation')}</div>
                       <Segmented
                         buyuk
                         value={orientation}
@@ -2659,7 +2659,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   ) : (
                     /* LED: Ekran Türü */
                     <div className="mb-2">
-                      <div className="text-[18px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.type')}</div>
+                      <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.type')}</div>
                       <Segmented
                         buyuk
                         cols={3}
@@ -2694,7 +2694,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {/* Sütunlar */}
                   <div className="mb-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-[18px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.columns')}</span>
+                      <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.columns')}</span>
                       <Stepper value={cols} onChange={setCols} min={1} max={colsMax} />
                     </div>
                     {/*
@@ -2702,7 +2702,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       Ölçüler modelden geliyor (previewModel), sabit değil —
                       başka bir model seçilince kendiliğinden değişir.
                     */}
-                    <div className="text-[14px] text-neutral-400 dark:text-neutral-500 mt-1">
+                    <div className="text-[15px] text-neutral-500 dark:text-neutral-400 mt-1">
                       {cols} × {kabinWmm} mm = {(cols * kabinWmm).toLocaleString('tr-TR')} mm
                     </div>
                   </div>
@@ -2710,10 +2710,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {/* Satırlar */}
                   <div className="mb-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-[18px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.rows')}</span>
+                      <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.rows')}</span>
                       <Stepper value={rows} onChange={setRows} min={1} max={rowsMax} />
                     </div>
-                    <div className="text-[14px] text-neutral-400 dark:text-neutral-500 mt-1">
+                    <div className="text-[15px] text-neutral-500 dark:text-neutral-400 mt-1">
                       {rows} × {kabinHmm} mm = {(rows * kabinHmm).toLocaleString('tr-TR')} mm
                     </div>
                   </div>
@@ -2733,10 +2733,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             <>
               {!isVideoWall && ekranCozunurlugu && (
                 <div className="mb-2">
-                  <div className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('res.heading')}</div>
+                  <div className="text-[17px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('res.heading')}</div>
                   <div
                     title={t('res.totalHint')}
-                    className="py-2.5 px-4 rounded-lg border border-neutral-200 dark:border-[#2c333f] text-[17px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100"
+                    className="py-2.5 px-4 rounded-lg border border-neutral-200 dark:border-[#2c333f] text-[18px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100"
                   >
                     {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)} px
                   </div>
@@ -2764,14 +2764,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     >
                       <div style={{ position: 'absolute', inset: 0, backgroundImage: LED_GRADIENT }} />
                       <div style={{ position: 'absolute', inset: 0, ...ledDotsStyle(3) }} />
-                      <span className="relative text-white text-[10px] font-semibold drop-shadow">
+                      <span className="relative text-white text-[12px] font-semibold drop-shadow">
                         {t('content.led')}
                       </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setContent('none')}
-                      className={`py-2.5 rounded-lg text-[15px] hover:border-neutral-300 dark:hover:border-[#39414f] ${
+                      className={`py-2.5 rounded-lg text-[16px] hover:border-neutral-300 dark:hover:border-[#39414f] ${
                         content === 'none'
                           ? 'btn-selected border-2'
                           : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
@@ -2791,14 +2791,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       }`}
                     >
                       <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("${DEFAULT_CONTENT_SRC}")`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                      <span className="relative text-white text-[10px] font-semibold drop-shadow">
+                      <span className="relative text-white text-[12px] font-semibold drop-shadow">
                         {t('content.default')}
                       </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className={`py-2.5 rounded-lg text-[15px] hover:border-neutral-300 dark:hover:border-[#39414f] flex items-center justify-center gap-1 ${
+                      className={`py-2.5 rounded-lg text-[16px] hover:border-neutral-300 dark:hover:border-[#39414f] flex items-center justify-center gap-1 ${
                         content === 'upload'
                           ? 'btn-selected border-2'
                           : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
@@ -2830,14 +2830,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         playsInline
                         className="absolute inset-0 w-full h-full object-cover"
                       />
-                      <span className="relative text-white text-[10px] font-semibold drop-shadow">
+                      <span className="relative text-white text-[12px] font-semibold drop-shadow">
                         {t('content.sample')}
                       </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => videoInputRef.current?.click()}
-                      className={`py-2.5 rounded-lg text-[15px] hover:border-neutral-300 dark:hover:border-[#39414f] flex items-center justify-center gap-1 ${
+                      className={`py-2.5 rounded-lg text-[16px] hover:border-neutral-300 dark:hover:border-[#39414f] flex items-center justify-center gap-1 ${
                         content === 'video'
                           ? 'btn-selected border-2'
                           : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
@@ -2851,7 +2851,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     </button>
                   </div>
                 </div>
-                <p className="text-[14px] text-neutral-400 dark:text-neutral-500 mt-2 m-0">
+                <p className="text-[15px] text-neutral-500 dark:text-neutral-400 mt-2 m-0">
                   {t('content.hint')}
                 </p>
               </div>
