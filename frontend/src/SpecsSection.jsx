@@ -12,55 +12,88 @@ import { useLang } from './useLang.js'
 import { DASH, fmt, computeSpecs } from './specsData.js'
 
 /**
- * Kart içindeki tek satır: solda etiket, sağda değer.
- * Etiket boşsa (ör. Çerçeve Kiti) değer tek başına, ortada ve büyük gösterilir.
+ * Kart içindeki tek veri: ETİKET ÜSTTE, DEĞER ALTTA.
+ *
+ * Önceden etiket solda, değer sağdaydı; uzun model adları dar sütunda
+ * kırılıp okunmuyordu ve her satırın altındaki çizgi kartı ızgaraya
+ * çeviriyordu. Artık değer kendi satırında, etiketten belirgin biçimde
+ * ayrışıyor; ayırıcı çizgi yerine boşluk kullanılıyor.
+ *
+ * Etiketsiz kullanım (ör. Ekran Yapılandırması) ANA DEĞER sayılıyor:
+ * büyük ve dikkat çekici yazılıyor.
  */
 function Pair({ label, value }) {
   if (!label) {
     return (
-      <div className="py-1 text-center text-lg font-semibold text-neutral-900 dark:text-neutral-100 whitespace-pre-line">
+      <div className="py-1 text-[22px] leading-tight font-semibold tracking-tight text-neutral-900 dark:text-neutral-50 whitespace-pre-line">
         {value}
       </div>
     )
   }
   return (
-    <div className="flex items-baseline justify-between gap-3 sm:gap-4 py-1.5 border-b border-neutral-100 dark:border-[#242b36] last:border-b-0 min-w-0 max-w-full overflow-x-auto">
-      <span className="text-sm text-neutral-500 dark:text-neutral-400 shrink-0">{label}</span>
-      <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 text-right whitespace-pre-line min-w-0">
+    <div className="min-w-0">
+      <div className="text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">{label}</div>
+      <div className="mt-0.5 text-[14px] leading-snug font-semibold text-neutral-900 dark:text-neutral-100 whitespace-pre-line break-words">
         {value}
-      </span>
+      </div>
     </div>
   )
 }
 
 /**
  * Bir başlık grubu = bir kart.
- * wide: geniş içerikli gruplar (ör. Güç, 6 satır) iki sütun yer kaplar.
+ *
+ * Çerçeve ve gölge sadeleşti: koyu çizgi yerine tek ince kenar, yumuşak
+ * köşe ve içerik miktarına göre büyüyen yükseklik. Başlıklar her kartta
+ * aynı: küçük, seyrek harfli, gri. Böylece göz önce DEĞERLERİ okuyor.
  */
-function Block({ title, children }) {
+function Block({ title, children, vurgulu = false }) {
   return (
     <div
-      className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-lg px-4 py-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] min-w-0 max-w-full"
+      className={`rounded-xl px-4 py-3.5 min-w-0 max-w-full self-start ${
+        vurgulu
+          ? 'bg-brand/[0.05] dark:bg-brand/10 border border-brand/25'
+          : 'bg-white dark:bg-[#161a21] border border-neutral-200/80 dark:border-[#252b35]'
+      }`}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <span className="w-1 h-4 rounded-full bg-brand shrink-0" />
-        <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 m-0">{title}</h3>
-      </div>
-      <div>{children}</div>
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.07em] text-neutral-500 dark:text-neutral-400 m-0 mb-2.5">
+        {title}
+      </h3>
+      <div className="flex flex-col gap-2.5">{children}</div>
     </div>
   )
 }
 
 /**
- * Kartların aktığı iki sütun.
- * CSS sütun akışı kullanılır: kartlar sırayla dizilir, ortada ayırıcı çizgi olur
- * ve hiçbir kart ikiye bölünmez.
+ * Kart ızgarası.
+ *
+ * Geniş ekranda 4, orta ekranda 2, dar ekranda tek sütun. Kartlar
+ * `self-start` ile içerikleri kadar yükseliyor: kısa kartlar boşuna
+ * uzamıyor, satır hizaları bozulmuyor.
  */
 function CardGrid({ children }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 overflow-x-auto">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 items-start">
       {children}
     </div>
+  )
+}
+
+/**
+ * Kit kartlarındaki "Miktarı görüntüle" satırı.
+ *
+ * Eskiden kartın ortasında iri bir yazıydı ve tıklanabilir görünmüyordu.
+ * Artık ikincil buton biçiminde: dokunmaya rahat, üzerine gelince
+ * belirginleşiyor. Davranışı değişmedi.
+ */
+function KitDugmesi({ children }) {
+  return (
+    <button
+      type="button"
+      className="w-full min-h-[38px] px-3 rounded-lg text-[13px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-300 hover:border-brand hover:text-brand transition-colors"
+    >
+      {children}
+    </button>
   )
 }
 
@@ -123,7 +156,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
   // Teknik özellikler ve bileşenler TEK listede; sütunlara sırayla dağılır.
   return (
     <CardGrid>
-        <Block title={t('sp.screenConfigLxh')}>
+        <Block title={t('sp.screenConfigLxh')} vurgulu>
           <Pair label="" value={has ? `${cols} ${t('sp.unit')} x ${rows} ${t('sp.unit')}` : DASH} />
         </Block>
 
@@ -161,7 +194,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
 
         {has && matchError && (
           <Block title={t('sp.hwMatchError')}>
-            <Pair label="" value={matchError} />
+            <p className="m-0 text-[13px] leading-relaxed text-amber-600 dark:text-amber-400">{matchError}</p>
           </Block>
         )}
 
@@ -225,13 +258,13 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
 
         {has && (
           <Block title={t('sp.frameKit')}>
-            <Pair label="" value={t('sp.viewQuantity')} />
+            <KitDugmesi>{t('sp.viewQuantity')}</KitDugmesi>
           </Block>
         )}
 
         {has && (
           <Block title={t('sp.decoKit')}>
-            <Pair label="" value={t('sp.viewQuantity')} />
+            <KitDugmesi>{t('sp.viewQuantity')}</KitDugmesi>
           </Block>
         )}
     </CardGrid>
@@ -270,7 +303,7 @@ export default function SpecsSection({ open = false, onClose, ...props }) {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[calc(100%-2rem)] mx-4 md:mx-auto md:max-w-6xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
+        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[calc(100%-2rem)] mx-4 md:mx-auto md:max-w-[1280px] max-h-[92vh] flex flex-col overflow-hidden shadow-[0_24px_60px_-12px_rgba(0,19,52,0.35)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Başlık */}
@@ -289,9 +322,9 @@ export default function SpecsSection({ open = false, onClose, ...props }) {
         </div>
 
         {/* İçerik */}
-        <div className="flex-1 overflow-y-auto overflow-x-auto bg-neutral-50/60 dark:bg-[#12161d] px-3 sm:px-5 py-4">
+        <div className="flex-1 overflow-y-auto bg-neutral-50 dark:bg-[#12161d] px-4 sm:px-6 py-5">
           <SpecsBody {...props} />
-          <div className="mt-4 space-y-0.5 text-[10px] text-neutral-400 dark:text-neutral-500">
+          <div className="mt-5 pt-4 border-t border-neutral-200/70 dark:border-[#252b35] space-y-1 text-[11px] leading-relaxed text-neutral-400 dark:text-neutral-500">
             <p className="m-0">{t('sp.footnote1')}</p>
             <p className="m-0">{t('sp.footnote2')}</p>
           </div>
