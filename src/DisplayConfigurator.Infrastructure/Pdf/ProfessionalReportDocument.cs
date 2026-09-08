@@ -441,7 +441,7 @@ public class ProfessionalReportDocument : IDocument
             {
                 Summary(row, "EKRAN (G × Y)", $"{wM:F2} × {hM:F2} m", $"{areaM2:F2} m²");
                 Summary(row, "ALAN / ORAN", $"{areaM2:F2} m²", Empty(_config.AspectRatio, "—"));
-                Summary(row, "ÇÖZÜNÜRLÜK", ResolutionTag(), $"{_config.TotalResolution} px{mpxText}");
+                Summary(row, "ÇÖZÜNÜRLÜK", ResolutionTag(), $"{_config.TotalResolution} piksel{mpxText}");
                 Summary(row, "İZLEME MESAFESİ", $"{viewDist:F1} m", "önerilen");
             });
 
@@ -475,7 +475,7 @@ public class ProfessionalReportDocument : IDocument
                 AddRow(table, "Toplam ekran alanı", $"{areaM2:F2} m²", ref alt);
                 AddRow(table, "En-boy oranı", Empty(_config.AspectRatio, "—"), ref alt);
                 AddRow(table, "Köşegen", $"{diag:F0}\"", ref alt);
-                AddRow(table, "Toplam çözünürlük", $"{_config.TotalResolution} px{mpxText}", ref alt);
+                AddRow(table, "Toplam çözünürlük", $"{_config.TotalResolution} piksel{mpxText}", ref alt);
                 if (viewDist > 0)
                     AddRow(table, "Önerilen izleme mesafesi", $"{viewDist:F1} m", ref alt);
                 AddRow(table, "Ünite adedi & matris", $"{total} adet ({cols} × {rows})", ref alt);
@@ -726,7 +726,7 @@ public class ProfessionalReportDocument : IDocument
         if (parts.Length == 2 && long.TryParse(parts[0], out var w) && long.TryParse(parts[1], out var h))
         {
             var px = w * h;
-            mpxText = $" ({px / 1_000_000.0:F2} Mpx)";
+            mpxText = $" ({px / 1_000_000.0:F2} milyon piksel)";
             return px;
         }
         return 0;
