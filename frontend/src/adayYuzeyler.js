@@ -71,8 +71,18 @@ export function adaylariBul(tuval, sec = {}) {
   } = sec
 
   const sonuc = []
-  /* Fotoğrafta gerçek bir ekran varsa hep birinci sıra: en doğru hedef odur. */
-  if (yuzey?.koseler?.length === 4) {
+  /*
+   * FOTOĞRAFTAKİ EKRAN — AMA DENETİMDEN GEÇEREK.
+   *
+   * Nesne modeli masadaki bir monitörü de "ekran" sayıyor; kenar araması o
+   * kutudan yola çıkıp kadrajın yarısını kaplayan, kolonların üstünden geçen
+   * dev bir dörtgen üretebiliyor (kullanıcının ofis fotoğrafındaki hata tam
+   * olarak buydu ve bu yol öteki adayların geçtiği denetimlerden muaftı).
+   * Artık aynı üç denetim burada da uygulanıyor: makul dörtgen, kadraj payı
+   * ve kenara yapışmama. Geçemezse bu aday hiç eklenmiyor; yerini geometrik
+   * arama ya da düzlem adayları alıyor.
+   */
+  if (yuzey?.koseler?.length === 4 && ekranAdayiGecerli(yuzey.koseler, tuval)) {
     sonuc.push({ koseler: yuzey.koseler, skor: 100, tur: 'screen', etiket: 'Mevcut ekran yüzeyi' })
   }
 
@@ -1037,6 +1047,30 @@ function camBolgeleri(harita) {
   }
   sonuc.sort((a, b) => b.alan - a.alan)
   return sonuc.slice(0, 3).map(({ x, y, w, h }) => ({ x, y, w, h }))
+}
+
+/**
+ * Bir ekran adayı fiziksel olarak makul mü?
+ *
+ * Üç ölçüt: dikdörtgenin perspektif izdüşümü olabilecek biçimde olması,
+ * kadrajın %3–30 arasında yer kaplaması ve kenarlara yapışmaması. Gerçek
+ * bir pano/ekran bu aralıkta kalıyor; kadrajı baştan aşağı kesen
+ * dörtgenler ise birleştirme artığıdır.
+ */
+function ekranAdayiGecerli(koseler, tuval) {
+  if (!makulDortgen(koseler)) return false
+  const alan = dortgenAlanOran(koseler)
+  if (!(alan > 0.03) || alan > 0.3) return false
+  const xs = koseler.map((k) => k.x)
+  const ys = koseler.map((k) => k.y)
+  if (Math.min(...xs) < 0.02 || Math.max(...xs) > 0.98) return false
+  if (Math.min(...ys) < 0.02 || Math.max(...ys) > 0.98) return false
+  /*
+   * Kolon denetimi burada da geçerli: ekran adayı iki ayrı düzlemin üstüne
+   * oturamaz (bkz. dikeyKesikVar).
+   */
+  if (tuval && dikeyKesikVar(tuval, Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys))) return false
+  return true
 }
 
 /** Dörtgenin alanı (0–1 birim karede). */
