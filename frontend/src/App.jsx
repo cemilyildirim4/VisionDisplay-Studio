@@ -3011,28 +3011,51 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 {scene === 'ozel' && ozelSahne && (
                   <div className="mt-2 border border-neutral-200 dark:border-[#2c333f] rounded-lg p-2.5">
                     {/*
-                      DÖRT KÖŞE — otomatik bulunanı düzeltmek ya da yüzeyi
-                      elle işaretlemek için. Güvenilir omurga bu: otomatik
-                      tespit iyi bir başlangıç noktası, kesin sonuç elle.
-                    */}
-                    {/*
-                      DÖRT KÖŞE — açı ve yön buradan veriliyor.
+                      YERLEŞİM DENETİMLERİ — iş sırasına göre.
 
-                      Köşeyi çekmek ölçüyü değiştirmiyor; hareket bir AÇI
-                      olarak okunuyor (bkz. koselerdenAci). Böylece tek bir
-                      denetimle hem yön hem perspektif ayarlanıyor.
+                      Önce tek tuşla en iyi yer (birincil, dolu buton),
+                      altında iki yardımcı yan yana: başka yerleri görmek
+                      ve köşelerden elle ayarlamak. Sıfırlama en altta ve
+                      yalnızca gerçekten bir düzenleme varken görünüyor.
+                      Önceden dördü de aynı görünümde alt alta duruyordu;
+                      hangisinin ana iş olduğu belli olmuyordu.
                     */}
                     <button
                       type="button"
-                      onClick={() => (koseKipi ? setKoseKipi(false) : koseKipiAc())}
-                      className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      onClick={() => oneriyiTazele()}
+                      className="w-full py-2.5 rounded-lg text-[15px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
                     >
-                      {koseKipi ? t('scene.cornersOff') : t('scene.cornersManual')}
+                      {t('scene.suggest')}
                     </button>
-                    {/*
-                      YERLEŞİMİ SIFIRLA — elle çekilen köşeleri ve açıyı
-                      bırakıp otomatik öneriye dönüyor.
-                    */}
+                    <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                      {adaylar.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setAdayKipi((v) => !v)}
+                          className={`py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors ${adayKipi ? 'border-brand text-brand' : ''}`}
+                        >
+                          {adayKipi ? t('scene.spotsOff') : t('scene.spots')}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => (koseKipi ? setKoseKipi(false) : koseKipiAc())}
+                        className={`py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors ${koseKipi ? 'border-brand text-brand' : ''} ${adaylar.length > 0 ? '' : 'col-span-2'}`}
+                      >
+                        {koseKipi ? t('scene.cornersOff') : t('scene.cornersManual')}
+                      </button>
+                    </div>
+                    {koseKipi && (
+                      <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('scene.cornersHint')}
+                      </p>
+                    )}
+                    {adayKipi && adaylar.length > 0 && (
+                      <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('scene.spotsHint')}
+                      </p>
+                    )}
+                    {/* Sıfırlama: düzenleme varken görünen sade metin bağlantısı. */}
                     {(elleKose || elleAci.yaw !== 0 || elleAci.tilt !== 0 || hedefKose) && (
                       <button
                         type="button"
@@ -3044,78 +3067,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           setHedefKose(null)
                           setHedefTur(null)
                         }}
-                        className="mt-1.5 w-full py-1.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                        className="mt-1.5 w-full py-1 text-[13px] text-neutral-500 dark:text-neutral-400 hover:text-brand transition-colors underline underline-offset-2 decoration-neutral-300 dark:decoration-[#3a4150]"
                       >
                         {t('scene.cornersReset')}
                       </button>
                     )}
-                    {koseKipi && (
-                      <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('scene.cornersHint')}
-                      </p>
-                    )}
-                    {(elleAci.yaw !== 0 || elleAci.tilt !== 0) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setElleAci({ yaw: 0, tilt: 0 })
-                          setElleKose(null)
-                        }}
-                        className="mt-1.5 w-full py-1.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                      >
-                        {t('scene.angleReset')}
-                      </button>
-                    )}
-                    {/*
-                      UYGUN YERLER — tek tahmin yerine seçenek listesi:
-                      kareleri gör, birine tıkla, tasarım oraya gitsin.
-                    */}
-                    {adaylar.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setAdayKipi((v) => !v)}
-                        className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                      >
-                        {adayKipi ? t('scene.spotsOff') : t('scene.spots')}
-                      </button>
-                    )}
-                    {adayKipi && adaylar.length > 0 && (
-                      <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('scene.spotsHint')}
-                      </p>
-                    )}
-                    {/*
-                      PUANLI ADAY LİSTESİ KALDIRILDI.
-
-                      Aynı bilgi zaten tuvalde duruyor: numaralı kareler
-                      hem yeri gösteriyor hem tıklanıyor. Panelde ikinci
-                      bir liste yer kaplıyor ve puanlar kullanıcı için bir
-                      şey ifade etmiyordu.
-                    */}
-                    <button
-                      type="button"
-                      onClick={() => oneriyiTazele()}
-                      className="mt-2 w-full py-2 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                    >
-                      {t('scene.suggest')}
-                    </button>
                     {ozelInceleniyor && (
                       <p className="mt-2 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                         {t('scene.analysing')}
                       </p>
                     )}
-                    {!ozelInceleniyor && ozelNesneler && (
-                      <p className="mt-2 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('scene.objectsFound')} {ozelNesneler.join(', ')}
-                      </p>
-                    )}
+                    {/*
+                      "Fotoğrafta görülenler" listesi ve yüzey güven uyarısı
+                      kaldırıldı: kullanıcıya yapacak bir iş vermiyor, sonucu
+                      da değiştirmiyorlardı. Yerleşim doğru değilse zaten
+                      köşelerden düzeltiliyor.
+                    */}
                     {sigmazUyari && (
                       <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
                         {sigmazUyari}
                       </p>
-                    )}
-                    {ozelUyari && (
-                      <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">{ozelUyari}</p>
                     )}
                   </div>
                 )}
