@@ -900,6 +900,14 @@ const dict = {
 
   // ---------- Teknik Özellikler / Bileşenler ----------
   'sp.title': { tr: 'Teknik Özellikler', en: 'Specifications', ar: 'المواصفات' },
+  'sp.subtitle': { tr: 'Konfigürasyona ait teknik detaylar ve bileşen bilgileri', en: 'Technical details and component information for this configuration', ar: 'تفاصيل فنية ومعلومات المكونات لهذه التهيئة' },
+  'sp.secScreenDesc': { tr: 'Fiziksel ekran ölçüleri ve temel görüntü özellikleri', en: 'Physical screen dimensions and basic display properties', ar: 'أبعاد الشاشة الفعلية وخصائص العرض الأساسية' },
+  'sp.secPowerDesc': { tr: 'Çözünürlük, güç tüketimi, devreler ve ısı üretimi', en: 'Resolution, power consumption, circuits and heat generation', ar: 'الدقة واستهلاك الطاقة والدوائر وتوليد الحرارة' },
+  'sp.secHardwareDesc': { tr: 'Kabinler, kartlar ve katalogdan eşleşen donanım', en: 'Cabinets, cards and hardware matched from the catalogue', ar: 'الخزائن والبطاقات والعتاد المطابق من الكتالوج' },
+  'sp.secChoiceDesc': { tr: 'Konfigüratörde yapılan seçimler', en: 'Choices made in the configurator', ar: 'الاختيارات التي تم إجراؤها في المُهيِّئ' },
+  'sp.secPackageDesc': { tr: 'Teklife giren toplam bileşen listesi', en: 'Full component list included in the quote', ar: 'قائمة المكونات الكاملة المدرجة في العرض' },
+  'sp.circuitsHeading': { tr: 'Devreler', en: 'Circuits', ar: 'الدوائر' },
+  'sp.extras': { tr: 'Ek Bileşenler', en: 'Additional components', ar: 'مكونات إضافية' },
   'sp.preparing': { tr: 'Hazırlanıyor…', en: 'Preparing…', ar: '…جارٍ التحضير' },
   'sp.components': { tr: 'Bileşenler', en: 'Components', ar: 'المكوّنات' },
   'sp.screenConfigLxh': { tr: 'Ekran Yapılandırması (LXH)', en: 'Screen Configuration (LXH)', ar: 'تهيئة الشاشة (ط×ا)' },
