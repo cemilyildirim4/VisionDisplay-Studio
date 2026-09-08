@@ -163,10 +163,11 @@ const dict = {
     ar: 'تبقى هذه الميزات ظاهرة في القائمة لدور المختبر.',
   },
   'cc.login.title': { tr: 'Bayi / müşteri girişi', en: 'Dealer / customer sign-in', ar: 'تسجيل دخول الوكيل / العميل' },
+  /* Kendi kendine kayıt kalktı: hesap davet koduyla açılıyor. */
   'cc.login.hint': {
-    tr: 'E-posta ve parolanızla giriş yapın. Hesabınız yoksa "Yeni kayıt" ile açabilirsiniz.',
-    en: 'Sign in with your e-mail and password. No account yet? Use "Sign up".',
-    ar: 'سجّل الدخول ببريدك وكلمة المرور. ليس لديك حساب؟ استخدم "حساب جديد".',
+    tr: 'E-posta ve parolanızla giriş yapın. Hesabınız yoksa davet kodu ile erişim isteyin.',
+    en: 'Sign in with your e-mail and password. No account yet? Request access with an invite code.',
+    ar: 'سجّل الدخول ببريدك وكلمة المرور. ليس لديك حساب؟ اطلب الوصول برمز دعوة.',
   },
   'cc.register.tab': { tr: 'Yeni kayıt', en: 'Sign up', ar: 'حساب جديد' },
   'cc.register.title': { tr: 'Yeni bayi hesabı', en: 'New dealer account', ar: 'حساب وكيل جديد' },
