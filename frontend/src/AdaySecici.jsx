@@ -29,8 +29,18 @@ export default function AdaySecici({ adaylar, tuvalW, tuvalH, onSec }) {
       <svg width={tuvalW} height={tuvalH} className="absolute inset-0">
         {adaylar.map((a, i) => {
           const nokta = a.koseler.map((k) => `${k.x},${k.y}`).join(' ')
-          const mx = a.koseler.reduce((t, k) => t + k.x, 0) / 4
-          const my = a.koseler.reduce((t, k) => t + k.y, 0) / 4
+          /*
+            ROZET MERKEZDE DEĞİL, SOL ÜSTTE.
+
+            Rozet karenin ortasındayken tasarımı sürüklemek için tam oraya
+            basmak gerekiyordu ve tıklama rozete gidip hareket hiç
+            başlamıyordu. Rozet köşeye çekildi: karenin ortası sürüklemeye
+            açık, seçim yine tek tıkla yapılıyor.
+          */
+          const merkezX = a.koseler.reduce((t, k) => t + k.x, 0) / 4
+          const merkezY = a.koseler.reduce((t, k) => t + k.y, 0) / 4
+          const mx = a.koseler[0].x + (merkezX - a.koseler[0].x) * 0.28
+          const my = a.koseler[0].y + (merkezY - a.koseler[0].y) * 0.28
           /* İlk sıra fotoğraftaki gerçek ekran ise ayırt edilsin. */
           const vurgu = a.tur === 'screen'
           return (

@@ -3100,27 +3100,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       </p>
                     )}
                     {/*
-                      PUANLI ADAY LİSTESİ.
+                      PUANLI ADAY LİSTESİ KALDIRILDI.
 
-                      Fotoğrafın üstündeki kareler nereyi gösterdiğini söylüyor,
-                      bu liste NEDEN önerildiğini: yüzeyin adı ve 100 üzerinden
-                      puanı. Kullanıcı hem kareye hem satıra tıklayabiliyor.
+                      Aynı bilgi zaten tuvalde duruyor: numaralı kareler
+                      hem yeri gösteriyor hem tıklanıyor. Panelde ikinci
+                      bir liste yer kaplıyor ve puanlar kullanıcı için bir
+                      şey ifade etmiyordu.
                     */}
-                    {adayKipi &&
-                      adaylar.map((aday, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => adayiUygula(aday)}
-                          className="mt-1.5 w-full flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg text-[13px] border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                        >
-                          <span className="truncate">
-                            {i + 1}. {aday.etiket || t('scene.spots')}
-                            {i === 0 ? ` · ${t('scene.recommended')}` : ''}
-                          </span>
-                          <span className="tabular-nums shrink-0">{aday.skor}/100</span>
-                        </button>
-                      ))}
                     <button
                       type="button"
                       onClick={() => oneriyiTazele()}
