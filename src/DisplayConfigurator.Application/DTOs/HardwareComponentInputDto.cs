@@ -6,6 +6,7 @@ public abstract class HardwareComponentInputDto
     public string Name { get; set; } = string.Empty;
     public string? Model { get; set; }
     public decimal Price { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 
 public class PowerSupplyInputDto : HardwareComponentInputDto
@@ -45,7 +46,9 @@ public class ReceivingCardInputDto : HardwareComponentInputDto
 
 public class ProcessorInputDto : HardwareComponentInputDto
 {
-    public decimal MaxPixelCapacityMpx { get; set; }
+    public int MaxPixelCapacityPerPort { get; set; } = 650_000;
+    public int MaxPortWidth { get; set; } = 4096;
+    public int MaxPortHeight { get; set; } = 4096;
     public int EthernetPortCount { get; set; }
     public string? InputPortsInfo { get; set; }
     public decimal PowerDrawWatt { get; set; }

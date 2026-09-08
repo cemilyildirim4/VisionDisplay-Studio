@@ -252,6 +252,7 @@ const BLANK = {
   refreshRateHz: 3840,
   powerTypicalWatts: 11,
   powerMaxWatts: 32,
+  supplyVoltage: '',
   viewingDistanceM: 3.1,
   sizeInch: '',
   bezelMm: '',
@@ -498,6 +499,7 @@ export default function AdminPanel() {
       refreshRateHz: c.refreshRateHz,
       powerTypicalWatts: c.powerTypicalWatts,
       powerMaxWatts: c.powerMaxWatts,
+      supplyVoltage: c.supplyVoltage ?? '',
       viewingDistanceM: c.viewingDistanceM ?? '',
       sizeInch: c.sizeInch ?? '',
       bezelMm: c.bezelMm ?? '',
@@ -556,6 +558,7 @@ export default function AdminPanel() {
         refreshRateHz: Number(form.refreshRateHz),
         powerTypicalWatts: Number(form.powerTypicalWatts),
         powerMaxWatts: Number(form.powerMaxWatts),
+        supplyVoltage: num(form.supplyVoltage),
         viewingDistanceM: num(form.viewingDistanceM),
         sizeInch: num(form.sizeInch),
         bezelMm: num(form.bezelMm),
@@ -1487,6 +1490,9 @@ export default function AdminPanel() {
                   </Field>
                   <Field label="Maksimum Güç (W)">
                     <input type="number" value={form.powerMaxWatts} onChange={(e) => set('powerMaxWatts', e.target.value)} className={inputCls} />
+                  </Field>
+                  <Field label="Besleme gerilimi (V)" hint="PSU eşleştirmesi için; boşsa gerilim süzülmez">
+                    <input type="number" min="0" step="0.1" value={form.supplyVoltage} onChange={(e) => set('supplyVoltage', e.target.value)} className={inputCls} placeholder="ör. 5" />
                   </Field>
                 </div>
 

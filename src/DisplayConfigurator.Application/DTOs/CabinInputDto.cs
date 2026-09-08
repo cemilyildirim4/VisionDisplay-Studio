@@ -33,6 +33,8 @@ public class CabinInputDto
     public int RefreshRateHz { get; set; }
     public decimal PowerTypicalWatts { get; set; }
     public decimal PowerMaxWatts { get; set; }
+    /// <summary>Modül besleme gerilimi (V). PSU eşleştirmesi için.</summary>
+    public decimal? SupplyVoltage { get; set; }
     public decimal? ViewingDistanceM { get; set; }
     public int? SizeInch { get; set; }
     public decimal? BezelMm { get; set; }

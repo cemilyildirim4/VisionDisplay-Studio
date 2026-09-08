@@ -65,16 +65,30 @@ function CardGrid({ children }) {
 }
 
 /** Pop-up içeriği (Teknik Özellikler + Bileşenler tek listede). */
-function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false }) {
+function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null }) {
   const { t } = useLang()
   const has = !!model
   const total = cols * rows
   const s = computeSpecs(model, cols, rows)
+  if (s && preview) {
+    if (Number(preview.totalMaxPowerWatts) > 0) s.pMax = Number(preview.totalMaxPowerWatts)
+    if (Number(preview.totalAvgPowerWatts) > 0) s.pTyp = Number(preview.totalAvgPowerWatts)
+    if (Number(preview.heatDissipationBtu) > 0) s.btuMax = Number(preview.heatDissipationBtu)
+  }
+  const breakdown = Array.isArray(preview?.hardwareBreakdown) ? preview.hardwareBreakdown : []
   const modulesPerCard = Number(model?.defaultModulesPerCard) > 0 ? Number(model.defaultModulesPerCard) : 10
-  const receivingCards =
-    String(model?.productType || '').toUpperCase() === 'MODULE'
+  const receivingCards = preview?.receivingCardCount
+    ? Number(preview.receivingCardCount)
+    : String(model?.productType || '').toUpperCase() === 'MODULE'
       ? Math.ceil(total / modulesPerCard)
       : total
+
+  const lineQty = (key, fallbackQty) => {
+    const item = breakdown.find((x) => x.key === key)
+    if (!item) return `${fmt(fallbackQty)} ${t('sp.unit')}`
+    const name = item.name ? ` · ${item.name}` : ''
+    return `${fmt(item.quantity)} ${t('sp.unit')}${name}`
+  }
 
   const circuitText = (c) =>
     has ? `${c.circuits} ${t('sp.circuit')}\n${t('sp.perCircuit')}: ${c.perCircuit} ${t('sp.cabinet')}` : DASH
@@ -145,6 +159,20 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           </Block>
         )}
 
+        {has && matchError && (
+          <Block title={t('sp.hwMatchError')}>
+            <Pair label="" value={matchError} />
+          </Block>
+        )}
+
+        {has && breakdown.length > 0 && (
+          <Block title={t('sp.matchedHardware')}>
+            {breakdown.filter((x) => x.quantity > 0).map((x) => (
+              <Pair key={x.key} label={x.name} value={`${fmt(x.quantity)} ${t('sp.unit')}`} />
+            ))}
+          </Block>
+        )}
+
         {has && (
           <Block title={t('sp.customerSelection')}>
             <Pair label={t('screen.type')} value={t(`screen.${screenType}`)} />
@@ -156,14 +184,14 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
         {has && (
           <Block title={t('sp.package')}>
             <Pair label={t('sp.pkg.module')} value={`${fmt(total)} ${t('sp.unit')}`} />
-            <Pair label={t('sp.pkg.processor')} value={`1 ${t('sp.unit')} · ${t('sp.pkg.included')}`} />
-            <Pair label={t('sp.pkg.psu')} value={`${fmt(total)} ${t('sp.unit')}`} />
+            <Pair label={t('sp.pkg.processor')} value={lineQty('processor', 1)} />
+            <Pair label={t('sp.pkg.psu')} value={lineQty('powerSupply', total)} />
             <Pair
               label={t('sp.pkg.miniPc')}
-              value={hasMiniPc ? `1 ${t('sp.unit')} · ${t('sp.pkg.included')}` : t('sp.pkg.viaProcessor')}
+              value={hasMiniPc ? lineQty('miniPc', 1) : t('sp.pkg.viaProcessor')}
             />
-            <Pair label={t('sp.pkg.patch')} value={`${fmt(receivingCards)} ${t('sp.unit')}`} />
-            <Pair label={t('sp.pkg.receiving')} value={`${fmt(receivingCards)} ${t('sp.unit')}`} />
+            <Pair label={t('sp.pkg.patch')} value={lineQty('patchCable', Math.max(0, receivingCards - 1))} />
+            <Pair label={t('sp.pkg.receiving')} value={lineQty('receivingCard', receivingCards)} />
           </Block>
         )}
 

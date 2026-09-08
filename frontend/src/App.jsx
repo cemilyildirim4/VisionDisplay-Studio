@@ -6,6 +6,7 @@ import MultiScreenModal from './MultiScreenModal.jsx'
 import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
+import { useConfigurationPreview } from './useConfigurationPreview.js'
 import Oturtma from './Oturtma.jsx'
 import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
@@ -1041,6 +1042,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   // Duvar–ekran dengesi: ekran duvardan büyük olamaz (Samsung mantığı)
   // Ekranın gerçek piksel çözünürlüğü (Teknik Özellikler ile aynı kaynak).
   const ekranCozunurlugu = computeSpecs(previewModel, cols, rows)
+  const { preview: hwPreview, error: hwMatchError } = useConfigurationPreview({
+    cabinId: selectedModel?.id,
+    cols,
+    rows,
+    hasMiniPc,
+    enabled: !!selectedModel?.id,
+  })
 
   const cwM = (previewModel?.widthMm || 500) / 1000
   const chM = (previewModel?.heightMm || 500) / 1000
@@ -2172,6 +2180,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         </div>
       </header>
       <BrandStripe />
+      {hasModel && hwMatchError && (
+        <div className="px-4 sm:px-6 lg:px-10 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900 text-sm text-amber-900 dark:text-amber-200">
+          {hwMatchError}
+        </div>
+      )}
 
       {/* Gövde */}
       {/* yatay-kap: telefon yatayken iki sütun — bkz. index.css */}
@@ -3318,6 +3331,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         screenType={screenType}
         isVideoWall={isVideoWall}
         screenMode={screenMode}
+        preview={hwPreview}
+        matchError={hwMatchError}
       />
 
       <ModelSelectModal
