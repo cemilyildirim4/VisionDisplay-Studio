@@ -4,6 +4,7 @@ import { useSession } from './SessionContext.jsx'
 import { BrandMark, BrandStripe, goToConfigurator } from './BrandChrome.jsx'
 import { API_URL, apiFetch } from './apiClient.js'
 import { duzenlemeyeGonder, taslakDolu } from './tasarimTaslagi.js'
+import { rowsToXlsxBlob } from './xlsx.js'
 
 
 
@@ -138,6 +139,48 @@ export default function ControlCenter() {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
+
+  /**
+   * Kayıtlı teklifin teknik özetini dosya olarak indirir.
+   *
+   * PDF alınırken üretilen CSV yalnızca o anda, tarayıcıda oluşuyordu;
+   * sonradan aynı kayda dönüldüğünde erişilemiyordu. Burada dosya, kaydın
+   * KENDİ alanlarından üretiliyor — yeni bir veri uydurulmuyor, ekranda
+   * "Görüntüle" ile görülen bilgilerin aynısı.
+   */
+  const teklifCsvIndir = (q) => {
+    const satirlar = [
+      [t('sp.title'), ''],
+      [t('cc.quotes.f.model'), q.modelCode || ''],
+      [t('cc.quotes.f.wall'), olcuMetni(q.wallWidthM, q.wallHeightM) || ''],
+      [t('cc.quotes.f.grid'), q.columns && q.rows ? `${q.columns} × ${q.rows}` : ''],
+      [t('cc.quotes.f.type'), q.screenType || ''],
+      [t('cc.quotes.f.resolution'), q.resolution || ''],
+      [t('cc.quotes.f.miniPc'), teklifteMiniPc(q) ? t('common.yes') : t('common.no')],
+      [t('cc.quotes.f.screens'), q.screensSummary || ''],
+      [t('cc.quotes.f.customer'), q.customerName || ''],
+      [t('cc.quotes.f.note'), q.adminNote || ''],
+      [t('cc.quotes.status'), q.status || ''],
+      [t('cc.quotes.date'), q.createdAt ? new Date(q.createdAt).toLocaleDateString('tr-TR') : ''],
+    ]
+    const blob = rowsToXlsxBlob(satirlar, { sheetName: t('sp.title'), colWidths: [34, 42] })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `teklif-${q.id}-${q.modelCode || 'kayit'}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+
+    /* Panelde "kim ne indirdi" görünsün diye kayıt; başarısız olsa da indirme sürer. */
+    apiFetch(`${API_URL}/api/export-logs`, {
+      method: 'POST',
+      auth: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'csv', modelCode: q.modelCode || null, companyName: q.customerName || null }),
+    }).catch(() => {})
+  }
 
   const teklifleriYukle = useCallback(async () => {
     if (!session?.accessToken) {
@@ -400,6 +443,13 @@ export default function ControlCenter() {
                           className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 min-h-[44px] py-2.5 text-[12px] font-semibold hover:border-brand transition-colors whitespace-nowrap inline-flex items-center justify-center w-full sm:w-auto max-w-full"
                         >
                           {acikTeklif === q.id ? t('cc.quotes.hide') : t('cc.quotes.view')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => teklifCsvIndir(q)}
+                          className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 min-h-[44px] py-2.5 text-[12px] font-semibold text-neutral-600 dark:text-neutral-300 hover:border-brand hover:text-brand transition-colors whitespace-nowrap inline-flex items-center justify-center w-full sm:w-auto max-w-full"
+                        >
+                          {t('cc.quotes.csv')}
                         </button>
                         {/* Tasarımı konfigüratörde geri açar — bkz. teklifiDuzenle */}
                         <button
