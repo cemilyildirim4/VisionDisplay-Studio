@@ -416,12 +416,12 @@ export default function ExportModal({ open, onClose, summary }) {
   return (
     <div id="export-modal-root" className="fixed inset-0 z-50 bg-[#001334]/45 flex items-center justify-center p-0 sm:p-4" onClick={onClose}>
       <div
-        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[calc(100%-2rem)] mx-4 md:mx-auto md:max-w-xl max-h-[90vh] overflow-y-auto p-5 sm:p-7 relative shadow-2xl"
+        className="bg-white dark:bg-[#161a21] rounded-2xl w-full max-w-[calc(100%-2rem)] mx-4 md:mx-auto md:max-w-[440px] max-h-[88vh] overflow-y-auto p-5 relative shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between mb-5">
-          <h2 className="text-lg font-bold m-0">{t('pdf.professional')}</h2>
-          <button type="button" onClick={onClose} aria-label={t('exp.close')} className="text-neutral-500 dark:text-neutral-400 hover:text-brand inline-flex items-center justify-center min-h-[44px] min-w-[44px] shrink-0">
+        <div className="flex items-start justify-between mb-4">
+          <h2 className="text-[17px] font-bold m-0">{t('pdf.professional')}</h2>
+          <button type="button" onClick={onClose} aria-label={t('exp.close')} className="text-neutral-500 dark:text-neutral-400 hover:text-brand inline-flex items-center justify-center min-h-[36px] min-w-[36px] -mr-1 -mt-1 shrink-0">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
               <line x1="6" y1="6" x2="18" y2="18" />
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -442,11 +442,11 @@ export default function ExportModal({ open, onClose, summary }) {
           gösteriliyor, düzenlenmiyor.
         */}
         {(customer || phone || email) && (
-          <div className="mb-5 rounded-xl border border-neutral-200 dark:border-[#2c333f] px-4 py-3">
+          <div className="mb-4 rounded-xl border border-neutral-200 dark:border-[#2c333f] px-3.5 py-2.5">
             <div className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">
               {t('exp.company')}
             </div>
-            <div className="mt-0.5 text-[14.5px] font-semibold text-neutral-900 dark:text-neutral-100">{customer || '—'}</div>
+            <div className="mt-0.5 text-[14px] font-semibold text-neutral-900 dark:text-neutral-100">{customer || '—'}</div>
             {(phone || email) && (
               <div className="mt-0.5 text-[13px] text-neutral-500 dark:text-neutral-400">
                 {[phone, email].filter(Boolean).join(' · ')}
@@ -463,11 +463,11 @@ export default function ExportModal({ open, onClose, summary }) {
           seçilmeden PDF/Excel düğmeleri açılmaz. Cevap yalnızca PDF'e NOT
           olarak yazılır — tasarımı, ölçüleri veya fiyatı etkilemez.
         */}
-        <div className="mb-5">
-          <span className="text-xs text-neutral-500 dark:text-neutral-400">
+        <div className="mb-4">
+          <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
             {t('exp.modelSure')} <span className="text-brand">*</span>
           </span>
-          <div className="mt-2 flex gap-2" role="radiogroup" aria-label={t('exp.modelSure')}>
+          <div className="mt-1.5 flex gap-2" role="radiogroup" aria-label={t('exp.modelSure')}>
             {[
               ['yes', t('common.yes')],
               ['no', t('common.no')],
@@ -478,7 +478,7 @@ export default function ExportModal({ open, onClose, summary }) {
                 role="radio"
                 aria-checked={modelOnay === deger}
                 onClick={() => setModelOnay(deger)}
-                className={`flex-1 rounded-full py-2 text-sm font-semibold border transition-colors ${
+                className={`flex-1 rounded-full py-2 text-[13.5px] font-semibold border transition-colors ${
                   modelOnay === deger
                     ? 'bg-brand text-white border-brand'
                     : 'border-neutral-300 dark:border-[#39414f] text-neutral-700 dark:text-neutral-300 hover:border-brand hover:text-brand'
@@ -493,7 +493,7 @@ export default function ExportModal({ open, onClose, summary }) {
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 accent-brand" />
           {t('exp.consent')}
         </label>
-        <button type="button" onClick={() => setPrivacyOpen(true)} className="block text-[11px] text-brand hover:underline mb-6 ml-6 min-h-[44px]">
+        <button type="button" onClick={() => setPrivacyOpen(true)} className="block text-[12px] text-brand hover:underline mb-4 ml-6 min-h-[32px]">
           {t('privacy.readMore')}
         </button>
 
@@ -524,7 +524,7 @@ export default function ExportModal({ open, onClose, summary }) {
           <button
             type="submit"
             disabled={!hazir || busy}
-            className={`flex-1 rounded-full py-3 min-h-[44px] text-sm font-semibold transition-colors w-full sm:w-auto ${
+            className={`flex-1 rounded-full py-2.5 min-h-[44px] text-[14px] font-semibold transition-colors w-full sm:w-auto ${
               hazir && !busy ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
           >
