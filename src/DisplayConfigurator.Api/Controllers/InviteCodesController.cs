@@ -28,6 +28,8 @@ public class InviteCodesController : ControllerBase
     public class CreateInviteCodeRequest
     {
         public string? Code { get; set; }
+        /// <summary>Kodun verileceği kullanıcı adı; giriş için kodla birlikte istenir.</summary>
+        public string? UserName { get; set; }
         public int MaxUses { get; set; } = 1;
         public DateTime? ExpiresAt { get; set; }
     }
@@ -42,6 +44,7 @@ public class InviteCodesController : ControllerBase
         var created = await _inviteCodeRepository.CreateAsync(new InviteCode
         {
             Code = code,
+            UserName = string.IsNullOrWhiteSpace(request.UserName) ? null : request.UserName.Trim(),
             MaxUses = request.MaxUses < 1 ? 1 : request.MaxUses,
             ExpiresAt = request.ExpiresAt,
         });

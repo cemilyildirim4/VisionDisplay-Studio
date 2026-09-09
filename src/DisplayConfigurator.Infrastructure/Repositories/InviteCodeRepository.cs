@@ -17,8 +17,8 @@ public class InviteCodeRepository : IInviteCodeRepository
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
-            SELECT id AS Id, code AS Code, max_uses AS MaxUses, used_count AS UsedCount,
-                   expires_at AS ExpiresAt, created_at AS CreatedAt
+            SELECT id AS Id, code AS Code, user_name AS UserName, max_uses AS MaxUses,
+                   used_count AS UsedCount, expires_at AS ExpiresAt, created_at AS CreatedAt
             FROM invite_codes WHERE upper(code) = upper(@Code)";
         return await connection.QueryFirstOrDefaultAsync<InviteCode>(sql, new { Code = code });
     }
@@ -28,17 +28,22 @@ public class InviteCodeRepository : IInviteCodeRepository
     /// içinde yapılır, böylece iki istek aynı anda son hakkı yakalayamaz
     /// (race condition'a karşı veritabanı seviyesinde koruma).
     /// </summary>
-    public async Task<bool> TryRedeemAsync(string code)
+    public async Task<bool> TryRedeemAsync(string code, string? userName)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
+        // Kullanıcı adı kodla birlikte doğrulanıyor. Kayıtta ad yoksa (eski
+        // kodlar) yalnızca kod aranıyor; varsa büyük/küçük harf ve baştaki
+        // sondaki boşluk yok sayılarak eşleşmesi gerekiyor.
         const string sql = @"
             UPDATE invite_codes
             SET used_count = used_count + 1
             WHERE upper(code) = upper(@Code)
               AND used_count < max_uses
               AND (expires_at IS NULL OR expires_at > NOW())
+              AND (user_name IS NULL OR btrim(user_name) = ''
+                   OR lower(btrim(user_name)) = lower(btrim(@UserName)))
             RETURNING id;";
-        var id = await connection.ExecuteScalarAsync<int?>(sql, new { Code = code });
+        var id = await connection.ExecuteScalarAsync<int?>(sql, new { Code = code, UserName = userName ?? string.Empty });
         return id.HasValue;
     }
 
@@ -46,8 +51,8 @@ public class InviteCodeRepository : IInviteCodeRepository
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
-            SELECT id AS Id, code AS Code, max_uses AS MaxUses, used_count AS UsedCount,
-                   expires_at AS ExpiresAt, created_at AS CreatedAt
+            SELECT id AS Id, code AS Code, user_name AS UserName, max_uses AS MaxUses,
+                   used_count AS UsedCount, expires_at AS ExpiresAt, created_at AS CreatedAt
             FROM invite_codes ORDER BY created_at DESC";
         return await connection.QueryAsync<InviteCode>(sql);
     }
@@ -56,8 +61,8 @@ public class InviteCodeRepository : IInviteCodeRepository
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
-            INSERT INTO invite_codes (code, max_uses, used_count, expires_at, created_at)
-            VALUES (@Code, @MaxUses, 0, @ExpiresAt, NOW())
+            INSERT INTO invite_codes (code, user_name, max_uses, used_count, expires_at, created_at)
+            VALUES (@Code, @UserName, @MaxUses, 0, @ExpiresAt, NOW())
             RETURNING id;";
         invite.Id = await connection.ExecuteScalarAsync<int>(sql, invite);
         return invite;

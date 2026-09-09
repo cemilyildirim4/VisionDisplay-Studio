@@ -113,6 +113,7 @@ export default function ControlCenter() {
    * açıyor. Sunucudaki /api/auth/register ucuna dokunulmadı.
    */
   /* Davet kodu alanı — beta erişimi buradan da açılabiliyor. */
+  const [davetAd, setDavetAd] = useState('')
   const [davetKod, setDavetKod] = useState('')
   const [davetHata, setDavetHata] = useState(null)
   const [davetBusy, setDavetBusy] = useState(false)
@@ -244,7 +245,7 @@ export default function ControlCenter() {
       const res = await apiFetch(`${API_URL}/api/auth/guest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: temiz }),
+        body: JSON.stringify({ code: temiz, userName: davetAd.trim() || null }),
       })
       const veri = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -259,6 +260,7 @@ export default function ControlCenter() {
         displayName: veri.displayName || 'Misafir',
       })
       setDavetKod('')
+      setDavetAd('')
       goTab('session')
     } catch {
       setDavetHata(t('cc.invite.network'))
@@ -488,6 +490,17 @@ export default function ControlCenter() {
           <Panel title={t('cc.invite.title')} hint={t('cc.invite.hint')}>
             <form onSubmit={davetGonder} className="flex flex-col gap-3 w-full max-w-sm">
               <label className="block">
+                <span className="text-[12px] text-neutral-500">{t('cc.invite.user')}</span>
+                <input
+                  type="text"
+                  required
+                  value={davetAd}
+                  onChange={(e) => setDavetAd(e.target.value)}
+                  placeholder={t('cc.invite.userPlaceholder')}
+                  className="w-full max-w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 min-h-[44px] py-2 text-sm bg-transparent focus:outline-none focus:border-brand"
+                />
+              </label>
+              <label className="block">
                 <span className="text-[12px] text-neutral-500">{t('cc.invite.label')}</span>
                 <input
                   type="text"
@@ -501,7 +514,7 @@ export default function ControlCenter() {
               {davetHata && <p className="text-[13px] text-red-600 m-0">{davetHata}</p>}
               <button
                 type="submit"
-                disabled={davetBusy || !davetKod.trim()}
+                disabled={davetBusy || !davetKod.trim() || !davetAd.trim()}
                 className="rounded-full bg-brand text-white px-4 min-h-[44px] py-2.5 text-sm font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors w-full max-w-full"
               >
                 {davetBusy ? t('cc.invite.busy') : t('cc.invite.submit')}

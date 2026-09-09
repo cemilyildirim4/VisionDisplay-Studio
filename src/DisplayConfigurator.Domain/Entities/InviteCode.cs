@@ -9,6 +9,12 @@ public class InviteCode
 {
     public int Id { get; set; }
     public string Code { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Kodun verildiği kullanıcı adı. Giriş için kod ile BİRLİKTE isteniyor.
+    /// Eski kayıtlarda boş olabilir; boşsa yalnızca kod sorulur.
+    /// </summary>
+    public string? UserName { get; set; }
     public int MaxUses { get; set; } = 1;
     public int UsedCount { get; set; }
     public DateTime? ExpiresAt { get; set; }

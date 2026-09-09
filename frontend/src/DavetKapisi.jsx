@@ -22,6 +22,7 @@ import { useState } from 'react'
 import { API_URL } from './apiClient.js'
 
 export default function DavetKapisi({ acik, onKapat, onJeton }) {
+  const [ad, setAd] = useState('')
   const [kod, setKod] = useState('')
   const [hata, setHata] = useState(null)
   const [gonderiliyor, setGonderiliyor] = useState(false)
@@ -31,18 +32,18 @@ export default function DavetKapisi({ acik, onKapat, onJeton }) {
   const gonder = async (e) => {
     e.preventDefault()
     const temiz = kod.trim()
-    if (!temiz) return
+    if (!temiz || !ad.trim()) return
     setGonderiliyor(true)
     setHata(null)
     try {
       const res = await fetch(`${API_URL}/api/auth/guest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: temiz }),
+        body: JSON.stringify({ code: temiz, userName: ad.trim() || null }),
       })
       const veri = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setHata(veri.message || 'Davet kodu geçersiz.')
+        setHata(veri.message || 'Kullanıcı adı veya davet kodu geçersiz.')
         return
       }
       onJeton?.(veri)
@@ -61,11 +62,18 @@ export default function DavetKapisi({ acik, onKapat, onJeton }) {
           Davet kodu
         </h2>
         <p className="mt-0 mb-4 text-[14px] leading-snug text-neutral-500 dark:text-neutral-400">
-          Uygulama şu an beta aşamasında. Devam etmek için size verilen kodu girin.
+          Uygulama şu an beta aşamasında. Devam etmek için kullanıcı adınızı ve size verilen kodu girin.
         </p>
         <form onSubmit={gonder} className="flex flex-col gap-3">
+          {/* Kullanıcı adı kod ile BİRLİKTE doğrulanıyor. */}
           <input
             autoFocus
+            value={ad}
+            onChange={(e) => setAd(e.target.value)}
+            placeholder="Kullanıcı adınız"
+            className="w-full rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#1b2029] px-3 py-2.5 text-[15px] text-neutral-900 dark:text-neutral-100"
+          />
+          <input
             value={kod}
             onChange={(e) => setKod(e.target.value.toUpperCase())}
             placeholder="ÖRN. MASAUSTU25"
@@ -74,7 +82,7 @@ export default function DavetKapisi({ acik, onKapat, onJeton }) {
           {hata && <p className="m-0 text-[13px] text-red-600 dark:text-red-400">{hata}</p>}
           <button
             type="submit"
-            disabled={gonderiliyor || !kod.trim()}
+            disabled={gonderiliyor || !kod.trim() || !ad.trim()}
             className="w-full rounded-full bg-brand text-white text-[15px] font-semibold py-2.5 hover:bg-brand-dark disabled:opacity-50"
           >
             {gonderiliyor ? 'Kontrol ediliyor…' : 'Devam et'}

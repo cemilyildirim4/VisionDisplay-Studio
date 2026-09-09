@@ -109,11 +109,14 @@ public class AuthController : ControllerBase
     [HttpPost("guest")]
     public async Task<ActionResult<AuthResponseDto>> RedeemInvite([FromBody] RedeemInviteDto dto)
     {
-        var ok = await _inviteCodeRepository.TryRedeemAsync(dto.Code.Trim());
+        var ad = dto.UserName?.Trim();
+        var ok = await _inviteCodeRepository.TryRedeemAsync(dto.Code.Trim(), ad);
         if (!ok)
-            return BadRequest(new { message = "Davet kodu geçersiz, süresi dolmuş veya kullanım hakkı tükenmiş." });
+            return BadRequest(new { message = "Kullanıcı adı veya davet kodu geçersiz, süresi dolmuş ya da kullanım hakkı tükenmiş." });
 
-        var guestUser = new User { Id = 0, Email = $"guest-{Guid.NewGuid():N}@beta.local", Role = "Guest", DisplayName = "Misafir" };
+        // Görünen ad, girilen kullanıcı adı; boşsa eski davranış ("Misafir").
+        var gorunenAd = string.IsNullOrWhiteSpace(ad) ? "Misafir" : ad;
+        var guestUser = new User { Id = 0, Email = $"guest-{Guid.NewGuid():N}@beta.local", Role = "Guest", DisplayName = gorunenAd };
         var (token, expiresAt) = _jwtTokenService.GenerateAccessToken(guestUser);
 
         return Ok(new AuthResponseDto
@@ -121,6 +124,7 @@ public class AuthController : ControllerBase
             AccessToken = token,
             AccessTokenExpiresAt = expiresAt,
             Role = "Guest",
+            DisplayName = gorunenAd,
         });
     }
 

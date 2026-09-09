@@ -52,6 +52,10 @@ public class RedeemInviteDto
 {
     [Required, StringLength(50)]
     public string Code { get; set; } = string.Empty;
+
+    /// <summary>Kodun verildiği kullanıcı adı; kod ile birlikte doğrulanır.</summary>
+    [StringLength(100)]
+    public string? UserName { get; set; }
 }
 
 /// <summary>Login/register/guest-redeem sonucunda dönen jeton çifti.</summary>

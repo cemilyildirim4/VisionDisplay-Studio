@@ -932,7 +932,8 @@ export default function AdminPanel() {
   const [invites, setInvites] = useState([])
   const [invitesLoading, setInvitesLoading] = useState(false)
   const [invitesError, setInvitesError] = useState(null)
-  const [inviteForm, setInviteForm] = useState({ code: '', maxUses: 1, expiresAt: '' })
+  /* userName: kodun verildiği kişi. Giriş için kod ile birlikte isteniyor. */
+  const [inviteForm, setInviteForm] = useState({ code: '', userName: '', maxUses: 1, expiresAt: '' })
   const [inviteSaving, setInviteSaving] = useState(false)
 
   const loadInvites = useCallback(async () => {
@@ -962,13 +963,14 @@ export default function AdminPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code: inviteForm.code.trim() || null,
+          userName: inviteForm.userName.trim() || null,
           maxUses: Number(inviteForm.maxUses) || 1,
           expiresAt: inviteForm.expiresAt ? new Date(inviteForm.expiresAt).toISOString() : null,
         }),
       })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Davet kodu oluşturulamadı.')
-      setInviteForm({ code: '', maxUses: 1, expiresAt: '' })
+      setInviteForm({ code: '', userName: '', maxUses: 1, expiresAt: '' })
       await loadInvites()
     } catch (e2) {
       setInvitesError(e2.message)
@@ -2048,7 +2050,10 @@ export default function AdminPanel() {
         {/* ================= KULLANICILAR ================= */}
         {tab === 'invites' && (
           <div className="flex flex-col gap-5">
-            <form onSubmit={createInvite} className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+            <form onSubmit={createInvite} className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl p-5 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+              <Field label="Kullanıcı adı">
+                <input value={inviteForm.userName} onChange={(e) => setInviteForm((f) => ({ ...f, userName: e.target.value }))} placeholder="ör. ahmet.yilmaz" className={inputCls} />
+              </Field>
               <Field label="Kod (boş bırakılırsa üretilir)">
                 <input value={inviteForm.code} onChange={(e) => setInviteForm((f) => ({ ...f, code: e.target.value }))} placeholder="ör. MASAUSTU25" className={inputCls} />
               </Field>
@@ -2075,6 +2080,7 @@ export default function AdminPanel() {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400">
                     <tr>
+                      <th className="text-left px-5 py-3 font-medium">Kullanıcı adı</th>
                       <th className="text-left px-5 py-3 font-medium">Kod</th>
                       <th className="text-left px-5 py-3 font-medium">Kullanım</th>
                       <th className="text-left px-5 py-3 font-medium">Son kullanma</th>
@@ -2084,6 +2090,7 @@ export default function AdminPanel() {
                   <tbody>
                     {invites.map((k) => (
                       <tr key={k.id} className="border-t border-neutral-100 dark:border-[#242b36]">
+                        <td className="px-5 py-3">{k.userName || '—'}</td>
                         <td className="px-5 py-3 font-mono tracking-wider">{k.code}</td>
                         <td className="px-5 py-3 tabular-nums">{(k.usedCount ?? 0) + " / " + k.maxUses}</td>
                         <td className="px-5 py-3">{k.expiresAt ? new Date(k.expiresAt).toLocaleDateString('tr-TR') : '—'}</td>
@@ -2093,7 +2100,7 @@ export default function AdminPanel() {
                       </tr>
                     ))}
                     {!invitesLoading && invites.length === 0 && (
-                      <tr><td colSpan={4} className="px-5 py-6 text-center text-neutral-500 dark:text-neutral-400">Henüz kod yok.</td></tr>
+                      <tr><td colSpan={5} className="px-5 py-6 text-center text-neutral-500 dark:text-neutral-400">Henüz kod yok.</td></tr>
                     )}
                   </tbody>
                 </table>
