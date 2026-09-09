@@ -23,6 +23,32 @@ const LEGACY_ADMIN_META = 'yonetim-jwt-meta'
 
 const SessionContext = createContext(null)
 
+/**
+ * JWT'nin bitiş zamanı (ms). Okunamazsa null döner.
+ *
+ * Jetonun gövdesi base64url; imzayı doğrulamıyoruz (o sunucunun işi),
+ * yalnızca "süresi geçmiş mi" sorusuna bakıyoruz.
+ */
+function jetonBitisi(token) {
+  try {
+    const govde = token.split('.')[1]
+    if (!govde) return null
+    const duz = govde.replace(/-/g, '+').replace(/_/g, '/')
+    const veri = JSON.parse(atob(duz.padEnd(duz.length + ((4 - (duz.length % 4)) % 4), '=')))
+    return typeof veri?.exp === 'number' ? veri.exp * 1000 : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Saklanan oturumu okur.
+ *
+ * SÜRESİ GEÇMİŞ JETON OTURUM SAYILMAZ. Önce yalnızca "jeton var mı" diye
+ * bakılıyordu; günler önce alınmış, artık sunucunun kabul etmediği bir
+ * jeton kullanıcıyı giriş kapısından geçiriyor, sonra her istek 401
+ * veriyordu. Artık böyle bir kayıt siliniyor ve giriş yeniden isteniyor.
+ */
 function readStoredSession() {
   try {
     const raw = localStorage.getItem(SESSION_KEY)
@@ -30,6 +56,17 @@ function readStoredSession() {
     const parsed = JSON.parse(raw)
     // Eski demo oturumları (JWT yok) yok sayılır.
     if (!parsed?.accessToken) return null
+
+    const bitis = jetonBitisi(parsed.accessToken)
+    /*
+     * Yenileme jetonu varsa süresi dolmuş erişim jetonu sorun değil:
+     * apiClient ilk istekte tazeliyor. Yenileme jetonu yoksa (davet
+     * kodundan önceki misafir oturumları) kayıt işe yaramaz.
+     */
+    if (bitis != null && bitis <= Date.now() && !parsed.refreshToken) {
+      localStorage.removeItem(SESSION_KEY)
+      return null
+    }
     return parsed
   } catch {
     return null
