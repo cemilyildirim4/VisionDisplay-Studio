@@ -27,6 +27,23 @@ export function logClientError(context, error, extra = {}) {
   })
 }
 
+/** Service worker kaydını ve önbellekleri silip sayfayı yeniler. */
+async function temizleVeYenile() {
+  try {
+    const kayitlar = (await navigator.serviceWorker?.getRegistrations?.()) || []
+    await Promise.all(kayitlar.map((k) => k.unregister().catch(() => {})))
+  } catch {
+    /* önemli değil */
+  }
+  try {
+    const adlar = (await window.caches?.keys?.()) || []
+    await Promise.all(adlar.map((ad) => caches.delete(ad).catch(() => {})))
+  } catch {
+    /* önemli değil */
+  }
+  window.location.reload()
+}
+
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props)
@@ -57,7 +74,14 @@ export default class ErrorBoundary extends Component {
             </p>
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              /*
+                Hata çoğu zaman ESKİMİŞ ÖNBELLEKTEN geliyor: service worker
+                eski index.html'i veriyor, o da artık var olmayan parça
+                dosyalarını istiyor. Düz yenileme aynı önbelleği getirdiği
+                için kullanıcı bu ekranda kilitleniyordu. Bu yüzden yenileme
+                öncesi kayıt ve önbellekler siliniyor.
+              */
+              onClick={() => temizleVeYenile()}
               className="rounded-full px-5 py-2.5 text-sm font-semibold btn-brand-primary"
             >
               Sayfayı Yenile

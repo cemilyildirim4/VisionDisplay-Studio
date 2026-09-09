@@ -18,11 +18,43 @@ import { lazy } from 'react'
  * yerden yürüyor. "Bir kez" şartı sessionStorage'daki bayrakla korunuyor:
  * gerçekten bozuk bir yükleme (ağ kopuk, dosya bozuk) sonsuz tazeleme
  * döngüsüne girmesin, ikinci denemede hata olduğu gibi yukarı çıksın.
+ *
+ * TAZELEMEDEN ÖNCE SERVICE WORKER TEMİZLİĞİ:
+ * Uygulama PWA; service worker eski index.html'i ÖNBELLEKTEN veriyor. O
+ * yüzden düz bir reload çoğu zaman aynı eski parça adlarıyla geri dönüyor,
+ * ikinci hata da "gerçekten yok" sayılıp hata ekranı çiziliyordu (yönetim
+ * paneli açılmıyordu). Artık tazelemeden önce service worker kaydı ve
+ * önbellekler siliniyor: yenilenen sayfa sunucudan taze index.html alıyor.
  */
 const BAYRAK = 'vds-parca-tazelendi'
 // İki tazeleme arasında beklenecek en az süre. Bunun altındaki ikinci hata
 // "parça gerçekten yok" demektir; tazeleme çözmez, hata yukarı çıkmalı.
 const BEKLEME_MS = 30000
+
+/**
+ * Service worker kaydını ve önbellekleri siler.
+ *
+ * Hiçbir adım zorunlu değil: desteklenmiyorsa ya da hata verirse sessizce
+ * geçiliyor, tazeleme yine de yapılıyor.
+ */
+async function onbellegiBosalt() {
+  try {
+    if (navigator?.serviceWorker?.getRegistrations) {
+      const kayitlar = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(kayitlar.map((k) => k.unregister().catch(() => {})))
+    }
+  } catch {
+    /* önemli değil */
+  }
+  try {
+    if (window.caches?.keys) {
+      const adlar = await caches.keys()
+      await Promise.all(adlar.map((ad) => caches.delete(ad).catch(() => {})))
+    }
+  } catch {
+    /* önemli değil */
+  }
+}
 
 export function guvenliLazy(yukle) {
   return lazy(() =>
@@ -43,7 +75,7 @@ export function guvenliLazy(yukle) {
       } catch {
         /* yazılamıyorsa tek seferlik koruma yok; yine de bir kez dene */
       }
-      window.location.reload()
+      onbellegiBosalt().finally(() => window.location.reload())
       // Sayfa yenilenene kadar React'e "hâlâ yükleniyor" de ki bu arada hata
       // ekranı çizilmesin.
       return new Promise(() => {})
