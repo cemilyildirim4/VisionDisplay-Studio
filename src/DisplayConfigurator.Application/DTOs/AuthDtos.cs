@@ -61,6 +61,17 @@ public class RedeemInviteDto
 /// <summary>Login/register/guest-redeem sonucunda dönen jeton çifti.</summary>
 public class AuthResponseDto
 {
+    /*
+     * FİRMA BİLGİLERİ — yalnızca davet kodu ile girişte dolu.
+     *
+     * Kod üretilirken kaydedilen firma adı/telefon/e-posta/not buradan
+     * uygulamaya geçiyor; kullanıcı PDF öncesi bunları tekrar yazmıyor.
+     */
+    public string? CompanyName { get; set; }
+    public string? CompanyPhone { get; set; }
+    public string? CompanyEmail { get; set; }
+    public string? CompanyNote { get; set; }
+
     public string AccessToken { get; set; } = string.Empty;
     public string? RefreshToken { get; set; }
     public DateTime AccessTokenExpiresAt { get; set; }

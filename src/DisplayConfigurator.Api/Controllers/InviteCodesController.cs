@@ -30,6 +30,11 @@ public class InviteCodesController : ControllerBase
         public string? Code { get; set; }
         /// <summary>Kodun verileceği kullanıcı adı; giriş için kodla birlikte istenir.</summary>
         public string? UserName { get; set; }
+        /// <summary>Firma bilgileri: teklif ve PDF bunlarla dolduruluyor.</summary>
+        public string? CompanyName { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
+        public string? Note { get; set; }
         public int MaxUses { get; set; } = 1;
         public DateTime? ExpiresAt { get; set; }
     }
@@ -45,6 +50,10 @@ public class InviteCodesController : ControllerBase
         {
             Code = code,
             UserName = string.IsNullOrWhiteSpace(request.UserName) ? null : request.UserName.Trim(),
+            CompanyName = string.IsNullOrWhiteSpace(request.CompanyName) ? null : request.CompanyName.Trim(),
+            Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
+            Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
+            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
             MaxUses = request.MaxUses < 1 ? 1 : request.MaxUses,
             ExpiresAt = request.ExpiresAt,
         });

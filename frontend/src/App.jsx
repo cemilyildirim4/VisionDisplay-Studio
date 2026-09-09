@@ -2418,6 +2418,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               role: veri.role || 'Dealer',
               email: veri.email || null,
               displayName: veri.displayName || 'Bayi',
+              firma: veri.companyName || null,
+              firmaTelefon: veri.companyPhone || null,
+              firmaEposta: veri.companyEmail || null,
+              firmaNot: veri.companyNote || null,
             })
           }
         />

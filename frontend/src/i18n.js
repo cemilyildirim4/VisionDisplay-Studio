@@ -846,6 +846,7 @@ const dict = {
   'exp.title': { tr: 'Teklif Talebi', en: 'Quote Request', ar: 'طلب عرض سعر' },
   'exp.customer': { tr: 'Ad Soyad', en: 'Full Name', ar: 'الاسم الكامل' },
   'exp.phone': { tr: 'Telefon', en: 'Phone', ar: 'الهاتف' },
+  'exp.company': { tr: 'Firma', en: 'Company', ar: 'الشركة' },
   'exp.email': { tr: 'E-posta', en: 'E-mail', ar: 'البريد الإلكتروني' },
   'exp.modelSure': { tr: 'Model seçiminden emin misiniz?', en: 'Are you sure about the model selection?', ar: 'هل أنت متأكد من اختيار الطراز؟' },
   'exp.modelSureNote': { tr: 'Model seçimi onayı', en: 'Model selection confirmation', ar: 'تأكيد اختيار الطراز' },

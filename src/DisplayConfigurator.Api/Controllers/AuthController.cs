@@ -143,7 +143,18 @@ public class AuthController : ControllerBase
             });
         }
 
-        return await IssueTokensAsync(user);
+        var yanit = await IssueTokensAsync(user);
+        // Firma bilgileri koda bağlı; oturuma taşınsın diye yanıta ekleniyor.
+        var davet = await _inviteCodeRepository.GetByCodeAsync(kod);
+        if (yanit.Result is OkObjectResult okSonuc && okSonuc.Value is AuthResponseDto govde && davet != null)
+        {
+            govde.CompanyName = davet.CompanyName;
+            govde.CompanyPhone = davet.Phone;
+            govde.CompanyEmail = davet.Email;
+            govde.CompanyNote = davet.Note;
+        }
+
+        return yanit;
     }
 
     /// <summary>

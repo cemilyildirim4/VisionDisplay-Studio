@@ -15,6 +15,18 @@ public class InviteCode
     /// Eski kayıtlarda boş olabilir; boşsa yalnızca kod sorulur.
     /// </summary>
     public string? UserName { get; set; }
+
+    /*
+     * FİRMA BİLGİLERİ.
+     *
+     * Kod üretilirken bir kez giriliyor; böylece bayi her PDF öncesi aynı
+     * bilgileri elle yazmıyor. Giriş yapıldığında oturuma taşınıyor ve
+     * teklif/rapor bunlarla dolduruluyor.
+     */
+    public string? CompanyName { get; set; }
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public string? Note { get; set; }
     public int MaxUses { get; set; } = 1;
     public int UsedCount { get; set; }
     public DateTime? ExpiresAt { get; set; }

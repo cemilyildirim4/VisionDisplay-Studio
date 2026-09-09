@@ -259,6 +259,10 @@ export default function ControlCenter() {
         role: veri.role || R.DEALER,
         email: veri.email || null,
         displayName: veri.displayName || davetAd.trim(),
+        firma: veri.companyName || null,
+        firmaTelefon: veri.companyPhone || null,
+        firmaEposta: veri.companyEmail || null,
+        firmaNot: veri.companyNote || null,
       })
       setDavetKod('')
       setDavetAd('')

@@ -42,6 +42,11 @@ export default function GirisKapisi() {
       role: veri.role || 'Dealer',
       email: veri.email || null,
       displayName: veri.displayName || yedekAd,
+      /* Davet kodunda kayıtlı firma bilgileri; PDF/teklif bunları kullanıyor. */
+      firma: veri.companyName || null,
+      firmaTelefon: veri.companyPhone || null,
+      firmaEposta: veri.companyEmail || null,
+      firmaNot: veri.companyNote || null,
     })
 
   const gonder = async (e) => {

@@ -17,7 +17,8 @@ public class InviteCodeRepository : IInviteCodeRepository
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
-            SELECT id AS Id, code AS Code, user_name AS UserName, max_uses AS MaxUses,
+            SELECT id AS Id, code AS Code, user_name AS UserName, company_name AS CompanyName,
+                   phone AS Phone, email AS Email, note AS Note, max_uses AS MaxUses,
                    used_count AS UsedCount, expires_at AS ExpiresAt, created_at AS CreatedAt
             FROM invite_codes WHERE upper(code) = upper(@Code)";
         return await connection.QueryFirstOrDefaultAsync<InviteCode>(sql, new { Code = code });
@@ -51,7 +52,8 @@ public class InviteCodeRepository : IInviteCodeRepository
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
-            SELECT id AS Id, code AS Code, user_name AS UserName, max_uses AS MaxUses,
+            SELECT id AS Id, code AS Code, user_name AS UserName, company_name AS CompanyName,
+                   phone AS Phone, email AS Email, note AS Note, max_uses AS MaxUses,
                    used_count AS UsedCount, expires_at AS ExpiresAt, created_at AS CreatedAt
             FROM invite_codes ORDER BY created_at DESC";
         return await connection.QueryAsync<InviteCode>(sql);
@@ -61,8 +63,10 @@ public class InviteCodeRepository : IInviteCodeRepository
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = @"
-            INSERT INTO invite_codes (code, user_name, max_uses, used_count, expires_at, created_at)
-            VALUES (@Code, @UserName, @MaxUses, 0, @ExpiresAt, NOW())
+            INSERT INTO invite_codes (code, user_name, company_name, phone, email, note,
+                                      max_uses, used_count, expires_at, created_at)
+            VALUES (@Code, @UserName, @CompanyName, @Phone, @Email, @Note,
+                    @MaxUses, 0, @ExpiresAt, NOW())
             RETURNING id;";
         invite.Id = await connection.ExecuteScalarAsync<int>(sql, invite);
         return invite;
@@ -82,7 +86,8 @@ public class InviteCodeRepository : IInviteCodeRepository
             UPDATE invite_codes
             SET max_uses = GREATEST(@MaxUses, used_count, 1)
             WHERE id = @Id
-            RETURNING id AS Id, code AS Code, user_name AS UserName, max_uses AS MaxUses,
+            RETURNING id AS Id, code AS Code, user_name AS UserName, company_name AS CompanyName,
+                      phone AS Phone, email AS Email, note AS Note, max_uses AS MaxUses,
                       used_count AS UsedCount, expires_at AS ExpiresAt, created_at AS CreatedAt;";
         return await connection.QueryFirstOrDefaultAsync<InviteCode>(sql, new { Id = id, MaxUses = maxUses });
     }

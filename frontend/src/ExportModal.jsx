@@ -11,7 +11,6 @@ import { useSession } from './SessionContext.jsx'
 import {
   compactPhone,
   parseProblemErrors,
-  validateContactForm,
   validateContactValue,
 } from './contactFormValidation.js'
 
@@ -82,12 +81,21 @@ async function resolveMiniPcFields(hasMiniPc) {
 
 export default function ExportModal({ open, onClose, summary }) {
   const { t, lang } = useLang()
-  const { isAuthenticated } = useSession()
-  const [customer, setCustomer] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
-  const [address, setAddress] = useState('')
+  const { isAuthenticated, session } = useSession()
+  /*
+   * FİRMA BİLGİLERİ ARTIK BURADA SORULMUYOR.
+   *
+   * Ad, telefon, e-posta ve not davet kodu üretilirken bir kez giriliyor;
+   * giriş yapıldığında oturuma taşınıyor. Aynı bilgileri her rapor öncesi
+   * tekrar yazdırmak hem yavaştı hem de yazım farkları yüzünden aynı firma
+   * farklı kayıtlar oluşturuyordu. Bu ekranda yalnızca RAPORA ÖZGÜ iki şey
+   * kaldı: model onayı ve aydınlatma metni.
+   */
+  const customer = session?.firma || session?.displayName || ''
+  const phone = session?.firmaTelefon || ''
+  const email = session?.firmaEposta || session?.email || ''
+  const address = ''
+  const message = session?.firmaNot || ''
   // Model seçimi onayı — zorunlu, yalnızca PDF'e not olarak geçer ('yes' | 'no')
   const [modelOnay, setModelOnay] = useState('')
   const [consent, setConsent] = useState(false)
@@ -95,33 +103,6 @@ export default function ExportModal({ open, onClose, summary }) {
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(null)
-  const setContactField = (field, value) => {
-    const setters = {
-      customer: setCustomer,
-      phone: setPhone,
-      email: setEmail,
-      address: setAddress,
-      message: setMessage,
-    }
-    setters[field]?.(value)
-    setErrors((prev) => {
-      if (!prev[field]) return prev
-      const next = { ...prev }
-      delete next[field]
-      return next
-    })
-  }
-
-  const blurContactField = (field, value) => {
-    const msg = validateContactValue(field, value)
-    setErrors((prev) => {
-      const next = { ...prev }
-      if (msg) next[field] = msg
-      else delete next[field]
-      return next
-    })
-  }
-
   // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)
   useGovdeKilidi(open)
 
@@ -238,11 +219,6 @@ export default function ExportModal({ open, onClose, summary }) {
     }
     if (!model?.id) {
       alert(t('exp.error'))
-      return
-    }
-    const fieldErrors = validateContactForm({ customer, phone, email, address, message })
-    if (Object.keys(fieldErrors).length > 0) {
-      setErrors(fieldErrors)
       return
     }
 
@@ -426,50 +402,24 @@ export default function ExportModal({ open, onClose, summary }) {
             handleExport()
           }}
         >
-        <Field label={t('exp.customer')} error={errors.customer}>
-          <input
-            value={customer}
-            onChange={(e) => setContactField('customer', e.target.value)}
-            onBlur={(e) => blurContactField('customer', e.target.value)}
-            autoComplete="name"
-            aria-invalid={errors.customer ? 'true' : 'false'}
-            className={errors.customer ? inputErrorCls : inputCls}
-          />
-        </Field>
-        <Field label={t('exp.phone')} error={errors.phone}>
-          <input
-            type="tel"
-            inputMode="numeric"
-            value={phone}
-            onChange={(e) => setContactField('phone', e.target.value)}
-            onBlur={(e) => blurContactField('phone', e.target.value)}
-            autoComplete="tel"
-            placeholder="05xxxxxxxxx"
-            aria-invalid={errors.phone ? 'true' : 'false'}
-            className={errors.phone ? inputErrorCls : inputCls}
-          />
-        </Field>
-        <Field label={t('exp.email')} error={errors.email}>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setContactField('email', e.target.value)}
-            onBlur={(e) => blurContactField('email', e.target.value)}
-            autoComplete="email"
-            aria-invalid={errors.email ? 'true' : 'false'}
-            className={errors.email ? inputErrorCls : inputCls}
-          />
-        </Field>
-        <Field label={t('exp.address')} error={errors.address}>
-          <input
-            value={address}
-            onChange={(e) => setContactField('address', e.target.value)}
-            onBlur={(e) => blurContactField('address', e.target.value)}
-            autoComplete="street-address"
-            aria-invalid={errors.address ? 'true' : 'false'}
-            className={errors.address ? inputErrorCls : inputCls}
-          />
-        </Field>
+        {/*
+          Firma bilgisi girişi kaldırıldı: değerler davet kodundan geliyor.
+          Kullanıcı kimin adına rapor aldığını görsün diye özet satır olarak
+          gösteriliyor, düzenlenmiyor.
+        */}
+        {(customer || phone || email) && (
+          <div className="mb-5 rounded-xl border border-neutral-200 dark:border-[#2c333f] px-4 py-3">
+            <div className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">
+              {t('exp.company')}
+            </div>
+            <div className="mt-0.5 text-[14.5px] font-semibold text-neutral-900 dark:text-neutral-100">{customer || '—'}</div>
+            {(phone || email) && (
+              <div className="mt-0.5 text-[13px] text-neutral-500 dark:text-neutral-400">
+                {[phone, email].filter(Boolean).join(' · ')}
+              </div>
+            )}
+          </div>
+        )}
         {/*
           MODEL SEÇİMİ ONAYI — zorunlu.
 
@@ -505,17 +455,6 @@ export default function ExportModal({ open, onClose, summary }) {
             ))}
           </div>
         </div>
-        <Field label={t('exp.message')} error={errors.message}>
-          <textarea
-            value={message}
-            onChange={(e) => setContactField('message', e.target.value)}
-            onBlur={(e) => blurContactField('message', e.target.value)}
-            rows={3}
-            aria-invalid={errors.message ? 'true' : 'false'}
-            className={errors.message ? textareaErrorCls : textareaCls}
-          />
-        </Field>
-
         <label className="flex items-start gap-2 text-xs text-neutral-600 dark:text-neutral-400 mb-1.5 cursor-pointer">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 accent-brand" />
           {t('exp.consent')}

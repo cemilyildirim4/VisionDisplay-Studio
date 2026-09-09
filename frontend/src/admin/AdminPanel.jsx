@@ -933,7 +933,7 @@ export default function AdminPanel() {
   const [invitesLoading, setInvitesLoading] = useState(false)
   const [invitesError, setInvitesError] = useState(null)
   /* userName: kodun verildiği kişi. Giriş için kod ile birlikte isteniyor. */
-  const [inviteForm, setInviteForm] = useState({ code: '', userName: '', maxUses: 1, expiresAt: '' })
+  const [inviteForm, setInviteForm] = useState({ code: '', userName: '', companyName: '', phone: '', email: '', note: '', maxUses: 1, expiresAt: '' })
   const [inviteSaving, setInviteSaving] = useState(false)
   /* Satır içi düzenleme: hangi kodun kullanım hakkı değiştiriliyor. */
   const [inviteEditId, setInviteEditId] = useState(null)
@@ -967,13 +967,17 @@ export default function AdminPanel() {
         body: JSON.stringify({
           code: inviteForm.code.trim() || null,
           userName: inviteForm.userName.trim() || null,
+          companyName: inviteForm.companyName.trim() || null,
+          phone: inviteForm.phone.trim() || null,
+          email: inviteForm.email.trim() || null,
+          note: inviteForm.note.trim() || null,
           maxUses: Number(inviteForm.maxUses) || 1,
           expiresAt: inviteForm.expiresAt ? new Date(inviteForm.expiresAt).toISOString() : null,
         }),
       })
       if (res.status === 401) { oturumDustu(); return }
       if (!res.ok) throw new Error('Davet kodu oluşturulamadı.')
-      setInviteForm({ code: '', userName: '', maxUses: 1, expiresAt: '' })
+      setInviteForm({ code: '', userName: '', companyName: '', phone: '', email: '', note: '', maxUses: 1, expiresAt: '' })
       await loadInvites()
     } catch (e2) {
       setInvitesError(e2.message)
@@ -2085,6 +2089,25 @@ export default function AdminPanel() {
               <Field label="Son kullanma (isteğe bağlı)">
                 <input type="date" value={inviteForm.expiresAt} onChange={(e) => setInviteForm((f) => ({ ...f, expiresAt: e.target.value }))} className={inputCls} />
               </Field>
+              {/*
+                FİRMA BİLGİLERİ BURADA, TEK SEFER.
+
+                Aynı bilgiler her PDF öncesi tekrar tekrar soruluyordu.
+                Kodda kayıtlı olunca bayi giriş yaptığı anda oturuma
+                geçiyor ve teklif/rapor bunlarla dolduruluyor.
+              */}
+              <Field label="Firma adı">
+                <input value={inviteForm.companyName} onChange={(e) => setInviteForm((f) => ({ ...f, companyName: e.target.value }))} placeholder="ör. Masaüstü Bilişim" className={inputCls} />
+              </Field>
+              <Field label="Telefon">
+                <input value={inviteForm.phone} onChange={(e) => setInviteForm((f) => ({ ...f, phone: e.target.value }))} placeholder="05xxxxxxxxx" className={inputCls} />
+              </Field>
+              <Field label="E-posta">
+                <input type="email" value={inviteForm.email} onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))} placeholder="firma@ornek.com" className={inputCls} />
+              </Field>
+              <Field label="Kısa not (isteğe bağlı)">
+                <input value={inviteForm.note} onChange={(e) => setInviteForm((f) => ({ ...f, note: e.target.value }))} placeholder="ör. AVM projesi" className={inputCls} />
+              </Field>
               <button type="submit" disabled={inviteSaving} className="rounded-full bg-brand text-white text-sm font-semibold px-4 py-2.5 min-h-[44px] hover:bg-brand-dark disabled:opacity-50 w-full md:w-auto">
                 {inviteSaving ? 'Ekleniyor…' : '+ Kod üret'}
               </button>
@@ -2103,6 +2126,7 @@ export default function AdminPanel() {
                   <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400">
                     <tr>
                       <th className="text-left px-5 py-3 font-medium">Kullanıcı adı</th>
+                      <th className="text-left px-5 py-3 font-medium">Firma</th>
                       <th className="text-left px-5 py-3 font-medium">Kod</th>
                       <th className="text-left px-5 py-3 font-medium">Kullanım</th>
                       <th className="text-left px-5 py-3 font-medium">Son kullanma</th>
@@ -2113,6 +2137,14 @@ export default function AdminPanel() {
                     {invites.map((k) => (
                       <tr key={k.id} className="border-t border-neutral-100 dark:border-[#242b36]">
                         <td className="px-5 py-3">{k.userName || '—'}</td>
+                        <td className="px-5 py-3">
+                          {k.companyName || '—'}
+                          {(k.phone || k.email) && (
+                            <span className="block text-[12px] text-neutral-500 dark:text-neutral-400">
+                              {[k.phone, k.email].filter(Boolean).join(' · ')}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-5 py-3 font-mono tracking-wider">{k.code}</td>
                         <td className="px-5 py-3 tabular-nums">
                           {inviteEditId === k.id ? (
@@ -2153,7 +2185,7 @@ export default function AdminPanel() {
                       </tr>
                     ))}
                     {!invitesLoading && invites.length === 0 && (
-                      <tr><td colSpan={5} className="px-5 py-6 text-center text-neutral-500 dark:text-neutral-400">Henüz kod yok.</td></tr>
+                      <tr><td colSpan={6} className="px-5 py-6 text-center text-neutral-500 dark:text-neutral-400">Henüz kod yok.</td></tr>
                     )}
                   </tbody>
                 </table>
