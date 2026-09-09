@@ -173,6 +173,18 @@ export default function ExportModal({ open, onClose, summary }) {
   const mesajNotlu = [onayNotu, message.trim()].filter(Boolean).join('\n')
   // PDF/Excel: KVKK onayı + model sorusu + oturum, üçü birden
   const hazir = consent && !!modelOnay && isAuthenticated
+  /*
+   * NEDEN KAPALI OLDUĞUNU SÖYLE.
+   *
+   * Düğme koşullar tamamlanmadan kilitli; ama kilitli düğmeye basınca
+   * hiçbir şey olmuyordu ve kullanıcı "çalışmıyor" diye düşünüyordu.
+   * Eksik olan ne varsa artık düğmenin hemen altında yazıyor.
+   */
+  const eksikler = [
+    !modelOnay && t('exp.missingModel'),
+    !consent && t('exp.missingConsent'),
+    !isAuthenticated && t('exp.missingLogin'),
+  ].filter(Boolean)
 
   const handleExcelExport = () => {
     const rows = [
@@ -464,6 +476,12 @@ export default function ExportModal({ open, onClose, summary }) {
         </button>
 
         <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
+
+        {!hazir && eksikler.length > 0 && (
+          <p className="mb-4 m-0 text-[13px] leading-relaxed text-amber-600 dark:text-amber-400">
+            {t('exp.missingIntro')} {eksikler.join(' · ')}
+          </p>
+        )}
 
         {formError && (
           <p className="text-[13px] text-red-600 dark:text-red-400 mb-4 m-0 leading-relaxed" role="alert">
