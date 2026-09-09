@@ -27,6 +27,10 @@ export const DEFAULT_LANG = 'tr'
 const dict = {
   // ---------- Genel / üst bar ----------
   'app.title': { tr: 'Ekran Konfigüratörü', en: 'Display Configurator', ar: 'مُهيّئ الشاشات' },
+  'gate.subtitle': { tr: 'Devam etmek için giriş yapın', en: 'Sign in to continue', ar: 'سجّل الدخول للمتابعة' },
+  'gate.tabInvite': { tr: 'Davet kodu', en: 'Invite code', ar: 'رمز الدعوة' },
+  'gate.tabPassword': { tr: 'E-posta ile', en: 'With e-mail', ar: 'بالبريد الإلكتروني' },
+  'gate.help': { tr: 'Erişim kodunuz yoksa Masaüstü Bilişim ile iletişime geçin.', en: 'If you do not have an access code, contact Masaüstü Bilişim.', ar: 'إذا لم يكن لديك رمز وصول، تواصل مع Masaüstü Bilişim.' },
   'app.tagline': { tr: 'LED Ekran ve Video Duvarı Çözümleri', en: 'LED Display & Video Wall Solutions', ar: 'حلول شاشات LED وجدران الفيديو' },
   'brand.company': { tr: 'Masaüstü Bilişim Teknolojileri', en: 'Masaüstü Bilişim Teknolojileri', ar: 'ماساوستو لتقنيات المعلومات' },
   'brand.companyShort': { tr: 'Masaüstü Bilişim', en: 'Masaüstü Bilişim', ar: 'ماساوستو' },

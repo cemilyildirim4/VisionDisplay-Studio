@@ -1,6 +1,8 @@
 import { useEffect, useState, Suspense } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import App from './App.jsx'
+import GirisKapisi from './GirisKapisi.jsx'
+import { useSession } from './SessionContext.jsx'
 import { guvenliLazy } from './guvenliLazy.js'
 import { LanguageProvider } from './LanguageContext.jsx'
 import { SessionProvider } from './SessionContext.jsx'
@@ -26,6 +28,20 @@ function routeFromHash(hash) {
   if (hash === '#yonetim' || hash.startsWith('#yonetim?')) return 'admin'
   if (hash === '#hesap' || hash.startsWith('#hesap?')) return 'account'
   return 'app'
+}
+
+/**
+ * Konfigüratör oturum ister.
+ *
+ * Site artık herkese açık değil: giriş yapmamış ziyaretçi konfigüratörü
+ * görmüyor, önce davet kodu ya da e-posta/parola ile kimliğini söylüyor.
+ * Yönetim (#yonetim) ve hesap (#hesap) sayfaları bunun dışında; onların
+ * kendi giriş ekranları var.
+ */
+function KorumaliUygulama({ theme, onToggleTheme }) {
+  const { isAuthenticated } = useSession()
+  if (!isAuthenticated) return <GirisKapisi />
+  return <App theme={theme} onToggleTheme={onToggleTheme} />
 }
 
 export default function Root() {
@@ -58,7 +74,7 @@ export default function Root() {
               <ControlCenter />
             </Suspense>
           ) : (
-            <App theme={theme} onToggleTheme={temaDegistir} />
+            <KorumaliUygulama theme={theme} onToggleTheme={temaDegistir} />
           )}
         </SessionProvider>
       </LanguageProvider>
