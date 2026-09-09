@@ -68,6 +68,25 @@ public class InviteCodeRepository : IInviteCodeRepository
         return invite;
     }
 
+    /// <summary>
+    /// Kullanım hakkını değiştirir.
+    ///
+    /// Yeni değer, halihazırda YAPILMIŞ kullanımın altına indirilemiyor:
+    /// "2/2" olan bir kodu 1 yapmak geçmişi tutarsız hâle getirirdi. Bu
+    /// yüzden alt sınır used_count (ve en az 1).
+    /// </summary>
+    public async Task<InviteCode?> UpdateMaxUsesAsync(int id, int maxUses)
+    {
+        using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = @"
+            UPDATE invite_codes
+            SET max_uses = GREATEST(@MaxUses, used_count, 1)
+            WHERE id = @Id
+            RETURNING id AS Id, code AS Code, user_name AS UserName, max_uses AS MaxUses,
+                      used_count AS UsedCount, expires_at AS ExpiresAt, created_at AS CreatedAt;";
+        return await connection.QueryFirstOrDefaultAsync<InviteCode>(sql, new { Id = id, MaxUses = maxUses });
+    }
+
     public async Task<bool> DeleteAsync(int id)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();

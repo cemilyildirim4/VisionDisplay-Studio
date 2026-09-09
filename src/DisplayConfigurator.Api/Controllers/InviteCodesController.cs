@@ -52,6 +52,19 @@ public class InviteCodesController : ControllerBase
         return Created(string.Empty, created);
     }
 
+    public class UpdateInviteCodeRequest
+    {
+        public int MaxUses { get; set; } = 1;
+    }
+
+    /// <summary>Kullanım hakkını güncelle. Yapılmış kullanımın altına inilemez.</summary>
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<InviteCode>> Update(int id, [FromBody] UpdateInviteCodeRequest request)
+    {
+        var updated = await _inviteCodeRepository.UpdateMaxUsesAsync(id, request.MaxUses);
+        return updated == null ? NotFound() : Ok(updated);
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {

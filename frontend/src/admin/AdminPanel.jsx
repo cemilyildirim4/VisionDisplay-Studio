@@ -935,6 +935,9 @@ export default function AdminPanel() {
   /* userName: kodun verildiği kişi. Giriş için kod ile birlikte isteniyor. */
   const [inviteForm, setInviteForm] = useState({ code: '', userName: '', maxUses: 1, expiresAt: '' })
   const [inviteSaving, setInviteSaving] = useState(false)
+  /* Satır içi düzenleme: hangi kodun kullanım hakkı değiştiriliyor. */
+  const [inviteEditId, setInviteEditId] = useState(null)
+  const [inviteEditUses, setInviteEditUses] = useState(1)
 
   const loadInvites = useCallback(async () => {
     setInvitesLoading(true)
@@ -976,6 +979,25 @@ export default function AdminPanel() {
       setInvitesError(e2.message)
     } finally {
       setInviteSaving(false)
+    }
+  }
+
+  /** Kullanım hakkını kaydeder; sunucu yapılmış kullanımın altına inmiyor. */
+  const saveInviteUses = async (id) => {
+    setInvitesError(null)
+    try {
+      const res = await apiFetch(API_URL + "/api/invite-codes/" + id, {
+        method: 'PUT',
+        auth: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxUses: Number(inviteEditUses) || 1 }),
+      })
+      if (res.status === 401) { oturumDustu(); return }
+      if (!res.ok) throw new Error('Kullanım hakkı güncellenemedi.')
+      setInviteEditId(null)
+      await loadInvites()
+    } catch (e) {
+      setInvitesError(e.message)
     }
   }
 
@@ -2092,10 +2114,41 @@ export default function AdminPanel() {
                       <tr key={k.id} className="border-t border-neutral-100 dark:border-[#242b36]">
                         <td className="px-5 py-3">{k.userName || '—'}</td>
                         <td className="px-5 py-3 font-mono tracking-wider">{k.code}</td>
-                        <td className="px-5 py-3 tabular-nums">{(k.usedCount ?? 0) + " / " + k.maxUses}</td>
+                        <td className="px-5 py-3 tabular-nums">
+                          {inviteEditId === k.id ? (
+                            <span className="inline-flex items-center gap-2">
+                              <span className="text-neutral-500 dark:text-neutral-400">{(k.usedCount ?? 0) + " /"}</span>
+                              <input
+                                type="number"
+                                min={k.usedCount ?? 1}
+                                value={inviteEditUses}
+                                onChange={(e) => setInviteEditUses(e.target.value)}
+                                className="w-20 border border-neutral-300 dark:border-[#39414f] rounded-lg px-2 py-1.5 bg-transparent text-sm"
+                              />
+                            </span>
+                          ) : (
+                            (k.usedCount ?? 0) + " / " + k.maxUses
+                          )}
+                        </td>
                         <td className="px-5 py-3">{k.expiresAt ? new Date(k.expiresAt).toLocaleDateString('tr-TR') : '—'}</td>
-                        <td className="px-5 py-3 text-right">
-                          <button type="button" onClick={() => deleteInvite(k.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Sil</button>
+                        <td className="px-5 py-3 text-right whitespace-nowrap">
+                          {inviteEditId === k.id ? (
+                            <>
+                              <button type="button" onClick={() => saveInviteUses(k.id)} className="text-sm text-brand dark:text-brand-light hover:underline mr-4">Kaydet</button>
+                              <button type="button" onClick={() => setInviteEditId(null)} className="text-sm text-neutral-500 dark:text-neutral-400 hover:underline">Vazgeç</button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => { setInviteEditId(k.id); setInviteEditUses(k.maxUses) }}
+                                className="text-sm text-brand dark:text-brand-light hover:underline mr-4"
+                              >
+                                Düzenle
+                              </button>
+                              <button type="button" onClick={() => deleteInvite(k.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Sil</button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}
