@@ -112,6 +112,10 @@ export default function ControlCenter() {
    * çelişiyordu. Bu ekranda yalnızca GİRİŞ var; hesabı yönetim paneli
    * açıyor. Sunucudaki /api/auth/register ucuna dokunulmadı.
    */
+  /* Davet kodu alanı — beta erişimi buradan da açılabiliyor. */
+  const [davetKod, setDavetKod] = useState('')
+  const [davetHata, setDavetHata] = useState(null)
+  const [davetBusy, setDavetBusy] = useState(false)
   const [bugNote, setBugNote] = useState('')
   const [bugSent, setBugSent] = useState(false)
   const [bugSending, setBugSending] = useState(false)
@@ -174,8 +178,14 @@ export default function ControlCenter() {
     if (canDealerTools) list.push({ id: 'quotes', label: t('cc.tab.quotes') })
     if (canTesterTools) list.push({ id: 'tester', label: t('cc.tab.tester') })
     list.push({ id: 'session', label: t('cc.tab.session') })
+    /*
+     * DAVET KODU sekmesi yalnızca oturum yokken görünüyor: kod, giriş
+     * yapmamış kullanıcıya 24 saatlik misafir erişimi veriyor. Oturum
+     * açıkken göstermek kafa karıştırıcı olurdu.
+     */
+    if (!isAuthenticated) list.push({ id: 'invite', label: t('cc.tab.invite') })
     return list
-  }, [canDealerTools, canTesterTools, t])
+  }, [canDealerTools, canTesterTools, isAuthenticated, t])
 
   useEffect(() => {
     if (tab === 'tester' && !canTesterTools) goTab('session')
@@ -215,6 +225,45 @@ export default function ControlCenter() {
       setLoginError(t('cc.login.network'))
     } finally {
       setLoginBusy(false)
+    }
+  }
+
+  /**
+   * Davet kodunu doğrular ve misafir oturumunu başlatır.
+   *
+   * Aynı uç, pop-up kapısıyla ortak (DavetKapisi.jsx): POST /api/auth/guest.
+   * Geçerli kod 24 saatlik "Guest" jetonu döndürüyor.
+   */
+  const davetGonder = async (e) => {
+    e.preventDefault()
+    const temiz = davetKod.trim()
+    if (!temiz || davetBusy) return
+    setDavetBusy(true)
+    setDavetHata(null)
+    try {
+      const res = await apiFetch(`${API_URL}/api/auth/guest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: temiz }),
+      })
+      const veri = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setDavetHata(veri.message || t('cc.invite.invalid'))
+        return
+      }
+      setSessionData({
+        accessToken: veri.accessToken,
+        refreshToken: veri.refreshToken,
+        role: veri.role || 'Guest',
+        email: veri.email || null,
+        displayName: veri.displayName || 'Misafir',
+      })
+      setDavetKod('')
+      goTab('session')
+    } catch {
+      setDavetHata(t('cc.invite.network'))
+    } finally {
+      setDavetBusy(false)
     }
   }
 
@@ -433,6 +482,32 @@ export default function ControlCenter() {
               </ul>
             </Panel>
           </div>
+        )}
+
+        {tab === 'invite' && !isAuthenticated && (
+          <Panel title={t('cc.invite.title')} hint={t('cc.invite.hint')}>
+            <form onSubmit={davetGonder} className="flex flex-col gap-3 w-full max-w-sm">
+              <label className="block">
+                <span className="text-[12px] text-neutral-500">{t('cc.invite.label')}</span>
+                <input
+                  type="text"
+                  required
+                  value={davetKod}
+                  onChange={(e) => setDavetKod(e.target.value.toUpperCase())}
+                  placeholder="ÖRN. MASAUSTU25"
+                  className="w-full max-w-full mt-1 border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 min-h-[44px] py-2 text-sm font-mono tracking-widest bg-transparent focus:outline-none focus:border-brand"
+                />
+              </label>
+              {davetHata && <p className="text-[13px] text-red-600 m-0">{davetHata}</p>}
+              <button
+                type="submit"
+                disabled={davetBusy || !davetKod.trim()}
+                className="rounded-full bg-brand text-white px-4 min-h-[44px] py-2.5 text-sm font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors w-full max-w-full"
+              >
+                {davetBusy ? t('cc.invite.busy') : t('cc.invite.submit')}
+              </button>
+            </form>
+          </Panel>
         )}
 
         {tab === 'session' && (
