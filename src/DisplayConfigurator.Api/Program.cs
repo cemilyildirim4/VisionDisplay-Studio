@@ -79,6 +79,7 @@ builder.Services.AddScoped<IPdfReportService, PdfReportService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IInviteCodeRepository, InviteCodeRepository>();
+builder.Services.AddScoped<IExportLogRepository, ExportLogRepository>();
 builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();

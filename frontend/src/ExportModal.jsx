@@ -186,6 +186,26 @@ export default function ExportModal({ open, onClose, summary }) {
     !isAuthenticated && t('exp.missingLogin'),
   ].filter(Boolean)
 
+  /**
+   * İndirme kaydını sunucuya bildirir.
+   *
+   * CSV dosyası tamamen tarayıcıda üretiliyor; bildirilmezse panelde
+   * "kim ne indirdi" hiç görünmüyor. Kayıt başarısız olsa bile indirme
+   * etkilenmiyor — bu yüzden hata yutuluyor.
+   */
+  const indirmeyiBildir = (kind) => {
+    apiFetch(`${API_URL}/api/export-logs`, {
+      method: 'POST',
+      auth: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind,
+        modelCode: summary.modelCode || null,
+        companyName: customer || null,
+      }),
+    }).catch(() => {})
+  }
+
   const handleExcelExport = () => {
     const rows = [
       [t('sp.title'), ''],
@@ -215,6 +235,7 @@ export default function ExportModal({ open, onClose, summary }) {
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
+    indirmeyiBildir('csv')
   }
 
   const handleExport = async () => {
@@ -297,6 +318,7 @@ export default function ExportModal({ open, onClose, summary }) {
       document.body.appendChild(a)
       a.click()
       a.remove()
+      indirmeyiBildir('pdf')
       URL.revokeObjectURL(url)
 
       /*

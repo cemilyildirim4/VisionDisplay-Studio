@@ -1284,6 +1284,8 @@ export default function AdminPanel() {
                     { label: 'Beklemede', value: dashboard.pendingQuotes, go: 'quotes' },
                     { label: 'Kayıtlı Proje', value: dashboard.totalConfigurations, go: 'configs' },
                     { label: 'Cevaplanamayan Soru', value: dashboard.unansweredChatLogs, go: 'chatlogs' },
+                    { label: 'CSV İndirme', value: dashboard.csvExports ?? 0, go: 'dashboard' },
+                    { label: 'PDF İndirme', value: dashboard.pdfExports ?? 0, go: 'dashboard' },
                   ].map((s) => (
                     <button
                       key={s.label}
@@ -1313,6 +1315,44 @@ export default function AdminPanel() {
                     <p className="text-[13px] text-neutral-600 dark:text-neutral-300 m-0">
                       {loading ? '…' : `${cabinets.length} model · ${seriesList.length} seri`}
                     </p>
+                  </div>
+                </div>
+
+                {/*
+                  SON İNDİRMELER — CSV dosyası tarayıcıda üretildiği için
+                  başka hiçbir yerde izi yok; panelde görünsün diye her
+                  indirme sunucuya kaydediliyor.
+                */}
+                <div className="bg-white dark:bg-[#161a21] border border-neutral-200 dark:border-[#2c333f] rounded-xl overflow-hidden mb-6">
+                  <div className="px-5 py-4 border-b border-neutral-100 dark:border-[#242b36]">
+                    <h3 className="text-sm font-bold m-0">Son indirmeler</h3>
+                  </div>
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full text-sm">
+                      <thead className="bg-neutral-50 dark:bg-[#1b2029] text-neutral-500 dark:text-neutral-400">
+                        <tr>
+                          <th className="text-left px-4 py-2.5 font-medium">Biçim</th>
+                          <th className="text-left px-4 py-2.5 font-medium">Kullanıcı</th>
+                          <th className="text-left px-4 py-2.5 font-medium">Firma</th>
+                          <th className="text-left px-4 py-2.5 font-medium">Model</th>
+                          <th className="text-left px-4 py-2.5 font-medium">Tarih</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(dashboard.recentExports || []).map((x) => (
+                          <tr key={x.id} className="border-t border-neutral-100 dark:border-[#242b36]">
+                            <td className="px-4 py-2.5 font-semibold uppercase">{x.kind}</td>
+                            <td className="px-4 py-2.5">{x.userName || '—'}</td>
+                            <td className="px-4 py-2.5">{x.companyName || '—'}</td>
+                            <td className="px-4 py-2.5">{x.modelCode || '—'}</td>
+                            <td className="px-4 py-2.5 text-neutral-500 dark:text-neutral-400">{dt(x.createdAt)}</td>
+                          </tr>
+                        ))}
+                        {(dashboard.recentExports || []).length === 0 && (
+                          <tr><td colSpan={5} className="px-4 py-6 text-center text-neutral-400 dark:text-neutral-500">Henüz indirme yok.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 

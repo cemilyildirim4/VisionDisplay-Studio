@@ -22,6 +22,23 @@ public class AnalyticsRepository : IAnalyticsRepository
         var totalConfigurations = await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM configurations");
         var unansweredChatLogs = await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM chat_logs WHERE answered = false");
 
+        /*
+         * İNDİRMELER.
+         *
+         * CSV dosyası tarayıcıda üretiliyor; sunucudaki tek iz export_logs.
+         * Sayılar ve son kayıtlar panele buradan gidiyor.
+         */
+        var csvExports = await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM export_logs WHERE kind = 'csv'");
+        var pdfExports = await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM export_logs WHERE kind = 'pdf'");
+
+        const string recentExportsSql = @"
+            SELECT id AS Id, user_name AS UserName, company_name AS CompanyName,
+                   model_code AS ModelCode, kind AS Kind, created_at AS CreatedAt
+            FROM export_logs
+            ORDER BY created_at DESC
+            LIMIT 10";
+        var recentExports = await connection.QueryAsync<ExportLogDto>(recentExportsSql);
+
         const string topModelsSql = @"
             SELECT cab.id AS CabinId, cab.model_code AS ModelCode, COUNT(cfg.id) AS ConfigurationCount
             FROM configurations cfg
@@ -49,6 +66,9 @@ public class AnalyticsRepository : IAnalyticsRepository
             PendingQuotes = pendingQuotes,
             TotalConfigurations = totalConfigurations,
             UnansweredChatLogs = unansweredChatLogs,
+            CsvExports = csvExports,
+            PdfExports = pdfExports,
+            RecentExports = recentExports,
             TopModels = topModels,
             FaqSuggestions = faqSuggestions,
         };
