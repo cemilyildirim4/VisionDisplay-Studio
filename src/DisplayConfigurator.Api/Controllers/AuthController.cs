@@ -103,29 +103,66 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// BETA: kayıt zorunluluğu olmadan geçici erişim. Davet kodu geçerliyse
-    /// "Guest" rolünde, kısa ömürlü (varsayılan 24 saat) bir jeton döner.
+    /// Davet kodu ile BAYİ girişi.
+    ///
+    /// Kullanıcı adı ve kod birlikte doğrulanıyor; geçerliyse o kullanıcı
+    /// adına ait bir bayi hesabı açılıyor (varsa yeniden kullanılıyor) ve
+    /// normal giriş jetonları veriliyor.
+    ///
+    /// NEDEN GERÇEK HESAP: eskiden kimliksiz bir "Guest" jetonu dönüyordu;
+    /// kullanıcı numarası olmadığı için "Tekliflerim" 401 veriyor,
+    /// kaydedilen teklifler de kimseye bağlanmıyordu. Gerçek kayıt açılınca
+    /// bayi kendi tekliflerini ve yapılandırmalarını görüyor, yönetici de
+    /// kullanıcı listesinde kimin girdiğini görebiliyor.
+    ///
+    /// Bu hesaba PAROLA İLE GİRİLEMEZ: parola alanına rastgele, kimsenin
+    /// bilmediği bir değer yazılıyor. Tek giriş yolu davet kodu.
     /// </summary>
     [HttpPost("guest")]
     public async Task<ActionResult<AuthResponseDto>> RedeemInvite([FromBody] RedeemInviteDto dto)
     {
         var ad = dto.UserName?.Trim();
-        var ok = await _inviteCodeRepository.TryRedeemAsync(dto.Code.Trim(), ad);
+        var kod = dto.Code.Trim();
+        var ok = await _inviteCodeRepository.TryRedeemAsync(kod, ad);
         if (!ok)
             return BadRequest(new { message = "Kullanıcı adı veya davet kodu geçersiz, süresi dolmuş ya da kullanım hakkı tükenmiş." });
 
-        // Görünen ad, girilen kullanıcı adı; boşsa eski davranış ("Misafir").
-        var gorunenAd = string.IsNullOrWhiteSpace(ad) ? "Misafir" : ad;
-        var guestUser = new User { Id = 0, Email = $"guest-{Guid.NewGuid():N}@beta.local", Role = "Guest", DisplayName = gorunenAd };
-        var (token, expiresAt) = _jwtTokenService.GenerateAccessToken(guestUser);
+        var gorunenAd = string.IsNullOrWhiteSpace(ad) ? kod : ad!;
+        var eposta = DavetEpostasi(gorunenAd);
 
-        return Ok(new AuthResponseDto
+        var user = await _userRepository.GetByEmailAsync(eposta);
+        if (user == null)
         {
-            AccessToken = token,
-            AccessTokenExpiresAt = expiresAt,
-            Role = "Guest",
-            DisplayName = gorunenAd,
-        });
+            user = await _userRepository.CreateAsync(new User
+            {
+                Email = eposta,
+                // Parola ile giriş kapalı: rastgele değer, hiçbir yerde saklanmıyor.
+                PasswordHash = PasswordHasher.Hash(Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N")),
+                DisplayName = gorunenAd,
+                Role = "Dealer",
+            });
+        }
+
+        return await IssueTokensAsync(user);
+    }
+
+    /// <summary>
+    /// Kullanıcı adından davet hesabı e-postası üretir: "ahmet yılmaz" →
+    /// "ahmet-yilmaz@davet.local". Aynı ad hep aynı hesaba düşsün diye
+    /// sadeleştirme deterministik.
+    /// </summary>
+    private static string DavetEpostasi(string ad)
+    {
+        var kucuk = ad.ToLowerInvariant()
+            .Replace('ı', 'i').Replace('ğ', 'g').Replace('ü', 'u')
+            .Replace('ş', 's').Replace('ö', 'o').Replace('ç', 'c');
+
+        var yazi = new string(kucuk.Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray())
+            .Trim('-');
+        while (yazi.Contains("--")) yazi = yazi.Replace("--", "-");
+        if (string.IsNullOrWhiteSpace(yazi)) yazi = "davet";
+
+        return $"{yazi}@davet.local";
     }
 
     private async Task<ActionResult<AuthResponseDto>> IssueTokensAsync(User user)

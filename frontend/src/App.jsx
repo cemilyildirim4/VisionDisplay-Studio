@@ -2410,11 +2410,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         <DavetKapisi
           acik={davetAcik}
           onKapat={() => setDavetAcik(false)}
+          /* Davet kodu bayi hesabı açıyor: sunucudan gelen rol ve ad kullanılıyor. */
           onJeton={(veri) =>
             setSessionData({
               accessToken: veri.accessToken,
-              role: veri.role || 'Guest',
-              displayName: 'Misafir',
+              refreshToken: veri.refreshToken,
+              role: veri.role || 'Dealer',
+              email: veri.email || null,
+              displayName: veri.displayName || 'Bayi',
             })
           }
         />

@@ -62,7 +62,7 @@ export default function DavetKapisi({ acik, onKapat, onJeton }) {
           Davet kodu
         </h2>
         <p className="mt-0 mb-4 text-[14px] leading-snug text-neutral-500 dark:text-neutral-400">
-          Uygulama şu an beta aşamasında. Devam etmek için kullanıcı adınızı ve size verilen kodu girin.
+          Devam etmek için kullanıcı adınızı ve size verilen davet kodunu girin; bayi hesabınızla oturum açılır.
         </p>
         <form onSubmit={gonder} className="flex flex-col gap-3">
           {/* Kullanıcı adı kod ile BİRLİKTE doğrulanıyor. */}

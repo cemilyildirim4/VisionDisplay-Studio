@@ -252,12 +252,13 @@ export default function ControlCenter() {
         setDavetHata(veri.message || t('cc.invite.invalid'))
         return
       }
+      /* Davet kodu BAYİ oturumu açıyor; sunucu gerçek bir hesap veriyor. */
       setSessionData({
         accessToken: veri.accessToken,
         refreshToken: veri.refreshToken,
-        role: veri.role || 'Guest',
+        role: veri.role || R.DEALER,
         email: veri.email || null,
-        displayName: veri.displayName || 'Misafir',
+        displayName: veri.displayName || davetAd.trim(),
       })
       setDavetKod('')
       setDavetAd('')
