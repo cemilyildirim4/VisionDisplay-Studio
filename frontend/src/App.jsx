@@ -1651,14 +1651,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * "Ortala" düğmesi ekranı doğrudan duvara hizalıyor.
    */
   /*
-   * TAŞIMA VE DÖNDÜRME YALNIZCA KULLANICININ KENDİ FOTOĞRAFINDA.
+   * TAŞIMA HER FOTOĞRAFLI MEKÂNDA AÇIK.
    *
-   * AVM koridoru ve şehir meydanında duvar dokuz dilimle esniyor ve tasarım
-   * duvarın ortasına kilitli; oraya kayma ya da dönme eklemek yerleşimi
-   * bozuyordu (ekran duvarın dışına kayıyordu). O iki sahnede yerleşim
-   * sabit kalıyor.
+   * Önce yalnızca kullanıcının kendi fotoğrafında açıktı; AVM koridoru ve
+   * şehir meydanında tasarım duvarın ortasına kilitliydi. Kiosk gövdesi
+   * eklendiğinde ekran yerde duruyor ve yerini düzeltmek gerekiyor —
+   * kilitli olduğu için hiç kıpırdamıyordu.
+   *
+   * Otomatik yerleşim değişmedi: tasarım yine duvarın ortasına oturuyor.
+   * Kullanıcı sürüklediği anda (mekanTasindi) kendi kayması bunun üstüne
+   * biniyor; "Ortala" düğmesi her zaman duvara geri getiriyor.
    */
-  const tasimaAcik = surukleAktif && !fotoSahne?.duvarKutu
+  const tasimaAcik = surukleAktif
 
   const duvaraHizali = surukleAktif && !kioskVar
   /*

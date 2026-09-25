@@ -1353,6 +1353,37 @@ export default function WallPreview({
                 <SegH w={gorunenKutu.w} label={fmtU(screenWm)} yazi={olcuYazi} />
               </div>
 
+              {/*
+                DUVARDA KALAN BOŞLUK.
+
+                Tasarım duvardan küçükse kenarlarda beyaz pay kalıyor ama
+                ölçüsü hiçbir yerde yazmıyordu; montajda asıl sorulan sayı o
+                ("sağa soluma ne kadar boşluk kalıyor?"). Pay, etiketin
+                sığacağı kadar genişse yazılıyor.
+              */}
+              {!kose && marginXpx > 34 && (
+                <>
+                  <div className="absolute" style={{ left: marginXpx / 2, top: -olcuYazi * 2.2 - sahnePayPx, transform: 'translateX(-50%)' }}>
+                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginXpx / pxPerM)}</span>
+                  </div>
+                  <div className="absolute" style={{ left: wallW - marginXpx / 2, top: -olcuYazi * 2.2 - sahnePayPx, transform: 'translateX(-50%)' }}>
+                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginXpx / pxPerM)}</span>
+                  </div>
+                </>
+              )}
+
+              {/* Dikey boşluklar: üst ve alt pay (sağ şeritte, gri) */}
+              {!kose && marginYpx > 34 && (
+                <>
+                  <div className="absolute" style={{ left: wallW + olcuYazi * 0.8 + sahnePayPx, top: marginYpx / 2, transform: 'translateY(-50%)' }}>
+                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginYpx / pxPerM)}</span>
+                  </div>
+                  <div className="absolute" style={{ left: wallW + olcuYazi * 0.8 + sahnePayPx, top: wallH - marginYpx / 2, transform: 'translateY(-50%)' }}>
+                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginYpx / pxPerM)}</span>
+                  </div>
+                </>
+              )}
+
               {/* Sağ ölçü etiketleri */}
               <div
                 style={{

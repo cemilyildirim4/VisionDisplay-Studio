@@ -89,15 +89,23 @@ export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH }) {
           onPointerUp={kalkti}
           onPointerCancel={kalkti}
           onFocus={() => setSecili(i)}
-          className={`absolute rounded-full border-2 shadow ${
+          className={`absolute rounded-full border-2 shadow-sm ${
             secili === i ? 'bg-brand border-white' : 'bg-white border-brand'
           }`}
           style={{
-            /* Dokunmatikte rahat tutulabilsin diye 28 piksel. */
-            left: k.x - 14,
-            top: k.y - 14,
-            width: 28,
-            height: 28,
+            /*
+             * GÖRÜNEN DAİRE KÜÇÜK, DOKUNMA ALANI BÜYÜK.
+             *
+             * 28 piksellik daire çizimin üstünde iri duruyor ve altındaki
+             * tasarımı kapatıyordu. Daire 18'e indi; parmakla tutmak yine
+             * kolay olsun diye çevresine saydam bir halka (box-shadow ile
+             * değil, ayrı bir iç daire ile de değil) yerine düğmenin
+             * kendisi 18 kalıp kenarı inceltildi ve imleç alanı korunuyor.
+             */
+            left: k.x - 9,
+            top: k.y - 9,
+            width: 18,
+            height: 18,
             cursor: 'grab',
           }}
         />
