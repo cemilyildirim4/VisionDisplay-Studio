@@ -53,6 +53,14 @@ export default function AdaySecici({ adaylar, tuvalW, tuvalH, onSec }) {
               tıklayarak yapılıyor.
             */
             <g key={i} className="aday-kare">
+              {/*
+                NEDEN BURASI.
+
+                Nesne aklı bir gerekçe ürettiyse (koltuğun karşısı, araç
+                yüksekliğinin üstü…) numaranın üstüne gelince yazıyor.
+                Kareyi kalabalıklaştırmadan kararı açıklıyor.
+              */}
+              <title>{a.sebep ? `${i + 1}. ${a.sebep}` : `${i + 1}. ${a.etiket || 'Uygun yüzey'}`}</title>
               <polygon
                 points={nokta}
                 style={{ pointerEvents: 'none' }}

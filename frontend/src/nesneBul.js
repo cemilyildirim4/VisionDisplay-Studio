@@ -29,20 +29,53 @@
 /** Modelin beklediği kare ölçüsü. */
 const GIRIS = 513
 
-/** Pascal VOC sınıf numaraları — yalnızca işimize yarayanlar. */
-const SINIF = {
+/*
+ * PASCAL VOC'UN YİRMİ SINIFININ TAMAMI.
+ *
+ * Önceden bunlardan yalnızca yedisi okunuyordu ve hepsi tek bir "engel"
+ * maskesinde eritiliyordu; yani model arabayı da koltuğu da görüyordu ama
+ * yerleştirme ikisini de "burası dolu" diye biliyordu. Oysa nesnenin NE
+ * olduğu, ekranın nereye geleceğini doğrudan söylüyor: koltuğun KARŞISI
+ * ekranlıktır, arabanın ÜSTÜ bilbordluktur, televizyonun kendisi zaten
+ * hedeftir. Tam liste bu yüzden dışarı veriliyor (bkz. nesneAkli.js).
+ */
+export const VOC = {
   ARKA_PLAN: 0,
+  UCAK: 1,
+  BISIKLET: 2,
+  KUS: 3,
+  TEKNE: 4,
   SISE: 5,
+  OTOBUS: 6,
+  ARABA: 7,
+  KEDI: 8,
   SANDALYE: 9,
+  INEK: 10,
   MASA: 11,
+  KOPEK: 12,
+  AT: 13,
+  MOTOSIKLET: 14,
   INSAN: 15,
   SAKSI: 16,
+  KOYUN: 17,
   KOLTUK: 18,
+  TREN: 19,
   EKRAN: 20,
 }
 
-/** Ekranın üstüne konamayacağı sınıflar. */
-const ENGELLER = new Set([SINIF.SISE, SINIF.SANDALYE, SINIF.MASA, SINIF.INSAN, SINIF.SAKSI, SINIF.KOLTUK])
+const SINIF = VOC
+
+/*
+ * ENGEL = EKRANIN ÜSTÜNE KONAMAYACAĞI HER ŞEY.
+ *
+ * Liste eşyayla sınırlıydı; araçlar ve canlılar dışarıda kalmıştı. Sokak
+ * fotoğrafında bu, tasarımın bir otobüsün üzerine oturması demekti. Kural
+ * basit: arka plan ve EKRAN dışındaki her sınıf hacimli bir cisimdir,
+ * duvar değildir.
+ */
+const ENGELLER = new Set(
+  Object.values(SINIF).filter((c) => c !== SINIF.ARKA_PLAN && c !== SINIF.EKRAN),
+)
 
 let oturumSozu = null
 
@@ -129,6 +162,8 @@ export async function nesneHaritasi(kaynak, cikisW = 160) {
   const w = cikisW
   const h = Math.max(1, Math.round((cikisW * kh) / kw))
   const engel = new Float32Array(w * h)
+  /* Sınıf haritası da saklanıyor: bölge çıkarımı ve akıl katmanı bunu okuyor. */
+  const siniflar = new Uint8Array(w * h)
   const sayim = {}
   let ekranX0 = Infinity
   let ekranY0 = Infinity
@@ -141,6 +176,7 @@ export async function nesneHaritasi(kaynak, cikisW = 160) {
     for (let x = 0; x < w; x++) {
       const sx = Math.min(cw - 1, Math.floor((x / w) * cw))
       const c = Number(sinif[sy * GIRIS + sx])
+      siniflar[y * w + x] = c
       sayim[c] = (sayim[c] || 0) + 1
       if (ENGELLER.has(c)) engel[y * w + x] = 1
       if (c === SINIF.EKRAN) {
@@ -162,16 +198,95 @@ export async function nesneHaritasi(kaynak, cikisW = 160) {
       ? { x: ekranX0 / w, y: ekranY0 / h, w: (ekranX1 - ekranX0 + 1) / w, h: (ekranY1 - ekranY0 + 1) / h }
       : null
 
-  return { w, h, engel, ekranKutusu, sayim }
+  return { w, h, engel, siniflar, ekranKutusu, sayim, bolgeler: bolgeleriCikar(siniflar, w, h) }
+}
+
+/**
+ * Sınıf haritasını BAĞLANTILI BÖLGELERE ayırır.
+ *
+ * Piksel sayısı "bu fotoğrafta koltuk var" demeye yetiyor ama "koltuk
+ * NEREDE" sorusuna cevap vermiyor; yer seçmek için gereken tam da bu.
+ * Aynı sınıftan komşu pikseller birleştirilip her birinin kadrajdaki
+ * kutusu çıkarılıyor.
+ *
+ * Kadrajın binde birinden küçük lekeler atılıyor: tek tük yanlış etiketlenen
+ * pikseller odanın ortasına hayali bir koltuk koyardı.
+ *
+ * @returns {Array<{sinif:number,x:number,y:number,w:number,h:number,alan:number}>}
+ *          kutu değerleri 0–1 oranlı, alan kadraja göre pay.
+ */
+function bolgeleriCikar(siniflar, W, H) {
+  const N = W * H
+  const gorulen = new Uint8Array(N)
+  const sonuc = []
+  const yigin = []
+  const enAz = Math.max(12, Math.round(N * 0.001))
+  for (let bas = 0; bas < N; bas++) {
+    if (gorulen[bas]) continue
+    const c = siniflar[bas]
+    if (!c) continue
+    let x0 = W
+    let y0 = H
+    let x1 = 0
+    let y1 = 0
+    let alan = 0
+    yigin.length = 0
+    yigin.push(bas)
+    gorulen[bas] = 1
+    while (yigin.length) {
+      const i = yigin.pop()
+      const x = i % W
+      const y = (i / W) | 0
+      alan++
+      if (x < x0) x0 = x
+      if (x > x1) x1 = x
+      if (y < y0) y0 = y
+      if (y > y1) y1 = y
+      const komsu = [i - 1, i + 1, i - W, i + W]
+      for (let k = 0; k < 4; k++) {
+        const j = komsu[k]
+        if (j < 0 || j >= N || gorulen[j]) continue
+        if (k < 2 && Math.abs((j % W) - x) !== 1) continue
+        if (siniflar[j] !== c) continue
+        gorulen[j] = 1
+        yigin.push(j)
+      }
+    }
+    if (alan < enAz) continue
+    sonuc.push({
+      sinif: c,
+      x: x0 / W,
+      y: y0 / H,
+      w: (x1 - x0 + 1) / W,
+      h: (y1 - y0 + 1) / H,
+      alan: alan / N,
+    })
+  }
+  sonuc.sort((a, b) => b.alan - a.alan)
+  /* Uzun kuyruk işe yaramıyor; en belirgin on iki cisim yeter. */
+  return sonuc.slice(0, 12)
 }
 
 /** Arayüzde göstermek için: bulunan nesnelerin adları. */
 export const SINIF_ADLARI = {
+  1: 'uçak',
+  2: 'bisiklet',
+  3: 'kuş',
+  4: 'tekne',
   5: 'şişe',
+  6: 'otobüs',
+  7: 'araba',
+  8: 'kedi',
   9: 'sandalye',
+  10: 'inek',
   11: 'masa',
+  12: 'köpek',
+  13: 'at',
+  14: 'motosiklet',
   15: 'insan',
   16: 'saksı',
+  17: 'koyun',
   18: 'koltuk',
+  19: 'tren',
   20: 'ekran',
 }

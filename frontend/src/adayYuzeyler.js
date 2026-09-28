@@ -28,6 +28,7 @@ import { parlakEkranKutusu } from './parlakEkran.js'
 import { SINIF } from './mekanHaritasi.js'
 import { duzlemAdaylari } from './duzlemAdaylar.js'
 import { perspektifeOturt } from './homografi.js'
+import { sahneOkumasi, nesnePuani } from './nesneAkli.js'
 
 /** Çözümleme genişliği — hızlı ve yeterli. */
 const COZUMLEME_W = 160
@@ -405,6 +406,14 @@ export function adaylariBul(tuval, sec = {}) {
    * geri kalanından belirgin biçimde KOYU ve dokusuzdur. Böyle kareler öne
    * alınıyor — kullanıcının "zaten orada bir ekran var" dediği yer burası.
    */
+  /*
+   * NESNE AKLI — sahnedeki cisimlerin NE olduğuna bakan katman.
+   *
+   * Tek seferde okunuyor: koltuklar bir "oturma grubu", araçlar bir "araç
+   * bandı" hâline geliyor. Aday başına yapılan iş yalnızca kutu kesişimi.
+   */
+  const okuma = sahneOkumasi(nesneler?.bolgeler || null)
+
   for (const a of ham) {
     /*
      * HARİTA PAYLARI HER ADAY İÇİN ÖLÇÜLÜYOR.
@@ -445,6 +454,15 @@ export function adaylariBul(tuval, sec = {}) {
      * davranış "eleme" değil "geriye alma".
      */
     if (a.camPay && !opakPano) a.skor -= Math.round(Math.min(1, a.camPay) * 22)
+
+    /*
+     * Nesne aklının farkı doğrudan puana biniyor; gerekçesi de adayın
+     * üstünde taşınıyor ki kullanıcı "neden burası" sorusunun cevabını
+     * görebilsin.
+     */
+    const nes = nesnePuani(a.koseler, okuma)
+    if (nes.delta) a.skor += nes.delta
+    if (nes.sebep && nes.delta > 0) a.sebep = nes.sebep
 
     if (!p) continue
     if (p.pencere) a.skor -= 22
@@ -697,7 +715,7 @@ export function adaylariBul(tuval, sec = {}) {
     if (sonuc.length >= enCok) return
     if (merkezler.some((m) => Math.hypot(m.x - a.merkez.x, m.y - a.merkez.y) < AYRIM)) return
     merkezler.push(a.merkez)
-    sonuc.push({ koseler: a.koseler, skor: Math.round(a.skor), tur: a.tur, etiket: a.etiket })
+    sonuc.push({ koseler: a.koseler, skor: Math.round(a.skor), tur: a.tur, etiket: a.etiket, sebep: a.sebep || null })
   }
   for (const a of elenmis) {
     if (sonuc.length >= enCok) break
@@ -712,6 +730,8 @@ export function adaylariBul(tuval, sec = {}) {
        * söylemek gerekiyor. Ad, karenin kadrajdaki yerinden türetiliyor.
        */
       etiket: yuzeyAdi(a.merkez),
+      /* "Neden burası" — nesne aklının gerekçesi (bkz. nesneAkli.js). */
+      sebep: a.sebep || null,
     })
   }
   /*
