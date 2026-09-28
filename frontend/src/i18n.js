@@ -393,6 +393,17 @@ const dict = {
     en: 'Analysing the photo: finding objects and angle…',
     ar: 'يتم تحليل الصورة: البحث عن الأجسام والزاوية…',
   },
+  'scene.analysingTitle': { tr: 'Fotoğraf inceleniyor', en: 'Analysing the photo', ar: 'يتم تحليل الصورة' },
+  'scene.analysingHint': {
+    tr: 'Nesneler ve derinlik çıkarılıyor. İlk fotoğrafta modeller indirildiği için biraz uzun sürer; sonrakiler daha hızlı.',
+    en: 'Detecting objects and depth. The first photo takes longer because the models are downloaded; later ones are faster.',
+    ar: 'يتم اكتشاف الأجسام والعمق. الصورة الأولى تستغرق وقتًا أطول بسبب تنزيل النماذج.',
+  },
+  'scene.analysingPrivacy': {
+    tr: 'Fotoğraf cihazınızdan çıkmıyor; işlem tarayıcıda yapılıyor.',
+    en: 'The photo never leaves your device; everything runs in the browser.',
+    ar: 'لا تغادر الصورة جهازك؛ تتم المعالجة في المتصفح.',
+  },
   'scene.scanning': { tr: 'Uygun ekran alanları bulunuyor…', en: 'Looking for suitable screen areas…', ar: 'يتم البحث عن مناطق شاشة مناسبة…' },
   'scene.screenSurface': {
     tr: 'LED ekran yüzeyi algılandı. Tasarım ekrana perspektifli olarak yerleştirildi.',

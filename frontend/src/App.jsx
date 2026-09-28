@@ -2287,6 +2287,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         <main ref={tuvalRef} id="pdf-onizleme" className={(adayKipi ? 'aday-secim ' : '') + "yatay-onizleme order-1 lg:order-2 grow-0 shrink-0 basis-auto h-[62vh] min-w-0 relative overflow-hidden bg-[#f4f4f4] dark:bg-[#232830] lg:flex-1 lg:h-auto lg:min-h-0"}>
 
           {/*
+            FOTOĞRAF İNCELENİRKEN YÜKLENİYOR KATMANI.
+
+            İnceleme birkaç saniye sürüyor (iki yapay zekâ modeli tarayıcıda
+            çalışıyor, ilk seferde ~30 MB model indiriliyor). Bu sırada
+            ekranda hiçbir şey değişmediği için uygulama donmuş sanılıyordu.
+            Panelde küçük bir yazı vardı ama kullanıcı tuvale bakıyor —
+            gösterge de tuvalde olmalı.
+          */}
+          {ozelInceleniyor && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-white/80 backdrop-blur-[2px] dark:bg-[#12161d]/80">
+              <div className="mx-4 flex max-w-[320px] flex-col items-center gap-3 text-center">
+                <svg className="h-9 w-9 animate-spin text-brand" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity="0.2" />
+                  <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+                <div className="text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">
+                  {t('scene.analysingTitle')}
+                </div>
+                <p className="m-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                  {t('scene.analysingHint')}
+                </p>
+                <p className="m-0 text-[11.5px] leading-snug text-neutral-400 dark:text-neutral-500">
+                  {t('scene.analysingPrivacy')}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/*
             Mekân sahnesi — her şeyin arkasında (z-0). Ortası kasıtlı boştur,
             ekran oraya oturur. Yalnızca model seçildikten sonra çizilir;
             boş durum kartının arkasında anlamı olmaz.
