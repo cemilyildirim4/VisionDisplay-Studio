@@ -354,6 +354,14 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
     nesneSayimi: nesneler ? nesneler.sayim : null,
     modelCalisti: !!nesneler,
     derinlikCalisti: !!derinlik,
+    /**
+     * Ham ters derinlik haritası.
+     *
+     * Arayüz bunu ÇİZİLEN karenin eğimini doğrulamak için kullanıyor
+     * (bkz. egimDenetimi.js): zincirin sonunda kare hâlâ fotoğrafın
+     * söylediği yöne mi yatıyor diye bakılıyor.
+     */
+    derinlik,
     /** Bulunan ekran yüzeyi: dört köşe (0–1) + skor. */
     yuzey,
     /** Tıklanabilir aday yerleşim kareleri (0–1 köşeler). */

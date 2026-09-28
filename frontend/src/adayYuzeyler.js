@@ -29,6 +29,7 @@ import { SINIF } from './mekanHaritasi.js'
 import { duzlemAdaylari } from './duzlemAdaylar.js'
 import { perspektifeOturt } from './homografi.js'
 import { sahneOkumasi, nesnePuani } from './nesneAkli.js'
+import { egimiDenetle } from './egimDenetimi.js'
 
 /** Çözümleme genişliği — hızlı ve yeterli. */
 const COZUMLEME_W = 160
@@ -799,6 +800,24 @@ export function adaylariBul(tuval, sec = {}) {
     for (const a of ham) {
       if ((a.yasakPay || 0) > 0.4) continue
       ekle({ ...a, etiket: a.etiket || yuzeyAdi(a.merkez) })
+    }
+  }
+
+  /*
+   * GÖSTERİLEN KARELERİN EĞİMİ DE DENETLENİYOR.
+   *
+   * Kullanıcı önce KARELERİ görüyor; biri ters yatıyorsa tıklamadan önce
+   * güveni gidiyor. Denetim yerleştirme anında da yapılıyor ama burada
+   * yapılması, ekrandaki görüntüyle uygulanan yerleşimin aynı yöne
+   * bakmasını sağlıyor (bkz. egimDenetimi.js).
+   */
+  if (derinlik?.veri) {
+    for (const a of sonuc) {
+      try {
+        a.koseler = egimiDenetle(a.koseler, derinlik, H > 0 ? W / H : 1)
+      } catch {
+        /* denetim yapılamadıysa kare olduğu gibi kalır */
+      }
     }
   }
 
