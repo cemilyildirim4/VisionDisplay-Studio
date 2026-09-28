@@ -1402,23 +1402,66 @@ function parlaklikOlcusu(tuval, koseler) {
 function olcuyeUydur(koseler, hedefEn, hedefBoy, W, H) {
   if (!Array.isArray(koseler) || koseler.length !== 4) return null
   const px = koseler.map((k) => ({ x: k.x * W, y: k.y * H }))
-  const uz = (a, b) => Math.hypot(px[a].x - px[b].x, px[a].y - px[b].y)
-  const en = (uz(0, 1) + uz(3, 2)) / 2
-  const boy = (uz(0, 3) + uz(1, 2)) / 2
-  if (!(en > 1) || !(boy > 1)) return null
+  const cx = px.reduce((t, q) => t + q.x, 0) / 4
+  const cy = px.reduce((t, q) => t + q.y, 0) / 4
+
+  /*
+   * ÖLÇEKLEME KARENİN KENDİ EKSENLERİNDE.
+   *
+   * Önce ekran eksenlerinde (yatay/düşey) ayrı ayrı ölçekliyordum ve bu
+   * EĞİMİ BOZUYORDU: eğik bir kenarın eğimi sy/sx katına çıkıyor. Kare
+   * duvarın açısını izlerken, kenarı kısaltınca duvarla hiç ilgisi olmayan
+   * bir açıya dönüyordu — kullanıcının "eğimin saçmalığı" dediği şey buydu.
+   *
+   * Doğrusu, kareyi kendi kenar yönlerinde kısaltmak: u ekseni üst/alt
+   * kenarların ortalaması, v ekseni yan kenarların ortalaması. Her köşe bu
+   * iki eksenin bileşimi olarak yazılıp katsayıları ölçekleniyor. Açılar ve
+   * yamukluk aynen kalıyor, yalnızca boy kısalıyor.
+   */
+  const ux = ((px[1].x - px[0].x) + (px[2].x - px[3].x)) / 2
+  const uy = ((px[1].y - px[0].y) + (px[2].y - px[3].y)) / 2
+  const vx = ((px[3].x - px[0].x) + (px[2].x - px[1].x)) / 2
+  const vy = ((px[3].y - px[0].y) + (px[2].y - px[1].y)) / 2
+  const en = Math.hypot(ux, uy)
+  const boy = Math.hypot(vx, vy)
+  const det = ux * vy - uy * vx
+  if (!(en > 1) || !(boy > 1) || Math.abs(det) < 1e-6) return null
+
   const sx = hedefEn / en
   const sy = hedefBoy / boy
   /* %2 pay: ölçüm gürültüsü yüzünden tam sığan yüzey "sığmıyor" sayılmasın. */
   const sigiyor = sx <= 1.02 && sy <= 1.02
-  const cx = px.reduce((t, p) => t + p.x, 0) / 4
-  const cy = px.reduce((t, p) => t + p.y, 0) / 4
-  return {
-    koseler: px.map((p) => ({
-      x: (cx + (p.x - cx) * sx) / W,
-      y: (cy + (p.y - cy) * sy) / H,
-    })),
-    sigiyor,
-  }
+
+  const yeni = px.map((q) => {
+    const dx = q.x - cx
+    const dy = q.y - cy
+    /* dx,dy = a·u + b·v denklemini çöz. */
+    const a = (dx * vy - dy * vx) / det
+    const b = (ux * dy - uy * dx) / det
+    const na = a * sx
+    const nb = b * sy
+    return { x: cx + na * ux + nb * vx, y: cy + na * uy + nb * vy }
+  })
+
+  /*
+   * SON DENETİM: SONUÇ HÂLÂ MAKUL BİR DÖRTGEN Mİ?
+   *
+   * Ölçüm zincirinin herhangi bir yerinde (düzlem eğimi, kaçış noktası,
+   * kenara oturtma) bozulma olursa kare gerçek bir dikdörtgenin perspektif
+   * izdüşümü olmaktan çıkıyor. Böyle bir karede tasarımı göstermek,
+   * kullanıcıya duvarda olmayan bir açı vaat etmek demek.
+   *
+   * Bozuksa eğim tamamen bırakılıyor: aynı merkezde, aynı ölçüde DÜZ bir
+   * dikdörtgen çiziliyor. Açısız ama dürüst.
+   */
+  const duzKare = () => [
+    { x: (cx - hedefEn / 2) / W, y: (cy - hedefBoy / 2) / H },
+    { x: (cx + hedefEn / 2) / W, y: (cy - hedefBoy / 2) / H },
+    { x: (cx + hedefEn / 2) / W, y: (cy + hedefBoy / 2) / H },
+    { x: (cx - hedefEn / 2) / W, y: (cy + hedefBoy / 2) / H },
+  ]
+  const oranli = yeni.map((q) => ({ x: q.x / W, y: q.y / H }))
+  return { koseler: makulDortgen(oranli) ? oranli : duzKare(), sigiyor }
 }
 
 /**
