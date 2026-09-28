@@ -23,6 +23,45 @@ window.addEventListener('unhandledrejection', (event) => {
   logClientError('unhandledrejection', event.reason)
 })
 
+/*
+ * YENİ SÜRÜM GELİNCE KENDİLİĞİNDEN GÜNCELLE.
+ *
+ * Uygulama PWA: service worker eski dosyaları önbellekte tutuyor ve yeni
+ * sürüm yayınlansa bile kullanıcı eski ekranı görmeye devam edebiliyordu
+ * ("hiçbir şey değişmemiş" denen durum tam buydu). Aşağıdaki kayıt, yeni
+ * bir service worker hazır olur olmaz onu devreye alıp sayfayı BİR KEZ
+ * yeniliyor. Böylece güncelleme kullanıcıdan bir şey istemeden geliyor.
+ *
+ * Sonsuz döngü koruması: yenileme yalnızca controller gerçekten
+ * değiştiğinde ve oturumda bir kez yapılıyor.
+ */
+if ('serviceWorker' in navigator) {
+  let yenilendi = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (yenilendi) return
+    yenilendi = true
+    window.location.reload()
+  })
+
+  navigator.serviceWorker.ready
+    .then((kayit) => {
+      /* Bekleyen bir sürüm varsa hemen devreye al. */
+      if (kayit.waiting) kayit.waiting.postMessage({ type: 'SKIP_WAITING' })
+      kayit.addEventListener('updatefound', () => {
+        const yeni = kayit.installing
+        if (!yeni) return
+        yeni.addEventListener('statechange', () => {
+          if (yeni.state === 'installed' && navigator.serviceWorker.controller) {
+            yeni.postMessage({ type: 'SKIP_WAITING' })
+          }
+        })
+      })
+      /* Sayfa her açıldığında sunucuda yeni sürüm var mı diye bak. */
+      kayit.update().catch(() => {})
+    })
+    .catch(() => {})
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>

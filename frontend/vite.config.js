@@ -66,6 +66,14 @@ self.addEventListener('activate', (event) => {
         ],
       },
       workbox: {
+        /*
+         * Yeni service worker beklemeden devralıyor ve açık sekmeleri
+         * kendine bağlıyor; main.jsx'teki controllerchange dinleyicisi de
+         * sayfayı bir kez yeniliyor. İkisi birlikte "eski sürüm görünüyor"
+         * sorununu bitiriyor.
+         */
+        skipWaiting: true,
+        clientsClaim: true,
         // Büyük video/görsel örnekleri VE isteğe bağlı yüklenen 3D/AR paketini
         // (three.js, drei, model-viewer — draco/basis decoder'ları da içeriyor)
         // önbellek manifestine dahil etme; bunlar yalnızca "3D Görünüm"
