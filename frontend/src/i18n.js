@@ -409,6 +409,11 @@ const dict = {
     en: 'The design is larger than this photo\'s frame. Set the distance to how far the photo was really taken from, or reduce the screen size.',
     ar: 'التصميم أكبر من إطار هذه الصورة. اضبط المسافة وفق المسافة الحقيقية للتصوير أو صغّر حجم الشاشة.',
   },
+  'scene.needDistance': {
+    tr: 'Sığması için mesafe en az:',
+    en: 'Minimum distance for it to fit:',
+    ar: 'أقل مسافة لكي يتّسع:',
+  },
   'scene.fitAsk': { tr: 'Ölçüyü bu yüzeye göre ayarlayayım mı?', en: 'Should I resize the design to this surface?', ar: 'هل أضبط المقاس على هذا السطح؟' },
   'scene.fitAskDetail': { tr: 'Seçtiğiniz yüzey yaklaşık', en: 'The selected surface is about', ar: 'السطح المحدد يبلغ تقريبًا' },
   'scene.fitAskNow': { tr: 'Tasarım şu an', en: 'The design is currently', ar: 'التصميم حاليًا' },

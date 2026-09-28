@@ -34,7 +34,7 @@ import {
   MEKAN_TURLERI,
   MEKAN_EN_COK_MB,
   VARSAYILAN_MESAFE_M,
-  kadrajGenisligi,
+  kadrajGenisligi, KADRAJ_KATSAYISI,
 } from './ozelMekan.js'
 import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
@@ -368,14 +368,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * değiştirmek de doğru değil — kullanıcının seçtiği kabin sayısı onun
    * kararı. O yüzden SORULUYOR.
    */
-  const [olcuSorusu, setOlcuSorusu] = useState(null)
   /*
-   * Seçili yerleşimin yüzey ölçüsü panelde KALICI duruyor: kullanıcı
-   * pop-up'ta ne derse desin sonradan fikrini değiştirebilsin. "Ölçü
-   * kalsın" dendiğinde eski kabin sayısı geri yüklenebilsin diye uydurma
-   * öncesi değerler saklanıyor.
+   * Ölçü sorusu artık yalnızca "sorulsun mu" bayrağı; ölçünün KENDİSİ
+   * saklanmıyor, çünkü mesafeye bağlı olarak değişiyor (bkz.
+   * secilenYuzeyOlcu). Saklanan bir kopya mesafe değiştiğinde eskiyip
+   * kullanıcıya gerçekte olmayan bir ölçü gösteriyordu.
    */
-  const [secilenYuzeyOlcu, setSecilenYuzeyOlcu] = useState(null)
+  const [olcuSorusu, setOlcuSorusu] = useState(false)
+  /*
+   * "Ölçü kalsın" dendiğinde eski kabin sayısı geri yüklenebilsin diye
+   * uydurma öncesi değerler saklanıyor.
+   */
   const [olcuOncesi, setOlcuOncesi] = useState(null)
   const [olcuUyduruldu, setOlcuUyduruldu] = useState(false)
   /* Modelin fotoğrafta gördükleri — arayüzde adlarıyla yazılıyor. */
@@ -1046,6 +1049,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   yuzeyOlcusuRef.current = yuzeyOlcusu
+
+  /*
+   * SEÇİLEN YÜZEYİN GERÇEK ÖLÇÜSÜ — MESAFENİN TÜREVİ.
+   *
+   * Ölçek tek bir şeyden geliyor: fotoğrafın kaç metreden çekildiği.
+   * Kadrajın kapsadığı genişlik = mesafe × 1,11; yüzeyin kadrajdaki payı da
+   * metre karşılığını veriyor. Yani "şu yüzey 2 m" demek ancak mesafeyle
+   * birlikte anlamlı.
+   *
+   * Önceden ölçü seçim ânında hesaplanıp saklanıyordu; kullanıcı sonradan
+   * mesafeyi düzeltince panelde eski (ve gerçekte olmayan) ölçü kalıyordu —
+   * 1 metreden çekilmiş bir fotoğrafta 1,99 m'lik yüzey gibi. Artık her
+   * mesafe değişiminde yeniden hesaplanıyor.
+   */
+  const secilenYuzeyOlcu = useMemo(() => {
+    if (scene !== 'ozel' || !ozelSahne || !hedefKose) return null
+    const o = yuzeyOlcusu(hedefKose, ozelSahne?.kaynak, ozelMesafeM)
+    return o && o.wm > 0.05 && o.hm > 0.05 ? o : null
+    /* yuzeyOlcusu saf bir hesap; bağımlılığa gerek yok. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene, ozelSahne, hedefKose, ozelMesafeM])
 
   /* Tasarımı panonun ölçüsüne getirir ve kabin sayısını yeniden dağıtır. */
   const olculeriPanoyaUydur = (koseler) => olculeriPanoyaUydurIle(koseler, ozelSahne?.kaynak)
@@ -2044,13 +2068,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         Math.abs(olcu.wm - tasarimWm) / Math.max(0.01, tasarimWm),
         Math.abs(olcu.hm - tasarimHm) / Math.max(0.01, tasarimHm),
       )
-      setSecilenYuzeyOlcu({ wm: olcu.wm, hm: olcu.hm })
-      setOlcuSorusu(fark > 0.1 ? { wm: olcu.wm, hm: olcu.hm } : null)
+      setOlcuSorusu(fark > 0.1)
       setOlcuUyduruldu(false)
       setOlcuOncesi(null)
     } else {
-      setSecilenYuzeyOlcu(null)
-      setOlcuSorusu(null)
+      setOlcuSorusu(false)
     }
     if ((aday.skor || 0) < GUVEN_ESIGI) {
       setOzelUyari(t('scene.lowConfidence'))
@@ -2067,7 +2089,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * taşmıyor, kalan boşluk da en aza iniyor.
    */
   const olcuyuYuzeyeUydur = () => {
-    const hedef = olcuSorusu || secilenYuzeyOlcu
+    const hedef = secilenYuzeyOlcu
     if (!hedef) return
     /* İlk uydurmada mevcut ölçü saklanıyor; "Ölçü kalsın" buna dönüyor. */
     if (!olcuOncesi) setOlcuOncesi({ cols, rows, width, height })
@@ -2080,14 +2102,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHeight((e) => Math.max(e, +(yeniRows * kh).toFixed(2)))
     setCols(yeniCols)
     setRows(yeniRows)
-    setOlcuSorusu(null)
+    setOlcuSorusu(false)
     setOlcuUyduruldu(true)
     setOzelUyari(t('scene.fitResult'))
   }
 
   /** Uydurmadan önceki kabin sayısına döner. */
   const olcuyuGeriAl = () => {
-    setOlcuSorusu(null)
+    setOlcuSorusu(false)
     if (!olcuOncesi) return
     setWidth(olcuOncesi.width)
     setHeight(olcuOncesi.height)
@@ -2096,6 +2118,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setOlcuUyduruldu(false)
     setOzelUyari(null)
   }
+
+  /*
+   * MESAFE DEĞİŞİNCE YERLEŞİM ÖLÇÜSÜ DE DEĞİŞİYOR.
+   *
+   * Kullanıcı "Ölçüyü ayarla" dedikten sonra mesafeyi düzeltiyorsa, aslında
+   * "o yüzey gerçekte şu kadar" bilgisini düzeltmiş oluyor. Ekran ölçüsü
+   * eski mesafeden hesaplanmış hâlde kalırsa bütün sahne yanlış ölçekte
+   * kalıyor. Bu yüzden uydurma, yeni mesafeyle kendiliğinden tekrarlanıyor.
+   *
+   * Yalnızca kullanıcı uydurmayı SEÇMİŞSE çalışıyor; "Ölçü kalsın" diyenin
+   * ölçüsüne dokunulmuyor.
+   */
+  const olcuyuUydurRef = useRef(null)
+  olcuyuUydurRef.current = olcuyuYuzeyeUydur
+  useEffect(() => {
+    if (!olcuUyduruldu) return
+    olcuyuUydurRef.current?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ozelMesafeM])
 
   /* ADAY KARELERİN TUVALDEKİ KARŞILIĞI — köşelerle birebir aynı dönüşüm. */
   const adayTuval = (() => {
@@ -2614,10 +2655,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           kalıcı duruyor, yani pop-up kapandıktan sonra fikir değiştirmek
           mümkün.
         */}
-        {olcuSorusu && (
+        {olcuSorusu && secilenYuzeyOlcu && (
           <div
             className="fixed inset-0 z-[60] flex items-center justify-center bg-[#001334]/45 p-4"
-            onClick={() => setOlcuSorusu(null)}
+            onClick={() => setOlcuSorusu(false)}
           >
             <div
               className="w-full max-w-[340px] rounded-2xl border border-neutral-200 bg-white p-5 shadow-[0_18px_50px_-18px_rgba(0,19,52,0.45)] dark:border-[#2c333f] dark:bg-[#161a21]"
@@ -2631,7 +2672,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {t('scene.fitAskDetail')}
                 </div>
                 <div className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100">
-                  {olcuSorusu.wm.toFixed(2).replace('.', ',')} × {olcuSorusu.hm.toFixed(2).replace('.', ',')} m
+                  {secilenYuzeyOlcu.wm.toFixed(2).replace('.', ',')} ×{' '}
+                  {secilenYuzeyOlcu.hm.toFixed(2).replace('.', ',')} m
                 </div>
                 <div className="mt-2 text-[11.5px] font-medium uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">
                   {t('scene.fitAskNow')}
@@ -2650,7 +2692,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setOlcuSorusu(null)}
+                  onClick={() => setOlcuSorusu(false)}
                   className="flex-1 rounded-full border border-neutral-200 py-2.5 text-[14px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300"
                 >
                   {t('scene.fitKeep')}
@@ -3444,7 +3486,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     */}
                     {scene === 'ozel' && ozelSahne && tasarimWm > kadrajGenisligi(ozelMesafeM) && (
                       <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
-                        {t('scene.tooBigForFrame')}
+                        {t('scene.tooBigForFrame')}{' '}
+                        {/*
+                          Kullanıcıya "mesafeyi düzelt" demek yetmiyor, KAÇ
+                          olması gerektiğini de söylemek gerekiyor: kadraj
+                          genişliği = mesafe × 1,11 olduğuna göre bu ekranın
+                          sığdığı en küçük mesafe doğrudan hesaplanabiliyor.
+                        */}
+                        {t('scene.needDistance')}{' '}
+                        {(Math.ceil((tasarimWm / KADRAJ_KATSAYISI) * 10) / 10)
+                          .toFixed(1)
+                          .replace('.', ',')}{' '}
+                        m
                       </p>
                     )}
                     {/* Fotoğrafta otomatik mesafe yok: ölçek ondan geliyor. */}
