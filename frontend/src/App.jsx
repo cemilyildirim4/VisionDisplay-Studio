@@ -41,7 +41,7 @@ import KoseSecici from './KoseSecici.jsx'
 import AdaySecici from './AdaySecici.jsx'
 import DavetKapisi from './DavetKapisi.jsx'
 import { kenarlaraOturt } from './ekranYuzeyi.js'
-import { egimiDenetle } from './egimDenetimi.js'
+import { duzlestir } from './egimDenetimi.js'
 
 import { DAVET_OLAYI } from './apiClient.js'
 import { useSession } from './SessionContext.jsx'
@@ -2187,19 +2187,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       /* iyileştirme başarısızsa aday olduğu gibi uygulanır */
     }
     /*
-     * SON SÖZ DERİNLİĞİN.
+     * AÇIYI SİSTEM DEĞİL KULLANICI VERİYOR.
      *
-     * Eğim uzun bir zincirin sonunda çıkıyor (düzlem uydurma → kaçış noktası
-     * → kenarlara oturtma) ve halkalardan biri yönü ters çevirdiğinde ekran
-     * duvara ters yatıyordu. Burada çizilecek kare, derinlik haritasının ham
-     * çıktısıyla karşılaştırılıyor: yakın yan uzun görünmeli. Çelişki varsa
-     * eğim bırakılıyor ve kare düz çiziliyor (bkz. egimDenetimi.js).
+     * Yerleşim düz uygulanıyor; eğim isteyen "Köşelerden ayarla" ile dört
+     * köşeyi fareyle çekiyor. Otomatik eğim ölçümü yeterince güvenilir
+     * değildi ve L tipi ekranda dörtgeni tamamen bozuyordu.
      */
     try {
-      const k = ozelSahne?.kaynak
-      koseler = egimiDenetle(koseler, ozelSahne?.derinlik, k?.w && k?.h ? k.w / k.h : 1)
+      koseler = duzlestir(koseler)
     } catch {
-      /* denetim yapılamadıysa kare olduğu gibi kalır */
+      /* düzleştirme yapılamadıysa kare olduğu gibi kalır */
     }
     /* Yeni yerleşim seçildi: önceki elle köşe ayarı geçerliliğini yitirdi. */
     elleDuzenlemeyiBirak()

@@ -74,8 +74,13 @@ function yanDerinlikler(koseler, derinlik) {
   }
 }
 
-/** Aynı merkez ve aynı ortalama ölçüde, yamukluğu olmayan kare. */
-function duzlestir(koseler) {
+/**
+ * Aynı merkez ve aynı ortalama ölçüde, yamukluğu olmayan kare.
+ *
+ * Dışarı da veriliyor: sistem artık kendiliğinden eğim vermiyor, bütün
+ * kareler bu işlevden geçip düz çiziliyor (bkz. adayYuzeyler.js).
+ */
+export function duzlestir(koseler) {
   const cx = koseler.reduce((t, k) => t + k.x, 0) / 4
   const cy = koseler.reduce((t, k) => t + k.y, 0) / 4
   const enOrt =

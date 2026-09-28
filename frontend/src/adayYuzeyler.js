@@ -29,7 +29,7 @@ import { SINIF } from './mekanHaritasi.js'
 import { duzlemAdaylari } from './duzlemAdaylar.js'
 import { perspektifeOturt } from './homografi.js'
 import { sahneOkumasi, nesnePuani } from './nesneAkli.js'
-import { egimiDenetle } from './egimDenetimi.js'
+import { duzlestir } from './egimDenetimi.js'
 
 /** Çözümleme genişliği — hızlı ve yeterli. */
 const COZUMLEME_W = 160
@@ -804,20 +804,27 @@ export function adaylariBul(tuval, sec = {}) {
   }
 
   /*
-   * GÖSTERİLEN KARELERİN EĞİMİ DE DENETLENİYOR.
+   * SİSTEM KENDİLİĞİNDEN EĞİM VERMİYOR.
    *
-   * Kullanıcı önce KARELERİ görüyor; biri ters yatıyorsa tıklamadan önce
-   * güveni gidiyor. Denetim yerleştirme anında da yapılıyor ama burada
-   * yapılması, ekrandaki görüntüyle uygulanan yerleşimin aynı yöne
-   * bakmasını sağlıyor (bkz. egimDenetimi.js).
+   * Eğim uzun bir ölçüm zincirinden geliyordu (derinlikten düzlem uydurma,
+   * kaçış noktası, kenar araması) ve zincir yeterince güvenilir değil:
+   * yüzeyin açısı kimi fotoğrafta tutuyor, kimi fotoğrafta ters çıkıyor,
+   * L tipi ekranda ise dörtgen tamamen bozuluyordu. Yanlış bir açı,
+   * kullanıcıya duvarda olmayan bir şeyi vaat etmek demek.
+   *
+   * Karar: açıyı sistem değil KULLANICI veriyor. Kareler düz çiziliyor;
+   * isteyen "Köşelerden ayarla" ile dört köşeyi fareyle çekip kendi
+   * perspektifini kuruyor. Ölçü ve merkez kaybolmuyor, yalnızca yamukluk
+   * bırakılıyor.
+   *
+   * Ölçüm zinciri kodda duruyor (duzlemAdaylar.js, egimDenetimi.js);
+   * güvenilir hâle geldiğinde buradan tek satırla geri açılabilir.
    */
-  if (derinlik?.veri) {
-    for (const a of sonuc) {
-      try {
-        a.koseler = egimiDenetle(a.koseler, derinlik, H > 0 ? W / H : 1)
-      } catch {
-        /* denetim yapılamadıysa kare olduğu gibi kalır */
-      }
+  for (const a of sonuc) {
+    try {
+      a.koseler = duzlestir(a.koseler)
+    } catch {
+      /* düzleştirme yapılamadıysa kare olduğu gibi kalır */
     }
   }
 
