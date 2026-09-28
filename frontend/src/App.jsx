@@ -934,43 +934,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     )
   }
 
-  /*
-   * ADAYLARI TAZELE — YERLEŞİME DOKUNMADAN.
-   *
-   * Aday kareleri artık tasarımın gerçek ölçüsünde çiziliyor; kabin sayısı
-   * ya da mesafe değişince o kareler de değişmeli. Ama bu bir "yeniden
-   * yerleştir" değil: kullanıcının seçtiği yüzey olduğu gibi kalıyor,
-   * yalnızca öneri kareleri yeni ölçüye göre aranıyor.
-   *
-   * Ağır modeller önbellekte olduğu için bu arama saniyenin altında
-   * sürüyor; "inceleniyor" katmanı bu yüzden gösterilmiyor.
-   */
-  const adaylariTazele = async () => {
-    const gorsel = ozelSahneGorsel.current
-    if (!ozelSahne || !gorsel) return
-    try {
-      const kayit = await ozelMekanKaydi(
-        ozelSahne.dosya,
-        gorsel,
-        tasarimWm / tasarimHm,
-        ozelMesafeM,
-        tasarimWm,
-      )
-      if (kayit) setOzelSahne(kayit)
-    } catch {
-      /* tazeleme başarısızsa eski kareler kalsın */
-    }
-  }
-  const adaylariTazeleRef = useRef(null)
-  adaylariTazeleRef.current = adaylariTazele
-  useEffect(() => {
-    if (scene !== 'ozel' || !ozelSahne?.dosya) return undefined
-    /* Artı/eksi düğmesine üst üste basılırken her tıkta aramaya gerek yok. */
-    const zaman = setTimeout(() => adaylariTazeleRef.current?.(), 450)
-    return () => clearTimeout(zaman)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasarimWm, tasarimHm, ozelMesafeM, scene, ozelSahne?.dosya])
-
   /* Öneriyi tazele: ölçü ya da alan genişliği değişmiş olabilir. */
   const oneriyiTazele = (alanM = ozelMesafeM) => {
     if (!ozelSahne) return
@@ -1228,6 +1191,51 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const tasarimHm = cokluAktif
     ? Math.max(...screens.map((s) => Math.max(1, s.rows) * chM))
     : ekranHm
+
+  /*
+   * BU BLOK TASARIM ÖLÇÜSÜNÜN TANIMINDAN SONRA DURMAK ZORUNDA.
+   *
+   * Aşağıdaki useEffect'in bağımlılık dizisi tasarimWm/tasarimHm'i ÇİZİM
+   * SIRASINDA okuyor. Blok yukarıdayken bu değişkenler henüz tanımlanmamış
+   * oluyordu ve uygulama açılışta "Bir şeyler ters gitti" ekranına düşüyordu.
+   */
+  /*
+   * ADAYLARI TAZELE — YERLEŞİME DOKUNMADAN.
+   *
+   * Aday kareleri artık tasarımın gerçek ölçüsünde çiziliyor; kabin sayısı
+   * ya da mesafe değişince o kareler de değişmeli. Ama bu bir "yeniden
+   * yerleştir" değil: kullanıcının seçtiği yüzey olduğu gibi kalıyor,
+   * yalnızca öneri kareleri yeni ölçüye göre aranıyor.
+   *
+   * Ağır modeller önbellekte olduğu için bu arama saniyenin altında
+   * sürüyor; "inceleniyor" katmanı bu yüzden gösterilmiyor.
+   */
+  const adaylariTazele = async () => {
+    const gorsel = ozelSahneGorsel.current
+    if (!ozelSahne || !gorsel) return
+    try {
+      const kayit = await ozelMekanKaydi(
+        ozelSahne.dosya,
+        gorsel,
+        tasarimWm / tasarimHm,
+        ozelMesafeM,
+        tasarimWm,
+      )
+      if (kayit) setOzelSahne(kayit)
+    } catch {
+      /* tazeleme başarısızsa eski kareler kalsın */
+    }
+  }
+  const adaylariTazeleRef = useRef(null)
+  adaylariTazeleRef.current = adaylariTazele
+  useEffect(() => {
+    if (scene !== 'ozel' || !ozelSahne?.dosya) return undefined
+    /* Artı/eksi düğmesine üst üste basılırken her tıkta aramaya gerek yok. */
+    const zaman = setTimeout(() => adaylariTazeleRef.current?.(), 450)
+    return () => clearTimeout(zaman)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasarimWm, tasarimHm, ozelMesafeM, scene, ozelSahne?.dosya])
+
   /*
    * EKRANIN DIŞ HATTI (0..1 arası oranlarla, sol üst köşe 0,0).
    *
