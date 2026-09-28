@@ -359,6 +359,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [ozelInceleniyor, setOzelInceleniyor] = useState(false)
   /* Yüklenen fotoğrafın görüntü nesnesi — kenar iyileştirmesi bunu kullanıyor. */
   const ozelSahneGorsel = useRef(null)
+  /*
+   * ÖLÇÜ SORUSU.
+   *
+   * Aday kare, fotoğraftaki yüzeyin gerçek ölçüsünü de biliyor. Tasarım o
+   * ölçüden belirgin biçimde farklıysa yerleşim "oturmuş" görünmüyor: ekran
+   * ya yüzeyi taşıyor ya da ortasında küçük kalıyor. Ölçüyü kendiliğinden
+   * değiştirmek de doğru değil — kullanıcının seçtiği kabin sayısı onun
+   * kararı. O yüzden SORULUYOR.
+   */
+  const [olcuSorusu, setOlcuSorusu] = useState(null)
   /* Modelin fotoğrafta gördükleri — arayüzde adlarıyla yazılıyor. */
   const [ozelNesneler, setOzelNesneler] = useState(null)
   /*
@@ -2007,11 +2017,45 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefKose(koseler)
     setHedefTur(aday.tur || null)
     setAdayKipi(false)
+
+    /* Yüzeyin gerçek ölçüsü ile tasarımın ölçüsü belirgin ayrılıyorsa sor. */
+    const olcu = yuzeyOlcusuRef.current?.(koseler, ozelSahne?.kaynak, ozelMesafeM) || null
+    if (olcu && olcu.wm > 0.05 && olcu.hm > 0.05) {
+      const fark = Math.max(
+        Math.abs(olcu.wm - tasarimWm) / Math.max(0.01, tasarimWm),
+        Math.abs(olcu.hm - tasarimHm) / Math.max(0.01, tasarimHm),
+      )
+      setOlcuSorusu(fark > 0.1 ? { wm: olcu.wm, hm: olcu.hm } : null)
+    } else {
+      setOlcuSorusu(null)
+    }
     if ((aday.skor || 0) < GUVEN_ESIGI) {
       setOzelUyari(t('scene.lowConfidence'))
     } else {
       setOzelUyari(null)
     }
+  }
+
+  /**
+   * Yüzey ölçüsünü kabin sayısına çevirip uygular.
+   *
+   * Kabin ölçüsü sabit olduğu için her ölçü birebir tutturulamaz: yüzeye
+   * SIĞAN en büyük kabin sayısı seçiliyor (en az 1). Böylece ekran yüzeyi
+   * taşmıyor, kalan boşluk da en aza iniyor.
+   */
+  const olcuyuYuzeyeUydur = () => {
+    if (!olcuSorusu) return
+    const kw = (previewModel?.widthMm || 500) / 1000
+    const kh = (previewModel?.heightMm || 500) / 1000
+    const yeniCols = Math.max(1, Math.floor(olcuSorusu.wm / kw + 1e-6))
+    const yeniRows = Math.max(1, Math.floor(olcuSorusu.hm / kh + 1e-6))
+    /* Duvar ölçüsü de en az tasarım kadar olmalı, yoksa kabin sayısı kırpılır. */
+    setWidth((e) => Math.max(e, +(yeniCols * kw).toFixed(2)))
+    setHeight((e) => Math.max(e, +(yeniRows * kh).toFixed(2)))
+    setCols(yeniCols)
+    setRows(yeniRows)
+    setOlcuSorusu(null)
+    setOzelUyari(t('scene.fitResult'))
   }
 
   /* ADAY KARELERİN TUVALDEKİ KARŞILIĞI — köşelerle birebir aynı dönüşüm. */
@@ -3171,6 +3215,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         {t('scene.spotsHint')}
                       </p>
                     )}
+                    {/*
+                      ÖLÇÜ SORUSU — yerleşim seçildikten sonra.
+
+                      "Şu yüzey 1,20 × 0,70 m; tasarımın 0,32 × 0,18 m.
+                      Ayarlayayım mı?" Cevap kullanıcıdan; ölçü kendiliğinden
+                      değişmiyor.
+                    */}
+                    {olcuSorusu && (
+                      <div className="mt-2 rounded-lg border border-brand/30 bg-brand/[0.06] px-3 py-2.5">
+                        <div className="text-[13.5px] font-semibold text-neutral-800 dark:text-neutral-100">
+                          {t('scene.fitAsk')}
+                        </div>
+                        <div className="mt-1 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
+                          {t('scene.fitAskDetail')}{' '}
+                          <b>
+                            {olcuSorusu.wm.toFixed(2).replace('.', ',')} × {olcuSorusu.hm.toFixed(2).replace('.', ',')} m
+                          </b>
+                          {' · '}
+                          {t('scene.fitAskNow')}{' '}
+                          <b>
+                            {tasarimWm.toFixed(2).replace('.', ',')} × {tasarimHm.toFixed(2).replace('.', ',')} m
+                          </b>
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={olcuyuYuzeyeUydur}
+                            className="rounded-lg bg-brand py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                          >
+                            {t('scene.fitApply')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOlcuSorusu(null)}
+                            className="rounded-lg border border-neutral-200 py-2 text-[13px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300"
+                          >
+                            {t('scene.fitKeep')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Sıfırlama: düzenleme varken görünen sade metin bağlantısı. */}
                     {(elleKose || elleAci.yaw !== 0 || elleAci.tilt !== 0 || hedefKose) && (
                       <button

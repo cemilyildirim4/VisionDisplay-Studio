@@ -409,6 +409,12 @@ const dict = {
     en: 'The design is larger than this photo\'s frame. Set the distance to how far the photo was really taken from, or reduce the screen size.',
     ar: 'التصميم أكبر من إطار هذه الصورة. اضبط المسافة وفق المسافة الحقيقية للتصوير أو صغّر حجم الشاشة.',
   },
+  'scene.fitAsk': { tr: 'Ölçüyü bu yüzeye göre ayarlayayım mı?', en: 'Should I resize the design to this surface?', ar: 'هل أضبط المقاس على هذا السطح؟' },
+  'scene.fitAskDetail': { tr: 'Seçtiğiniz yüzey yaklaşık', en: 'The selected surface is about', ar: 'السطح المحدد يبلغ تقريبًا' },
+  'scene.fitAskNow': { tr: 'Tasarım şu an', en: 'The design is currently', ar: 'التصميم حاليًا' },
+  'scene.fitApply': { tr: 'Ölçüyü ayarla', en: 'Resize', ar: 'اضبط المقاس' },
+  'scene.fitKeep': { tr: 'Ölçü kalsın', en: 'Keep size', ar: 'أبقِ المقاس' },
+  'scene.fitResult': { tr: 'Ölçü yüzeye göre ayarlandı', en: 'Size adjusted to the surface', ar: 'تم ضبط المقاس وفق السطح' },
   'scene.scanning': { tr: 'Uygun ekran alanları bulunuyor…', en: 'Looking for suitable screen areas…', ar: 'يتم البحث عن مناطق شاشة مناسبة…' },
   'scene.screenSurface': {
     tr: 'LED ekran yüzeyi algılandı. Tasarım ekrana perspektifli olarak yerleştirildi.',
