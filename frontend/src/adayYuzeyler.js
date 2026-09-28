@@ -172,6 +172,14 @@ export function adaylariBul(tuval, sec = {}) {
          */
         let duvarPay = 0
         let yasakPay = 0
+        /*
+         * CAM PAYI — yasak değil, tercih.
+         *
+         * Cam/pencere yüzeyine ekran yapılabiliyor, o yüzden eleme yok.
+         * Ama sağlam bir duvar varken camı önermek kötü bir öneri: karenin
+         * ne kadarı cam ise puanı o oranda düşüyor.
+         */
+        let camPay = 0
         if (harita) {
           const hx0 = Math.round((x0 / W) * harita.w)
           const hx1 = Math.max(hx0 + 1, Math.round((x1 / W) * harita.w))
@@ -179,17 +187,20 @@ export function adaylariBul(tuval, sec = {}) {
           const hy1 = Math.max(hy0 + 1, Math.round((y1 / H) * harita.h))
           let duvar = 0
           let yasak = 0
+          let cam = 0
           let toplam = 0
           for (let hy = hy0; hy < hy1; hy++) {
             for (let hx = hx0; hx < hx1; hx++) {
               const sv = harita.sinif[hy * harita.w + hx]
               if (sv === SINIF.DUVAR || sv === SINIF.EKRAN || sv === SINIF.CAM) duvar++
               else if (sv !== SINIF.BILINMEYEN) yasak++
+              if (sv === SINIF.CAM) cam++
               toplam++
             }
           }
           duvarPay = toplam ? duvar / toplam : 0
           yasakPay = toplam ? yasak / toplam : 0
+          camPay = toplam ? cam / toplam : 0
           /*
            * HARİTA, ARAMA KUTULARINI DARALTMAMALI.
            *
@@ -320,6 +331,7 @@ export function adaylariBul(tuval, sec = {}) {
         ham.push({
           skor,
           yasakPay,
+          camPay,
           merkez: { x: (x0 + x1) / 2 / W, y: (y0 + y1) / 2 / H },
           /*
            * KENARLAR SAHNENİN PERSPEKTİFİNE OTURUYOR.
@@ -377,7 +389,7 @@ export function adaylariBul(tuval, sec = {}) {
       duzlemler = []
     }
     for (const d of duzlemler) {
-      ham.push({ ...d, yasakPay: 0 })
+      ham.push({ ...d, yasakPay: 0, camPay: 0 })
     }
   }
 
@@ -394,6 +406,11 @@ export function adaylariBul(tuval, sec = {}) {
    * alınıyor — kullanıcının "zaten orada bir ekran var" dediği yer burası.
    */
   for (const a of ham) {
+    /*
+     * Cam payı ne kadar yüksekse ceza o kadar büyük (tamamı camsa −34).
+     * Duvarın bir köşesine denk gelen küçük cam payı neredeyse etkisiz.
+     */
+    if (a.camPay) a.skor -= Math.round(Math.min(1, a.camPay) * 34)
     const p = parlaklikOlcusu(tuval, a.koseler)
     if (!p) continue
     if (p.pencere) a.skor -= 22
