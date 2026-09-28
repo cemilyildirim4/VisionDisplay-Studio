@@ -1814,13 +1814,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const koseTuval = (() => {
     if (!fotoYer || !cizimOlcek) return null
-    /* Kullanıcı köşeleri çektiyse çizim doğrudan onlara uyuyor. */
+    /*
+     * Kullanıcı köşeleri çektiyse çizim doğrudan onlara uyuyor.
+     *
+     * TAŞIMA BURADA DA GEÇERLİ: köşeler ayarlandıktan sonra tasarımı
+     * sürüklemek mümkün olmuyordu (kayma yalnızca otomatik hedefe
+     * uygulanıyordu). Artık elle çizilen dörtgen de sürükleme kaymasını
+     * alıyor; köşeler kendi aralarındaki şekli koruyarak birlikte gidiyor.
+     */
     if (elleKose) {
       const dw0 = tasarimWm * cizimOlcek
       const dh0 = tasarimHm * cizimOlcek
       const sol0 = tuvalBoyut.w / 2 - dw0 / 2
       const ust0 = tuvalBoyut.h / 2 - dh0 / 2
-      return elleKose.map((k) => ({ x: k.x - sol0, y: k.y - ust0 }))
+      return elleKose.map((k) => ({
+        x: k.x - sol0 + (elleKayma?.x || 0),
+        y: k.y - ust0 + (elleKayma?.y || 0),
+      }))
     }
     if (!hedefKose) return null
     const dw = tasarimWm * cizimOlcek
@@ -2127,6 +2137,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const koseleriTasi = (noktalar) => {
     if (!Array.isArray(noktalar) || noktalar.length !== 4) return
+    /*
+     * Tutamaklar ekranda KAYMA UYGULANMIŞ hâli gösteriyor; kaydedilen değer
+     * ise kaymasız olmalı, yoksa kayma iki kez toplanır ve köşe tutamağın
+     * altından kaçar.
+     */
+    noktalar = noktalar.map((k) => ({
+      x: k.x - (elleKayma?.x || 0),
+      y: k.y - (elleKayma?.y || 0),
+    }))
     const oncekiler = elleKose || koseMutlak
     if (!oncekiler) {
       setElleKose(noktalar)

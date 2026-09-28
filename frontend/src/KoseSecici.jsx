@@ -72,7 +72,15 @@ export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH }) {
     <div
       ref={katmanRef}
       data-pdf-gizle
-      className="absolute inset-0 z-20"
+      /*
+        KATMAN TIKLAMAYI YUTMUYOR.
+
+        Kök öğe tüm tuvali kaplıyordu ve pointer olaylarını alıyordu; köşe
+        kipindeyken tasarımı sürüklemek bu yüzden mümkün değildi. Artık
+        yalnızca TUTAMAKLAR tıklanabilir, boş alan alttaki sürükleme
+        tutamağına geçiyor.
+      */
+      className="absolute inset-0 z-20 pointer-events-none"
       style={{ touchAction: 'none' }}
     >
       <svg width={tuvalW} height={tuvalH} className="absolute inset-0 pointer-events-none">
@@ -89,10 +97,19 @@ export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH }) {
           onPointerUp={kalkti}
           onPointerCancel={kalkti}
           onFocus={() => setSecili(i)}
-          className={`absolute rounded-full border-2 shadow-sm ${
+          className={`pointer-events-auto absolute rounded-full border-2 shadow-sm ${
             secili === i ? 'bg-brand border-white' : 'bg-white border-brand'
           }`}
           style={{
+            /*
+             * TUTAMAK HER ZAMAN KADRAJIN İÇİNDE.
+             *
+             * Köşe tuvalin dışına düşünce tutamak da görünmez oluyor ve o
+             * köşe bir daha düzeltilemiyordu (kullanıcının yaşadığı durum
+             * tam buydu). Dörtgen gerçek yerinde çiziliyor ama TUTAMAK
+             * kenara sabitleniyor: dışarı kaçan köşe kenardan tutulup geri
+             * getirilebiliyor.
+             */
             /*
              * GÖRÜNEN DAİRE KÜÇÜK, DOKUNMA ALANI BÜYÜK.
              *
@@ -102,8 +119,8 @@ export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH }) {
              * değil, ayrı bir iç daire ile de değil) yerine düğmenin
              * kendisi 18 kalıp kenarı inceltildi ve imleç alanı korunuyor.
              */
-            left: k.x - 9,
-            top: k.y - 9,
+            left: Math.max(2, Math.min(tuvalW - 20, k.x - 9)),
+            top: Math.max(2, Math.min(tuvalH - 20, k.y - 9)),
             width: 18,
             height: 18,
             cursor: 'grab',
