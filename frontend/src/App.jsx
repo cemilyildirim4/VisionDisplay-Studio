@@ -494,6 +494,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [kilitliKose, setKilitliKose] = useState([])
 
   const [koseKipi, setKoseKipi] = useState(false)
+
+  /*
+   * ELLE YAPILAN DÜZENLEMEYİ BIRAK.
+   *
+   * elleKose TUVAL PİKSELİ cinsinden mutlak bir dörtgen ve çizimde her şeyin
+   * ÖNÜNDE geliyor: doluysa hedef yüzey, yerleşim önerisi, hatta fotoğrafın
+   * kendisi dikkate alınmıyor. Hiçbir yerde temizlenmediği için bir kez köşe
+   * ayarına dokunan kullanıcı o dörtgene kilitleniyordu:
+   *
+   *   • fotoğraf değişince eski dörtgen yeni fotoğrafın üstünde — hatta
+   *     dışında — asılı kalıyordu (düz duran bir laptop ekranının yanında
+   *     havada duran eğik tasarım tam olarak buydu);
+   *   • önerilen yerlerden birine tıklamak hiçbir şeyi değiştirmiyordu,
+   *     çünkü elle dörtgen her zaman kazanıyordu. "Yerleşimlerde fark yok"
+   *     denmesinin sebeplerinden biri de bu.
+   *
+   * Bu yüzden yeni bir fotoğraf ya da yeni bir yerleşim kararı elle
+   * düzenlemeyi sıfırlıyor: köşe ayarı yalnızca o yerleşime ait.
+   */
+  const elleDuzenlemeyiBirak = () => {
+    setElleKose(null)
+    setKilitliKose([])
+    setElleAci({ yaw: 0, tilt: 0 })
+  }
   /*
    * ADAY KARELER — fotoğrafta yerleştirmeye uygun bulunan yüzeyler.
    * Tek bir tahmine mahkûm kalmamak için hepsi gösteriliyor; kullanıcı
@@ -750,6 +774,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         setOzelInceleniyor(false)
       }
       if (!kayit) return
+      /* Yeni fotoğraf, yeni sayfa: önceki fotoğrafın köşe ayarı taşınmıyor. */
+      elleDuzenlemeyiBirak()
       // Önceki fotoğrafın adresi bellekte kalmasın
       setOzelSahne((eski) => {
         if (eski?.dosya?.startsWith('blob:')) URL.revokeObjectURL(eski.dosya)
@@ -833,6 +859,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     const bulunan = Array.isArray(kayit?.adaylar) ? kayit.adaylar : []
     setAdaylar(bulunan)
+    /*
+     * "En uygun yere yerleştir" de bir yerleşim kararıdır: elle çizilmiş
+     * dörtgen kalırsa düğme hiçbir iş yapmıyormuş gibi görünüyor.
+     */
+    if (uygula) elleDuzenlemeyiBirak()
     /*
      * Tek aday kalsa bile kare gösteriliyor: kullanıcı nereye konduğunu
      * görüyor ve isterse manuel köşelerle düzeltiyor.
@@ -2102,6 +2133,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     } catch {
       /* iyileştirme başarısızsa aday olduğu gibi uygulanır */
     }
+    /* Yeni yerleşim seçildi: önceki elle köşe ayarı geçerliliğini yitirdi. */
+    elleDuzenlemeyiBirak()
     setHedefKose(koseler)
     setHedefTur(aday.tur || null)
     setAdayKipi(false)
