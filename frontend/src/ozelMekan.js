@@ -36,7 +36,12 @@ import { parlakEkranKutusu } from './parlakEkran.js'
  * Varsayılan çekim mesafesi (metre) — tipik bir dış mekân karesi.
  * Kullanıcı değiştirdiğinde bütün ölçek onunla birlikte değişiyor.
  */
-export const VARSAYILAN_MESAFE_M = 15
+/*
+ * Varsayılan 15 m bir iç mekân fotoğrafı için fazlaydı: kadraj 16 metre
+ * sayılıyor, 3 metrelik duvar devasa görünüyordu. Tipik bir oda/duvar
+ * fotoğrafı 3–5 metreden çekiliyor.
+ */
+export const VARSAYILAN_MESAFE_M = 4
 
 /**
  * KADRAJ GENİŞLİĞİ = 2·mesafe·tan(görüş açısı/2).

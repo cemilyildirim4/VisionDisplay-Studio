@@ -208,8 +208,50 @@ export function duzlemAdaylari(sec = {}) {
     const zc = b.a * cx + b.b * cy + b.c
     const zl = b.a * x0 + b.b * cy + b.c
     const zr = b.a * x1 + b.b * cy + b.c
+
+    /*
+     * ÜÇÜNCÜ ÖLÇÜM: HAM DERİNLİK ORTALAMASI.
+     *
+     * Eğimin YÖNÜ şimdiye kadar tek bir kaynaktan geliyordu: bölgeye
+     * uydurulan düzlemin eğimi. Uydurma, bölgenin kenarındaki birkaç
+     * yanlış pikselden etkilenip yönü ters çevirebiliyor — sonuç, duvara
+     * ters yöne yatmış bir kare oluyor (kullanıcı bunu hemen görüyor).
+     *
+     * Burada düzlemden BAĞIMSIZ bir ölçüm alınıyor: bölgenin sol üçte biri
+     * ile sağ üçte birinin ham ters derinlik ortalaması. Hangi yan daha
+     * yakınsa onun görünen boyu uzundur. Bu ölçüm düzlemin söylediğiyle
+     * aynı yönü göstermiyorsa ya da fark belirsizse EĞİM VERİLMİYOR;
+     * kare kadrajla hizalı kalıyor.
+     */
+    let solT = 0
+    let solN = 0
+    let sagT = 0
+    let sagN = 0
+    const ucte = (x1 - x0) / 3
+    for (const i of b.piksel) {
+      const px = i % W
+      const py = (i / W) | 0
+      if (py < y0 || py > y1) continue
+      if (px <= x0 + ucte) {
+        solT += der[i]
+        solN++
+      } else if (px >= x1 - ucte) {
+        sagT += der[i]
+        sagN++
+      }
+    }
+    const solOrt = solN ? solT / solN : 0
+    const sagOrt = sagN ? sagT / sagN : 0
+    const yanFark = Math.abs(solOrt - sagOrt)
+    /* Fark ölçüm gürültüsünden büyük olmalı ve düzlemle aynı yönü göstermeli. */
+    const olcumUyumu =
+      solN > 20 &&
+      sagN > 20 &&
+      yanFark > yayilim * 0.04 &&
+      (solOrt > sagOrt) === (zl > zr)
+
     let koseler
-    if (uyumIyi && egikYuzey && yonUyumu && zc > 1e-6 && zl > 1e-6 && zr > 1e-6) {
+    if (uyumIyi && egikYuzey && yonUyumu && olcumUyumu && zc > 1e-6 && zl > 1e-6 && zr > 1e-6) {
       /*
        * Yamukluk sınırı daraltıldı (eski: 0,70–1,42). Bir duvara asılmış
        * ekranda kenarlar arasındaki fark bu kadar büyük olmuyor; geniş

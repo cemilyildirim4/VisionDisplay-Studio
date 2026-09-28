@@ -404,6 +404,11 @@ const dict = {
     en: 'The photo never leaves your device; everything runs in the browser.',
     ar: 'لا تغادر الصورة جهازك؛ تتم المعالجة في المتصفح.',
   },
+  'scene.tooBigForFrame': {
+    tr: 'Tasarım bu fotoğrafın kadrajından büyük. Mesafe ayarını fotoğrafın gerçekte kaç metreden çekildiğine göre düzeltin ya da ekran ölçüsünü küçültün.',
+    en: 'The design is larger than this photo\'s frame. Set the distance to how far the photo was really taken from, or reduce the screen size.',
+    ar: 'التصميم أكبر من إطار هذه الصورة. اضبط المسافة وفق المسافة الحقيقية للتصوير أو صغّر حجم الشاشة.',
+  },
   'scene.scanning': { tr: 'Uygun ekran alanları bulunuyor…', en: 'Looking for suitable screen areas…', ar: 'يتم البحث عن مناطق شاشة مناسبة…' },
   'scene.screenSurface': {
     tr: 'LED ekran yüzeyi algılandı. Tasarım ekrana perspektifli olarak yerleştirildi.',

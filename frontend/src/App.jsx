@@ -738,10 +738,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * gerekir; kadraj = mesafe × 1,11 olduğundan bu, ekranın kadrajın
        * ~%70'ini kaplaması demek. 2–120 m arasına sıkıştırılıyor.
        */
-      setOzelMesafeM((eski) => {
-        const onerilen = Math.max(2, Math.min(120, Math.round(tasarimWm * 1.6)))
-        return eski === VARSAYILAN_MESAFE_M ? onerilen : eski
-      })
+      /*
+       * MESAFE ARTIK TASARIMDAN TÜRETİLMİYOR.
+       *
+       * Önceki kural "mesafe = tasarım genişliği × 1,6" idi; amaç tasarımın
+       * kadraja sığmasıydı. Sonuç: ölçek tasarımı takip ediyordu. 12,8 m'lik
+       * bir ekran seçilince fotoğrafın kadrajı 22 m sayılıyor ve 3 metrelik
+       * bir ofis duvarı 20 metre gibi ölçekleniyordu — çizim "sığıyormuş"
+       * gibi görünüyor ama gerçeği yansıtmıyordu.
+       *
+       * Ölçek artık yalnızca KULLANICININ verdiği mesafeden geliyor.
+       * Tasarım o kadraja sığmıyorsa bu bir hata değil, bilgi: o duvara o
+       * ekran gerçekten sığmıyor demektir ve aşağıda uyarı olarak yazılıyor.
+       */
       setScene('ozel')
       mekaniOrtala()
       oneriyiUygula(kayit, false)   /* yalnızca adaylar; yerleşim kullanıcıdan */
@@ -1348,6 +1357,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * söylüyor. Ayrı bir "çekim mesafesi" alanı yerine kullanıcının girdiği
    * mesafe doğrudan ölçeğe bağlandı: tek sayı, tek yerde.
    */
+  /*
+   * FOTOĞRAFTA MESAFE, TASARIMDAN BAĞIMSIZ.
+   *
+   * Otomatik mesafe (otoIzlemeM) tasarımın ÖNERİLEN İZLEME mesafesidir ve
+   * ekran büyüdükçe büyür. Fotoğraflı mekânda bu değer ölçeği belirlediği
+   * için ekran ne kadar büyütülürse kadraj da o kadar büyüyor, yani duvar
+   * kendiliğinden genişliyordu: 3 metrelik bir ofis duvarına 12 metrelik
+   * ekran "sığıyormuş" gibi görünüyordu.
+   *
+   * Artık fotoğraf seçilince mesafe bir kez gerçek bir çekim mesafesine
+   * (VARSAYILAN_MESAFE_M) sabitleniyor; sonrasını kullanıcı giriyor.
+   * Ölçek yalnızca bu sayıdan geliyor, tasarımdan değil.
+   */
+  useEffect(() => {
+    if (scene !== 'ozel' || !ozelSahne) return
+    if (izlemeM == null) setIzlemeM(VARSAYILAN_MESAFE_M)
+  }, [scene, ozelSahne, izlemeM])
+
   useEffect(() => {
     if (scene !== 'ozel' || !ozelSahne) return
     setOzelMesafeM((onceki) => (Math.abs(onceki - izlemeMesafesi) < 0.01 ? onceki : izlemeMesafesi))
@@ -3187,6 +3214,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                       {scene === 'ozel' && ozelSahne ? t('scene.photoDistanceHint') : t('scene.viewDistHint')}
                     </p>
+                    {/*
+                      ÖLÇEK UYARISI.
+
+                      Tasarım, verilen mesafeden görünen kadrajdan genişse
+                      çizim zaten taşıyor. Sessizce sığdırmak yerine sebebi
+                      söyleniyor: ya mesafe yanlış girilmiş ya da o ekran o
+                      mekâna gerçekten sığmıyor.
+                    */}
+                    {scene === 'ozel' && ozelSahne && tasarimWm > kadrajGenisligi(ozelMesafeM) && (
+                      <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                        {t('scene.tooBigForFrame')}
+                      </p>
+                    )}
                     {/* Fotoğrafta otomatik mesafe yok: ölçek ondan geliyor. */}
                     <div className={`mt-2 items-center justify-between gap-3 ${scene === 'ozel' && ozelSahne ? 'hidden' : 'flex'}`}>
                       <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
