@@ -1706,7 +1706,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const z = sahneYakinlik || 1
     return (fotoYer.panelHpx / 2) * z - tasarimYariH
   }
-  const oturmaKaymasi = !surukleAktif
+  /*
+   * ÖNERİ KAYMALARI YALNIZCA BİR YERLEŞİM SEÇİLDİYSE.
+   *
+   * Fotoğraf yüklenince tasarım artık hiçbir adaya oturmuyor (bkz.
+   * oneriyiUygula'daki uygula bayrağı). Buna rağmen "önerilen alana kay"
+   * hesapları çalışmaya devam ediyordu: tasarım ortada değil, önerinin
+   * bulunduğu yerde ve yukarıda duruyordu. Hedef yokken ve kullanıcı
+   * taşımamışken kayma SIFIR — yani tuvalin tam ortası.
+   */
+  const yerlesimSecildi = !!hedefKose || mekanTasindi
+  const oturmaKaymasi = !surukleAktif || !yerlesimSecildi
     ? 0
     : duvaraHizali
       ? (fotoYer?.sigdir ? oneriDikeyKaymasi(fotoYer, tuvalBoyut.h) : duvarDibiKaymasi())
@@ -1722,7 +1732,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           tasarimWm * (cizimOlcek || 0),
         )
   /* Sığdırılmış fotoğrafta ekran, önerilen alanın üstüne yatayda da kayar. */
-  const oneriKaymasi = surukleAktif ? oneriYatayKaymasi(fotoYer, tuvalBoyut.w) : 0
+  const oneriKaymasi = surukleAktif && yerlesimSecildi ? oneriYatayKaymasi(fotoYer, tuvalBoyut.w) : 0
 
   const elleKayma = surukleAktif
     ? kaymayiSinirla(

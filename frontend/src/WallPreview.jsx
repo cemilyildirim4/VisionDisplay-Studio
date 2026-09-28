@@ -1361,7 +1361,15 @@ export default function WallPreview({
                 ("sağa soluma ne kadar boşluk kalıyor?"). Pay, etiketin
                 sığacağı kadar genişse yazılıyor.
               */}
-              {!kose && marginXpx > 34 && (
+              {/*
+                Boşluk ölçüleri yalnızca SADE DUVAR görünümünde.
+
+                Mekân fotoğrafında duvar kutusu tuvalin tamamı kadar; bu
+                etiketler tasarımdan metrelerce uzağa, fotoğrafın kenarına
+                düşüyordu. Orada anlamı da yok: ölçülen şey müşterinin
+                duvarı değil, sahnenin kadrajı.
+              */}
+              {!sahneVar && !kose && marginXpx > 34 && (
                 <>
                   <div className="absolute" style={{ left: marginXpx / 2, top: -olcuYazi * 2.2 - sahnePayPx, transform: 'translateX(-50%)' }}>
                     <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginXpx / pxPerM)}</span>
@@ -1373,7 +1381,7 @@ export default function WallPreview({
               )}
 
               {/* Dikey boşluklar: üst ve alt pay (sağ şeritte, gri) */}
-              {!kose && marginYpx > 34 && (
+              {!sahneVar && !kose && marginYpx > 34 && (
                 <>
                   <div className="absolute" style={{ left: wallW + olcuYazi * 0.8 + sahnePayPx, top: marginYpx / 2, transform: 'translateY(-50%)' }}>
                     <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginYpx / pxPerM)}</span>

@@ -584,7 +584,12 @@ export function adaylariBul(tuval, sec = {}) {
    * ekran oraya konmaz.
    */
   const elenmis = ham
-    .filter((a) => a.skor >= PUAN_ESIGI && (a.yasakPay || 0) <= 0.25)
+    /*
+     * Yasak sınıf payı %25'ten %12'ye indirildi. Vitrin/dükkân girişinin
+     * üstüne taşan kareler bu payla geçiyordu: karenin dörtte biri kapı ya
+     * da nesne olsa bile aday sayılıyordu. Ekran, kapının önüne konamaz.
+     */
+    .filter((a) => a.skor >= PUAN_ESIGI && (a.yasakPay || 0) <= 0.12)
     .filter((a) => !pencereMi(tuval, a.koseler))
 
   const merkezler = sonuc.map((a) => dortgenMerkez(a.koseler))
