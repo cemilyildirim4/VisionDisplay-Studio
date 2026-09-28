@@ -51,9 +51,9 @@ const KINDS = [
     label: 'İşlemci',
     api: 'hardware',
     columns: [
-      { key: 'maxPixelCapacityPerPort', label: 'Port başı piksel (px/port)', format: (v) => (v ? `${Number(v).toLocaleString('tr-TR')} px` : '—') },
-      { key: 'maxPortWidth', label: 'Port maks. genişlik', format: (v) => (v ? `${v} px` : '—') },
-      { key: 'maxPortHeight', label: 'Port maks. yükseklik', format: (v) => (v ? `${v} px` : '—') },
+      { key: 'maxPixelCapacityPerPort', label: 'Port başı piksel', format: (v) => (v ? `${Number(v).toLocaleString('tr-TR')} piksel` : '—') },
+      { key: 'maxPortWidth', label: 'Port maks. genişlik', format: (v) => (v ? `${v} piksel` : '—') },
+      { key: 'maxPortHeight', label: 'Port maks. yükseklik', format: (v) => (v ? `${v} piksel` : '—') },
       { key: 'ethernetPortCount', label: 'Ethernet' },
       { key: 'inputPortsInfo', label: 'Giriş portları' },
       { key: 'powerDrawWatt', label: 'Güç', format: (v) => `${v} W` },
@@ -131,7 +131,7 @@ function pixelCap(item) {
   const w = Number(item.maxPixelWidth) || 0
   const h = Number(item.maxPixelHeight) || 0
   if (!w && !h) return '—'
-  return `${w} × ${h} px`
+  return `${w} × ${h} piksel`
 }
 
 function Field({ label, hint, children }) {

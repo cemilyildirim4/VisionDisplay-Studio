@@ -2750,7 +2750,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     title={t('res.totalHint')}
                     className="py-2.5 px-4 rounded-lg border border-neutral-200 dark:border-[#2c333f] text-[18px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100"
                   >
-                    {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)} px
+                    {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)} piksel
                   </div>
                 </div>
               )}
