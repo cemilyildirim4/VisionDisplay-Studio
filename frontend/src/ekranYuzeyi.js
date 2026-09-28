@@ -201,6 +201,111 @@ export function mevcutEkranYuzeyi(kaynak, sec = {}) {
  * toplanan gradyan en yüksek olan konum kazanıyor. Köşeler kaydırılan iki
  * kenarın kesişiminden yeniden kuruluyor, böylece dörtgen bozulmuyor.
  */
+/**
+ * SEÇİLEN DÖRTGENİ FOTOĞRAFTAKİ KENARLARA OTURT.
+ *
+ * Aday kare doğru yeri gösteriyor ama açısı birkaç derece tutmuyorsa ekran
+ * "az kaymış" görünüyor — kullanıcı bunu hemen fark ediyor, düzeltmesi ise
+ * dört köşeyi elle çekmeyi gerektiriyordu.
+ *
+ * Burada dörtgen, GÖRÜNTÜDEKİ GERÇEK KENARLARA göre ince ayarlanıyor:
+ * küçük döndürme, yamukluk, ölçek ve kaydırma denemeleri yapılıp dört
+ * kenarın üzerinden geçen kenar enerjisi en yüksek olan seçiliyor. Ölçüm
+ * doğrudan görüntüden geldiği için derinlik kestirimindeki hatalardan
+ * etkilenmiyor.
+ *
+ * Kazanç küçükse (%8'in altında) dörtgen olduğu gibi bırakılıyor: gürültüye
+ * bakıp ekranı oynatmak, olduğu yerde bırakmaktan kötüdür.
+ *
+ * @param {HTMLCanvasElement|HTMLImageElement} kaynak
+ * @param {{x:number,y:number}[]} koseler 0–1 aralığında dört köşe
+ * @returns {{x:number,y:number}[]} iyileştirilmiş dörtgen (0–1)
+ */
+export function kenarlaraOturt(kaynak, koseler) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return koseler
+  const veri = griKare(kaynak)
+  if (!veri) return koseler
+  const { gri, W, H } = veri
+  const { mag } = sobel(gri, W, H)
+
+  /* 0–1 → piksel */
+  const pik = koseler.map((k) => ({ x: k.x * W, y: k.y * H }))
+  const merkez = {
+    x: (pik[0].x + pik[1].x + pik[2].x + pik[3].x) / 4,
+    y: (pik[0].y + pik[1].y + pik[2].y + pik[3].y) / 4,
+  }
+  const enerji = (k) => {
+    let toplam = 0
+    const kenar = [[0, 1], [1, 2], [2, 3], [3, 0]]
+    for (const [i, j] of kenar) {
+      const a = k[i]
+      const b = k[j]
+      const n = 40
+      for (let t = 0; t <= n; t++) {
+        const x = Math.round(a.x + (b.x - a.x) * (t / n))
+        const y = Math.round(a.y + (b.y - a.y) * (t / n))
+        if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) continue
+        let en = 0
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const v = mag[(y + dy) * W + (x + dx)]
+            if (v > en) en = v
+          }
+        }
+        toplam += en
+      }
+    }
+    return toplam
+  }
+
+  /* Dönüşüm: döndürme + ölçek + yamukluk + kaydırma */
+  const uygula = (aci, olcek, yamuk, dx, dy) =>
+    pik.map((k, i) => {
+      const rx = k.x - merkez.x
+      const ry = k.y - merkez.y
+      const c = Math.cos(aci)
+      const s = Math.sin(aci)
+      /* Yamukluk: sol kenar (0,3) ve sağ kenar (1,2) dikeyde farklı ölçekleniyor. */
+      const sag = i === 1 || i === 2
+      const oy = ry * (1 + (sag ? yamuk : -yamuk))
+      return {
+        x: merkez.x + (rx * c - oy * s) * olcek + dx,
+        y: merkez.y + (rx * s + oy * c) * olcek + dy,
+      }
+    })
+
+  const boy = Math.hypot(pik[3].x - pik[0].x, pik[3].y - pik[0].y) || 1
+  const adimK = Math.max(1, boy * 0.02)
+  let enIyi = { deger: enerji(pik), k: pik }
+  const baslangic = enIyi.deger
+
+  const aciDizi = [-0.10, -0.07, -0.045, -0.025, 0, 0.025, 0.045, 0.07, 0.10]
+  const olcekDizi = [0.94, 0.97, 1, 1.03, 1.06]
+  const yamukDizi = [-0.10, -0.06, -0.03, 0, 0.03, 0.06, 0.10]
+  const kayDizi = [-adimK, 0, adimK]
+
+  for (const aci of aciDizi) {
+    for (const olcek of olcekDizi) {
+      for (const yamuk of yamukDizi) {
+        for (const dx of kayDizi) {
+          for (const dy of kayDizi) {
+            const k = uygula(aci, olcek, yamuk, dx, dy)
+            const d = enerji(k)
+            if (d > enIyi.deger) enIyi = { deger: d, k }
+          }
+        }
+      }
+    }
+  }
+
+  /* Belirgin bir kazanç yoksa dokunma. */
+  if (enIyi.deger < baslangic * 1.08) return koseler
+  return enIyi.k.map((k) => ({
+    x: Math.max(0, Math.min(1, k.x / W)),
+    y: Math.max(0, Math.min(1, k.y / H)),
+  }))
+}
+
 function kenaraOturt(k, mag, W, H) {
   const merkez = {
     x: (k[0].x + k[1].x + k[2].x + k[3].x) / 4,

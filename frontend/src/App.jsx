@@ -40,6 +40,7 @@ import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
 import AdaySecici from './AdaySecici.jsx'
 import DavetKapisi from './DavetKapisi.jsx'
+import { kenarlaraOturt } from './ekranYuzeyi.js'
 
 import { DAVET_OLAYI } from './apiClient.js'
 import { useSession } from './SessionContext.jsx'
@@ -356,6 +357,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [ozelUyari, setOzelUyari] = useState(null)
   /* Model çalışırken kullanıcı beklediğini bilsin — birkaç saniye sürüyor. */
   const [ozelInceleniyor, setOzelInceleniyor] = useState(false)
+  /* Yüklenen fotoğrafın görüntü nesnesi — kenar iyileştirmesi bunu kullanıyor. */
+  const ozelSahneGorsel = useRef(null)
   /* Modelin fotoğrafta gördükleri — arayüzde adlarıyla yazılıyor. */
   const [ozelNesneler, setOzelNesneler] = useState(null)
   /*
@@ -715,6 +718,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const url = URL.createObjectURL(dosya)
     const gorsel = new Image()
     gorsel.onload = async () => {
+      ozelSahneGorsel.current = gorsel
       setOzelInceleniyor(true)
       setOzelUyari(null)
       let kayit = null
@@ -913,6 +917,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!ozelSahne) return
     const gorsel = new Image()
     gorsel.onload = async () => {
+      ozelSahneGorsel.current = gorsel
       setOzelInceleniyor(true)
       let kayit = null
       try {
@@ -1982,7 +1987,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const GUVEN_ESIGI = 70
   const adayiUygula = (aday) => {
     if (!aday) return
-    setHedefKose(aday.koseler)
+    /*
+     * SEÇİLEN KAREYİ GÖRÜNTÜDEKİ KENARLARA OTURT.
+     *
+     * Aday doğru yeri gösterse bile açısı birkaç derece tutmayabiliyor;
+     * ekran "az kaymış" duruyordu. Burada dörtgen, fotoğraftaki gerçek
+     * kenarlara göre ince ayarlanıyor (bkz. kenarlaraOturt): küçük
+     * döndürme/ölçek/yamukluk denemeleri arasından kenar enerjisi en
+     * yüksek olan seçiliyor. Belirgin kazanç yoksa aday olduğu gibi
+     * kalıyor — gürültüye bakıp ekranı oynatmıyoruz.
+     */
+    let koseler = aday.koseler
+    try {
+      const g = ozelSahneGorsel.current
+      if (g) koseler = kenarlaraOturt(g, aday.koseler) || aday.koseler
+    } catch {
+      /* iyileştirme başarısızsa aday olduğu gibi uygulanır */
+    }
+    setHedefKose(koseler)
     setHedefTur(aday.tur || null)
     setAdayKipi(false)
     if ((aday.skor || 0) < GUVEN_ESIGI) {
@@ -3201,12 +3223,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           {izlemeMesafesi.toFixed(1).replace('.', ',')} m
                         </span>
                       ) : (
+                        /*
+                          METRENİN ALTI DA GİRİLEBİLİR.
+
+                          Yakın çekim fotoğraflarda (bir masa üstü ekranı, bir
+                          vitrin) kamera bir metreden yakın olabiliyor; alt
+                          sınır 1 m iken ölçek olduğundan büyük çıkıyordu.
+                          Alt sınır 0,2 m'ye indi ve adım 0,1 m oldu; kutuya
+                          elle istenen değer de yazılabiliyor.
+                        */
                         <Stepper
                           value={izlemeMesafesi}
                           onChange={setIzlemeM}
-                          min={1}
+                          min={0.2}
                           max={scene === 'ozel' && ozelSahne ? 300 : 60}
-                          step={0.5}
+                          step={0.1}
                           decimals={1}
                         />
                       )}
