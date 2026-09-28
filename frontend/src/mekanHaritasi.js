@@ -217,63 +217,6 @@ export function mekanHaritasi(tuval, sec = {}) {
   }
 
   /*
-   * CAM CEPHENİN KOYU PANELLERİ DE CAM.
-   *
-   * Karşıtlık ölçütü camın yalnızca PARLAK yerlerini yakalıyor: dışarısı
-   * görünen pencere, yansıma, vitrin ışığı. Aynı cephenin koyu kanatları
-   * (siyah cam kapı, gölgede kalan bölme) düz ve donuk olduğu için DUVAR
-   * kalıyordu — ve yerleştirme motoru oraya "sağlam duvar" diye ekran
-   * öneriyordu.
-   *
-   * Cam bir yüzeydir, parça değil: cam olarak işaretlenmiş piksellerden
-   * başlayıp KOMŞU duvar piksellerine yayılıyoruz, ama yalnızca duvar
-   * ortalamasından belirgin biçimde ayrılan (çok koyu ya da çok parlak)
-   * pikseller üzerinden. Düz boyalı duvar bu ölçütü geçemediği için yayılma
-   * cephenin sınırında kendiliğinden duruyor.
-   *
-   * GÜVENLİK SINIRI: yayılan alan tohumun 2,5 katını geçemiyor. Ölçüm
-   * yanılırsa bile bütün duvar cama dönüşmüyor.
-   */
-  {
-    let tohum = 0
-    for (let i = 0; i < N; i++) if (sinif[i] === SINIF.CAM) tohum++
-    if (tohum > N * 0.01) {
-      let duvarTon = 0
-      let duvarAdet = 0
-      for (let i = 0; i < N; i++) {
-        if (sinif[i] === SINIF.DUVAR) {
-          duvarTon += parlak[i]
-          duvarAdet++
-        }
-      }
-      duvarTon = duvarAdet ? duvarTon / duvarAdet : 128
-      const sinirAlan = Math.round(tohum * 2.5)
-      const yigin = []
-      for (let i = 0; i < N; i++) if (sinif[i] === SINIF.CAM) yigin.push(i)
-      let buyuyen = 0
-      while (yigin.length && buyuyen < sinirAlan) {
-        const i = yigin.pop()
-        const x = i % W
-        const y = (i / W) | 0
-        const komsu = [i - 1, i + 1, i - W, i + W]
-        for (let k = 0; k < 4; k++) {
-          const j = komsu[k]
-          if (j < 0 || j >= N) continue
-          if (k < 2 && Math.abs((j % W) - x) !== 1) continue
-          if (k >= 2 && Math.abs(((j / W) | 0) - y) !== 1) continue
-          if (sinif[j] !== SINIF.DUVAR) continue
-          /* Duvarın kendi tonundan %25'ten fazla ayrılan piksel cephenin parçası. */
-          if (Math.abs(parlak[j] - duvarTon) < duvarTon * 0.25) continue
-          sinif[j] = SINIF.CAM
-          buyuyen++
-          yigin.push(j)
-          if (buyuyen >= sinirAlan) break
-        }
-      }
-    }
-  }
-
-  /*
    * KAPI: duvarın içinde, zemine değen, boyu eninden uzun ve çevresinden
    * koyu dikey şeritler. Sütun sütun taranıyor.
    */

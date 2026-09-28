@@ -421,15 +421,34 @@ export function adaylariBul(tuval, sec = {}) {
       a.camPay = pay.camPay
       a.yasakPay = Math.max(a.yasakPay || 0, pay.yasakPay)
     }
-    /*
-     * Cam payı ne kadar yüksekse ceza o kadar büyük (tamamı camsa −34).
-     * Duvarın bir köşesine denk gelen küçük cam payı neredeyse etkisiz.
-     */
-    if (a.camPay) a.skor -= Math.round(Math.min(1, a.camPay) * 34)
     const p = parlaklikOlcusu(tuval, a.koseler)
+
+    /*
+     * CAM CEPHENİN İÇİNDEKİ OPAK PANO — ARANAN YER TAM OLARAK BURASI.
+     *
+     * Bir mağaza/ofis cephesinde camların arasında duran koyu, düz, dokusuz
+     * dikdörtgen cam DEĞİLDİR: alınlık panelidir, tabelanın asıldığı yer
+     * odur. Ölçüsü de belli — kadrajın geri kalanından koyu, kendi içinde
+     * düz ve çevresi ondan aydınlık.
+     *
+     * Bu yüzden cam cezası buraya işlemiyor: kare cam bölgesinin ORTASINDA
+     * olsa bile, opaksa ceza yerine ödül alıyor. Önceki sürümde tam tersi
+     * oluyordu ve kullanıcının yerleştirmek istediği siyah pano listeden
+     * tamamen düşmüştü.
+     */
+    const opakPano = !!p?.karanlikEkran
+
+    /*
+     * Cam payı ne kadar yüksekse ceza o kadar büyük. Ceza 34 iken eşiğin
+     * (54) altına düşen adaylar listeden tamamen kayboluyordu; 22 ile cam
+     * kareler sırada geriye gidiyor ama seçilebilir kalıyor — istenen
+     * davranış "eleme" değil "geriye alma".
+     */
+    if (a.camPay && !opakPano) a.skor -= Math.round(Math.min(1, a.camPay) * 22)
+
     if (!p) continue
     if (p.pencere) a.skor -= 22
-    if (p.karanlikEkran) a.skor += 18
+    if (opakPano) a.skor += 24
   }
   ham.sort((a, b) => b.skor - a.skor)
 
@@ -610,7 +629,12 @@ export function adaylariBul(tuval, sec = {}) {
        */
       const pay = haritaPaylari(harita, enIyi.koseler)
       const camOran = pay?.camPay || 0
-      if (camOran > 0.45) {
+      /*
+       * Cam bölgesinin içinde bulunsa bile OPAK bir pano ise ilk sıra hakkı
+       * duruyor: aranan yer zaten odur.
+       */
+      const pEnIyi = parlaklikOlcusu(tuval, enIyi.koseler)
+      if (camOran > 0.45 && !pEnIyi?.karanlikEkran) {
         ham.push({
           koseler: enIyi.koseler,
           merkez: dortgenMerkez(enIyi.koseler),
@@ -1251,8 +1275,12 @@ function parlaklikOlcusu(tuval, koseler) {
    * dörtgenin hemen dışı belirgin biçimde daha aydınlıktır. Koyu cam ise
    * dörtgenin dışında da devam eder.
    *
-   * Karenin dışındaki ince şerit dört kenarda ayrı ayrı ölçülüyor; en az
-   * üç kenar içeriden %25 aydınlıksa yüzey çerçeveli sayılıyor.
+   * Karenin dışındaki ince şerit dört kenarda ayrı ayrı ölçülüyor.
+   *
+   * İKİ KENAR YETİYOR: cam cephedeki alınlık panelinin sağı ve solu camdır
+   * (aydınlık), üstü saçak, altı kapı olabilir. Dört kenarın üçünü şart
+   * koşunca tam da aranan pano eleniyordu. Koyu camın dörtgen dışında da
+   * devam etmesi ise iki kenarda bile fark yaratmıyor — ayrım korunuyor.
    */
   const serit = (sx0, sy0, sx1, sy1) => {
     let t = 0
@@ -1278,7 +1306,7 @@ function parlaklikOlcusu(tuval, koseler) {
     serit(x1 + 1, y0, x1 + payX * 2, y1),
   ].filter((v) => v != null)
   const parlakKenar = kenarlar.filter((v) => v > adayOrt * 1.25).length
-  const cerceveli = kenarlar.length >= 3 && parlakKenar >= 3
+  const cerceveli = kenarlar.length >= 3 && parlakKenar >= 2
 
   return {
     ort: adayOrt,
@@ -1305,11 +1333,32 @@ function haritaPaylari(harita, koseler) {
   const hy0 = Math.max(0, Math.floor(Math.min(...ys) * harita.h))
   const hx1 = Math.min(harita.w, Math.max(hx0 + 1, Math.ceil(Math.max(...xs) * harita.w)))
   const hy1 = Math.min(harita.h, Math.max(hy0 + 1, Math.ceil(Math.max(...ys) * harita.h)))
+  /*
+   * ÖLÇÜM DÖRTGENİN İÇİNDE, ÇEVRESİNİ SARAN KUTUDA DEĞİL.
+   *
+   * Perspektifli kareler yamuktur; onları saran dikdörtgen kutunun
+   * köşelerinde karenin dışı kalır. Kutu üzerinden ölçünce o dışarıda kalan
+   * zemin/kapı pikselleri de adaya yazılıyor ve sağlam bir aday "yasak
+   * bölge" diye eleniyordu. Nokta-dörtgen sınamasıyla yalnızca gerçekten
+   * karenin altında kalan pikseller sayılıyor.
+   */
+  const icinde = (px, py) => {
+    let sonuc = false
+    for (let i = 0, j = 3; i < 4; j = i++) {
+      const xi = koseler[i].x * harita.w
+      const yi = koseler[i].y * harita.h
+      const xj = koseler[j].x * harita.w
+      const yj = koseler[j].y * harita.h
+      if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) sonuc = !sonuc
+    }
+    return sonuc
+  }
   let yasak = 0
   let cam = 0
   let toplam = 0
   for (let hy = hy0; hy < hy1; hy++) {
     for (let hx = hx0; hx < hx1; hx++) {
+      if (!icinde(hx + 0.5, hy + 0.5)) continue
       const sv = harita.sinif[hy * harita.w + hx]
       if (sv === SINIF.CAM) cam++
       else if (sv !== SINIF.DUVAR && sv !== SINIF.EKRAN && sv !== SINIF.BILINMEYEN) yasak++
