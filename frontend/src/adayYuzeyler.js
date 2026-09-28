@@ -381,6 +381,24 @@ export function adaylariBul(tuval, sec = {}) {
     }
   }
 
+  /*
+   * PARLAKLIK PUANI — YASAK DEĞİL, TERCİH.
+   *
+   * Pencereyi kesin kural olarak elemek yanlıştı: bazen cama gerçekten ekran
+   * yapılıyor, bazen de ölçüm yanılıyor. Artık pencere gibi görünen kare
+   * listeden ÇIKMIYOR, yalnızca puanı düşüyor — sırada geriye gidiyor ama
+   * kullanıcı isterse seçebiliyor.
+   *
+   * Aynı ölçüm tersini de söylüyor: kapalı bir LED ekran ya da pano, kadrajın
+   * geri kalanından belirgin biçimde KOYU ve dokusuzdur. Böyle kareler öne
+   * alınıyor — kullanıcının "zaten orada bir ekran var" dediği yer burası.
+   */
+  for (const a of ham) {
+    const p = parlaklikOlcusu(tuval, a.koseler)
+    if (!p) continue
+    if (p.pencere) a.skor -= 22
+    if (p.karanlikEkran) a.skor += 18
+  }
   ham.sort((a, b) => b.skor - a.skor)
 
   /*
@@ -579,9 +597,8 @@ export function adaylariBul(tuval, sec = {}) {
    * Az ama doğru seçenek, çok ama şüpheli seçenekten iyi.
    */
   /*
-   * Pencereler aday olamaz: parlaklık ölçümüyle eleniyor (bkz. pencereMi).
-   * Bu eleme puandan önce geliyor — parlak bir pencere yüksek puan da alsa
-   * ekran oraya konmaz.
+   * Parlaklık artık elemiyor, puanlıyor (bkz. parlaklikOlcusu): pencere
+   * gibi görünen kare listede kalıyor ama sona düşüyor.
    */
   const elenmis = ham
     /*
@@ -590,7 +607,6 @@ export function adaylariBul(tuval, sec = {}) {
      * da nesne olsa bile aday sayılıyordu. Ekran, kapının önüne konamaz.
      */
     .filter((a) => a.skor >= PUAN_ESIGI && (a.yasakPay || 0) <= 0.12)
-    .filter((a) => !pencereMi(tuval, a.koseler))
 
   const merkezler = sonuc.map((a) => dortgenMerkez(a.koseler))
   const ekle = (a) => {
@@ -626,7 +642,6 @@ export function adaylariBul(tuval, sec = {}) {
   if (sonuc.length < 2) {
     for (const a of ham) {
       if ((a.yasakPay || 0) > 0.4) continue
-      if (pencereMi(tuval, a.koseler)) continue
       ekle({ ...a, etiket: a.etiket || yuzeyAdi(a.merkez) })
     }
   }
@@ -1098,17 +1113,17 @@ function ekranAdayiGecerli(koseler, tuval) {
  * Dörtgenin içinden ızgara örnekleri alınıp ortalama parlaklık, kadrajın
  * ortalamasıyla karşılaştırılıyor. Belirgin şekilde parlaksa aday atılıyor.
  */
-function pencereMi(tuval, koseler) {
-  if (!tuval || !koseler || koseler.length !== 4) return false
+function parlaklikOlcusu(tuval, koseler) {
+  if (!tuval || !koseler || koseler.length !== 4) return null
   const W = tuval.width
   const H = tuval.height
   let ctx
   try {
     ctx = tuval.getContext('2d', { willReadFrequently: true })
   } catch {
-    return false
+    return null
   }
-  if (!ctx) return false
+  if (!ctx) return null
 
   const xs = koseler.map((k) => k.x)
   const ys = koseler.map((k) => k.y)
@@ -1116,7 +1131,7 @@ function pencereMi(tuval, koseler) {
   const x1 = Math.min(W - 1, Math.ceil(Math.max(...xs) * W))
   const y0 = Math.max(0, Math.floor(Math.min(...ys) * H))
   const y1 = Math.min(H - 1, Math.ceil(Math.max(...ys) * H))
-  if (x1 - x0 < 4 || y1 - y0 < 4) return false
+  if (x1 - x0 < 4 || y1 - y0 < 4) return null
 
   /* Kadrajın geneli: 24x24 ızgara yeter, tam tarama gereksiz. */
   let kareToplam = 0
@@ -1136,6 +1151,7 @@ function pencereMi(tuval, koseler) {
   let adayToplam = 0
   let adaySay = 0
   let yanik = 0
+  const ornekler = []
   for (let gy = 0; gy < 12; gy++) {
     for (let gx = 0; gx < 12; gx++) {
       const px = Math.round(x0 + ((gx + 0.5) / 12) * (x1 - x0))
@@ -1144,10 +1160,11 @@ function pencereMi(tuval, koseler) {
       const l = 0.299 * d[0] + 0.587 * d[1] + 0.114 * d[2]
       adayToplam += l
       adaySay++
+      ornekler.push(l)
       if (l > 235) yanik++
     }
   }
-  if (!adaySay) return false
+  if (!adaySay) return null
   const adayOrt = adayToplam / adaySay
 
   /*
@@ -1155,7 +1172,21 @@ function pencereMi(tuval, koseler) {
    *   • kadrajın ortalamasından %55 daha parlak (ışık kaynağı),
    *   • ya da örneklerin dörtte biri yanmış beyaz (dışarısı görünüyor).
    */
-  return adayOrt > kareOrt * 1.55 || yanik / adaySay > 0.25
+  /*
+   * İki uç:
+   *   • PENCERE  — kadrajın ortalamasından çok parlak ya da yanmış beyaz.
+   *   • KARANLIK EKRAN — kadrajın ortalamasından belirgin koyu ve kendi
+   *     içinde düz (kapalı bir LED ekranın yüzeyi budur).
+   */
+  let sapma = 0
+  for (const l of ornekler) sapma += (l - adayOrt) * (l - adayOrt)
+  const standart = Math.sqrt(sapma / Math.max(1, ornekler.length))
+
+  return {
+    ort: adayOrt,
+    pencere: adayOrt > kareOrt * 1.55 || yanik / adaySay > 0.25,
+    karanlikEkran: adayOrt < kareOrt * 0.55 && standart < 34,
+  }
 }
 
 /** Dörtgenin alanı (0–1 birim karede). */

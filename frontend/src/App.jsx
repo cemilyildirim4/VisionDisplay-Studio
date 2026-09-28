@@ -369,6 +369,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kararı. O yüzden SORULUYOR.
    */
   const [olcuSorusu, setOlcuSorusu] = useState(null)
+  /*
+   * Seçili yerleşimin yüzey ölçüsü panelde KALICI duruyor: kullanıcı
+   * pop-up'ta ne derse desin sonradan fikrini değiştirebilsin. "Ölçü
+   * kalsın" dendiğinde eski kabin sayısı geri yüklenebilsin diye uydurma
+   * öncesi değerler saklanıyor.
+   */
+  const [secilenYuzeyOlcu, setSecilenYuzeyOlcu] = useState(null)
+  const [olcuOncesi, setOlcuOncesi] = useState(null)
+  const [olcuUyduruldu, setOlcuUyduruldu] = useState(false)
   /* Modelin fotoğrafta gördükleri — arayüzde adlarıyla yazılıyor. */
   const [ozelNesneler, setOzelNesneler] = useState(null)
   /*
@@ -2025,8 +2034,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         Math.abs(olcu.wm - tasarimWm) / Math.max(0.01, tasarimWm),
         Math.abs(olcu.hm - tasarimHm) / Math.max(0.01, tasarimHm),
       )
+      setSecilenYuzeyOlcu({ wm: olcu.wm, hm: olcu.hm })
       setOlcuSorusu(fark > 0.1 ? { wm: olcu.wm, hm: olcu.hm } : null)
+      setOlcuUyduruldu(false)
+      setOlcuOncesi(null)
     } else {
+      setSecilenYuzeyOlcu(null)
       setOlcuSorusu(null)
     }
     if ((aday.skor || 0) < GUVEN_ESIGI) {
@@ -2044,18 +2057,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * taşmıyor, kalan boşluk da en aza iniyor.
    */
   const olcuyuYuzeyeUydur = () => {
-    if (!olcuSorusu) return
+    const hedef = olcuSorusu || secilenYuzeyOlcu
+    if (!hedef) return
+    /* İlk uydurmada mevcut ölçü saklanıyor; "Ölçü kalsın" buna dönüyor. */
+    if (!olcuOncesi) setOlcuOncesi({ cols, rows, width, height })
     const kw = (previewModel?.widthMm || 500) / 1000
     const kh = (previewModel?.heightMm || 500) / 1000
-    const yeniCols = Math.max(1, Math.floor(olcuSorusu.wm / kw + 1e-6))
-    const yeniRows = Math.max(1, Math.floor(olcuSorusu.hm / kh + 1e-6))
+    const yeniCols = Math.max(1, Math.floor(hedef.wm / kw + 1e-6))
+    const yeniRows = Math.max(1, Math.floor(hedef.hm / kh + 1e-6))
     /* Duvar ölçüsü de en az tasarım kadar olmalı, yoksa kabin sayısı kırpılır. */
     setWidth((e) => Math.max(e, +(yeniCols * kw).toFixed(2)))
     setHeight((e) => Math.max(e, +(yeniRows * kh).toFixed(2)))
     setCols(yeniCols)
     setRows(yeniRows)
     setOlcuSorusu(null)
+    setOlcuUyduruldu(true)
     setOzelUyari(t('scene.fitResult'))
+  }
+
+  /** Uydurmadan önceki kabin sayısına döner. */
+  const olcuyuGeriAl = () => {
+    setOlcuSorusu(null)
+    if (!olcuOncesi) return
+    setWidth(olcuOncesi.width)
+    setHeight(olcuOncesi.height)
+    setCols(olcuOncesi.cols)
+    setRows(olcuOncesi.rows)
+    setOlcuUyduruldu(false)
+    setOzelUyari(null)
   }
 
   /* ADAY KARELERİN TUVALDEKİ KARŞILIĞI — köşelerle birebir aynı dönüşüm. */
@@ -2559,6 +2588,59 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           Kod doğrulanınca 24 saatlik misafir jetonu oturuma yazılıyor ve
           kullanıcı kaldığı yerden devam ediyor.
         */}
+        {/*
+          ÖLÇÜ SORUSU — küçük pop-up.
+
+          Karar anı burada: yerleşim yeni uygulandı. Panelde de aynı seçim
+          kalıcı duruyor, yani pop-up kapandıktan sonra fikir değiştirmek
+          mümkün.
+        */}
+        {olcuSorusu && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-[#001334]/45 p-4"
+            onClick={() => setOlcuSorusu(null)}
+          >
+            <div
+              className="w-full max-w-[340px] rounded-2xl border border-neutral-200 bg-white p-5 shadow-[0_18px_50px_-18px_rgba(0,19,52,0.45)] dark:border-[#2c333f] dark:bg-[#161a21]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="m-0 text-[15.5px] font-bold text-neutral-900 dark:text-neutral-50">
+                {t('scene.fitAsk')}
+              </h3>
+              <div className="mt-2.5 rounded-lg bg-neutral-50 px-3 py-2.5 dark:bg-[#1b2029]">
+                <div className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">
+                  {t('scene.fitAskDetail')}
+                </div>
+                <div className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100">
+                  {olcuSorusu.wm.toFixed(2).replace('.', ',')} × {olcuSorusu.hm.toFixed(2).replace('.', ',')} m
+                </div>
+                <div className="mt-2 text-[11.5px] font-medium uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">
+                  {t('scene.fitAskNow')}
+                </div>
+                <div className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100">
+                  {tasarimWm.toFixed(2).replace('.', ',')} × {tasarimHm.toFixed(2).replace('.', ',')} m
+                </div>
+              </div>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={olcuyuYuzeyeUydur}
+                  className="flex-1 rounded-full bg-brand py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  {t('scene.fitApply')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOlcuSorusu(null)}
+                  className="flex-1 rounded-full border border-neutral-200 py-2.5 text-[14px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300"
+                >
+                  {t('scene.fitKeep')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <DavetKapisi
           acik={davetAcik}
           onKapat={() => setDavetAcik(false)}
@@ -3216,40 +3298,42 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       </p>
                     )}
                     {/*
-                      ÖLÇÜ SORUSU — yerleşim seçildikten sonra.
+                      ÖLÇÜ SEÇİMİ PANELDE KALIYOR.
 
-                      "Şu yüzey 1,20 × 0,70 m; tasarımın 0,32 × 0,18 m.
-                      Ayarlayayım mı?" Cevap kullanıcıdan; ölçü kendiliğinden
-                      değişmiyor.
+                      Pop-up yalnızca karar anında çıkıyor; seçim burada
+                      duruyor ki kullanıcı sonradan fikrini değiştirebilsin.
+                      Etkin seçenek işaretli.
                     */}
-                    {olcuSorusu && (
-                      <div className="mt-2 rounded-lg border border-brand/30 bg-brand/[0.06] px-3 py-2.5">
-                        <div className="text-[13.5px] font-semibold text-neutral-800 dark:text-neutral-100">
-                          {t('scene.fitAsk')}
-                        </div>
-                        <div className="mt-1 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
+                    {secilenYuzeyOlcu && (
+                      <div className="mt-2 rounded-lg border border-neutral-200 px-3 py-2.5 dark:border-[#2c333f]">
+                        <div className="text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
                           {t('scene.fitAskDetail')}{' '}
                           <b>
-                            {olcuSorusu.wm.toFixed(2).replace('.', ',')} × {olcuSorusu.hm.toFixed(2).replace('.', ',')} m
-                          </b>
-                          {' · '}
-                          {t('scene.fitAskNow')}{' '}
-                          <b>
-                            {tasarimWm.toFixed(2).replace('.', ',')} × {tasarimHm.toFixed(2).replace('.', ',')} m
+                            {secilenYuzeyOlcu.wm.toFixed(2).replace('.', ',')} ×{' '}
+                            {secilenYuzeyOlcu.hm.toFixed(2).replace('.', ',')} m
                           </b>
                         </div>
                         <div className="mt-2 grid grid-cols-2 gap-1.5">
                           <button
                             type="button"
                             onClick={olcuyuYuzeyeUydur}
-                            className="rounded-lg bg-brand py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                            className={`rounded-lg py-2 text-[13px] font-semibold transition-colors ${
+                              olcuUyduruldu
+                                ? 'bg-brand text-white'
+                                : 'border border-neutral-200 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300'
+                            }`}
                           >
                             {t('scene.fitApply')}
                           </button>
                           <button
                             type="button"
-                            onClick={() => setOlcuSorusu(null)}
-                            className="rounded-lg border border-neutral-200 py-2 text-[13px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300"
+                            onClick={olcuyuGeriAl}
+                            disabled={!olcuUyduruldu}
+                            className={`rounded-lg py-2 text-[13px] font-semibold transition-colors ${
+                              !olcuUyduruldu
+                                ? 'bg-brand text-white'
+                                : 'border border-neutral-200 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300'
+                            }`}
                           >
                             {t('scene.fitKeep')}
                           </button>
