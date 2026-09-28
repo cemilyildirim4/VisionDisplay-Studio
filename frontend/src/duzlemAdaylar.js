@@ -178,8 +178,16 @@ export function duzlemAdaylari(sec = {}) {
      * İkisi sağlanmıyorsa dikdörtgen kadrajla hizalı kalıyor; kullanıcı
      * dilerse açıyı elle veriyor (bkz. AciSecici.jsx).
      */
-    const uyumIyi = b.artik != null && b.artik < yayilim * 0.045
-    const egikYuzey = Math.abs(b.a) * W > yayilim * 0.03
+    /*
+     * EĞİM ÇITASI YÜKSELTİLDİ.
+     *
+     * Eski eşik (%3) karşıdan görünen düz bir duvarda bile eğim vermeye
+     * yetiyordu; sonuç, dümdüz duvara yamuk oturmuş bir ekran oluyordu.
+     * Gerçekten yandan görünen bir yüzeyde yatay derinlik eğimi çok daha
+     * belirgin olur. Çıta iki katına çıkarıldı: şüphedeyken ekran DÜZ kalıyor.
+     */
+    const uyumIyi = b.artik != null && b.artik < yayilim * 0.04
+    const egikYuzey = Math.abs(b.a) * W > yayilim * 0.06
     /*
      * İKİ ÖLÇÜM UYUŞUYOR MU?
      *
@@ -202,8 +210,13 @@ export function duzlemAdaylari(sec = {}) {
     const zr = b.a * x1 + b.b * cy + b.c
     let koseler
     if (uyumIyi && egikYuzey && yonUyumu && zc > 1e-6 && zl > 1e-6 && zr > 1e-6) {
-      const sl = Math.max(0.7, Math.min(1.42, zl / zc))
-      const sr = Math.max(0.7, Math.min(1.42, zr / zc))
+      /*
+       * Yamukluk sınırı daraltıldı (eski: 0,70–1,42). Bir duvara asılmış
+       * ekranda kenarlar arasındaki fark bu kadar büyük olmuyor; geniş
+       * sınır, ölçüm gürültüsünü abartılı bir perspektife çeviriyordu.
+       */
+      const sl = Math.max(0.84, Math.min(1.19, zl / zc))
+      const sr = Math.max(0.84, Math.min(1.19, zr / zc))
       koseler = [
         { x: x0 / W, y: (cy - yariH * sl) / H },
         { x: x1 / W, y: (cy - yariH * sr) / H },

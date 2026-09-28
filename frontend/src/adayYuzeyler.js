@@ -578,7 +578,14 @@ export function adaylariBul(tuval, sec = {}) {
    * veriyordu: kullanıcı yolun üzerindeki kareyi görüp "saçma" diyor.
    * Az ama doğru seçenek, çok ama şüpheli seçenekten iyi.
    */
-  const elenmis = ham.filter((a) => a.skor >= PUAN_ESIGI && (a.yasakPay || 0) <= 0.25)
+  /*
+   * Pencereler aday olamaz: parlaklık ölçümüyle eleniyor (bkz. pencereMi).
+   * Bu eleme puandan önce geliyor — parlak bir pencere yüksek puan da alsa
+   * ekran oraya konmaz.
+   */
+  const elenmis = ham
+    .filter((a) => a.skor >= PUAN_ESIGI && (a.yasakPay || 0) <= 0.25)
+    .filter((a) => !pencereMi(tuval, a.koseler))
 
   const merkezler = sonuc.map((a) => dortgenMerkez(a.koseler))
   const ekle = (a) => {
@@ -614,6 +621,7 @@ export function adaylariBul(tuval, sec = {}) {
   if (sonuc.length < 2) {
     for (const a of ham) {
       if ((a.yasakPay || 0) > 0.4) continue
+      if (pencereMi(tuval, a.koseler)) continue
       ekle({ ...a, etiket: a.etiket || yuzeyAdi(a.merkez) })
     }
   }
@@ -1071,6 +1079,78 @@ function ekranAdayiGecerli(koseler, tuval) {
    */
   if (tuval && dikeyKesikVar(tuval, Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys))) return false
   return true
+}
+
+/**
+ * ADAY PENCEREYE Mİ DÜŞÜYOR?
+ *
+ * "Cam" sınıfı iki farklı şeyi topluyordu: vitrin camı (ekran konabilir) ve
+ * ODANIN PENCERESİ (konamaz). Harita ikisini ayıramıyor çünkü ölçütü yerel
+ * karşıtlık; pencere de camdır. Ayıran şey PARLAKLIK: içeri ışık veren bir
+ * pencere kadrajın geri kalanından belirgin biçimde daha aydınlıktır, çoğu
+ * zaman da yanmış beyazdır.
+ *
+ * Dörtgenin içinden ızgara örnekleri alınıp ortalama parlaklık, kadrajın
+ * ortalamasıyla karşılaştırılıyor. Belirgin şekilde parlaksa aday atılıyor.
+ */
+function pencereMi(tuval, koseler) {
+  if (!tuval || !koseler || koseler.length !== 4) return false
+  const W = tuval.width
+  const H = tuval.height
+  let ctx
+  try {
+    ctx = tuval.getContext('2d', { willReadFrequently: true })
+  } catch {
+    return false
+  }
+  if (!ctx) return false
+
+  const xs = koseler.map((k) => k.x)
+  const ys = koseler.map((k) => k.y)
+  const x0 = Math.max(0, Math.floor(Math.min(...xs) * W))
+  const x1 = Math.min(W - 1, Math.ceil(Math.max(...xs) * W))
+  const y0 = Math.max(0, Math.floor(Math.min(...ys) * H))
+  const y1 = Math.min(H - 1, Math.ceil(Math.max(...ys) * H))
+  if (x1 - x0 < 4 || y1 - y0 < 4) return false
+
+  /* Kadrajın geneli: 24x24 ızgara yeter, tam tarama gereksiz. */
+  let kareToplam = 0
+  let kareSay = 0
+  for (let gy = 0; gy < 24; gy++) {
+    for (let gx = 0; gx < 24; gx++) {
+      const px = Math.min(W - 1, Math.round(((gx + 0.5) / 24) * W))
+      const py = Math.min(H - 1, Math.round(((gy + 0.5) / 24) * H))
+      const d = ctx.getImageData(px, py, 1, 1).data
+      kareToplam += 0.299 * d[0] + 0.587 * d[1] + 0.114 * d[2]
+      kareSay++
+    }
+  }
+  const kareOrt = kareSay ? kareToplam / kareSay : 0
+
+  /* Adayın içi: 12x12 ızgara. */
+  let adayToplam = 0
+  let adaySay = 0
+  let yanik = 0
+  for (let gy = 0; gy < 12; gy++) {
+    for (let gx = 0; gx < 12; gx++) {
+      const px = Math.round(x0 + ((gx + 0.5) / 12) * (x1 - x0))
+      const py = Math.round(y0 + ((gy + 0.5) / 12) * (y1 - y0))
+      const d = ctx.getImageData(px, py, 1, 1).data
+      const l = 0.299 * d[0] + 0.587 * d[1] + 0.114 * d[2]
+      adayToplam += l
+      adaySay++
+      if (l > 235) yanik++
+    }
+  }
+  if (!adaySay) return false
+  const adayOrt = adayToplam / adaySay
+
+  /*
+   * İki koşuldan biri yeterli:
+   *   • kadrajın ortalamasından %55 daha parlak (ışık kaynağı),
+   *   • ya da örneklerin dörtte biri yanmış beyaz (dışarısı görünüyor).
+   */
+  return adayOrt > kareOrt * 1.55 || yanik / adaySay > 0.25
 }
 
 /** Dörtgenin alanı (0–1 birim karede). */

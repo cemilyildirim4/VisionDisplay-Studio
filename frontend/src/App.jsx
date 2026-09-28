@@ -744,7 +744,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       })
       setScene('ozel')
       mekaniOrtala()
-      oneriyiUygula(kayit)
+      oneriyiUygula(kayit, false)   /* yalnızca adaylar; yerleşim kullanıcıdan */
     }
     gorsel.src = url
   }
@@ -759,7 +759,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * çevirmektense düz bırakmak daha dürüst.
    */
   const ACI_ESIGI = 0.45
-  const oneriyiUygula = (kayit) => {
+  /*
+   * uygula=false → YALNIZCA ADAYLARI GÖSTER.
+   *
+   * Fotoğraf yüklenir yüklenmez tasarım kendiliğinden birinci adaya
+   * oturuyordu; yerleşim yanlışsa kullanıcı önce onu bozmak zorunda
+   * kalıyordu. Artık tasarım ortada, kendi düz hâliyle duruyor; aday
+   * kareler görünüyor ve yerleşim ancak kullanıcı bir kareye tıklayınca
+   * ya da "En uygun yere yerleştir" düğmesine basınca uygulanıyor.
+   */
+  const oneriyiUygula = (kayit, uygula = true) => {
     const aci = kayit?.aci
     const saglam = aci && aci.guven >= ACI_ESIGI && (Math.abs(aci.yaw) > 1.5 || Math.abs(aci.tilt) > 1.5)
     yonuAyarla(saglam ? aci : null)
@@ -796,6 +805,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAdayKipi(bulunan.length > 0)
 
     const yuzey = kayit?.yuzey
+    if (!uygula) {
+      /* Sadece kareler gösterildi; tasarım ortada düz kalıyor. */
+      setHedefKose(null)
+      setHedefTur(null)
+      setKoseKipi(false)
+      return
+    }
     if (yuzey) {
       setHedefKose(yuzey.koseler)
       setHedefTur('screen')
