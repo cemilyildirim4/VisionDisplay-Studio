@@ -1867,7 +1867,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * bulunduğu yerde ve yukarıda duruyordu. Hedef yokken ve kullanıcı
    * taşımamışken kayma SIFIR — yani tuvalin tam ortası.
    */
-  const yerlesimSecildi = !!hedefKose || mekanTasindi
+  /*
+   * BU KURAL YALNIZCA KENDİ FOTOĞRAFINDA GEÇERLİ.
+   *
+   * 'Yerleşim seçilmediyse kayma sıfır' kuralı kullanıcının kendi fotoğrafı
+   * için konmuştu: orada tasarımın kendiliğinden bir yüzeye oturmaması
+   * isteniyor. Ama kural bütün kiosk sahnelerine uygulanıyordu; AVM koridoru
+   * ve şehir meydanında hedef dörtgen diye bir şey yok, dolayısıyla duvara
+   * hizalama da iptal oluyor ve tasarım duvarın üstünden kayıyordu.
+   *
+   * Hazır sahnelerde duvar zaten tanımlı; oraya hizalanmak doğru davranış.
+   */
+  const yerlesimSecildi = scene !== 'ozel' || !!hedefKose || mekanTasindi
   const oturmaKaymasi = !surukleAktif || !yerlesimSecildi
     ? 0
     : duvaraHizali
@@ -1893,6 +1904,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         tuvalBoyut,
         tasarimWm * (cizimOlcek || 0),
         tuvalBoyut.h / 2,
+        tasarimHm * (cizimOlcek || 0),
       )
     : null
 
@@ -2010,7 +2022,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     const elleMudahale =
       mekanTasindi || koseKipi || elleKose || elleAci.yaw !== 0 || elleAci.tilt !== 0
-    const son = elleMudahale ? acili : ekranaSigdir(acili, tuvalBoyut)
+    /*
+     * SON EMNİYET: TASARIM HİÇBİR ZAMAN TAMAMEN KAYBOLMUYOR.
+     *
+     * Elle müdahale varken sığdırma kapalı — kullanıcı ekranı bilerek kenara
+     * taşıyabilsin diye. Ama tamamen kadraj dışına çıkması hiçbir işe
+     * yaramıyor: kullanıcı tasarımı bir daha bulamıyor ve ne olduğunu
+     * anlamıyor. Mesafeyi değiştirdiğinde ölçek değiştiği için bu
+     * kendiliğinden de olabiliyordu.
+     *
+     * Bu yüzden serbestlik korunuyor, yalnızca son bir sınır var: dörtgenin
+     * dörtte biri kadrajın içinde kalacak kadar geri çekiliyor.
+     */
+    const son = elleMudahale ? kadrajaCek(acili, tuvalBoyut) : ekranaSigdir(acili, tuvalBoyut)
     return son.map((k) => ({
       x: k.x - solUst.x,
       y: k.y - solUst.y,
@@ -2076,6 +2100,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Dörtgeni tuvalin içine alır: önce kaydırır, gerekiyorsa merkezine göre
    * küçültür. Oran korunuyor — tek çarpanla ölçekleniyor.
    */
+  /**
+   * Dörtgeni, en az dörtte biri kadrajda kalacak kadar geri çeker.
+   *
+   * Sığdırmadan farkı: şekli ve ölçüyü HİÇ değiştirmiyor, yalnızca gerekirse
+   * kaydırıyor. Zaten yeterince görünüyorsa hiçbir şey yapmıyor.
+   */
+  function kadrajaCek(koseler, tuval) {
+    if (!Array.isArray(koseler) || koseler.length !== 4 || !(tuval?.w > 0)) return koseler
+    const xs = koseler.map((k) => k.x)
+    const ys = koseler.map((k) => k.y)
+    const x0 = Math.min(...xs)
+    const x1 = Math.max(...xs)
+    const y0 = Math.min(...ys)
+    const y1 = Math.max(...ys)
+    const gen = x1 - x0
+    const yuk = y1 - y0
+    if (!(gen > 0) || !(yuk > 0)) return koseler
+    const pay = 0.25
+    let dx = 0
+    let dy = 0
+    if (x1 < gen * pay) dx = gen * pay - x1
+    else if (x0 > tuval.w - gen * pay) dx = tuval.w - gen * pay - x0
+    if (y1 < yuk * pay) dy = yuk * pay - y1
+    else if (y0 > tuval.h - yuk * pay) dy = tuval.h - yuk * pay - y0
+    if (!dx && !dy) return koseler
+    return koseler.map((k) => ({ x: k.x + dx, y: k.y + dy }))
+  }
+
   function ekranaSigdir(koseler, tuval) {
     if (!koseler?.length || !tuval?.w || !tuval?.h) return koseler
     const pay = 6
@@ -2199,6 +2251,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setOlcuSorusu(false)
     setOlcuUyduruldu(true)
     setOzelUyari(t('scene.fitResult'))
+  }
+
+  /*
+   * ÖLÇEĞİ GERÇEK ÖLÇÜDEN KUR.
+   *
+   * Sahnedeki her şeyin ölçeği tek bir sayıdan geliyor: fotoğrafın kaç
+   * metreden çekildiği. Kullanıcı bunu bilmiyor ve tahmin etmek zorunda
+   * kalıyordu; yanlış tahmin, gerçekte birbirine yakın iki şeyin (bir
+   * dizüstü ekranı ile 0,32 m'lik bir LED tasarımı) fotoğrafta bambaşka
+   * ölçüde görünmesi demek.
+   *
+   * Oysa kullanıcı mesafeyi bilmese de, seçtiği yüzeyin GERÇEK GENİŞLİĞİNİ
+   * çoğu zaman biliyor ya da ölçebiliyor. Hesap tersten kuruluyor:
+   *
+   *   yüzeyin kadrajdaki payı = ölçülen genişlik ÷ (mesafe × 1,11)
+   *   bu pay sabit olduğuna göre  →  mesafe = gerçek genişlik ÷ (pay × 1,11)
+   *
+   * Böylece tek bir bilinen ölçü bütün sahnenin ölçeğini doğruya çekiyor;
+   * tasarım da kendi gerçek boyuyla, o yüzeye göre doğru oranda görünüyor.
+   */
+  const olcegiGercekOlcudenKur = (gercekWm) => {
+    const w = Number(gercekWm)
+    if (!(w > 0.05) || !secilenYuzeyOlcu?.wm) return
+    const kadrajW = kadrajGenisligi(ozelMesafeM)
+    const pay = secilenYuzeyOlcu.wm / kadrajW
+    if (!(pay > 0.01)) return
+    const yeni = w / (pay * KADRAJ_KATSAYISI)
+    /* 0,2–120 m: elle girilen mesafenin kabul aralığıyla aynı. */
+    setOzelMesafeM(Math.max(0.2, Math.min(120, Math.round(yeni * 10) / 10)))
   }
 
   /** Uydurmadan önceki kabin sayısına döner. */
@@ -3497,6 +3578,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             {secilenYuzeyOlcu.hm.toFixed(2).replace('.', ',')} m
                           </b>
                         </div>
+                        {/*
+                          GERÇEK ÖLÇÜYÜ BİLİYORSAN ÖLÇEĞİ O KURSUN.
+
+                          Üstteki değer bir TAHMİN: mesafeden hesaplanıyor.
+                          Kullanıcı o yüzeyin gerçek genişliğini biliyorsa
+                          (bir dizüstü ekranı 0,34 m, bir kapı 0,90 m) buraya
+                          yazıyor ve mesafe geriye doğru hesaplanıyor. Bütün
+                          sahnenin ölçeği tek hamlede doğruya oturuyor.
+                        */}
+                        <label className="mt-2 flex items-center gap-2 text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                          <span className="shrink-0">{t('scene.realWidth')}</span>
+                          <input
+                            type="number"
+                            min="0.05"
+                            step="0.01"
+                            placeholder={secilenYuzeyOlcu.wm.toFixed(2)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') olcegiGercekOlcudenKur(e.currentTarget.value)
+                            }}
+                            onBlur={(e) => olcegiGercekOlcudenKur(e.currentTarget.value)}
+                            className="w-20 rounded-md border border-neutral-200 px-2 py-1 text-[13px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                          />
+                          <span className="shrink-0">m</span>
+                        </label>
                         <div className="mt-2 grid grid-cols-2 gap-1.5">
                           <button
                             type="button"

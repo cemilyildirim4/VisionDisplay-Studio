@@ -1048,13 +1048,38 @@ export default function WallPreview({
                 ))}
                 <VL left={marginXpx + totalWpx} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
 
-                {/* Sol/sağ kenar payı (üstte, gri) */}
-                {marginXpx > 34 && (
+                {/*
+                  SOL/SAĞ KENAR PAYI — DAR BOŞLUKTA DA YAZILIYOR.
+
+                  Etiket yalnızca boşluk 34 pikselden genişse gösteriliyordu;
+                  ince bir pay (birkaç santim) hiç yazılmıyor, kullanıcı da
+                  duvarda kalan o şeridin ölçüsünü öğrenemiyordu. Oysa montajda
+                  asıl merak edilen tam olarak o.
+
+                  Dar boşlukta etiket boşluğun İÇİNE sığmaz; bu yüzden bir üst
+                  satıra alınıp duvarın kenarına yaslanıyor. Geniş boşlukta
+                  eskisi gibi ortalanıyor.
+                */}
+                {marginXpx > 2 && marginXm > 0.004 && (
                   <>
-                    <div className="absolute" style={{ left: marginXpx / 2, top: -40 - bombePx, transform: 'translateX(-50%)' }}>
+                    <div
+                      className="absolute"
+                      style={{
+                        left: marginXpx > 34 ? marginXpx / 2 : 0,
+                        top: (marginXpx > 34 ? -40 : -62) - bombePx,
+                        transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-8%)',
+                      }}
+                    >
                       <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(marginXm)}</span>
                     </div>
-                    <div className="absolute" style={{ left: wallW - marginXpx / 2, top: -40 - bombePx, transform: 'translateX(-50%)' }}>
+                    <div
+                      className="absolute"
+                      style={{
+                        left: marginXpx > 34 ? wallW - marginXpx / 2 : wallW,
+                        top: (marginXpx > 34 ? -40 : -62) - bombePx,
+                        transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-92%)',
+                      }}
+                    >
                       <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(marginXm)}</span>
                     </div>
                   </>

@@ -78,7 +78,7 @@ export function useSurukleme(pxPerM) {
  * olduğu görünmüyor, dolayısıyla oraya konan ekran hiçbir şey anlatmıyor.
  * Piksel cinsinden sınırlanıp metreye geri çevriliyor.
  */
-export function kaymayiSinirla(ofsetM, pxPerM, sahne, ekranWpx, tabanY) {
+export function kaymayiSinirla(ofsetM, pxPerM, sahne, ekranWpx, tabanY, ekranHpx = 0) {
   if (!(pxPerM > 0) || !(sahne?.w > 0)) return { x: 0, y: 0 }
 
   /*
@@ -90,12 +90,33 @@ export function kaymayiSinirla(ofsetM, pxPerM, sahne, ekranWpx, tabanY) {
    * görünmüyordu. Tek kural kaldı: ekranın DÖRTTE BİRİ kadrajda kalsın —
    * yoksa tasarım tamamen kaybolur ve kullanıcı onu geri bulamaz.
    */
+  /*
+   * SINIR HESABI DÜZELTİLDİ.
+   *
+   * "Dörtte biri kadrajda kalsın" deniyordu ama hesap bunu vermiyordu:
+   * yatay sınır ekranın genişliğinin %75'i kadar pay bırakıyordu; en uç
+   * noktada tasarımın SOL kenarı bile kadrajın sağ kenarını geçiyor, yani
+   * ekran tamamen kayboluyordu. Dikey sınır ise tasarımın kendi boyunu hiç
+   * hesaba katmıyor, kadrajın yüksekliğini kullanıyordu.
+   *
+   * Doğrusu, kalan payın tasarımın KENDİ ölçüsünden ayrılması:
+   *   sağa en çok  = kadrajın yarısı + tasarımın dörtte biri
+   * Bu noktada tasarımın dörtte biri hâlâ kadrajın içinde kalıyor.
+   *
+   * Bu, kullanıcının "mesafeyi değiştirince tasarım ekrandan kaybolabiliyor"
+   * dediği durumun doğrudan sebebiydi: mesafe küçülünce tasarım büyüyor,
+   * yanlış formülde sınır da onunla birlikte üç katı hızla açılıyordu.
+   */
   const kalanPay = 0.25
-  const enCokX = Math.max(0, sahne.w / 2 + ekranWpx * (1 - kalanPay))
+  const gW = Math.max(1, ekranWpx || 0)
+  const gH = Math.max(1, ekranHpx || ekranWpx || 0)
+
+  const enCokX = Math.max(0, sahne.w / 2 + gW * kalanPay)
   const x = Math.max(-enCokX, Math.min(enCokX, ofsetM.x * pxPerM))
 
-  const yukari = tabanY + sahne.h * (1 - kalanPay)
-  const asagi = sahne.h * (1 + kalanPay) - tabanY
+  /* Dikeyde tasarımın merkezi tabanY'de duruyor. */
+  const yukari = Math.max(0, tabanY + gH * kalanPay)
+  const asagi = Math.max(0, sahne.h - tabanY + gH * kalanPay)
   const y = Math.max(-yukari, Math.min(asagi, ofsetM.y * pxPerM))
 
   return { x, y }
