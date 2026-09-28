@@ -2244,8 +2244,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const kilitli = kilitliKose.includes(oynayan) ? kilitliKose : [...kilitliKose, oynayan]
     if (kilitli !== kilitliKose) setKilitliKose(kilitli)
 
-    const dw = tasarimWm * (cizimOlcek || 0)
-    const dh = tasarimHm * (cizimOlcek || 0)
     const serbest = [0, 1, 2, 3].filter((i) => !kilitli.includes(i))
 
     /*
@@ -2256,19 +2254,43 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * Serbest köşe kalmadıysa (kullanıcı dördünü de yerleştirdiyse)
      * dörtgen olduğu gibi kabul ediliyor.
      */
-    if (!(dw > 0) || !(dh > 0) || serbest.length === 0) {
+    if (serbest.length === 0) {
       setElleKose(noktalar)
       return
     }
-    const ortEn =
-      (Math.hypot(noktalar[1].x - noktalar[0].x, noktalar[1].y - noktalar[0].y) +
-        Math.hypot(noktalar[2].x - noktalar[3].x, noktalar[2].y - noktalar[3].y)) / 2
-    const ortBoy =
-      (Math.hypot(noktalar[3].x - noktalar[0].x, noktalar[3].y - noktalar[0].y) +
-        Math.hypot(noktalar[2].x - noktalar[1].x, noktalar[2].y - noktalar[1].y)) / 2
-    if (!(ortEn > 1) || !(ortBoy > 1)) return
-    const sx = dw / ortEn
-    const sy = dh / ortBoy
+    /*
+     * ÖLÇÜ KİLİDİ ARTIK TASARIM KUTUSUNA DEĞİL, BİR ÖNCEKİ DÖRTGENE GÖRE.
+     *
+     * Önce ortalama kenar uzunlukları doğrudan tasarımın kutusuna
+     * (tasarimWm × cizimOlcek) eşitleniyordu. Oysa çizilen dörtgen o kutuyla
+     * aynı olmak zorunda değil: perspektif onu yamultuyor, kullanıcı kendi
+     * eliyle dikey/yatay çekmiş olabiliyor. Kare bir tasarım dikey bir
+     * dörtgene oturmuşken tutamağa dokunulduğu anda sx≈2, sy≈0,5 çıkıyor ve
+     * dörtgen tek köşenin çevresinde koca bir kareye fırlıyordu
+     * (kullanıcının gönderdiği ikinci ekran görüntüsü tam olarak buydu).
+     *
+     * Doğru kural: "köşe çekmek ölçüyü değiştirmez" — ölçü, BU HAREKETTEN
+     * ÖNCEKİ dörtgenin ölçüsüdür. Böylece kullanıcının kurduğu biçim
+     * korunuyor, sürükleme yalnızca yön veriyor ve hiçbir sıçrama olmuyor.
+     */
+    const ortalamaKenar = (k) => ({
+      en:
+        (Math.hypot(k[1].x - k[0].x, k[1].y - k[0].y) +
+          Math.hypot(k[2].x - k[3].x, k[2].y - k[3].y)) / 2,
+      boy:
+        (Math.hypot(k[3].x - k[0].x, k[3].y - k[0].y) +
+          Math.hypot(k[2].x - k[1].x, k[2].y - k[1].y)) / 2,
+    })
+    const yeni = ortalamaKenar(noktalar)
+    const once = ortalamaKenar(oncekiler)
+    if (!(yeni.en > 1) || !(yeni.boy > 1) || !(once.en > 1) || !(once.boy > 1)) return
+    /*
+     * Düzeltme çarpanı sınırlı: ölçüm bir şekilde bozulursa dörtgen yine de
+     * fırlamıyor, en fazla yarıya iner ya da iki katına çıkar.
+     */
+    const kis = (v) => Math.max(0.5, Math.min(2, v))
+    const sx = kis(once.en / yeni.en)
+    const sy = kis(once.boy / yeni.boy)
     /* Ölçekleme merkezi: sabitlenmiş köşelerin ağırlık merkezi. */
     const mx = kilitli.reduce((t, i) => t + noktalar[i].x, 0) / kilitli.length
     const my = kilitli.reduce((t, i) => t + noktalar[i].y, 0) / kilitli.length
@@ -2296,8 +2318,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Elle köşe seçimi ekranın kendi sınırlarını kullanır; oranı orada kullanıcı kurar. */
   /* Manuel kip açılırken elde bir dörtgen yoksa fotoğrafın ortasında biri kurulur. */
   const koseKipiAc = () => {
-    /* Tutamaklar çizilen tasarımın köşelerinden başlıyor. */
-    if (!elleKose && koseMutlak) setElleKose(koseMutlak)
+    /*
+     * Tutamaklar çizilen tasarımın köşelerinden başlıyor.
+     *
+     * KAYMA İKİ KEZ EKLENMİYOR: koseMutlak ekranda görünen yeri veriyor ve
+     * sürükleme kaymasını ZATEN içinde taşıyor. Olduğu gibi kaydedilince
+     * okuma yolunda kayma bir kez daha ekleniyor ve kip açılır açılmaz
+     * tasarım yer değiştiriyordu. Saklanan değer kaymasız olmalı — tıpkı
+     * koseleriTasi'nda olduğu gibi.
+     */
+    if (!elleKose && koseMutlak) {
+      setElleKose(
+        koseMutlak.map((k) => ({
+          x: k.x - (elleKayma?.x || 0),
+          y: k.y - (elleKayma?.y || 0),
+        })),
+      )
+    }
     /* Yeni düzenleme turunda hiçbir köşe sabit değil. */
     setKilitliKose([])
     if (!hedefKose) {
