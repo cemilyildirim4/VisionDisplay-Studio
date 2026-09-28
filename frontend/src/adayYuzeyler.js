@@ -68,6 +68,17 @@ export function adaylariBul(tuval, sec = {}) {
     harita = null,
     /* Sahnenin kaçış noktası (0–1) ve güveni — bkz. aciBul.js */
     aci = null,
+    /*
+     * TASARIMIN GERÇEK ÖLÇÜSÜ (metre) ve kadrajın kapsadığı genişlik.
+     *
+     * Adaylar artık "şu duvar boş" diye değil, "BU EKRAN şuraya sığar" diye
+     * aranıyor: her aday karesi tasarımın kendi ölçüsünde çiziliyor,
+     * sığmayan yüzeyler listede geriye düşüyor. Öneriler böylece somut
+     * oluyor — kullanıcının gördüğü kare, gerçekte oraya konacak ekranın
+     * tam boyu.
+     */
+    hedefOlcu = null,
+    kadrajM = 0,
     enCok = 5,
   } = sec
 
@@ -702,6 +713,38 @@ export function adaylariBul(tuval, sec = {}) {
    * Parlaklık artık elemiyor, puanlıyor (bkz. parlaklikOlcusu): pencere
    * gibi görünen kare listede kalıyor ama sona düşüyor.
    */
+  /*
+   * ADAYLAR TASARIMIN ÖLÇÜSÜNE GETİRİLİYOR.
+   *
+   * Buraya kadar her aday "temiz yüzeyin tamamı"ydı; boyu yüzeyden
+   * geliyordu, tasarımdan değil. Kullanıcı 2 metrelik bir ekran kurmuşken
+   * kendisine 6 metrelik bir kare gösteriliyor, tıklayınca da ekran o
+   * karenin ortasına küçücük oturuyordu.
+   *
+   * Artık her kare tasarımın gerçek ölçüsüne indiriliyor ve yüzeyin
+   * tasarımı ALIP ALMADIĞI ölçülüyor. Sığmayan yüzey elenmiyor (kullanıcı
+   * yine de oraya koymak isteyebilir) ama puanı düşüyor ve sıralamada
+   * sığanların arkasına geçiyor.
+   */
+  if (hedefOlcu?.wm > 0 && hedefOlcu?.hm > 0 && kadrajM > 0) {
+    const pxPerM = W / kadrajM
+    const hedefEn = hedefOlcu.wm * pxPerM
+    const hedefBoy = hedefOlcu.hm * pxPerM
+    const uyarla = (a) => {
+      const o = olcuyeUydur(a.koseler, hedefEn, hedefBoy, W, H)
+      if (!o) return
+      a.koseler = o.koseler
+      a.merkez = dortgenMerkez(o.koseler)
+      if (!o.sigiyor) {
+        a.skor -= 26
+        a.sigmiyor = true
+      }
+    }
+    for (const a of ham) uyarla(a)
+    for (const a of sonuc) uyarla(a)
+    ham.sort((a, b) => b.skor - a.skor)
+  }
+
   const elenmis = ham
     /*
      * Yasak sınıf payı %25'ten %12'ye indirildi. Vitrin/dükkân girişinin
@@ -715,7 +758,14 @@ export function adaylariBul(tuval, sec = {}) {
     if (sonuc.length >= enCok) return
     if (merkezler.some((m) => Math.hypot(m.x - a.merkez.x, m.y - a.merkez.y) < AYRIM)) return
     merkezler.push(a.merkez)
-    sonuc.push({ koseler: a.koseler, skor: Math.round(a.skor), tur: a.tur, etiket: a.etiket, sebep: a.sebep || null })
+    sonuc.push({
+      koseler: a.koseler,
+      skor: Math.round(a.skor),
+      tur: a.tur,
+      etiket: a.etiket,
+      sebep: a.sebep || null,
+      sigmiyor: !!a.sigmiyor,
+    })
   }
   for (const a of elenmis) {
     if (sonuc.length >= enCok) break
@@ -732,6 +782,8 @@ export function adaylariBul(tuval, sec = {}) {
       etiket: yuzeyAdi(a.merkez),
       /* "Neden burası" — nesne aklının gerekçesi (bkz. nesneAkli.js). */
       sebep: a.sebep || null,
+      /* Tasarım bu yüzeye sığmıyor: kullanıcıya söyleniyor, engellenmiyor. */
+      sigmiyor: !!a.sigmiyor,
     })
   }
   /*
@@ -1332,6 +1384,40 @@ function parlaklikOlcusu(tuval, koseler) {
     ort: adayOrt,
     pencere: adayOrt > kareOrt * 1.55 || yanik / adaySay > 0.25,
     karanlikEkran: adayOrt < kareOrt * 0.55 && standart < 34 && cerceveli,
+  }
+}
+
+/**
+ * Dörtgeni TASARIMIN ölçüsüne indirir.
+ *
+ * Kare, kendi merkezinden dışa doğru küçültülüyor: perspektif biçimi
+ * (yamukluk, eğim) korunuyor, yalnızca kenar uzunlukları tasarımın metre
+ * karşılığına eşitleniyor. Ölçekleme görüntü eksenlerinde yapılıyor;
+ * kareler düşey kenarlı yamuklar olduğu için bu yeterince doğru ve
+ * homografi çözmekten çok daha ucuz.
+ *
+ * @returns {{koseler:Array<{x:number,y:number}>, sigiyor:boolean}|null}
+ *          Yüzey tasarımı almaya yetiyor mu bilgisi sigiyor alanında.
+ */
+function olcuyeUydur(koseler, hedefEn, hedefBoy, W, H) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return null
+  const px = koseler.map((k) => ({ x: k.x * W, y: k.y * H }))
+  const uz = (a, b) => Math.hypot(px[a].x - px[b].x, px[a].y - px[b].y)
+  const en = (uz(0, 1) + uz(3, 2)) / 2
+  const boy = (uz(0, 3) + uz(1, 2)) / 2
+  if (!(en > 1) || !(boy > 1)) return null
+  const sx = hedefEn / en
+  const sy = hedefBoy / boy
+  /* %2 pay: ölçüm gürültüsü yüzünden tam sığan yüzey "sığmıyor" sayılmasın. */
+  const sigiyor = sx <= 1.02 && sy <= 1.02
+  const cx = px.reduce((t, p) => t + p.x, 0) / 4
+  const cy = px.reduce((t, p) => t + p.y, 0) / 4
+  return {
+    koseler: px.map((p) => ({
+      x: (cx + (p.x - cx) * sx) / W,
+      y: (cy + (p.y - cy) * sy) / H,
+    })),
+    sigiyor,
   }
 }
 

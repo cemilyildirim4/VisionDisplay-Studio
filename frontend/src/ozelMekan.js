@@ -77,6 +77,8 @@ export const MEKAN_EN_COK_MB = 60
  * @param {HTMLImageElement} gorsel yüklenmiş görsel
  * @param {number} oran   tasarımın en/boy oranı — öneri buna göre aranır
  * @param {number} mesafeM  fotoğrafın çekildiği mesafe (metre)
+ * @param {number} tasarimWm tasarımın gerçek genişliği (metre) — aday
+ *        kareleri bu ölçüde çiziliyor ve sığmayan yüzeyler geriye düşüyor
  */
 /*
  * ÇÖZÜMLEME ÖNBELLEĞİ.
@@ -106,7 +108,7 @@ function gorselAnahtari(gorsel) {
   }
 }
 
-export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MESAFE_M) {
+export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MESAFE_M, tasarimWm = 0) {
   const W = gorsel.naturalWidth
   const H = gorsel.naturalHeight
   if (!W || !H) return null
@@ -214,8 +216,31 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
   }
   }
 
-  let adaylar = onbellek ? onbellek.adaylar : []
+  /*
+   * AÇI ÖLÇÜMÜ DE ÖNBELLEĞE GİRİYOR.
+   *
+   * Adaylar artık her seferinde yeniden üretildiği için (aşağıya bakınız)
+   * açı ölçümü de her seferinde koşardı; oysa o da yalnızca fotoğrafa bağlı.
+   */
+  let aci = onbellek ? onbellek.aci : null
   if (!onbellek) {
+    try {
+      aci = aciOlc(tuval)
+    } catch {
+      aci = null
+    }
+  }
+
+  /*
+   * ADAYLAR ÖNBELLEĞE GİRMİYOR: TASARIMA BAĞLILAR.
+   *
+   * Ağır olan kısım modeller (nesne tanıma, derinlik) ve onlar önbellekte
+   * kalıyor — fotoğraf ikinci kez açıldığında yeniden inmiyor. Aday
+   * kareleri ise tasarımın ölçüsüne göre çiziliyor; kullanıcı kabin sayısını
+   * ya da mesafeyi değiştirdiğinde yeni ölçüyle yeniden aranmaları gerekiyor.
+   * Bu arama saniyenin altında sürüyor, modeller tekrar çalışmıyor.
+   */
+  let adaylar = []
   try {
     adaylar = adaylariBul(tuval, {
       nesneler,
@@ -225,16 +250,18 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
       zeminOran,
       harita,
       /* Kaçış noktası: aday kenarlarını sahnenin perspektifine oturtuyor. */
-      aci: aciOlc(tuval),
+      aci,
+      /* Aday kareleri tasarımın gerçek ölçüsünde çiziliyor. */
+      hedefOlcu: tasarimWm > 0 ? { wm: tasarimWm, hm: tasarimWm / enBoy } : null,
+      kadrajM: kadrajGenisligi(mesafeM),
     })
   } catch {
     adaylar = yuzey ? [{ koseler: yuzey.koseler, skor: 100, tur: 'screen' }] : []
   }
-  }
 
   /* Sonuç önbelleğe yazılıyor: aynı fotoğraf her seferinde aynı yüzeyler. */
   if (anahtar && !onbellek) {
-    cozumlemeOnbellek.set(anahtar, { zeminOran, nesneler, derinlik, yuzey, harita, adaylar })
+    cozumlemeOnbellek.set(anahtar, { zeminOran, nesneler, derinlik, yuzey, harita, aci })
     /* Bellek şişmesin: en fazla altı fotoğraf tutuluyor. */
     if (cozumlemeOnbellek.size > 6) {
       cozumlemeOnbellek.delete(cozumlemeOnbellek.keys().next().value)

@@ -745,7 +745,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setOzelUyari(null)
       let kayit = null
       try {
-        kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM)
+        kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM, tasarimWm)
       } finally {
         setOzelInceleniyor(false)
       }
@@ -934,6 +934,43 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     )
   }
 
+  /*
+   * ADAYLARI TAZELE — YERLEŞİME DOKUNMADAN.
+   *
+   * Aday kareleri artık tasarımın gerçek ölçüsünde çiziliyor; kabin sayısı
+   * ya da mesafe değişince o kareler de değişmeli. Ama bu bir "yeniden
+   * yerleştir" değil: kullanıcının seçtiği yüzey olduğu gibi kalıyor,
+   * yalnızca öneri kareleri yeni ölçüye göre aranıyor.
+   *
+   * Ağır modeller önbellekte olduğu için bu arama saniyenin altında
+   * sürüyor; "inceleniyor" katmanı bu yüzden gösterilmiyor.
+   */
+  const adaylariTazele = async () => {
+    const gorsel = ozelSahneGorsel.current
+    if (!ozelSahne || !gorsel) return
+    try {
+      const kayit = await ozelMekanKaydi(
+        ozelSahne.dosya,
+        gorsel,
+        tasarimWm / tasarimHm,
+        ozelMesafeM,
+        tasarimWm,
+      )
+      if (kayit) setOzelSahne(kayit)
+    } catch {
+      /* tazeleme başarısızsa eski kareler kalsın */
+    }
+  }
+  const adaylariTazeleRef = useRef(null)
+  adaylariTazeleRef.current = adaylariTazele
+  useEffect(() => {
+    if (scene !== 'ozel' || !ozelSahne?.dosya) return undefined
+    /* Artı/eksi düğmesine üst üste basılırken her tıkta aramaya gerek yok. */
+    const zaman = setTimeout(() => adaylariTazeleRef.current?.(), 450)
+    return () => clearTimeout(zaman)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasarimWm, tasarimHm, ozelMesafeM, scene, ozelSahne?.dosya])
+
   /* Öneriyi tazele: ölçü ya da alan genişliği değişmiş olabilir. */
   const oneriyiTazele = (alanM = ozelMesafeM) => {
     if (!ozelSahne) return
@@ -943,7 +980,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setOzelInceleniyor(true)
       let kayit = null
       try {
-        kayit = await ozelMekanKaydi(ozelSahne.dosya, gorsel, tasarimWm / tasarimHm, alanM)
+        kayit = await ozelMekanKaydi(ozelSahne.dosya, gorsel, tasarimWm / tasarimHm, alanM, tasarimWm)
       } finally {
         setOzelInceleniyor(false)
       }
@@ -2120,23 +2157,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
-   * MESAFE DEĞİŞİNCE YERLEŞİM ÖLÇÜSÜ DE DEĞİŞİYOR.
+   * MESAFE DEĞİŞİNCE EKRAN ÖLÇÜSÜNE DOKUNULMUYOR.
    *
-   * Kullanıcı "Ölçüyü ayarla" dedikten sonra mesafeyi düzeltiyorsa, aslında
-   * "o yüzey gerçekte şu kadar" bilgisini düzeltmiş oluyor. Ekran ölçüsü
-   * eski mesafeden hesaplanmış hâlde kalırsa bütün sahne yanlış ölçekte
-   * kalıyor. Bu yüzden uydurma, yeni mesafeyle kendiliğinden tekrarlanıyor.
-   *
-   * Yalnızca kullanıcı uydurmayı SEÇMİŞSE çalışıyor; "Ölçü kalsın" diyenin
-   * ölçüsüne dokunulmuyor.
+   * Bir ara mesafe değişince ölçü kendiliğinden yeniden uyduruluyordu.
+   * Kullanıcının itirazı haklıydı: ekranın kaç kabin olacağı onun kararı,
+   * mesafeyi düzeltmek "ekranımı büyüt" demek değil. Artık yalnızca
+   * BİLGİ güncelleniyor — paneldeki "Seçtiğiniz yüzey yaklaşık…" satırı
+   * yeni mesafeye göre yeniden hesaplanıyor — ve "Ölçüyü ayarla" düğmesi
+   * panelde durmaya devam ediyor. Uygulama kararı kullanıcıya bırakıyor.
    */
-  const olcuyuUydurRef = useRef(null)
-  olcuyuUydurRef.current = olcuyuYuzeyeUydur
-  useEffect(() => {
-    if (!olcuUyduruldu) return
-    olcuyuUydurRef.current?.()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ozelMesafeM])
 
   /* ADAY KARELERİN TUVALDEKİ KARŞILIĞI — köşelerle birebir aynı dönüşüm. */
   const adayTuval = (() => {
