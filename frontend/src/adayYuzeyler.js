@@ -407,6 +407,21 @@ export function adaylariBul(tuval, sec = {}) {
    */
   for (const a of ham) {
     /*
+     * HARİTA PAYLARI HER ADAY İÇİN ÖLÇÜLÜYOR.
+     *
+     * Cam cezası konmuştu ama işe yaramıyordu: adayların ASIL üreticisi
+     * düzlem üreticisi ve onun çıktıları listeye "camPay: 0" diye
+     * ekleniyordu. Yani ceza yalnızca yedek üreticinin karelerine
+     * uygulanıyor, gerçekte gösterilen kareler denetimsiz kalıyordu.
+     * Ölçüm artık üreticiden bağımsız: nereden gelirse gelsin her karenin
+     * altındaki piksellere bakılıyor.
+     */
+    const pay = haritaPaylari(harita, a.koseler)
+    if (pay) {
+      a.camPay = pay.camPay
+      a.yasakPay = Math.max(a.yasakPay || 0, pay.yasakPay)
+    }
+    /*
      * Cam payı ne kadar yüksekse ceza o kadar büyük (tamamı camsa −34).
      * Duvarın bir köşesine denk gelen küçük cam payı neredeyse etkisiz.
      */
@@ -580,7 +595,35 @@ export function adaylariBul(tuval, sec = {}) {
     if (enIyi) enIyi = { ...enIyi, koseler: panoyaOturt(tuval, enIyi.koseler) }
 
     if (enIyi && !sonuc.some((a) => a.tur === 'screen')) {
-      sonuc.unshift({ koseler: enIyi.koseler, skor: 92, tur: 'screen', etiket: 'Duvar–çerçeve arası' })
+      /*
+       * KENAR ARAMASININ KAZANANI DA DENETİMDEN GEÇİYOR.
+       *
+       * Bu dörtgen doğrudan 1 NUMARALI öneri olarak listenin başına
+       * konuyordu — puanlamaya hiç uğramadan. Arama kutularından biri de
+       * cam bölgeleri olduğu için, cam cephenin çerçevesi bulunduğunda
+       * "en iyi öneri" cama çıkıyordu; cam cezası eklendiği hâlde
+       * kullanıcının hiçbir değişiklik görmemesinin sebebi buydu.
+       *
+       * Artık dörtgen ölçülüyor: çoğunluğu camsa ayrıcalıklı ilk sırayı
+       * kaybedip öteki adaylarla aynı sıraya giriyor. ELENMİYOR — cama
+       * ekran yapılmak istenebilir; yalnızca kendiliğinden birinci olmuyor.
+       */
+      const pay = haritaPaylari(harita, enIyi.koseler)
+      const camOran = pay?.camPay || 0
+      if (camOran > 0.45) {
+        ham.push({
+          koseler: enIyi.koseler,
+          merkez: dortgenMerkez(enIyi.koseler),
+          skor: 92 - Math.round(Math.min(1, camOran) * 34),
+          tur: 'screen',
+          etiket: 'Cam cephe',
+          camPay: camOran,
+          yasakPay: pay?.yasakPay || 0,
+        })
+        ham.sort((a, b) => b.skor - a.skor)
+      } else {
+        sonuc.unshift({ koseler: enIyi.koseler, skor: 92, tur: 'screen', etiket: 'Duvar–çerçeve arası' })
+      }
     } else if (parlak && !sonuc.some((a) => a.tur === 'screen')) {
       /*
        * Kenar araması tutmadıysa parlak bölgenin KENDİSİ hedef oluyor.
@@ -1199,11 +1242,82 @@ function parlaklikOlcusu(tuval, koseler) {
   for (const l of ornekler) sapma += (l - adayOrt) * (l - adayOrt)
   const standart = Math.sqrt(sapma / Math.max(1, ornekler.length))
 
+  /*
+   * KOYU YÜZEY GERÇEKTEN EKRAN MI, YOKSA KOYU CAM MI?
+   *
+   * "Kadrajdan koyu + dokusuz" ölçütü kapalı bir LED ekranı buluyor ama
+   * koyu bir cam kapıyı da aynı ölçüde buluyordu — ve ona +18 puan
+   * veriyordu. Fark fiziksel: gerçek bir ekranın KASASI vardır, yani
+   * dörtgenin hemen dışı belirgin biçimde daha aydınlıktır. Koyu cam ise
+   * dörtgenin dışında da devam eder.
+   *
+   * Karenin dışındaki ince şerit dört kenarda ayrı ayrı ölçülüyor; en az
+   * üç kenar içeriden %25 aydınlıksa yüzey çerçeveli sayılıyor.
+   */
+  const serit = (sx0, sy0, sx1, sy1) => {
+    let t = 0
+    let n = 0
+    for (let gy = 0; gy < 6; gy++) {
+      for (let gx = 0; gx < 6; gx++) {
+        const px = Math.round(sx0 + ((gx + 0.5) / 6) * (sx1 - sx0))
+        const py = Math.round(sy0 + ((gy + 0.5) / 6) * (sy1 - sy0))
+        if (px < 0 || py < 0 || px >= W || py >= H) continue
+        const d = ctx.getImageData(px, py, 1, 1).data
+        t += 0.299 * d[0] + 0.587 * d[1] + 0.114 * d[2]
+        n++
+      }
+    }
+    return n ? t / n : null
+  }
+  const payX = Math.max(3, Math.round((x1 - x0) * 0.08))
+  const payY = Math.max(3, Math.round((y1 - y0) * 0.08))
+  const kenarlar = [
+    serit(x0, y0 - payY * 2, x1, y0 - 1),
+    serit(x0, y1 + 1, x1, y1 + payY * 2),
+    serit(x0 - payX * 2, y0, x0 - 1, y1),
+    serit(x1 + 1, y0, x1 + payX * 2, y1),
+  ].filter((v) => v != null)
+  const parlakKenar = kenarlar.filter((v) => v > adayOrt * 1.25).length
+  const cerceveli = kenarlar.length >= 3 && parlakKenar >= 3
+
   return {
     ort: adayOrt,
     pencere: adayOrt > kareOrt * 1.55 || yanik / adaySay > 0.25,
-    karanlikEkran: adayOrt < kareOrt * 0.55 && standart < 34,
+    karanlikEkran: adayOrt < kareOrt * 0.55 && standart < 34 && cerceveli,
   }
+}
+
+/**
+ * Bir dörtgenin altındaki piksellerin mekân haritasındaki dağılımı.
+ *
+ * Tek ölçüm noktası olması önemli: aday hangi üreticiden gelirse gelsin
+ * (pencere taraması, düzlem üreticisi, kenar araması) aynı denetimden
+ * geçiyor. Daha önce her üretici kendi payını taşıdığı — ya da hiç
+ * taşımadığı — için denetim delikliydi.
+ *
+ * @returns {{yasakPay:number, camPay:number}|null}
+ */
+function haritaPaylari(harita, koseler) {
+  if (!harita?.sinif || !koseler || koseler.length !== 4) return null
+  const xs = koseler.map((k) => k.x)
+  const ys = koseler.map((k) => k.y)
+  const hx0 = Math.max(0, Math.floor(Math.min(...xs) * harita.w))
+  const hy0 = Math.max(0, Math.floor(Math.min(...ys) * harita.h))
+  const hx1 = Math.min(harita.w, Math.max(hx0 + 1, Math.ceil(Math.max(...xs) * harita.w)))
+  const hy1 = Math.min(harita.h, Math.max(hy0 + 1, Math.ceil(Math.max(...ys) * harita.h)))
+  let yasak = 0
+  let cam = 0
+  let toplam = 0
+  for (let hy = hy0; hy < hy1; hy++) {
+    for (let hx = hx0; hx < hx1; hx++) {
+      const sv = harita.sinif[hy * harita.w + hx]
+      if (sv === SINIF.CAM) cam++
+      else if (sv !== SINIF.DUVAR && sv !== SINIF.EKRAN && sv !== SINIF.BILINMEYEN) yasak++
+      toplam++
+    }
+  }
+  if (!toplam) return null
+  return { yasakPay: yasak / toplam, camPay: cam / toplam }
 }
 
 /** Dörtgenin alanı (0–1 birim karede). */
