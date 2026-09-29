@@ -535,8 +535,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * verilen ölçüyle kuruluyor.
    */
   const [taslakSorusu, setTaslakSorusu] = useState(false)
-  /* Fotoğraf yüklenince kutunun kendiliğinden kurulması için işaret. */
-  const taslakBekliyor = useRef(false)
   /* Yerinde 3B katmanı gerçekten çizebildi mi (bkz. Mekan3D → onHazir). */
   const [uc3dHazir, setUc3dHazir] = useState(false)
   /*
@@ -1048,11 +1046,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       }
       if (kayit) setOzelSahne(kayit)
       mekaniOrtala()
-      /* Ölçü pop-up'ta girildiyse kutu hemen kuruluyor (bkz. taslakSorusu). */
-      if (taslakBekliyor.current) {
-        taslakBekliyor.current = false
-        setTimeout(() => taslakKutuyuKurRef.current?.(), 0)
-      }
+      /*
+       * ÖNCE FOTOĞRAF, SONRA ÖLÇÜ.
+       *
+       * Ölçüyü fotoğraftan önce sormak, kullanıcıdan görmediği bir duvarın
+       * ölçüsünü istemek demekti. Sıra çevrildi: fotoğraf yükleniyor,
+       * üstüne pop-up geliyor ve kullanıcı duvara BAKARAK ölçüyü yazıyor.
+       */
+      if (TASLAK_KIPI) setTaslakSorusu(true)
       if (kayit) oneriyiUygula(kayit)
     }
     gorsel.src = ozelSahne.dosya
@@ -3407,13 +3408,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     !(Number(String(taslakHm).replace(',', '.')) > 0.05)
                   }
                   onClick={() => {
-                    taslakBekliyor.current = true
                     setTaslakSorusu(false)
-                    ozelDosyaRef.current?.click()
+                    taslakKutuyuKurRef.current?.()
                   }}
                   className="flex-1 rounded-full bg-brand py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                 >
-                  {t('scene.wallNext')}
+                  {t('scene.draftMake')}
                 </button>
                 <button
                   type="button"
@@ -4017,7 +4017,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 />
                 <button
                   type="button"
-                  onClick={() => (TASLAK_KIPI ? setTaslakSorusu(true) : ozelDosyaRef.current?.click())}
+                  onClick={() => ozelDosyaRef.current?.click()}
                   className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
                 >
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">

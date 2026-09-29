@@ -435,8 +435,8 @@ const dict = {
     ar: 'المقاس الحقيقي للجدار في الصورة',
   },
   'scene.wallAskHint': {
-    tr: 'Taslak kutu bu ölçüye göre kurulacak ve sahnenin ölçeği bundan hesaplanacak. Fotoğrafı bir sonraki adımda seçeceksiniz.',
-    en: 'The draft box is built from this size and the scene scale comes from it. You will pick the photo in the next step.',
+    tr: 'Fotoğraftaki duvara bakarak yazın. Taslak kutu bu ölçüye göre kurulacak ve sahnenin ölçeği bundan hesaplanacak.',
+    en: 'Read it off the wall in the photo. The draft box is built from this size and the scene scale comes from it.',
     ar: 'يُبنى المربع المبدئي وفق هذا المقاس ومنه يُحسب مقياس المشهد.',
   },
   'scene.wallNext': { tr: 'Devam et ve fotoğraf seç', en: 'Continue and pick a photo', ar: 'متابعة واختيار صورة' },
@@ -505,8 +505,8 @@ const dict = {
     ar: 'المقاس الحقيقي للجدار في الصورة',
   },
   'scene.wallAskHint': {
-    tr: 'Taslak kutu bu ölçüye göre kurulacak ve sahnenin ölçeği bundan hesaplanacak. Fotoğrafı bir sonraki adımda seçeceksiniz.',
-    en: 'The draft box is built from this size and the scene scale comes from it. You will pick the photo in the next step.',
+    tr: 'Fotoğraftaki duvara bakarak yazın. Taslak kutu bu ölçüye göre kurulacak ve sahnenin ölçeği bundan hesaplanacak.',
+    en: 'Read it off the wall in the photo. The draft box is built from this size and the scene scale comes from it.',
     ar: 'يُبنى المربع المبدئي وفق هذا المقاس ومنه يُحسب مقياس المشهد.',
   },
   'scene.wallNext': { tr: 'Devam et ve fotoğraf seç', en: 'Continue and pick a photo', ar: 'متابعة واختيار صورة' },
