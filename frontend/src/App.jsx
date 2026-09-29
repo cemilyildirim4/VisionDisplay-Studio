@@ -2955,6 +2955,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * eşlemenin tersi uygulanıyor. Kutu bundan sonra ekranda durmuyor —
    * görevi bitti, duvarı tanıttı.
    */
+  /*
+   * SAHNE DEĞİŞİNCE KUTU KALMIYOR.
+   *
+   * Kutu yalnızca kullanıcının kendi fotoğrafına ait. Başka bir mekâna
+   * geçilince ekranda asılı kalması, oraya ait olmayan bir duvarı
+   * göstermek demek.
+   */
+  useEffect(() => {
+    if (scene !== 'ozel' || !ozelSahne) setTaslakKutu(null)
+  }, [scene, ozelSahne])
+
   const taslakKutusunuUygula = () => {
     if (!taslakKutu) return
     /* Kutu zaten fotoğrafa göre oranlı: hedef yüzey doğrudan o. */
@@ -3512,28 +3523,44 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                 {t('scene.wallAskHint')}
               </p>
-              <div className="mt-3 flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  autoFocus
-                  value={taslakWm}
-                  onChange={(e) => setTaslakWm(e.target.value)}
-                  placeholder={t('scene.wallW')}
-                  className="w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                />
-                <span className="text-[14px] text-neutral-400">×</span>
-                <input
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  value={taslakHm}
-                  onChange={(e) => setTaslakHm(e.target.value)}
-                  placeholder={t('scene.wallH')}
-                  className="w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                />
-                <span className="text-[14px] text-neutral-400">m</span>
+              {/*
+                ETİKETLER KUTUNUN ÜSTÜNDE, İÇİNDE DEĞİL.
+
+                Önce yer tutucu (placeholder) kullanılıyordu; kullanıcı sayıyı
+                yazar yazmaz "en"/"boy" kayboluyor ve hangi kutunun hangisi
+                olduğu görünmez oluyordu. 6 × 10 girip kutunun neden dikey
+                çıktığına şaşırmanın sebebi buydu.
+              */}
+              <div className="mt-3 flex items-end gap-2">
+                <label className="flex-1 min-w-0">
+                  <span className="block text-[12.5px] font-medium text-neutral-600 dark:text-neutral-300">
+                    {t('scene.wallWLabel')}
+                  </span>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    autoFocus
+                    value={taslakWm}
+                    onChange={(e) => setTaslakWm(e.target.value)}
+                    className="mt-1 w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                  />
+                </label>
+                <span className="pb-2.5 text-[14px] text-neutral-400">×</span>
+                <label className="flex-1 min-w-0">
+                  <span className="block text-[12.5px] font-medium text-neutral-600 dark:text-neutral-300">
+                    {t('scene.wallHLabel')}
+                  </span>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={taslakHm}
+                    onChange={(e) => setTaslakHm(e.target.value)}
+                    className="mt-1 w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                  />
+                </label>
+                <span className="pb-2.5 text-[14px] text-neutral-400">m</span>
               </div>
               <div className="mt-3">
                 <label className="block text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
