@@ -57,6 +57,21 @@ import ArView from './ArView.jsx'
 const Scene3D = guvenliLazy(() => import('./Scene3D.jsx'))
 /* Fotograflı mekânda tasarımı yerinde 3B çizen katman — yalnızca gerekince yüklenir. */
 const Mekan3D = guvenliLazy(() => import('./Mekan3D.jsx'))
+
+/*
+ * YERİNDE 3B ŞİMDİLİK KAPALI.
+ *
+ * Katman çalışıyor ama ekranı YANLIŞ yere ve yanlış boyda koyuyor: tasarımın
+ * ortasında/altında duran koyu kutu buydu ve kullanıcı mesafeyi her
+ * ayarladığında önüne çıkıyordu. Yanlış duran bir 3B, düz çizimden kötü.
+ *
+ * Kod olduğu gibi duruyor (Mekan3D.jsx). Eksik olan şey benim tarafımda:
+ * yerleşimi yerelde uçtan uca üretip ölçeği ve merkezi doğrulayamadım
+ * (yerel arka uç CORS yüzünden model seçimi tamamlanmıyor). Doğrulandığında
+ * bu bayrak true yapılıp geri açılacak; başka hiçbir yerde değişiklik
+ * gerekmiyor.
+ */
+const YERINDE_3B = false
 import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, curveDiameterM, curveAmountForDiameter, L_KIRILMA_PCT, curveDepthFor, IMAGE_MAX_MB, KAVIS_ACI_ADIMI, curveAmountForArc, kavisAciSecenekleri, kavisYuzdesiniOturt } from './content.js'
 import { LANGUAGES } from './i18n.js'
 import { useAcilirKonum } from './hooks/useAcilirKonum.js'
@@ -2907,7 +2922,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Ekranın duruşu köşelerden geliyor: görsel yan duruyorsa
             kullanıcı köşeleri o yana çekiyor, 3B ekran da o yana dönüyor.
           */}
-          {hasModel && scene === 'ozel' && ozelSahne && koseMutlak && (
+          {YERINDE_3B && hasModel && scene === 'ozel' && ozelSahne && koseMutlak && (
             <Suspense fallback={null}>
               <Mekan3D
                 model={previewModel}
