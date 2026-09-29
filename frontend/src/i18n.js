@@ -440,6 +440,11 @@ const dict = {
     ar: 'يُبنى المربع المبدئي وفق هذا المقاس ومنه يُحسب مقياس المشهد.',
   },
   'scene.wallNext': { tr: 'Devam et ve fotoğraf seç', en: 'Continue and pick a photo', ar: 'متابعة واختيار صورة' },
+  'scene.wallBiggerThanFrame': {
+    tr: 'Girdiğiniz duvar, bu mesafeden görünen kadrajdan geniş. Mesafeyi fotoğrafın gerçekte kaç metreden çekildiğine göre düzeltin.',
+    en: "The wall you entered is wider than the frame at this distance. Correct the distance to how far the photo was really taken from.",
+    ar: 'الجدار الذي أدخلته أوسع من الإطار عند هذه المسافة. صحّح المسافة.',
+  },
   'scene.askDistance': {
     tr: 'Fotoğrafın çekildiği mesafe',
     en: 'Distance the photo was taken from',
@@ -520,6 +525,11 @@ const dict = {
     ar: 'يُبنى المربع المبدئي وفق هذا المقاس ومنه يُحسب مقياس المشهد.',
   },
   'scene.wallNext': { tr: 'Devam et ve fotoğraf seç', en: 'Continue and pick a photo', ar: 'متابعة واختيار صورة' },
+  'scene.wallBiggerThanFrame': {
+    tr: 'Girdiğiniz duvar, bu mesafeden görünen kadrajdan geniş. Mesafeyi fotoğrafın gerçekte kaç metreden çekildiğine göre düzeltin.',
+    en: "The wall you entered is wider than the frame at this distance. Correct the distance to how far the photo was really taken from.",
+    ar: 'الجدار الذي أدخلته أوسع من الإطار عند هذه المسافة. صحّح المسافة.',
+  },
   'scene.askDistance': {
     tr: 'Fotoğrafın çekildiği mesafe',
     en: 'Distance the photo was taken from',

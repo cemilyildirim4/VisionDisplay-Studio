@@ -2820,6 +2820,67 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kutu yükseklikte fotoğrafa sığmıyorsa (çok basık/çok uzun duvar) pay
    * küçültülüyor; oran hep korunuyor.
    */
+  /*
+   * KUTU FOTOĞRAFA GÖRE ORANLI SAKLANIYOR (tuval pikselinde değil).
+   *
+   * Piksel olarak saklandığında, mesafe değişip fotoğrafın yakınlığı
+   * değiştiğinde kutu yerinde kalıyor ve fotoğraf altından kayıyordu; yani
+   * kullanıcının duvara oturttuğu kutu duvarı göstermez oluyordu. Oranlı
+   * saklanınca kutu fotoğrafa yapışık kalıyor.
+   */
+  const oranTuvale = (k) => {
+    const yer = fotoYer
+    /* Fotoğraf yerleşimi yoksa dönüşüm yapılamaz; nokta olduğu gibi döner. */
+    if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return k
+    const z = sahneYakinlik || 1
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    return {
+      x: mX + (yer.sol + k.x * yer.genislik - mX) * z,
+      y: mY + (yer.ust + k.y * yer.yukseklik - mY) * z,
+    }
+  }
+  const tuvalOrana = (k) => {
+    const yer = fotoYer
+    if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return k
+    const z = sahneYakinlik || 1
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    return {
+      x: (mX + (k.x - mX) / z - yer.sol) / yer.genislik,
+      y: (mY + (k.y - mY) / z - yer.ust) / yer.yukseklik,
+    }
+  }
+
+  /*
+   * KUTU OYNATILDIKÇA ÖLÇEK YENİDEN HESAPLANIYOR.
+   *
+   * Kullanıcı kutuyu gerçek duvarın üstüne oturtuyor. O anda iki şey
+   * biliniyor: duvarın GERÇEK eni (kullanıcı yazdı) ve fotoğrafta kapladığı
+   * PAY (kutunun genişliği). İkisinden kadraj, kadrajdan da mesafe çıkıyor:
+   *
+   *   kadraj = duvar eni ÷ kutunun genişlik payı
+   *   mesafe = kadraj ÷ 1,11
+   *
+   * Böylece kullanıcının girdiği ölçü gerçekten geçerli oluyor: kutuyu
+   * duvara oturttuğu anda sahnenin ölçeği ona göre kalibre ediliyor.
+   */
+  const taslaktanOlcek = (kutu) => {
+    const w = Number(String(taslakWm).replace(',', '.'))
+    if (!(w > 0.05) || !Array.isArray(kutu) || kutu.length !== 4) return
+    const xs = kutu.map((k) => k.x)
+    const payW = Math.max(...xs) - Math.min(...xs)
+    if (!(payW > 0.01)) return
+    const mesafe = w / payW / KADRAJ_KATSAYISI
+    setIzlemeM(Math.max(0.2, Math.min(300, Math.round(mesafe * 100) / 100)))
+  }
+
+  const taslakKutusuDegisti = (tuvalKoseler) => {
+    const oranli = tuvalKoseler.map(tuvalOrana)
+    setTaslakKutu(oranli)
+    taslaktanOlcek(oranli)
+  }
+
   const taslakKutuyuKur = () => {
     const w = Number(String(taslakWm).replace(',', '.'))
     const h = Number(String(taslakHm).replace(',', '.'))
@@ -2839,30 +2900,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     const kadrajW = kadrajGenisligi(m)
     const kadrajH = kadrajW * (kaynak.h / kaynak.w)
-    const payW = Math.max(0.04, Math.min(0.98, w / kadrajW))
-    const payH = Math.max(0.04, Math.min(0.98, h / kadrajH))
+    const payW = w / kadrajW
+    const payH = h / kadrajH
     setIzlemeM(Math.max(0.2, Math.min(300, m)))
-
-    /* Oranlı köşeler tuval pikseline çevriliyor (koseTuval ile aynı eşleme). */
-    const mX = tuvalBoyut.w / 2
-    const mY = tuvalBoyut.h / 2
-    const z = sahneYakinlik || 1
-    const cev = (ox, oy) => ({
-      x: mX + (yer.sol + ox * yer.genislik - mX) * z,
-      y: mY + (yer.ust + oy * yer.yukseklik - mY) * z,
-    })
 
     elleDuzenlemeyiBirak()
     setHedefKose(null)
     setAdayKipi(false)
     setTaslakKutu([
-      cev(0.5 - payW / 2, 0.5 - payH / 2),
-      cev(0.5 + payW / 2, 0.5 - payH / 2),
-      cev(0.5 + payW / 2, 0.5 + payH / 2),
-      cev(0.5 - payW / 2, 0.5 + payH / 2),
+      { x: 0.5 - payW / 2, y: 0.5 - payH / 2 },
+      { x: 0.5 + payW / 2, y: 0.5 - payH / 2 },
+      { x: 0.5 + payW / 2, y: 0.5 + payH / 2 },
+      { x: 0.5 - payW / 2, y: 0.5 + payH / 2 },
     ])
     setTaslakKuruldu(true)
-    setOzelUyari(null)
+    /*
+     * SESSİZCE KÜÇÜLTME YOK.
+     *
+     * Duvar, verilen mesafeden görünen kadrajdan genişse kutu fotoğrafa
+     * sığmaz. Eskiden sessizce %98'e kırpılıyordu; o zaman kutunun ölçüsü
+     * kullanıcının yazdığı ölçü olmaktan çıkıyordu. Artık kutu gerçek
+     * ölçüsünde kalıyor ve sebebi yazılıyor: mesafe yanlış girilmiş.
+     */
+    setOzelUyari(payW > 1 || payH > 1 ? t('scene.wallBiggerThanFrame') : null)
   }
 
   /*
@@ -2873,17 +2933,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * görevi bitti, duvarı tanıttı.
    */
   const taslakKutusunuUygula = () => {
-    const yer = fotoYer
-    if (!taslakKutu || !(yer?.genislik > 0)) return
-    const mX = tuvalBoyut.w / 2
-    const mY = tuvalBoyut.h / 2
-    const z = sahneYakinlik || 1
-    setHedefKose(
-      taslakKutu.map((k) => ({
-        x: (mX + (k.x - mX) / z - yer.sol) / yer.genislik,
-        y: (mY + (k.y - mY) / z - yer.ust) / yer.yukseklik,
-      })),
-    )
+    if (!taslakKutu) return
+    /* Kutu zaten fotoğrafa göre oranlı: hedef yüzey doğrudan o. */
+    setHedefKose(taslakKutu)
     setHedefTur('taslak')
     setTaslakKutu(null)
   }
@@ -3306,12 +3358,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             çekerek gerçek duvara oturtuyor. Üstüne tıklayınca tasarım
             kendi ölçüsüyle içine yerleşiyor ve kutu kayboluyor.
           */}
-          {taslakKutu && scene === 'ozel' && ozelSahne && (
+          {taslakKutu && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <TaslakKutu
-              koseler={taslakKutu}
+              koseler={taslakKutu.map(oranTuvale)}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
-              onKose={setTaslakKutu}
+              onKose={taslakKutusuDegisti}
               onSec={taslakKutusunuUygula}
               etiket={t('scene.draftTapHint')}
             />
