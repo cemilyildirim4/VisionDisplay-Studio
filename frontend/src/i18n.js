@@ -464,7 +464,7 @@ const dict = {
     ar: 'المسافة التي التقطت منها الصورة',
   },
   'scene.draftTapHint': {
-    tr: 'Duvara getir, tıkla',
+    tr: 'Duvara taşı, bitince tıkla',
     en: 'Move onto the wall, then tap',
     ar: 'حرّكه إلى الجدار ثم انقر',
   },
@@ -564,7 +564,7 @@ const dict = {
     ar: 'المسافة التي التقطت منها الصورة',
   },
   'scene.draftTapHint': {
-    tr: 'Duvara getir, tıkla',
+    tr: 'Duvara taşı, bitince tıkla',
     en: 'Move onto the wall, then tap',
     ar: 'حرّكه إلى الجدار ثم انقر',
   },

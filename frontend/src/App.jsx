@@ -2899,6 +2899,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const taslakKutusuDegisti = (tuvalKoseler) => {
     const oranli = tuvalKoseler.map(tuvalOrana)
     setTaslakKutu(oranli)
+    /* Tasarım kutunun içinde: kutu nereye giderse o da oraya. */
+    setHedefKose(oranli)
     taslaktanOlcek(oranli)
   }
 
@@ -2944,15 +2946,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     payH /= asim
     setIzlemeM(Math.max(0.2, Math.min(300, Math.round(m * asim * 100) / 100)))
 
-    elleDuzenlemeyiBirak()
-    setHedefKose(null)
-    setAdayKipi(false)
-    setTaslakKutu([
+    /*
+     * DEĞERLER GİRİLİR GİRİLMEZ TASARIM KUTUNUN İÇİNDE.
+     *
+     * Önce kutu boş beliriyor, kullanıcı duvara taşıyıp tıklayınca tasarım
+     * içine giriyordu; fazladan bir adımdı. Artık kutu ve tasarım birlikte
+     * geliyor: tasarım kutunun ortasında, kendi gerçek ölçüsüyle. Kutuyu
+     * duvara taşıdıkça tasarım da onunla gidiyor (bkz. taslakKutusuDegisti).
+     */
+    const kutu = [
       { x: 0.5 - payW / 2, y: 0.5 - payH / 2 },
       { x: 0.5 + payW / 2, y: 0.5 - payH / 2 },
       { x: 0.5 + payW / 2, y: 0.5 + payH / 2 },
       { x: 0.5 - payW / 2, y: 0.5 + payH / 2 },
-    ])
+    ]
+    elleDuzenlemeyiBirak()
+    setAdayKipi(false)
+    setTaslakKutu(kutu)
+    setHedefKose(kutu)
+    setHedefTur('taslak')
+    setDuvarOlcu({ wm: w, hm: h })
     setTaslakKuruldu(true)
     /*
      * SESSİZCE KÜÇÜLTME YOK.
@@ -2990,9 +3003,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
   }, [scene, ozelSahne])
 
+  /*
+   * KUTUYA TIKLAMAK = 'DUVARI BULDUM, BİTİR'.
+   *
+   * Tasarım zaten kutunun içinde; tıklamak yalnızca kutuyu ekrandan
+   * kaldırıyor. Duvarın ölçüsü saklı kaldığı için sığma denetimi çalışmaya
+   * devam ediyor.
+   */
   const taslakKutusunuUygula = () => {
     if (!taslakKutu) return
-    /* Duvarın gerçek ölçüsü saklanıyor: sığma denetimi buna dayanıyor. */
     const dw = Number(String(taslakWm).replace(',', '.'))
     const dh = Number(String(taslakHm).replace(',', '.'))
     setDuvarOlcu(dw > 0 && dh > 0 ? { wm: dw, hm: dh } : null)
