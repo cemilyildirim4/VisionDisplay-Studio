@@ -2185,8 +2185,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Dörtgeni tuvalin içine alır: önce kaydırır, gerekiyorsa merkezine göre
    * küçültür. Oran korunuyor — tek çarpanla ölçekleniyor.
    */
-  /** Ölçü etiketlerinin ekranın kutusu dışında kapladığı yaklaşık pay (px). */
-  const ETIKET_PAYI = 44
+  /*
+   * KENARDAN BIRAKILAN PAY.
+   *
+   * Ölçü etiketleri ekranın kutusunun dışına taşıyor, bu yüzden fotoğrafın
+   * kenarında bir pay bırakılıyordu. 44 piksel fazla geldi: tasarımı
+   * fotoğrafın kenarına yaklaştırmak mümkün olmuyor, ortada kocaman bir
+   * boşluk kalıyordu.
+   *
+   * Pay artık fotoğrafın kendi ölçüsüne göre: kısa kenarının %3'ü, en çok
+   * 14 piksel. Küçük bir fotoğrafta neredeyse yok, büyüğünde etiketin
+   * tamamen dışarı düşmesini önleyecek kadar var. Etiketin bir ucunun
+   * fotoğraf dışına birkaç piksel taşması, tasarımı kenara götürememekten
+   * daha az sorun.
+   */
+  const etiketPayi = (yer) => {
+    if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return 0
+    return Math.min(14, Math.min(yer.genislik, yer.yukseklik) * 0.03)
+  }
 
   /**
    * Dörtgeni (ve onunla birlikte ölçü etiketlerini) FOTOĞRAFIN içine çeker.
@@ -2210,8 +2226,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const y0 = Math.min(...ys)
     const y1 = Math.max(...ys)
 
-    const payX = Math.min(ETIKET_PAYI, Math.max(0, (yer.genislik - (x1 - x0)) / 2))
-    const payY = Math.min(ETIKET_PAYI, Math.max(0, (yer.yukseklik - (y1 - y0)) / 2))
+    const taban = etiketPayi(yer)
+    const payX = Math.min(taban, Math.max(0, (yer.genislik - (x1 - x0)) / 2))
+    const payY = Math.min(taban, Math.max(0, (yer.yukseklik - (y1 - y0)) / 2))
     const solSinir = yer.sol + payX
     const sagSinir = yer.sol + yer.genislik - payX
     const ustSinir = yer.ust + payY
