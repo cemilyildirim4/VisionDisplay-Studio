@@ -562,12 +562,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * sınırı bununla uygulanıyor; hesapla bulmak mümkün değil çünkü duvar
    * kutusu kapsayıcının ortasında durmuyor.
    */
-  const ekranKutuYeri = useRef(null)
+  /*
+   * ÖLÇÜM DURUM OLARAK TUTULUYOR (ref değil).
+   *
+   * Ref'e yazmak yeniden çizim tetiklemiyor. Ölçüm geldiğinde o çizim çoktan
+   * eski varsayımla yapılmış oluyordu ve düzeltilmiş başnokta hiçbir zaman
+   * kullanılmıyordu — tasarım bu yüzden fotoğrafın solunda kalıyordu.
+   *
+   * Döngü riski yok: aynı değer ikinci kez geldiğinde yarım pikselin
+   * altındaki fark yok sayılıp durum güncellenmiyor.
+   */
+  const [ekranKutuYeri, setEkranKutuYeri] = useState(null)
   const ekranKutuYeriniYaz = (y) => {
     if (!y) return
-    const e = ekranKutuYeri.current
-    if (e && Math.abs(e.sol - y.sol) < 0.5 && Math.abs(e.ust - y.ust) < 0.5) return
-    ekranKutuYeri.current = y
+    setEkranKutuYeri((e) =>
+      e && Math.abs(e.sol - y.sol) < 0.5 && Math.abs(e.ust - y.ust) < 0.5 ? e : y,
+    )
   }
 
   /*
@@ -2302,7 +2312,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * henüz gelmediyse eski varsayıma düşülüyor.
    */
   function ekranKutuBasi(dw, dh) {
-    const olculen = ekranKutuYeri.current
+    const olculen = ekranKutuYeri
     const ana = tuvalRef.current?.getBoundingClientRect()
     if (olculen && ana) return { x: olculen.sol - ana.left, y: olculen.ust - ana.top }
     return { x: tuvalBoyut.w / 2 - dw / 2, y: tuvalBoyut.h / 2 - dh / 2 }
@@ -2391,9 +2401,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * tasarımı hiç kıpırdatamıyordu. Ölçüm gelmediyse serbest bırakmak,
      * yanlış yere hapsetmekten iyidir.
      */
-    if (!ana || !ekranKutuYeri.current) return koseler
-    const kx = ekranKutuYeri.current.sol - ana.left
-    const ky = ekranKutuYeri.current.ust - ana.top
+    if (!ana || !ekranKutuYeri) return koseler
+    const kx = ekranKutuYeri.sol - ana.left
+    const ky = ekranKutuYeri.ust - ana.top
     const xs = koseler.map((k) => k.x + kx)
     const ys = koseler.map((k) => k.y + ky)
     const x0 = Math.min(...xs)
