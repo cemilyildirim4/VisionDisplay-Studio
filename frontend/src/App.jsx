@@ -2497,12 +2497,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const es = ESI[oynayan]
     const dx = noktalar[oynayan].x - oncekiler[oynayan].x
     const dy = noktalar[oynayan].y - oncekiler[oynayan].y
+    const tasinmis = oncekiler.map((k, i) => {
+      if (i === oynayan) return { x: k.x + dx, y: k.y + dy }
+      if (i === es) return { x: k.x + dx, y: k.y - dy }
+      return { x: k.x, y: k.y }
+    })
+
+    /*
+     * KÖŞE ÇEKMEK AÇIYI DEĞİŞTİRİR, ÖLÇÜYÜ DEĞİL.
+     *
+     * Kenarı uzatıp kısaltmak dörtgenin genel boyunu da büyütüp küçültüyordu;
+     * kullanıcı açı vermeye çalışırken ekran farkında olmadan büyüyordu.
+     * Oysa ekranın kaç metre olduğu kabin sayısından geliyor, köşe
+     * çekmekten değil.
+     *
+     * Bu yüzden hareketten SONRA dörtgen kendi merkezinde yeniden
+     * ölçekleniyor: ortalama en ve boy, hareketten ÖNCEKİ değerlere
+     * eşitleniyor. Perspektif bilgisi sol/sağ kenarların ORANINDA saklı
+     * olduğu için bu oran bozulmuyor — yalnızca genel boy sabit kalıyor.
+     */
+    const olcu = (k) => ({
+      en: (Math.hypot(k[1].x - k[0].x, k[1].y - k[0].y) + Math.hypot(k[2].x - k[3].x, k[2].y - k[3].y)) / 2,
+      boy: (Math.hypot(k[3].x - k[0].x, k[3].y - k[0].y) + Math.hypot(k[2].x - k[1].x, k[2].y - k[1].y)) / 2,
+    })
+    const once = olcu(oncekiler)
+    const simdi = olcu(tasinmis)
+    if (!(simdi.en > 1) || !(simdi.boy > 1) || !(once.en > 1) || !(once.boy > 1)) {
+      setElleKose(tasinmis)
+      return
+    }
+    const mx = tasinmis.reduce((t, k) => t + k.x, 0) / 4
+    const my = tasinmis.reduce((t, k) => t + k.y, 0) / 4
+    const sx = once.en / simdi.en
+    const sy = once.boy / simdi.boy
     setElleKose(
-      oncekiler.map((k, i) => {
-        if (i === oynayan) return { x: k.x + dx, y: k.y + dy }
-        if (i === es) return { x: k.x + dx, y: k.y - dy }
-        return { x: k.x, y: k.y }
-      }),
+      tasinmis.map((k) => ({ x: mx + (k.x - mx) * sx, y: my + (k.y - my) * sy })),
     )
   }
   /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
