@@ -512,6 +512,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [kilitliKose, setKilitliKose] = useState([])
 
   const [koseKipi, setKoseKipi] = useState(false)
+
+  /*
+   * TASLAK KİPİ — fotoğraflı mekânda yeni akış.
+   *
+   * Öneri üretimi ve nesne tanıma kalktı. Kullanıcı duvarın gerçek ölçüsünü
+   * yazıyor, ekranda o orana sahip bir taslak kutu beliriyor; kutuyu
+   * köşelerinden fotoğraftaki duvara oturtuyor. Ölçek o andan itibaren
+   * tahmin değil: duvarın kaç metre olduğunu kullanıcı söyledi.
+   */
+  const TASLAK_KIPI = true
+  const [taslakWm, setTaslakWm] = useState('')
+  const [taslakHm, setTaslakHm] = useState('')
+  const [taslakKuruldu, setTaslakKuruldu] = useState(false)
   /* Yerinde 3B katmanı gerçekten çizebildi mi (bkz. Mekan3D → onHazir). */
   const [uc3dHazir, setUc3dHazir] = useState(false)
 
@@ -789,7 +802,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setOzelUyari(null)
       let kayit = null
       try {
-        kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM, tasarimWm)
+        kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM, tasarimWm, TASLAK_KIPI)
       } finally {
         setOzelInceleniyor(false)
       }
@@ -994,7 +1007,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setOzelInceleniyor(true)
       let kayit = null
       try {
-        kayit = await ozelMekanKaydi(ozelSahne.dosya, gorsel, tasarimWm / tasarimHm, alanM, tasarimWm)
+        kayit = await ozelMekanKaydi(ozelSahne.dosya, gorsel, tasarimWm / tasarimHm, alanM, tasarimWm, TASLAK_KIPI)
       } finally {
         setOzelInceleniyor(false)
       }
@@ -1289,6 +1302,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         tasarimWm / tasarimHm,
         ozelMesafeM,
         tasarimWm,
+        TASLAK_KIPI,
       )
       if (kayit) setOzelSahne(kayit)
     } catch {
@@ -2713,6 +2727,59 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cizimOlcek])
 
+  /*
+   * TASLAK KUTUYU KUR.
+   *
+   * Kullanıcının yazdığı duvar ölçüsünden, fotoğrafın ortasına o oranda bir
+   * dikdörtgen konuyor ve ÖLÇEK ondan türetiliyor:
+   *
+   *   kutu fotoğrafın %70'ini kaplıyor  →  kadraj = duvar eni ÷ 0,70
+   *   mesafe = kadraj ÷ 1,11
+   *
+   * Yani kullanıcı duvarın kaç metre olduğunu söylediği anda sahnenin
+   * ölçeği biliniyor; tahmine gerek kalmıyor. Kutu köşelerinden gerçek
+   * duvara oturtuldukça ölçek daha da doğrulanıyor.
+   *
+   * Kutu yükseklikte fotoğrafa sığmıyorsa (çok basık/çok uzun duvar) pay
+   * küçültülüyor; oran hep korunuyor.
+   */
+  const taslakKutuyuKur = () => {
+    const w = Number(String(taslakWm).replace(',', '.'))
+    const h = Number(String(taslakHm).replace(',', '.'))
+    if (!(w > 0.05) || !(h > 0.05)) return
+    const kaynak = ozelSahne?.kaynak
+    if (!kaynak?.w || !kaynak?.h) return
+
+    /* Fotoğrafın en/boy oranı, kutunun oranıyla birlikte payı belirliyor. */
+    const fotoOran = kaynak.w / kaynak.h
+    let payW = 0.7
+    let payH = (payW * (h / w)) * fotoOran
+    if (payH > 0.7) {
+      payH = 0.7
+      payW = (payH / ((h / w) * fotoOran))
+    }
+    const x0 = 0.5 - payW / 2
+    const x1 = 0.5 + payW / 2
+    const y0 = 0.5 - payH / 2
+    const y1 = 0.5 + payH / 2
+
+    elleDuzenlemeyiBirak()
+    setHedefKose([
+      { x: x0, y: y0 },
+      { x: x1, y: y0 },
+      { x: x1, y: y1 },
+      { x: x0, y: y1 },
+    ])
+    setHedefTur('taslak')
+    setAdayKipi(false)
+
+    /* Ölçek: kutunun kadraj payı ve duvarın gerçek eni. */
+    const kadrajM = w / payW
+    setIzlemeM(Math.max(0.2, Math.min(300, Math.round((kadrajM / KADRAJ_KATSAYISI) * 10) / 10)))
+    setTaslakKuruldu(true)
+    setOzelUyari(null)
+  }
+
   const koseAyariniSifirla = () => {
     setElleKose(null)
     setKilitliKose([])
@@ -3838,15 +3905,65 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       Önceden dördü de aynı görünümde alt alta duruyordu;
                       hangisinin ana iş olduğu belli olmuyordu.
                     */}
-                    <button
-                      type="button"
-                      onClick={() => oneriyiTazele()}
-                      className="w-full py-2.5 rounded-lg text-[15px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
-                    >
-                      {t('scene.suggest')}
-                    </button>
+                    {/*
+                      DUVAR ÖLÇÜSÜ ÖNCE SORULUYOR.
+
+                      Öneri üretimi kalktı: ölçeği tahmin etmek yerine
+                      kullanıcıya soruyoruz. Duvarın gerçek eni ve boyu
+                      girilince fotoğrafın ortasına o oranda bir taslak kutu
+                      konuyor ve sahnenin ölçeği o andan itibaren biliniyor.
+                      Kullanıcı kutuyu köşelerinden gerçek duvara oturtuyor.
+                    */}
+                    {TASLAK_KIPI && (
+                      <>
+                        <div className="text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
+                          {t('scene.wallAsk')}
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            value={taslakWm}
+                            onChange={(e) => setTaslakWm(e.target.value)}
+                            placeholder={t('scene.wallW')}
+                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                          />
+                          <span className="text-[13px] text-neutral-400">×</span>
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            value={taslakHm}
+                            onChange={(e) => setTaslakHm(e.target.value)}
+                            placeholder={t('scene.wallH')}
+                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                          />
+                          <span className="text-[13px] text-neutral-400">m</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={taslakKutuyuKur}
+                          className="mt-1.5 w-full py-2.5 rounded-lg text-[15px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
+                        >
+                          {taslakKuruldu ? t('scene.draftAgain') : t('scene.draftMake')}
+                        </button>
+                        <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                          {t('scene.draftHint')}
+                        </p>
+                      </>
+                    )}
+                    {!TASLAK_KIPI && (
+                      <button
+                        type="button"
+                        onClick={() => oneriyiTazele()}
+                        className="w-full py-2.5 rounded-lg text-[15px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
+                      >
+                        {t('scene.suggest')}
+                      </button>
+                    )}
                     <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                      {adaylar.length > 0 && (
+                      {!TASLAK_KIPI && adaylar.length > 0 && (
                         <button
                           type="button"
                           onClick={() => setAdayKipi((v) => !v)}
@@ -3858,7 +3975,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <button
                         type="button"
                         onClick={() => (koseKipi ? setKoseKipi(false) : koseKipiAc())}
-                        className={`py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors ${koseKipi ? 'border-brand text-brand' : ''} ${adaylar.length > 0 ? '' : 'col-span-2'}`}
+                        className={`py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors ${koseKipi ? 'border-brand text-brand' : ''} ${!TASLAK_KIPI && adaylar.length > 0 ? '' : 'col-span-2'}`}
                       >
                         {koseKipi ? t('scene.cornersOff') : t('scene.cornersManual')}
                       </button>

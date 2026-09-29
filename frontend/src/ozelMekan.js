@@ -108,7 +108,18 @@ function gorselAnahtari(gorsel) {
   }
 }
 
-export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MESAFE_M, tasarimWm = 0) {
+/*
+ * TASLAK KİPİ — ÖNERİ ARAMIYORUZ.
+ *
+ * Eski akış fotoğrafı iki yapay sinir ağıyla (nesne tanıma + derinlik)
+ * çözümleyip "uygun yerleşim kareleri" öneriyordu. Öneriler her fotoğrafta
+ * tutmadı; kullanıcı sonuçta hep kendi eliyle düzeltti. Yeni akışta ölçüyü
+ * kullanıcı veriyor: duvarın gerçek ölçüsünü yazıyor, taslak kutuyu
+ * fotoğraftaki duvara oturtuyor. Ölçek böylece tahmin değil, ölçüm oluyor.
+ *
+ * Taslak kipinde modeller hiç indirilmiyor: fotoğraf anında açılıyor.
+ */
+export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MESAFE_M, tasarimWm = 0, taslakKipi = false) {
   const W = gorsel.naturalWidth
   const H = gorsel.naturalHeight
   if (!W || !H) return null
@@ -147,7 +158,7 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    * dönülüyor — özellik kaybolur, uygulama durmaz.
    */
   let nesneler = onbellek ? onbellek.nesneler : null
-  if (!onbellek) {
+  if (!onbellek && !taslakKipi) {
     try {
       nesneler = await nesneHaritasi(tuval)
     } catch (e) {
@@ -242,6 +253,7 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    */
   let adaylar = []
   try {
+    if (taslakKipi) throw new Error('taslak')
     adaylar = adaylariBul(tuval, {
       nesneler,
       derinlik,
