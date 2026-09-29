@@ -527,6 +527,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [taslakKuruldu, setTaslakKuruldu] = useState(false)
   /* Yerinde 3B katmanı gerçekten çizebildi mi (bkz. Mekan3D → onHazir). */
   const [uc3dHazir, setUc3dHazir] = useState(false)
+  /*
+   * Ekran kutusunun kapsayıcıdaki yeri (WallPreview ölçüyor). Fotoğraf
+   * sınırı bununla uygulanıyor; hesapla bulmak mümkün değil çünkü duvar
+   * kutusu kapsayıcının ortasında durmuyor.
+   */
+  const ekranKutuYeri = useRef({ sol: 0, ust: 0 })
+  const ekranKutuYeriniYaz = (y) => {
+    if (!y) return
+    const e = ekranKutuYeri.current
+    if (Math.abs(e.sol - y.sol) < 0.5 && Math.abs(e.ust - y.ust) < 0.5) return
+    ekranKutuYeri.current = y
+  }
 
   /*
    * ELLE YAPILAN DÜZENLEMEYİ BIRAK.
@@ -2282,8 +2294,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   function fotografaCek(koseler, yer) {
     if (!Array.isArray(koseler) || koseler.length !== 4) return koseler
     if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return koseler
-    const xs = koseler.map((k) => k.x)
-    const ys = koseler.map((k) => k.y)
+    /*
+     * SINIR EKRANDA GÖRÜNEN YERE GÖRE.
+     *
+     * koseler, ekran kutusunun sol üstüne göre. O kutunun kapsayıcıdaki
+     * yeri ölçülüyor (bkz. ekranKutuYeri); fotoğrafın dikdörtgeni de
+     * kapsayıcı koordinatında. İkisi aynı uzaya getirilmeden yapılan
+     * karşılaştırma yanlış çıkıyordu ve tasarım fotoğrafın dışına
+     * taşabiliyordu.
+     */
+    const kx = ekranKutuYeri.current.sol
+    const ky = ekranKutuYeri.current.ust
+    const xs = koseler.map((k) => k.x + kx)
+    const ys = koseler.map((k) => k.y + ky)
     const x0 = Math.min(...xs)
     const x1 = Math.max(...xs)
     const y0 = Math.min(...ys)
@@ -3168,6 +3191,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               yon={surukleAktif && !koseTuval ? mekanYon : null}
               sahneOlcekVarsayilan={sahneOlcekVarsayilan}
               onPxPerM={setCizimOlcek}
+              onEkranKutusu={ekranKutuYeriniYaz}
             />
           ) : (
             /* Boş durum tuvali */

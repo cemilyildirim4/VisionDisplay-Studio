@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
@@ -727,6 +727,17 @@ export default function WallPreview({
    */
   uc3dKatman = null,
   /*
+   * Ekran kutusunun (kose koordinatlarının başnoktası) KAPSAYICIYA göre
+   * yeri bildiriliyor. App, fotoğraf sınırını uygularken bu noktayı
+   * kullanıyor: kose (0,0) ekranda tam olarak nereye düşüyor.
+   *
+   * Ölçmeden hesaplamak mümkün değil — duvar kutusu kapsayıcının içinde
+   * insan silueti, boşluklar ve ölçü payları yüzünden ortalanmıyor.
+   * Sınırı tuvale göre uygulamak bu yüzden tutmuyordu: tasarım
+   * fotoğrafın dışına çıkabiliyordu.
+   */
+  onEkranKutusu = null,
+  /*
    * Mekân çizimi ekranın DIŞINA taşıyor (pano kasası, direği). Ölçü
    * etiketleri ve +/- düğmeleri ekranın hemen kenarında durduğu için onun
    * üstüne biniyordu. Bu pay kadar dışarı itiliyorlar.
@@ -1323,6 +1334,23 @@ export default function WallPreview({
   const marginYpx = Math.max(0, (wallH - screenH) / 2)
 
   /*
+   * EKRAN KUTUSUNUN GERÇEK YERİ.
+   *
+   * Dönüşüm uygulanmamış hâlinin kapsayıcıya göre sol üst köşesi ölçülüyor.
+   * koseDonusumu transformOrigin '0 0' kullandığı için kose (0,0) tam olarak
+   * buraya denk geliyor.
+   */
+  const ekranKutuRef = useRef(null)
+  useLayoutEffect(() => {
+    const el = ekranKutuRef.current
+    const kap = containerRef.current
+    if (!el || !kap || !onEkranKutusu) return
+    const a = el.getBoundingClientRect()
+    const b = kap.getBoundingClientRect()
+    onEkranKutusu({ sol: a.left - b.left, ust: a.top - b.top })
+  })
+
+  /*
    * ÖLÇÜNÜN DAYANDIĞI KUTU.
    *
    * Dört köşe kipinde ekran, tasarım kutusundan farklı büyüklükte bir
@@ -1367,6 +1395,7 @@ export default function WallPreview({
               tasarımın dört köşesini hedefe eşlemek zorunda.
             */}
             <div
+              ref={ekranKutuRef}
               style={{
                 width: screenW,
                 height: screenH,
