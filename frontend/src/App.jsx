@@ -1987,10 +1987,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const dh0 = tasarimHm * cizimOlcek
       const sol0 = tuvalBoyut.w / 2 - dw0 / 2
       const ust0 = tuvalBoyut.h / 2 - dh0 / 2
-      return elleKose.map((k) => ({
-        x: k.x - sol0 + (elleKayma?.x || 0),
-        y: k.y - ust0 + (elleKayma?.y || 0),
+      /*
+       * FOTOĞRAF SINIRI BU DALDA DA GEÇERLİ.
+       *
+       * Sınır yalnızca otomatik yerleşime konmuştu; elle köşe kurulduğunda
+       * dörtgen hiç denetlenmiyordu ve kullanıcı tasarımı fotoğrafın
+       * dışındaki boş alana kadar sürükleyebiliyordu. Orası mekân değil.
+       */
+      const elle = elleKose.map((k) => ({
+        x: k.x + (elleKayma?.x || 0),
+        y: k.y + (elleKayma?.y || 0),
       }))
+      return fotografaCek(elle, fotoYer).map((k) => ({ x: k.x - sol0, y: k.y - ust0 }))
     }
     if (!hedefKose) return null
     const dw = tasarimWm * cizimOlcek
@@ -2448,6 +2456,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const koseleriTasi = (noktalar) => {
     if (!Array.isArray(noktalar) || noktalar.length !== 4) return
+    /*
+     * TUTAMAK FOTOĞRAFIN DIŞINA ÇIKAMIYOR.
+     *
+     * Köşe fotoğrafın dışına çekilince tasarımın bir parçası mekânın
+     * dışında kalıyor; orada duvar da yok, ölçü de anlamsız. Nokta daha
+     * kaydedilmeden fotoğrafın dikdörtgenine sıkıştırılıyor.
+     */
+    if (fotoYer?.genislik > 0 && fotoYer?.yukseklik > 0) {
+      noktalar = noktalar.map((k) => ({
+        x: Math.max(fotoYer.sol, Math.min(fotoYer.sol + fotoYer.genislik, k.x)),
+        y: Math.max(fotoYer.ust, Math.min(fotoYer.ust + fotoYer.yukseklik, k.y)),
+      }))
+    }
     /*
      * Tutamaklar ekranda KAYMA UYGULANMIŞ hâli gösteriyor; kaydedilen değer
      * ise kaymasız olmalı, yoksa kayma iki kez toplanır ve köşe tutamağın
