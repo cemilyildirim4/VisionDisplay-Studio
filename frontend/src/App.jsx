@@ -1975,19 +1975,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * biniyor; "Ortala" düğmesi her zaman duvara geri getiriyor.
    */
   /*
-   * TAŞIMA HER MEKÂNDA AÇIK.
+   * TAŞIMA: HAZIR SAHNELERDE YALNIZCA KIOSK VARKEN.
    *
-   * Bir ara AVM koridoru ve şehir meydanında kapatılmıştı: oralarda duvar
-   * ölçülü olarak tanımlı ve tasarım ona hizalanıyor, sürükleme de ekranı
-   * duvarından koparıyordu. Ama kullanıcı serbest hareket istiyor ve haklı:
-   * hizalama bir BAŞLANGIÇ olmalı, kilit değil.
+   * AVM koridoru ve şehir meydanında duvar ölçülü olarak tanımlı; ekran o
+   * duvara monteli demektir ve duvardan koparılıp havada bırakılması yanlış
+   * bir ürün gösterir. Bu yüzden oralarda tasarım yerinden oynatılmıyor.
    *
-   * Duvar hizalaması yerinde duruyor (bkz. yerlesimSecildi); sürükleme onun
-   * ÜSTÜNE kayma olarak biniyor. Yani tasarım duvara oturmuş hâlde geliyor,
-   * kullanıcı isterse oradan çekip alıyor. Ekranın dörtte birinin kadrajda
-   * kalması kuralı duruyor ki tasarım kaybolmasın.
+   * TEK İSTİSNA KIOSK: kiosk gövdesi eklendiğinde ekran duvara monteli
+   * değil, yerde duran bağımsız bir üründür — nereye konacağı kullanıcının
+   * kararıdır ve taşınabilir olmalıdır.
+   *
+   * Kullanıcının kendi fotoğrafında sınır yok: orada duvarın nerede
+   * olduğunu yalnızca kullanıcı biliyor.
    */
-  const tasimaAcik = surukleAktif
+  const tasimaAcik = surukleAktif && (!fotoSahne?.duvarKutu || kioskVar)
 
   const duvaraHizali = surukleAktif && !kioskVar
   /*
