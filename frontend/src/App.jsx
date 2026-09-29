@@ -545,6 +545,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * gerçek ölçüsüyle içine yerleşiyor.
    */
   const [taslakKutu, setTaslakKutu] = useState(null)
+  /*
+   * TANITILAN DUVAR — kutu uygulandıktan sonra da saklanıyor.
+   *
+   * Amaç en baştan şuydu: nesne taramasına gerek kalmadan, yerleştirilecek
+   * alanı kullanıcı kendi seçsin ve LED ekranın o duvarda nasıl duracağını
+   * görsün. Kutu ölçeği kalibre edip kayboluyordu; duvarın KENDİSİ
+   * unutuluyordu. Oysa asıl sorular duvarla ilgili: bu ekran bu duvara
+   * sığar mı, kaç kabin girer.
+   */
+  const [duvarOlcu, setDuvarOlcu] = useState(null)
   /* Yerinde 3B katmanı gerçekten çizebildi mi (bkz. Mekan3D → onHazir). */
   const [uc3dHazir, setUc3dHazir] = useState(false)
   /*
@@ -2966,11 +2976,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * göstermek demek.
    */
   useEffect(() => {
-    if (scene !== 'ozel' || !ozelSahne) setTaslakKutu(null)
+    if (scene !== 'ozel' || !ozelSahne) {
+      setTaslakKutu(null)
+      setDuvarOlcu(null)
+    }
   }, [scene, ozelSahne])
 
   const taslakKutusunuUygula = () => {
     if (!taslakKutu) return
+    /* Duvarın gerçek ölçüsü saklanıyor: sığma denetimi buna dayanıyor. */
+    const dw = Number(String(taslakWm).replace(',', '.'))
+    const dh = Number(String(taslakHm).replace(',', '.'))
+    setDuvarOlcu(dw > 0 && dh > 0 ? { wm: dw, hm: dh } : null)
     /* Kutu zaten fotoğrafa göre oranlı: hedef yüzey doğrudan o. */
     setHedefKose(taslakKutu)
     setHedefTur('taslak')
@@ -2979,6 +2996,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   const taslakKutuyuKurRef = useRef(null)
   taslakKutuyuKurRef.current = taslakKutuyuKur
+
+  /*
+   * TASARIM BU DUVARA SIĞIYOR MU?
+   *
+   * Şimdiye kadar denetim fotoğrafın KADRAJINA bakıyordu; oysa soru duvarla
+   * ilgili. Duvar tanıtıldıysa karşılaştırma onunla yapılıyor ve cevap somut
+   * veriliyor: duvara en fazla kaç kabinlik, kaç metrelik bir ekran girer.
+   */
+  const duvaraSigma = useMemo(() => {
+    if (!duvarOlcu || !(tasarimWm > 0) || !(tasarimHm > 0)) return null
+    const sigiyor = tasarimWm <= duvarOlcu.wm + 1e-6 && tasarimHm <= duvarOlcu.hm + 1e-6
+    if (sigiyor) return null
+    const kw = (previewModel?.widthMm || 0) / 1000
+    const kh = (previewModel?.heightMm || 0) / 1000
+    const enCokSutun = kw > 0 ? Math.floor(duvarOlcu.wm / kw + 1e-6) : 0
+    const enCokSatir = kh > 0 ? Math.floor(duvarOlcu.hm / kh + 1e-6) : 0
+    return {
+      duvar: duvarOlcu,
+      sutun: enCokSutun,
+      satir: enCokSatir,
+      wm: enCokSutun * kw,
+      hm: enCokSatir * kh,
+    }
+  }, [duvarOlcu, tasarimWm, tasarimHm, previewModel])
 
   const koseAyariniSifirla = () => {
     setElleKose(null)
@@ -4494,7 +4535,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       söyleniyor: ya mesafe yanlış girilmiş ya da o ekran o
                       mekâna gerçekten sığmıyor.
                     */}
-                    {scene === 'ozel' && ozelSahne && tasarimWm > kadrajGenisligi(ozelMesafeM) && (
+                    {/*
+                      DUVARA SIĞMA UYARISI.
+
+                      Duvar tanıtıldıysa ölçüt odur; kadraj denetimi yalnızca
+                      duvar yokken anlamlı (o zaman elimizdeki tek referans
+                      fotoğrafın kendisi).
+                    */}
+                    {duvaraSigma && (
+                      <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                        {t('scene.tooBigForWall')}{' '}
+                        {t('scene.wallIs')} {duvaraSigma.duvar.wm.toFixed(2).replace('.', ',')} ×{' '}
+                        {duvaraSigma.duvar.hm.toFixed(2).replace('.', ',')} m,{' '}
+                        {t('scene.designIs')} {tasarimWm.toFixed(2).replace('.', ',')} ×{' '}
+                        {tasarimHm.toFixed(2).replace('.', ',')} m.
+                        {duvaraSigma.sutun > 0 && duvaraSigma.satir > 0 && (
+                          <>
+                            {' '}
+                            {t('scene.wallFitsAtMost')}{' '}
+                            {duvaraSigma.wm.toFixed(2).replace('.', ',')} ×{' '}
+                            {duvaraSigma.hm.toFixed(2).replace('.', ',')} m ({duvaraSigma.sutun} ×{' '}
+                            {duvaraSigma.satir} {t('scene.cabinets')}).
+                          </>
+                        )}
+                      </p>
+                    )}
+                    {!duvarOlcu && scene === 'ozel' && ozelSahne && tasarimWm > kadrajGenisligi(ozelMesafeM) && (
                       <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
                         {t('scene.tooBigForFrame')}{' '}
                         {/*

@@ -445,6 +445,19 @@ const dict = {
     en: "The wall you entered is wider than the frame at this distance. Correct the distance to how far the photo was really taken from.",
     ar: 'الجدار الذي أدخلته أوسع من الإطار عند هذه المسافة. صحّح المسافة.',
   },
+  'scene.tooBigForWall': {
+    tr: 'Tasarım bu duvara sığmıyor.',
+    en: 'The design does not fit on this wall.',
+    ar: 'التصميم لا يتّسع على هذا الجدار.',
+  },
+  'scene.wallIs': { tr: 'Duvar', en: 'Wall', ar: 'الجدار' },
+  'scene.designIs': { tr: 'tasarım', en: 'design', ar: 'التصميم' },
+  'scene.wallFitsAtMost': {
+    tr: 'Bu duvara en fazla',
+    en: 'This wall takes at most',
+    ar: 'يتّسع هذا الجدار لما لا يزيد عن',
+  },
+  'scene.cabinets': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
   'scene.askDistance': {
     tr: 'Fotoğrafın çekildiği mesafe',
     en: 'Distance the photo was taken from',
@@ -532,6 +545,19 @@ const dict = {
     en: "The wall you entered is wider than the frame at this distance. Correct the distance to how far the photo was really taken from.",
     ar: 'الجدار الذي أدخلته أوسع من الإطار عند هذه المسافة. صحّح المسافة.',
   },
+  'scene.tooBigForWall': {
+    tr: 'Tasarım bu duvara sığmıyor.',
+    en: 'The design does not fit on this wall.',
+    ar: 'التصميم لا يتّسع على هذا الجدار.',
+  },
+  'scene.wallIs': { tr: 'Duvar', en: 'Wall', ar: 'الجدار' },
+  'scene.designIs': { tr: 'tasarım', en: 'design', ar: 'التصميم' },
+  'scene.wallFitsAtMost': {
+    tr: 'Bu duvara en fazla',
+    en: 'This wall takes at most',
+    ar: 'يتّسع هذا الجدار لما لا يزيد عن',
+  },
+  'scene.cabinets': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
   'scene.askDistance': {
     tr: 'Fotoğrafın çekildiği mesafe',
     en: 'Distance the photo was taken from',
