@@ -684,6 +684,14 @@ export default function WallPreview({
    */
   ekranGizle = false,
   /*
+   * Yerinde 3B katmanı. Bir işlev olarak alınıyor çünkü yerleştirilecek yeri
+   * yalnızca BURASI biliyor: duvar kutusunun ölçüsü ve ekranın o kutunun
+   * içindeki gerçek dörtgeni. Daha önce katman App tarafında çiziliyor ve
+   * konumu tuvalin merkezine göre hesaplıyordu; duvar kutusu tuvalde ortalı
+   * olmadığı için ekran yanlış yere düşüyordu.
+   */
+  uc3dKatman = null,
+  /*
    * Mekân çizimi ekranın DIŞINA taşıyor (pano kasası, direği). Ölçü
    * etiketleri ve +/- düğmeleri ekranın hemen kenarında durduğu için onun
    * üstüne biniyordu. Bu pay kadar dışarı itiliyorlar.
@@ -1317,7 +1325,7 @@ export default function WallPreview({
             ...(tutamak ? tutamak.style : null),
           }}
         >
-          <div style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} flex items-center justify-center`}>
+          <div style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative flex items-center justify-center`}>
             {/*
               Dört köşe hedefi varken dönüşüm EKRAN KUTUSUNA uygulanıyor:
               duvar kutusu tasarımdan büyük olabiliyor, homografi ise tam
@@ -1329,6 +1337,8 @@ export default function WallPreview({
                 height: screenH,
                 transform: koseDonusumu(screenW, screenH, kose) || undefined,
                 transformOrigin: '0 0',
+                /* Yerinde 3B çizildiyse düz çizim gizleniyor: ekran iki kez görünmesin. */
+                opacity: ekranGizle ? 0 : undefined,
               }}
             >
             <Screen
@@ -1345,6 +1355,24 @@ export default function WallPreview({
               curveAmount={curveAmount}
             />
             </div>
+            {/*
+              YERİNDE 3B — DUVAR KUTUSUNUN İÇİNDE.
+
+              Dörtgen duvar kutusuna göre veriliyor: ekran kutusu duvarın
+              ortasında duruyor, köşeler de ona göre kaydırılıyor. Böylece
+              3B ekran düz çizimle tam olarak aynı yere ve aynı ölçüde
+              oturuyor.
+            */}
+            {uc3dKatman?.({
+              koseler: (kose || [
+                { x: 0, y: 0 },
+                { x: screenW, y: 0 },
+                { x: screenW, y: screenH },
+                { x: 0, y: screenH },
+              ]).map((k) => ({ x: marginXpx + k.x, y: marginYpx + k.y })),
+              genislik: wallW,
+              yukseklik: wallH,
+            })}
           </div>
 
           {/*

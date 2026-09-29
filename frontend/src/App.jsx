@@ -71,7 +71,7 @@ const Mekan3D = guvenliLazy(() => import('./Mekan3D.jsx'))
  * bu bayrak true yapılıp geri açılacak; başka hiçbir yerde değişiklik
  * gerekmiyor.
  */
-const YERINDE_3B = false
+const YERINDE_3B = true
 import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, curveDiameterM, curveAmountForDiameter, L_KIRILMA_PCT, curveDepthFor, IMAGE_MAX_MB, KAVIS_ACI_ADIMI, curveAmountForArc, kavisAciSecenekleri, kavisYuzdesiniOturt } from './content.js'
 import { LANGUAGES } from './i18n.js'
 import { useAcilirKonum } from './hooks/useAcilirKonum.js'
@@ -2861,6 +2861,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               kioskGizle={lTipiVar || !kioskVar}
               /* Yerinde 3B açıkken düz çizim gizleniyor: ekran iki kez görünmesin. */
               ekranGizle={uc3dHazir}
+              /*
+               * 3B katmanı WallPreview'ın İÇİNDE çiziliyor; yerini oradan
+               * alıyor. App yalnızca ne çizileceğini veriyor.
+               */
+              uc3dKatman={
+                YERINDE_3B && scene === 'ozel' && ozelSahne
+                  ? ({ koseler, genislik, yukseklik }) => (
+                      <Suspense fallback={null}>
+                        <Mekan3D
+                          model={previewModel}
+                          cols={cols}
+                          rows={rows}
+                          content={content}
+                          contentUrl={contentUrl}
+                          screenType={screenType}
+                          curveAmount={curveAmount}
+                          screens={screenMode === 'multi' ? screens : null}
+                          koseler={koseler}
+                          tuvalW={genislik}
+                          tuvalH={yukseklik}
+                          tasarimWm={tasarimWm}
+                          onHazir={setUc3dHazir}
+                        />
+                      </Suspense>
+                    )
+                  : null
+              }
               /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
               olcuGoster={showMeasurements}
               /* Duvar etiketi kullanıcının kendi ölçüsünü yazıyor */
@@ -2935,40 +2962,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 </button>
               </div>
             </div>
-          )}
-
-          {/*
-            YERİNDE 3B — KULLANICININ KENDİ FOTOĞRAFINDA.
-
-            Fotoğraf eklendiğinde tasarım artık düz bir çıkartma değil, 3D
-            görünümdeki geometrinin ta kendisi: kabin ızgarası, kasa,
-            derinlik, ortam ışığı (bkz. Mekan3D.jsx). Tuval saydam olduğu
-            için fotoğraf arkasında görünmeye devam ediyor.
-
-            Katman düz çizimin ÜSTÜNDE, ölçü etiketleri ve köşe
-            tutamaklarının ALTINDA duruyor; ikisi de çalışmaya devam ediyor.
-
-            Ekranın duruşu köşelerden geliyor: görsel yan duruyorsa
-            kullanıcı köşeleri o yana çekiyor, 3B ekran da o yana dönüyor.
-          */}
-          {YERINDE_3B && hasModel && scene === 'ozel' && ozelSahne && koseMutlak && (
-            <Suspense fallback={null}>
-              <Mekan3D
-                model={previewModel}
-                cols={cols}
-                rows={rows}
-                content={content}
-                contentUrl={contentUrl}
-                screenType={screenType}
-                curveAmount={curveAmount}
-                screens={screenMode === 'multi' ? screens : null}
-                koseler={koseMutlak}
-                tuvalW={tuvalBoyut.w}
-                tuvalH={tuvalBoyut.h}
-                tasarimWm={tasarimWm}
-                onHazir={setUc3dHazir}
-              />
-            </Suspense>
           )}
 
           {/*
