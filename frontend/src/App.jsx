@@ -2216,6 +2216,47 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * "kadrajından büyük" uyarısını görüyor, üstüne bir de ekranı kenara
    * yapıştırmak durumu anlaşılmaz kılardı.
    */
+  /**
+   * Dörtgeni fotoğrafın içine SIĞDIRIR — gerekirse küçülterek.
+   *
+   * Girişteki nokta kırpması yetmiyordu: kırpmadan sonra eş köşe hareketi ve
+   * ölçü düzeltmesi geliyor, ikisi de köşeleri yeniden dışarı itebiliyor.
+   * Sınır bu yüzden zincirin EN SONUNDA uygulanıyor. Önce kaydırılıyor,
+   * kaydırma yetmiyorsa (dörtgen fotoğraftan geniş) merkezine göre
+   * küçültülüyor; şekil ve açı korunuyor.
+   */
+  function fotografaSigdir(koseler) {
+    const yer = fotoYer
+    if (!Array.isArray(koseler) || koseler.length !== 4) return koseler
+    if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return koseler
+    const kutu = (q) => ({
+      x0: Math.min(...q.map((p) => p.x)),
+      x1: Math.max(...q.map((p) => p.x)),
+      y0: Math.min(...q.map((p) => p.y)),
+      y1: Math.max(...q.map((p) => p.y)),
+    })
+    let k = koseler
+    let b = kutu(k)
+    const olcek = Math.min(
+      1,
+      yer.genislik / Math.max(1, b.x1 - b.x0),
+      yer.yukseklik / Math.max(1, b.y1 - b.y0),
+    )
+    if (olcek < 1) {
+      const cx = (b.x0 + b.x1) / 2
+      const cy = (b.y0 + b.y1) / 2
+      k = k.map((p) => ({ x: cx + (p.x - cx) * olcek, y: cy + (p.y - cy) * olcek }))
+      b = kutu(k)
+    }
+    let dx = 0
+    let dy = 0
+    if (b.x0 < yer.sol) dx = yer.sol - b.x0
+    else if (b.x1 > yer.sol + yer.genislik) dx = yer.sol + yer.genislik - b.x1
+    if (b.y0 < yer.ust) dy = yer.ust - b.y0
+    else if (b.y1 > yer.ust + yer.yukseklik) dy = yer.ust + yer.yukseklik - b.y1
+    return dx || dy ? k.map((p) => ({ x: p.x + dx, y: p.y + dy })) : k
+  }
+
   function fotografaCek(koseler, yer) {
     if (!Array.isArray(koseler) || koseler.length !== 4) return koseler
     if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return koseler
@@ -2555,10 +2596,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const ESI = [3, 2, 1, 0]
     const es = ESI[oynayan]
     const dx = noktalar[oynayan].x - oncekiler[oynayan].x
-    const dy = noktalar[oynayan].y - oncekiler[oynayan].y
+    let dy = noktalar[oynayan].y - oncekiler[oynayan].y
+
+    /*
+     * KENAR ÇÖKMÜYOR, KÖŞELER BİRBİRİNE GİRMİYOR.
+     *
+     * Eş köşe ters yöne gittiği için kenar iki kat hızla kısalıyor ve
+     * yeterince çekilince sıfırı geçip TERS dönüyordu: iki köşe birbirinin
+     * içinden geçiyor, dörtgen kendi üstüne katlanıyordu. Kenarın
+     * kısalabileceği en küçük boy, başlangıç boyunun dörtte biri.
+     */
+    const kenarBoyu = Math.abs(oncekiler[es].y - oncekiler[oynayan].y)
+    const enAzKenar = Math.max(24, kenarBoyu * 0.25)
+
+    /*
+     * HAREKET YUMUŞADI.
+     *
+     * Eş köşe tam ayna hareket edince kenar, farenin gittiği yolun İKİ KATI
+     * kadar değişiyordu; küçük bir el hareketi perspektifi zıplatıyordu.
+     * Tutulan köşe fareyi birebir izlemeye devam ediyor (tutamak elin
+     * altından kaçmasın), eş köşe ise yarı yolu gidiyor: kenar 2·dy yerine
+     * 1,5·dy değişiyor. Aynı açı, daha ince ayar.
+     */
+    const ESLIK = 0.5
+    /* Kenarın yeni boyu alt sınırın altına inecekse dy kısılıyor. */
+    const yon = oncekiler[es].y > oncekiler[oynayan].y ? 1 : -1
+    const yeniBoy = kenarBoyu - yon * dy * (1 + ESLIK)
+    if (yeniBoy < enAzKenar) {
+      dy = (yon * (kenarBoyu - enAzKenar)) / (1 + ESLIK)
+    }
+
     const tasinmis = oncekiler.map((k, i) => {
       if (i === oynayan) return { x: k.x + dx, y: k.y + dy }
-      if (i === es) return { x: k.x + dx, y: k.y - dy }
+      if (i === es) return { x: k.x + dx, y: k.y - dy * ESLIK }
       return { x: k.x, y: k.y }
     })
 
@@ -2590,7 +2660,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const sx = once.en / simdi.en
     const sy = once.boy / simdi.boy
     setElleKose(
-      tasinmis.map((k) => ({ x: mx + (k.x - mx) * sx, y: my + (k.y - my) * sy })),
+      fotografaSigdir(tasinmis.map((k) => ({ x: mx + (k.x - mx) * sx, y: my + (k.y - my) * sy }))),
     )
   }
   /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
