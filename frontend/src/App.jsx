@@ -3289,7 +3289,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * alıyor. App yalnızca ne çizileceğini veriyor.
                */
               uc3dKatman={
-                YERINDE_3B && scene === 'ozel' && ozelSahne
+                /*
+                 * ARKA PLANI OLAN HER MEKÂNDA.
+                 *
+                 * Katman yalnızca kullanıcının kendi fotoğrafında açıktı;
+                 * AVM koridoru ve şehir meydanında hiç çizilmiyordu, o
+                 * yüzden oralarda eğim verilince kasanın kalınlığı
+                 * görünmüyordu. Konum ve ölçü artık duvar kutusundan geldiği
+                 * için üç sahnede de aynı şekilde çalışıyor.
+                 */
+                YERINDE_3B && surukleAktif
                   ? ({ koseler, genislik, yukseklik }) => (
                       <Suspense fallback={null}>
                         <Mekan3D
