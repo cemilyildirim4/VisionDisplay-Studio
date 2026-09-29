@@ -146,7 +146,15 @@ export default function Mekan3D({
      */
     <div className="absolute inset-0 z-[15] pointer-events-none" data-pdf-3d>
       <Canvas
-        style={{ width: '100%', height: '100%' }}
+        /*
+         * TUVAL FAREYİ YUTMUYOR.
+         *
+         * Sarmalayıcıda pointer-events-none var ama react-three-fiber kendi
+         * tuvaline olay dinleyicileri bağlıyor; tarayıcıya "bu katman hiç
+         * yokmuş gibi davran" demek için kuralı tuvalin kendisine de yazmak
+         * gerekiyor. Aksi hâlde 3B katman açıkken tasarım sürüklenemiyor.
+         */
+        style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
         gl={{ alpha: true, antialias: true, preserveDrawingBuffer: true }}
         camera={{ fov: GORUS_ACISI, position: [0, 0, yerlesim.uzaklik], near: 0.01, far: yerlesim.uzaklik * 4 }}
       >

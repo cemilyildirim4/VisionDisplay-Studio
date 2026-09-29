@@ -676,6 +676,14 @@ export default function WallPreview({
   // duvarı görünsün diye. Beyaz dikdörtgen gri odanın içinde yama gibi durur.
   sahneVar = false,
   /*
+   * Ekranın GÖRÜNEN yüzü gizlensin mi. Fotoğraflı mekânda tasarım gerçek
+   * 3B olarak çiziliyor (Mekan3D.jsx); düz çizim de altında durunca aynı
+   * ekran iki kez görünüyor ve ikisi birbirini kirletiyordu. Ölçü
+   * etiketleri, tutamaklar ve yerleşim hesapları olduğu gibi kalıyor —
+   * gizlenen yalnızca yüz.
+   */
+  ekranGizle = false,
+  /*
    * Mekân çizimi ekranın DIŞINA taşıyor (pano kasası, direği). Ölçü
    * etiketleri ve +/- düğmeleri ekranın hemen kenarında durduğu için onun
    * üstüne biniyordu. Bu pay kadar dışarı itiliyorlar.
@@ -977,6 +985,7 @@ export default function WallPreview({
                   height: maxHpx,
                   transform: koseDonusumu(totalWpx, maxHpx, kose) || undefined,
                   transformOrigin: '0 0',
+                  opacity: ekranGizle ? 0 : undefined,
                 }}
               >
                 {/* z0: Tek içerik katmanı — tüm şeride yayılır, ekran şekline kırpılır */}

@@ -2828,6 +2828,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * iç L tipi dışarıda: onun gövdesi çizilemiyor.
                */
               kioskGizle={lTipiVar || !kioskVar}
+              /* Yerinde 3B açıkken düz çizim gizleniyor: ekran iki kez görünmesin. */
+              ekranGizle={hasModel && scene === 'ozel' && !!ozelSahne && !!koseMutlak}
               /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
               olcuGoster={showMeasurements}
               /* Duvar etiketi kullanıcının kendi ölçüsünü yazıyor */
