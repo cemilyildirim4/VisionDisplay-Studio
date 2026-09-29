@@ -2085,8 +2085,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (elleKose) {
       const dw0 = tasarimWm * cizimOlcek
       const dh0 = tasarimHm * cizimOlcek
-      const sol0 = tuvalBoyut.w / 2 - dw0 / 2
-      const ust0 = tuvalBoyut.h / 2 - dh0 / 2
+      const bas0 = ekranKutuBasi(dw0, dh0)
+      const sol0 = bas0.x
+      const ust0 = bas0.y
       /*
        * FOTOĞRAF SINIRI BU DALDA DA GEÇERLİ.
        *
@@ -2104,7 +2105,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const dw = tasarimWm * cizimOlcek
     const dh = tasarimHm * cizimOlcek
     if (!(dw > 0) || !(dh > 0)) return null
-    const solUst = { x: tuvalBoyut.w / 2 - dw / 2, y: tuvalBoyut.h / 2 - dh / 2 }
+    const solUst = ekranKutuBasi(dw, dh)
     /*
      * Fotoğraf yakınlaştıkça yüzey de kadrajda büyüyüp yer değiştiriyor;
      * köşeler aynı dönüşümden geçiyor. Ölçek merkezi PanoFoto ile aynı:
@@ -2225,7 +2226,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const dw = tasarimWm * cizimOlcek
     const dh = tasarimHm * cizimOlcek
     if (!(dw > 0) || !(dh > 0)) return null
-    const solUst = { x: tuvalBoyut.w / 2 - dw / 2, y: tuvalBoyut.h / 2 - dh / 2 }
+    const solUst = ekranKutuBasi(dw, dh)
     return koseTuval.map((k) => ({ x: k.x + solUst.x, y: k.y + solUst.y }))
   })()
 
@@ -2286,6 +2287,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * "tanımlanmadan önce erişim" hatası veriyor ve uygulama hata ekranına
    * düşüyordu. Fonksiyon bildirimi yukarı taşındığı için sorun olmuyor.
    */
+  /*
+   * EKRAN KUTUSUNUN BAŞNOKTASI.
+   *
+   * koseTuval, köşeleri "tasarım kutusunun sol üstü" başnoktasına göre
+   * veriyor ve şimdiye kadar o kutunun TUVALİN ortasında durduğunu
+   * varsayıyordu. Oysa çizimi yapan WallPreview onu DUVAR KUTUSUNUN
+   * ortasına koyuyor; duvar kutusu da tuvalde ortalı değil (insan silueti,
+   * boşluklar, ölçü payları). İki farklı başnokta yüzünden 2B çizim ile
+   * yerinde 3B ayrı yerlerde duruyordu — biri duvarda, öteki fotoğrafın
+   * dışında.
+   *
+   * Başnokta artık ÖLÇÜLEN değerden geliyor (bkz. ekranKutuYeri). Ölçüm
+   * henüz gelmediyse eski varsayıma düşülüyor.
+   */
+  function ekranKutuBasi(dw, dh) {
+    const olculen = ekranKutuYeri.current
+    const ana = tuvalRef.current?.getBoundingClientRect()
+    if (olculen && ana) return { x: olculen.sol - ana.left, y: olculen.ust - ana.top }
+    return { x: tuvalBoyut.w / 2 - dw / 2, y: tuvalBoyut.h / 2 - dh / 2 }
+  }
+
   function etiketPayi(yer) {
     if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return 0
     return Math.min(14, Math.min(yer.genislik, yer.yukseklik) * 0.03)
