@@ -1955,16 +1955,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * biniyor; "Ortala" düğmesi her zaman duvara geri getiriyor.
    */
   /*
-   * TAŞIMA YALNIZCA KULLANICININ KENDİ FOTOĞRAFINDA.
+   * TAŞIMA HER MEKÂNDA AÇIK.
    *
-   * AVM koridoru ve şehir meydanı hazır sahneler: duvarları ölçülü olarak
-   * tanımlı ve tasarım o duvara hizalanıyor. Oralarda sürüklemeye izin
-   * vermek ekranı kendi duvarından koparmak demekti — duvar bir yerde,
-   * tasarım başka yerde. Bu sahnelerde ikisi birlikte yerleşiyor. Taşıma
-   * yalnızca kullanıcının kendi fotoğrafında açık, çünkü orada duvarın
-   * nerede olduğunu yalnızca kullanıcı biliyor.
+   * Bir ara AVM koridoru ve şehir meydanında kapatılmıştı: oralarda duvar
+   * ölçülü olarak tanımlı ve tasarım ona hizalanıyor, sürükleme de ekranı
+   * duvarından koparıyordu. Ama kullanıcı serbest hareket istiyor ve haklı:
+   * hizalama bir BAŞLANGIÇ olmalı, kilit değil.
+   *
+   * Duvar hizalaması yerinde duruyor (bkz. yerlesimSecildi); sürükleme onun
+   * ÜSTÜNE kayma olarak biniyor. Yani tasarım duvara oturmuş hâlde geliyor,
+   * kullanıcı isterse oradan çekip alıyor. Ekranın dörtte birinin kadrajda
+   * kalması kuralı duruyor ki tasarım kaybolmasın.
    */
-  const tasimaAcik = surukleAktif && scene === 'ozel'
+  const tasimaAcik = surukleAktif
 
   const duvaraHizali = surukleAktif && !kioskVar
   /*
