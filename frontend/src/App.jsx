@@ -525,6 +525,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [taslakWm, setTaslakWm] = useState('')
   const [taslakHm, setTaslakHm] = useState('')
   const [taslakKuruldu, setTaslakKuruldu] = useState(false)
+  /*
+   * Duvar ölçüsü FOTOĞRAFTAN ÖNCE soruluyor.
+   *
+   * Ölçüyü sonradan panelde istemek, kullanıcıyı önce ölçeksiz bir sahneyle
+   * baş başa bırakıyordu: fotoğraf geliyor, tasarım rastgele bir boyda
+   * duruyor, sonra ölçü giriliyor ve her şey zıplıyordu. Artık sıra doğru:
+   * önce ölçü, sonra fotoğraf. Fotoğraf yüklenir yüklenmez taslak kutu
+   * verilen ölçüyle kuruluyor.
+   */
+  const [taslakSorusu, setTaslakSorusu] = useState(false)
+  /* Fotoğraf yüklenince kutunun kendiliğinden kurulması için işaret. */
+  const taslakBekliyor = useRef(false)
   /* Yerinde 3B katmanı gerçekten çizebildi mi (bkz. Mekan3D → onHazir). */
   const [uc3dHazir, setUc3dHazir] = useState(false)
   /*
@@ -1025,6 +1037,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       }
       if (kayit) setOzelSahne(kayit)
       mekaniOrtala()
+      /* Ölçü pop-up'ta girildiyse kutu hemen kuruluyor (bkz. taslakSorusu). */
+      if (taslakBekliyor.current) {
+        taslakBekliyor.current = false
+        setTimeout(() => taslakKutuyuKurRef.current?.(), 0)
+      }
       if (kayit) oneriyiUygula(kayit)
     }
     gorsel.src = ozelSahne.dosya
@@ -2811,6 +2828,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setOzelUyari(null)
   }
 
+  const taslakKutuyuKurRef = useRef(null)
+  taslakKutuyuKurRef.current = taslakKutuyuKur
+
   const koseAyariniSifirla = () => {
     setElleKose(null)
     setKilitliKose([])
@@ -3310,6 +3330,80 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   className="flex-1 rounded-full border border-neutral-200 py-2.5 text-[14px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300"
                 >
                   {t('scene.fitKeep')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/*
+          DUVAR ÖLÇÜSÜ SORUSU — fotoğraftan önce.
+
+          Kullanıcı fotoğrafı seçmeden önce fotoğraftaki duvarın gerçek
+          ölçüsünü yazıyor. Onay verilince dosya seçici açılıyor; fotoğraf
+          yüklenir yüklenmez taslak kutu bu ölçüyle kuruluyor ve sahnenin
+          ölçeği ilk andan itibaren doğru oluyor.
+        */}
+        {taslakSorusu && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-[#001334]/45 p-4"
+            onClick={() => setTaslakSorusu(false)}
+          >
+            <div
+              className="w-full max-w-[360px] rounded-2xl border border-neutral-200 bg-white p-5 shadow-[0_18px_50px_-18px_rgba(0,19,52,0.45)] dark:border-[#2c333f] dark:bg-[#161a21]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="m-0 text-[15.5px] font-bold text-neutral-900 dark:text-neutral-50">
+                {t('scene.wallAsk')}
+              </h3>
+              <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                {t('scene.wallAskHint')}
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  autoFocus
+                  value={taslakWm}
+                  onChange={(e) => setTaslakWm(e.target.value)}
+                  placeholder={t('scene.wallW')}
+                  className="w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                />
+                <span className="text-[14px] text-neutral-400">×</span>
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={taslakHm}
+                  onChange={(e) => setTaslakHm(e.target.value)}
+                  placeholder={t('scene.wallH')}
+                  className="w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                />
+                <span className="text-[14px] text-neutral-400">m</span>
+              </div>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  disabled={
+                    !(Number(String(taslakWm).replace(',', '.')) > 0.05) ||
+                    !(Number(String(taslakHm).replace(',', '.')) > 0.05)
+                  }
+                  onClick={() => {
+                    taslakBekliyor.current = true
+                    setTaslakSorusu(false)
+                    ozelDosyaRef.current?.click()
+                  }}
+                  className="flex-1 rounded-full bg-brand py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                >
+                  {t('scene.wallNext')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTaslakSorusu(false)}
+                  className="flex-1 rounded-full border border-neutral-200 py-2.5 text-[14px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300"
+                >
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
@@ -3906,7 +4000,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 />
                 <button
                   type="button"
-                  onClick={() => ozelDosyaRef.current?.click()}
+                  onClick={() => (TASLAK_KIPI ? setTaslakSorusu(true) : ozelDosyaRef.current?.click())}
                   className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
                 >
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
