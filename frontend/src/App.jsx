@@ -871,6 +871,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setScene('ozel')
       mekaniOrtala()
       oneriyiUygula(kayit, false)   /* yalnızca adaylar; yerleşim kullanıcıdan */
+      /*
+       * ÖNCE FOTOĞRAF, SONRA ÖLÇÜ.
+       *
+       * Fotoğraf ekranda göründükten sonra pop-up açılıyor; kullanıcı
+       * duvara BAKARAK ölçüyü ve mesafeyi yazıyor. Bir sonraki çizimde
+       * açılsın diye kuyruğa alınıyor, yoksa fotoğraf daha görünmeden
+       * pop-up üstüne biniyor.
+       */
+      if (TASLAK_KIPI) setTimeout(() => setTaslakSorusu(true), 0)
     }
     gorsel.src = url
   }
@@ -1056,14 +1065,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       }
       if (kayit) setOzelSahne(kayit)
       mekaniOrtala()
-      /*
-       * ÖNCE FOTOĞRAF, SONRA ÖLÇÜ.
-       *
-       * Ölçüyü fotoğraftan önce sormak, kullanıcıdan görmediği bir duvarın
-       * ölçüsünü istemek demekti. Sıra çevrildi: fotoğraf yükleniyor,
-       * üstüne pop-up geliyor ve kullanıcı duvara BAKARAK ölçüyü yazıyor.
-       */
-      if (TASLAK_KIPI) setTaslakSorusu(true)
       if (kayit) oneriyiUygula(kayit)
     }
     gorsel.src = ozelSahne.dosya
