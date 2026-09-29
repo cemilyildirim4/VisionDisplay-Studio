@@ -1403,24 +1403,66 @@ export default function WallPreview({
                 düşüyordu. Orada anlamı da yok: ölçülen şey müşterinin
                 duvarı değil, sahnenin kadrajı.
               */}
-              {!sahneVar && !kose && marginXpx > 34 && (
+              {/*
+                DAR PAYIN ÖLÇÜSÜ DE YAZILIYOR.
+
+                Etiket yalnızca boşluk 34 pikselden genişse çıkıyordu. 1 m'lik
+                duvara 0,96 m'lik ekran kurulduğunda yanlarda 2'şer santim
+                kalıyor ve o pay hiç yazılmıyordu; kullanıcı duvarda ne kadar
+                yer kaldığını öğrenemiyordu. Oysa montajda asıl merak edilen
+                tam olarak bu.
+
+                Dar boşlukta etiket araya sığmaz: bir üst satıra alınıp
+                duvarın kenarına yaslanıyor. Geniş boşlukta eskisi gibi
+                boşluğun ortasında duruyor.
+              */}
+              {!sahneVar && !kose && marginXpx > 1 && marginXpx / pxPerM > 0.004 && (
                 <>
-                  <div className="absolute" style={{ left: marginXpx / 2, top: -olcuYazi * 2.2 - sahnePayPx, transform: 'translateX(-50%)' }}>
+                  <div
+                    className="absolute"
+                    style={{
+                      left: marginXpx > 34 ? marginXpx / 2 : 0,
+                      top: (marginXpx > 34 ? -olcuYazi * 2.2 : -olcuYazi * 3.6) - sahnePayPx,
+                      transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-8%)',
+                    }}
+                  >
                     <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginXpx / pxPerM)}</span>
                   </div>
-                  <div className="absolute" style={{ left: wallW - marginXpx / 2, top: -olcuYazi * 2.2 - sahnePayPx, transform: 'translateX(-50%)' }}>
+                  <div
+                    className="absolute"
+                    style={{
+                      left: marginXpx > 34 ? wallW - marginXpx / 2 : wallW,
+                      top: (marginXpx > 34 ? -olcuYazi * 2.2 : -olcuYazi * 3.6) - sahnePayPx,
+                      transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-92%)',
+                    }}
+                  >
                     <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginXpx / pxPerM)}</span>
                   </div>
                 </>
               )}
 
               {/* Dikey boşluklar: üst ve alt pay (sağ şeritte, gri) */}
-              {!sahneVar && !kose && marginYpx > 34 && (
+              {/* Dar üst/alt pay da yazılıyor — yatayla aynı kural. */}
+              {!sahneVar && !kose && marginYpx > 1 && marginYpx / pxPerM > 0.004 && (
                 <>
-                  <div className="absolute" style={{ left: wallW + olcuYazi * 0.8 + sahnePayPx, top: marginYpx / 2, transform: 'translateY(-50%)' }}>
+                  <div
+                    className="absolute"
+                    style={{
+                      left: wallW + olcuYazi * 0.8 + sahnePayPx,
+                      top: marginYpx > 34 ? marginYpx / 2 : 0,
+                      transform: marginYpx > 34 ? 'translateY(-50%)' : 'translateY(-8%)',
+                    }}
+                  >
                     <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginYpx / pxPerM)}</span>
                   </div>
-                  <div className="absolute" style={{ left: wallW + olcuYazi * 0.8 + sahnePayPx, top: wallH - marginYpx / 2, transform: 'translateY(-50%)' }}>
+                  <div
+                    className="absolute"
+                    style={{
+                      left: wallW + olcuYazi * 0.8 + sahnePayPx,
+                      top: marginYpx > 34 ? wallH - marginYpx / 2 : wallH,
+                      transform: marginYpx > 34 ? 'translateY(-50%)' : 'translateY(-92%)',
+                    }}
+                  >
                     <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginYpx / pxPerM)}</span>
                   </div>
                 </>
