@@ -1046,7 +1046,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
     const { yatay, dikey } = yerlesimSecenekleri(m, width, height)
 
-    const dikeySec = dikey.piksel > yatay.piksel || (dikey.piksel === yatay.piksel && portrait)
+    /*
+     * EŞİTLİKTE YATAY KAZANIYOR.
+     *
+     * Kabin döndüğünde piksel sayısı değişmiyor, yalnızca yer değiştiriyor;
+     * bu yüzden iki dizilim sık sık BİREBİR aynı çıkıyor. Eşitlikte seçim
+     * kullanıcının o anki yön ayarına bırakılmıştı ve tasarım sebepsiz yere
+     * dikeye dönebiliyordu. Eşitlik bir üstünlük değil: yatay varsayılan
+     * kalıyor, dikeye geçmek isteyen YAPILANDIRMA kartından seçiyor.
+     */
+    const dikeySec = dikey.piksel > yatay.piksel
     const kazanan = dikeySec ? dikey : yatay
 
     setOrientation(dikeySec ? 'portrait' : 'landscape')
@@ -1116,7 +1125,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHeight(h)
     if (selectedModel) {
       const { yatay, dikey } = yerlesimSecenekleri(selectedModel, w, h)
-      const dikeySec = dikey.piksel > yatay.piksel || (dikey.piksel === yatay.piksel && portrait)
+      /*
+     * EŞİTLİKTE YATAY KAZANIYOR.
+     *
+     * Kabin döndüğünde piksel sayısı değişmiyor, yalnızca yer değiştiriyor;
+     * bu yüzden iki dizilim sık sık BİREBİR aynı çıkıyor. Eşitlikte seçim
+     * kullanıcının o anki yön ayarına bırakılmıştı ve tasarım sebepsiz yere
+     * dikeye dönebiliyordu. Eşitlik bir üstünlük değil: yatay varsayılan
+     * kalıyor, dikeye geçmek isteyen YAPILANDIRMA kartından seçiyor.
+     */
+    const dikeySec = dikey.piksel > yatay.piksel
       const kazanan = dikeySec ? dikey : yatay
       setOrientation(dikeySec ? 'portrait' : 'landscape')
       setCols(kazanan.cols)
