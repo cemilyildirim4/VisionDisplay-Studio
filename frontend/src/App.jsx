@@ -2949,24 +2949,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     let payH = h / kadrajH
 
     /*
-     * KUTU ÇALIŞILABİLİR BİR BOYDA BAŞLIYOR.
+     * SIĞDIRMA YOK: KUTU TAM OLARAK GİRİLEN ÖLÇÜDE.
      *
-     * Gerçek ölçü, girilen mesafede kutuyu fotoğrafın tamamından büyük
-     * yapabiliyor; o hâlde kutuyu ne görebiliyor ne de tutup taşıyabiliyorsun.
-     * Bu yüzden başlangıçta kadrajın %70'ine sığdırılıyor — ORAN bozulmadan,
-     * iki kenar aynı katsayıyla.
+     * Bir ara kutu kadrajın %70'ine sığdırılıyordu. Sığdırma iki kenara AYNI
+     * katsayıyla uygulandığı için eni değiştirmek boyu da oynatıyordu —
+     * kullanıcının gördüğü hata buydu; iki alan bağımsız olmasına rağmen
+     * ekrandaki kutu bağlıymış gibi davranıyordu. Üstelik mesafe de o
+     * katsayıyla çarpılıyordu, yani girilen sayı yazılan sayı olmuyordu.
      *
-     * Ölçü yalan olmuyor: küçültme yapıldıysa mesafe de o oranda büyütülüp
-     * yazılıyor, yani ekrandaki kutu her zaman paneldeki mesafeyle tutarlı.
-     * Asıl kalibrasyon zaten kutuyu duvara oturttuğunda yapılıyor (bkz.
-     * taslaktanOlcek): orada duvarın gerçek eni ile kapladığı pay
-     * karşılaştırılıp mesafe yeniden hesaplanıyor.
+     * Artık her iki kenar kendi ölçüsünden geliyor ve mesafe aynen
+     * yazıldığı gibi kullanılıyor. Kutu fotoğrafa sığmıyorsa bu bir bilgidir:
+     * mesafe yanlış girilmiştir ve aşağıda söyleniyor.
      */
-    const SIGDIR = 0.7
-    const asim = Math.max(payW / SIGDIR, payH / SIGDIR, 1)
-    payW /= asim
-    payH /= asim
-    setIzlemeM(Math.max(0.2, Math.min(300, Math.round(m * asim * 100) / 100)))
+    setIzlemeM(Math.max(0.2, Math.min(300, m)))
 
     /*
      * DEĞERLER GİRİLİR GİRİLMEZ TASARIM KUTUNUN İÇİNDE.
@@ -2997,11 +2992,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * kullanıcının yazdığı ölçü olmaktan çıkıyordu. Artık kutu gerçek
      * ölçüsünde kalıyor ve sebebi yazılıyor: mesafe yanlış girilmiş.
      */
-    /*
-     * Küçültme gerektiyse mesafe kullanıcının yazdığından farklı çıkıyor;
-     * bunu sessizce yapmak yanlış olur, sebebi söyleniyor.
-     */
-    setOzelUyari(asim > 1.001 ? t('scene.wallBiggerThanFrame') : null)
+    setOzelUyari(payW > 1 || payH > 1 ? t('scene.wallBiggerThanFrame') : null)
   }
 
   /*

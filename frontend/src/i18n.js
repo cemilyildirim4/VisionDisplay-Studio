@@ -441,7 +441,7 @@ const dict = {
   },
   'scene.wallNext': { tr: 'Devam et ve fotoğraf seç', en: 'Continue and pick a photo', ar: 'متابعة واختيار صورة' },
   'scene.wallBiggerThanFrame': {
-    tr: 'Duvar, girdiğiniz mesafede kadraja sığmadığı için kutu küçültüldü ve mesafe buna göre güncellendi. Kutuyu duvara oturttuğunuzda ölçek yeniden hesaplanacak.',
+    tr: 'Girdiğiniz duvar, bu mesafeden görünen kadrajdan büyük — kutu fotoğrafa sığmıyor. Mesafeyi fotoğrafın gerçekte kaç metreden çekildiğine göre düzeltin.',
     en: "The wall you entered is wider than the frame at this distance. Correct the distance to how far the photo was really taken from.",
     ar: 'الجدار الذي أدخلته أوسع من الإطار عند هذه المسافة. صحّح المسافة.',
   },
@@ -541,7 +541,7 @@ const dict = {
   },
   'scene.wallNext': { tr: 'Devam et ve fotoğraf seç', en: 'Continue and pick a photo', ar: 'متابعة واختيار صورة' },
   'scene.wallBiggerThanFrame': {
-    tr: 'Duvar, girdiğiniz mesafede kadraja sığmadığı için kutu küçültüldü ve mesafe buna göre güncellendi. Kutuyu duvara oturttuğunuzda ölçek yeniden hesaplanacak.',
+    tr: 'Girdiğiniz duvar, bu mesafeden görünen kadrajdan büyük — kutu fotoğrafa sığmıyor. Mesafeyi fotoğrafın gerçekte kaç metreden çekildiğine göre düzeltin.',
     en: "The wall you entered is wider than the frame at this distance. Correct the distance to how far the photo was really taken from.",
     ar: 'الجدار الذي أدخلته أوسع من الإطار عند هذه المسافة. صحّح المسافة.',
   },
