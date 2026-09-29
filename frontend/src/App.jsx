@@ -1832,7 +1832,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kullanıcı sürüklediği anda (mekanTasindi) kendi kayması bunun üstüne
    * biniyor; "Ortala" düğmesi her zaman duvara geri getiriyor.
    */
-  const tasimaAcik = surukleAktif
+  /*
+   * TAŞIMA YALNIZCA KULLANICININ KENDİ FOTOĞRAFINDA.
+   *
+   * AVM koridoru ve şehir meydanı hazır sahneler: duvarları ölçülü olarak
+   * tanımlı ve tasarım o duvara hizalanıyor. Oralarda sürüklemeye izin
+   * vermek ekranı kendi duvarından koparmak demekti — duvar bir yerde,
+   * tasarım başka yerde. Bu sahnelerde ikisi birlikte yerleşiyor. Taşıma
+   * yalnızca kullanıcının kendi fotoğrafında açık, çünkü orada duvarın
+   * nerede olduğunu yalnızca kullanıcı biliyor.
+   */
+  const tasimaAcik = surukleAktif && scene === 'ozel'
 
   const duvaraHizali = surukleAktif && !kioskVar
   /*
@@ -2036,7 +2046,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * Bu yüzden serbestlik korunuyor, yalnızca son bir sınır var: dörtgenin
      * dörtte biri kadrajın içinde kalacak kadar geri çekiliyor.
      */
-    const son = elleMudahale ? kadrajaCek(acili, tuvalBoyut) : ekranaSigdir(acili, tuvalBoyut)
+    const kadrajlanmis = elleMudahale ? kadrajaCek(acili, tuvalBoyut) : ekranaSigdir(acili, tuvalBoyut)
+    /*
+     * TASARIM VE ÖLÇÜLERİ FOTOĞRAFIN DIŞINA TAŞMIYOR.
+     *
+     * Tuval fotoğraftan geniş olabiliyor: fotoğraf ortalanıyor ve yanlarında
+     * boş alan kalıyor. Sınır tuvale göre konunca tasarım o boş alana, yani
+     * fotoğrafın dışına çıkabiliyordu; ölçü etiketleri de öyle. Oysa
+     * kullanıcının gördüğü mekân fotoğrafın kendisi — dışarısı mekân değil.
+     */
+    const son = fotografaCek(kadrajlanmis, fotoYer)
     return son.map((k) => ({
       x: k.x - solUst.x,
       y: k.y - solUst.y,
@@ -2102,6 +2121,56 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Dörtgeni tuvalin içine alır: önce kaydırır, gerekiyorsa merkezine göre
    * küçültür. Oran korunuyor — tek çarpanla ölçekleniyor.
    */
+  /** Ölçü etiketlerinin ekranın kutusu dışında kapladığı yaklaşık pay (px). */
+  const ETIKET_PAYI = 44
+
+  /**
+   * Dörtgeni (ve onunla birlikte ölçü etiketlerini) FOTOĞRAFIN içine çeker.
+   *
+   * Etiketler ekranın kutusunun dışına taşıyor, o yüzden kenarlardan etiket
+   * payı kadar içeride duruluyor. Fotoğraf bu payı kaldıramayacak kadar
+   * darsa pay kendiliğinden küçülüyor — dar bir fotoğrafta tasarımı hiç
+   * çizememektense etiketin biraz kırpılması yeğ.
+   *
+   * Tasarım fotoğraftan büyükse kırpmak yerine ortalanıyor: kullanıcı zaten
+   * "kadrajından büyük" uyarısını görüyor, üstüne bir de ekranı kenara
+   * yapıştırmak durumu anlaşılmaz kılardı.
+   */
+  function fotografaCek(koseler, yer) {
+    if (!Array.isArray(koseler) || koseler.length !== 4) return koseler
+    if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return koseler
+    const xs = koseler.map((k) => k.x)
+    const ys = koseler.map((k) => k.y)
+    const x0 = Math.min(...xs)
+    const x1 = Math.max(...xs)
+    const y0 = Math.min(...ys)
+    const y1 = Math.max(...ys)
+
+    const payX = Math.min(ETIKET_PAYI, Math.max(0, (yer.genislik - (x1 - x0)) / 2))
+    const payY = Math.min(ETIKET_PAYI, Math.max(0, (yer.yukseklik - (y1 - y0)) / 2))
+    const solSinir = yer.sol + payX
+    const sagSinir = yer.sol + yer.genislik - payX
+    const ustSinir = yer.ust + payY
+    const altSinir = yer.ust + yer.yukseklik - payY
+
+    let dx = 0
+    let dy = 0
+    if (x1 - x0 <= sagSinir - solSinir) {
+      if (x0 < solSinir) dx = solSinir - x0
+      else if (x1 > sagSinir) dx = sagSinir - x1
+    } else {
+      dx = (solSinir + sagSinir) / 2 - (x0 + x1) / 2
+    }
+    if (y1 - y0 <= altSinir - ustSinir) {
+      if (y0 < ustSinir) dy = ustSinir - y0
+      else if (y1 > altSinir) dy = altSinir - y1
+    } else {
+      dy = (ustSinir + altSinir) / 2 - (y0 + y1) / 2
+    }
+    if (!dx && !dy) return koseler
+    return koseler.map((k) => ({ x: k.x + dx, y: k.y + dy }))
+  }
+
   /**
    * Dörtgeni, en az dörtte biri kadrajda kalacak kadar geri çeker.
    *
@@ -2731,7 +2800,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               ekranSekli={ekranSekli}
               ayakOrani={ayakOrani}
               yon={koseTuval ? null : mekanYon}
-              kioskGizle={!!koseTuval || lTipiVar || !kioskVar}
+              /*
+               * KIOSK GÖVDESİ KULLANICININ KARARI.
+               *
+               * Dört köşe hedefi varken gövde gizleniyordu; gerekçe "duvara
+               * oturtulmuş ekranın ayağı olmaz"dı. Ama kullanıcı gövdeyi
+               * açıkça AÇTIYSA onu gizlemek, düğmenin hiçbir işe yaramaması
+               * demek — kioskun hiç görünmemesinin sebebi buydu. Yalnızca
+               * iç L tipi dışarıda: onun gövdesi çizilemiyor.
+               */
+              kioskGizle={lTipiVar || !kioskVar}
               /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
               olcuGoster={showMeasurements}
               /* Duvar etiketi kullanıcının kendi ölçüsünü yazıyor */
