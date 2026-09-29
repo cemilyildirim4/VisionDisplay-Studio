@@ -888,7 +888,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const oneriyiUygula = (kayit, uygula = true) => {
     const aci = kayit?.aci
-    const saglam = aci && aci.guven >= ACI_ESIGI && (Math.abs(aci.yaw) > 1.5 || Math.abs(aci.tilt) > 1.5)
+    /*
+     * TASLAK KİPİNDE EĞİM YOK.
+     *
+     * Fotoğraf eklenince tasarım kendiliğinden eğik geliyordu: sahnenin
+     * kaçış noktasından çıkarılan açı dörtgene biniyordu. Kullanıcı eğimi
+     * kendi vermek istiyor — köşelerden ayarlayana kadar ekran düz duracak.
+     */
+    const saglam =
+      !TASLAK_KIPI &&
+      aci &&
+      aci.guven >= ACI_ESIGI &&
+      (Math.abs(aci.yaw) > 1.5 || Math.abs(aci.tilt) > 1.5)
     yonuAyarla(saglam ? aci : null)
 
     /*
@@ -2320,8 +2331,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * karşılaştırma yanlış çıkıyordu ve tasarım fotoğrafın dışına
      * taşabiliyordu.
      */
-    const kx = ekranKutuYeri.current.sol
-    const ky = ekranKutuYeri.current.ust
+    /*
+     * Ölçüm viewport koordinatında geliyor; fotoğrafın dikdörtgeni ise
+     * tuvale (ana bölgeye) göre. İkisi burada aynı uzaya getiriliyor.
+     */
+    const ana = tuvalRef.current?.getBoundingClientRect()
+    if (!ana) return koseler
+    const kx = ekranKutuYeri.current.sol - ana.left
+    const ky = ekranKutuYeri.current.ust - ana.top
     const xs = koseler.map((k) => k.x + kx)
     const ys = koseler.map((k) => k.y + ky)
     const x0 = Math.min(...xs)

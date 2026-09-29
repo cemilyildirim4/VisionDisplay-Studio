@@ -1340,14 +1340,27 @@ export default function WallPreview({
    * koseDonusumu transformOrigin '0 0' kullandığı için kose (0,0) tam olarak
    * buraya denk geliyor.
    */
-  const ekranKutuRef = useRef(null)
+  /*
+   * ÖLÇÜM DÖNÜŞÜM UYGULANMAMIŞ KUTUDAN.
+   *
+   * Önce ekran kutusunun kendisi ölçülüyordu; oysa o kutuya perspektif
+   * dönüşümü (matrix3d) binmiş durumda ve getBoundingClientRect DÖNÜŞMÜŞ
+   * hâli veriyor. Yani ölçtüğüm başnokta, ölçmek istediğim şeyin kendisine
+   * bağlıydı — sınır bu yüzden hep kayıyordu.
+   *
+   * Şimdi DUVAR kutusu ölçülüyor (üstünde dönüşüm yok) ve ekran kutusunun
+   * ondan içeri payı ekleniyor. Ekran kutusu duvarın ortasında durduğu için
+   * bu pay tam olarak marginXpx / marginYpx.
+   *
+   * Ekran koordinatı veriliyor (viewport); çağıran taraf kendi başnoktasına
+   * göre çeviriyor.
+   */
+  const duvarKutuRef = useRef(null)
   useLayoutEffect(() => {
-    const el = ekranKutuRef.current
-    const kap = containerRef.current
-    if (!el || !kap || !onEkranKutusu) return
+    const el = duvarKutuRef.current
+    if (!el || !onEkranKutusu) return
     const a = el.getBoundingClientRect()
-    const b = kap.getBoundingClientRect()
-    onEkranKutusu({ sol: a.left - b.left, ust: a.top - b.top })
+    onEkranKutusu({ sol: a.left + marginXpx, ust: a.top + marginYpx })
   })
 
   /*
@@ -1388,14 +1401,13 @@ export default function WallPreview({
             ...(tutamak ? tutamak.style : null),
           }}
         >
-          <div style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative flex items-center justify-center`}>
+          <div ref={duvarKutuRef} style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative flex items-center justify-center`}>
             {/*
               Dört köşe hedefi varken dönüşüm EKRAN KUTUSUNA uygulanıyor:
               duvar kutusu tasarımdan büyük olabiliyor, homografi ise tam
               tasarımın dört köşesini hedefe eşlemek zorunda.
             */}
             <div
-              ref={ekranKutuRef}
               style={{
                 width: screenW,
                 height: screenH,
