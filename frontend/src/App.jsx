@@ -2213,7 +2213,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * fotoğraf dışına birkaç piksel taşması, tasarımı kenara götürememekten
    * daha az sorun.
    */
-  const etiketPayi = (yer) => {
+  /*
+   * BİLEREK FONKSİYON BİLDİRİMİ (const değil).
+   *
+   * Bunu koseTuval ÇİZİM SIRASINDA çağırıyor ve koseTuval dosyada bu
+   * satırdan ÖNCE duruyor. const olarak yazıldığında her çizimde
+   * "tanımlanmadan önce erişim" hatası veriyor ve uygulama hata ekranına
+   * düşüyordu. Fonksiyon bildirimi yukarı taşındığı için sorun olmuyor.
+   */
+  function etiketPayi(yer) {
     if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return 0
     return Math.min(14, Math.min(yer.genislik, yer.yukseklik) * 0.03)
   }
