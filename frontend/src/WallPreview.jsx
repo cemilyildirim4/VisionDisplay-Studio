@@ -325,9 +325,28 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           >
             {videoSrc && <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX} top={offsetY} lit={isLit} />}
             {leftDots && <LedDotsCanvas wPx={leftW} hPx={hPx} dotW={leftDots.dotW} dotH={leftDots.dotH} />}
-            {/* Gölge katmanı kaldırıldı: görüntü düz ekrandakiyle aynı canlılıkta
-                kalmalı. Köşeyi zaten iki kanadın trapez kırpımı ve dikiş çizgisi
-                anlatıyor. */}
+            {/*
+              KATLANMA GÖLGESİ — SOL KANAT.
+
+              Yukarıdaki not "köşeyi asıl anlatan şey iki yüzün farklı
+              aydınlıkta olması" diyor ama gölge katmanı bir ara kaldırılmış;
+              geriye tek ipucu olarak trapez kırpımı kalınca ekran DÜZ
+              görünüyordu. Gölge geri geliyor, fakat düz karartma olarak değil:
+              dikişe doğru koyulaşan bir geçiş. Yüzeyin ortası ve dış kenarı
+              tam canlılıkta kalıyor, yalnızca köşeye yaklaşırken kararıyor —
+              gerçek bir katlanmada da ışık böyle davranır.
+            */}
+            {!isNone && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  background:
+                    'linear-gradient(to right, rgba(0,0,0,0) 55%, rgba(0,0,0,0.10) 85%, rgba(0,0,0,0.20) 100%)',
+                }}
+              />
+            )}
           </div>
           {/* Sağ kanat — gölgede kalan yüz (bkz. yukarıdaki not) */}
           <div
@@ -343,7 +362,23 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           >
             {videoSrc && <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX + leftW} top={offsetY} lit={isLit} />}
             {rightDots && <LedDotsCanvas wPx={rightW} hPx={hPx} dotW={rightDots.dotW} dotH={rightDots.dotH} />}
-            {/* Gölge katmanı kaldırıldı — bkz. sol kanattaki not. */}
+            {/*
+              KATLANMA GÖLGESİ — SAĞ KANAT (gölgede kalan yüz).
+              Dikiş bu kanadın SOL kenarında; koyuluk oradan başlayıp dışa
+              doğru açılıyor. Sol kanattan biraz daha güçlü, çünkü bu yüz
+              ışıktan uzaklaşan taraf.
+            */}
+            {!isNone && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  background:
+                    'linear-gradient(to right, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.14) 18%, rgba(0,0,0,0.05) 45%, rgba(0,0,0,0) 70%)',
+                }}
+              />
+            )}
           </div>
         </div>
         {/*
