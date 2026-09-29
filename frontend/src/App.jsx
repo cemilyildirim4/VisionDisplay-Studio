@@ -2557,6 +2557,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yalnızca köşe ayarını bırakıyor: seçilen yüzey, ölçü ve mesafe yerinde
    * kalıyor, dörtgen o yüzeyin kendi düzgün dikdörtgenine dönüyor.
    */
+  /*
+   * ÖLÇEK DEĞİŞİNCE ELLE DÖRTGEN DE ONUNLA BÜYÜYÜP KÜÇÜLÜYOR.
+   *
+   * elleKose tuval PİKSELİ cinsinden saklanıyor. Mesafe ya da gerçek
+   * genişlik değişince tasarımın piksel karşılığı değişiyor ama dörtgen
+   * eski ölçekte kalıyordu; ikisi birbirini tutmayınca homografi bozuluyor
+   * ve tasarım ekranı kesen dev bir yalamaya dönüyordu (kullanıcının
+   * gönderdiği görüntü buydu). Dörtgen artık aynı oranda ölçekleniyor:
+   * kullanıcının kurduğu açı korunuyor, yalnızca boy ölçekle birlikte
+   * değişiyor.
+   */
+  const olcekIzi = useRef(null)
+  useEffect(() => {
+    const eski = olcekIzi.current
+    olcekIzi.current = cizimOlcek
+    if (!eski || !cizimOlcek || eski === cizimOlcek) return
+    const oran = cizimOlcek / eski
+    if (!(oran > 0) || Math.abs(oran - 1) < 1e-6) return
+    setElleKose((onceki) => {
+      if (!onceki) return onceki
+      const mx = tuvalBoyut.w / 2
+      const my = tuvalBoyut.h / 2
+      return onceki.map((k) => ({ x: mx + (k.x - mx) * oran, y: my + (k.y - my) * oran }))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cizimOlcek])
+
   const koseAyariniSifirla = () => {
     setElleKose(null)
     setKilitliKose([])

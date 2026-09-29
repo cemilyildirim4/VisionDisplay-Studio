@@ -71,6 +71,29 @@ export function koseDonusumu(w, h, koseler) {
   if (!(w > 0) || !(h > 0) || !Array.isArray(koseler) || koseler.length !== 4) return null
   if (koseler.some((k) => !k || !Number.isFinite(k.x) || !Number.isFinite(k.y))) return null
 
+  /*
+   * BOZUK DÖRTGEN HİÇ ÇİZİLMİYOR.
+   *
+   * Dörtgen yassılaşınca (kenarı sıfıra yaklaşınca ya da köşeleri aynı
+   * doğruya düşünce) homografi patlıyor ve tasarım ekranı boydan boya
+   * kesen dev bir yalama hâline geliyordu. Böyle bir durumda perspektif
+   * vermemek doğru: dönüşüm boş dönüyor ve tasarım düz çiziliyor.
+   *
+   * Ölçüt alan: dörtgenin alanı, köşelerini saran kutunun %8'inden küçükse
+   * o artık bir yüzey değil, bir çizgidir.
+   */
+  const xs = koseler.map((k) => k.x)
+  const ys = koseler.map((k) => k.y)
+  const kutu = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys))
+  const alan =
+    Math.abs(
+      koseler.reduce((t, p, i) => {
+        const q = koseler[(i + 1) % 4]
+        return t + (p.x * q.y - q.x * p.y)
+      }, 0),
+    ) / 2
+  if (!(kutu > 1) || alan < kutu * 0.08) return null
+
   const H = birimKaredenHomografi(koseler)
   if (!H) return null
 
@@ -130,6 +153,29 @@ export function dortgenGecerli(koseler, enAzAlan = 400) {
  * düzleminde ölçü yapabilmek için gerekli.
  */
 export function dortgenNoktasi(koseler, u, v) {
+  /*
+   * BOZUK DÖRTGEN HİÇ ÇİZİLMİYOR.
+   *
+   * Dörtgen yassılaşınca (kenarı sıfıra yaklaşınca ya da köşeleri aynı
+   * doğruya düşünce) homografi patlıyor ve tasarım ekranı boydan boya
+   * kesen dev bir yalama hâline geliyordu. Böyle bir durumda perspektif
+   * vermemek doğru: dönüşüm boş dönüyor ve tasarım düz çiziliyor.
+   *
+   * Ölçüt alan: dörtgenin alanı, köşelerini saran kutunun %8'inden küçükse
+   * o artık bir yüzey değil, bir çizgidir.
+   */
+  const xs = koseler.map((k) => k.x)
+  const ys = koseler.map((k) => k.y)
+  const kutu = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys))
+  const alan =
+    Math.abs(
+      koseler.reduce((t, p, i) => {
+        const q = koseler[(i + 1) % 4]
+        return t + (p.x * q.y - q.x * p.y)
+      }, 0),
+    ) / 2
+  if (!(kutu > 1) || alan < kutu * 0.08) return null
+
   const H = birimKaredenHomografi(koseler)
   if (!H) return null
   const [a, b, c, d, e, f, g, h] = H
