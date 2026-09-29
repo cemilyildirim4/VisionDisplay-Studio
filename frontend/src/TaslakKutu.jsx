@@ -74,7 +74,14 @@ export default function TaslakKutu({ koseler, tuvalW, tuvalH, onSec, onKose, eti
   }
 
   return (
-    <div data-pdf-gizle className="absolute inset-0 z-20" style={{ touchAction: 'none' }}>
+    /*
+      KATMAN TIKLAMA YUTMUYOR.
+
+      Saydam bir div de tıklamayı yakalar. Bu katman tuvalin tamamını
+      kaplıyordu ve altındaki tasarım sürüklenemiyordu. Yalnızca dörtgenin
+      kendisi ve tutamaklar tıklanabilir.
+    */
+    <div data-pdf-gizle className="absolute inset-0 z-20 pointer-events-none" style={{ touchAction: 'none' }}>
       <svg width={tuvalW} height={tuvalH} className="absolute inset-0">
         <polygon
           points={nokta}

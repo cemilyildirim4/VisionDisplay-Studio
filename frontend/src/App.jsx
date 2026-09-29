@@ -562,11 +562,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * sınırı bununla uygulanıyor; hesapla bulmak mümkün değil çünkü duvar
    * kutusu kapsayıcının ortasında durmuyor.
    */
-  const ekranKutuYeri = useRef({ sol: 0, ust: 0 })
+  const ekranKutuYeri = useRef(null)
   const ekranKutuYeriniYaz = (y) => {
     if (!y) return
     const e = ekranKutuYeri.current
-    if (Math.abs(e.sol - y.sol) < 0.5 && Math.abs(e.ust - y.ust) < 0.5) return
+    if (e && Math.abs(e.sol - y.sol) < 0.5 && Math.abs(e.ust - y.ust) < 0.5) return
     ekranKutuYeri.current = y
   }
 
@@ -2361,7 +2361,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * tuvale (ana bölgeye) göre. İkisi burada aynı uzaya getiriliyor.
      */
     const ana = tuvalRef.current?.getBoundingClientRect()
-    if (!ana) return koseler
+    /*
+     * ÖLÇÜM YOKSA SINIR DA YOK.
+     *
+     * Başnokta ölçülmeden sıfır kabul edilirse dörtgen fotoğrafın çok
+     * dışındaymış gibi görünüyor ve her çizimde geri çekiliyordu; kullanıcı
+     * tasarımı hiç kıpırdatamıyordu. Ölçüm gelmediyse serbest bırakmak,
+     * yanlış yere hapsetmekten iyidir.
+     */
+    if (!ana || !ekranKutuYeri.current) return koseler
     const kx = ekranKutuYeri.current.sol - ana.left
     const ky = ekranKutuYeri.current.ust - ana.top
     const xs = koseler.map((k) => k.x + kx)
