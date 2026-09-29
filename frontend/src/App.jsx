@@ -55,6 +55,8 @@ import ArView from './ArView.jsx'
 // gömülürse ilk yükleme herkes için ağırlaşır. Bu yüzden "3D Görünüm" düğmesine
 // basılana kadar hiç indirilmez (kod bölme / code-splitting).
 const Scene3D = guvenliLazy(() => import('./Scene3D.jsx'))
+/* Fotograflı mekânda tasarımı yerinde 3B çizen katman — yalnızca gerekince yüklenir. */
+const Mekan3D = guvenliLazy(() => import('./Mekan3D.jsx'))
 import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, curveDiameterM, curveAmountForDiameter, L_KIRILMA_PCT, curveDepthFor, IMAGE_MAX_MB, KAVIS_ACI_ADIMI, curveAmountForArc, kavisAciSecenekleri, kavisYuzdesiniOturt } from './content.js'
 import { LANGUAGES } from './i18n.js'
 import { useAcilirKonum } from './hooks/useAcilirKonum.js'
@@ -2804,6 +2806,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 </button>
               </div>
             </div>
+          )}
+
+          {/*
+            YERİNDE 3B — KULLANICININ KENDİ FOTOĞRAFINDA.
+
+            Fotoğraf eklendiğinde tasarım artık düz bir çıkartma değil, 3D
+            görünümdeki geometrinin ta kendisi: kabin ızgarası, kasa,
+            derinlik, ortam ışığı (bkz. Mekan3D.jsx). Tuval saydam olduğu
+            için fotoğraf arkasında görünmeye devam ediyor.
+
+            Katman düz çizimin ÜSTÜNDE, ölçü etiketleri ve köşe
+            tutamaklarının ALTINDA duruyor; ikisi de çalışmaya devam ediyor.
+
+            Ekranın duruşu köşelerden geliyor: görsel yan duruyorsa
+            kullanıcı köşeleri o yana çekiyor, 3B ekran da o yana dönüyor.
+          */}
+          {hasModel && scene === 'ozel' && ozelSahne && koseMutlak && (
+            <Suspense fallback={null}>
+              <Mekan3D
+                model={previewModel}
+                cols={cols}
+                rows={rows}
+                content={content}
+                contentUrl={contentUrl}
+                screenType={screenType}
+                curveAmount={curveAmount}
+                screens={screenMode === 'multi' ? screens : null}
+                koseler={koseMutlak}
+                tuvalW={tuvalBoyut.w}
+                tuvalH={tuvalBoyut.h}
+                tasarimWm={tasarimWm}
+              />
+            </Suspense>
           )}
 
           {/*

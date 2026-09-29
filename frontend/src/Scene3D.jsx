@@ -450,7 +450,12 @@ function Duvar({ ortak, screenType, curveAmount, leftCols, rightCols, uvOffset, 
  * görseli şeridin tamamına yayılıp her ekranın genişlik payına düşen dilimi o
  * ekrana verilir. Her ekran kendi biçimini (düz / kavisli / iç L) korur.
  */
-function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, screenType, curveAmount, leftCols, rightCols, screens }) {
+/*
+ * Kabin ızgarası dışarı da veriliyor: mekân fotoğrafının üstündeki yerinde
+ * 3D katmanı (Mekan3D.jsx) aynı ekranı çiziyor. İki yerde iki ayrı ekran
+ * geometrisi tutmak, birinde yapılan düzeltmenin ötekine geçmemesi demekti.
+ */
+export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, screenType, curveAmount, leftCols, rightCols, screens }) {
   const cabW = (model?.widthMm || 500) / 1000
   const cabH = (model?.heightMm || 500) / 1000
   const cabD = (model?.depthMm || 100) / 1000
