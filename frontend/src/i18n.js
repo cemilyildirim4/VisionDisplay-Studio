@@ -440,6 +440,16 @@ const dict = {
     ar: 'يُبنى المربع المبدئي وفق هذا المقاس ومنه يُحسب مقياس المشهد.',
   },
   'scene.wallNext': { tr: 'Devam et ve fotoğraf seç', en: 'Continue and pick a photo', ar: 'متابعة واختيار صورة' },
+  'scene.askDistance': {
+    tr: 'Fotoğrafın çekildiği mesafe',
+    en: 'Distance the photo was taken from',
+    ar: 'المسافة التي التقطت منها الصورة',
+  },
+  'scene.draftTapHint': {
+    tr: 'Duvara getir, tıkla',
+    en: 'Move onto the wall, then tap',
+    ar: 'حرّكه إلى الجدار ثم انقر',
+  },
   'scene.wallW': { tr: 'en', en: 'width', ar: 'العرض' },
   'scene.wallH': { tr: 'boy', en: 'height', ar: 'الارتفاع' },
   'scene.draftMake': { tr: 'Taslak kutuyu oluştur', en: 'Create draft box', ar: 'إنشاء مربع مبدئي' },
@@ -510,6 +520,16 @@ const dict = {
     ar: 'يُبنى المربع المبدئي وفق هذا المقاس ومنه يُحسب مقياس المشهد.',
   },
   'scene.wallNext': { tr: 'Devam et ve fotoğraf seç', en: 'Continue and pick a photo', ar: 'متابعة واختيار صورة' },
+  'scene.askDistance': {
+    tr: 'Fotoğrafın çekildiği mesafe',
+    en: 'Distance the photo was taken from',
+    ar: 'المسافة التي التقطت منها الصورة',
+  },
+  'scene.draftTapHint': {
+    tr: 'Duvara getir, tıkla',
+    en: 'Move onto the wall, then tap',
+    ar: 'حرّكه إلى الجدار ثم انقر',
+  },
   'scene.wallW': { tr: 'en', en: 'width', ar: 'العرض' },
   'scene.wallH': { tr: 'boy', en: 'height', ar: 'الارتفاع' },
   'scene.draftMake': { tr: 'Taslak kutuyu oluştur', en: 'Create draft box', ar: 'إنشاء مربع مبدئي' },

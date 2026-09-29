@@ -38,6 +38,7 @@ import {
 } from './ozelMekan.js'
 import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
+import TaslakKutu from './TaslakKutu.jsx'
 import AdaySecici from './AdaySecici.jsx'
 import DavetKapisi from './DavetKapisi.jsx'
 import { kenarlaraOturt } from './ekranYuzeyi.js'
@@ -535,6 +536,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * verilen ölçüyle kuruluyor.
    */
   const [taslakSorusu, setTaslakSorusu] = useState(false)
+  const [taslakMesafe, setTaslakMesafe] = useState('')
+  /*
+   * Taslak kutu TUVAL pikseli cinsinden: kullanıcı onu fareyle taşıyor ve
+   * köşelerinden çekiyor, yani doğrudan ekran koordinatında çalışıyor.
+   * Tasarım henüz burada değil — kutu yalnızca DUVARI tanıtıyor. Kullanıcı
+   * kutuya tıklayınca dörtgen hedef yüzeye çevriliyor ve tasarım kendi
+   * gerçek ölçüsüyle içine yerleşiyor.
+   */
+  const [taslakKutu, setTaslakKutu] = useState(null)
   /* Yerinde 3B katmanı gerçekten çizebildi mi (bkz. Mekan3D → onHazir). */
   const [uc3dHazir, setUc3dHazir] = useState(false)
   /*
@@ -2812,38 +2822,69 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const taslakKutuyuKur = () => {
     const w = Number(String(taslakWm).replace(',', '.'))
     const h = Number(String(taslakHm).replace(',', '.'))
-    if (!(w > 0.05) || !(h > 0.05)) return
+    const m = Number(String(taslakMesafe).replace(',', '.'))
+    if (!(w > 0.05) || !(h > 0.05) || !(m > 0.1)) return
     const kaynak = ozelSahne?.kaynak
-    if (!kaynak?.w || !kaynak?.h) return
+    const yer = fotoYer
+    if (!kaynak?.w || !kaynak?.h || !(yer?.genislik > 0)) return
 
-    /* Fotoğrafın en/boy oranı, kutunun oranıyla birlikte payı belirliyor. */
-    const fotoOran = kaynak.w / kaynak.h
-    let payW = 0.7
-    let payH = (payW * (h / w)) * fotoOran
-    if (payH > 0.7) {
-      payH = 0.7
-      payW = (payH / ((h / w) * fotoOran))
-    }
-    const x0 = 0.5 - payW / 2
-    const x1 = 0.5 + payW / 2
-    const y0 = 0.5 - payH / 2
-    const y1 = 0.5 + payH / 2
+    /*
+     * ÖLÇEK TAHMİN DEĞİL: MESAFE KULLANICIDAN GELİYOR.
+     *
+     * Kadrajın kapsadığı genişlik = mesafe × 1,11. Duvarın kadrajdaki payı
+     * da gerçek eninin buna oranı. Yani kutu, fotoğrafta duvarın GERÇEKTEN
+     * kapladığı kadar yer kaplıyor; kullanıcı onu duvarın üstüne
+     * getirdiğinde iki ölçü örtüşüyor ve sahne kalibre olmuş oluyor.
+     */
+    const kadrajW = kadrajGenisligi(m)
+    const kadrajH = kadrajW * (kaynak.h / kaynak.w)
+    const payW = Math.max(0.04, Math.min(0.98, w / kadrajW))
+    const payH = Math.max(0.04, Math.min(0.98, h / kadrajH))
+    setIzlemeM(Math.max(0.2, Math.min(300, m)))
+
+    /* Oranlı köşeler tuval pikseline çevriliyor (koseTuval ile aynı eşleme). */
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    const z = sahneYakinlik || 1
+    const cev = (ox, oy) => ({
+      x: mX + (yer.sol + ox * yer.genislik - mX) * z,
+      y: mY + (yer.ust + oy * yer.yukseklik - mY) * z,
+    })
 
     elleDuzenlemeyiBirak()
-    setHedefKose([
-      { x: x0, y: y0 },
-      { x: x1, y: y0 },
-      { x: x1, y: y1 },
-      { x: x0, y: y1 },
-    ])
-    setHedefTur('taslak')
+    setHedefKose(null)
     setAdayKipi(false)
-
-    /* Ölçek: kutunun kadraj payı ve duvarın gerçek eni. */
-    const kadrajM = w / payW
-    setIzlemeM(Math.max(0.2, Math.min(300, Math.round((kadrajM / KADRAJ_KATSAYISI) * 10) / 10)))
+    setTaslakKutu([
+      cev(0.5 - payW / 2, 0.5 - payH / 2),
+      cev(0.5 + payW / 2, 0.5 - payH / 2),
+      cev(0.5 + payW / 2, 0.5 + payH / 2),
+      cev(0.5 - payW / 2, 0.5 + payH / 2),
+    ])
     setTaslakKuruldu(true)
     setOzelUyari(null)
+  }
+
+  /*
+   * KUTUYA TIKLANDI: TASARIM İÇİNE YERLEŞİYOR.
+   *
+   * Kutu tuval pikselinde; hedef yüzey ise fotoğrafa göre oranlı. Aynı
+   * eşlemenin tersi uygulanıyor. Kutu bundan sonra ekranda durmuyor —
+   * görevi bitti, duvarı tanıttı.
+   */
+  const taslakKutusunuUygula = () => {
+    const yer = fotoYer
+    if (!taslakKutu || !(yer?.genislik > 0)) return
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    const z = sahneYakinlik || 1
+    setHedefKose(
+      taslakKutu.map((k) => ({
+        x: (mX + (k.x - mX) / z - yer.sol) / yer.genislik,
+        y: (mY + (k.y - mY) / z - yer.ust) / yer.yukseklik,
+      })),
+    )
+    setHedefTur('taslak')
+    setTaslakKutu(null)
   }
 
   const taslakKutuyuKurRef = useRef(null)
@@ -3258,6 +3299,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/*
+            TASLAK KUTU — duvarı tanıtan dörtgen.
+
+            Fotoğrafın üstünde duruyor; kullanıcı taşıyıp köşelerinden
+            çekerek gerçek duvara oturtuyor. Üstüne tıklayınca tasarım
+            kendi ölçüsüyle içine yerleşiyor ve kutu kayboluyor.
+          */}
+          {taslakKutu && scene === 'ozel' && ozelSahne && (
+            <TaslakKutu
+              koseler={taslakKutu}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+              onKose={setTaslakKutu}
+              onSec={taslakKutusunuUygula}
+              etiket={t('scene.draftTapHint')}
+            />
+          )}
+
+          {/*
             MANUEL DÖRT KÖŞE KATMANI — tuvalin üstünde.
             Otomatik bulma her fotoğrafta doğru sonuç veremez; kesin sonucu
             kullanıcının kendi işaretlediği dört köşe verir.
@@ -3400,12 +3459,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 />
                 <span className="text-[14px] text-neutral-400">m</span>
               </div>
+              <div className="mt-3">
+                <label className="block text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
+                  {t('scene.askDistance')}
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0.2"
+                    step="0.1"
+                    value={taslakMesafe}
+                    onChange={(e) => setTaslakMesafe(e.target.value)}
+                    placeholder="4"
+                    className="w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                  />
+                  <span className="text-[14px] text-neutral-400">m</span>
+                </div>
+              </div>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
                   disabled={
                     !(Number(String(taslakWm).replace(',', '.')) > 0.05) ||
-                    !(Number(String(taslakHm).replace(',', '.')) > 0.05)
+                    !(Number(String(taslakHm).replace(',', '.')) > 0.05) ||
+                    !(Number(String(taslakMesafe).replace(',', '.')) > 0.1)
                   }
                   onClick={() => {
                     setTaslakSorusu(false)
@@ -3413,7 +3490,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   }}
                   className="flex-1 rounded-full bg-brand py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                 >
-                  {t('scene.draftMake')}
+                  {t('common.ok')}
                 </button>
                 <button
                   type="button"
