@@ -419,6 +419,11 @@ const dict = {
     en: 'Real width of this surface:',
     ar: 'العرض الحقيقي لهذا السطح:',
   },
+  'scene.cornersReset': {
+    tr: 'Köşe ayarını sıfırla',
+    en: 'Reset corner adjustment',
+    ar: 'إعادة ضبط ضبط الزوايا',
+  },
   'scene.fitAsk': { tr: 'Ölçüyü bu yüzeye göre ayarlayayım mı?', en: 'Should I resize the design to this surface?', ar: 'هل أضبط المقاس على هذا السطح؟' },
   'scene.fitAskDetail': { tr: 'Seçtiğiniz yüzey yaklaşık', en: 'The selected surface is about', ar: 'السطح المحدد يبلغ تقريبًا' },
   'scene.fitAskNow': { tr: 'Tasarım şu an', en: 'The design is currently', ar: 'التصميم حاليًا' },

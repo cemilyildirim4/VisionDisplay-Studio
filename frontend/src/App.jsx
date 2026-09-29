@@ -2446,7 +2446,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return
     }
 
-    /* Hangi köşe oynadı? */
+    /*
+     * KÖŞE AYARI DÜZENLİ: KENAR BİR BÜTÜN OLARAK HAREKET EDİYOR.
+     *
+     * Dört köşe birbirinden bağımsız hareket edince dörtgen kelebeğe
+     * dönüyor ve ekran gerçek bir dikdörtgenin görüntüsü olmaktan çıkıyordu
+     * (kullanıcının gönderdiği üçgenimsi şekil buydu). Oysa duvara asılı düz
+     * bir ekran fotoğrafta her zaman DÜZGÜN bir yamuk verir.
+     *
+     * Kural, tutulan köşenin aynı yandaki eşine bağlı:
+     *   • YATAYDA birlikte gidiyorlar — kenar olduğu gibi kayıyor, yan kenar
+     *     düşey kalıyor;
+     *   • DİKEYDE birbirinin aynası — kenar kendi ortasından uzayıp
+     *     kısalıyor. Perspektif tam olarak budur: uzak yan kısa, yakın yan
+     *     uzun.
+     *
+     * Sonuç her zaman düzgün bir yamuk: açılar bozulmuyor, kelebek oluşmuyor,
+     * sağ üst köşe yukarı çekilince sağ alt köşe de ona göre gidiyor.
+     */
     let oynayan = -1
     let enBuyuk = 0.5
     for (let i = 0; i < 4; i++) {
@@ -2457,65 +2474,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       }
     }
     if (oynayan < 0) return
-    const kilitli = kilitliKose.includes(oynayan) ? kilitliKose : [...kilitliKose, oynayan]
-    if (kilitli !== kilitliKose) setKilitliKose(kilitli)
 
-    const serbest = [0, 1, 2, 3].filter((i) => !kilitli.includes(i))
-
-    /*
-     * ÖLÇÜ DÜZELTMESİ YALNIZCA SERBEST KÖŞELERE.
-     *
-     * Sabitlenmiş köşeler olduğu yerde kalıyor; ölçüyü tutturmak için
-     * kalan köşeler, sabitlerin ağırlık merkezine göre ölçekleniyor.
-     * Serbest köşe kalmadıysa (kullanıcı dördünü de yerleştirdiyse)
-     * dörtgen olduğu gibi kabul ediliyor.
-     */
-    if (serbest.length === 0) {
-      setElleKose(noktalar)
-      return
-    }
-    /*
-     * ÖLÇÜ KİLİDİ ARTIK TASARIM KUTUSUNA DEĞİL, BİR ÖNCEKİ DÖRTGENE GÖRE.
-     *
-     * Önce ortalama kenar uzunlukları doğrudan tasarımın kutusuna
-     * (tasarimWm × cizimOlcek) eşitleniyordu. Oysa çizilen dörtgen o kutuyla
-     * aynı olmak zorunda değil: perspektif onu yamultuyor, kullanıcı kendi
-     * eliyle dikey/yatay çekmiş olabiliyor. Kare bir tasarım dikey bir
-     * dörtgene oturmuşken tutamağa dokunulduğu anda sx≈2, sy≈0,5 çıkıyor ve
-     * dörtgen tek köşenin çevresinde koca bir kareye fırlıyordu
-     * (kullanıcının gönderdiği ikinci ekran görüntüsü tam olarak buydu).
-     *
-     * Doğru kural: "köşe çekmek ölçüyü değiştirmez" — ölçü, BU HAREKETTEN
-     * ÖNCEKİ dörtgenin ölçüsüdür. Böylece kullanıcının kurduğu biçim
-     * korunuyor, sürükleme yalnızca yön veriyor ve hiçbir sıçrama olmuyor.
-     */
-    const ortalamaKenar = (k) => ({
-      en:
-        (Math.hypot(k[1].x - k[0].x, k[1].y - k[0].y) +
-          Math.hypot(k[2].x - k[3].x, k[2].y - k[3].y)) / 2,
-      boy:
-        (Math.hypot(k[3].x - k[0].x, k[3].y - k[0].y) +
-          Math.hypot(k[2].x - k[1].x, k[2].y - k[1].y)) / 2,
-    })
-    const yeni = ortalamaKenar(noktalar)
-    const once = ortalamaKenar(oncekiler)
-    if (!(yeni.en > 1) || !(yeni.boy > 1) || !(once.en > 1) || !(once.boy > 1)) return
-    /*
-     * Düzeltme çarpanı sınırlı: ölçüm bir şekilde bozulursa dörtgen yine de
-     * fırlamıyor, en fazla yarıya iner ya da iki katına çıkar.
-     */
-    const kis = (v) => Math.max(0.5, Math.min(2, v))
-    const sx = kis(once.en / yeni.en)
-    const sy = kis(once.boy / yeni.boy)
-    /* Ölçekleme merkezi: sabitlenmiş köşelerin ağırlık merkezi. */
-    const mx = kilitli.reduce((t, i) => t + noktalar[i].x, 0) / kilitli.length
-    const my = kilitli.reduce((t, i) => t + noktalar[i].y, 0) / kilitli.length
-    const sonuc = noktalar.map((k, i) =>
-      kilitli.includes(i)
-        ? { x: k.x, y: k.y }
-        : { x: mx + (k.x - mx) * sx, y: my + (k.y - my) * sy },
+    /* Aynı yandaki dikey eş: 0-3 sol kenar, 1-2 sağ kenar. */
+    const ESI = [3, 2, 1, 0]
+    const es = ESI[oynayan]
+    const dx = noktalar[oynayan].x - oncekiler[oynayan].x
+    const dy = noktalar[oynayan].y - oncekiler[oynayan].y
+    setElleKose(
+      oncekiler.map((k, i) => {
+        if (i === oynayan) return { x: k.x + dx, y: k.y + dy }
+        if (i === es) return { x: k.x + dx, y: k.y - dy }
+        return { x: k.x, y: k.y }
+      }),
     )
-    setElleKose(sonuc)
   }
   /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
   const koseleriYaz = (noktalar) => {
@@ -2532,6 +2503,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /* Elle köşe seçimi ekranın kendi sınırlarını kullanır; oranı orada kullanıcı kurar. */
+  /*
+   * KÖŞE AYARINI SIFIRLA.
+   *
+   * Kullanıcı köşeleri çeke çeke içinden çıkılmaz bir şekle sokabiliyordu ve
+   * geri dönüşü yoktu; tek çare bütün yerleşimi sıfırlamaktı. Bu düğme
+   * yalnızca köşe ayarını bırakıyor: seçilen yüzey, ölçü ve mesafe yerinde
+   * kalıyor, dörtgen o yüzeyin kendi düzgün dikdörtgenine dönüyor.
+   */
+  const koseAyariniSifirla = () => {
+    setElleKose(null)
+    setKilitliKose([])
+    setElleAci({ yaw: 0, tilt: 0 })
+  }
+
   /* Manuel kip açılırken elde bir dörtgen yoksa fotoğrafın ortasında biri kurulur. */
   const koseKipiAc = () => {
     /*
@@ -3683,9 +3668,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       </button>
                     </div>
                     {koseKipi && (
-                      <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('scene.cornersHint')}
-                      </p>
+                      <>
+                        <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                          {t('scene.cornersHint')}
+                        </p>
+                        {/* Köşeleri dağıtan kullanıcı için geri dönüş yolu. */}
+                        <button
+                          type="button"
+                          onClick={koseAyariniSifirla}
+                          className="mt-2 w-full rounded-lg border border-neutral-200 py-2 text-[13px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300"
+                        >
+                          {t('scene.cornersReset')}
+                        </button>
+                      </>
                     )}
                     {adayKipi && adaylar.length > 0 && (
                       <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
