@@ -2900,9 +2900,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     const kadrajW = kadrajGenisligi(m)
     const kadrajH = kadrajW * (kaynak.h / kaynak.w)
-    const payW = w / kadrajW
-    const payH = h / kadrajH
-    setIzlemeM(Math.max(0.2, Math.min(300, m)))
+    let payW = w / kadrajW
+    let payH = h / kadrajH
+
+    /*
+     * KUTU ÇALIŞILABİLİR BİR BOYDA BAŞLIYOR.
+     *
+     * Gerçek ölçü, girilen mesafede kutuyu fotoğrafın tamamından büyük
+     * yapabiliyor; o hâlde kutuyu ne görebiliyor ne de tutup taşıyabiliyorsun.
+     * Bu yüzden başlangıçta kadrajın %70'ine sığdırılıyor — ORAN bozulmadan,
+     * iki kenar aynı katsayıyla.
+     *
+     * Ölçü yalan olmuyor: küçültme yapıldıysa mesafe de o oranda büyütülüp
+     * yazılıyor, yani ekrandaki kutu her zaman paneldeki mesafeyle tutarlı.
+     * Asıl kalibrasyon zaten kutuyu duvara oturttuğunda yapılıyor (bkz.
+     * taslaktanOlcek): orada duvarın gerçek eni ile kapladığı pay
+     * karşılaştırılıp mesafe yeniden hesaplanıyor.
+     */
+    const SIGDIR = 0.7
+    const asim = Math.max(payW / SIGDIR, payH / SIGDIR, 1)
+    payW /= asim
+    payH /= asim
+    setIzlemeM(Math.max(0.2, Math.min(300, Math.round(m * asim * 100) / 100)))
 
     elleDuzenlemeyiBirak()
     setHedefKose(null)
@@ -2922,7 +2941,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * kullanıcının yazdığı ölçü olmaktan çıkıyordu. Artık kutu gerçek
      * ölçüsünde kalıyor ve sebebi yazılıyor: mesafe yanlış girilmiş.
      */
-    setOzelUyari(payW > 1 || payH > 1 ? t('scene.wallBiggerThanFrame') : null)
+    /*
+     * Küçültme gerektiyse mesafe kullanıcının yazdığından farklı çıkıyor;
+     * bunu sessizce yapmak yanlış olur, sebebi söyleniyor.
+     */
+    setOzelUyari(asim > 1.001 ? t('scene.wallBiggerThanFrame') : null)
   }
 
   /*
