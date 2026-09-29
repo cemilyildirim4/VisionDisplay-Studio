@@ -1512,6 +1512,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   /** Yururlukteki mesafe: elle secildiyse o, yoksa otomatik hesap. */
   const izlemeMesafesi = izlemeM != null ? izlemeM : otoIzlemeM
+
+  /*
+   * İZLEME MESAFESİ — AVM VE ŞEHİR MEYDANINDA BİLGİ, AYAR DEĞİL.
+   *
+   * Bu iki sahnede duvar dokuz dilimle esniyor; ölçeği duvarın kendisi
+   * taşıyor ve yakınlaştırma hesabı onlar için zaten sabitleniyor
+   * (bkz. sahneYakinlik: duvarKutu olan sahnede yakınlık 1'e sabitleniyor). Yani
+   * paneldeki mesafe alanı orada hiçbir şey yapmıyordu; çalışmayan bir
+   * düğme, bozuk bir düğmeden beterdir.
+   *
+   * Yerine gerçekten işe yarayan bilgi konuyor: SEÇİLEN MODELİN uygun
+   * izleme mesafesi. Bu değer çizim zincirine HİÇ girmiyor — ne yakınlık,
+   * ne duvar ölçeği, ne 3B duruş, ne kabin sayısı. Yalnızca gösteriliyor.
+   * Bu yüzden izlemeM durumuna da dokunulmuyor, ayrı bir türetilmiş
+   * değer olarak duruyor.
+   */
+  const izlemeBilgiSahnesi = !!fotoSahne?.duvarKutu
+  const onerilenIzlemeM = useMemo(
+    () => viewingDistanceFor(previewModel, cols, rows) || 0,
+    [previewModel, cols, rows],
+  )
   /*
    * FOTOĞRAFTA ÖLÇEK = MESAFE.
    *
@@ -3888,9 +3909,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   <div className="mt-2 border border-neutral-200 dark:border-[#2c333f] rounded-lg p-2.5">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-[15px] text-neutral-600 dark:text-neutral-400">
-                        {t('scene.viewDist')}
+                        {izlemeBilgiSahnesi ? t('scene.viewDistFixed') : t('scene.viewDist')}
                       </span>
-                      {izlemeM == null && !(scene === 'ozel' && ozelSahne) ? (
+                      {izlemeBilgiSahnesi ? (
+                        /* Salt bilgi: modelin kendi izleme mesafesi. */
+                        <span className="text-[15px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-200">
+                          {onerilenIzlemeM.toFixed(1).replace('.', ',')} m
+                        </span>
+                      ) : izlemeM == null && !(scene === 'ozel' && ozelSahne) ? (
                         <span className="text-[15px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-200">
                           {izlemeMesafesi.toFixed(1).replace('.', ',')} m
                         </span>
@@ -3915,7 +3941,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       )}
                     </div>
                     <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                      {scene === 'ozel' && ozelSahne ? t('scene.photoDistanceHint') : t('scene.viewDistHint')}
+                      {izlemeBilgiSahnesi
+                        ? t('scene.viewDistFixedHint')
+                        : scene === 'ozel' && ozelSahne
+                        ? t('scene.photoDistanceHint')
+                        : t('scene.viewDistHint')}
                     </p>
                     {/*
                       ÖLÇEK UYARISI.
@@ -3942,7 +3972,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       </p>
                     )}
                     {/* Fotoğrafta otomatik mesafe yok: ölçek ondan geliyor. */}
-                    <div className={`mt-2 items-center justify-between gap-3 ${scene === 'ozel' && ozelSahne ? 'hidden' : 'flex'}`}>
+                    <div className={`mt-2 items-center justify-between gap-3 ${(scene === 'ozel' && ozelSahne) || izlemeBilgiSahnesi ? 'hidden' : 'flex'}`}>
                       <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
                         {t('scene.viewDistAuto')}
                       </span>

@@ -149,7 +149,9 @@ export const SAHNELER = [
     olculer: [
       { etiket: 'Duvar', duvarOlcusu: true, x: 0.19, y: 0.28 },
       { etiket: 'Genişlik', tur: 'kadraj', x: 0.82, y: 0.55 },
-      { etiket: 'Mesafe', tur: 'mesafe', x: 0.18, y: 0.82 },
+      /* "Kamera mesafesi": fotoğrafın çekildiği uzaklık. Paneldeki
+         "İzleme Mesafesi" ile karıştırılmasın diye adı açıkça yazılıyor. */
+      { etiket: 'Kamera Mesafesi', tur: 'mesafe', x: 0.18, y: 0.82 },
       { etiket: 'Derinlik', tur: 'derinlik', x: 0.82, y: 0.92 },
     ],
   },
@@ -222,7 +224,7 @@ export const SAHNELER = [
     olculer: [
       { etiket: 'Duvar', duvarOlcusu: true, x: 0.17, y: 0.5 },
       { etiket: 'Genişlik', tur: 'kadraj', x: 0.84, y: 0.5 },
-      { etiket: 'Mesafe', tur: 'mesafe', x: 0.18, y: 0.84 },
+      { etiket: 'Kamera Mesafesi', tur: 'mesafe', x: 0.18, y: 0.84 },
       { etiket: 'Derinlik', tur: 'derinlik', x: 0.84, y: 0.93 },
     ],
   },

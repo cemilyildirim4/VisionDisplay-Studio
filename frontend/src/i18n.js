@@ -419,6 +419,16 @@ const dict = {
     en: 'Real width of this surface:',
     ar: 'العرض الحقيقي لهذا السطح:',
   },
+  'scene.viewDistFixed': {
+    tr: 'İzleme Mesafesi',
+    en: 'Viewing distance',
+    ar: 'مسافة المشاهدة',
+  },
+  'scene.viewDistFixedHint': {
+    tr: 'Seçilen modelin uygun izleme mesafesi. Yalnızca bilgidir; çizimi etkilemez.',
+    en: "The selected model's recommended viewing distance. Information only; it does not affect the drawing.",
+    ar: 'مسافة المشاهدة الموصى بها للطراز المحدد. للعلم فقط؛ لا تؤثر على الرسم.',
+  },
   'scene.cornersReset': {
     tr: 'Köşe ayarını sıfırla',
     en: 'Reset corner adjustment',
@@ -459,6 +469,16 @@ const dict = {
   'scene.cornersManual': { tr: 'Köşelerden ayarla', en: 'Adjust by corners', ar: 'الضبط من الزوايا' },
   'scene.cornersHint': { tr: 'Köşeleri tutup çekin; ekran o dört köşeye oturur. Metre ölçüsü değişmez.', en: 'Drag the corners; the screen fits those four points. Its size in metres stays the same.', ar: 'اسحب الزوايا؛ تنطبق الشاشة على تلك النقاط الأربع.' },
   'scene.cornersOff': { tr: 'Köşe ayarını bitir', en: 'Finish corner adjustment', ar: 'إنهاء ضبط الزوايا' },
+  'scene.viewDistFixed': {
+    tr: 'İzleme Mesafesi',
+    en: 'Viewing distance',
+    ar: 'مسافة المشاهدة',
+  },
+  'scene.viewDistFixedHint': {
+    tr: 'Seçilen modelin uygun izleme mesafesi. Yalnızca bilgidir; çizimi etkilemez.',
+    en: "The selected model's recommended viewing distance. Information only; it does not affect the drawing.",
+    ar: 'مسافة المشاهدة الموصى بها للطراز المحدد. للعلم فقط؛ لا تؤثر على الرسم.',
+  },
   'scene.cornersReset': { tr: 'Yerleşimi sıfırla', en: 'Reset placement', ar: 'إعادة ضبط الموضع' },
   'scene.objectsFound': { tr: 'Fotoğrafta görülenler:', en: 'Found in the photo:', ar: 'ما تم العثور عليه في الصورة:' },
   'scene.angleWeak': {
