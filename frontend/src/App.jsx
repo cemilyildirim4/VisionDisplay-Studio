@@ -497,6 +497,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [kilitliKose, setKilitliKose] = useState([])
 
   const [koseKipi, setKoseKipi] = useState(false)
+  /* Yerinde 3B katmanı gerçekten çizebildi mi (bkz. Mekan3D → onHazir). */
+  const [uc3dHazir, setUc3dHazir] = useState(false)
 
   /*
    * ELLE YAPILAN DÜZENLEMEYİ BIRAK.
@@ -2814,7 +2816,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                */
               kioskGizle={lTipiVar || !kioskVar}
               /* Yerinde 3B açıkken düz çizim gizleniyor: ekran iki kez görünmesin. */
-              ekranGizle={hasModel && scene === 'ozel' && !!ozelSahne && !!koseMutlak}
+              ekranGizle={uc3dHazir}
               /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
               olcuGoster={showMeasurements}
               /* Duvar etiketi kullanıcının kendi ölçüsünü yazıyor */
@@ -2920,6 +2922,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 tuvalW={tuvalBoyut.w}
                 tuvalH={tuvalBoyut.h}
                 tasarimWm={tasarimWm}
+                onHazir={setUc3dHazir}
               />
             </Suspense>
           )}

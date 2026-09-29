@@ -1,4 +1,4 @@
-import { Suspense, useMemo } from 'react'
+import { Suspense, useEffect, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Environment } from '@react-three/drei'
 import { CabinetGrid } from './Scene3D.jsx'
@@ -106,6 +106,8 @@ export default function Mekan3D({
   tuvalH,
   /** Tasarımın gerçek genişliği (metre) — piksel/metre oranı için. */
   tasarimWm,
+  /** 3B gerçekten çizildi mi — düz çizim ancak o zaman gizleniyor. */
+  onHazir,
 }) {
   const durus = useMemo(() => dortgenDurusu(koseler), [koseler])
   const acilar = useMemo(() => acilariCikar(koseler), [koseler])
@@ -134,6 +136,20 @@ export default function Mekan3D({
       y: -(durus.y - tuvalH / 2) / pxPerM,
     }
   }, [durus, acilar.yaw, tuvalW, tuvalH, tasarimWm])
+
+  /*
+   * DÜZ ÇİZİM ANCAK 3B ÇİZİLDİYSE GİZLENİYOR.
+   *
+   * Düz çizimi koşulsuz gizlemek tehlikeli: bu katman geç yükleniyor (kod
+   * bölünmüş), WebGL kapalı olabiliyor ya da yerleşim hesabı sonuç
+   * vermeyebiliyor. Öyle bir durumda ekranda HİÇBİR ŞEY kalmıyor —
+   * kullanıcının "tasarım görseli görünmüyor" dediği durum tam buydu.
+   * Haber vermeden gizlenmiyor.
+   */
+  useEffect(() => {
+    onHazir?.(!!yerlesim)
+    return () => onHazir?.(false)
+  }, [onHazir, yerlesim])
 
   if (!yerlesim) return null
 
