@@ -80,6 +80,20 @@ const EN_UZAK = 60
 /** Tuval, duvar kutusunun her kenarında bu oranda taşma payı alıyor (bkz. yerleşim). */
 const PAY = 0.5
 
+/**
+ * ÇİZİLEBİLECEK EN ÇOK KABİN.
+ *
+ * Her kabin ayrı bir gövde; binlercesi tarayıcıyı kilitliyor ve çizim hiç
+ * tamamlanmıyor. Sorun şuydu: düz çizim "3B hazır" denildiği anda gizleniyor,
+ * 3B de çizemeyince ekranda HİÇBİR ŞEY kalmıyordu. Büyük bir duvar ölçüsü
+ * girip "duvara tam sığdır" denince tam bu oluyordu.
+ *
+ * Bu sayının üstünde 3B'den vazgeçiliyor: yerleşim boş dönüyor, onHazir
+ * yanlış diyor ve düz çizim yerinde kalıyor. Az görüntü, hiç görüntüden
+ * iyidir.
+ */
+const EN_COK_KABIN = 1500
+
 const kis = (d, en, cok) => Math.max(en, Math.min(cok, d))
 
 /**
@@ -278,8 +292,16 @@ export default function Mekan3D({
     [koseler, tasarimWm, tasarimHm],
   )
 
+  /* Çoklu ekranda toplam kabin sayısı ekranların toplamı. */
+  const kabinSayisi = useMemo(() => {
+    if (Array.isArray(screens) && screens.length)
+      return screens.reduce((t, e) => t + (e.cols || 0) * (e.rows || 0), 0)
+    return (cols || 0) * (rows || 0)
+  }, [screens, cols, rows])
+
   const yerlesim = useMemo(() => {
     if (!durus || !(tuvalW > 0) || !(tuvalH > 0) || !(tasarimWm > 0)) return null
+    if (kabinSayisi > EN_COK_KABIN) return null
 
     /* Ölçek duruşla birlikte çözülüyor (bkz. perspektifDurusu → pxPerM). */
     const pxPerM = acilar.pxPerM
@@ -323,7 +345,7 @@ export default function Mekan3D({
       x: (durus.x - tuvalW / 2) / pxPerM,
       y: -(durus.y - tuvalH / 2) / pxPerM,
     }
-  }, [durus, acilar.pxPerM, acilar.uzaklikM, tuvalW, tuvalH, tasarimWm])
+  }, [durus, acilar.pxPerM, acilar.uzaklikM, tuvalW, tuvalH, tasarimWm, kabinSayisi])
 
   /*
    * DÜZ ÇİZİM ANCAK 3B ÇİZİLDİYSE GİZLENİYOR.

@@ -3223,6 +3223,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ilgili. Duvar tanıtıldıysa karşılaştırma onunla yapılıyor ve cevap somut
    * veriliyor: duvara en fazla kaç kabinlik, kaç metrelik bir ekran girer.
    */
+  /*
+   * SANTİM METRE SANILDI MI?
+   *
+   * Duvar ölçüsü metre isteniyor ama insan duvarı santimle ölçüyor: 35,5 × 23
+   * yazınca program 35,5 METRELİK bir duvar anlıyor ve tasarım o duvarın
+   * yanında birkaç piksel kalıyor — kullanıcının gördüğü şey tasarımın yok
+   * olması.
+   *
+   * Sessizce bölmek yanlış olur: 35 metrelik video duvarları gerçekten var.
+   * Bu yüzden düzeltmiyoruz, soruyoruz — ve metre karşılığını da yazıyoruz ki
+   * kullanıcı ne yazacağını bilsin.
+   */
+  const birimSuphesi = useMemo(() => {
+    if (!duvarOlcu || !(tasarimWm > 0)) return null
+    const oran = tasarimWm / duvarOlcu.wm
+    if (oran >= 0.02) return null
+    return { wm: duvarOlcu.wm, hm: duvarOlcu.hm, yuzde: oran * 100 }
+  }, [duvarOlcu, tasarimWm])
+
   const duvaraSigma = useMemo(() => {
     if (!duvarOlcu || !(tasarimWm > 0) || !(tasarimHm > 0)) return null
     const sigiyor = tasarimWm <= duvarOlcu.wm + 1e-6 && tasarimHm <= duvarOlcu.hm + 1e-6
@@ -4739,6 +4758,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       duvar yokken anlamlı (o zaman elimizdeki tek referans
                       fotoğrafın kendisi).
                     */}
+                    {birimSuphesi && (
+                      <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                        {t('scene.unitDoubt')}{' '}
+                        {t('scene.unitDoubtFix')}{' '}
+                        {birimSuphesi.wm.toFixed(2).replace('.', ',')} ×{' '}
+                        {birimSuphesi.hm.toFixed(2).replace('.', ',')} cm ={' '}
+                        {(birimSuphesi.wm / 100).toFixed(3).replace('.', ',')} ×{' '}
+                        {(birimSuphesi.hm / 100).toFixed(3).replace('.', ',')} m.
+                      </p>
+                    )}
                     {duvaraSigma && (
                       <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
                         {t('scene.tooBigForWall')}{' '}

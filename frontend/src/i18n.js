@@ -460,6 +460,16 @@ const dict = {
     ar: 'يتّسع هذا الجدار لما لا يزيد عن',
   },
   'scene.cabinets': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
+  'scene.unitDoubt': {
+    tr: 'Tasarım bu duvarın yanında görünmeyecek kadar küçük kalıyor. Duvar ölçüsü METRE cinsinden isteniyor — santim yazmış olabilir misiniz?',
+    en: 'The design is too small to see next to this wall. The wall size is in METRES — did you enter centimetres?',
+    ar: 'التصميم أصغر من أن يُرى بجانب هذا الجدار. مقاس الجدار بالأمتار — هل أدخلت سنتيمترات؟',
+  },
+  'scene.unitDoubtFix': {
+    tr: 'Öyleyse şöyle yazın:',
+    en: 'If so, enter it like this:',
+    ar: 'إن كان كذلك فاكتبه هكذا:',
+  },
   'scene.distFromBox': {
     tr: 'Kutuya göre çekim mesafesi',
     en: 'Shooting distance from the box',
