@@ -38,6 +38,7 @@ import {
 } from './ozelMekan.js'
 import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
+import TaslakKutu from './TaslakKutu.jsx'
 import AdaySecici from './AdaySecici.jsx'
 import DavetKapisi from './DavetKapisi.jsx'
 import { kenarlaraOturt } from './ekranYuzeyi.js'
@@ -536,6 +537,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [taslakSorusu, setTaslakSorusu] = useState(false)
   const [taslakMesafe, setTaslakMesafe] = useState('')
+  /*
+   * Taslak kutu TUVAL pikseli cinsinden: kullanıcı onu fareyle taşıyor ve
+   * köşelerinden çekiyor, yani doğrudan ekran koordinatında çalışıyor.
+   * Tasarım henüz burada değil — kutu yalnızca DUVARI tanıtıyor. Kullanıcı
+   * kutuya tıklayınca dörtgen hedef yüzeye çevriliyor ve tasarım kendi
+   * gerçek ölçüsüyle içine yerleşiyor.
+   */
+  const [taslakKutu, setTaslakKutu] = useState(null)
   /*
    * TANITILAN DUVAR — kutu uygulandıktan sonra da saklanıyor.
    *
@@ -2865,6 +2874,69 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kutu yükseklikte fotoğrafa sığmıyorsa (çok basık/çok uzun duvar) pay
    * küçültülüyor; oran hep korunuyor.
    */
+  /*
+   * KUTU FOTOĞRAFA GÖRE ORANLI SAKLANIYOR (tuval pikselinde değil).
+   *
+   * Piksel olarak saklandığında, mesafe değişip fotoğrafın yakınlığı
+   * değiştiğinde kutu yerinde kalıyor ve fotoğraf altından kayıyordu; yani
+   * kullanıcının duvara oturttuğu kutu duvarı göstermez oluyordu. Oranlı
+   * saklanınca kutu fotoğrafa yapışık kalıyor.
+   */
+  const oranTuvale = (k) => {
+    const yer = fotoYer
+    /* Fotoğraf yerleşimi yoksa dönüşüm yapılamaz; nokta olduğu gibi döner. */
+    if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return k
+    const z = sahneYakinlik || 1
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    return {
+      x: mX + (yer.sol + k.x * yer.genislik - mX) * z,
+      y: mY + (yer.ust + k.y * yer.yukseklik - mY) * z,
+    }
+  }
+  const tuvalOrana = (k) => {
+    const yer = fotoYer
+    if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return k
+    const z = sahneYakinlik || 1
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    return {
+      x: (mX + (k.x - mX) / z - yer.sol) / yer.genislik,
+      y: (mY + (k.y - mY) / z - yer.ust) / yer.yukseklik,
+    }
+  }
+
+  /*
+   * KUTU OYNATILDIKÇA ÖLÇEK YENİDEN HESAPLANIYOR.
+   *
+   * Kullanıcı kutuyu gerçek duvarın üstüne oturtuyor. O anda iki şey
+   * biliniyor: duvarın GERÇEK eni (kullanıcı yazdı) ve fotoğrafta kapladığı
+   * PAY (kutunun genişliği). İkisinden kadraj, kadrajdan da mesafe çıkıyor:
+   *
+   *   kadraj = duvar eni ÷ kutunun genişlik payı
+   *   mesafe = kadraj ÷ 1,11
+   *
+   * Böylece kullanıcının girdiği ölçü gerçekten geçerli oluyor: kutuyu
+   * duvara oturttuğu anda sahnenin ölçeği ona göre kalibre ediliyor.
+   */
+  const taslaktanOlcek = (kutu) => {
+    const w = Number(String(taslakWm).replace(',', '.'))
+    if (!(w > 0.05) || !Array.isArray(kutu) || kutu.length !== 4) return
+    const xs = kutu.map((k) => k.x)
+    const payW = Math.max(...xs) - Math.min(...xs)
+    if (!(payW > 0.01)) return
+    const mesafe = w / payW / KADRAJ_KATSAYISI
+    setIzlemeM(Math.max(0.2, Math.min(300, Math.round(mesafe * 100) / 100)))
+  }
+
+  const taslakKutusuDegisti = (tuvalKoseler) => {
+    const oranli = tuvalKoseler.map(tuvalOrana)
+    setTaslakKutu(oranli)
+    /* Tasarım kutunun içinde: kutu nereye giderse o da oraya. */
+    setHedefKose(oranli)
+    taslaktanOlcek(oranli)
+  }
+
   const taslakKutuyuKur = () => {
     const w = Number(String(taslakWm).replace(',', '.'))
     const h = Number(String(taslakHm).replace(',', '.'))
@@ -2910,27 +2982,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * geliyor: tasarım kutunun ortasında, kendi gerçek ölçüsüyle. Kutuyu
      * duvara taşıdıkça tasarım da onunla gidiyor (bkz. taslakKutusuDegisti).
      */
-    /*
-     * KUTU AYRI BİR NESNE DEĞİL: TASARIMIN KENDİ DÖRTGENİ.
-     *
-     * Kutu bir süre tuval koordinatında ayrı bir katman olarak çiziliyordu;
-     * tasarım ise duvar kutusu koordinatında. İki farklı sistem yüzünden
-     * ikisi ayrı yerlerde duruyor, kutuyu taşımak tasarımı taşımıyor ve
-     * tıklamak işe yaramıyordu.
-     *
-     * Artık tek sistem var: pop-up'ta verilen ölçü doğrudan tasarımın hedef
-     * yüzeyi oluyor. Taşımak, köşelerden ayarlamak ve ölçü — hepsi zaten
-     * çalışan tasarım denetimleriyle yapılıyor. "Tıkla da yerleşsin" adımına
-     * da gerek kalmıyor.
-     */
-    elleDuzenlemeyiBirak()
-    setAdayKipi(false)
-    setHedefKose([
+    const kutu = [
       { x: 0.5 - payW / 2, y: 0.5 - payH / 2 },
       { x: 0.5 + payW / 2, y: 0.5 - payH / 2 },
       { x: 0.5 + payW / 2, y: 0.5 + payH / 2 },
       { x: 0.5 - payW / 2, y: 0.5 + payH / 2 },
-    ])
+    ]
+    elleDuzenlemeyiBirak()
+    setAdayKipi(false)
+    setTaslakKutu(kutu)
+    setHedefKose(kutu)
     setHedefTur('taslak')
     setDuvarOlcu({ wm: w, hm: h })
     setTaslakKuruldu(true)
@@ -2960,8 +3021,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * göstermek demek.
    */
   useEffect(() => {
-    if (scene !== 'ozel' || !ozelSahne) setDuvarOlcu(null)
+    if (scene !== 'ozel' || !ozelSahne) {
+      setTaslakKutu(null)
+      setDuvarOlcu(null)
+    }
   }, [scene, ozelSahne])
+
+  /*
+   * KUTUYA TIKLAMAK = 'DUVARI BULDUM, BİTİR'.
+   *
+   * Tasarım zaten kutunun içinde; tıklamak yalnızca kutuyu ekrandan
+   * kaldırıyor. Duvarın ölçüsü saklı kaldığı için sığma denetimi çalışmaya
+   * devam ediyor.
+   */
+  const taslakKutusunuUygula = () => {
+    if (!taslakKutu) return
+    const dw = Number(String(taslakWm).replace(',', '.'))
+    const dh = Number(String(taslakHm).replace(',', '.'))
+    setDuvarOlcu(dw > 0 && dh > 0 ? { wm: dw, hm: dh } : null)
+    /* Kutu zaten fotoğrafa göre oranlı: hedef yüzey doğrudan o. */
+    setHedefKose(taslakKutu)
+    setHedefTur('taslak')
+    setTaslakKutu(null)
+  }
 
   const taslakKutuyuKurRef = useRef(null)
   taslakKutuyuKurRef.current = taslakKutuyuKur
@@ -3405,6 +3487,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 </button>
               </div>
             </div>
+          )}
+
+          {/*
+            TASLAK KUTU — duvarı tanıtan dörtgen.
+
+            Fotoğrafın üstünde duruyor; kullanıcı taşıyıp köşelerinden
+            çekerek gerçek duvara oturtuyor. Üstüne tıklayınca tasarım
+            kendi ölçüsüyle içine yerleşiyor ve kutu kayboluyor.
+          */}
+          {taslakKutu && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+            <TaslakKutu
+              koseler={taslakKutu.map(oranTuvale)}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+              onKose={taslakKutusuDegisti}
+              onSec={taslakKutusunuUygula}
+              etiket={t('scene.draftTapHint')}
+            />
           )}
 
           {/*
