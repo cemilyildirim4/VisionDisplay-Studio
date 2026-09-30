@@ -14,7 +14,7 @@
  * çünkü burada ayarlanan şey ekranın boyu değil, duvarın fotoğraftaki yeri.
  */
 
-export default function TaslakKutu({ koseler, tuvalW, tuvalH, onSec, onKose, etiket }) {
+export default function TaslakKutu({ koseler, tuvalW, tuvalH, onSec, onKose, etiket, soluk = false }) {
   if (!Array.isArray(koseler) || koseler.length !== 4) return null
 
   const nokta = koseler.map((k) => `${k.x},${k.y}`).join(' ')
@@ -85,9 +85,15 @@ export default function TaslakKutu({ koseler, tuvalW, tuvalH, onSec, onKose, eti
       <svg width={tuvalW} height={tuvalH} className="absolute inset-0">
         <polygon
           points={nokta}
-          fill="rgba(41,98,173,0.14)"
+          /*
+            ONAYDAN SONRA SOLUK.
+            Kutu duvarın nerede olduğunu göstermeye devam ediyor ama
+            tasarımın önüne geçmiyor: dolgu kalkıyor, çizgi inceliyor.
+          */
+          fill={soluk ? 'transparent' : 'rgba(41,98,173,0.14)'}
           stroke="#2962ad"
-          strokeWidth="2"
+          strokeWidth={soluk ? 1.5 : 2}
+          strokeOpacity={soluk ? 0.55 : 1}
           strokeDasharray="7 5"
           onPointerDown={govdeSurukle}
           style={{ cursor: 'move', pointerEvents: 'auto' }}
@@ -110,10 +116,11 @@ export default function TaslakKutu({ koseler, tuvalW, tuvalH, onSec, onKose, eti
             key={i}
             cx={k.x}
             cy={k.y}
-            r="9"
+            r={soluk ? 7 : 9}
             fill="#ffffff"
             stroke="#2962ad"
             strokeWidth="3"
+            opacity={soluk ? 0.6 : 1}
             onPointerDown={koseSurukle(i)}
             style={{ cursor: 'grab', pointerEvents: 'auto' }}
           />

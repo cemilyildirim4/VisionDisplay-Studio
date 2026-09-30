@@ -546,6 +546,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [taslakKutu, setTaslakKutu] = useState(null)
   /*
+   * Kutu onaylandı mı. Onaydan sonra kutu EKRANDAN KALKMIYOR, yalnızca
+   * soluyor: tasarımı taşırken duvarın nerede olduğunu görmek gerekiyor.
+   * Önce onayla birlikte siliniyordu ve kullanıcı tasarımı kutusuz bir
+   * fotoğrafta sürüklüyordu.
+   */
+  const [kutuOnaylandi, setKutuOnaylandi] = useState(false)
+  /*
    * TANITILAN DUVAR — kutu uygulandıktan sonra da saklanıyor.
    *
    * Amaç en baştan şuydu: nesne taramasına gerek kalmadan, yerleştirilecek
@@ -3098,6 +3105,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     elleDuzenlemeyiBirak()
     setAdayKipi(false)
     setTaslakKutu(kutu)
+    setKutuOnaylandi(false)
     setHedefKose(kutu)
     setHedefTur('taslak')
     setDuvarOlcu({ wm: w, hm: h })
@@ -3153,6 +3161,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   useEffect(() => {
     if (scene !== 'ozel' || !ozelSahne) {
       setTaslakKutu(null)
+      setKutuOnaylandi(false)
       setDuvarOlcu(null)
     }
   }, [scene, ozelSahne])
@@ -3172,7 +3181,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Kutu zaten fotoğrafa göre oranlı: hedef yüzey doğrudan o. */
     setHedefKose(taslakKutu)
     setHedefTur('taslak')
-    setTaslakKutu(null)
+    setKutuOnaylandi(true)
   }
 
   const taslakKutuyuKurRef = useRef(null)
@@ -3633,7 +3642,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               tuvalH={tuvalBoyut.h}
               onKose={taslakKutusuDegisti}
               onSec={taslakKutusunuUygula}
-              etiket={t('scene.draftTapHint')}
+              soluk={kutuOnaylandi}
+              etiket={kutuOnaylandi ? null : t('scene.draftTapHint')}
             />
           )}
 
