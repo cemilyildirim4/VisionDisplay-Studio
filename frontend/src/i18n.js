@@ -472,6 +472,11 @@ const dict = {
   'scene.wallWLabel': { tr: 'Duvar genişliği', en: 'Wall width', ar: 'عرض الجدار' },
   'scene.wallHLabel': { tr: 'Duvar yüksekliği', en: 'Wall height', ar: 'ارتفاع الجدار' },
   'scene.wallH': { tr: 'boy', en: 'height', ar: 'الارتفاع' },
+  'scene.fitWall': {
+    tr: 'Tasarımı duvara tam sığdır',
+    en: 'Fit the design to the wall',
+    ar: 'ملء الجدار بالتصميم',
+  },
   'scene.draftMake': { tr: 'Taslak kutuyu oluştur', en: 'Create draft box', ar: 'إنشاء مربع مبدئي' },
   'scene.draftAgain': { tr: 'Taslak kutuyu yenile', en: 'Rebuild draft box', ar: 'إعادة إنشاء المربع' },
   'scene.draftHint': {
@@ -572,6 +577,11 @@ const dict = {
   'scene.wallWLabel': { tr: 'Duvar genişliği', en: 'Wall width', ar: 'عرض الجدار' },
   'scene.wallHLabel': { tr: 'Duvar yüksekliği', en: 'Wall height', ar: 'ارتفاع الجدار' },
   'scene.wallH': { tr: 'boy', en: 'height', ar: 'الارتفاع' },
+  'scene.fitWall': {
+    tr: 'Tasarımı duvara tam sığdır',
+    en: 'Fit the design to the wall',
+    ar: 'ملء الجدار بالتصميم',
+  },
   'scene.draftMake': { tr: 'Taslak kutuyu oluştur', en: 'Create draft box', ar: 'إنشاء مربع مبدئي' },
   'scene.draftAgain': { tr: 'Taslak kutuyu yenile', en: 'Rebuild draft box', ar: 'إعادة إنشاء المربع' },
   'scene.draftHint': {

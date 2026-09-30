@@ -2994,6 +2994,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     taslaktanOlcek(oranli)
   }
 
+  /*
+   * TASARIMI DUVARA TAM SIĞDIR.
+   *
+   * Duvarın gerçek ölçüsü biliniyor (pop-up'ta girildi). Ekran kabinlerden
+   * oluştuğu için duvara TAM oturması ancak tam sayıda kabinle mümkün:
+   * duvara sığan en çok sütun ve satır alınıyor, artan birkaç santim boş
+   * kalıyor. Kabin ölçüsü ekranın yönüne göre (yatay/dikey) değiştiği için
+   * hesap cwM/chM üzerinden yapılıyor.
+   */
+  const tasarimiDuvaraSigdir = () => {
+    if (!duvarOlcu || !(cwM > 0) || !(chM > 0)) return
+    const c = Math.max(1, Math.floor(duvarOlcu.wm / cwM + EPS))
+    const r = Math.max(1, Math.floor(duvarOlcu.hm / chM + EPS))
+    setCols(c)
+    setRows(r)
+    /* Duvar alanı da en az bu kadar olmalı, yoksa üst sınır kabinleri kırpar. */
+    setWidth((e) => Math.max(e, +(c * cwM).toFixed(2)))
+    setHeight((e) => Math.max(e, +(r * chM).toFixed(2)))
+    setOzelUyari(null)
+  }
+
   const taslakKutuyuKur = () => {
     const w = Number(String(taslakWm).replace(',', '.'))
     const h = Number(String(taslakHm).replace(',', '.'))
@@ -4432,6 +4453,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         >
                           {taslakKuruldu ? t('scene.draftAgain') : t('scene.draftMake')}
                         </button>
+                        {/*
+                          DUVARA TAM SIĞDIR — kutunun ölçüsünden kabin sayısı.
+                          Yalnızca duvar tanıtıldıysa anlamlı.
+                        */}
+                        {duvarOlcu && (
+                          <button
+                            type="button"
+                            onClick={tasarimiDuvaraSigdir}
+                            className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                          >
+                            {t('scene.fitWall')}
+                          </button>
+                        )}
                         <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                           {t('scene.draftHint')}
                         </p>
