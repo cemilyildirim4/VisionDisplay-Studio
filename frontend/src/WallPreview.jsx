@@ -859,13 +859,22 @@ export default function WallPreview({
    * Ölçüm duvar kutusundan alınıyor (üstünde dönüşüm yok); ekran kutusunun
    * ondan içeri payı tek ekran dalında bir ref'e yazılıyor, burada okunuyor.
    */
-  const duvarKutuRef = useRef(null)
-  const olcuPayiRef = useRef({ x: 0, y: 0 })
+  /*
+   * EKRAN NEREYE DÜŞTÜ?
+   *
+   * Başnoktayı hesapla bulmaya çalışmak (duvar kutusu + pay) tutmadı: tasarım
+   * ısrarla fotoğrafın dışında kalıyordu ve varsayımın nerede bozulduğunu
+   * bulamadım. Artık varsayım yok — ekranın DÖNÜŞÜM UYGULANMIŞ hâlinin
+   * ekrandaki gerçek yeri ölçülüp yukarı bildiriliyor. Çağıran taraf bunu
+   * olması gereken yerle karşılaştırıp aradaki farkı kapatıyor; hesap
+   * yanlışsa bile sonuç bir çizimde yerine oturuyor.
+   */
+  const ekranKutuRef = useRef(null)
   useLayoutEffect(() => {
-    const el = duvarKutuRef.current
+    const el = ekranKutuRef.current
     if (!el || !onEkranKutusu) return
     const a = el.getBoundingClientRect()
-    onEkranKutusu({ sol: a.left + olcuPayiRef.current.x, ust: a.top + olcuPayiRef.current.y })
+    onEkranKutusu({ sol: a.left, ust: a.top })
   })
 
   const isMulti = screenMode === 'multi' && screens.length > 0
@@ -1354,7 +1363,7 @@ export default function WallPreview({
   const marginXpx = Math.max(0, (wallW - screenW) / 2)
   const marginYpx = Math.max(0, (wallH - screenH) / 2)
   /* Ölçüm kancası bu payı okuyor (bkz. yukarıdaki useLayoutEffect). */
-  olcuPayiRef.current = { x: marginXpx, y: marginYpx }
+
 
   /*
    * EKRAN KUTUSUNUN GERÇEK YERİ.
@@ -1401,13 +1410,14 @@ export default function WallPreview({
             ...(tutamak ? tutamak.style : null),
           }}
         >
-          <div ref={duvarKutuRef} style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative flex items-center justify-center`}>
+          <div style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative flex items-center justify-center`}>
             {/*
               Dört köşe hedefi varken dönüşüm EKRAN KUTUSUNA uygulanıyor:
               duvar kutusu tasarımdan büyük olabiliyor, homografi ise tam
               tasarımın dört köşesini hedefe eşlemek zorunda.
             */}
             <div
+              ref={ekranKutuRef}
               style={{
                 width: screenW,
                 height: screenH,

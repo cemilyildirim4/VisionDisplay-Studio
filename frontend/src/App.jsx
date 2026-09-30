@@ -572,12 +572,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Döngü riski yok: aynı değer ikinci kez geldiğinde yarım pikselin
    * altındaki fark yok sayılıp durum güncellenmiyor.
    */
-  const [ekranKutuYeri, setEkranKutuYeri] = useState(null)
+  /*
+   * ÇİZİM DÜZELTMESİ — varsayım değil, ölçüm.
+   *
+   * Tasarımın hangi başnoktaya göre çizildiğini hesapla bulmaya çalıştım ve
+   * tutturamadım; tasarım fotoğrafın dışında kalmaya devam etti. Bu yüzden
+   * yöntem değişti: ekranın GERÇEKTE düştüğü yer ölçülüyor, olması gereken
+   * yerle farkı alınıyor ve bu fark bir sonraki çizimde kapatılıyor.
+   *
+   * Döngü olmuyor çünkü fark kapandıkça sıfıra gidiyor; yarım pikselin
+   * altındaki fark yok sayılıyor.
+   */
+  const [cizimDuzeltme, setCizimDuzeltme] = useState({ x: 0, y: 0 })
+  /* koseTuval, olması gereken sol üst köşeyi buraya yazıyor (tuval koordinatı). */
+  const beklenenKoseRef = useRef(null)
   const ekranKutuYeriniYaz = (y) => {
     if (!y) return
-    setEkranKutuYeri((e) =>
-      e && Math.abs(e.sol - y.sol) < 0.5 && Math.abs(e.ust - y.ust) < 0.5 ? e : y,
-    )
+    const beklenen = beklenenKoseRef.current
+    const ana = tuvalRef.current?.getBoundingClientRect()
+    if (!beklenen || !ana) return
+    const gercekX = y.sol - ana.left
+    const gercekY = y.ust - ana.top
+    const dx = beklenen.x - gercekX
+    const dy = beklenen.y - gercekY
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return
+    setCizimDuzeltme((e) => ({ x: e.x + dx, y: e.y + dy }))
   }
 
   /*
@@ -2211,9 +2230,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * kullanıcının gördüğü mekân fotoğrafın kendisi — dışarısı mekân değil.
      */
     const son = fotografaCek(kadrajlanmis, fotoYer)
+    /*
+     * Olması gereken sol üst köşe (tuval koordinatı) saklanıyor; ölçüm
+     * geldiğinde gerçek yerle karşılaştırılıp fark kapatılıyor.
+     */
+    beklenenKoseRef.current = {
+      x: Math.min(...son.map((k) => k.x)),
+      y: Math.min(...son.map((k) => k.y)),
+    }
     return son.map((k) => ({
-      x: k.x - solUst.x,
-      y: k.y - solUst.y,
+      x: k.x - solUst.x + cizimDuzeltme.x,
+      y: k.y - solUst.y + cizimDuzeltme.y,
     }))
   })()
 
@@ -2313,9 +2340,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * henüz gelmediyse eski varsayıma düşülüyor.
    */
   function ekranKutuBasi(dw, dh) {
-    const olculen = ekranKutuYeri
-    const ana = tuvalRef.current?.getBoundingClientRect()
-    if (olculen && ana) return { x: olculen.sol - ana.left, y: olculen.ust - ana.top }
     return { x: tuvalBoyut.w / 2 - dw / 2, y: tuvalBoyut.h / 2 - dh / 2 }
   }
 
@@ -2402,9 +2426,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * tasarımı hiç kıpırdatamıyordu. Ölçüm gelmediyse serbest bırakmak,
      * yanlış yere hapsetmekten iyidir.
      */
-    if (!ana || !ekranKutuYeri) return koseler
-    const kx = ekranKutuYeri.sol - ana.left
-    const ky = ekranKutuYeri.ust - ana.top
+    if (!ana) return koseler
+    const kx = 0
+    const ky = 0
     const xs = koseler.map((k) => k.x + kx)
     const ys = koseler.map((k) => k.y + ky)
     const x0 = Math.min(...xs)
