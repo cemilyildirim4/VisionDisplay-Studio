@@ -3110,7 +3110,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * kullanıcının yazdığı ölçü olmaktan çıkıyordu. Artık kutu gerçek
      * ölçüsünde kalıyor ve sebebi yazılıyor: mesafe yanlış girilmiş.
      */
-    setOzelUyari(payW > 1 || payH > 1 ? t('scene.wallBiggerThanFrame') : null)
+    /*
+     * ÇELİŞKİYİ SAYIYLA SÖYLE.
+     *
+     * Duvar, verilen mesafede görünen kadrajdan genişse iki sayı birbiriyle
+     * çelişiyor demektir: o duvar o mesafeden tek kareye sığmaz. Bunu
+     * "sığmıyor" diye geçmek yetmiyordu; kullanıcı hangi sayıyı düzelteceğini
+     * bilmiyordu. Artık gereken en az mesafe yazılıyor.
+     *
+     * Bu uyarı, birim karışıklığını da yakalıyor: bir dizüstü ekranı için
+     * 1920 (piksel) yazılırsa duvar 1,92 m sayılıyor ve uyarı hemen çıkıyor.
+     */
+    if (payW > 1 || payH > 1) {
+      const enAz = Math.ceil((w / KADRAJ_KATSAYISI) * 10) / 10
+      setOzelUyari(
+        t('scene.wallBiggerThanFrame') +
+          ' ' +
+          t('scene.needDistance') +
+          ' ' +
+          enAz.toFixed(1).replace('.', ',') +
+          ' m',
+      )
+    } else {
+      setOzelUyari(null)
+    }
   }
 
   /*
