@@ -847,6 +847,27 @@ export default function WallPreview({
   // İzleme mesafesi: kısa etiket (1 ondalık) — diyagonal çizgide taşmasın
   const fmtDist = (m) => `${Number(m).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} m`
 
+  /*
+   * ÖLÇÜM KANCASI ERKEN DÖNÜŞÜN ÜSTÜNDE OLMAK ZORUNDA.
+   *
+   * Bu kanca bir ara çoklu ekran dalının ALTINDA duruyordu. Çoklu ekranda
+   * bileşen daha yukarıda return ediyor, dolayısıyla kanca hiç çalışmıyor ve
+   * React iki çizim arasında farklı sayıda kanca görüyordu — hata #300
+   * ("beklenenden az kanca"). L tipi Çoklu Ekran penceresinden seçildiği
+   * için çökme tam orada oluyordu.
+   *
+   * Ölçüm duvar kutusundan alınıyor (üstünde dönüşüm yok); ekran kutusunun
+   * ondan içeri payı tek ekran dalında bir ref'e yazılıyor, burada okunuyor.
+   */
+  const duvarKutuRef = useRef(null)
+  const olcuPayiRef = useRef({ x: 0, y: 0 })
+  useLayoutEffect(() => {
+    const el = duvarKutuRef.current
+    if (!el || !onEkranKutusu) return
+    const a = el.getBoundingClientRect()
+    onEkranKutusu({ sol: a.left + olcuPayiRef.current.x, ust: a.top + olcuPayiRef.current.y })
+  })
+
   const isMulti = screenMode === 'multi' && screens.length > 0
 
   // ---- ÇOKLU EKRAN ----
@@ -1332,6 +1353,8 @@ export default function WallPreview({
    */
   const marginXpx = Math.max(0, (wallW - screenW) / 2)
   const marginYpx = Math.max(0, (wallH - screenH) / 2)
+  /* Ölçüm kancası bu payı okuyor (bkz. yukarıdaki useLayoutEffect). */
+  olcuPayiRef.current = { x: marginXpx, y: marginYpx }
 
   /*
    * EKRAN KUTUSUNUN GERÇEK YERİ.
@@ -1340,29 +1363,6 @@ export default function WallPreview({
    * koseDonusumu transformOrigin '0 0' kullandığı için kose (0,0) tam olarak
    * buraya denk geliyor.
    */
-  /*
-   * ÖLÇÜM DÖNÜŞÜM UYGULANMAMIŞ KUTUDAN.
-   *
-   * Önce ekran kutusunun kendisi ölçülüyordu; oysa o kutuya perspektif
-   * dönüşümü (matrix3d) binmiş durumda ve getBoundingClientRect DÖNÜŞMÜŞ
-   * hâli veriyor. Yani ölçtüğüm başnokta, ölçmek istediğim şeyin kendisine
-   * bağlıydı — sınır bu yüzden hep kayıyordu.
-   *
-   * Şimdi DUVAR kutusu ölçülüyor (üstünde dönüşüm yok) ve ekran kutusunun
-   * ondan içeri payı ekleniyor. Ekran kutusu duvarın ortasında durduğu için
-   * bu pay tam olarak marginXpx / marginYpx.
-   *
-   * Ekran koordinatı veriliyor (viewport); çağıran taraf kendi başnoktasına
-   * göre çeviriyor.
-   */
-  const duvarKutuRef = useRef(null)
-  useLayoutEffect(() => {
-    const el = duvarKutuRef.current
-    if (!el || !onEkranKutusu) return
-    const a = el.getBoundingClientRect()
-    onEkranKutusu({ sol: a.left + marginXpx, ust: a.top + marginYpx })
-  })
-
   /*
    * ÖLÇÜNÜN DAYANDIĞI KUTU.
    *
