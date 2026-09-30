@@ -4577,68 +4577,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       duruyor ki kullanıcı sonradan fikrini değiştirebilsin.
                       Etkin seçenek işaretli.
                     */}
-                    {secilenYuzeyOlcu && (
-                      <div className="mt-2 rounded-lg border border-neutral-200 px-3 py-2.5 dark:border-[#2c333f]">
-                        <div className="text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
-                          {t('scene.fitAskDetail')}{' '}
-                          <b>
-                            {secilenYuzeyOlcu.wm.toFixed(2).replace('.', ',')} ×{' '}
-                            {secilenYuzeyOlcu.hm.toFixed(2).replace('.', ',')} m
-                          </b>
-                        </div>
-                        {/*
-                          GERÇEK ÖLÇÜYÜ BİLİYORSAN ÖLÇEĞİ O KURSUN.
-
-                          Üstteki değer bir TAHMİN: mesafeden hesaplanıyor.
-                          Kullanıcı o yüzeyin gerçek genişliğini biliyorsa
-                          (bir dizüstü ekranı 0,34 m, bir kapı 0,90 m) buraya
-                          yazıyor ve mesafe geriye doğru hesaplanıyor. Bütün
-                          sahnenin ölçeği tek hamlede doğruya oturuyor.
-                        */}
-                        <label className="mt-2 flex items-center gap-2 text-[12.5px] text-neutral-500 dark:text-neutral-400">
-                          <span className="shrink-0">{t('scene.realWidth')}</span>
-                          <input
-                            type="number"
-                            min="0.05"
-                            step="0.01"
-                            placeholder={secilenYuzeyOlcu.wm.toFixed(2)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') olcegiGercekOlcudenKur(e.currentTarget.value)
-                            }}
-                            onBlur={(e) => olcegiGercekOlcudenKur(e.currentTarget.value)}
-                            className="w-20 rounded-md border border-neutral-200 px-2 py-1 text-[13px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                          />
-                          <span className="shrink-0">m</span>
-                        </label>
-                        <div className="mt-2 grid grid-cols-2 gap-1.5">
-                          <button
-                            type="button"
-                            onClick={olcuyuYuzeyeUydur}
-                            className={`rounded-lg py-2 text-[13px] font-semibold transition-colors ${
-                              olcuUyduruldu
-                                ? 'bg-brand text-white'
-                                : 'border border-neutral-200 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300'
-                            }`}
-                          >
-                            {t('scene.fitApply')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={olcuyuGeriAl}
-                            disabled={!olcuUyduruldu}
-                            className={`rounded-lg py-2 text-[13px] font-semibold transition-colors ${
-                              !olcuUyduruldu
-                                ? 'bg-brand text-white'
-                                : 'border border-neutral-200 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300'
-                            }`}
-                          >
-                            {t('scene.fitKeep')}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Sıfırlama: düzenleme varken görünen sade metin bağlantısı. */}
                     {(elleKose || elleAci.yaw !== 0 || elleAci.tilt !== 0 || hedefKose) && (
                       <button
                         type="button"
