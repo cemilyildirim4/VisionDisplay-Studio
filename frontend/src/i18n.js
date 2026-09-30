@@ -429,6 +429,8 @@ const dict = {
     en: "The selected model's recommended viewing distance. Information only; it does not affect the drawing.",
     ar: 'مسافة المشاهدة الموصى بها للطراز المحدد. للعلم فقط؛ لا تؤثر على الرسم.',
   },
+  'scene.scaleHeading': { tr: 'Ölçek', en: 'Scale', ar: 'المقياس' },
+  'scene.placeHeading': { tr: 'Yerleşim', en: 'Placement', ar: 'الموضع' },
   'scene.wallAsk': {
     tr: 'Fotoğraftaki duvarın gerçek ölçüsü',
     en: 'Real size of the wall in the photo',
@@ -534,6 +536,8 @@ const dict = {
     en: "The selected model's recommended viewing distance. Information only; it does not affect the drawing.",
     ar: 'مسافة المشاهدة الموصى بها للطراز المحدد. للعلم فقط؛ لا تؤثر على الرسم.',
   },
+  'scene.scaleHeading': { tr: 'Ölçek', en: 'Scale', ar: 'المقياس' },
+  'scene.placeHeading': { tr: 'Yerleşim', en: 'Placement', ar: 'الموضع' },
   'scene.wallAsk': {
     tr: 'Fotoğraftaki duvarın gerçek ölçüsü',
     en: 'Real size of the wall in the photo',

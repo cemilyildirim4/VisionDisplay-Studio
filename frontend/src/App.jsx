@@ -4343,25 +4343,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               {/* Mini PC — opsiyonel görüntü kaynağı; kapalıysa yalnızca işlemci */}
               {!isVideoWall && (
                 <div className="mb-3">
-                  <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-neutral-200 dark:border-[#2c333f] p-3 hover:border-brand/40 transition-colors min-h-[44px]">
+                  {/*
+                    MİNİ PC — TEK SATIR.
+
+                    Başlık + iki açıklama satırı sağ panelde gereğinden çok yer
+                    kaplıyordu. Seçenek tek satıra indi; açıklama üstüne
+                    gelince (title) okunuyor.
+                  */}
+                  <label
+                    title={t('minipc.hint') + ' — ' + t('minipc.offHint')}
+                    className="flex items-center gap-2.5 cursor-pointer rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2 hover:border-brand/40 transition-colors"
+                  >
                     <input
                       type="checkbox"
                       checked={hasMiniPc}
                       onChange={(e) => setHasMiniPc(e.target.checked)}
-                      className="mt-1 h-4 w-4 shrink-0 accent-[#2962ad]"
+                      className="h-4 w-4 shrink-0 accent-[#2962ad]"
                     />
-                    <span className="min-w-0">
-                      <span className="block text-[15px] font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">
-                        {t('minipc.heading')}
-                      </span>
-                      <span className="inline-block mt-1.5 text-[11px] font-medium rounded-full px-2 py-0.5 bg-neutral-100 dark:bg-[#222833] text-neutral-600 dark:text-neutral-300">
-                        {t('minipc.hint')}
-                      </span>
-                      {!hasMiniPc && (
-                        <span className="block mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                          {t('minipc.offHint')}
-                        </span>
-                      )}
+                    <span className="min-w-0 text-[14px] font-medium text-neutral-800 dark:text-neutral-100 leading-snug">
+                      {t('minipc.heading')}
                     </span>
                   </label>
                 </div>
@@ -4474,8 +4474,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {TASLAK_KIPI && (
                       <>
                         <div className="text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
-                          {t('scene.wallAsk')}
+                          {t('scene.scaleHeading')}
                         </div>
+                        <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                          {t('scene.wallAsk')}
+                        </p>
                         <div className="mt-1.5 flex items-center gap-2">
                           <input
                             type="number"
@@ -4483,6 +4486,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             step="0.1"
                             value={taslakWm}
                             onChange={(e) => setTaslakWm(e.target.value)}
+                            onBlur={taslakKutuyuKur}
+                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur()}
                             placeholder={t('scene.wallW')}
                             className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
                           />
@@ -4493,22 +4498,43 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             step="0.1"
                             value={taslakHm}
                             onChange={(e) => setTaslakHm(e.target.value)}
+                            onBlur={taslakKutuyuKur}
+                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur()}
                             placeholder={t('scene.wallH')}
                             className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
                           />
                           <span className="text-[13px] text-neutral-400">m</span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={taslakKutuyuKur}
-                          className="mt-1.5 w-full py-2.5 rounded-lg text-[15px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
-                        >
-                          {taslakKuruldu ? t('scene.draftAgain') : t('scene.draftMake')}
-                        </button>
+                        {/*
+                          MESAFE DE BURADA.
+                          Ölçeği belirleyen üç sayı bir arada: duvarın eni,
+                          boyu ve fotoğrafın çekildiği mesafe. Ayrı bir
+                          "yenile" düğmesi yok — alandan çıkınca ya da Enter'a
+                          basınca kutu bu değerlerle yeniden kuruluyor.
+                        */}
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <span className="shrink-0 text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                            {t('scene.askDistance')}
+                          </span>
+                          <input
+                            type="number"
+                            min="0.2"
+                            step="0.1"
+                            value={taslakMesafe}
+                            onChange={(e) => setTaslakMesafe(e.target.value)}
+                            onBlur={taslakKutuyuKur}
+                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur()}
+                            className="w-20 min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                          />
+                          <span className="text-[13px] text-neutral-400">m</span>
+                        </div>
                         {/*
                           DUVARA TAM SIĞDIR — kutunun ölçüsünden kabin sayısı.
                           Yalnızca duvar tanıtıldıysa anlamlı.
                         */}
+                        <div className="mt-3 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
+                          {t('scene.placeHeading')}
+                        </div>
                         {duvarOlcu && (
                           <button
                             type="button"
