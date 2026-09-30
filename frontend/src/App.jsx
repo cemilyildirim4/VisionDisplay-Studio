@@ -586,6 +586,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [cizimDuzeltme, setCizimDuzeltme] = useState({ x: 0, y: 0 })
   /* koseTuval, olması gereken sol üst köşeyi buraya yazıyor (tuval koordinatı). */
   const beklenenKoseRef = useRef(null)
+  /* Kaç kez düzeltme denendi — sonsuz döngüye karşı emniyet. */
+  const duzeltmeSayaciRef = useRef(0)
+  /* Yerleşim değişince düzeltme baştan öğrenilir. */
+  useEffect(() => {
+    duzeltmeSayaciRef.current = 0
+  }, [hedefKose, scene, ozelSahne])
+
   const ekranKutuYeriniYaz = (y) => {
     if (!y) return
     const beklenen = beklenenKoseRef.current
@@ -596,6 +603,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const dx = beklenen.x - gercekX
     const dy = beklenen.y - gercekY
     if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return
+    /*
+     * GÜVENLİK SINIRI. Düzeltme normalde tek adımda kapanır. Kapanmıyorsa
+     * ölçüm ile çizim aynı şeyi göstermiyor demektir; sonsuza kadar
+     * denemektense durup olduğu gibi bırakmak doğru.
+     */
+    if (!(Math.abs(dx) < 20000) || !(Math.abs(dy) < 20000)) return
+    duzeltmeSayaciRef.current += 1
+    if (duzeltmeSayaciRef.current > 8) return
     setCizimDuzeltme((e) => ({ x: e.x + dx, y: e.y + dy }))
   }
 
@@ -2103,7 +2118,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * eşliyor (bkz. homografi.js).
    */
   const koseTuval = (() => {
-    if (!fotoYer || !cizimOlcek) return null
+    /*
+     * DÜZELTME YALNIZCA ÇİZİM VARKEN.
+     *
+     * Beklenen köşe temizlenmezse, tasarım hiç çizilmediği hâlde ölçüm
+     * karşılaştırması sürüyor; fark hiç kapanmıyor ve her çizimde durum
+     * güncelleniyordu. React bunu sonsuz döngü sayıp hata ekranına
+     * düşüyordu — "bazen böyle oluyor" denen çökme buydu.
+     */
+    if (!fotoYer || !cizimOlcek) {
+      beklenenKoseRef.current = null
+      return null
+    }
     /*
      * Kullanıcı köşeleri çektiyse çizim doğrudan onlara uyuyor.
      *
@@ -2131,7 +2157,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       }))
       return fotografaCek(elle, fotoYer).map((k) => ({ x: k.x - sol0, y: k.y - ust0 }))
     }
-    if (!hedefKose) return null
+    if (!hedefKose) {
+      beklenenKoseRef.current = null
+      return null
+    }
     const dw = tasarimWm * cizimOlcek
     const dh = tasarimHm * cizimOlcek
     if (!(dw > 0) || !(dh > 0)) return null
