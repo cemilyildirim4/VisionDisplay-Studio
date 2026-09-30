@@ -1129,6 +1129,24 @@ export default function WallPreview({
                   ))}
                 </div>
               </div>
+              {/*
+                YERİNDE 3B — ÇOKLU EKRANDA DA.
+
+                Katman yalnızca tek ekran dalına konmuştu; L tipi ve çoklu
+                dizilim arka plan üstünde düz kalıyordu. Şerit duvar
+                kutusunun içinde stripTop yüksekliğinde durduğu için
+                köşeler o paya göre kaydırılıyor.
+              */}
+              {uc3dKatman?.({
+                koseler: (kose || [
+                  { x: 0, y: 0 },
+                  { x: totalWpx, y: 0 },
+                  { x: totalWpx, y: maxHpx },
+                  { x: 0, y: maxHpx },
+                ]).map((k) => ({ x: marginXpx + k.x, y: stripTop + k.y })),
+                genislik: wallW,
+                yukseklik: wallH,
+              })}
             </div>
 
             {showMeasurements && (

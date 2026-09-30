@@ -3542,44 +3542,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * iç L tipi dışarıda: onun gövdesi çizilemiyor.
                */
               kioskGizle={lTipiVar || !kioskVar}
-              /* Yerinde 3B açıkken düz çizim gizleniyor: ekran iki kez görünmesin. */
-              ekranGizle={uc3dHazir}
-              /*
-               * 3B katmanı WallPreview'ın İÇİNDE çiziliyor; yerini oradan
-               * alıyor. App yalnızca ne çizileceğini veriyor.
-               */
-              uc3dKatman={
-                /*
-                 * ARKA PLANI OLAN HER MEKÂNDA.
-                 *
-                 * Katman yalnızca kullanıcının kendi fotoğrafında açıktı;
-                 * AVM koridoru ve şehir meydanında hiç çizilmiyordu, o
-                 * yüzden oralarda eğim verilince kasanın kalınlığı
-                 * görünmüyordu. Konum ve ölçü artık duvar kutusundan geldiği
-                 * için üç sahnede de aynı şekilde çalışıyor.
-                 */
-                YERINDE_3B && surukleAktif
-                  ? ({ koseler, genislik, yukseklik }) => (
-                      <Suspense fallback={null}>
-                        <Mekan3D
-                          model={previewModel}
-                          cols={cols}
-                          rows={rows}
-                          content={content}
-                          contentUrl={contentUrl}
-                          screenType={screenType}
-                          curveAmount={curveAmount}
-                          screens={screenMode === 'multi' ? screens : null}
-                          koseler={koseler}
-                          tuvalW={genislik}
-                          tuvalH={yukseklik}
-                          tasarimWm={tasarimWm}
-                          onHazir={setUc3dHazir}
-                        />
-                      </Suspense>
-                    )
-                  : null
-              }
               /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
               olcuGoster={showMeasurements}
               /* Duvar etiketi kullanıcının kendi ölçüsünü yazıyor */
@@ -3630,6 +3592,47 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               sahneOlcekVarsayilan={sahneOlcekVarsayilan}
               onPxPerM={setCizimOlcek}
               onEkranKutusu={ekranKutuYeriniYaz}
+              /*
+               * YERİNDE 3B — ARKA PLAN VARKEN TASARIM ÜÇ BOYUTLU.
+               *
+               * Düz çizim, fotoğrafın üstüne yapıştırılmış bir dikdörtgendi:
+               * kasası, derinliği, kenar ışığı yoktu. Katman aynı ekranı 3D
+               * görünümdeki geometriyle (CabinetGrid) çiziyor; tuval saydam
+               * olduğu için arkada kullanıcının fotoğrafı, üstünde de ölçü
+               * etiketleri ve köşe tutamakları çalışmaya devam ediyor.
+               *
+               * Açıyı sistem uydurmuyor: kullanıcının köşe tutamaklarıyla
+               * kurduğu dörtgenden çıkarılıyor (bkz. Mekan3D → acilariCikar).
+               *
+               * Düz çizim ancak 3B GERÇEKTEN çizildiyse gizleniyor
+               * (uc3dHazir); WebGL kapalıysa ya da katman yüklenemezse
+               * ekranda hiçbir şey kalmasın.
+               */
+              ekranGizle={uc3dHazir}
+              uc3dKatman={
+                YERINDE_3B && surukleAktif
+                  ? ({ koseler, genislik, yukseklik }) => (
+                      <Suspense fallback={null}>
+                        <Mekan3D
+                          model={previewModel}
+                          cols={cols}
+                          rows={rows}
+                          content={content}
+                          contentUrl={contentUrl}
+                          screenType={screenType}
+                          curveAmount={curveAmount}
+                          screens={screenMode === 'multi' ? screens : null}
+                          koseler={koseler}
+                          tuvalW={genislik}
+                          tuvalH={yukseklik}
+                          tasarimWm={tasarimWm}
+                          tasarimHm={tasarimHm}
+                          onHazir={setUc3dHazir}
+                        />
+                      </Suspense>
+                    )
+                  : null
+              }
             />
           ) : (
             /* Boş durum tuvali */
