@@ -474,6 +474,8 @@ const dict = {
   'scene.wallWLabel': { tr: 'Duvar genişliği', en: 'Wall width', ar: 'عرض الجدار' },
   'scene.wallHLabel': { tr: 'Duvar yüksekliği', en: 'Wall height', ar: 'ارتفاع الجدار' },
   'scene.wallH': { tr: 'boy', en: 'height', ar: 'الارتفاع' },
+  'scene.fitWallDone': { tr: 'Tasarım duvara göre ayarlandı:', en: 'Design fitted to the wall:', ar: 'تم ضبط التصميم:' },
+  'scene.fitWallSame': { tr: 'Bu duvara sığan en büyük düzen zaten buydu:', en: 'This was already the largest layout that fits:', ar: 'كان هذا بالفعل أكبر ترتيب ممكن:' },
   'scene.fitWall': {
     tr: 'Tasarımı duvara tam sığdır',
     en: 'Fit the design to the wall',
@@ -581,6 +583,8 @@ const dict = {
   'scene.wallWLabel': { tr: 'Duvar genişliği', en: 'Wall width', ar: 'عرض الجدار' },
   'scene.wallHLabel': { tr: 'Duvar yüksekliği', en: 'Wall height', ar: 'ارتفاع الجدار' },
   'scene.wallH': { tr: 'boy', en: 'height', ar: 'الارتفاع' },
+  'scene.fitWallDone': { tr: 'Tasarım duvara göre ayarlandı:', en: 'Design fitted to the wall:', ar: 'تم ضبط التصميم:' },
+  'scene.fitWallSame': { tr: 'Bu duvara sığan en büyük düzen zaten buydu:', en: 'This was already the largest layout that fits:', ar: 'كان هذا بالفعل أكبر ترتيب ممكن:' },
   'scene.fitWall': {
     tr: 'Tasarımı duvara tam sığdır',
     en: 'Fit the design to the wall',

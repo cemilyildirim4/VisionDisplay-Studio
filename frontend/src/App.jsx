@@ -3048,7 +3048,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Duvar alanı da en az bu kadar olmalı, yoksa üst sınır kabinleri kırpar. */
     setWidth((e) => Math.max(e, +(c * cwM).toFixed(2)))
     setHeight((e) => Math.max(e, +(r * chM).toFixed(2)))
-    setOzelUyari(null)
+    /*
+     * SONUCU SÖYLE.
+     *
+     * Duvar bir kabinden küçükse hesap zaten 1 × 1 çıkıyor ve ekranda
+     * hiçbir şey değişmiyordu; kullanıcı düğmenin bozuk olduğunu sanıyordu.
+     * Değişsin değişmesin sonuç yazılıyor.
+     */
+    const ayni = c === cols && r === rows
+    setOzelUyari(
+      (ayni ? t('scene.fitWallSame') : t('scene.fitWallDone')) +
+        ' ' +
+        c +
+        ' × ' +
+        r +
+        ' ' +
+        t('scene.cabinets') +
+        ' (' +
+        (c * cwM).toFixed(2).replace('.', ',') +
+        ' × ' +
+        (r * chM).toFixed(2).replace('.', ',') +
+        ' m)',
+    )
   }
 
   const taslakKutuyuKur = () => {
