@@ -2953,8 +2953,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setIzlemeM(Math.max(0.2, Math.min(300, Math.round(mesafe * 100) / 100)))
   }
 
+  /*
+   * KUTU FOTOĞRAFIN DIŞINA ÇIKMIYOR.
+   *
+   * Kutu fotoğrafa göre ORANLI saklanıyor: 0 ile 1 arası fotoğrafın içi,
+   * dışı fotoğrafın dışı. Kullanıcı kutuyu kenardan dışarı sürüklediğinde
+   * dörtgen olduğu gibi geri kaydırılıyor — şekli ve ölçüsü bozulmuyor,
+   * yalnızca yeri düzeltiliyor.
+   *
+   * Kutu fotoğraftan büyükse (girilen duvar o mesafeye sığmıyorsa) kırpmak
+   * yanlış olur: o zaman ortalanıyor ve sebep zaten uyarı olarak yazılı.
+   */
+  const kutuyuFotografaSigdir = (k) => {
+    const x0 = Math.min(...k.map((q) => q.x))
+    const x1 = Math.max(...k.map((q) => q.x))
+    const y0 = Math.min(...k.map((q) => q.y))
+    const y1 = Math.max(...k.map((q) => q.y))
+    let dx = 0
+    let dy = 0
+    if (x1 - x0 <= 1) {
+      if (x0 < 0) dx = -x0
+      else if (x1 > 1) dx = 1 - x1
+    } else {
+      dx = 0.5 - (x0 + x1) / 2
+    }
+    if (y1 - y0 <= 1) {
+      if (y0 < 0) dy = -y0
+      else if (y1 > 1) dy = 1 - y1
+    } else {
+      dy = 0.5 - (y0 + y1) / 2
+    }
+    return dx || dy ? k.map((q) => ({ x: q.x + dx, y: q.y + dy })) : k
+  }
+
   const taslakKutusuDegisti = (tuvalKoseler) => {
-    const oranli = tuvalKoseler.map(tuvalOrana)
+    const oranli = kutuyuFotografaSigdir(tuvalKoseler.map(tuvalOrana))
     setTaslakKutu(oranli)
     /* Tasarım kutunun içinde: kutu nereye giderse o da oraya. */
     setHedefKose(oranli)
