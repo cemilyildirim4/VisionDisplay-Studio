@@ -437,7 +437,7 @@ const dict = {
     ar: 'المقاس الحقيقي للجدار في الصورة',
   },
   'scene.wallAskHint': {
-    tr: 'Fotoğraftaki duvara bakarak yazın. Taslak kutu bu ölçüye göre kurulacak ve sahnenin ölçeği bundan hesaplanacak.',
+    tr: 'Fotoğraftaki duvarın gerçek enini ve boyunu yazın. Taslak kutu bu oranda çıkacak; onu köşelerinden duvarın üstüne oturtunca sahnenin ölçeği kendiliğinden doğrulanır.',
     en: 'Read it off the wall in the photo. The draft box is built from this size and the scene scale comes from it.',
     ar: 'يُبنى المربع المبدئي وفق هذا المقاس ومنه يُحسب مقياس المشهد.',
   },
@@ -460,6 +460,16 @@ const dict = {
     ar: 'يتّسع هذا الجدار لما لا يزيد عن',
   },
   'scene.cabinets': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
+  'scene.distFromBox': {
+    tr: 'Kutuya göre çekim mesafesi',
+    en: 'Shooting distance from the box',
+    ar: 'مسافة التصوير وفق المربع',
+  },
+  'scene.distFromBoxHint': {
+    tr: 'Ölçek taslak kutudan geliyor: kutuyu fotoğraftaki duvarın üstüne oturttuğunuzda mesafe kendiliğinden hesaplanıyor. Elle girmeniz gerekmiyor.',
+    en: 'The scale comes from the draft box: fit the box onto the wall in the photo and the distance is calculated for you.',
+    ar: 'يأتي المقياس من المربع المبدئي: طابق المربع مع الجدار في الصورة وتُحسب المسافة تلقائيًا.',
+  },
   'scene.askDistance': {
     tr: 'Fotoğrafın çekildiği mesafe',
     en: 'Distance the photo was taken from',
@@ -484,7 +494,7 @@ const dict = {
   'scene.draftMake': { tr: 'Taslak kutuyu oluştur', en: 'Create draft box', ar: 'إنشاء مربع مبدئي' },
   'scene.draftAgain': { tr: 'Taslak kutuyu yenile', en: 'Rebuild draft box', ar: 'إعادة إنشاء المربع' },
   'scene.draftHint': {
-    tr: 'Kutu oluştuktan sonra "Köşelerden ayarla" ile fotoğraftaki duvara oturtun. Ölçek bu ölçüden hesaplanır.',
+    tr: 'Kutuyu köşelerinden tutup fotoğraftaki duvarın tam üstüne oturtun. Ölçek oradan hesaplanıyor: kutu duvarı doğru kaplıyorsa tasarım da gerçek boyutunda görünür.',
     en: 'After the box appears, use "Adjust by corners" to fit it to the wall in the photo. The scale comes from this size.',
     ar: 'بعد ظهور المربع، استخدم «الضبط من الزوايا» لمطابقته مع الجدار في الصورة.',
   },
@@ -546,7 +556,7 @@ const dict = {
     ar: 'المقاس الحقيقي للجدار في الصورة',
   },
   'scene.wallAskHint': {
-    tr: 'Fotoğraftaki duvara bakarak yazın. Taslak kutu bu ölçüye göre kurulacak ve sahnenin ölçeği bundan hesaplanacak.',
+    tr: 'Fotoğraftaki duvarın gerçek enini ve boyunu yazın. Taslak kutu bu oranda çıkacak; onu köşelerinden duvarın üstüne oturtunca sahnenin ölçeği kendiliğinden doğrulanır.',
     en: 'Read it off the wall in the photo. The draft box is built from this size and the scene scale comes from it.',
     ar: 'يُبنى المربع المبدئي وفق هذا المقاس ومنه يُحسب مقياس المشهد.',
   },
@@ -593,7 +603,7 @@ const dict = {
   'scene.draftMake': { tr: 'Taslak kutuyu oluştur', en: 'Create draft box', ar: 'إنشاء مربع مبدئي' },
   'scene.draftAgain': { tr: 'Taslak kutuyu yenile', en: 'Rebuild draft box', ar: 'إعادة إنشاء المربع' },
   'scene.draftHint': {
-    tr: 'Kutu oluştuktan sonra "Köşelerden ayarla" ile fotoğraftaki duvara oturtun. Ölçek bu ölçüden hesaplanır.',
+    tr: 'Kutuyu köşelerinden tutup fotoğraftaki duvarın tam üstüne oturtun. Ölçek oradan hesaplanıyor: kutu duvarı doğru kaplıyorsa tasarım da gerçek boyutunda görünür.',
     en: 'After the box appears, use "Adjust by corners" to fit it to the wall in the photo. The scale comes from this size.',
     ar: 'بعد ظهور المربع، استخدم «الضبط من الزوايا» لمطابقته مع الجدار في الصورة.',
   },
