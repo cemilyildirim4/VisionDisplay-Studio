@@ -460,6 +460,11 @@ const dict = {
     ar: 'يتّسع هذا الجدار لما لا يزيد عن',
   },
   'scene.cabinets': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
+  'scene.distOptional': {
+    tr: 'Bilmiyorsanız boş bırakın: kutu fotoğrafa tam sığacak şekilde kurulur, sonra köşelerinden duvara oturtursunuz.',
+    en: 'Leave it empty if you do not know: the box is built to fill the photo and you fit it to the wall by its corners.',
+    ar: 'اتركه فارغًا إن كنت لا تعرف: يُبنى المربع ليملأ الصورة ثم تطابقه مع الجدار من زواياه.',
+  },
   'scene.unitDoubt': {
     tr: 'Tasarım bu duvarın yanında görünmeyecek kadar küçük kalıyor. Duvar ölçüsü METRE cinsinden isteniyor — santim yazmış olabilir misiniz?',
     en: 'The design is too small to see next to this wall. The wall size is in METRES — did you enter centimetres?',
