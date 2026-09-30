@@ -57,8 +57,23 @@ export const VARSAYILAN_MESAFE_M = 4
  */
 export const KADRAJ_KATSAYISI = 1.11
 
+/*
+ * KADRAJIN KAPSADIĞI GENİŞLİK (metre).
+ *
+ * ALT SINIR 0,5 m İDİ VE ÖLÇEĞİ BOZUYORDU.
+ *
+ * Yakın çekimlerde (bir dizüstü ekranı, bir vitrin) mesafe 0,5 m'nin altına
+ * iniyor. Eski alt sınır bu durumda kadrajı 0,5 m'ye sabitliyordu: kullanıcı
+ * 0,35 m yazsa bile hesap 0,5 m'ye göre yapılıyor ve mekândaki her şey
+ * olduğundan KÜÇÜK çiziliyordu. 0,345 m'lik bir dizüstü ekranı kadrajın
+ * %89'u yerine %69'u kadar görünüyordu — 1020 piksellik fotoğrafta 906
+ * yerine 704 piksel. Ölçülen değer tam olarak buydu.
+ *
+ * Sınır artık yalnızca sıfır/bozuk girdiye karşı: 0,05 m. Mesafe alanının
+ * kendi alt sınırı zaten 0,2 m ve o da 0,22 m'lik bir kadraj veriyor.
+ */
 export function kadrajGenisligi(mesafeM) {
-  return Math.max(0.5, (Number(mesafeM) || VARSAYILAN_MESAFE_M) * KADRAJ_KATSAYISI)
+  return Math.max(0.05, (Number(mesafeM) || VARSAYILAN_MESAFE_M) * KADRAJ_KATSAYISI)
 }
 
 /** Geriye dönük: eski çağrılar için varsayılan alan genişliği. */
