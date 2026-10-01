@@ -470,6 +470,11 @@ const dict = {
     en: 'Hide the metre grid',
     ar: 'إخفاء شبكة الأمتار',
   },
+  'scene.distComputed': {
+    tr: 'Taslak kutu fotoğrafın tamamını kaplayacak; mesafe bu ölçüden hesaplanıyor. Kutuyu küçültmek isterseniz sağ panelden mesafeyi büyütün ya da kutuyu köşelerinden çekin.',
+    en: 'The draft box will cover the whole photo and the distance is calculated from this size. To shrink the box, raise the distance in the right panel or drag its corners.',
+    ar: 'سيغطي المربع المبدئي الصورة بالكامل وتُحسب المسافة من هذا المقاس.',
+  },
   'scene.distOptional': {
     tr: 'Bilmiyorsanız boş bırakın: kutu fotoğrafa tam sığacak şekilde kurulur, sonra köşelerinden duvara oturtursunuz.',
     en: 'Leave it empty if you do not know: the box is built to fill the photo and you fit it to the wall by its corners.',

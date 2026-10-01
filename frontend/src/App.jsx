@@ -3201,14 +3201,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    *
    * Artık tetikleyene göre ayrışıyor:
    *
-   *   ölçü değişti  → kutu YERİNDE kalır, yalnızca ölçeği değişir
+   *   ilk kurulum    → kutu fotoğrafın tamamını kaplar, MESAFE ondan hesaplanır
+   *   ölçü değişti   → kutu YERİNDE kalır, yalnızca ölçeği değişir
    *   mesafe girildi → kutu o mesafeden görünen kadraja göre yeniden kurulur
    *   kutu oynatıldı → mesafe kutudan yeniden hesaplanır
    *
-   * Kutu hiç yoksa fotoğrafı tam dolduracak şekilde kuruluyor: insan
-   * ilgilendiği duvarı kadraja doldurarak çeker.
+   * İLK KURULUMDA ÖLÇÜ KAZANIYOR. Pop-up'ta en/boy ve mesafe aynı anda
+   * giriliyordu ve ikisi birbiriyle çelişebiliyordu: fotoğrafın tamamı
+   * 0,355 m iken mesafeye 0,5 yazılınca kadraj 0,555 m sayılıyor ve duvar
+   * karenin ancak %64'ünü kaplıyordu — kullanıcının "kutu küçük duruyor"
+   * dediği durum tam buydu. Fotoğraftaki duvarın ne kadarını kapladığını
+   * bilen tek şey kullanıcının kendisi; o da kutuyu sürükleyerek söylüyor.
+   * Bu yüzden ilk kutu her zaman fotoğrafın tamamı ve mesafe ondan çıkıyor.
    *
-   * @param {'olcu'|'mesafe'} kaynak değişikliği hangi alan tetikledi
+   * @param {'ilk'|'olcu'|'mesafe'} kaynak değişikliği hangi alan tetikledi
    */
   /*
    * SOL PANELDEKİ DUVAR = TASLAK KUTU.
@@ -3241,7 +3247,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * dörtgenin ölçeğini değiştiriyor; dörtgenin kendisi kullanıcınındır.
      */
     const mevcut = taslakKutu
-    if (kaynak !== 'mesafe' && Array.isArray(mevcut) && mevcut.length === 4) {
+    if (kaynak === 'olcu' && Array.isArray(mevcut) && mevcut.length === 4) {
       setDuvarOlcu({ wm: w, hm: h })
       setTaslakKuruldu(true)
       setHedefKose(mevcut)
@@ -3255,7 +3261,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return
     }
 
-    const girilen = mesafeElleRef.current ? Number(String(taslakMesafe).replace(',', '.')) : 0
+    /* İlk kurulumda mesafe hesaplanan sonuçtur, girdi değil (bkz. not). */
+    if (kaynak === 'ilk') mesafeElleRef.current = false
+    const girilen =
+      kaynak !== 'ilk' && mesafeElleRef.current
+        ? Number(String(taslakMesafe).replace(',', '.'))
+        : 0
 
     /*
      * MESAFE YOKSA KUTU FOTOĞRAFIN TAMAMI.
@@ -4081,34 +4092,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 <span className="pb-2.5 text-[14px] text-neutral-400">m</span>
               </div>
               {/*
-                MESAFE BURADA DA SORULUYOR, AMA ZORUNLU DEĞİL.
+                MESAFE BURADA SORULMUYOR, HESAPLANIYOR.
 
-                Kullanıcı mesafeyi biliyorsa yazıyor; bilmiyorsa boş bırakıyor
-                ve kutu fotoğrafa tam sığacak şekilde kuruluyor. Zorunlu
-                tutmak, bilmeyeni uydurmaya zorluyordu.
+                En/boy ve mesafe aynı anda girilince ikisi çelişebiliyordu ve
+                çelişkide mesafe kazandığı için kutu küçük kalıyordu. Burada
+                girilen ölçü kutuyu belirler; mesafe o ölçünün sonucudur ve
+                yalnızca gösterilir. Sonradan sağ panelden değiştirilebiliyor —
+                orada yazmak kutuyu bilerek büyütüp küçültmek demek.
               */}
-              <div className="mt-3">
-                <label className="block text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
-                  {t('scene.askDistance')}
-                </label>
-                <div className="mt-1 flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0.2"
-                    step="0.05"
-                    value={taslakMesafe}
-                    onChange={(e) => {
-                      setTaslakMesafe(e.target.value)
-                      mesafeElleRef.current = true
-                    }}
-                    className="w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                  />
-                  <span className="text-[14px] text-neutral-400">m</span>
-                </div>
-                <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                  {t('scene.distOptional')}
-                </p>
-              </div>
+              {(() => {
+                const w = Number(String(taslakWm).replace(',', '.'))
+                if (!(w > 0.05)) return null
+                const m = w / KADRAJ_KATSAYISI
+                return (
+                  <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-neutral-50 px-3 py-2 dark:bg-[#1b2029]">
+                    <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                      {t('scene.askDistance')}
+                    </span>
+                    <span className="text-[14px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
+                      {m.toFixed(2).replace('.', ',')} m
+                    </span>
+                  </div>
+                )
+              })()}
+              <p className="mt-1.5 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                {t('scene.distComputed')}
+              </p>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
@@ -4118,8 +4127,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   }
                   onClick={() => {
                     setTaslakSorusu(false)
-                    /* İlk kurulumda kutu yok: fotoğrafa sığdırılarak kuruluyor. */
-                    taslakKutuyuKurRef.current?.('mesafe')
+                    /* İlk kurulum: kutu fotoğrafın tamamı, mesafe ondan hesaplanıyor. */
+                    taslakKutuyuKurRef.current?.('ilk')
                   }}
                   className="flex-1 rounded-full bg-brand py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                 >
