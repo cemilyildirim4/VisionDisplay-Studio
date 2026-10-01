@@ -90,13 +90,22 @@ export default function TaslakKutu({ koseler, tuvalW, tuvalH, onSec, onKose, eti
             Kutu duvarın nerede olduğunu göstermeye devam ediyor ama
             tasarımın önüne geçmiyor: dolgu kalkıyor, çizgi inceliyor.
           */
-          fill={soluk ? 'transparent' : 'rgba(41,98,173,0.14)'}
+          /*
+           * ONAYDAN SONRA GÖVDE FAREYİ YUTMUYOR.
+           *
+           * Kutu onaylandıktan sonra da dolgusu 'transparent' idi; SVG'de
+           * saydam dolgu hâlâ tıklanabilir olduğu için kutunun üstündeki her
+           * sürükleme kutuya gidiyordu ve TASARIM hiç kıpırdamıyordu.
+           * 'none' dolgu hiç hedef olmuyor; köşe tutamakları yerinde kalıyor,
+           * yani kutu hâlâ ayarlanabiliyor.
+           */
+          fill={soluk ? 'none' : 'rgba(41,98,173,0.14)'}
           stroke="#2962ad"
           strokeWidth={soluk ? 1.5 : 2}
           strokeOpacity={soluk ? 0.55 : 1}
           strokeDasharray="7 5"
-          onPointerDown={govdeSurukle}
-          style={{ cursor: 'move', pointerEvents: 'auto' }}
+          onPointerDown={soluk ? undefined : govdeSurukle}
+          style={{ cursor: soluk ? 'default' : 'move', pointerEvents: soluk ? 'none' : 'auto' }}
         />
         {etiket && (
           <text

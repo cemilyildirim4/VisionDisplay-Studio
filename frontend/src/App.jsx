@@ -3210,6 +3210,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    *
    * @param {'olcu'|'mesafe'} kaynak değişikliği hangi alan tetikledi
    */
+  /*
+   * SOL PANELDEKİ DUVAR = TASLAK KUTU.
+   *
+   * Sol paneldeki "Duvar" alanı kabin sayısının üst sınırını belirliyor
+   * (colsMax / rowsMax). Fotoğraflı mekânda varsayılan 1 × 1 m kalıyor ve
+   * kullanıcının taslak kutuyla tanıttığı gerçek duvardan habersiz oluyordu:
+   * duvar 4 metre olsa bile sütun sayısı 3'te takılıyordu.
+   *
+   * Kalibrasyon tamamlandığında ikisi eşitleniyor — duvar neyse ekranın
+   * sığabileceği alan da o.
+   */
+  const duvariEsitle = (w, h) => {
+    if (!(w > 0) || !(h > 0)) return
+    setWidth(Math.round(w * 1000) / 1000)
+    setHeight(Math.round(h * 1000) / 1000)
+  }
+
   const taslakKutuyuKur = (kaynak = 'olcu') => {
     const w = Number(String(taslakWm).replace(',', '.'))
     const h = Number(String(taslakHm).replace(',', '.'))
@@ -3229,6 +3246,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setTaslakKuruldu(true)
       setHedefKose(mevcut)
       setHedefTur('taslak')
+    /* Sol paneldeki duvar alanı kalibre edilen duvara eşitleniyor (bkz. not). */
+    duvariEsitle(w, h)
+
       /* Mesafe alanı da aynı gerçeği göstersin — ama karar kullanıcının kalsın. */
       taslaktanOlcek(mevcut, false)
       setOzelUyari(null)
@@ -3268,6 +3288,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setHedefTur('taslak')
       setDuvarOlcu({ wm: w, hm: h })
       setTaslakKuruldu(true)
+    /* Sol paneldeki duvar alanı kalibre edilen duvara eşitleniyor (bkz. not). */
+    duvariEsitle(w, h)
       taslaktanOlcek(kutu, false)
       setOzelUyari(null)
       return
@@ -3305,6 +3327,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefTur('taslak')
     setDuvarOlcu({ wm: w, hm: h })
     setTaslakKuruldu(true)
+    /* Sol paneldeki duvar alanı kalibre edilen duvara eşitleniyor (bkz. not). */
+    duvariEsitle(w, h)
     setIzlemeM(Math.max(0.2, Math.min(300, m)))
     /*
      * Duvar, verilen mesafeden görünen kadrajdan genişse iki sayı çelişiyor
@@ -3360,6 +3384,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const dw = Number(String(taslakWm).replace(',', '.'))
     const dh = Number(String(taslakHm).replace(',', '.'))
     setDuvarOlcu(dw > 0 && dh > 0 ? { wm: dw, hm: dh } : null)
+    duvariEsitle(dw, dh)
     /* Kutu zaten fotoğrafa göre oranlı: hedef yüzey doğrudan o. */
     setHedefKose(taslakKutu)
     setHedefTur('taslak')
