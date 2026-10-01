@@ -362,3 +362,113 @@ export function dortgenMerkezi(koseler) {
     y: koseler.reduce((t, k) => t + k.y, 0) / n,
   }
 }
+
+/**
+ * GERÇEK DÜNYA ↔ FOTOĞRAF DÖNÜŞÜMÜ.
+ *
+ * Buraya kadar olan kod "şu dikdörtgeni şu dörtgene oturt" diyordu: ölçü
+ * CSS pikseliydi, metre ancak dolaylı olarak işin içine giriyordu. Fotoğraf
+ * üstünde ÖLÇÜLÜ çalışmak için bu yetmiyor.
+ *
+ * Burada duvar bir KOORDİNAT SİSTEMİ oluyor:
+ *
+ *     (0,0) ────────── (enM, 0)
+ *       │                 │        X: 0 → duvarın gerçek genişliği (m)
+ *       │                 │        Y: 0 → duvarın gerçek yüksekliği (m)
+ *     (0,boyM) ───── (enM,boyM)
+ *
+ * Bu dikdörtgenin dört köşesi, kullanıcının fotoğraf üzerinde işaretlediği
+ * dört köşeye eşleniyor. Aradaki dönüşüm bir homografi; yani duvar fotoğrafta
+ * yamuk görünüyorsa, duvarın üstündeki HER ŞEY aynı yamuklukla görünüyor.
+ *
+ * Böylece 4 metrelik bir duvara konan 2 metrelik bir ekran, fotoğrafta kaç
+ * piksel ettiğinden bağımsız olarak duvarın tam yarısını kaplıyor. Ekranın
+ * CSS genişliği yalnızca ÇİZİM ölçeğidir; fiziksel oranı o belirlemez.
+ *
+ * @param {Array<{x:number,y:number}>} koseler duvarın fotoğraftaki dört köşesi
+ *        (SÜ, SağÜ, SağA, SolA) — hangi birimde verilirse sonuç o birimde
+ * @param {number} enM  duvarın gerçek genişliği (metre)
+ * @param {number} boyM duvarın gerçek yüksekliği (metre)
+ * @returns {{ileri:Function, geri:Function, enM:number, boyM:number}|null}
+ */
+export function duvarDunyasi(koseler, enM, boyM) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return null
+  if (!(enM > 0) || !(boyM > 0)) return null
+  if (koseler.some((k) => !k || !Number.isFinite(k.x) || !Number.isFinite(k.y))) return null
+
+  /* Yassı dörtgende dönüşüm patlıyor; duvar olarak kullanılamaz. */
+  const xs = koseler.map((k) => k.x)
+  const ys = koseler.map((k) => k.y)
+  const kutu = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys))
+  const alan =
+    Math.abs(
+      koseler.reduce((t, a, i) => {
+        const b = koseler[(i + 1) % 4]
+        return t + (a.x * b.y - b.x * a.y)
+      }, 0),
+    ) / 2
+  if (!(kutu > 1) || alan < kutu * 0.08) return null
+
+  const H = birimKaredenHomografi(koseler)
+  if (!H) return null
+  const [a, b, c, d, e, f, g, h] = H
+
+  /*
+   * TERS DÖNÜŞÜM — fare hareketini metreye çevirmek için.
+   *
+   * 3×3 matrisin tersi, ek matrisinin (adjugate) determinanta bölünmesi.
+   * Son satır [g, h, 1] olduğu için formüller sadeleşiyor.
+   */
+  const k11 = e - f * h
+  const k12 = -(d - f * g)
+  const k13 = d * h - e * g
+  const k21 = -(b - c * h)
+  const k22 = a - c * g
+  const k23 = -(a * h - b * g)
+  const k31 = b * f - c * e
+  const k32 = -(a * f - c * d)
+  const k33 = a * e - b * d
+  const det = a * k11 + b * k12 + c * k13
+  if (!Number.isFinite(det) || Math.abs(det) < EPS) return null
+  /* Ters matris satır öncelikli: adjugate = kofaktörlerin devriği. */
+  const T = [k11, k21, k31, k12, k22, k32, k13, k23, k33].map((v) => v / det)
+
+  return {
+    enM,
+    boyM,
+    /** Duvar üstünde (xm, ym) metre → fotoğraf/tuval noktası. */
+    ileri(xm, ym) {
+      const u = xm / enM
+      const v = ym / boyM
+      const payda = g * u + h * v + 1
+      if (!Number.isFinite(payda) || Math.abs(payda) < EPS) return null
+      return { x: (a * u + b * v + c) / payda, y: (d * u + e * v + f) / payda }
+    },
+    /** Fotoğraf/tuval noktası → duvar üstünde metre. */
+    geri(px, py) {
+      const w = T[6] * px + T[7] * py + T[8]
+      if (!Number.isFinite(w) || Math.abs(w) < EPS) return null
+      const u = (T[0] * px + T[1] * py + T[2]) / w
+      const v = (T[3] * px + T[4] * py + T[5]) / w
+      return { x: u * enM, y: v * boyM }
+    },
+  }
+}
+
+/**
+ * Duvarın üstündeki bir dikdörtgenin (metre) fotoğraftaki dört köşesi.
+ *
+ * Ekran bir CSS dikdörtgeni olarak çizilemez: duvar perspektifliyse ekranın
+ * da dört kenarı farklı uzunlukta görünmeli. Bu yüzden dört köşe ayrı ayrı
+ * dönüştürülüyor.
+ */
+export function dunyaDortgeni(dunya, xm, ym, enM, boyM) {
+  if (!dunya || !(enM > 0) || !(boyM > 0)) return null
+  const k = [
+    dunya.ileri(xm, ym),
+    dunya.ileri(xm + enM, ym),
+    dunya.ileri(xm + enM, ym + boyM),
+    dunya.ileri(xm, ym + boyM),
+  ]
+  return k.some((q) => !q) ? null : k
+}

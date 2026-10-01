@@ -46,7 +46,7 @@ import { duzlestir } from './egimDenetimi.js'
 
 import { DAVET_OLAYI } from './apiClient.js'
 import { useSession } from './SessionContext.jsx'
-import { icDortgen, sigdirDortgen } from './homografi.js'
+import { icDortgen, sigdirDortgen, duvarDunyasi, dunyaDortgeni } from './homografi.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
@@ -58,6 +58,7 @@ import ArView from './ArView.jsx'
 const Scene3D = guvenliLazy(() => import('./Scene3D.jsx'))
 /* Fotograflı mekânda tasarımı yerinde 3B çizen katman — yalnızca gerekince yüklenir. */
 const Mekan3D = guvenliLazy(() => import('./Mekan3D.jsx'))
+const DuvarIzgara = guvenliLazy(() => import('./DuvarIzgara.jsx'))
 
 /*
  * YERİNDE 3B ŞİMDİLİK KAPALI.
@@ -2150,6 +2151,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * üstüne göre yazılıyor — homografi kutunun kendi köşelerini hedefe
    * eşliyor (bkz. homografi.js).
    */
+  /*
+   * DUVARIN TUVALDEKİ DÖRTGENİ.
+   *
+   * hedefKose fotoğrafa göre oranlı (0–1); burada tuval pikseline çevriliyor.
+   * Yakınlaştırma fotoğrafla birlikte dörtgeni de taşıdığı için aynı dönüşüm
+   * uygulanıyor (bkz. PanoFoto).
+   *
+   * Bu dörtgen artık yalnızca "bir yüzey" değil, GERÇEK DÜNYA KOORDİNAT
+   * SİSTEMİNİN dayanağı: dört köşesi duvarın (0,0)–(enM,0)–(enM,boyM)–(0,boyM)
+   * dikdörtgenine karşılık geliyor.
+   */
+  const duvarTuval = (() => {
+    if (!fotoYer || !Array.isArray(hedefKose) || hedefKose.length !== 4) return null
+    const mX = tuvalBoyut.w / 2
+    const mY = tuvalBoyut.h / 2
+    const z = sahneYakinlik || 1
+    return hedefKose.map((k) => ({
+      x: mX + (fotoYer.sol + k.x * fotoYer.genislik - mX) * z,
+      y: mY + (fotoYer.ust + k.y * fotoYer.yukseklik - mY) * z,
+    }))
+  })()
+
+  /*
+   * GERÇEK DÜNYA ↔ FOTOĞRAF.
+   *
+   * Duvarın gerçek ölçüsü biliniyorsa ölçek artık tahmin değil: metre ile
+   * piksel arasındaki bağ bu dönüşümde. Ekranın fotoğrafta kaç piksel ettiği
+   * bir sonuç; fiziksel oranı belirleyen şey değil.
+   */
+  const duvarDunya =
+    duvarTuval && duvarOlcu?.wm > 0 && duvarOlcu?.hm > 0
+      ? duvarDunyasi(duvarTuval, duvarOlcu.wm, duvarOlcu.hm)
+      : null
+
+  /* Ekranın duvar üzerindeki yeri (metre) — panelde gösteriliyor. */
+  const ekranDunyaRef = useRef(null)
+  /*
+   * IZGARA — kalibrasyonun gözle denetimi (bkz. DuvarIzgara.jsx). Varsayılan
+   * kapalı: her zaman açık durursa çizimin önünü kapatıyor.
+   */
+  const [izgaraAcik, setIzgaraAcik] = useState(false)
+
   const koseTuval = (() => {
     /*
      * DÜZELTME YALNIZCA ÇİZİM VARKEN.
@@ -2171,7 +2214,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * uygulanıyordu). Artık elle çizilen dörtgen de sürükleme kaymasını
      * alıyor; köşeler kendi aralarındaki şekli koruyarak birlikte gidiyor.
      */
-    if (elleKose) {
+    /* Kalibre duvarda ölçünün kaynağı dünya katmanı; elle dörtgen onu ezmiyor. */
+    if (elleKose && !duvarDunya) {
       const dw0 = tasarimWm * cizimOlcek
       const dh0 = tasarimHm * cizimOlcek
       const bas0 = ekranKutuBasi(dw0, dh0)
@@ -2203,52 +2247,63 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * köşeler aynı dönüşümden geçiyor. Ölçek merkezi PanoFoto ile aynı:
      * panelin merkezi, yani tuvalin ortası.
      */
-    const mX = tuvalBoyut.w / 2
-    const mY = tuvalBoyut.h / 2
-    const z = sahneYakinlik || 1
-    const tuvalKose = hedefKose.map((k) => ({
-      x: mX + (fotoYer.sol + k.x * fotoYer.genislik - mX) * z,
-      y: mY + (fotoYer.ust + k.y * fotoYer.yukseklik - mY) * z,
-    }))
+    const tuvalKose = duvarTuval
     /*
-     * ÖLÇEK ÇEKİM MESAFESİNDEN.
+     * EKRANIN YERİ VE ÖLÇÜSÜ GERÇEK DÜNYADA HESAPLANIYOR.
      *
-     * Kadrajın kapsadığı genişlik = mesafe × 1,11 (bkz. ozelMekan.js). Yüzeyin
-     * gerçek genişliği de kadrajdaki payı kadarı: yarısını kaplıyorsa kadrajın
-     * yarısı kadar metre. Tasarım bu ölçeğe göre yüzeyin içine oturuyor —
-     * yüzeye yayılmıyor. Böylece 4 m'lik bir ekran her fotoğrafta 4 metre
-     * gibi görünüyor.
+     * Duvar kalibre edildiyse (dört köşe + gerçek en/boy) ekranın dört köşesi
+     * önce METRE cinsinden kuruluyor, sonra homografi ile fotoğrafa
+     * aktarılıyor. Böylece 4 metrelik duvara konan 2 metrelik ekran, duvarın
+     * fotoğrafta kaç piksel ettiğinden bağımsız olarak duvarın yarısını
+     * kaplıyor.
      *
-     * Manuel dört köşede de aynı kural geçerli.
+     * SÜRÜKLEME DE METREYLE: farenin piksel kayması ters homografiden
+     * geçirilip metreye çevriliyor, sınır denetimi de metre ile yapılıyor
+     * (ekran duvarın dışına çıkmıyor). Piksel doğrudan metre sayılmıyor.
+     *
+     * Duvar kalibre edilmemişse (hazır mekânlar, eski kayıtlar) önceki yol
+     * olduğu gibi duruyor.
      */
-    const yuzeyPayi =
-      (Math.hypot(tuvalKose[1].x - tuvalKose[0].x, tuvalKose[1].y - tuvalKose[0].y) +
-        Math.hypot(tuvalKose[2].x - tuvalKose[3].x, tuvalKose[2].y - tuvalKose[3].y)) /
-      2 /
-      Math.max(1, fotoYer.genislik)
-    const yuzeyWm = Math.max(0.2, yuzeyPayi * kadrajGenisligi(ozelMesafeM))
-    /*
-     * TASARIMIN ŞEKLİ VE ÖLÇÜSÜ DEĞİŞMİYOR.
-     *
-     * "Doldur" kipi tasarımı panonun alanına göre büyütüp küçültüyordu;
-     * kullanıcı bunu istemedi. Yerleşim artık her zaman gerçek ölçüde:
-     * tasarım kendi metre karşılığında, kendi oranıyla, yüzeyin merkezine
-     * ve perspektifine oturuyor.
-     */
-    const olcekli = icDortgen(tuvalKose, tasarimWm, tasarimHm, yuzeyWm)
-
-    /*
-     * TAŞIMA VE DÖNDÜRME DÖRT KÖŞEYE DE UYGULANIYOR.
-     *
-     * Dört köşe hedefi varken sürükleme kapalıydı: kayma yalnızca kutuya
-     * uygulanıyordu, köşelere değil. Artık ikisi de köşelerin üstünde:
-     * sürükleme kaymayı ekliyor, döndürme dörtgeni kendi merkezinde
-     * çeviriyor. Yüzeyin perspektifi bozulmuyor.
-     */
-    const kaydirilmis = olcekli.map((k) => ({
-      x: k.x + (elleKayma?.x || 0),
-      y: k.y + (elleKayma?.y || 0),
-    }))
+    let kaydirilmis
+    if (duvarDunya) {
+      const ortaX = (duvarOlcu.wm - tasarimWm) / 2
+      const ortaY = (duvarOlcu.hm - tasarimHm) / 2
+      let xm = ortaX
+      let ym = ortaY
+      if (elleKayma && (elleKayma.x || elleKayma.y)) {
+        const merkez = duvarDunya.ileri(ortaX + tasarimWm / 2, ortaY + tasarimHm / 2)
+        const hedef = merkez && duvarDunya.geri(merkez.x + elleKayma.x, merkez.y + elleKayma.y)
+        if (hedef) {
+          xm = hedef.x - tasarimWm / 2
+          ym = hedef.y - tasarimHm / 2
+        }
+      }
+      /* Sınır metreyle: ekran duvardan büyükse ortalanıyor, değilse içeride kalıyor. */
+      xm = duvarOlcu.wm > tasarimWm ? Math.max(0, Math.min(duvarOlcu.wm - tasarimWm, xm)) : ortaX
+      ym = duvarOlcu.hm > tasarimHm ? Math.max(0, Math.min(duvarOlcu.hm - tasarimHm, ym)) : ortaY
+      ekranDunyaRef.current = { x: xm, y: ym }
+      kaydirilmis =
+        dunyaDortgeni(duvarDunya, xm, ym, tasarimWm, tasarimHm) || tuvalKose
+    } else {
+      ekranDunyaRef.current = null
+      /*
+       * ESKİ YOL — duvarın gerçek ölçüsü bilinmiyor.
+       *
+       * Ölçek çekim mesafesinden tahmin ediliyor (kadraj = mesafe × 1,11) ve
+       * tasarım yüzeyin içine o tahmine göre oturuyor. Yaklaşıktır; kalibre
+       * edilmiş duvarda kullanılmıyor.
+       */
+      const yuzeyPayi =
+        (Math.hypot(tuvalKose[1].x - tuvalKose[0].x, tuvalKose[1].y - tuvalKose[0].y) +
+          Math.hypot(tuvalKose[2].x - tuvalKose[3].x, tuvalKose[2].y - tuvalKose[3].y)) /
+        2 /
+        Math.max(1, fotoYer.genislik)
+      const yuzeyWm = Math.max(0.2, yuzeyPayi * kadrajGenisligi(ozelMesafeM))
+      kaydirilmis = icDortgen(tuvalKose, tasarimWm, tasarimHm, yuzeyWm).map((k) => ({
+        x: k.x + (elleKayma?.x || 0),
+        y: k.y + (elleKayma?.y || 0),
+      }))
+    }
     /*
      * TASARIMIN TAMAMI EKRANDA KALIYOR.
      *
@@ -2282,7 +2337,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * Bu yüzden serbestlik korunuyor, yalnızca son bir sınır var: dörtgenin
      * dörtte biri kadrajın içinde kalacak kadar geri çekiliyor.
      */
-    const kadrajlanmis = elleMudahale ? kadrajaCek(acili, tuvalBoyut) : ekranaSigdir(acili, tuvalBoyut)
+    /*
+     * KALİBRE DUVARDA SIĞDIRMA YOK.
+     *
+     * ekranaSigdir, dörtgeni tuvale sığsın diye KÜÇÜLTÜYOR. Duvarın gerçek
+     * ölçüsü biliniyorken bu doğrudan yanlış: ekranın duvara oranı çizim
+     * alanına göre değişiyor, yani fiziksel oran bozuluyor. Ölçümde duvarı
+     * tam kaplayan bir ekran %98,82'ye iniyordu.
+     *
+     * Kalibre duvarda yalnızca son emniyet kalıyor (kadrajaCek): dörtgen
+     * tamamen kadrajın dışına çıkarsa geri çekiliyor. O da kaydırma, ölçü
+     * değiştirmiyor.
+     */
+    const kadrajlanmis =
+      duvarDunya || elleMudahale ? kadrajaCek(acili, tuvalBoyut) : ekranaSigdir(acili, tuvalBoyut)
     /*
      * TASARIM VE ÖLÇÜLERİ FOTOĞRAFIN DIŞINA TAŞMIYOR.
      *
@@ -2291,7 +2359,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * fotoğrafın dışına çıkabiliyordu; ölçü etiketleri de öyle. Oysa
      * kullanıcının gördüğü mekân fotoğrafın kendisi — dışarısı mekân değil.
      */
-    const son = fotografaCek(kadrajlanmis, fotoYer)
+    /*
+     * Fotoğraf sınırı da kalibre duvarda uygulanmıyor: ölçünün dayanağı artık
+     * duvar, fotoğrafın kenarı değil. Duvar fotoğrafın içinde olduğu sürece
+     * ekran da içinde kalıyor; taşıyorsa sebep duvarın kendisidir ve onu
+     * kırpmak ölçüyü bozar.
+     */
+    const son = duvarDunya ? kadrajlanmis : fotografaCek(kadrajlanmis, fotoYer)
     /*
      * Olması gereken sol üst köşe (tuval koordinatı) saklanıyor; ölçüm
      * geldiğinde gerçek yerle karşılaştırılıp fark kapatılıyor.
@@ -2849,6 +2923,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       )
 
     if (!disbukey(aday) || enKisaKenar(aday) < 24) return
+
+    /*
+     * KALİBRE DUVARDA DÜZENLENEN ŞEY DUVARIN KENDİSİ.
+     *
+     * Dörtgen tuval pikselinde; duvar ise fotoğrafa göre oranlı saklanıyor.
+     * Yakınlaştırma da geri alınıyor (bkz. duvarTuval'daki ileri yön).
+     */
+    if (duvarOlcu && fotoYer?.genislik > 0 && fotoYer?.yukseklik > 0) {
+      const mX = tuvalBoyut.w / 2
+      const mY = tuvalBoyut.h / 2
+      const z = sahneYakinlik || 1
+      setHedefKose(
+        aday.map((k) => ({
+          x: (mX + (k.x - mX) / z - fotoYer.sol) / fotoYer.genislik,
+          y: (mY + (k.y - mY) / z - fotoYer.ust) / fotoYer.yukseklik,
+        })),
+      )
+      setTaslakKutu(
+        aday.map((k) => ({
+          x: (mX + (k.x - mX) / z - fotoYer.sol) / fotoYer.genislik,
+          y: (mY + (k.y - mY) / z - fotoYer.ust) / fotoYer.yukseklik,
+        })),
+      )
+      return
+    }
     setElleKose(aday)
   }
 
@@ -3285,7 +3384,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * tasarım yer değiştiriyordu. Saklanan değer kaymasız olmalı — tıpkı
      * koseleriTasi'nda olduğu gibi.
      */
-    if (!elleKose && koseMutlak) {
+    /*
+     * KALİBRE DUVARDA EKRANIN KENDİ DÖRTGENİ TUTULMUYOR.
+     *
+     * Köşe kipini açmak elleKose'yi dolduruyordu; o dolu olduğu sürece çizim
+     * dünya katmanını atlayıp doğrudan o dörtgeni kullanıyor, yani ölçü
+     * sistemi devre dışı kalıyordu. Ölçümde belirtisi şuydu: duvarın köşesi
+     * çekiliyor ama ekran kılını kıpırdatmıyordu.
+     *
+     * Duvar kalibre edilmişse köşe kipi DUVARI düzenliyor (bkz. koseleriTasi)
+     * ve ekran duvarın koordinat sisteminden kendiliğinden geliyor.
+     */
+    if (!duvarOlcu && !elleKose && koseMutlak) {
       setElleKose(
         koseMutlak.map((k) => ({
           x: k.x - (elleKayma?.x || 0),
@@ -3689,6 +3799,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/*
+            DUVAR IZGARASI — gerçek metre çizgileri.
+
+            Kalibrasyon doğruysa çizgiler duvarın üstüne oturur ve aralıkları
+            duvarın perspektifini izler. Bu, ölçünün doğruluğunu gözle
+            denetlemenin tek pratik yolu.
+          */}
+          {izgaraAcik && duvarDunya && scene === 'ozel' && ozelSahne && (
+            <Suspense fallback={null}>
+              <DuvarIzgara dunya={duvarDunya} tuvalW={tuvalBoyut.w} tuvalH={tuvalBoyut.h} />
+            </Suspense>
+          )}
+
+          {/*
             TASLAK KUTU — duvarı tanıtan dörtgen.
 
             Fotoğrafın üstünde duruyor; kullanıcı taşıyıp köşelerinden
@@ -3735,9 +3858,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
 
 
-          {showMeasurements && koseKipi && koseMutlak && (
+          {/*
+            KÖŞELERDEN AYARLA = DUVARI KALİBRE ET.
+
+            Önce ekranın kendi dörtgenini düzenliyordu; ekran duvardan bağımsız
+            eğilebiliyor, ölçü sistemiyle ilişkisi kopuyordu. Artık düzenlenen
+            şey DUVAR: kullanıcı dört köşeyi fotoğraftaki duvara oturtuyor,
+            ekran da duvarın koordinat sisteminden kendiliğinden doğru yere ve
+            doğru perspektife düşüyor.
+
+            Duvar ölçüsü bilinmiyorsa (hazır mekânlar) eski davranış duruyor.
+          */}
+          {showMeasurements && koseKipi && (duvarOlcu ? duvarTuval : koseMutlak) && (
             <KoseSecici
-              koseler={koseMutlak}
+              koseler={duvarOlcu ? duvarTuval : koseMutlak}
               onDegis={koseleriTasi}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
@@ -4617,6 +4751,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           DUVARA TAM SIĞDIR — kutunun ölçüsünden kabin sayısı.
                           Yalnızca duvar tanıtıldıysa anlamlı.
                         */}
+                        {/*
+                          KALİBRASYON DENETİMİ.
+
+                          Izgara duvarın gerçek koordinat sisteminden
+                          üretiliyor; açıp çizgilerin duvara oturup
+                          oturmadığına bakmak ölçünün doğruluğunu gösteriyor.
+                        */}
+                        {duvarDunya && (
+                          <button
+                            type="button"
+                            onClick={() => setIzgaraAcik((v) => !v)}
+                            className={`mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border transition-colors ${
+                              izgaraAcik
+                                ? 'border-brand text-brand'
+                                : 'border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
+                            }`}
+                          >
+                            {izgaraAcik ? t('scene.gridOff') : t('scene.gridOn')}
+                          </button>
+                        )}
                         <div className="mt-3 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
                           {t('scene.placeHeading')}
                         </div>

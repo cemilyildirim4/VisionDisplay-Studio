@@ -460,6 +460,16 @@ const dict = {
     ar: 'يتّسع هذا الجدار لما لا يزيد عن',
   },
   'scene.cabinets': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
+  'scene.gridOn': {
+    tr: 'Metre ızgarasını göster',
+    en: 'Show the metre grid',
+    ar: 'إظهار شبكة الأمتار',
+  },
+  'scene.gridOff': {
+    tr: 'Metre ızgarasını gizle',
+    en: 'Hide the metre grid',
+    ar: 'إخفاء شبكة الأمتار',
+  },
   'scene.distOptional': {
     tr: 'Bilmiyorsanız boş bırakın: kutu fotoğrafa tam sığacak şekilde kurulur, sonra köşelerinden duvara oturtursunuz.',
     en: 'Leave it empty if you do not know: the box is built to fill the photo and you fit it to the wall by its corners.',
@@ -550,8 +560,8 @@ const dict = {
     en: 'The surface is not fully reliable. You can adjust the corners by hand.',
     ar: 'السطح غير موثوق تمامًا. يمكنك ضبط الزوايا يدويًا.',
   },
-  'scene.cornersManual': { tr: 'Köşelerden ayarla', en: 'Adjust by corners', ar: 'الضبط من الزوايا' },
-  'scene.cornersHint': { tr: 'Köşeleri tutup çekin; ekran o dört köşeye oturur. Metre ölçüsü değişmez.', en: 'Drag the corners; the screen fits those four points. Its size in metres stays the same.', ar: 'اسحب الزوايا؛ تنطبق الشاشة على تلك النقاط الأربع.' },
+  'scene.cornersManual': { tr: 'Duvarı köşelerden kalibre et', en: 'Calibrate the wall by corners', ar: 'معايرة الجدار من الزوايا' },
+  'scene.cornersHint': { tr: 'Dört köşeyi fotoğraftaki duvarın köşelerine oturtun. Duvarın gerçek ölçüsü bu dörtgene bağlanır; ekran da duvarın koordinat sisteminden doğru yere ve doğru perspektife düşer.', en: 'Put the four handles on the wall corners in the photo. The wall size in metres is bound to this quad and the screen follows the wall coordinate system.', ar: 'ضع الزوايا الأربع على زوايا الجدار في الصورة.' },
   'scene.cornersOff': { tr: 'Köşe ayarını bitir', en: 'Finish corner adjustment', ar: 'إنهاء ضبط الزوايا' },
   'scene.viewDistFixed': {
     tr: 'İzleme Mesafesi',
