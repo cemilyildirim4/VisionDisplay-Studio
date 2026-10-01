@@ -3062,7 +3062,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Böylece kullanıcının girdiği ölçü gerçekten geçerli oluyor: kutuyu
    * duvara oturttuğu anda sahnenin ölçeği ona göre kalibre ediliyor.
    */
-  const taslaktanOlcek = (kutu) => {
+  const taslaktanOlcek = (kutu, elle = true) => {
     const w = Number(String(taslakWm).replace(',', '.'))
     if (!(w > 0.05) || !Array.isArray(kutu) || kutu.length !== 4) return
     /*
@@ -3087,8 +3087,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setIzlemeM(yuvarlak)
     /* Alandaki sayı da güncellensin: iki yön de aynı gerçeği göstersin. */
     setTaslakMesafe(yuvarlak.toFixed(2))
-    /* Kutuyu duvara oturtmak da bir karardır: bundan sonra kendiliğinden bozulmuyor. */
-    mesafeElleRef.current = true
+    /*
+     * Kutuyu duvara oturtmak bir karardır. Ama duvarın metre değeri
+     * değiştiğinde de bu hesap çalışıyor; orada karar veren kullanıcı değil,
+     * yalnızca sayı güncelleniyor (elle = false).
+     */
+    if (elle) mesafeElleRef.current = true
   }
 
   /*
@@ -3184,25 +3188,52 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kalıyordu. Aynı mesafeden çekilen iki fotoğraf, lens değişince bambaşka
    * genişlikleri kapsar; mesafeden ölçek çıkarmak baştan yanlıştı.
    *
-   * İKİ YÖN DE ÇALIŞIYOR:
+   * KUTU KALİBRASYONDUR; METRE ONUN NE ANLAMA GELDİĞİNİ SÖYLER.
    *
-   *   mesafe girilince  → kutu o mesafeden görünen kadraja göre kuruluyor
-   *   kutu oynatılınca  → mesafe kutudan yeniden hesaplanıyor
+   * Burada uzun süre bir hata vardı: duvarın metre değeri her değiştiğinde
+   * kutu yeniden kuruluyordu. Oysa kutu, fotoğraftaki duvarın DÖRT KÖŞESİ —
+   * duvarın kaç metre olduğunu yazmak o köşeleri oynatmamalı, yalnızca o
+   * dörtgenin kaç metre ettiğini değiştirmeli.
    *
-   * Mesafe boş bırakılırsa tahmin edilmiyor, HESAPLANIYOR: kutuyu fotoğrafa
-   * tam sığdıran mesafe alınıyor. Çünkü insan ilgilendiği duvarı kadraja
-   * doldurarak çeker; sabit bir "%85" ya da "0,5 m" varsayımı ise her
-   * fotoğrafta tutmuyordu.
+   * Belirtisi şuydu: fotoğrafın tamamı kullanıcının ekranıyken kutuyu
+   * fotoğrafa oturtmak için gerçek ölçü yerine uydurma bir ölçü (0,55 × 0,34)
+   * yazmak gerekiyordu.
    *
-   * Kullanıcı ölçüyü sonradan değiştirirse kutunun YERİ korunuyor: duvarı
-   * zaten işaretlemişti, değişen yalnızca ölçüsü.
+   * Artık tetikleyene göre ayrışıyor:
+   *
+   *   ölçü değişti  → kutu YERİNDE kalır, yalnızca ölçeği değişir
+   *   mesafe girildi → kutu o mesafeden görünen kadraja göre yeniden kurulur
+   *   kutu oynatıldı → mesafe kutudan yeniden hesaplanır
+   *
+   * Kutu hiç yoksa fotoğrafı tam dolduracak şekilde kuruluyor: insan
+   * ilgilendiği duvarı kadraja doldurarak çeker.
+   *
+   * @param {'olcu'|'mesafe'} kaynak değişikliği hangi alan tetikledi
    */
-  const taslakKutuyuKur = () => {
+  const taslakKutuyuKur = (kaynak = 'olcu') => {
     const w = Number(String(taslakWm).replace(',', '.'))
     const h = Number(String(taslakHm).replace(',', '.'))
     if (!(w > 0.05) || !(h > 0.05)) return
-    const kaynak = ozelSahne?.kaynak
-    if (!kaynak?.w || !kaynak?.h) return
+    const foto = ozelSahne?.kaynak
+    if (!foto?.w || !foto?.h) return
+
+    /*
+     * ÖLÇÜ DEĞİŞTİ, KUTU DURUYOR.
+     *
+     * Kullanıcı duvarı zaten işaretlemiş. Yeni metre değeri yalnızca o
+     * dörtgenin ölçeğini değiştiriyor; dörtgenin kendisi kullanıcınındır.
+     */
+    const mevcut = taslakKutu
+    if (kaynak !== 'mesafe' && Array.isArray(mevcut) && mevcut.length === 4) {
+      setDuvarOlcu({ wm: w, hm: h })
+      setTaslakKuruldu(true)
+      setHedefKose(mevcut)
+      setHedefTur('taslak')
+      /* Mesafe alanı da aynı gerçeği göstersin — ama karar kullanıcının kalsın. */
+      taslaktanOlcek(mevcut, false)
+      setOzelUyari(null)
+      return
+    }
 
     /*
      * Mesafe boşsa: duvarı kadraja TAM sığdıran mesafe. İki kenardan hangisi
@@ -3210,7 +3241,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * gereksiz de küçük kalmıyor.
      */
     const girilen = mesafeElleRef.current ? Number(String(taslakMesafe).replace(',', '.')) : 0
-    const sigan = Math.max(w, h * (kaynak.w / kaynak.h)) / KADRAJ_KATSAYISI
+    const sigan = Math.max(w, h * (foto.w / foto.h)) / KADRAJ_KATSAYISI
     const m = girilen > 0.1 ? girilen : Math.max(0.2, sigan)
     if (!(girilen > 0.1)) setTaslakMesafe(m.toFixed(2))
 
@@ -3220,7 +3251,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * KAPLAYACAĞI kadar yer kaplıyor.
      */
     const kadrajW = kadrajGenisligi(m)
-    const kadrajH = kadrajW * (kaynak.h / kaynak.w)
+    const kadrajH = kadrajW * (foto.h / foto.w)
     const payW = w / kadrajW
     const payH = h / kadrajH
 
@@ -4038,7 +4069,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   }
                   onClick={() => {
                     setTaslakSorusu(false)
-                    taslakKutuyuKurRef.current?.()
+                    /* İlk kurulumda kutu yok: fotoğrafa sığdırılarak kuruluyor. */
+                    taslakKutuyuKurRef.current?.('mesafe')
                   }}
                   className="flex-1 rounded-full bg-brand py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                 >
@@ -4701,8 +4733,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             step="0.1"
                             value={taslakWm}
                             onChange={(e) => setTaslakWm(e.target.value)}
-                            onBlur={taslakKutuyuKur}
-                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur()}
+                            onBlur={() => taslakKutuyuKur('olcu')}
+                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur('olcu')}
                             placeholder={t('scene.wallW')}
                             className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
                           />
@@ -4713,8 +4745,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             step="0.1"
                             value={taslakHm}
                             onChange={(e) => setTaslakHm(e.target.value)}
-                            onBlur={taslakKutuyuKur}
-                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur()}
+                            onBlur={() => taslakKutuyuKur('olcu')}
+                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur('olcu')}
                             placeholder={t('scene.wallH')}
                             className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
                           />
@@ -4741,8 +4773,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               setTaslakMesafe(e.target.value)
                               mesafeElleRef.current = true
                             }}
-                            onBlur={taslakKutuyuKur}
-                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur()}
+                            onBlur={() => taslakKutuyuKur('mesafe')}
+                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur('mesafe')}
                             className="w-20 min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
                           />
                           <span className="text-[13px] text-neutral-400">m</span>

@@ -519,7 +519,7 @@ const dict = {
   'scene.draftMake': { tr: 'Taslak kutuyu oluştur', en: 'Create draft box', ar: 'إنشاء مربع مبدئي' },
   'scene.draftAgain': { tr: 'Taslak kutuyu yenile', en: 'Rebuild draft box', ar: 'إعادة إنشاء المربع' },
   'scene.draftHint': {
-    tr: 'Kutuyu köşelerinden tutup fotoğraftaki duvarın tam üstüne oturtun. Ölçek oradan hesaplanıyor: kutu duvarı doğru kaplıyorsa tasarım da gerçek boyutunda görünür.',
+    tr: 'Kutuyu köşelerinden tutup fotoğraftaki duvarın tam üstüne oturtun; sonra o duvarın gerçek ölçüsünü yazın. Ölçüyü değiştirmek kutuyu oynatmaz, yalnızca kaç metre ettiğini söyler.',
     en: 'After the box appears, use "Adjust by corners" to fit it to the wall in the photo. The scale comes from this size.',
     ar: 'بعد ظهور المربع، استخدم «الضبط من الزوايا» لمطابقته مع الجدار في الصورة.',
   },
