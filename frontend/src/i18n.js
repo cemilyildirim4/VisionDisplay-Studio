@@ -483,6 +483,12 @@ const dict = {
     en: 'First mark a reference area whose real size you know.',
     ar: 'حدّد أولًا منطقة مرجعية تعرف مقاسها الحقيقي.',
   },
+  'ref.ayniDuzlem': {
+    tr: 'Bu ölçek yalnızca referansla AYNI düzlemde geçerli. Referans masadaysa masa ölçülür; duvarı ölçmek için referans da duvarda olmalı.',
+    en: 'This scale is valid only on the SAME plane as the reference. If the reference is on the table, the table is what gets measured.',
+    ar: 'هذا المقياس صالح فقط على المستوى نفسه الذي عليه المرجع.',
+  },
+  'ref.kutuGuncelle': { tr: 'Ölçüyü güncelle', en: 'Update the size', ar: 'تحديث المقاس' },
   'ref.kutuKur': { tr: 'Kutuyu oluştur', en: 'Create the box', ar: 'إنشاء المربع' },
   'ref.kutuIpucu': {
     tr: 'Kutunun ölçüsü girdiğiniz santimetreden geliyor; elle büyütülüp küçültülemez. Gövdesinden tutup istediğiniz yere taşıyın.',

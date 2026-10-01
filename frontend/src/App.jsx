@@ -46,7 +46,7 @@ import { duzlestir } from './egimDenetimi.js'
 
 import { DAVET_OLAYI } from './apiClient.js'
 import { useSession } from './SessionContext.jsx'
-import { icDortgen, sigdirDortgen, duvarDunyasi, dunyaDortgeni } from './homografi.js'
+import { icDortgen, duvarDunyasi, dunyaDortgeni } from './homografi.js'
 import { kalibrasyonKur, merkezeYerlestir, referansDenetle } from './referansOlcek.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
@@ -525,9 +525,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * tahmin değil: duvarın kaç metre olduğunu kullanıcı söyledi.
    */
   const TASLAK_KIPI = true
-  const [taslakWm, setTaslakWm] = useState('')
-  const [taslakHm, setTaslakHm] = useState('')
-  const [taslakKuruldu, setTaslakKuruldu] = useState(false)
   /*
    * Duvar ölçüsü FOTOĞRAFTAN ÖNCE soruluyor.
    *
@@ -546,7 +543,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * oynatılınca mesafe ondan yeniden hesaplanıp alana yazılıyor. Hangisini
    * bilirsen onu giriyorsun, diğeri kendiliğinden doğruyu gösteriyor.
    */
-  const [taslakMesafe, setTaslakMesafe] = useState('')
   /*
    * KAMERA KATSAYISI ÖĞRENİLMİYOR — VE ÖĞRENİLMEMELİ.
    *
@@ -579,8 +575,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Bu ayrım olmadan, kullanıcı ölçüyü ilk seferde yanlış girip düzeltince
    * kutu bir daha fotoğrafı doldurmuyordu.
    */
-  const mesafeElleRef = useRef(false)
-  const [taslakSorusu, setTaslakSorusu] = useState(false)
   /*
    * Taslak kutu TUVAL pikseli cinsinden: kullanıcı onu fareyle taşıyor ve
    * köşelerinden çekiyor, yani doğrudan ekran koordinatında çalışıyor.
@@ -613,12 +607,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [kutuEn, setKutuEn] = useState('')
   const [kutuBoy, setKutuBoy] = useState('')
   /*
+   * Bu bölümün kendi mesajı.
+   *
+   * Hatalar ozelUyari'ya yazılıyordu ama o değer hiçbir yerde çizilmiyor —
+   * yani "ölçüyü yaz" uyarısı kullanıcıya hiç ulaşmıyordu. Mesaj artık
+   * bölümün kendi içinde gösteriliyor.
+   */
+  const [refMesaj, setRefMesaj] = useState(null)
+  /*
    * Kutu onaylandı mı. Onaydan sonra kutu EKRANDAN KALKMIYOR, yalnızca
    * soluyor: tasarımı taşırken duvarın nerede olduğunu görmek gerekiyor.
    * Önce onayla birlikte siliniyordu ve kullanıcı tasarımı kutusuz bir
    * fotoğrafta sürüklüyordu.
    */
-  const [kutuOnaylandi, setKutuOnaylandi] = useState(false)
   /*
    * TANITILAN DUVAR — kutu uygulandıktan sonra da saklanıyor.
    *
@@ -1015,8 +1016,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
          * Eski taslak/mesafe sorusu da artık sorulmuyor — ölçek referanstan
          * geliyor (bkz. referansOlcek.js).
          */
-        mesafeElleRef.current = false
-        setTaslakMesafe('')
         setReferans(null)
         setReferansKipi(false)
         setRefKose(null)
@@ -2793,29 +2792,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Böylece tek bir bilinen ölçü bütün sahnenin ölçeğini doğruya çekiyor;
    * tasarım da kendi gerçek boyuyla, o yüzeye göre doğru oranda görünüyor.
    */
-  const olcegiGercekOlcudenKur = (gercekWm) => {
-    const w = Number(gercekWm)
-    if (!(w > 0.05) || !secilenYuzeyOlcu?.wm) return
-    const kadrajW = kadrajGenisligi(ozelMesafeM)
-    const pay = secilenYuzeyOlcu.wm / kadrajW
-    if (!(pay > 0.01)) return
-    const yeni = w / (pay * KADRAJ_KATSAYISI)
-    /* 0,2–120 m: elle girilen mesafenin kabul aralığıyla aynı. */
-    setOzelMesafeM(Math.max(0.2, Math.min(120, Math.round(yeni * 10) / 10)))
-  }
-
   /** Uydurmadan önceki kabin sayısına döner. */
-  const olcuyuGeriAl = () => {
-    setOlcuSorusu(false)
-    if (!olcuOncesi) return
-    setWidth(olcuOncesi.width)
-    setHeight(olcuOncesi.height)
-    setCols(olcuOncesi.cols)
-    setRows(olcuOncesi.rows)
-    setOlcuUyduruldu(false)
-    setOzelUyari(null)
-  }
-
   /*
    * MESAFE DEĞİŞİNCE EKRAN ÖLÇÜSÜNE DOKUNULMUYOR.
    *
@@ -3075,39 +3052,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Böylece kullanıcının girdiği ölçü gerçekten geçerli oluyor: kutuyu
    * duvara oturttuğu anda sahnenin ölçeği ona göre kalibre ediliyor.
    */
-  const taslaktanOlcek = (kutu, elle = true) => {
-    const w = Number(String(taslakWm).replace(',', '.'))
-    if (!(w > 0.05) || !Array.isArray(kutu) || kutu.length !== 4) return
-    /*
-     * PERSPEKTİFTE ÇEVRELEYEN KUTU YANILTIYOR.
-     *
-     * Duvara açıyla bakıldığında kutu yamuk oluyor: üst kenarı uzun, alt
-     * kenarı kısa. Çevreleyen kutunun eni her zaman UZUN kenara eşit
-     * olduğundan duvar olduğundan geniş sayılıyor, ölçek de o kadar
-     * küçülüyordu. İki kenarın ortalaması duvarın gerçek payına çok daha
-     * yakın; düz bakışta zaten ikisi eşit, yani hiçbir şey değişmiyor.
-     */
-    const ust = Math.abs(kutu[1].x - kutu[0].x)
-    const alt = Math.abs(kutu[2].x - kutu[3].x)
-    let payW = (ust + alt) / 2
-    if (!(payW > 0.01)) {
-      const xs = kutu.map((k) => k.x)
-      payW = Math.max(...xs) - Math.min(...xs)
-    }
-    if (!(payW > 0.01)) return
-    const mesafe = w / payW / KADRAJ_KATSAYISI
-    const yuvarlak = Math.max(0.2, Math.min(300, Math.round(mesafe * 100) / 100))
-    setIzlemeM(yuvarlak)
-    /* Alandaki sayı da güncellensin: iki yön de aynı gerçeği göstersin. */
-    setTaslakMesafe(yuvarlak.toFixed(2))
-    /*
-     * Kutuyu duvara oturtmak bir karardır. Ama duvarın metre değeri
-     * değiştiğinde de bu hesap çalışıyor; orada karar veren kullanıcı değil,
-     * yalnızca sayı güncelleniyor (elle = false).
-     */
-    if (elle) mesafeElleRef.current = true
-  }
-
   /*
    * KUTU FOTOĞRAFIN DIŞINA ÇIKMIYOR.
    *
@@ -3119,36 +3063,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kutu fotoğraftan büyükse (girilen duvar o mesafeye sığmıyorsa) kırpmak
    * yanlış olur: o zaman ortalanıyor ve sebep zaten uyarı olarak yazılı.
    */
-  const kutuyuFotografaSigdir = (k) => {
-    const x0 = Math.min(...k.map((q) => q.x))
-    const x1 = Math.max(...k.map((q) => q.x))
-    const y0 = Math.min(...k.map((q) => q.y))
-    const y1 = Math.max(...k.map((q) => q.y))
-    let dx = 0
-    let dy = 0
-    if (x1 - x0 <= 1) {
-      if (x0 < 0) dx = -x0
-      else if (x1 > 1) dx = 1 - x1
-    } else {
-      dx = 0.5 - (x0 + x1) / 2
-    }
-    if (y1 - y0 <= 1) {
-      if (y0 < 0) dy = -y0
-      else if (y1 > 1) dy = 1 - y1
-    } else {
-      dy = 0.5 - (y0 + y1) / 2
-    }
-    return dx || dy ? k.map((q) => ({ x: q.x + dx, y: q.y + dy })) : k
-  }
-
-  const taslakKutusuDegisti = (tuvalKoseler) => {
-    const oranli = kutuyuFotografaSigdir(tuvalKoseler.map(tuvalOrana))
-    setTaslakKutu(oranli)
-    /* Tasarım kutunun içinde: kutu nereye giderse o da oraya. */
-    setHedefKose(oranli)
-    taslaktanOlcek(oranli)
-  }
-
   /*
    * TASARIMI DUVARA TAM SIĞDIR.
    *
@@ -3246,224 +3160,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHeight(Math.round(h * 1000) / 1000)
   }
 
-  const taslakKutuyuKur = (kaynak = 'olcu') => {
-    const w = Number(String(taslakWm).replace(',', '.'))
-    const h = Number(String(taslakHm).replace(',', '.'))
-    if (!(w > 0.05) || !(h > 0.05)) return
-    const foto = ozelSahne?.kaynak
-    if (!foto?.w || !foto?.h) return
-
-    /*
-     * ÖLÇÜ DEĞİŞTİ, KUTU DURUYOR.
-     *
-     * Kullanıcı duvarı zaten işaretlemiş. Yeni metre değeri yalnızca o
-     * dörtgenin ölçeğini değiştiriyor; dörtgenin kendisi kullanıcınındır.
-     */
-    const mevcut = taslakKutu
-    if (kaynak === 'olcu' && Array.isArray(mevcut) && mevcut.length === 4) {
-      setDuvarOlcu({ wm: w, hm: h })
-      setTaslakKuruldu(true)
-      setHedefKose(mevcut)
-      setHedefTur('taslak')
-    /* Sol paneldeki duvar alanı kalibre edilen duvara eşitleniyor (bkz. not). */
-    duvariEsitle(w, h)
-
-      /* Mesafe alanı da aynı gerçeği göstersin — ama karar kullanıcının kalsın. */
-      taslaktanOlcek(mevcut, false)
-      setOzelUyari(null)
-      return
-    }
-
-    const yazilan = Number(String(taslakMesafe).replace(',', '.'))
-
-    /*
-     * İLK KURULUMDA KUTU FOTOĞRAFIN TAMAMI, MESAFE DE BİLGİDİR.
-     *
-     * Kullanıcı mesafeyi biliyorsa (fotoğrafı kaç metreden çektiğini) o sayı
-     * atılmıyor: kutunun fotoğrafı tam kapladığı varsayımıyla birlikte
-     * KAMERANIN KATSAYISINI veriyor. Sonraki mesafe değişiklikleri artık o
-     * kameraya göre hesaplanıyor, genel bir varsayıma göre değil.
-     */
-    /*
-     * Katsayı, kutunun kadrajda KAPLADIĞI paya göre öğreniliyor. Kutu
-     * fotoğrafın tamamı değil; payı hesaba katmazsak kamera olduğundan dar
-     * açılı sayılırdı.
-     */
-    if (kaynak === 'ilk') mesafeElleRef.current = false
-    const girilen = kaynak !== 'ilk' && mesafeElleRef.current ? yazilan : 0
-
-    /*
-     * MESAFE YOKSA KUTU FOTOĞRAFIN TAMAMI.
-     *
-     * Önce kutu, duvarın KENDİ en/boy oranı korunarak fotoğrafa sığdırılıyordu.
-     * Bu, duvarın oranının fotoğrafın oranıyla aynı olduğunu varsayıyor — oysa
-     * ikisi çoğu zaman tutmuyor ve kutu fotoğrafın bir kenarında boşluk
-     * bırakıyordu (ölçümde %86,8). Kullanıcı o boşluğu kapatmak için ya kutuyu
-     * çekmek ya da uydurma bir ölçü yazmak zorunda kalıyordu.
-     *
-     * Oysa insan ilgilendiği duvarı kadraja DOLDURARAK çeker. Oran farkı da
-     * atılacak bir bilgi değil: duvar fotoğrafta kendi oranından başka
-     * görünüyorsa, fotoğraf açıyla çekilmiş demektir ve dünya dönüşümü bunu
-     * zaten doğru hesaplıyor (yatay ve dikey ölçek ayrı).
-     *
-     * Mesafe girilmişse eski yol: kutu o mesafeden görünen kadraja göre.
-     */
-    if (!(girilen > 0.1)) {
-      /*
-       * KUTU BİR ALAN SEÇİCİDİR, KADRAJIN TAMAMI DEĞİL.
-       *
-       * Bir ara "mesafe verilmediyse kutu fotoğrafın tamamını kaplasın" diye
-       * bir kural koymuştum. Yanlıştı: kullanıcı bu kutuyu arka plandaki
-       * BİR YERİ işaretlemek için kullanıyor — duvarın bir bölümü, bir
-       * vitrin, bir cephe parçası. Kadrajın tamamı bunlardan yalnızca biri.
-       *
-       * Kutu artık fotoğrafın ortasında, girilen ölçünün kendi oranıyla ve
-       * dört köşesi rahat yakalanacak kadar içeride açılıyor. Kullanıcı onu
-       * sürükleyip köşelerinden çekerek istediği yere oturtuyor; oturttuğu
-       * yer de kalıyor — ne girilen ölçü ne başka bir kural onu geri
-       * büyütmüyor. Kadrajın tamamını işaretlemek isteyen köşeleri kenara
-       * çeker.
-       */
-      const PAY = 0.7
-      const oran = (w / h) * (foto.h / foto.w)
-      let payW = PAY
-      let payH = payW / oran
-      if (payH > PAY) {
-        payH = PAY
-        payW = payH * oran
-      }
-      const kutu = [
-        { x: 0.5 - payW / 2, y: 0.5 - payH / 2 },
-        { x: 0.5 + payW / 2, y: 0.5 - payH / 2 },
-        { x: 0.5 + payW / 2, y: 0.5 + payH / 2 },
-        { x: 0.5 - payW / 2, y: 0.5 + payH / 2 },
-      ]
-      elleDuzenlemeyiBirak()
-      setAdayKipi(false)
-      setTaslakKutu(kutu)
-      setKutuOnaylandi(false)
-      setHedefKose(kutu)
-      setHedefTur('taslak')
-      setDuvarOlcu({ wm: w, hm: h })
-      setTaslakKuruldu(true)
-      /* Sol paneldeki duvar alanı kalibre edilen duvara eşitleniyor (bkz. not). */
-      duvariEsitle(w, h)
-      /*
-       * Kullanıcı mesafeyi yazdıysa o DURUYOR (katsayı ona göre öğrenildi);
-       * yazmadıysa varsayılan katsayıdan hesaplanıyor.
-       */
-      /*
-       * Mesafe burada yalnızca SAKLANIYOR: izleme mesafesi ve 3B kamerası
-       * için bilgi. Açılış kutusunun payından kamera açısı çıkarmıyoruz —
-       * o pay kullanıcının kararı değil, bizim arayüz kolaylığımız.
-       */
-      if (yazilan > 0.05) {
-        setTaslakMesafe(yazilan.toFixed(2))
-        setIzlemeM(Math.max(0.2, Math.min(300, yazilan)))
-      } else {
-        const m0 = w / (payW * KADRAJ_KATSAYISI)
-        setTaslakMesafe(m0.toFixed(2))
-        setIzlemeM(Math.max(0.2, Math.min(300, m0)))
-      }
-      setOzelUyari(null)
-      return
-    }
-
-    const m = girilen
-    /*
-     * Kadraj ORTALAMA bir kamera açısıyla: bu yalnızca "mesafeyi yazınca kutu
-     * ne kadar olsun" sorusunun cevabı, ölçünün kaynağı değil (bkz. not).
-     */
-    const kadrajW = Math.max(0.05, m * KADRAJ_KATSAYISI)
-    const kadrajH = kadrajW * (foto.h / foto.w)
-    const payW = w / kadrajW
-    const payH = h / kadrajH
-
-    /*
-     * MESAFE DEĞİŞİNCE KUTU YENİDEN KURULMUYOR, ÖLÇEKLENİYOR.
-     *
-     * Yeniden kurmak kutuya fotoğrafın en/boy oranını dayatıyordu: mesafeyi
-     * 1 m yapıp 0,5'e geri döndüğünde kutu eski hâline dönmüyor, boyu %15
-     * şişiyordu. Oysa mesafeyi değiştirmek "aynı duvara daha uzaktan bakmak"
-     * demek — şekil aynı kalır, yalnızca küçülür. Kullanıcının köşelerden
-     * verdiği eğim de böylece korunuyor.
-     */
-    const onceki = taslakKutu
-    if (Array.isArray(onceki) && onceki.length === 4) {
-      const ustK = Math.abs(onceki[1].x - onceki[0].x)
-      const altK = Math.abs(onceki[2].x - onceki[3].x)
-      const eskiPay = (ustK + altK) / 2
-      if (eskiPay > 0.01) {
-        const k = payW / eskiPay
-        const ox = onceki.reduce((a, q) => a + q.x, 0) / 4
-        const oy = onceki.reduce((a, q) => a + q.y, 0) / 4
-        const yeniKutu = kutuyuFotografaSigdir(
-          onceki.map((q) => ({ x: ox + (q.x - ox) * k, y: oy + (q.y - oy) * k })),
-        )
-        elleDuzenlemeyiBirak()
-        setAdayKipi(false)
-        setTaslakKutu(yeniKutu)
-        setKutuOnaylandi(false)
-        setHedefKose(yeniKutu)
-        setHedefTur('taslak')
-        setDuvarOlcu({ wm: w, hm: h })
-        setTaslakKuruldu(true)
-        duvariEsitle(w, h)
-        setIzlemeM(Math.max(0.2, Math.min(300, m)))
-        setOzelUyari(null)
-        return
-      }
-    }
-
-    /* Kutu duvara oturtulmuşsa yeri korunuyor; değişen yalnızca ölçüsü. */
-    let mx = 0.5
-    let my = 0.5
-    const eski = taslakKutu
-    if (Array.isArray(eski) && eski.length === 4) {
-      const xs = eski.map((k) => k.x)
-      const ys = eski.map((k) => k.y)
-      mx = (Math.min(...xs) + Math.max(...xs)) / 2
-      my = (Math.min(...ys) + Math.max(...ys)) / 2
-    }
-
-    const kutu = kutuyuFotografaSigdir([
-      { x: mx - payW / 2, y: my - payH / 2 },
-      { x: mx + payW / 2, y: my - payH / 2 },
-      { x: mx + payW / 2, y: my + payH / 2 },
-      { x: mx - payW / 2, y: my + payH / 2 },
-    ])
-
-    elleDuzenlemeyiBirak()
-    setAdayKipi(false)
-    setTaslakKutu(kutu)
-    setKutuOnaylandi(false)
-    setHedefKose(kutu)
-    setHedefTur('taslak')
-    setDuvarOlcu({ wm: w, hm: h })
-    setTaslakKuruldu(true)
-    /* Sol paneldeki duvar alanı kalibre edilen duvara eşitleniyor (bkz. not). */
-    duvariEsitle(w, h)
-    setIzlemeM(Math.max(0.2, Math.min(300, m)))
-    /*
-     * Duvar, verilen mesafeden görünen kadrajdan genişse iki sayı çelişiyor
-     * demektir: o duvar o mesafeden tek kareye sığmaz. Gereken en az mesafe
-     * yazılıyor ki kullanıcı hangi sayıyı düzelteceğini bilsin.
-     */
-    if (payW > 1 || payH > 1) {
-      const enAz = Math.ceil((Math.max(w, h * (foto.w / foto.h)) / KADRAJ_KATSAYISI) * 100) / 100
-      setOzelUyari(
-        t('scene.wallBiggerThanFrame') +
-          ' ' +
-          t('scene.needDistance') +
-          ' ' +
-          enAz.toFixed(2).replace('.', ',') +
-          ' m',
-      )
-    } else {
-      setOzelUyari(null)
-    }
-  }
-
   /*
    * KUTUYA TIKLANDI: TASARIM İÇİNE YERLEŞİYOR.
    *
@@ -3481,7 +3177,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   useEffect(() => {
     if (scene !== 'ozel' || !ozelSahne) {
       setTaslakKutu(null)
-      setKutuOnaylandi(false)
       setDuvarOlcu(null)
     }
   }, [scene, ozelSahne])
@@ -3493,18 +3188,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kaldırıyor. Duvarın ölçüsü saklı kaldığı için sığma denetimi çalışmaya
    * devam ediyor.
    */
-  const taslakKutusunuUygula = () => {
-    if (!taslakKutu) return
-    const dw = Number(String(taslakWm).replace(',', '.'))
-    const dh = Number(String(taslakHm).replace(',', '.'))
-    setDuvarOlcu(dw > 0 && dh > 0 ? { wm: dw, hm: dh } : null)
-    duvariEsitle(dw, dh)
-    /* Kutu zaten fotoğrafa göre oranlı: hedef yüzey doğrudan o. */
-    setHedefKose(taslakKutu)
-    setHedefTur('taslak')
-    setKutuOnaylandi(true)
-  }
-
   /*
    * GÖRSEL PİKSELİ ↔ TUVAL PİKSELİ.
    *
@@ -3545,7 +3228,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefKose(oranli)
     /* Ekrandaki kutu çizimi de aynı dörtgeni kullanıyor. */
     setTaslakKutu(oranli)
-    setKutuOnaylandi(true)
     setHedefTur('taslak')
     setDuvarOlcu({ wm: olcuKutu.enCm / 100, hm: olcuKutu.boyCm / 100 })
     duvariEsitle(olcuKutu.enCm / 100, olcuKutu.boyCm / 100)
@@ -3577,12 +3259,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const aday = { koseler: refKose, enCm: en, boyCm: boy }
     const d = referansDenetle(aday)
     if (!d.tamam) {
-      setOzelUyari(t('ref.hata.' + d.sebep))
+      setRefMesaj(t('ref.hata.' + d.sebep))
       return
     }
     setReferans(aday)
     setReferansKipi(false)
-    setOzelUyari(null)
+    setRefMesaj(null)
   }
 
   /** Referansı ve ona bağlı her şeyi bırak. */
@@ -3593,24 +3275,47 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setOlcuKutu(null)
     setHedefKose(null)
     setDuvarOlcu(null)
-    setOzelUyari(null)
+    setRefMesaj(null)
   }
 
   /** Ölçü kutusunu kur: girilen santimetre, referansın ortasına. */
-  const olcuKutusunuKur = () => {
-    if (!kalibrasyon) {
-      setOzelUyari(t('ref.onceReferans'))
-      return
-    }
+  /** Girilen santimetreyi okur; geçersizse mesaj yazıp null döner. */
+  const kutuOlcusuOku = () => {
     const en = Number(String(kutuEn).replace(',', '.'))
     const boy = Number(String(kutuBoy).replace(',', '.'))
     if (!(en > 0.5) || !(boy > 0.5)) {
-      setOzelUyari(t('ref.hata.olcuYok'))
+      setRefMesaj(t('ref.hata.olcuYok'))
+      return null
+    }
+    return { en, boy }
+  }
+
+  /** Kutuyu ilk kez oluştur: referansın ortasına. */
+  const olcuKutusunuKur = () => {
+    if (!kalibrasyon) {
+      setRefMesaj(t('ref.onceReferans'))
       return
     }
-    const yer = merkezeYerlestir(kalibrasyon, en, boy)
-    setOlcuKutu({ xCm: yer.x, yCm: yer.y, enCm: en, boyCm: boy })
-    setOzelUyari(null)
+    const o = kutuOlcusuOku()
+    if (!o) return
+    const yer = merkezeYerlestir(kalibrasyon, o.en, o.boy)
+    setOlcuKutu({ xCm: yer.x, yCm: yer.y, enCm: o.en, boyCm: o.boy })
+    setRefMesaj(null)
+  }
+
+  /*
+   * ÖLÇÜYÜ GÜNCELLE — kutuyu yeniden kurmadan.
+   *
+   * Ölçüyü değiştirmek için kutuyu baştan oluşturmak gerekiyordu, o da kutuyu
+   * ortaya geri atıyor ve kullanıcının yerleştirdiği yer kayboluyordu.
+   * Güncelleme yalnızca ölçüyü değiştiriyor, YERİ koruyor.
+   */
+  const olcuKutusunuGuncelle = () => {
+    if (!kalibrasyon || !olcuKutu) return
+    const o = kutuOlcusuOku()
+    if (!o) return
+    setOlcuKutu((e) => (e ? { ...e, enCm: o.en, boyCm: o.boy } : e))
+    setRefMesaj(null)
   }
 
   /*
@@ -3628,8 +3333,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setOlcuKutu((e) => (e ? { ...e, xCm: cm.x, yCm: cm.y } : e))
   }
 
-  const taslakKutuyuKurRef = useRef(null)
-  taslakKutuyuKurRef.current = taslakKutuyuKur
 
   /*
    * TASARIM BU DUVARA SIĞIYOR MU?
@@ -4293,139 +3996,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           yüklenir yüklenmez taslak kutu bu ölçüyle kuruluyor ve sahnenin
           ölçeği ilk andan itibaren doğru oluyor.
         */}
-        {taslakSorusu && (
-          <div
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-[#001334]/45 p-4"
-            onClick={() => setTaslakSorusu(false)}
-          >
-            <div
-              className="w-full max-w-[360px] rounded-2xl border border-neutral-200 bg-white p-5 shadow-[0_18px_50px_-18px_rgba(0,19,52,0.45)] dark:border-[#2c333f] dark:bg-[#161a21]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="m-0 text-[15.5px] font-bold text-neutral-900 dark:text-neutral-50">
-                {t('scene.wallAsk')}
-              </h3>
-              <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                {t('scene.wallAskHint')}
-              </p>
-              {/*
-                ETİKETLER KUTUNUN ÜSTÜNDE, İÇİNDE DEĞİL.
-
-                Önce yer tutucu (placeholder) kullanılıyordu; kullanıcı sayıyı
-                yazar yazmaz "en"/"boy" kayboluyor ve hangi kutunun hangisi
-                olduğu görünmez oluyordu. 6 × 10 girip kutunun neden dikey
-                çıktığına şaşırmanın sebebi buydu.
-              */}
-              <div className="mt-3 flex items-end gap-2">
-                <label className="flex-1 min-w-0">
-                  <span className="block text-[12.5px] font-medium text-neutral-600 dark:text-neutral-300">
-                    {t('scene.wallWLabel')}
-                  </span>
-                  <input
-                    type="number"
-                    min="0.1"
-                    step="0.1"
-                    autoFocus
-                    value={taslakWm}
-                    onChange={(e) => setTaslakWm(e.target.value)}
-                    className="mt-1 w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                  />
-                </label>
-                <span className="pb-2.5 text-[14px] text-neutral-400">×</span>
-                <label className="flex-1 min-w-0">
-                  <span className="block text-[12.5px] font-medium text-neutral-600 dark:text-neutral-300">
-                    {t('scene.wallHLabel')}
-                  </span>
-                  <input
-                    type="number"
-                    min="0.1"
-                    step="0.1"
-                    value={taslakHm}
-                    onChange={(e) => setTaslakHm(e.target.value)}
-                    className="mt-1 w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                  />
-                </label>
-                <span className="pb-2.5 text-[14px] text-neutral-400">m</span>
-              </div>
-              {/*
-                MESAFE BURADA SORULMUYOR, HESAPLANIYOR.
-
-                En/boy ve mesafe aynı anda girilince ikisi çelişebiliyordu ve
-                çelişkide mesafe kazandığı için kutu küçük kalıyordu. Burada
-                girilen ölçü kutuyu belirler; mesafe o ölçünün sonucudur ve
-                yalnızca gösterilir. Sonradan sağ panelden değiştirilebiliyor —
-                orada yazmak kutuyu bilerek büyütüp küçültmek demek.
-              */}
-              <div className="mt-3">
-                <label className="block text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
-                  {t('scene.askDistance')}
-                </label>
-                <div className="mt-1 flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0.05"
-                    step="0.05"
-                    value={taslakMesafe}
-                    onChange={(e) => setTaslakMesafe(e.target.value)}
-                    className="w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                  />
-                  <span className="text-[14px] text-neutral-400">m</span>
-                </div>
-                {/*
-                  ÖNERİ, KURAL DEĞİL.
-
-                  Öneri, her kameranın görüş açısını aynı sayan varsayımdan
-                  çıkıyor (kadraj = mesafe × 1,11) ve çoğu telefonda tutmuyor.
-                  Bu yüzden yalnızca yazılı duruyor: kullanıcı kendi bildiği
-                  mesafeyi girerse program o kameranın katsayısını ondan
-                  öğreniyor.
-                */}
-                {(() => {
-                  const w = Number(String(taslakWm).replace(',', '.'))
-                  if (!(w > 0.05)) return null
-                  return (
-                    <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                      {t('scene.distSuggest')}{' '}
-                      <button
-                        type="button"
-                        onClick={() => setTaslakMesafe((w / KADRAJ_KATSAYISI).toFixed(2))}
-                        className="font-semibold tabular-nums text-brand underline-offset-2 hover:underline"
-                      >
-                        {(w / KADRAJ_KATSAYISI).toFixed(2).replace('.', ',')} m
-                      </button>{' '}
-                      {t('scene.distSuggestNote')}
-                    </p>
-                  )
-                })()}
-              </div>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  disabled={
-                    !(Number(String(taslakWm).replace(',', '.')) > 0.05) ||
-                    !(Number(String(taslakHm).replace(',', '.')) > 0.05)
-                  }
-                  onClick={() => {
-                    setTaslakSorusu(false)
-                    /* İlk kurulum: kutu fotoğrafın tamamı, mesafe ondan hesaplanıyor. */
-                    taslakKutuyuKurRef.current?.('ilk')
-                  }}
-                  className="flex-1 rounded-full bg-brand py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-                >
-                  {t('common.ok')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTaslakSorusu(false)}
-                  className="flex-1 rounded-full border border-neutral-200 py-2.5 text-[14px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300"
-                >
-                  {t('common.cancel')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         <DavetKapisi
           acik={davetAcik}
           onKapat={() => setDavetAcik(false)}
@@ -5069,7 +4639,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     */}
                     {TASLAK_KIPI && (
                       <>
-                        <div className="text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
+                        {refMesaj && (
+                          <p className="mb-1 mt-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                            {refMesaj}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-1.5 text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
+                          <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-[#e06c1f]" />
                           {t('ref.baslik')}
                         </div>
                         <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
@@ -5145,6 +4721,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 {referans.enCm} × {referans.boyCm} cm
                               </span>
                             </div>
+                            {/*
+                              AYNI DÜZLEM ŞARTI KALICI OLARAK YAZILI.
+                              Referans masadaysa masa ölçülür; duvardaki bir şeyi ölçmek için
+                              referans da duvarda olmalı. Bu kuralı kod denetleyemiyor, söylemek
+                              zorunda.
+                            */}
+                            <p className="mt-1 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">
+                              {t('ref.ayniDuzlem')}
+                            </p>
                             <button
                               type="button"
                               onClick={referansiSifirla}
@@ -5156,7 +4741,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         )}
 
                         {/* ÖLÇÜ KUTUSU — referans kurulmadan açılmıyor. */}
-                        <div className="mt-3 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
+                        <div className="flex items-center gap-1.5 mt-3 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
+                          <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-brand" />
                           {t('ref.kutuBaslik')}
                         </div>
                         {!kalibrasyon && (
@@ -5190,10 +4776,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             </div>
                             <button
                               type="button"
-                              onClick={olcuKutusunuKur}
+                              onClick={olcuKutu ? olcuKutusunuGuncelle : olcuKutusunuKur}
                               className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
                             >
-                              {t('ref.kutuKur')}
+                              {olcuKutu ? t('ref.kutuGuncelle') : t('ref.kutuKur')}
                             </button>
                             {olcuKutu && (
                               <p className="mt-1 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
