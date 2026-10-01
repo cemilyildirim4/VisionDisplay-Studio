@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { Environment } from '@react-three/drei'
 import { CabinetGrid } from './Scene3D.jsx'
+import { videoSrcFor } from './videoContent.js'
 
 /**
  * YERİNDE 3D — kullanıcının kendi fotoğrafının üstünde gerçek bir 3B ekran.
@@ -77,8 +78,25 @@ const EN_COK_ACI = (72 * Math.PI) / 180
 const EN_YAKIN = 1.2
 const EN_UZAK = 60
 
-/** Tuval, duvar kutusunun her kenarında bu oranda taşma payı alıyor (bkz. yerleşim). */
+/**
+ * Tuval, EKRANIN her kenarında bu oranda taşma payı alıyor.
+ *
+ * Önce pay duvar kutusuna göre hesaplanıyordu ve bu ölçüm sırasında çok kötü
+ * bir sonuç verdi: fotoğraftaki ölçek 1 metre ≈ 3000 piksel olduğunda duvar
+ * kutusu da 3000 piksel oluyor, tuval 5878 × 5878'e (34 milyon piksel)
+ * çıkıyordu. Kare süresi 16,7 ms'den 400 ms'ye fırlıyordu — kullanıcının
+ * "site aşırı kasıyor" dediği durum buydu. Oysa tuvalin duvarı değil, yalnızca
+ * EKRANI ve çevresindeki payı kaplaması yeter.
+ */
 const PAY = 0.5
+
+/**
+ * Tuvalin en uzun kenarı (çizim pikseli).
+ *
+ * Ekran çok büyük çizildiğinde bile tuval bu sınırı aşmıyor: piksel yoğunluğu
+ * düşürülüyor. Görüntü biraz yumuşuyor ama akıcı kalıyor.
+ */
+const EN_COK_PIKSEL = 1800
 
 /**
  * ÇİZİLEBİLECEK EN ÇOK KABİN.
@@ -251,17 +269,21 @@ export function dortgenDurusu(k) {
  *    gereken piksele oturtuluyor. Böylece ölçü ile perspektif birbirini
  *    bozmuyor.
  */
-function Kamera({ uzaklik, fov, x, y, genisW, genisH, merkezX, merkezY }) {
+function Kamera({ uzaklik, fov, genisW, genisH, merkezX, merkezY }) {
   const kamera = useThree((d) => d.camera)
+  const tazele = useThree((d) => d.invalidate)
   useEffect(() => {
     if (!(uzaklik > 0) || !(fov > 0) || !(genisW > 0) || !(genisH > 0)) return
     kamera.fov = fov
-    kamera.position.set(x, y, uzaklik)
+    /* Ekran hep eksende: nesne ve kamera aynı noktada, kayma pencereye veriliyor. */
+    kamera.position.set(0, 0, uzaklik)
     kamera.near = Math.max(0.01, uzaklik / 200)
     kamera.far = uzaklik * 6
     kamera.setViewOffset(genisW, genisH, genisW / 2 - merkezX, genisH / 2 - merkezY, genisW, genisH)
     kamera.updateProjectionMatrix()
-  }, [kamera, uzaklik, fov, x, y, genisW, genisH, merkezX, merkezY])
+    /* İstek üzerine çizimde (frameloop="demand") yeni kareyi kendimiz istiyoruz. */
+    tazele()
+  }, [kamera, tazele, uzaklik, fov, genisW, genisH, merkezX, merkezY])
   return null
 }
 
@@ -286,6 +308,7 @@ export default function Mekan3D({
   /** 3B gerçekten çizildi mi — düz çizim ancak o zaman gizleniyor. */
   onHazir,
 }) {
+  const videoVar = useMemo(() => !!videoSrcFor(content, contentUrl), [content, contentUrl])
   const durus = useMemo(() => dortgenDurusu(koseler), [koseler])
   const acilar = useMemo(
     () => perspektifDurusu(koseler, tasarimWm, tasarimHm),
@@ -308,22 +331,29 @@ export default function Mekan3D({
     if (!(pxPerM > 0)) return null
 
     /*
-     * TUVAL DUVAR KUTUSUNDAN BÜYÜK.
+     * TUVAL EKRANI VE PAYINI KAPLIYOR.
      *
-     * Katman önce tam duvar kutusu kadardı. Ekran duvarı dolduracak kadar
-     * büyükse — "duvara tam sığdır" bunu yapıyor — en ufak dönmede kasanın
-     * kenarı kutunun dışına taşıp KIRPILIYORDU. Ekran o yüzden dönmüş değil,
-     * düz bir renk bloğu gibi görünüyordu: görünen şey ekranın kenarı değil,
-     * tuvalin kenarıydı.
-     *
-     * Tuval hem büyüyor hem aynı oranda daha geniş bir dünya gösteriyor,
-     * yani ekranın sayfadaki boyu değişmiyor; yalnızca dönen ekranın
-     * etrafında yer kalıyor.
+     * Tam ekran kadar olursa en ufak dönmede kasanın kenarı dışarı taşıp
+     * KIRPILIYOR; ekran o zaman dönmüş değil, düz bir renk bloğu gibi
+     * görünüyor. Bu yüzden her kenarda pay var — ama pay EKRANDAN
+     * hesaplanıyor, duvardan değil (bkz. PAY).
      */
-    const genisW = tuvalW * (1 + 2 * PAY)
-    const genisH = tuvalH * (1 + 2 * PAY)
-    const merkezX = durus.x + tuvalW * PAY
-    const merkezY = durus.y + tuvalH * PAY
+    const xs = koseler.map((k) => k.x)
+    const ys = koseler.map((k) => k.y)
+    const qx = Math.min(...xs)
+    const qy = Math.min(...ys)
+    const qw = Math.max(...xs) - qx
+    const qh = Math.max(...ys) - qy
+    if (!(qw > 1) || !(qh > 1)) return null
+    const payX = Math.max(qw * PAY, 32)
+    const payY = Math.max(qh * PAY, 32)
+    const sol = qx - payX
+    const ust = qy - payY
+    const genisW = qw + 2 * payX
+    const genisH = qh + 2 * payY
+    /* Ekranın ortası tuvalin neresine düşmeli (bkz. Kamera → setViewOffset). */
+    const merkezX = durus.x - sol
+    const merkezY = durus.y - ust
 
     /*
      * Görüş açısı kamera uzaklığından çıkıyor: nesne düzleminde tuvalin
@@ -332,20 +362,19 @@ export default function Mekan3D({
     const fov = (2 * Math.atan(genisH / (2 * pxPerM * acilar.uzaklikM)) * 180) / Math.PI
     if (!(fov > 0.5) || !(fov < 150)) return null
 
-    /* Tuval merkezine göre kayma — piksel, dünya birimine çevriliyor. */
     return {
       genisW,
       genisH,
       merkezX,
       merkezY,
-      sol: -tuvalW * PAY,
-      ust: -tuvalH * PAY,
+      sol,
+      ust,
       uzaklik: acilar.uzaklikM,
       fov,
-      x: (durus.x - tuvalW / 2) / pxPerM,
-      y: -(durus.y - tuvalH / 2) / pxPerM,
+      /* Büyük tuvalde piksel yoğunluğu düşüyor: akıcılık keskinlikten önemli. */
+      yogunluk: Math.max(0.6, Math.min(1.25, EN_COK_PIKSEL / Math.max(genisW, genisH))),
     }
-  }, [durus, acilar.pxPerM, acilar.uzaklikM, tuvalW, tuvalH, tasarimWm, kabinSayisi])
+  }, [durus, koseler, acilar.pxPerM, acilar.uzaklikM, tuvalW, tuvalH, tasarimWm, kabinSayisi])
 
   /*
    * DÜZ ÇİZİM ANCAK 3B ÇİZİLDİYSE GİZLENİYOR.
@@ -391,19 +420,23 @@ export default function Mekan3D({
          */
         style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
         gl={{ alpha: true, antialias: true, preserveDrawingBuffer: true }}
+        dpr={yerlesim.yogunluk}
         /*
-         * Tuval duvar kutusunun iki katı; piksel yoğunluğunu 2'de tutmak dört
-         * kat piksel demek olurdu. 1,5 hem keskin duruyor hem zayıf makinede
-         * akıcı kalıyor.
+         * İSTEK ÜZERİNE ÇİZİM.
+         *
+         * Varsayılan ayarda tuval saniyede 60 kez yeniden çiziliyordu — hiçbir
+         * şey kımıldamasa bile. Ölçümde kare süresi 400 ms'ye çıkıyordu;
+         * sayfanın tamamı kasıyordu. Burada canlanan bir şey yok: ekran
+         * yalnızca ölçü, açı ya da içerik değişince yeniden çizilmeli.
+         *
+         * Tek istisna video içerik: kareleri akmaya devam etmeli.
          */
-        dpr={[1, 1.5]}
-        camera={{ fov: yerlesim.fov, position: [yerlesim.x, yerlesim.y, yerlesim.uzaklik] }}
+        frameloop={videoVar ? 'always' : 'demand'}
+        camera={{ fov: yerlesim.fov, position: [0, 0, yerlesim.uzaklik] }}
       >
         <Kamera
           uzaklik={yerlesim.uzaklik}
           fov={yerlesim.fov}
-          x={yerlesim.x}
-          y={yerlesim.y}
           genisW={yerlesim.genisW}
           genisH={yerlesim.genisH}
           merkezX={yerlesim.merkezX}
@@ -415,10 +448,7 @@ export default function Mekan3D({
         <ambientLight intensity={0.35} />
         <directionalLight position={[3, 4, 5]} intensity={1.1} />
 
-        <group
-          position={[yerlesim.x, yerlesim.y, 0]}
-          rotation={[acilar.pitch, acilar.yaw, acilar.roll, 'YXZ']}
-        >
+        <group rotation={[acilar.pitch, acilar.yaw, acilar.roll, 'YXZ']}>
           <CabinetGrid
             model={model}
             cols={cols}

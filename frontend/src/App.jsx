@@ -2795,22 +2795,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
 
     /*
-     * KÖŞE AYARI DÜZENLİ: KENAR BİR BÜTÜN OLARAK HAREKET EDİYOR.
+     * TUTULAN KÖŞE FAREYİ BİREBİR İZLİYOR.
      *
-     * Dört köşe birbirinden bağımsız hareket edince dörtgen kelebeğe
-     * dönüyor ve ekran gerçek bir dikdörtgenin görüntüsü olmaktan çıkıyordu
-     * (kullanıcının gönderdiği üçgenimsi şekil buydu). Oysa duvara asılı düz
-     * bir ekran fotoğrafta her zaman DÜZGÜN bir yamuk verir.
+     * Burada bir süre "düzenli yamuk" kuralı vardı: tutulan köşenin aynı
+     * yandaki eşi de yarı yolu gidiyor, sonra dörtgen eski ölçüsüne geri
+     * ölçekleniyor ve fotoğrafa ortalanıyordu. Niyet iyiydi (kelebek şekil
+     * oluşmasın) ama sonuç kullanılamazdı: tutamak elin altından kaçıyor,
+     * çekilmeyen köşeler kendiliğinden oynuyor, dörtgen her harekette
+     * yeniden boyutlanıyordu.
      *
-     * Kural, tutulan köşenin aynı yandaki eşine bağlı:
-     *   • YATAYDA birlikte gidiyorlar — kenar olduğu gibi kayıyor, yan kenar
-     *     düşey kalıyor;
-     *   • DİKEYDE birbirinin aynası — kenar kendi ortasından uzayıp
-     *     kısalıyor. Perspektif tam olarak budur: uzak yan kısa, yakın yan
-     *     uzun.
+     * Kural artık tek: hangi köşe tutulduysa yalnızca o gidiyor, gittiği
+     * yere gidiyor. Köşelerden duvara oturtmak ancak böyle yapılabilir.
      *
-     * Sonuç her zaman düzgün bir yamuk: açılar bozulmuyor, kelebek oluşmuyor,
-     * sağ üst köşe yukarı çekilince sağ alt köşe de ona göre gidiyor.
+     * Geriye tek bir koruma kalıyor: dörtgen kendi üstüne katlanmasın.
+     * Katlanma, ardışık kenarların çapraz çarpımlarının işaret değiştirmesi
+     * demektir; öyle bir hamle kabul edilmiyor ve köşe son geçerli yerinde
+     * kalıyor.
      */
     let oynayan = -1
     let enBuyuk = 0.5
@@ -2823,77 +2823,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
     if (oynayan < 0) return
 
-    /* Aynı yandaki dikey eş: 0-3 sol kenar, 1-2 sağ kenar. */
-    const ESI = [3, 2, 1, 0]
-    const es = ESI[oynayan]
-    const dx = noktalar[oynayan].x - oncekiler[oynayan].x
-    let dy = noktalar[oynayan].y - oncekiler[oynayan].y
+    const aday = oncekiler.map((k, i) => (i === oynayan ? noktalar[oynayan] : k))
 
-    /*
-     * KENAR ÇÖKMÜYOR, KÖŞELER BİRBİRİNE GİRMİYOR.
-     *
-     * Eş köşe ters yöne gittiği için kenar iki kat hızla kısalıyor ve
-     * yeterince çekilince sıfırı geçip TERS dönüyordu: iki köşe birbirinin
-     * içinden geçiyor, dörtgen kendi üstüne katlanıyordu. Kenarın
-     * kısalabileceği en küçük boy, başlangıç boyunun dörtte biri.
-     */
-    const kenarBoyu = Math.abs(oncekiler[es].y - oncekiler[oynayan].y)
-    const enAzKenar = Math.max(24, kenarBoyu * 0.25)
-
-    /*
-     * HAREKET YUMUŞADI.
-     *
-     * Eş köşe tam ayna hareket edince kenar, farenin gittiği yolun İKİ KATI
-     * kadar değişiyordu; küçük bir el hareketi perspektifi zıplatıyordu.
-     * Tutulan köşe fareyi birebir izlemeye devam ediyor (tutamak elin
-     * altından kaçmasın), eş köşe ise yarı yolu gidiyor: kenar 2·dy yerine
-     * 1,5·dy değişiyor. Aynı açı, daha ince ayar.
-     */
-    const ESLIK = 0.5
-    /* Kenarın yeni boyu alt sınırın altına inecekse dy kısılıyor. */
-    const yon = oncekiler[es].y > oncekiler[oynayan].y ? 1 : -1
-    const yeniBoy = kenarBoyu - yon * dy * (1 + ESLIK)
-    if (yeniBoy < enAzKenar) {
-      dy = (yon * (kenarBoyu - enAzKenar)) / (1 + ESLIK)
+    /* Dörtgen dışbükey mi: dört çapraz çarpımın da aynı işarette olması gerekir. */
+    const disbukey = (k) => {
+      let arti = 0
+      let eksi = 0
+      for (let i = 0; i < 4; i++) {
+        const a = k[i]
+        const b = k[(i + 1) % 4]
+        const c = k[(i + 2) % 4]
+        const z = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)
+        if (z > 0) arti++
+        else if (z < 0) eksi++
+      }
+      return arti === 0 || eksi === 0
     }
 
-    const tasinmis = oncekiler.map((k, i) => {
-      if (i === oynayan) return { x: k.x + dx, y: k.y + dy }
-      if (i === es) return { x: k.x + dx, y: k.y - dy * ESLIK }
-      return { x: k.x, y: k.y }
-    })
+    /* Kenarlar da ölçülemeyecek kadar kısalmasın. */
+    const enKisaKenar = (k) =>
+      Math.min(
+        ...[0, 1, 2, 3].map((i) =>
+          Math.hypot(k[(i + 1) % 4].x - k[i].x, k[(i + 1) % 4].y - k[i].y),
+        ),
+      )
 
-    /*
-     * KÖŞE ÇEKMEK AÇIYI DEĞİŞTİRİR, ÖLÇÜYÜ DEĞİL.
-     *
-     * Kenarı uzatıp kısaltmak dörtgenin genel boyunu da büyütüp küçültüyordu;
-     * kullanıcı açı vermeye çalışırken ekran farkında olmadan büyüyordu.
-     * Oysa ekranın kaç metre olduğu kabin sayısından geliyor, köşe
-     * çekmekten değil.
-     *
-     * Bu yüzden hareketten SONRA dörtgen kendi merkezinde yeniden
-     * ölçekleniyor: ortalama en ve boy, hareketten ÖNCEKİ değerlere
-     * eşitleniyor. Perspektif bilgisi sol/sağ kenarların ORANINDA saklı
-     * olduğu için bu oran bozulmuyor — yalnızca genel boy sabit kalıyor.
-     */
-    const olcu = (k) => ({
-      en: (Math.hypot(k[1].x - k[0].x, k[1].y - k[0].y) + Math.hypot(k[2].x - k[3].x, k[2].y - k[3].y)) / 2,
-      boy: (Math.hypot(k[3].x - k[0].x, k[3].y - k[0].y) + Math.hypot(k[2].x - k[1].x, k[2].y - k[1].y)) / 2,
-    })
-    const once = olcu(oncekiler)
-    const simdi = olcu(tasinmis)
-    if (!(simdi.en > 1) || !(simdi.boy > 1) || !(once.en > 1) || !(once.boy > 1)) {
-      setElleKose(tasinmis)
-      return
-    }
-    const mx = tasinmis.reduce((t, k) => t + k.x, 0) / 4
-    const my = tasinmis.reduce((t, k) => t + k.y, 0) / 4
-    const sx = once.en / simdi.en
-    const sy = once.boy / simdi.boy
-    setElleKose(
-      fotografaSigdir(tasinmis.map((k) => ({ x: mx + (k.x - mx) * sx, y: my + (k.y - my) * sy }))),
-    )
+    if (!disbukey(aday) || enKisaKenar(aday) < 24) return
+    setElleKose(aday)
   }
+
   /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
   const koseleriYaz = (noktalar) => {
     if (!fotoYer?.genislik || !fotoYer?.yukseklik) return
