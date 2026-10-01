@@ -3228,29 +3228,81 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const o = kutuOlcusuOku()
     if (!o) return
     setOlcuKutu({ enCm: o.en, boyCm: o.boy })
-    /* Dörtgen yoksa fotoğrafın ortasında, girilen oranla bir tane kuruluyor. */
-    if (!hedefKose) {
-      const oran = o.en / o.boy
-      const fotoOran = kaynakOran()
-      const PAY = 0.6
-      let payW = PAY
-      let payH = payW / (oran / fotoOran)
-      if (payH > PAY) {
-        payH = PAY
-        payW = payH * (oran / fotoOran)
-      }
-      const kutu = [
-        { x: 0.5 - payW / 2, y: 0.5 - payH / 2 },
-        { x: 0.5 + payW / 2, y: 0.5 - payH / 2 },
-        { x: 0.5 + payW / 2, y: 0.5 + payH / 2 },
-        { x: 0.5 - payW / 2, y: 0.5 + payH / 2 },
-      ]
-      setHedefKose(kutu)
-      setTaslakKutu(kutu)
-      setHedefTur('taslak')
-    }
+    /*
+     * DÖRTGEN HER ZAMAN YENİDEN KURULUYOR.
+     *
+     * Eskiden burada `if (!hedefKose)` vardı ve bu blok pratikte hiç
+     * çalışmıyordu: fotoğraf yüklenirken otomatik yüzey tespiti hedefKose'yi
+     * zaten dolduruyor (bkz. setHedefKose(yuzey.koseler)). Sonuç, kutunun
+     * kullanıcının yazdığı santimetreyle hiç ilgisi olmayan, tespit edilmiş
+     * yüzeyin şeklinde kalmasıydı — o şekilde kutu gerçek nesneyle
+     * karşılaştırılamaz.
+     *
+     * Tespit edilen yerin MERKEZİ korunuyor; şekli korunmuyor.
+     */
+    const merkez = hedefKose ? koseMerkezi(hedefKose) : { x: 0.5, y: 0.5 }
+    const kutu = oranliDortgen(o.en, o.boy, merkez)
+    setHedefKose(kutu)
+    setTaslakKutu(kutu)
+    setHedefTur('taslak')
     setKutuMesaj(null)
   }
+
+  /** Dörtgenin merkezi — köşelerin ortalaması. */
+  const koseMerkezi = (k) => ({
+    x: k.reduce((t, q) => t + q.x, 0) / k.length,
+    y: k.reduce((t, q) => t + q.y, 0) / k.length,
+  })
+
+  /*
+   * FİZİKSEL ORANDA BAŞLANGIÇ DÖRTGENİ.
+   *
+   * Kutunun fotoğraftaki ilk şekli, girilen en/boy oranını birebir vermek
+   * ZORUNDA: 21 × 30 cm yazıldığında ekranda da 21/30 oranında bir
+   * dikdörtgen durmalı. Bu bir görünüm tercihi değil — kutu, tasarımın
+   * fiziksel ölçüsünün karşılaştırıldığı referanstır.
+   *
+   * Dörtgen normalize FOTOĞRAF koordinatında (0..1) tutuluyor, yani kenarların
+   * piksel karşılığı fotoğrafın kendi en/boy oranıyla çarpılıyor. Bu yüzden
+   * normalize kenar oranı fotoğrafın oranına BÖLÜNÜYOR:
+   *   piksel oranı = (payW · W) / (payH · H) = (payW/payH) · fotoOran = en/boy
+   * Kullanıcının fotoğrafı tuvale SIĞDIRILDIĞI için (contain, bkz.
+   * fotoYerlesim) çizilen dikdörtgenin oranı kaynağın oranına eşit kalıyor.
+   */
+  const oranliDortgen = (enCm, boyCm, merkez = { x: 0.5, y: 0.5 }) => {
+    const oran = enCm / boyCm
+    const fotoOran = kaynakOran()
+    const PAY = 0.6
+    let payW = PAY
+    let payH = payW / (oran / fotoOran)
+    if (payH > PAY) {
+      payH = PAY
+      payW = payH * (oran / fotoOran)
+    }
+    /* Merkez, dörtgen fotoğrafın dışına taşmayacak şekilde kısıtlanıyor. */
+    const mx = Math.min(1 - payW / 2, Math.max(payW / 2, merkez.x))
+    const my = Math.min(1 - payH / 2, Math.max(payH / 2, merkez.y))
+    return [
+      { x: mx - payW / 2, y: my - payH / 2 },
+      { x: mx + payW / 2, y: my - payH / 2 },
+      { x: mx + payW / 2, y: my + payH / 2 },
+      { x: mx - payW / 2, y: my + payH / 2 },
+    ]
+  }
+
+  /*
+   * Dörtgen hâlâ eksenlere paralel bir dikdörtgen mi, yani kullanıcı henüz
+   * perspektif vermemiş mi? Ölçü güncellenirken buna bakılıyor: perspektif
+   * verilmişse kullanıcının emeği korunuyor, verilmemişse dörtgen yeni orana
+   * göre yeniden kuruluyor.
+   */
+  const dikdortgenMi = (k) =>
+    Array.isArray(k) &&
+    k.length === 4 &&
+    Math.abs(k[0].y - k[1].y) < 1e-4 &&
+    Math.abs(k[3].y - k[2].y) < 1e-4 &&
+    Math.abs(k[0].x - k[3].x) < 1e-4 &&
+    Math.abs(k[1].x - k[2].x) < 1e-4
 
   /** Fotoğrafın en/boy oranı — varsayılan kutuyu kurarken gerekiyor. */
   const kaynakOran = () => {
@@ -3271,6 +3323,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const o = kutuOlcusuOku()
     if (!o) return
     setOlcuKutu((e) => (e ? { ...e, enCm: o.en, boyCm: o.boy } : e))
+    /*
+     * ORAN BURADA DA KORUNUYOR.
+     *
+     * Ölçüyü 21 × 30'dan 30 × 21'e çevirmek dörtgeni de çevirmek demektir;
+     * eski dörtgen kalırsa kutu artık yazılan ölçüyü göstermiyor.
+     *
+     * Ama kullanıcı köşeleri çekip perspektif verdiyse o dörtgen yeniden
+     * kurulamaz — verdiği açı kaybolur. O durumda yalnızca santimetre
+     * değişiyor ve kullanıcı isterse "Kutuyu oluştur" ile sıfırdan kurabilir.
+     */
+    if (dikdortgenMi(hedefKose)) {
+      const kutu = oranliDortgen(o.en, o.boy, koseMerkezi(hedefKose))
+      setHedefKose(kutu)
+      setTaslakKutu(kutu)
+      setHedefTur('taslak')
+    }
     setKutuMesaj(null)
   }
 
