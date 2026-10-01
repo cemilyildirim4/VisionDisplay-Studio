@@ -168,5 +168,42 @@ const TAS_H = 2
   )
 }
 
+/* --- E) 2,88 x 1,92 m tasarim / 5 x 3 m alan: olculen degerlerle ayni senaryo --- */
+{
+  console.log('\nE) 2,88 x 1,92 m TASARIM / 5 x 3 m ALAN')
+  /* Bu dort kose, tarayici testinde kutunun oturtuldugu noktalar. */
+  const koseler = [
+    { x: 260, y: 300 },
+    { x: 820, y: 330 },
+    { x: 820, y: 640 },
+    { x: 260, y: 690 },
+  ]
+  const d = duvarDunyasi(koseler, 5, 3)
+  const TW = 2.88
+  const TH = 1.92
+  const dx = (5 - TW) / 2
+  const dy = (3 - TH) / 2
+  kontrol('designX = 1,06 m', esit(dx, 1.06), '-> ' + dx.toFixed(4))
+  kontrol('designY = 0,54 m', esit(dy, 0.54), '-> ' + dy.toFixed(4))
+  const q = dunyaDortgeni(d, dx, dy, TW, TH)
+  const g = q.map((k) => d.geri(k.x, k.y))
+  const bek = [
+    [1.06, 0.54],
+    [3.94, 0.54],
+    [3.94, 2.46],
+    [1.06, 2.46],
+  ]
+  kontrol(
+    'dunya koseleri 1,06/0,54 - 3,94/2,46',
+    g.every((k, n) => esit(k.x, bek[n][0]) && esit(k.y, bek[n][1])),
+    g.map((k) => k.x.toFixed(4) + ',' + k.y.toFixed(4)).join(' | '),
+  )
+  kontrol(
+    'tasarim olcusu 2,8800 x 1,9200 m',
+    esit(g[1].x - g[0].x, TW) && esit(g[3].y - g[0].y, TH),
+    (g[1].x - g[0].x).toFixed(4) + ' x ' + (g[3].y - g[0].y).toFixed(4),
+  )
+}
+
 console.log(hata === 0 ? '\nTUMU GECTI' : `\n${hata} BASARISIZ`)
 process.exit(hata ? 1 : 0)

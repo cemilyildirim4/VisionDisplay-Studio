@@ -547,23 +547,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [taslakMesafe, setTaslakMesafe] = useState('')
   /*
-   * KAMERANIN KENDİ KATSAYISI.
+   * KAMERA KATSAYISI ÖĞRENİLMİYOR — VE ÖĞRENİLMEMELİ.
    *
-   * Program şimdiye kadar her kameranın görüş açısını aynı sayıyordu:
-   * kadraj genişliği = mesafe × 1,11 (yaklaşık 58°). Bu bir VARSAYIM ve
-   * telefondan telefona, lensten lense değişiyor. Kullanıcı 0,5 metreden
-   * çektiği fotoğrafın tamamının 0,355 metre olduğunu söylediğinde, o
-   * kameranın katsayısı 1,11 değil 0,71'dir — varsayımda ısrar etmek kutuyu
-   * sürekli yanlış büyüklükte çiziyordu.
-   *
-   * Katsayı artık kullanıcının verdiği iki sayıdan ÖĞRENİLİYOR:
+   * Bir ara katsayı şöyle çıkarılıyordu:
    *
    *     katsayı = duvarın gerçek eni ÷ (kutunun kadrajdaki payı × mesafe)
    *
-   * Mesafe verilmediyse varsayım olduğu gibi kalıyor; o zaman mesafe de
-   * zaten bir sonuç, girdi değil.
+   * Buradaki "pay", kutunun AÇILIŞTAKİ payıydı. Oysa açılış kutusu yalnızca
+   * bir arayüz kolaylığı: kullanıcı onu sonradan taşıyıp köşelerinden gerçek
+   * alana oturtuyor. Dolayısıyla o paydan çıkarılan katsayı rastgele bir
+   * sayıydı ve mesafe okumasını anlamsız kılıyordu.
+   *
+   * Kameranın gerçek görüş açısını bilmenin tek dürüst yolu, fotoğrafın
+   * EXIF'inden ya da kullanıcıdan ayrıca sormaktır; elimizde ikisi de yok.
+   * Bu yüzden mesafe ile kutu arasındaki çeviri açıkça ORTALAMA bir kamera
+   * varsayımıyla yapılıyor (KADRAJ_KATSAYISI) ve bu yalnızca bir YARDIMCI.
+   *
+   * ÖLÇÜNÜN KAYNAĞI DEĞİL: gerçek ölçek yalnızca kullanıcının yerleştirdiği
+   * dört köşe ile girdiği metreden kuruluyor (bkz. duvarDunyasi). Mesafe o
+   * zincirin hiçbir yerinde yok.
    */
-  const [kameraKatsayi, setKameraKatsayi] = useState(KADRAJ_KATSAYISI)
   /*
    * MESAFEYİ KİM BELİRLEDİ?
    *
@@ -981,10 +984,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * pop-up üstüne biniyor.
        */
       if (TASLAK_KIPI) {
-        /* Yeni fotoğraf, yeni ölçek: önceki mesafe ve kamera kararı geçersiz. */
+        /* Yeni fotoğraf, yeni ölçek: önceki mesafe kararı geçersiz. */
         mesafeElleRef.current = false
         setTaslakMesafe('')
-        setKameraKatsayi(KADRAJ_KATSAYISI)
         setTimeout(() => setTaslakSorusu(true), 0)
       }
     }
@@ -2759,7 +2761,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const kadrajW = kadrajGenisligi(ozelMesafeM)
     const pay = secilenYuzeyOlcu.wm / kadrajW
     if (!(pay > 0.01)) return
-    const yeni = w / (pay * kameraKatsayi)
+    const yeni = w / (pay * KADRAJ_KATSAYISI)
     /* 0,2–120 m: elle girilen mesafenin kabul aralığıyla aynı. */
     setOzelMesafeM(Math.max(0.2, Math.min(120, Math.round(yeni * 10) / 10)))
   }
@@ -3055,7 +3057,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       payW = Math.max(...xs) - Math.min(...xs)
     }
     if (!(payW > 0.01)) return
-    const mesafe = w / payW / kameraKatsayi
+    const mesafe = w / payW / KADRAJ_KATSAYISI
     const yuvarlak = Math.max(0.2, Math.min(300, Math.round(mesafe * 100) / 100))
     setIzlemeM(yuvarlak)
     /* Alandaki sayı da güncellensin: iki yön de aynı gerçeği göstersin. */
@@ -3312,14 +3314,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * Kullanıcı mesafeyi yazdıysa o DURUYOR (katsayı ona göre öğrenildi);
        * yazmadıysa varsayılan katsayıdan hesaplanıyor.
        */
+      /*
+       * Mesafe burada yalnızca SAKLANIYOR: izleme mesafesi ve 3B kamerası
+       * için bilgi. Açılış kutusunun payından kamera açısı çıkarmıyoruz —
+       * o pay kullanıcının kararı değil, bizim arayüz kolaylığımız.
+       */
       if (yazilan > 0.05) {
-        /* Kullanıcının bildiği mesafe + kutunun payı = bu kameranın katsayısı. */
-        const k = w / (payW * yazilan)
-        setKameraKatsayi(k > 0.2 && k < 6 ? k : KADRAJ_KATSAYISI)
         setTaslakMesafe(yazilan.toFixed(2))
         setIzlemeM(Math.max(0.2, Math.min(300, yazilan)))
       } else {
-        setKameraKatsayi(KADRAJ_KATSAYISI)
         const m0 = w / (payW * KADRAJ_KATSAYISI)
         setTaslakMesafe(m0.toFixed(2))
         setIzlemeM(Math.max(0.2, Math.min(300, m0)))
@@ -3329,8 +3332,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
 
     const m = girilen
-    /* Kadraj artık bu kameranın katsayısıyla (bkz. kameraKatsayi). */
-    const kadrajW = Math.max(0.05, m * kameraKatsayi)
+    /*
+     * Kadraj ORTALAMA bir kamera açısıyla: bu yalnızca "mesafeyi yazınca kutu
+     * ne kadar olsun" sorusunun cevabı, ölçünün kaynağı değil (bkz. not).
+     */
+    const kadrajW = Math.max(0.05, m * KADRAJ_KATSAYISI)
     const kadrajH = kadrajW * (foto.h / foto.w)
     const payW = w / kadrajW
     const payH = h / kadrajH
