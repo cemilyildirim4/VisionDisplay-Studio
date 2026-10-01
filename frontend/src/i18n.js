@@ -470,6 +470,16 @@ const dict = {
     en: 'Hide the metre grid',
     ar: 'إخفاء شبكة الأمتار',
   },
+  'scene.distSuggest': {
+    tr: 'Bilmiyorsanız boş bırakın. Öneri:',
+    en: 'Leave it empty if you do not know. Suggestion:',
+    ar: 'اتركه فارغًا إن كنت لا تعرف. اقتراح:',
+  },
+  'scene.distSuggestNote': {
+    tr: '— bu öneri ortalama bir kamera açısına göre, sizin telefonunuzda tutmayabilir. Kendi bildiğiniz mesafeyi yazarsanız program kameranızın açısını ondan öğrenir.',
+    en: '— this suggestion assumes an average camera angle and may not match your phone. If you enter the distance you know, the app learns your camera angle from it.',
+    ar: '— هذا الاقتراح يفترض زاوية كاميرا متوسطة وقد لا يطابق هاتفك.',
+  },
   'scene.distComputed': {
     tr: 'Taslak kutu fotoğrafın tamamını kaplayacak; mesafe bu ölçüden hesaplanıyor. Kutuyu küçültmek isterseniz sağ panelden mesafeyi büyütün ya da kutuyu köşelerinden çekin.',
     en: 'The draft box will cover the whole photo and the distance is calculated from this size. To shrink the box, raise the distance in the right panel or drag its corners.',

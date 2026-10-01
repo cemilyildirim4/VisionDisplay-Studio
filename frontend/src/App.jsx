@@ -547,6 +547,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [taslakMesafe, setTaslakMesafe] = useState('')
   /*
+   * KAMERANIN KENDİ KATSAYISI.
+   *
+   * Program şimdiye kadar her kameranın görüş açısını aynı sayıyordu:
+   * kadraj genişliği = mesafe × 1,11 (yaklaşık 58°). Bu bir VARSAYIM ve
+   * telefondan telefona, lensten lense değişiyor. Kullanıcı 0,5 metreden
+   * çektiği fotoğrafın tamamının 0,355 metre olduğunu söylediğinde, o
+   * kameranın katsayısı 1,11 değil 0,71'dir — varsayımda ısrar etmek kutuyu
+   * sürekli yanlış büyüklükte çiziyordu.
+   *
+   * Katsayı artık kullanıcının verdiği iki sayıdan ÖĞRENİLİYOR:
+   *
+   *     katsayı = duvarın gerçek eni ÷ (kutunun kadrajdaki payı × mesafe)
+   *
+   * Mesafe verilmediyse varsayım olduğu gibi kalıyor; o zaman mesafe de
+   * zaten bir sonuç, girdi değil.
+   */
+  const [kameraKatsayi, setKameraKatsayi] = useState(KADRAJ_KATSAYISI)
+  /*
    * MESAFEYİ KİM BELİRLEDİ?
    *
    * Kullanıcı mesafeyi yazdıysa ya da kutuyu elle duvara oturttuysa, ölçek
@@ -963,9 +981,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * pop-up üstüne biniyor.
        */
       if (TASLAK_KIPI) {
-        /* Yeni fotoğraf, yeni ölçek: önceki mesafe kararı geçersiz. */
+        /* Yeni fotoğraf, yeni ölçek: önceki mesafe ve kamera kararı geçersiz. */
         mesafeElleRef.current = false
         setTaslakMesafe('')
+        setKameraKatsayi(KADRAJ_KATSAYISI)
         setTimeout(() => setTaslakSorusu(true), 0)
       }
     }
@@ -2772,7 +2791,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const kadrajW = kadrajGenisligi(ozelMesafeM)
     const pay = secilenYuzeyOlcu.wm / kadrajW
     if (!(pay > 0.01)) return
-    const yeni = w / (pay * KADRAJ_KATSAYISI)
+    const yeni = w / (pay * kameraKatsayi)
     /* 0,2–120 m: elle girilen mesafenin kabul aralığıyla aynı. */
     setOzelMesafeM(Math.max(0.2, Math.min(120, Math.round(yeni * 10) / 10)))
   }
@@ -3082,7 +3101,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       payW = Math.max(...xs) - Math.min(...xs)
     }
     if (!(payW > 0.01)) return
-    const mesafe = w / payW / KADRAJ_KATSAYISI
+    const mesafe = w / payW / kameraKatsayi
     const yuvarlak = Math.max(0.2, Math.min(300, Math.round(mesafe * 100) / 100))
     setIzlemeM(yuvarlak)
     /* Alandaki sayı da güncellensin: iki yön de aynı gerçeği göstersin. */
@@ -3261,12 +3280,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return
     }
 
-    /* İlk kurulumda mesafe hesaplanan sonuçtur, girdi değil (bkz. not). */
-    if (kaynak === 'ilk') mesafeElleRef.current = false
-    const girilen =
-      kaynak !== 'ilk' && mesafeElleRef.current
-        ? Number(String(taslakMesafe).replace(',', '.'))
-        : 0
+    const yazilan = Number(String(taslakMesafe).replace(',', '.'))
+
+    /*
+     * İLK KURULUMDA KUTU FOTOĞRAFIN TAMAMI, MESAFE DE BİLGİDİR.
+     *
+     * Kullanıcı mesafeyi biliyorsa (fotoğrafı kaç metreden çektiğini) o sayı
+     * atılmıyor: kutunun fotoğrafı tam kapladığı varsayımıyla birlikte
+     * KAMERANIN KATSAYISINI veriyor. Sonraki mesafe değişiklikleri artık o
+     * kameraya göre hesaplanıyor, genel bir varsayıma göre değil.
+     */
+    if (kaynak === 'ilk') {
+      mesafeElleRef.current = false
+      if (yazilan > 0.05) {
+        const k = w / (1 * yazilan)
+        if (k > 0.2 && k < 6) setKameraKatsayi(k)
+      } else {
+        setKameraKatsayi(KADRAJ_KATSAYISI)
+      }
+    }
+    const girilen = kaynak !== 'ilk' && mesafeElleRef.current ? yazilan : 0
 
     /*
      * MESAFE YOKSA KUTU FOTOĞRAFIN TAMAMI.
@@ -3299,18 +3332,66 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setHedefTur('taslak')
       setDuvarOlcu({ wm: w, hm: h })
       setTaslakKuruldu(true)
-    /* Sol paneldeki duvar alanı kalibre edilen duvara eşitleniyor (bkz. not). */
-    duvariEsitle(w, h)
-      taslaktanOlcek(kutu, false)
+      /* Sol paneldeki duvar alanı kalibre edilen duvara eşitleniyor (bkz. not). */
+      duvariEsitle(w, h)
+      /*
+       * Kullanıcı mesafeyi yazdıysa o DURUYOR (katsayı ona göre öğrenildi);
+       * yazmadıysa varsayılan katsayıdan hesaplanıyor.
+       */
+      if (yazilan > 0.05) {
+        setTaslakMesafe(yazilan.toFixed(2))
+        setIzlemeM(Math.max(0.2, Math.min(300, yazilan)))
+      } else {
+        const m0 = w / KADRAJ_KATSAYISI
+        setTaslakMesafe(m0.toFixed(2))
+        setIzlemeM(Math.max(0.2, Math.min(300, m0)))
+      }
       setOzelUyari(null)
       return
     }
 
     const m = girilen
-    const kadrajW = kadrajGenisligi(m)
+    /* Kadraj artık bu kameranın katsayısıyla (bkz. kameraKatsayi). */
+    const kadrajW = Math.max(0.05, m * kameraKatsayi)
     const kadrajH = kadrajW * (foto.h / foto.w)
     const payW = w / kadrajW
     const payH = h / kadrajH
+
+    /*
+     * MESAFE DEĞİŞİNCE KUTU YENİDEN KURULMUYOR, ÖLÇEKLENİYOR.
+     *
+     * Yeniden kurmak kutuya fotoğrafın en/boy oranını dayatıyordu: mesafeyi
+     * 1 m yapıp 0,5'e geri döndüğünde kutu eski hâline dönmüyor, boyu %15
+     * şişiyordu. Oysa mesafeyi değiştirmek "aynı duvara daha uzaktan bakmak"
+     * demek — şekil aynı kalır, yalnızca küçülür. Kullanıcının köşelerden
+     * verdiği eğim de böylece korunuyor.
+     */
+    const onceki = taslakKutu
+    if (Array.isArray(onceki) && onceki.length === 4) {
+      const ustK = Math.abs(onceki[1].x - onceki[0].x)
+      const altK = Math.abs(onceki[2].x - onceki[3].x)
+      const eskiPay = (ustK + altK) / 2
+      if (eskiPay > 0.01) {
+        const k = payW / eskiPay
+        const ox = onceki.reduce((a, q) => a + q.x, 0) / 4
+        const oy = onceki.reduce((a, q) => a + q.y, 0) / 4
+        const yeniKutu = kutuyuFotografaSigdir(
+          onceki.map((q) => ({ x: ox + (q.x - ox) * k, y: oy + (q.y - oy) * k })),
+        )
+        elleDuzenlemeyiBirak()
+        setAdayKipi(false)
+        setTaslakKutu(yeniKutu)
+        setKutuOnaylandi(false)
+        setHedefKose(yeniKutu)
+        setHedefTur('taslak')
+        setDuvarOlcu({ wm: w, hm: h })
+        setTaslakKuruldu(true)
+        duvariEsitle(w, h)
+        setIzlemeM(Math.max(0.2, Math.min(300, m)))
+        setOzelUyari(null)
+        return
+      }
+    }
 
     /* Kutu duvara oturtulmuşsa yeri korunuyor; değişen yalnızca ölçüsü. */
     let mx = 0.5
@@ -4100,24 +4181,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 yalnızca gösterilir. Sonradan sağ panelden değiştirilebiliyor —
                 orada yazmak kutuyu bilerek büyütüp küçültmek demek.
               */}
-              {(() => {
-                const w = Number(String(taslakWm).replace(',', '.'))
-                if (!(w > 0.05)) return null
-                const m = w / KADRAJ_KATSAYISI
-                return (
-                  <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-neutral-50 px-3 py-2 dark:bg-[#1b2029]">
-                    <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
-                      {t('scene.askDistance')}
-                    </span>
-                    <span className="text-[14px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
-                      {m.toFixed(2).replace('.', ',')} m
-                    </span>
-                  </div>
-                )
-              })()}
-              <p className="mt-1.5 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                {t('scene.distComputed')}
-              </p>
+              <div className="mt-3">
+                <label className="block text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
+                  {t('scene.askDistance')}
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0.05"
+                    step="0.05"
+                    value={taslakMesafe}
+                    onChange={(e) => setTaslakMesafe(e.target.value)}
+                    className="w-full min-w-0 rounded-md border border-neutral-200 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                  />
+                  <span className="text-[14px] text-neutral-400">m</span>
+                </div>
+                {/*
+                  ÖNERİ, KURAL DEĞİL.
+
+                  Öneri, her kameranın görüş açısını aynı sayan varsayımdan
+                  çıkıyor (kadraj = mesafe × 1,11) ve çoğu telefonda tutmuyor.
+                  Bu yüzden yalnızca yazılı duruyor: kullanıcı kendi bildiği
+                  mesafeyi girerse program o kameranın katsayısını ondan
+                  öğreniyor.
+                */}
+                {(() => {
+                  const w = Number(String(taslakWm).replace(',', '.'))
+                  if (!(w > 0.05)) return null
+                  return (
+                    <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                      {t('scene.distSuggest')}{' '}
+                      <button
+                        type="button"
+                        onClick={() => setTaslakMesafe((w / KADRAJ_KATSAYISI).toFixed(2))}
+                        className="font-semibold tabular-nums text-brand underline-offset-2 hover:underline"
+                      >
+                        {(w / KADRAJ_KATSAYISI).toFixed(2).replace('.', ',')} m
+                      </button>{' '}
+                      {t('scene.distSuggestNote')}
+                    </p>
+                  )
+                })()}
+              </div>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
