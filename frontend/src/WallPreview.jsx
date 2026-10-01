@@ -1230,8 +1230,17 @@ export default function WallPreview({
   }
 
   // ---- TEK EKRAN ----
-  const wallWm = Math.max(0.1, Number(width) || 0)
-  const wallHm = Math.max(0.1, Number(height) || 0)
+  /*
+   * Duvar, kullanıcının yazdığı ölçüden küçük olamaz ama TASARIMDAN da küçük
+   * olamaz. Çoklu ekran dalı (yukarıda) bunu zaten böyle yapıyordu; tek ekran
+   * dalı yapmıyordu ve ikisi ayrışıyordu.
+   *
+   * Duvarı tasarımı içerecek kadar büyütmek, aşağıdaki iki kırpmayı da
+   * kendiliğinden gereksiz kılıyor: fitScale 1'de kalıyor (nativeW ≤ wallW),
+   * paylar negatife düşmüyor. Yani tasarım artık kırpılmıyor, duvar esniyor.
+   */
+  const wallWm = Math.max(0.1, Number(width) || 0, Math.max(1, cols) * cw)
+  const wallHm = Math.max(0.1, Number(height) || 0, Math.max(1, rows) * ch)
 
   /*
    * ÖLÇEK HESABI — duvar kaç piksele sığacak?
@@ -1371,8 +1380,12 @@ export default function WallPreview({
   // Ekran boyutuna göre değişir: sütun/satır arttıkça mesafe de artar
   const viewDist = viewingDistanceFor(model, nCols, nRows)
 
-  const screenWm = Math.min(wallWm, nCols * cw)
-  const screenHm = Math.min(wallHm, nRows * ch)
+  /*
+   * Ekranın fiziksel ölçüsü doğrudan kabin sayısından geliyor; duvara
+   * kırpılmıyor (bkz. yukarıdaki wallWm notu ve App.jsx'teki ekranWm).
+   */
+  const screenWm = nCols * cw
+  const screenHm = nRows * ch
   /*
    * Ölçü düğmelerinin boyu tasarımla birlikte: ekranın kısa kenarının beşte
    * biri, 18–32 piksel arasında. Küçük tasarımda ekranı bastırmıyor, büyük

@@ -1430,8 +1430,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * büyüyor. Sığma ölçeği yalnızca ÜST SINIR olarak duruyor — aşırı büyük
    * tasarımlarda pano tuvalden tamamen çıkıp mekân kaybolmasın diye.
    */
-  const ekranWm = Math.min(Number(width) || Infinity, cols * cwM)
-  const ekranHm = Math.min(Number(height) || Infinity, rows * chM)
+  /*
+   * TASARIMIN FİZİKSEL ÖLÇÜSÜ = KABİN SAYISI × KABİN ÖLÇÜSÜ. BAŞKA HİÇBİR ŞEY.
+   *
+   * Burada eskiden duvar/kutu ölçüsüne kırpma vardı:
+   *   Math.min(width, cols * cwM)
+   * Bu mantık hatasıydı. 30 cm'lik bir alana 32 cm'lik bir kabin koyunca
+   * tasarım 30 cm'e iniyordu: fotoğrafta kabin alana tam oturuyor gibi
+   * görünüyor, oysa gerçekte 2 cm taşıyor. Yani ekran tam da kullanıcının
+   * görmesi gereken şeyi — sığmadığını — gizliyordu.
+   *
+   * Kabin bölünemeyen bir donanım; ölçüsü duvara göre esnemez. Duvar
+   * küçükse tasarım taşar ve taşması GÖRÜNÜR (bkz. mekanDuvarWm: duvar
+   * tasarımı içerecek kadar büyür, WallPreview'daki wallWm ile aynı kural).
+   * Kaç tam kabinin sığdığı ayrı bir hesap ve yerinde duruyor:
+   * tasarimiDuvaraSigdir / colsMax.
+   */
+  const ekranWm = Math.max(1, cols) * cwM
+  const ekranHm = Math.max(1, rows) * chM
 
   /*
    * TASARIMIN KAPLADIĞI ALAN ve MEKÂNIN DUVARI — çoklu ekran dahil.
