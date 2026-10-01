@@ -222,6 +222,24 @@ const SAMPLE_CABINETS = [
  * panelde geçici bir bilgi satırı olarak da gösteriliyor; ikisi TEK yerden
  * geliyor ki gösterilen sayı ile uygulanan yerleşim ayrışmasın.
  */
+/*
+ * SÜTUN/SATIR ÜST SINIRI — DUVARDAN DEĞİL, DONANIMDAN.
+ *
+ * Eskiden sınır duvar ölçüsünden geliyordu: floor(width / kabinEni). Bu,
+ * kullanıcının SEÇİMİNİ kısıtlıyordu: 30 cm'lik bir alana 32 cm'lik iki kabin
+ * koymak imkânsızdı. Oysa "bu alan yetmiyor, ne kadar yetmiyor?" geçerli bir
+ * soru ve cevabı ancak taşan tasarım çizilerek görülüyor.
+ *
+ * Ölçü kutusu artık yalnızca KARŞILAŞTIRMA REFERANSI: seçimi engellemiyor,
+ * taşmayı gösteriyor (bkz. duvaraSigma uyarısı). Kaç tam kabinin sığdığını
+ * hesaplamak yalnızca "Tasarımı duvara tam sığdır" düğmesinin işi.
+ *
+ * Sınır yine var ama anlamı değişti: tek eksende 200 kabin, 320 mm'lik kabinle
+ * 64 metre eder; hiçbir gerçek kurulumda aşılmıyor. Buradaki tek işi arayüzün
+ * ve 3B sahnenin uçsuz sayılarla kilitlenmesini önlemek.
+ */
+const EN_COK_KABIN_EKSEN = 200
+
 function yerlesimSecenekleri(m, genislikM, yukseklikM) {
   if (!m) return null
   const EPSILON = 1e-9
@@ -1252,11 +1270,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const fitToWall = () => {
     const m = selectedModel
-    if (!m) {
-      setCols(colsMax)
-      setRows(rowsMax)
-      return
-    }
+    /*
+     * Model yoksa kabin ölçüsü de yok, sığdırılacak bir şey yok. Eskiden
+     * burada üst sınıra atlanıyordu; sınır duvardan geldiği için bu "duvarı
+     * doldur" anlamına geliyordu. Sınır artık donanım sınırı (200), ona
+     * atlamak saçma olurdu.
+     */
+    if (!m) return
 
     const { yatay, dikey } = yerlesimSecenekleri(m, width, height)
 
@@ -1409,7 +1429,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   // EPS: 4,8 / 0,32 kayan noktada 14,999... çıkıyor; küçük tolerans olmadan
   // tam sığan son kabin sayılmıyor.
   const EPS = 1e-9
-  const colsMax = hasModel ? Math.max(1, Math.floor(width / cwM + EPS)) : 999
+  /* Duvar ölçüsünden bağımsız — bkz. EN_COK_KABIN_EKSEN. */
+  const colsMax = EN_COK_KABIN_EKSEN
 
   /*
    * PANO ölçeği.
@@ -3505,18 +3526,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * (Bir ara şişkinliğe yer bırakıp satır azaltmayı denedik: sayılar kendiliğinden
    * değiştiği için kafa karıştırıcı bulundu.)
    */
-  const rowsMax = hasModel ? Math.max(1, Math.floor(height / chM + EPS)) : 999
+  /* Duvar ölçüsünden bağımsız — bkz. EN_COK_KABIN_EKSEN. */
+  const rowsMax = EN_COK_KABIN_EKSEN
   // Duvarın alt sınırı: mevcut ekranı barındıran en küçük ölçü, 0,1 m'ye yuvarlanır
   const widthMin = hasModel ? Math.max(0.1, Math.ceil(cols * cwM * 10 - EPS) / 10) : 0
   const heightMin = hasModel ? Math.max(0.1, Math.ceil(rows * chM * 10 - EPS) / 10) : 0
 
-  // Güvenlik ağı: paylaşılan bağlantı ya da duvar küçülmesi yüzünden ekran
-  // duvardan büyük kalırsa sınıra çekilir.
-  useEffect(() => {
-    if (!hasModel) return
-    if (rows > rowsMax) setRows(rowsMax)
-    if (cols > colsMax) setCols(colsMax)
-  }, [hasModel, rows, rowsMax, cols, colsMax])
+  /*
+   * BURADA ESKİDEN BİR "GÜVENLİK AĞI" VARDI VE KALDIRILDI.
+   *
+   * Ekran duvardan büyük kalırsa satır/sütunu sınıra çekiyordu. Sınır duvar
+   * ölçüsünden geldiği için bu, kullanıcının seçtiği kabin sayısını sessizce
+   * azaltmak demekti: 30 cm'lik alana 2 sütun seçilince bir sonraki çizimde
+   * kendiliğinden 1'e düşüyordu.
+   *
+   * Tasarımın fiziksel ölçüsü artık hiçbir yerde kutuya göre küçültülmüyor
+   * (bkz. ekranWm/ekranHm). Taşma bir hata değil, gösterilecek bir bilgi:
+   * uyarıyı duvaraSigma veriyor.
+   */
 
   return (
     <div className="bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans">
