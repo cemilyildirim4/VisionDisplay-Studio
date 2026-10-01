@@ -4,7 +4,18 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
+/*
+ * YAPIM DAMGASI.
+ *
+ * Yeni sürüm yayınlandığı hâlde kullanıcı eski ekranı görüyor olabiliyor
+ * (tarayıcı/PWA önbelleği bir yükleme geriden geliyor). O zaman "değişmemiş"
+ * mi yoksa "eski paket mi açık" ayırt edilemiyordu. Bu damga sağ panelin
+ * altında yazılı duruyor; bakıp hangi sürümde olunduğu anlaşılıyor.
+ */
+const YAPIM = new Date().toISOString().slice(0, 16).replace('T', ' ')
+
 export default defineConfig({
+  define: { __YAPIM__: JSON.stringify(YAPIM) },
   plugins: [
     react(),
     tailwindcss(),

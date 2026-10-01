@@ -5244,6 +5244,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           >
             {t('privacy.footerLink')}
           </button>
+          {/*
+            SÜRÜM DAMGASI — "yeni sürüm mü açık?" sorusunun tek cevabı.
+            Yayın saatini gösteriyor; tarayıcı eski paketi açtıysa burada eski
+            saat yazıyor ve durum hemen anlaşılıyor.
+          */}
+          <div className="mt-1 text-center text-[10.5px] text-neutral-300 dark:text-neutral-600 tabular-nums select-all">
+            {__YAPIM__}
+          </div>
           </Sigdir>
         </aside>
         </div>
