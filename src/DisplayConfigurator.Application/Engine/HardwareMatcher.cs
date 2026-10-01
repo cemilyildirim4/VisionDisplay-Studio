@@ -21,6 +21,15 @@ public sealed class HardwareCatalogSnapshot
     public IReadOnlyList<MiniPc> MiniPcs { get; init; } = [];
 }
 
+/// <summary>Kısmi veya tam katalog eşleşmesi.</summary>
+public sealed class HardwareMatchResult
+{
+    public required HardwareCatalogItems Items { get; init; }
+    public IReadOnlyList<string> MissingPartLabels { get; init; } = [];
+    public IReadOnlyList<string> MissingMessages { get; init; } = [];
+    public bool IsComplete => MissingPartLabels.Count == 0;
+}
+
 /// <summary>
 /// Veritabanındaki gerçek katalog kayıtlarını ekran talebine göre seçer.
 /// Jenerik/varsayılan model adı veya sabit "6 modül = 1 PSU" kuralı kullanmaz.
@@ -54,20 +63,41 @@ public static class HardwareMatcher
         HardwareCatalogSnapshot catalog,
         HardwareCatalogItems? requested = null)
     {
+        var result = TryMatch(demand, hasMiniPc, catalog, requested);
+        if (!result.IsComplete)
+            throw new HardwareMatchException(result.MissingMessages[0]);
+        return result.Items;
+    }
+
+    public static HardwareMatchResult TryMatch(
+        ScreenDemand demand,
+        bool hasMiniPc,
+        HardwareCatalogSnapshot catalog,
+        HardwareCatalogItems? requested = null)
+    {
+        var labels = new List<string>();
+        var messages = new List<string>();
+
+        void Miss(string label, string message)
+        {
+            labels.Add(label);
+            messages.Add(message);
+        }
+
         var powerSupply = requested?.PowerSupply
-            ?? SelectPowerSupply(demand, Active(catalog.PowerSupplies))
-            ?? throw new HardwareMatchException(
-                "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
+            ?? SelectPowerSupply(demand, Active(catalog.PowerSupplies));
+        if (powerSupply == null)
+            Miss("Güç Kaynağı", "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
 
         var receivingCard = requested?.ReceivingCard
-            ?? SelectReceivingCard(demand, Active(catalog.ReceivingCards))
-            ?? throw new HardwareMatchException(
-                "Seçilen konfigürasyon için veritabanında uygun Alıcı Kart bulunamadı.");
+            ?? SelectReceivingCard(demand, Active(catalog.ReceivingCards));
+        if (receivingCard == null)
+            Miss("Alıcı Kart", "Seçilen konfigürasyon için veritabanında uygun Alıcı Kart bulunamadı.");
 
         var processor = requested?.Processor
-            ?? SelectProcessor(demand, Active(catalog.Processors))
-            ?? throw new HardwareMatchException(
-                "Seçilen konfigürasyon için veritabanında uygun İşlemci bulunamadı.");
+            ?? SelectProcessor(demand, Active(catalog.Processors));
+        if (processor == null)
+            Miss("İşlemci", "Seçilen konfigürasyon için veritabanında uygun İşlemci bulunamadı.");
 
         int receivingQty = ConfigurationCalculator.CountReceivingCards(
             demand.TotalResW, demand.TotalResH, demand.TotalPixels, receivingCard);
@@ -76,26 +106,31 @@ public static class HardwareMatcher
         PatchCable? patchCable = requested?.PatchCable;
         if (patchCable == null && patchQty > 0)
         {
-            patchCable = SelectPatchCable(Active(catalog.PatchCables))
-                ?? throw new HardwareMatchException(
-                    "Seçilen konfigürasyon için veritabanında uygun Patch Kablosu bulunamadı.");
+            patchCable = SelectPatchCable(Active(catalog.PatchCables));
+            if (patchCable == null)
+                Miss("Patch Kablosu", "Seçilen konfigürasyon için veritabanında uygun Patch Kablosu bulunamadı.");
         }
 
         MiniPc? miniPc = requested?.MiniPc;
         if (hasMiniPc && miniPc == null)
         {
-            miniPc = SelectMiniPc(demand, Active(catalog.MiniPcs))
-                ?? throw new HardwareMatchException(
-                    "Seçilen konfigürasyon için veritabanında uygun Mini PC bulunamadı.");
+            miniPc = SelectMiniPc(demand, Active(catalog.MiniPcs));
+            if (miniPc == null)
+                Miss("Mini PC", "Seçilen konfigürasyon için veritabanında uygun Mini PC bulunamadı.");
         }
 
-        return new HardwareCatalogItems
+        return new HardwareMatchResult
         {
-            PowerSupply = powerSupply,
-            ReceivingCard = receivingCard,
-            Processor = processor,
-            PatchCable = patchCable,
-            MiniPc = miniPc,
+            Items = new HardwareCatalogItems
+            {
+                PowerSupply = powerSupply,
+                ReceivingCard = receivingCard,
+                Processor = processor,
+                PatchCable = patchCable,
+                MiniPc = miniPc,
+            },
+            MissingPartLabels = labels,
+            MissingMessages = messages,
         };
     }
 

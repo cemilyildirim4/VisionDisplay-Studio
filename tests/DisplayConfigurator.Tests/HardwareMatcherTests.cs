@@ -241,6 +241,21 @@ public class HardwareMatcherTests
     }
 
     [Fact]
+    public void TryMatch_KatalogBos_HataFirlatmazEksikListeDoner()
+    {
+        var demand = HardwareMatcher.DemandFrom(SampleCabin(), 4, 3);
+        var result = HardwareMatcher.TryMatch(demand, hasMiniPc: true, new HardwareCatalogSnapshot());
+
+        Assert.False(result.IsComplete);
+        Assert.Contains("Güç Kaynağı", result.MissingPartLabels);
+        Assert.Contains("İşlemci", result.MissingPartLabels);
+        Assert.Contains("Alıcı Kart", result.MissingPartLabels);
+        Assert.Contains("Mini PC", result.MissingPartLabels);
+        Assert.Null(result.Items.PowerSupply);
+        Assert.Null(result.Items.Processor);
+    }
+
+    [Fact]
     public void SelectPowerSupply_PasifKayitlariAtlar()
     {
         var demand = HardwareMatcher.DemandFrom(SampleCabin(), 4, 3);

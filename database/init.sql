@@ -515,6 +515,23 @@ ON CONFLICT (id) DO NOTHING;
 
 SELECT setval('cabins_id_seq', (SELECT COALESCE(MAX(id), 1) FROM public.cabins));
 
+-- NovaStar işlemciler (model koduna göre; tekrar çalışınca çiftlenmez)
+INSERT INTO public.processors
+    (name, model, price, is_active, max_pixel_capacity_per_port, max_port_width, max_port_height,
+     ethernet_port_count, input_ports_info, power_draw_watt)
+SELECT v.name, v.model, v.price, true, 650000, 4096, 4096, v.ports, v.inputs, v.watt
+FROM (VALUES
+    ('NovaStar TB40',   'TB40',     350.00::numeric,  2, 'HDMI 1.4 x1, USB 3.0 x1',                    18.00::numeric),
+    ('NovaStar TB60',   'TB60',     530.00::numeric,  4, 'HDMI 1.4 x1, USB 3.0 x1, USB 2.0 x2',        18.00::numeric),
+    ('NovaStar VX400',  'VX400',    675.00::numeric,  4, 'HDMI 1.3 x2, DVI x1, 3G-SDI x1',             28.00::numeric),
+    ('NovaStar VX600',  'VX600',    925.00::numeric,  6, 'HDMI 1.3 x2, DVI x1, 3G-SDI x1',             28.00::numeric),
+    ('NovaStar VX1000', 'VX1000',  1325.00::numeric, 10, 'HDMI 1.4 x2, DVI x1, 3G-SDI x1',             28.00::numeric),
+    ('NovaStar MCTRL4K','MCTRL4K', 3500.00::numeric, 16, 'DP 1.2 x1, HDMI 2.0 x1, Dual-Link DVI x2',   30.00::numeric)
+) AS v(name, model, price, ports, inputs, watt)
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.processors p WHERE lower(coalesce(p.model, '')) = lower(v.model)
+);
+
 -- =====================================================================
 -- Table: public.feedback_reports
 -- Test/beta kullanıcılarının gönderdiği hata ve geri bildirim notları.

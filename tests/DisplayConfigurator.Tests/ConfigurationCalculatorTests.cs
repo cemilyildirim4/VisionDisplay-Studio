@@ -346,6 +346,24 @@ public class ConfigurationCalculatorTests
     }
 
     [Fact]
+    public void Calculate_KismiKatalog_PdfIcinHataFirlatmaz()
+    {
+        var cabin = SampleCabinet();
+        var dto = new CreateConfigurationDto { ProjectName = "PDF", CabinId = 1, Cols = 4, Rows = 3 };
+        var unmet = new[] { "Güç Kaynağı", "İşlemci" };
+
+        var result = ConfigurationCalculator.Calculate(dto, cabin, hardware: null, requireCompleteMatch: false, unmet);
+
+        Assert.True(result.HasUnmetHardwareRequirements);
+        Assert.Equal("Güç Kaynağı, İşlemci", result.UnmetHardwareDetails);
+        Assert.Equal(12, result.HardwareBreakdown.Single(x => x.Key == "module").Quantity);
+        Assert.Equal(0, result.HardwareBreakdown.Single(x => x.Key == "processor").Quantity);
+        Assert.Equal(ConfigurationCalculator.MissingCatalogItem, result.RecommendedProcessor);
+        Assert.Equal(ConfigurationCalculator.MissingCatalogItem, result.HardwareBreakdown.Single(x => x.Key == "patchCable").Name);
+        Assert.True(result.HardwareBreakdown.Single(x => x.Key == "patchCable").Quantity >= 0);
+    }
+
+    [Fact]
     public void CountPowerSupplies_WattKapasitesineGoreAdetDoner()
     {
         var psu = new PowerSupply { MaxPowerOutputWatt = 3600m };

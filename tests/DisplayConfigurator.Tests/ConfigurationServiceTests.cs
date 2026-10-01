@@ -1,8 +1,11 @@
 using DisplayConfigurator.Application.DTOs;
 using DisplayConfigurator.Application.Engine;
+using DisplayConfigurator.Application.Interfaces;
 using DisplayConfigurator.Domain.Entities;
+using DisplayConfigurator.Infrastructure.Pdf;
 using DisplayConfigurator.Infrastructure.Services;
 using DisplayConfigurator.Tests.Fakes;
+using QuestPDF.Infrastructure;
 using Xunit;
 
 namespace DisplayConfigurator.Tests;
@@ -15,6 +18,10 @@ namespace DisplayConfigurator.Tests;
 /// </summary>
 public class ConfigurationServiceTests
 {
+    static ConfigurationServiceTests()
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+    }
     private static void SeedCatalog(InMemoryHardwareCatalogRepository hw)
     {
         hw.PowerSupplies[1] = new PowerSupply
@@ -71,7 +78,8 @@ public class ConfigurationServiceTests
     private static ConfigurationService CreateService(
         out InMemoryCabinRepository cabinRepo,
         out InMemoryConfigurationRepository configRepo,
-        bool seedHardware = true)
+        bool seedHardware = true,
+        IPdfReportService? pdfService = null)
     {
         cabinRepo = new InMemoryCabinRepository();
         configRepo = new InMemoryConfigurationRepository();
@@ -98,7 +106,7 @@ public class ConfigurationServiceTests
             cabinRepo,
             hardwareRepo,
             new InMemorySystemSettingsRepository(),
-            new StubPdfReportService());
+            pdfService ?? new StubPdfReportService());
     }
 
     private sealed class StubPdfReportService : DisplayConfigurator.Application.Interfaces.IPdfReportService
@@ -176,5 +184,34 @@ public class ConfigurationServiceTests
         Assert.Equal(1, result.ProcessorId);
         Assert.Contains("VX1000", result.RecommendedProcessor);
         Assert.Equal(12003m, result.TotalPrice);
+    }
+
+    [Fact]
+    public async Task GeneratePdf_KatalogBos_MusteriPdfOlustururUyariYok()
+    {
+        var service = CreateService(out _, out _, seedHardware: false, pdfService: new PdfReportService());
+        var dto = new CreateConfigurationDto { ProjectName = "PDF", CabinId = 1, Cols = 4, Rows = 3 };
+
+        var bytes = await service.GenerateSpecSheetPdfFromDtoAsync(dto, kind: PdfReportKind.Client);
+
+        Assert.True(bytes.Length > 100);
+        var text = System.Text.Encoding.UTF8.GetString(bytes);
+        Assert.DoesNotContain("UYARI", text, StringComparison.Ordinal);
+        var warning = ProfessionalReportDocument.FormatAdminUnmetWarning("Güç Kaynağı, İşlemci");
+        Assert.Contains("UYARI:", warning);
+        Assert.Contains("[Güç Kaynağı, İşlemci]", warning);
+    }
+
+    [Fact]
+    public async Task GeneratePdf_KatalogBos_AdminPdfUyariMetniniKullanir()
+    {
+        var service = CreateService(out _, out _, seedHardware: false, pdfService: new PdfReportService());
+        var dto = new CreateConfigurationDto { ProjectName = "PDF", CabinId = 1, Cols = 4, Rows = 3 };
+
+        var bytes = await service.GenerateSpecSheetPdfFromDtoAsync(dto, kind: PdfReportKind.Admin);
+        Assert.True(bytes.Length > 100);
+        var warning = ProfessionalReportDocument.FormatAdminUnmetWarning("Güç Kaynağı");
+        Assert.StartsWith("UYARI:", warning);
+        Assert.Contains("temin ediniz.", warning);
     }
 }

@@ -99,6 +99,12 @@ public class ConfigurationResponseDto
 
     public IReadOnlyList<HardwareLineItemDto> HardwareBreakdown { get; set; } = [];
 
+    /// <summary>Katalogdaki aktif kayıtlar ekran ihtiyacını tam karşılamıyorsa.</summary>
+    public bool HasUnmetHardwareRequirements { get; set; }
+
+    /// <summary>Eksik kalem adları (ör. "Güç Kaynağı, İşlemci"). Müşteri PDF'de gösterilmez.</summary>
+    public string? UnmetHardwareDetails { get; set; }
+
     /// <summary>Seçili PSU verim oranı (0–1). Admin PDF güç tablosu için.</summary>
     public decimal? PsuEfficiencyRatio { get; set; }
 

@@ -67,9 +67,9 @@ public class ConfigurationService : IConfigurationService
         if (cabin == null)
             throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
 
-        var hardware = await LoadHardwareAsync(dto, cabin);
+        var (hardware, unmet) = await ResolveHardwareAsync(dto, cabin, requireComplete: true);
         dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
-        var responseDto = CalculateConfigurationDto(dto, cabin, hardware);
+        var responseDto = CalculateConfigurationDto(dto, cabin, hardware, requireComplete: true, unmet);
 
         var entity = new Configuration
         {
@@ -135,9 +135,9 @@ public class ConfigurationService : IConfigurationService
         if (cabin == null)
             throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
 
-        var hardware = await LoadHardwareAsync(dto, cabin);
+        var (hardware, unmet) = await ResolveHardwareAsync(dto, cabin, requireComplete: true);
         dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
-        return CalculateConfigurationDto(dto, cabin, hardware);
+        return CalculateConfigurationDto(dto, cabin, hardware, requireComplete: true, unmet);
     }
 
     public async Task<byte[]?> GenerateSpecSheetPdfAsync(int id, PdfReportKind kind = PdfReportKind.Client)
@@ -151,9 +151,9 @@ public class ConfigurationService : IConfigurationService
         if (cabin == null) return null;
 
         var dto = ToCreateDto(entity);
-        var hardware = await LoadHardwareAsync(dto, cabin);
+        var (hardware, unmet) = await ResolveHardwareAsync(dto, cabin, requireComplete: false);
         dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
-        var configDto = CalculateConfigurationDto(dto, cabin, hardware);
+        var configDto = CalculateConfigurationDto(dto, cabin, hardware, requireComplete: false, unmet);
         configDto.Id = entity.Id;
         configDto.UserId = entity.UserId;
         configDto.Status = entity.Status;
@@ -171,9 +171,9 @@ public class ConfigurationService : IConfigurationService
         if (cabin == null)
             throw new ArgumentException("Seçilen kabin veya modül modeli bulunamadı.");
 
-        var hardware = await LoadHardwareAsync(dto, cabin);
+        var (hardware, unmet) = await ResolveHardwareAsync(dto, cabin, requireComplete: false);
         dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
-        var configDto = CalculateConfigurationDto(dto, cabin, hardware);
+        var configDto = CalculateConfigurationDto(dto, cabin, hardware, requireComplete: false, unmet);
         return _pdfReportService.Generate(configDto, extras, cabin, kind);
     }
 
@@ -203,10 +203,15 @@ public class ConfigurationService : IConfigurationService
     private static ConfigurationResponseDto CalculateConfigurationDto(
         CreateConfigurationDto dto,
         Cabin cabin,
-        HardwareCatalogItems? hardware = null)
-        => ConfigurationCalculator.Calculate(dto, cabin, hardware);
+        HardwareCatalogItems? hardware,
+        bool requireComplete,
+        IReadOnlyList<string> unmet)
+        => ConfigurationCalculator.Calculate(dto, cabin, hardware, requireComplete, unmet);
 
-    private async Task<HardwareCatalogItems> LoadHardwareAsync(CreateConfigurationDto dto, Cabin cabin)
+    private async Task<(HardwareCatalogItems Items, IReadOnlyList<string> Unmet)> ResolveHardwareAsync(
+        CreateConfigurationDto dto,
+        Cabin cabin,
+        bool requireComplete)
     {
         var snapshot = new HardwareCatalogSnapshot
         {
@@ -247,7 +252,10 @@ public class ConfigurationService : IConfigurationService
         }
 
         var demand = HardwareMatcher.DemandFrom(cabin, dto.Cols, dto.Rows);
-        return HardwareMatcher.Match(demand, dto.HasMiniPc, snapshot, requested);
+        var matched = HardwareMatcher.TryMatch(demand, dto.HasMiniPc, snapshot, requested);
+        if (requireComplete && !matched.IsComplete)
+            throw new HardwareMatchException(matched.MissingMessages[0]);
+        return (matched.Items, matched.MissingPartLabels);
     }
 
     private static ConfigurationResponseDto MapToResponseDto(Configuration c, Cabin? cabin = null)

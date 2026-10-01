@@ -12,6 +12,9 @@ namespace DisplayConfigurator.Application.Engine;
 /// </summary>
 public static class ConfigurationCalculator
 {
+    /// <summary>Katalogda marka/model yoksa raporda gösterilen ibare.</summary>
+    public const string MissingCatalogItem = "Mevcut item yok";
+
     /// <summary>1 RJ45 portunun güvenli piksel tavanı (işlemci port bütçesi).</summary>
     public const int MaxPixelsPerPort = 650000;
 
@@ -25,6 +28,14 @@ public static class ConfigurationCalculator
         CreateConfigurationDto dto,
         Cabin cabin,
         HardwareCatalogItems? hardware)
+        => Calculate(dto, cabin, hardware, requireCompleteMatch: true, unmetHardware: null);
+
+    public static ConfigurationResponseDto Calculate(
+        CreateConfigurationDto dto,
+        Cabin cabin,
+        HardwareCatalogItems? hardware,
+        bool requireCompleteMatch,
+        IReadOnlyList<string>? unmetHardware)
     {
         if (dto.Cols <= 0 || dto.Rows <= 0)
             throw new ArgumentException("Sütun ve satır sayısı 0'dan büyük olmalıdır.");
@@ -32,6 +43,7 @@ public static class ConfigurationCalculator
             throw new ArgumentException("Modül genişliği ve yüksekliği 0'dan büyük olmalıdır.");
 
         var hw = hardware ?? new HardwareCatalogItems();
+        var unmet = unmetHardware ?? [];
 
         int screenWidthMm = dto.Cols * cabin.WidthMm;
         int screenHeightMm = dto.Rows * cabin.HeightMm;
@@ -64,58 +76,71 @@ public static class ConfigurationCalculator
         decimal moduleAvgWatts = totalModules * avgWattsPerUnit;
         decimal? moduleVoltage = cabin.SupplyVoltage is > 0 ? cabin.SupplyVoltage : null;
 
-        if (hw.PowerSupply == null)
-            throw new HardwareMatchException(
-                "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
-        if (hw.ReceivingCard == null)
-            throw new HardwareMatchException(
-                "Seçilen konfigürasyon için veritabanında uygun Alıcı Kart bulunamadı.");
-        if (hw.Processor == null)
-            throw new HardwareMatchException(
-                "Seçilen konfigürasyon için veritabanında uygun İşlemci bulunamadı.");
+        if (requireCompleteMatch)
+        {
+            if (hw.PowerSupply == null)
+                throw new HardwareMatchException(
+                    "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
+            if (hw.ReceivingCard == null)
+                throw new HardwareMatchException(
+                    "Seçilen konfigürasyon için veritabanında uygun Alıcı Kart bulunamadı.");
+            if (hw.Processor == null)
+                throw new HardwareMatchException(
+                    "Seçilen konfigürasyon için veritabanında uygun İşlemci bulunamadı.");
+        }
 
-        int powerSupplyQty = CountPowerSupplies(moduleMaxWatts, hw.PowerSupply, moduleVoltage);
-        if (powerSupplyQty <= 0)
+        int powerSupplyQty = hw.PowerSupply != null
+            ? CountPowerSupplies(moduleMaxWatts, hw.PowerSupply, moduleVoltage)
+            : 0;
+        if (requireCompleteMatch && powerSupplyQty <= 0)
             throw new HardwareMatchException(
                 "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
 
         int receivingCardQty = CountReceivingCards(totalResW, totalResH, totalPixels, hw.ReceivingCard);
         int patchCableQty = CountPatchCables(receivingCardQty);
-        int processorQty = CountProcessors(totalPixels, totalResW, totalResH, hw.Processor, out int requiredPorts);
-        int miniPcQty = dto.HasMiniPc ? 1 : 0;
+        int processorQty = hw.Processor != null
+            ? CountProcessors(totalPixels, totalResW, totalResH, hw.Processor, out int requiredPorts)
+            : CountProcessors(totalPixels, totalResW, totalResH, processor: null, out requiredPorts);
+        if (hw.Processor == null)
+            processorQty = 0;
+        int miniPcQty = dto.HasMiniPc && hw.MiniPc != null ? 1 : 0;
 
-        if (patchCableQty > 0 && hw.PatchCable == null)
-            throw new HardwareMatchException(
-                "Seçilen konfigürasyon için veritabanında uygun Patch Kablosu bulunamadı.");
-        if (miniPcQty > 0 && hw.MiniPc == null)
-            throw new HardwareMatchException(
-                "Seçilen konfigürasyon için veritabanında uygun Mini PC bulunamadı.");
+        if (requireCompleteMatch)
+        {
+            if (patchCableQty > 0 && hw.PatchCable == null)
+                throw new HardwareMatchException(
+                    "Seçilen konfigürasyon için veritabanında uygun Patch Kablosu bulunamadı.");
+            if (dto.HasMiniPc && hw.MiniPc == null)
+                throw new HardwareMatchException(
+                    "Seçilen konfigürasyon için veritabanında uygun Mini PC bulunamadı.");
+        }
 
-        string recommendedProcessor = DisplayName(hw.Processor, hw.Processor.Name);
+        string recommendedProcessor = CatalogItemName(hw.Processor);
 
         var breakdown = new List<HardwareLineItemDto>
         {
             Line("module", ModuleDisplayName(cabin), totalModules, cabin.Price),
-            Line("processor", recommendedProcessor, processorQty, hw.Processor.Price),
-            Line("powerSupply", DisplayName(hw.PowerSupply, "Güç Kaynağı"),
-                powerSupplyQty, hw.PowerSupply.Price),
-            Line("miniPc", DisplayName(hw.MiniPc, "Mini PC"),
+            Line("processor", CatalogItemName(hw.Processor),
+                processorQty, hw.Processor?.Price ?? 0m),
+            Line("powerSupply", CatalogItemName(hw.PowerSupply),
+                powerSupplyQty, hw.PowerSupply?.Price ?? 0m),
+            Line("miniPc", CatalogItemName(hw.MiniPc),
                 miniPcQty, hw.MiniPc?.Price ?? 0m),
-            Line("patchCable", DisplayName(hw.PatchCable, "Patch Kablosu"),
+            Line("patchCable", CatalogItemName(hw.PatchCable),
                 patchCableQty, hw.PatchCable?.Price ?? 0m),
-            Line("receivingCard", DisplayName(hw.ReceivingCard, "Alıcı Kart"),
-                receivingCardQty, hw.ReceivingCard.Price),
+            Line("receivingCard", CatalogItemName(hw.ReceivingCard),
+                receivingCardQty, hw.ReceivingCard?.Price ?? 0m),
         };
 
         decimal hardwareSubtotal = Math.Round(breakdown.Sum(x => x.LineTotal), 2);
 
-        decimal efficiency = hw.PowerSupply.EfficiencyRatio > 0
+        decimal efficiency = hw.PowerSupply is { EfficiencyRatio: > 0 }
             ? hw.PowerSupply.EfficiencyRatio
             : 1m;
 
         decimal accessoryWatts =
-            receivingCardQty * hw.ReceivingCard.PowerDrawWatt
-            + processorQty * hw.Processor.PowerDrawWatt
+            receivingCardQty * (hw.ReceivingCard?.PowerDrawWatt ?? 0m)
+            + processorQty * (hw.Processor?.PowerDrawWatt ?? 0m)
             + miniPcQty * (hw.MiniPc?.PowerDrawWatt ?? 0m);
 
         decimal totalMaxWatts = ApplyPsuLosses(moduleMaxWatts + accessoryWatts, efficiency);
@@ -124,7 +149,8 @@ public static class ConfigurationCalculator
         decimal maxPowerKw = Math.Round(totalMaxWatts / 1000m, 2);
         decimal avgPowerKw = Math.Round(totalAvgWatts / 1000m, 2);
         decimal moduleHeatBtu = Math.Round(
-            moduleMaxWatts * WattsToBtu + powerSupplyQty * hw.PowerSupply.HeatDissipationBtu, 2);
+            moduleMaxWatts * WattsToBtu
+            + powerSupplyQty * (hw.PowerSupply?.HeatDissipationBtu ?? 0m), 2);
         decimal totalWeightKg = Math.Round(totalModules * (cabin.WeightKg ?? 0m), 2);
 
         decimal widthM = screenWidthMm / 1000m;
@@ -137,6 +163,9 @@ public static class ConfigurationCalculator
         string aspectRatio = CalculateAspectRatio(screenWidthMm, screenHeightMm);
         bool isFullHd = totalResW >= 1920 && totalResH >= 1080;
         bool is4K = totalResW >= 3840 && totalResH >= 2160;
+
+        bool hasUnmet = unmet.Count > 0;
+        string? unmetDetails = hasUnmet ? string.Join(", ", unmet) : null;
 
         return new ConfigurationResponseDto
         {
@@ -168,12 +197,14 @@ public static class ConfigurationCalculator
             ScreenAreaM2 = screenAreaM2,
             LaborCost = laborCost,
             HardwareSubtotal = hardwareSubtotal,
-            PowerSupplyId = hw.PowerSupply.Id,
+            PowerSupplyId = hw.PowerSupply?.Id,
             MiniPcId = hw.MiniPc?.Id,
             PatchCableId = hw.PatchCable?.Id,
-            ReceivingCardId = hw.ReceivingCard.Id,
-            ProcessorId = hw.Processor.Id,
+            ReceivingCardId = hw.ReceivingCard?.Id,
+            ProcessorId = hw.Processor?.Id,
             HardwareBreakdown = breakdown,
+            HasUnmetHardwareRequirements = hasUnmet,
+            UnmetHardwareDetails = unmetDetails,
             PsuEfficiencyRatio = efficiency,
             TotalPrice = adminTotal,
             Status = "Beklemede",
@@ -328,12 +359,13 @@ public static class ConfigurationCalculator
         return "Modül";
     }
 
-    private static string DisplayName(HardwareComponent? component, string fallback)
+    /// <summary>Katalog kaydının adı; marka/model yoksa "Mevcut item yok".</summary>
+    public static string CatalogItemName(HardwareComponent? component)
     {
-        if (component == null) return fallback;
+        if (component == null) return MissingCatalogItem;
         if (!string.IsNullOrWhiteSpace(component.Name)) return component.Name;
         if (!string.IsNullOrWhiteSpace(component.Model)) return component.Model;
-        return fallback;
+        return MissingCatalogItem;
     }
 
     public static string DetermineProcessor(int totalPixels, int requiredPorts)

@@ -8,7 +8,8 @@ using QuestPDF.Infrastructure;
 namespace DisplayConfigurator.Infrastructure.Pdf;
 
 /// <summary>
-/// Profesyonel PDF: müşteri (teknik özet + nihai toplam) veya admin (donanım + işçilik dökümü).
+/// Profesyonel PDF: müşteri (teknik özet + paket + nihai toplam) veya admin
+/// (donanım + işçilik dökümü; eksik katalogda uyarı kutusu).
 /// </summary>
 public class ProfessionalReportDocument : IDocument
 {
@@ -33,7 +34,11 @@ public class ProfessionalReportDocument : IDocument
         _isAdmin = kind == PdfReportKind.Admin;
     }
 
-    public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
+    public static string FormatAdminUnmetWarning(string? details)
+    {
+        var detay = string.IsNullOrWhiteSpace(details) ? "donanım" : details.Trim();
+        return $"UYARI: Sistem gereksinimlerini tam karşılayan donanım veritabanında bulunamadı. Eksik parçaları [{detay}] temin ediniz.";
+    }
 
     public void Compose(IDocumentContainer container)
     {
@@ -400,6 +405,13 @@ public class ProfessionalReportDocument : IDocument
 
         container.PaddingTop(12).Column(column =>
         {
+            if (_isAdmin && _config.HasUnmetHardwareRequirements)
+            {
+                column.Item().PaddingBottom(10).Border(1.5f).BorderColor(Color.FromHex("#b45309"))
+                    .Background(Color.FromHex("#fffbeb")).Padding(10).Text(
+                        FormatAdminUnmetWarning(_config.UnmetHardwareDetails))
+                    .FontSize(9).Bold().FontColor(Color.FromHex("#92400e"));
+            }
             // ---- 1. TEKLİF / ÖZET ----
             column.Item().Text("Teklif özeti").FontSize(12).Bold().FontColor(BrandBlue);
             column.Item().PaddingTop(6).Table(table =>
@@ -483,8 +495,10 @@ public class ProfessionalReportDocument : IDocument
                 {
                     AddRow(table, "Alıcı kart (adet)", $"{_config.ReceivingCardCount}", ref alt);
                     AddRow(table, "Gerekli RJ45 Ethernet portu", portText, ref alt);
-                    AddRow(table, "Tavsiye işlemci", Empty(_config.RecommendedProcessor, MediaBox(pixels, minPorts)), ref alt);
-                    AddRow(table, "Tavsiye medya oynatıcı", MediaBox(pixels, minPorts), ref alt);
+                    AddRow(table, "Tavsiye işlemci", Empty(_config.RecommendedProcessor, "—"), ref alt);
+                    AddRow(table, "Tavsiye medya oynatıcı", _config.HasMiniPc
+                        ? Empty(_config.HardwareBreakdown.FirstOrDefault(x => x.Key == "miniPc" && x.Quantity > 0)?.Name, "Mini PC")
+                        : "İşlemci üzerinden", ref alt);
                 }
                 AddRow(table, "Tahmini toplam ağırlık", $"{_config.TotalWeightKg:N1} kg", ref alt);
                 if (_isAdmin)
@@ -524,15 +538,55 @@ public class ProfessionalReportDocument : IDocument
             }
             else
             {
+                column.Item().Element(ComposeClientPackage);
                 column.Item().Element(ComposeClientTotalPrice);
             }
         });
     }
 
     /// <summary>
-    /// Müşteri raporunda yalnızca nihai satış tutarı. Birim fiyat, kalem dökümü
-    /// ve işçilik çarpanı bu belgede yok; onlar admin raporunda kalır.
+    /// Müşteri raporunda eşleşen katalog kalemleri (adet; birim fiyat yok).
+    /// Eksik parça uyarısı buraya yazılmaz.
     /// </summary>
+    private void ComposeClientPackage(IContainer container)
+    {
+        var lines = _config.HardwareBreakdown.ToList();
+        if (lines.Count == 0) return;
+
+        container.PaddingTop(14).Column(column =>
+        {
+            column.Item().Text("Paket içeriği").FontSize(12).Bold().FontColor(BrandBlue);
+            column.Item().PaddingTop(5).Table(table =>
+            {
+                table.ColumnsDefinition(c =>
+                {
+                    c.RelativeColumn(1.6f);
+                    c.RelativeColumn(2.4f);
+                    c.RelativeColumn(0.8f);
+                });
+
+                table.Header(h =>
+                {
+                    h.Cell().Background(BrandBlue).Padding(6).Text("Kalem").FontColor(Colors.White).Bold().FontSize(8);
+                    h.Cell().Background(BrandBlue).Padding(6).Text("Ürün").FontColor(Colors.White).Bold().FontSize(8);
+                    h.Cell().Background(BrandBlue).Padding(6).Text("Adet").FontColor(Colors.White).Bold().FontSize(8);
+                });
+
+                bool alt = true;
+                foreach (var line in lines)
+                {
+                    var bg = alt ? Color.FromHex("#f8fafc") : Colors.White;
+                    alt = !alt;
+                    table.Cell().Background(bg).BorderBottom(1).BorderColor(Color.FromHex("#e2e8f0"))
+                        .PaddingVertical(2.6f).PaddingHorizontal(4).Text(HardwareLabel(line.Key)).FontSize(8);
+                    table.Cell().Background(bg).BorderBottom(1).BorderColor(Color.FromHex("#e2e8f0"))
+                        .PaddingVertical(2.6f).PaddingHorizontal(4).Text(line.Name).FontSize(8);
+                    table.Cell().Background(bg).BorderBottom(1).BorderColor(Color.FromHex("#e2e8f0"))
+                        .PaddingVertical(2.6f).PaddingHorizontal(4).AlignRight().Text($"{line.Quantity}").Bold().FontSize(8);
+                }
+            });
+        });
+    }
     private void ComposeClientTotalPrice(IContainer container)
     {
         container.PaddingTop(14).Border(1.5f).BorderColor(BrandBlue)
@@ -582,7 +636,7 @@ public class ProfessionalReportDocument : IDocument
                     AddMoneyRow(table, HardwareLabel(line.Key), line.Name, line.Quantity, line.UnitPrice, line.LineTotal, ref alt);
                 }
 
-                if (_config.HardwareBreakdown.Count == 0)
+                if (!_config.HardwareBreakdown.Any(x => x.Quantity > 0))
                 {
                     var bg = Color.FromHex("#f8fafc");
                     table.Cell().ColumnSpan(5).Background(bg).Padding(6)
@@ -732,14 +786,6 @@ public class ProfessionalReportDocument : IDocument
         return 0;
     }
 
-    private static string MediaBox(long pixels, int minPorts)
-    {
-        if (pixels <= 650000 && minPorts <= 1) return "NovaStar TB30 (1 Port / Cloud)";
-        if (pixels <= 1300000 && minPorts <= 2) return "NovaStar TB40 (2 Port / Cloud)";
-        if (pixels <= 2300000 && minPorts <= 4) return "NovaStar TB60 (4 Port / Cloud)";
-        return "Harici işlemci gerekli (TB yetersiz)";
-    }
-
     private void ComposeFooter(IContainer container)
     {
         container.Column(col =>
@@ -749,7 +795,7 @@ public class ProfessionalReportDocument : IDocument
             {
                 row.RelativeItem().Text(_isAdmin
                         ? "Masaüstü Bilişim Teknolojileri — Vision Display Studio. İÇ RAPOR — fiyat ve donanım dökümü müşteri belgesinde yer almaz."
-                        : "Masaüstü Bilişim Teknolojileri — Vision Display Studio. Müşteri raporu — nihai toplam satış fiyatı içerir; kalem dökümü bu belgede yer almaz.")
+                        : "Masaüstü Bilişim Teknolojileri — Vision Display Studio. Müşteri raporu — paket içeriği ve nihai toplam satış fiyatı içerir.")
                     .FontSize(7.5f).FontColor(Colors.Grey.Medium);
                 row.ConstantItem(70).AlignRight().Text(t =>
                 {
