@@ -3235,21 +3235,45 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return
     }
 
-    /*
-     * Mesafe boşsa: duvarı kadraja TAM sığdıran mesafe. İki kenardan hangisi
-     * önce dolarsa o belirliyor, böylece kutu fotoğrafın dışına taşmıyor ama
-     * gereksiz de küçük kalmıyor.
-     */
     const girilen = mesafeElleRef.current ? Number(String(taslakMesafe).replace(',', '.')) : 0
-    const sigan = Math.max(w, h * (foto.w / foto.h)) / KADRAJ_KATSAYISI
-    const m = girilen > 0.1 ? girilen : Math.max(0.2, sigan)
-    if (!(girilen > 0.1)) setTaslakMesafe(m.toFixed(2))
 
     /*
-     * Kadrajın kapsadığı genişlik = mesafe × 1,11. Duvarın kadrajdaki payı da
-     * gerçek eninin buna oranı; yani kutu, fotoğrafta duvarın o mesafeden
-     * KAPLAYACAĞI kadar yer kaplıyor.
+     * MESAFE YOKSA KUTU FOTOĞRAFIN TAMAMI.
+     *
+     * Önce kutu, duvarın KENDİ en/boy oranı korunarak fotoğrafa sığdırılıyordu.
+     * Bu, duvarın oranının fotoğrafın oranıyla aynı olduğunu varsayıyor — oysa
+     * ikisi çoğu zaman tutmuyor ve kutu fotoğrafın bir kenarında boşluk
+     * bırakıyordu (ölçümde %86,8). Kullanıcı o boşluğu kapatmak için ya kutuyu
+     * çekmek ya da uydurma bir ölçü yazmak zorunda kalıyordu.
+     *
+     * Oysa insan ilgilendiği duvarı kadraja DOLDURARAK çeker. Oran farkı da
+     * atılacak bir bilgi değil: duvar fotoğrafta kendi oranından başka
+     * görünüyorsa, fotoğraf açıyla çekilmiş demektir ve dünya dönüşümü bunu
+     * zaten doğru hesaplıyor (yatay ve dikey ölçek ayrı).
+     *
+     * Mesafe girilmişse eski yol: kutu o mesafeden görünen kadraja göre.
      */
+    if (!(girilen > 0.1)) {
+      const kutu = [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+        { x: 0, y: 1 },
+      ]
+      elleDuzenlemeyiBirak()
+      setAdayKipi(false)
+      setTaslakKutu(kutu)
+      setKutuOnaylandi(false)
+      setHedefKose(kutu)
+      setHedefTur('taslak')
+      setDuvarOlcu({ wm: w, hm: h })
+      setTaslakKuruldu(true)
+      taslaktanOlcek(kutu, false)
+      setOzelUyari(null)
+      return
+    }
+
+    const m = girilen
     const kadrajW = kadrajGenisligi(m)
     const kadrajH = kadrajW * (foto.h / foto.w)
     const payW = w / kadrajW
@@ -3288,7 +3312,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * yazılıyor ki kullanıcı hangi sayıyı düzelteceğini bilsin.
      */
     if (payW > 1 || payH > 1) {
-      const enAz = Math.ceil(sigan * 100) / 100
+      const enAz = Math.ceil((Math.max(w, h * (foto.w / foto.h)) / KADRAJ_KATSAYISI) * 100) / 100
       setOzelUyari(
         t('scene.wallBiggerThanFrame') +
           ' ' +
