@@ -2524,38 +2524,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kaydırma yetmiyorsa (dörtgen fotoğraftan geniş) merkezine göre
    * küçültülüyor; şekil ve açı korunuyor.
    */
-  function fotografaSigdir(koseler) {
-    const yer = fotoYer
-    if (!Array.isArray(koseler) || koseler.length !== 4) return koseler
-    if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return koseler
-    const kutu = (q) => ({
-      x0: Math.min(...q.map((p) => p.x)),
-      x1: Math.max(...q.map((p) => p.x)),
-      y0: Math.min(...q.map((p) => p.y)),
-      y1: Math.max(...q.map((p) => p.y)),
-    })
-    let k = koseler
-    let b = kutu(k)
-    const olcek = Math.min(
-      1,
-      yer.genislik / Math.max(1, b.x1 - b.x0),
-      yer.yukseklik / Math.max(1, b.y1 - b.y0),
-    )
-    if (olcek < 1) {
-      const cx = (b.x0 + b.x1) / 2
-      const cy = (b.y0 + b.y1) / 2
-      k = k.map((p) => ({ x: cx + (p.x - cx) * olcek, y: cy + (p.y - cy) * olcek }))
-      b = kutu(k)
-    }
-    let dx = 0
-    let dy = 0
-    if (b.x0 < yer.sol) dx = yer.sol - b.x0
-    else if (b.x1 > yer.sol + yer.genislik) dx = yer.sol + yer.genislik - b.x1
-    if (b.y0 < yer.ust) dy = yer.ust - b.y0
-    else if (b.y1 > yer.ust + yer.yukseklik) dy = yer.ust + yer.yukseklik - b.y1
-    return dx || dy ? k.map((p) => ({ x: p.x + dx, y: p.y + dy })) : k
-  }
-
   function fotografaCek(koseler, yer) {
     if (!Array.isArray(koseler) || koseler.length !== 4) return koseler
     if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return koseler
@@ -2968,20 +2936,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return
     }
     setElleKose(aday)
-  }
-
-  /* Tuval noktasını fotoğrafa göre orana çevirir (manuel sürükleme). */
-  const koseleriYaz = (noktalar) => {
-    if (!fotoYer?.genislik || !fotoYer?.yukseklik) return
-    const mX = tuvalBoyut.w / 2
-    const mY = tuvalBoyut.h / 2
-    const z = sahneYakinlik || 1
-    setHedefKose(
-      noktalar.map((k) => ({
-        x: (mX + (k.x - mX) / z - fotoYer.sol) / fotoYer.genislik,
-        y: (mY + (k.y - mY) / z - fotoYer.ust) / fotoYer.yukseklik,
-      })),
-    )
   }
 
   /* Elle köşe seçimi ekranın kendi sınırlarını kullanır; oranı orada kullanıcı kurar. */
