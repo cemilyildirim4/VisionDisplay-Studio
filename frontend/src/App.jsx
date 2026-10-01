@@ -3244,15 +3244,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * KAMERANIN KATSAYISINI veriyor. Sonraki mesafe değişiklikleri artık o
      * kameraya göre hesaplanıyor, genel bir varsayıma göre değil.
      */
-    if (kaynak === 'ilk') {
-      mesafeElleRef.current = false
-      if (yazilan > 0.05) {
-        const k = w / (1 * yazilan)
-        if (k > 0.2 && k < 6) setKameraKatsayi(k)
-      } else {
-        setKameraKatsayi(KADRAJ_KATSAYISI)
-      }
-    }
+    /*
+     * Katsayı, kutunun kadrajda KAPLADIĞI paya göre öğreniliyor. Kutu
+     * fotoğrafın tamamı değil; payı hesaba katmazsak kamera olduğundan dar
+     * açılı sayılırdı.
+     */
+    if (kaynak === 'ilk') mesafeElleRef.current = false
     const girilen = kaynak !== 'ilk' && mesafeElleRef.current ? yazilan : 0
 
     /*
@@ -3272,11 +3269,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * Mesafe girilmişse eski yol: kutu o mesafeden görünen kadraja göre.
      */
     if (!(girilen > 0.1)) {
+      /*
+       * KUTU BİR ALAN SEÇİCİDİR, KADRAJIN TAMAMI DEĞİL.
+       *
+       * Bir ara "mesafe verilmediyse kutu fotoğrafın tamamını kaplasın" diye
+       * bir kural koymuştum. Yanlıştı: kullanıcı bu kutuyu arka plandaki
+       * BİR YERİ işaretlemek için kullanıyor — duvarın bir bölümü, bir
+       * vitrin, bir cephe parçası. Kadrajın tamamı bunlardan yalnızca biri.
+       *
+       * Kutu artık fotoğrafın ortasında, girilen ölçünün kendi oranıyla ve
+       * dört köşesi rahat yakalanacak kadar içeride açılıyor. Kullanıcı onu
+       * sürükleyip köşelerinden çekerek istediği yere oturtuyor; oturttuğu
+       * yer de kalıyor — ne girilen ölçü ne başka bir kural onu geri
+       * büyütmüyor. Kadrajın tamamını işaretlemek isteyen köşeleri kenara
+       * çeker.
+       */
+      const PAY = 0.7
+      const oran = (w / h) * (foto.h / foto.w)
+      let payW = PAY
+      let payH = payW / oran
+      if (payH > PAY) {
+        payH = PAY
+        payW = payH * oran
+      }
       const kutu = [
-        { x: 0, y: 0 },
-        { x: 1, y: 0 },
-        { x: 1, y: 1 },
-        { x: 0, y: 1 },
+        { x: 0.5 - payW / 2, y: 0.5 - payH / 2 },
+        { x: 0.5 + payW / 2, y: 0.5 - payH / 2 },
+        { x: 0.5 + payW / 2, y: 0.5 + payH / 2 },
+        { x: 0.5 - payW / 2, y: 0.5 + payH / 2 },
       ]
       elleDuzenlemeyiBirak()
       setAdayKipi(false)
@@ -3293,10 +3313,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * yazmadıysa varsayılan katsayıdan hesaplanıyor.
        */
       if (yazilan > 0.05) {
+        /* Kullanıcının bildiği mesafe + kutunun payı = bu kameranın katsayısı. */
+        const k = w / (payW * yazilan)
+        setKameraKatsayi(k > 0.2 && k < 6 ? k : KADRAJ_KATSAYISI)
         setTaslakMesafe(yazilan.toFixed(2))
         setIzlemeM(Math.max(0.2, Math.min(300, yazilan)))
       } else {
-        const m0 = w / KADRAJ_KATSAYISI
+        setKameraKatsayi(KADRAJ_KATSAYISI)
+        const m0 = w / (payW * KADRAJ_KATSAYISI)
         setTaslakMesafe(m0.toFixed(2))
         setIzlemeM(Math.max(0.2, Math.min(300, m0)))
       }

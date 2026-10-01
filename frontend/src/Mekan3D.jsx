@@ -124,6 +124,7 @@ const kis = (d, en, cok) => Math.max(en, Math.min(cok, d))
 export function perspektifDurusu(k, enM, boyM) {
   const buyuk = Math.max(enM || 1, boyM || 1)
   const bos = {
+    gerilme: 1,
     yaw: 0,
     pitch: 0,
     roll: 0,
@@ -160,12 +161,31 @@ export function perspektifDurusu(k, enM, boyM) {
   const gucYaw = (sol - sag) / (sol + sag)
   const gucPitch = (ust - alt) / (ust + alt)
 
-  /* (1) Oran sapması hangi eksende daralma olduğunu söylüyor. */
+  const mY = Math.abs(gucYaw)
+  const mP = Math.abs(gucPitch)
+
+  /*
+   * DÖNME YALNIZCA YAMUKLUKTAN ÇIKIYOR.
+   *
+   * Önce en/boy oranındaki her sapma dönme sayılıyordu. Bu, kalibrasyonun
+   * yatay ve dikey ölçeğinin farklı olabileceğini gözden kaçırıyordu:
+   * kullanıcı fotoğrafın tamamını 0,355 × 0,23 m diye tanıttığında dörtgen
+   * 2,30:1 oranında oluyor ama ekranın kendi oranı 2:1. Aradaki fark dönme
+   * sanılıp ekran 30 derece arkaya yatırılıyor ve kabinin ALT YÜZÜ
+   * görünüyordu — kullanıcının "kenarlarında siyahlıklar var" dediği şey
+   * buydu. Düz çizimde yoktu, çünkü o yalnızca geriliyor.
+   *
+   * Karşılıklı kenarlar paralelse ortada perspektif yoktur: dönme de yoktur.
+   * Oran farkı o zaman ölçek farkıdır ve aşağıda GERİLME olarak uygulanıyor.
+   */
+  const yamuk = mY > GUC_ESIGI || mP > GUC_ESIGI
   const oran = enPx / boyPx / (enM / boyM)
   let yaw = 0
   let pitch = 0
-  if (oran < 1) yaw = Math.min(EN_COK_ACI, Math.acos(kis(oran, 0.05, 1)))
-  else if (oran > 1) pitch = Math.min(EN_COK_ACI, Math.acos(kis(1 / oran, 0.05, 1)))
+  if (yamuk) {
+    if (oran < 1) yaw = Math.min(EN_COK_ACI, Math.acos(kis(oran, 0.05, 1)))
+    else if (oran > 1) pitch = Math.min(EN_COK_ACI, Math.acos(kis(1 / oran, 0.05, 1)))
+  }
 
   /*
    * Dönme yönü, hangi kenarın uzun olduğundan geliyor. Fark ölçülemeyecek
@@ -174,10 +194,6 @@ export function perspektifDurusu(k, enM, boyM) {
    */
   const yonY = gucYaw < 0 ? -1 : 1
   const yonP = gucPitch < 0 ? -1 : 1
-
-  /* (2) Karşılıklı kenar farkı uzaklığı veriyor. */
-  const mY = Math.abs(gucYaw)
-  const mP = Math.abs(gucPitch)
   let uzaklikM = buyuk * EN_UZAK
   if (yaw > 0 && mY > GUC_ESIGI) uzaklikM = ((enM / 2) * Math.sin(yaw)) / mY
   else if (pitch > 0 && mP > GUC_ESIGI) uzaklikM = ((boyM / 2) * Math.sin(pitch)) / mP
@@ -203,7 +219,26 @@ export function perspektifDurusu(k, enM, boyM) {
       ? (boyPx * (1 - gY * gY)) / boyM
       : (enPx * (1 - gP * gP)) / enM
 
+  /*
+   * GERİLME — dönmeyle açıklanamayan oran farkı.
+   *
+   * Dörtgen, ekranın kendi oranından başka bir orandaysa ve bu fark dönmeden
+   * gelmiyorsa, kalibrasyonun yatay ve dikey ölçeği birbirinden farklı
+   * demektir (fotoğraf tam karşıdan çekilmemiş ya da girilen ölçü kadrajın
+   * tamamını birebir karşılamıyor). Düz çizim bu durumda zaten geriliyor;
+   * 3B de aynı oranda gerilmeli ki ikisi üst üste otursun ve dörtgenin
+   * içinde boşluk kalmasın.
+   */
+  const gerilme = kis(
+    (enPx / Math.max(0.2, Math.cos(yaw))) /
+      (boyPx / Math.max(0.2, Math.cos(pitch))) /
+      (enM / boyM),
+    0.25,
+    4,
+  )
+
   return {
+    gerilme,
     yaw: yaw * yonY,
     /* Üst kenar uzunsa ekranın altı geriye gitmeli: işaret ters. */
     pitch: -pitch * yonP,
@@ -448,7 +483,10 @@ export default function Mekan3D({
         <ambientLight intensity={0.35} />
         <directionalLight position={[3, 4, 5]} intensity={1.1} />
 
-        <group rotation={[acilar.pitch, acilar.yaw, acilar.roll, 'YXZ']}>
+        <group
+          rotation={[acilar.pitch, acilar.yaw, acilar.roll, 'YXZ']}
+          scale={[acilar.gerilme || 1, 1, 1]}
+        >
           <CabinetGrid
             model={model}
             cols={cols}
