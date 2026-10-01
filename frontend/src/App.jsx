@@ -47,6 +47,7 @@ import { duzlestir } from './egimDenetimi.js'
 import { DAVET_OLAYI } from './apiClient.js'
 import { useSession } from './SessionContext.jsx'
 import { icDortgen, sigdirDortgen, duvarDunyasi, dunyaDortgeni } from './homografi.js'
+import { kalibrasyonKur, merkezeYerlestir, referansDenetle } from './referansOlcek.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
@@ -588,6 +589,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * gerçek ölçüsüyle içine yerleşiyor.
    */
   const [taslakKutu, setTaslakKutu] = useState(null)
+
+  /*
+   * ÖLÇEK REFERANSI.
+   *
+   * Tek bir fotoğraftan gerçek santimetre çıkarmak imkânsız (bkz.
+   * referansOlcek.js). Ölçek, kullanıcının fotoğrafta gösterdiği, gerçek
+   * ölçüsünü BİLDİĞİ bir dikdörtgenden geliyor. Eski mesafe/kadraj zinciri
+   * bu akışta kullanılmıyor.
+   *
+   * Köşeler ORİJİNAL görsel pikselinde saklanıyor: pencere boyutu değişince
+   * ölçü değişmesin diye.
+   */
+  const [referans, setReferans] = useState(null)
+  /* Referans işaretleme kipi açık mı — kullanıcı düğmeyle açıyor. */
+  const [referansKipi, setReferansKipi] = useState(false)
+  /* Kip açıkken düzenlenen dörtgen (orijinal görsel pikseli). */
+  const [refKose, setRefKose] = useState(null)
+  const [refEn, setRefEn] = useState('')
+  const [refBoy, setRefBoy] = useState('')
+  /* Ölçü kutusu: referans düzleminde yer ve gerçek ölçü (santimetre). */
+  const [olcuKutu, setOlcuKutu] = useState(null)
+  const [kutuEn, setKutuEn] = useState('')
+  const [kutuBoy, setKutuBoy] = useState('')
   /*
    * Kutu onaylandı mı. Onaydan sonra kutu EKRANDAN KALKMIYOR, yalnızca
    * soluyor: tasarımı taşırken duvarın nerede olduğunu görmek gerekiyor.
@@ -984,10 +1008,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * pop-up üstüne biniyor.
        */
       if (TASLAK_KIPI) {
-        /* Yeni fotoğraf, yeni ölçek: önceki mesafe kararı geçersiz. */
+        /*
+         * YENİ FOTOĞRAF, YENİ ÖLÇEK.
+         *
+         * Referans o fotoğrafa aittir: başka bir fotoğrafta geçerli değil.
+         * Eski taslak/mesafe sorusu da artık sorulmuyor — ölçek referanstan
+         * geliyor (bkz. referansOlcek.js).
+         */
         mesafeElleRef.current = false
         setTaslakMesafe('')
-        setTimeout(() => setTaslakSorusu(true), 0)
+        setReferans(null)
+        setReferansKipi(false)
+        setRefKose(null)
+        setRefEn('')
+        setRefBoy('')
+        setOlcuKutu(null)
+        setTaslakKutu(null)
+        setHedefKose(null)
+        setDuvarOlcu(null)
       }
     }
     gorsel.src = url
@@ -3467,6 +3505,129 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setKutuOnaylandi(true)
   }
 
+  /*
+   * GÖRSEL PİKSELİ ↔ TUVAL PİKSELİ.
+   *
+   * Referans ve ölçü kutusu ORİJİNAL görsel pikselinde saklanıyor; ekranda
+   * çizmek için tuvale çevriliyor. Fiziksel hesap bu çeviriye hiç bakmıyor.
+   */
+  const kaynakW = ozelSahne?.kaynak?.w || 0
+  const kaynakH = ozelSahne?.kaynak?.h || 0
+  const gorselTuvale = (k) =>
+    kaynakW > 0 && kaynakH > 0 ? oranTuvale({ x: k.x / kaynakW, y: k.y / kaynakH }) : k
+  const tuvalGorsele = (k) => {
+    if (!(kaynakW > 0) || !(kaynakH > 0)) return k
+    const o = tuvalOrana(k)
+    return { x: o.x * kaynakW, y: o.y * kaynakH }
+  }
+
+  /** Referanstan kurulan kalibrasyon — ölçünün TEK kaynağı. */
+  const kalibrasyon = useMemo(() => kalibrasyonKur(referans), [referans])
+
+  /*
+   * ÖLÇÜ KUTUSU → ÇİZİM.
+   *
+   * Kutunun dört köşesi kalibrasyondan hesaplanıyor (gerçek santimetre →
+   * görsel pikseli), sonra çizim zincirinin beklediği oranlı biçime
+   * çevriliyor. Tasarım bu kutunun içine kendi gerçek ölçüsüyle oturuyor —
+   * o kısım değişmedi.
+   */
+  useEffect(() => {
+    if (!kalibrasyon || !olcuKutu || !(kaynakW > 0) || !(kaynakH > 0)) return
+    const q = kalibrasyon.kutuDortgeni(
+      olcuKutu.xCm,
+      olcuKutu.yCm,
+      olcuKutu.enCm,
+      olcuKutu.boyCm,
+    )
+    if (!q) return
+    const oranli = q.map((k) => ({ x: k.x / kaynakW, y: k.y / kaynakH }))
+    setHedefKose(oranli)
+    /* Ekrandaki kutu çizimi de aynı dörtgeni kullanıyor. */
+    setTaslakKutu(oranli)
+    setKutuOnaylandi(true)
+    setHedefTur('taslak')
+    setDuvarOlcu({ wm: olcuKutu.enCm / 100, hm: olcuKutu.boyCm / 100 })
+    duvariEsitle(olcuKutu.enCm / 100, olcuKutu.boyCm / 100)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kalibrasyon, olcuKutu, kaynakW, kaynakH])
+
+  /** Referans kipini aç: fotoğrafın ortasında makul bir dikdörtgen. */
+  const referansiBaslat = () => {
+    if (!(kaynakW > 0) || !(kaynakH > 0)) return
+    setRefKose([
+      { x: kaynakW * 0.3, y: kaynakH * 0.35 },
+      { x: kaynakW * 0.7, y: kaynakH * 0.35 },
+      { x: kaynakW * 0.7, y: kaynakH * 0.65 },
+      { x: kaynakW * 0.3, y: kaynakH * 0.65 },
+    ])
+    setReferansKipi(true)
+  }
+
+  /** Köşe/gövde sürüklendi — tuval pikseli geliyor, görsel pikseline çevriliyor. */
+  const refKoseDegisti = (tuvalKoseler) => {
+    if (!Array.isArray(tuvalKoseler) || tuvalKoseler.length !== 4) return
+    setRefKose(tuvalKoseler.map(tuvalGorsele))
+  }
+
+  /** Referansı onayla: kalibrasyon buradan kuruluyor. */
+  const referansiOnayla = () => {
+    const en = Number(String(refEn).replace(',', '.'))
+    const boy = Number(String(refBoy).replace(',', '.'))
+    const aday = { koseler: refKose, enCm: en, boyCm: boy }
+    const d = referansDenetle(aday)
+    if (!d.tamam) {
+      setOzelUyari(t('ref.hata.' + d.sebep))
+      return
+    }
+    setReferans(aday)
+    setReferansKipi(false)
+    setOzelUyari(null)
+  }
+
+  /** Referansı ve ona bağlı her şeyi bırak. */
+  const referansiSifirla = () => {
+    setReferans(null)
+    setReferansKipi(false)
+    setRefKose(null)
+    setOlcuKutu(null)
+    setHedefKose(null)
+    setDuvarOlcu(null)
+    setOzelUyari(null)
+  }
+
+  /** Ölçü kutusunu kur: girilen santimetre, referansın ortasına. */
+  const olcuKutusunuKur = () => {
+    if (!kalibrasyon) {
+      setOzelUyari(t('ref.onceReferans'))
+      return
+    }
+    const en = Number(String(kutuEn).replace(',', '.'))
+    const boy = Number(String(kutuBoy).replace(',', '.'))
+    if (!(en > 0.5) || !(boy > 0.5)) {
+      setOzelUyari(t('ref.hata.olcuYok'))
+      return
+    }
+    const yer = merkezeYerlestir(kalibrasyon, en, boy)
+    setOlcuKutu({ xCm: yer.x, yCm: yer.y, enCm: en, boyCm: boy })
+    setOzelUyari(null)
+  }
+
+  /*
+   * ÖLÇÜ KUTUSU TAŞINDI.
+   *
+   * Yalnızca YERİ değişiyor; ölçüsü girilen santimetreden geliyor ve elle
+   * değiştirilemiyor. Taşıma, sol üst köşenin düzlemdeki yeni santimetre
+   * karşılığından okunuyor — piksel farkı doğrudan santimetre sayılmıyor.
+   */
+  const olcuKutusuTasindi = (tuvalKoseler) => {
+    if (!kalibrasyon || !olcuKutu || !Array.isArray(tuvalKoseler)) return
+    const solUst = tuvalGorsele(tuvalKoseler[0])
+    const cm = kalibrasyon.gorseldenCm(solUst.x, solUst.y)
+    if (!cm) return
+    setOlcuKutu((e) => (e ? { ...e, xCm: cm.x, yCm: cm.y } : e))
+  }
+
   const taslakKutuyuKurRef = useRef(null)
   taslakKutuyuKurRef.current = taslakKutuyuKur
 
@@ -3974,17 +4135,47 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             çekerek gerçek duvara oturtuyor. Üstüne tıklayınca tasarım
             kendi ölçüsüyle içine yerleşiyor ve kutu kayboluyor.
           */}
-          {taslakKutu && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+          {/*
+            REFERANS KUTUSU — kalibrasyonu kuran dörtgen.
+
+            Turuncu: ölçü kutusuyla karışmasın. Yalnızca işaretleme kipinde
+            görünüyor; onaylandıktan sonra görevi biter, ölçek artık
+            kalibrasyonda saklı.
+          */}
+          {referansKipi && refKose && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <TaslakKutu
-              koseler={taslakKutu.map(oranTuvale)}
+              koseler={refKose.map(gorselTuvale)}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
-              onKose={taslakKutusuDegisti}
-              onSec={taslakKutusunuUygula}
-              soluk={kutuOnaylandi}
-              etiket={kutuOnaylandi ? null : t('scene.draftTapHint')}
+              onKose={refKoseDegisti}
+              renk="#e06c1f"
+              dolgu="rgba(224,108,31,0.14)"
+              etiket={t('ref.etiket')}
             />
           )}
+
+          {/*
+            ÖLÇÜ KUTUSU — tasarımın yerleşeceği gerçek alan.
+
+            Köşeleri kapalı: boyu girilen santimetreden geliyor, elle
+            çekilerek değiştirilemez. Yalnızca yeri taşınabiliyor.
+          */}
+          {!referansKipi &&
+            kalibrasyon &&
+            olcuKutu &&
+            taslakKutu &&
+            fotoYer?.genislik > 0 &&
+            scene === 'ozel' &&
+            ozelSahne && (
+              <TaslakKutu
+                koseler={taslakKutu.map(oranTuvale)}
+                tuvalW={tuvalBoyut.w}
+                tuvalH={tuvalBoyut.h}
+                onKose={olcuKutusuTasindi}
+                koseKapali
+                etiket={null}
+              />
+            )}
 
           {/*
             MANUEL DÖRT KÖŞE KATMANI — tuvalin üstünde.
@@ -4865,91 +5056,154 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       konuyor ve sahnenin ölçeği o andan itibaren biliniyor.
                       Kullanıcı kutuyu köşelerinden gerçek duvara oturtuyor.
                     */}
+                    {/*
+                      ÖLÇEK REFERANSI → ÖLÇÜ KUTUSU.
+                    
+                      Eski akışta ölçek "duvarın eni + çekim mesafesi" tahmininden geliyordu ve
+                      hiçbir fotoğrafta tutmuyordu: tek bir fotoğraftan gerçek santimetre
+                      çıkarmak matematiksel olarak imkânsız (bkz. referansOlcek.js).
+                    
+                      Yeni akış iki adım: önce gerçek ölçüsü BİLİNEN bir nesneyi işaretle
+                      (kalibrasyon), sonra ölçü kutusunun gerçek ölçüsünü yaz (kutu otomatik
+                      doğru pikselde çıkar). İkisi ayrı renkte, ayrı başlıkta.
+                    */}
                     {TASLAK_KIPI && (
                       <>
                         <div className="text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
-                          {t('scene.scaleHeading')}
+                          {t('ref.baslik')}
                         </div>
                         <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {t('scene.wallAsk')}
+                          {t('ref.aciklama')}
                         </p>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="0.1"
-                            step="0.1"
-                            value={taslakWm}
-                            onChange={(e) => setTaslakWm(e.target.value)}
-                            onBlur={() => taslakKutuyuKur('olcu')}
-                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur('olcu')}
-                            placeholder={t('scene.wallW')}
-                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                          />
-                          <span className="text-[13px] text-neutral-400">×</span>
-                          <input
-                            type="number"
-                            min="0.1"
-                            step="0.1"
-                            value={taslakHm}
-                            onChange={(e) => setTaslakHm(e.target.value)}
-                            onBlur={() => taslakKutuyuKur('olcu')}
-                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur('olcu')}
-                            placeholder={t('scene.wallH')}
-                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                          />
-                          <span className="text-[13px] text-neutral-400">m</span>
-                        </div>
-                        {/*
-                          MESAFE, EN/BOY İLE AYNI YERDE.
 
-                          Ölçeği belirleyen üç sayı bir arada duruyor. Alandan
-                          çıkınca ya da Enter'a basınca kutu bu değerlerle
-                          yeniden kuruluyor; kutu elle oynatılırsa da buradaki
-                          sayı kendiliğinden güncelleniyor.
-                        */}
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <span className="shrink-0 text-[12.5px] text-neutral-500 dark:text-neutral-400">
-                            {t('scene.askDistance')}
-                          </span>
-                          <input
-                            type="number"
-                            min="0.2"
-                            step="0.05"
-                            value={taslakMesafe}
-                            onChange={(e) => {
-                              setTaslakMesafe(e.target.value)
-                              mesafeElleRef.current = true
-                            }}
-                            onBlur={() => taslakKutuyuKur('mesafe')}
-                            onKeyDown={(e) => e.key === 'Enter' && taslakKutuyuKur('mesafe')}
-                            className="w-20 min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                          />
-                          <span className="text-[13px] text-neutral-400">m</span>
-                        </div>
-                        {/*
-                          DUVARA TAM SIĞDIR — kutunun ölçüsünden kabin sayısı.
-                          Yalnızca duvar tanıtıldıysa anlamlı.
-                        */}
-                        {/*
-                          KALİBRASYON DENETİMİ.
-
-                          Izgara duvarın gerçek koordinat sisteminden
-                          üretiliyor; açıp çizgilerin duvara oturup
-                          oturmadığına bakmak ölçünün doğruluğunu gösteriyor.
-                        */}
-                        {duvarDunya && (
+                        {!referansKipi && !referans && (
                           <button
                             type="button"
-                            onClick={() => setIzgaraAcik((v) => !v)}
-                            className={`mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border transition-colors ${
-                              izgaraAcik
-                                ? 'border-brand text-brand'
-                                : 'border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
-                            }`}
+                            onClick={referansiBaslat}
+                            className="mt-1.5 w-full py-2.5 rounded-lg text-[15px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
                           >
-                            {izgaraAcik ? t('scene.gridOff') : t('scene.gridOn')}
+                            {t('ref.isaretle')}
                           </button>
                         )}
+
+                        {referansKipi && (
+                          <>
+                            <p className="mt-1.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                              {t('ref.kipAciklama')}
+                            </p>
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={refEn}
+                                onChange={(e) => setRefEn(e.target.value)}
+                                placeholder={t('ref.en')}
+                                className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                              />
+                              <span className="text-[13px] text-neutral-400">×</span>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={refBoy}
+                                onChange={(e) => setRefBoy(e.target.value)}
+                                placeholder={t('ref.boy')}
+                                className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                              />
+                              <span className="text-[13px] text-neutral-400">cm</span>
+                            </div>
+                            <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                              <button
+                                type="button"
+                                onClick={referansiOnayla}
+                                className="py-2 rounded-lg text-[14px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
+                              >
+                                {t('ref.onayla')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReferansKipi(false)
+                                  setRefKose(null)
+                                }}
+                                className="py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                              >
+                                {t('common.cancel')}
+                              </button>
+                            </div>
+                          </>
+                        )}
+
+                        {referans && !referansKipi && (
+                          <>
+                            <div className="mt-1.5 flex items-center justify-between gap-2 rounded-lg bg-neutral-50 px-3 py-2 dark:bg-[#1b2029]">
+                              <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                                {t('ref.kurulu')}
+                              </span>
+                              <span className="text-[14px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
+                                {referans.enCm} × {referans.boyCm} cm
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={referansiSifirla}
+                              className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                            >
+                              {t('ref.sifirla')}
+                            </button>
+                          </>
+                        )}
+
+                        {/* ÖLÇÜ KUTUSU — referans kurulmadan açılmıyor. */}
+                        <div className="mt-3 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
+                          {t('ref.kutuBaslik')}
+                        </div>
+                        {!kalibrasyon && (
+                          <p className="mt-1 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                            {t('ref.onceReferans')}
+                          </p>
+                        )}
+                        {kalibrasyon && (
+                          <>
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={kutuEn}
+                                onChange={(e) => setKutuEn(e.target.value)}
+                                placeholder={t('ref.en')}
+                                className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                              />
+                              <span className="text-[13px] text-neutral-400">×</span>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={kutuBoy}
+                                onChange={(e) => setKutuBoy(e.target.value)}
+                                placeholder={t('ref.boy')}
+                                className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                              />
+                              <span className="text-[13px] text-neutral-400">cm</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={olcuKutusunuKur}
+                              className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
+                            >
+                              {t('ref.kutuKur')}
+                            </button>
+                            {olcuKutu && (
+                              <p className="mt-1 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                                {t('ref.kutuIpucu')}
+                              </p>
+                            )}
+                          </>
+                        )}
+
+                        {/* YERLEŞİM — tasarımın kabin hesabı, olduğu gibi. */}
                         <div className="mt-3 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
                           {t('scene.placeHeading')}
                         </div>
@@ -4962,9 +5216,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             {t('scene.fitWall')}
                           </button>
                         )}
-                        <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {t('scene.draftHint')}
-                        </p>
+                        {duvarDunya && (
+                          <button
+                            type="button"
+                            onClick={() => setIzgaraAcik((v) => !v)}
+                            className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                          >
+                            {izgaraAcik ? t('scene.gridOff') : t('scene.gridOn')}
+                          </button>
+                        )}
                       </>
                     )}
                     {!TASLAK_KIPI && (

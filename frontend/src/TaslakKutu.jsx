@@ -14,7 +14,30 @@
  * çünkü burada ayarlanan şey ekranın boyu değil, duvarın fotoğraftaki yeri.
  */
 
-export default function TaslakKutu({ koseler, tuvalW, tuvalH, onSec, onKose, etiket, soluk = false }) {
+/*
+ * İKİ AYRI İŞ, İKİ AYRI RENK.
+ *
+ * Aynı bileşen iki yerde kullanılıyor ve ikisi karıştırılmamalı:
+ *
+ *   REFERANS kutusu  — gerçek ölçüsü bilinen nesne, kalibrasyonu kuran şey
+ *   ÖLÇÜ kutusu      — tasarımın yerleşeceği alan, kalibrasyondan türeyen şey
+ *
+ * Renk ayrımı bunun için. `koseKapali` ise ölçü kutusu içindir: onun boyu
+ * girilen santimetreden gelir, elle çekilerek değiştirilemez (yoksa fiziksel
+ * ölçü bozulurdu); yalnızca yeri değişir.
+ */
+export default function TaslakKutu({
+  koseler,
+  tuvalW,
+  tuvalH,
+  onSec,
+  onKose,
+  etiket,
+  soluk = false,
+  renk = '#2962ad',
+  dolgu = 'rgba(41,98,173,0.14)',
+  koseKapali = false,
+}) {
   if (!Array.isArray(koseler) || koseler.length !== 4) return null
 
   const nokta = koseler.map((k) => `${k.x},${k.y}`).join(' ')
@@ -99,8 +122,8 @@ export default function TaslakKutu({ koseler, tuvalW, tuvalH, onSec, onKose, eti
            * 'none' dolgu hiç hedef olmuyor; köşe tutamakları yerinde kalıyor,
            * yani kutu hâlâ ayarlanabiliyor.
            */
-          fill={soluk ? 'none' : 'rgba(41,98,173,0.14)'}
-          stroke="#2962ad"
+          fill={soluk ? 'none' : dolgu}
+          stroke={renk}
           strokeWidth={soluk ? 1.5 : 2}
           strokeOpacity={soluk ? 0.55 : 1}
           strokeDasharray="7 5"
@@ -114,20 +137,21 @@ export default function TaslakKutu({ koseler, tuvalW, tuvalH, onSec, onKose, eti
             textAnchor="middle"
             fontSize="13"
             fontWeight="600"
-            fill="#2962ad"
+            fill={renk}
             style={{ pointerEvents: 'none' }}
           >
             {etiket}
           </text>
         )}
-        {koseler.map((k, i) => (
+        {!koseKapali &&
+          koseler.map((k, i) => (
           <circle
             key={i}
             cx={k.x}
             cy={k.y}
             r={soluk ? 7 : 9}
             fill="#ffffff"
-            stroke="#2962ad"
+            stroke={renk}
             strokeWidth="3"
             opacity={soluk ? 0.6 : 1}
             onPointerDown={koseSurukle(i)}
