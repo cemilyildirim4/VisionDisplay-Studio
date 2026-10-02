@@ -658,6 +658,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [refEskidi, setRefEskidi] = useState(false)
   /*
+   * KUTUYU KONUMLANDIRMA KİPİ.
+   *
+   * Kip AÇIKKEN kutu tutulabiliyor: gövdesinden taşınıyor, köşelerinden
+   * perspektifi ayarlanıyor. Kip KAPALIYKEN kutu yalnızca soluk bir çerçeve
+   * — ne gövdesi ne köşeleri tutulabiliyor.
+   *
+   * İkisini ayırmanın sebebi: tasarım göründükten sonra fotoğraf üzerindeki
+   * sürükleme tasarımı taşıyor. Kutu da aynı anda tutulabilir olsaydı hangi
+   * şeyin hareket ettiği belirsizdi ve kullanıcı tasarımı taşımak isterken
+   * kutunun köşesini çekip AÇIYI bozabilirdi. Açı, kullanıcı bilerek
+   * konumlandırma kipine girmeden değişmiyor.
+   */
+  const [kutuKipi, setKutuKipi] = useState(false)
+  /*
    * Kutu onaylandı mı. Onaydan sonra kutu EKRANDAN KALKMIYOR, yalnızca
    * soluyor: tasarımı taşırken duvarın nerede olduğunu görmek gerekiyor.
    * Önce onayla birlikte siliniyordu ve kullanıcı tasarımı kutusuz bir
@@ -3392,6 +3406,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefTur('taslak')
     /* Yeni kutu: tasarım yeniden gizleniyor, kullanıcı kutuya tıklayınca açılacak. */
     setTasarimAcik(false)
+    /* Yeni kutu doğrudan konumlandırılabilir olsun; ilk iş onu yerine koymak. */
+    setKutuKipi(true)
     setRefEskidi(false)
     setKutuMesaj(k.tasiyor ? t('ref2.kadrajaSigmaz') : null)
   }
@@ -3873,7 +3889,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * Sürükleme tutamağı arka plan varken HER ZAMAN açık; dört köşe
                * hedefi varken kayma köşelere uygulanıyor (bkz. koseTuval).
                */
-              tutamak={tasimaAcik ? etkinTutamak : null}
+              /*
+               * Konumlandırma kipinde tasarımın sürükleme tutamağı kapalı:
+               * o sırada fotoğraf üzerindeki sürükleme KUTUYA ait.
+               */
+              tutamak={tasimaAcik && !kutuKipi ? etkinTutamak : null}
               yon={surukleAktif && !koseTuval ? mekanYon : null}
               sahneOlcekVarsayilan={sahneOlcekVarsayilan}
               onPxPerM={setCizimOlcek}
@@ -4006,8 +4026,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * TaslakKutu sürükleme ile tıklamayı ayırıyor: gövde
                * sürüklendiyse onSec tetiklenmiyor (bkz. govdeSurukle).
                */
-              onSec={() => setTasarimAcik(true)}
-              etiket={tasarimGizli ? t('kutu.tiklaGoster') : null}
+              onSec={() => {
+                setTasarimAcik(true)
+                setKutuKipi(false)
+              }}
+              /*
+               * Kip kapalıyken kutu SOLUK ve köşeleri KAPALI: gövdesi
+               * pointerEvents almıyor, tutamakları hiç çizilmiyor. Böylece
+               * tasarımı taşırken kutunun açısı yanlışlıkla bozulamıyor.
+               */
+              soluk={!kutuKipi}
+              koseKapali={!kutuKipi}
+              etiket={tasarimGizli ? t('kutu.tiklaGoster') : kutuKipi ? t('ref2.konumIpucu') : null}
             />
           )}
 
@@ -4890,9 +4920,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           {t('ref2.kutuKur')}
                         </button>
                         {olcuKutu && (
-                          <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                            {t('kutu.ipucu')}
-                          </p>
+                          <>
+                            {/*
+                              KUTUYU KONUMLANDIR — açık/kapalı.
+
+                              Tasarım göründükten sonra kutuyu yeniden
+                              yerleştirmek için tek yol bu; kip kapalıyken
+                              kutuya dokunulamıyor ve açısı değişemiyor.
+                            */}
+                            <button
+                              type="button"
+                              onClick={() => setKutuKipi((v) => !v)}
+                              className={`mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-semibold transition-opacity ${
+                                kutuKipi
+                                  ? 'bg-brand text-white hover:opacity-90'
+                                  : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
+                              }`}
+                            >
+                              {kutuKipi ? t('ref2.konumBitir') : t('ref2.konumla')}
+                            </button>
+                            <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                              {kutuKipi ? t('ref2.konumAciklama') : t('kutu.ipucu')}
+                            </p>
+                          </>
                         )}
 
                         {/* YERLEŞİM — tasarımın kabin hesabı, olduğu gibi. */}

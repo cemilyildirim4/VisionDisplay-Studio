@@ -498,6 +498,18 @@ const dict = {
     en: 'The reference changed. Create the measurement box again to use the new scale.',
     ar: 'تغيّر المرجع. أعد إنشاء مربع القياس لاستخدام المقياس الجديد.',
   },
+  'ref2.konumla': { tr: 'Kutuyu konumlandır', en: 'Position the box', ar: 'تحديد موضع المربع' },
+  'ref2.konumBitir': { tr: 'Konumlandırmayı bitir', en: 'Finish positioning', ar: 'إنهاء تحديد الموضع' },
+  'ref2.konumAciklama': {
+    tr: 'Gövdesinden tutup taşıyın, köşelerinden çekip açısını verin. Açı yalnızca burada değişir; kip kapalıyken kutuya dokunulamaz.',
+    en: 'Drag the body to move it, drag the corners to set its angle. The angle changes only here; with the mode off the box cannot be touched.',
+    ar: 'اسحب الجسم للتحريك والزوايا لضبط الميل.',
+  },
+  'ref2.konumIpucu': {
+    tr: 'Taşı · köşelerden açı ver · bitince kutuya tıkla',
+    en: 'Move · set angle from corners · click the box when done',
+    ar: 'حرّك · اضبط الزاوية · انقر عند الانتهاء',
+  },
   'ref2.kutuKur': { tr: 'Ölçü kutusunu oluştur', en: 'Create measurement box', ar: 'إنشاء مربع القياس' },
   'ref2.kadrajaSigmaz': {
     tr: 'Bu ölçü fotoğrafın kadrajından büyük. Kutu küçültülmedi; dışarı taşıyor.',
