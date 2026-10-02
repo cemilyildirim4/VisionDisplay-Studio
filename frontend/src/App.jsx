@@ -26,6 +26,7 @@ import {
   EN_AZ_PIKSEL,
 } from './referansOlcek.js'
 import ReferansSecici from './ReferansSecici.jsx'
+import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
@@ -671,6 +672,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * konumlandırma kipine girmeden değişmiyor.
    */
   const [kutuKipi, setKutuKipi] = useState(false)
+  /*
+   * ÖLÇÜ SİHİRBAZI — kaçıncı adım (0 = kapalı).
+   *
+   * Dört iş tek blokta duruyordu ve sırası belli olmuyordu: noktaları
+   * işaretle, uzunluğu yaz, kutuyu kur, kutuyu yerleştir. Artık her adım
+   * sırası gelince fotoğrafın altında kendi kartında çıkıyor.
+   *
+   * Sağ panel yok olmadı: orada akışın ÖZETİ ve "baştan başla" duruyor, ki
+   * sihirbazı kapatan kullanıcı sıkışmasın.
+   */
+  const [sihirbazAdim, setSihirbazAdim] = useState(0)
   /*
    * Kutu onaylandı mı. Onaydan sonra kutu EKRANDAN KALKMIYOR, yalnızca
    * soluyor: tasarımı taşırken duvarın nerede olduğunu görmek gerekiyor.
@@ -3413,6 +3425,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
+   * SİHİRBAZ ADIMLARI.
+   *
+   * Her adım yalnızca kendi işini yapıyor; ölçek ve kutu mantığı aşağıdaki
+   * mevcut işlevlerde kalıyor (referansiSifirla, olcuKutusunuKur).
+   */
+  const sihirbaziBaslat = () => {
+    setRefNokta([])
+    setRefUzunlukCm('')
+    setRefMesaj(null)
+    setRefKipi(true)
+    setSihirbazAdim(1)
+  }
+  const sihirbazIleri = () => {
+    setSihirbazAdim((a) => {
+      /* 2. adıma geçerken işaretleme kipi kapanmıyor: kullanıcı uzunluğu
+         yazarken noktaları hâlâ düzeltebilsin. 3. adımda kapanıyor. */
+      if (a === 2) setRefKipi(false)
+      return Math.min(4, a + 1)
+    })
+  }
+  const sihirbazGeri = () => {
+    setSihirbazAdim((a) => {
+      if (a === 3) setRefKipi(true)
+      if (a === 4) setKutuKipi(true)
+      return Math.max(1, a - 1)
+    })
+  }
+  const sihirbazKutuKur = () => {
+    olcuKutusunuKur()
+    setSihirbazAdim(4)
+  }
+  const sihirbazBitir = () => {
+    setKutuKipi(false)
+    setTasarimAcik(true)
+    setSihirbazAdim(0)
+  }
+  const sihirbaziKapat = () => {
+    setRefKipi(false)
+    setSihirbazAdim(0)
+  }
+
+  /*
    * REFERANS NOKTALARI DEĞİŞTİ.
    *
    * Noktalar tuval pikselinde geliyor (ReferansSecici), normalize fotoğraf
@@ -3987,6 +4041,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             kendi ölçüsüyle içine yerleşiyor ve kutu kayboluyor.
           */}
           {/*
+            ÖLÇÜ SİHİRBAZI — fotoğrafın altında, engellemeyen kart.
+          */}
+          {sihirbazAdim > 0 && scene === 'ozel' && ozelSahne && (
+            <OlcuSihirbazi
+              adim={sihirbazAdim}
+              t={t}
+              refNoktaSayisi={refNokta.length}
+              onIsaretle={() => {
+                setRefNokta([])
+                setRefKipi(true)
+              }}
+              refUzunlukCm={refUzunlukCm}
+              setRefUzunlukCm={setRefUzunlukCm}
+              refOlcek={refOlcek}
+              refPxCm={refPxCm}
+              kutuEn={kutuEn}
+              setKutuEn={setKutuEn}
+              kutuBoy={kutuBoy}
+              setKutuBoy={setKutuBoy}
+              kutuMesaj={kutuMesaj}
+              onGeri={sihirbazGeri}
+              onIleri={sihirbazIleri}
+              onKutuKur={sihirbazKutuKur}
+              onBitir={sihirbazBitir}
+              onKapat={sihirbaziKapat}
+            />
+          )}
+
+          {/*
             REFERANS KATMANI — iki nokta işaretleme.
 
             Ölçü kutusunun ÜSTÜNDE duruyor: referans kipi açıkken kutuyu
@@ -4029,6 +4112,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               onSec={() => {
                 setTasarimAcik(true)
                 setKutuKipi(false)
+                /* Son adımdaysak sihirbaz da bitmiş demektir. */
+                setSihirbazAdim(0)
               }}
               /*
                * Kip kapalıyken kutu SOLUK ve köşeleri KAPALI: gövdesi
@@ -4807,126 +4892,66 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           </p>
                         )}
                         {/*
-                          REFERANS ÖLÇÜ — ÖNCE BU.
+                          SAĞ PANEL ARTIK ÖZET.
                         
-                          Fotoğrafın ölçeği yalnızca buradan çıkıyor. Referans kurulmadan ölçü
-                          kutusu oluşturulamıyor; alternatif bir yol (EXIF, çekim mesafesi,
-                          görsel kutu, 96 PPI) bilerek bırakılmadı — hepsi ölçü olmadığı hâlde
-                          ölçü gibi görünüyordu.
+                          Adım adım giriş sihirbaz kartında yapılıyor (bkz. OlcuSihirbazi).
+                          Burada yalnızca o anki durum ve iki eylem duruyor: akışı baştan
+                          başlatmak ve kutuyu yeniden konumlandırmak.
                         */}
                         <div className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
-                          <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-emerald-500" />
+                          <span className={`inline-block h-2.5 w-2.5 rounded-[3px] ${refPxCm ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-[#39404d]'}`} />
                           {t('ref2.baslik')}
                         </div>
-                        <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {t('ref2.aciklama')}
-                        </p>
-                        {/* Ölçeğin yerel olduğunu söyleyen uyarı: kod bunu denetleyemiyor. */}
-                        <p className="mt-1 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">
-                          {t('ref2.duzlemUyari')}
-                        </p>
-                        {refMesaj && (
-                          <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">{refMesaj}</p>
+                        {refPxCm ? (
+                          <p className="mt-0.5 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
+                            {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
+                            <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
+                          </p>
+                        ) : (
+                          <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                            {t('sih.ozetYok')}
+                          </p>
                         )}
-                        <button
-                          type="button"
-                          onClick={refKipi ? () => setRefKipi(false) : referansiSifirla}
-                          className={`mt-1.5 w-full py-2 rounded-lg text-[14px] font-semibold text-white transition-opacity hover:opacity-90 ${
-                            refKipi ? 'bg-emerald-600' : 'bg-brand'
-                          }`}
-                        >
-                          {refKipi ? t('ref2.bitir') : refNokta.length === 2 ? t('ref2.yeniden') : t('ref2.sec')}
-                        </button>
-                        {refNokta.length === 2 && (
-                          <>
-                            <div className="mt-1.5 flex items-center gap-2">
-                              <span className="shrink-0 text-[12.5px] text-neutral-500 dark:text-neutral-400">
-                                {t('ref2.uzunluk')}
-                              </span>
-                              <input
-                                type="number"
-                                min="0.1"
-                                step="0.1"
-                                value={refUzunlukCm}
-                                onChange={(e) => setRefUzunlukCm(e.target.value)}
-                                placeholder={t('ref2.uzunlukPh')}
-                                className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                              />
-                              <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
-                            </div>
-                            {/* Hesabın kendisi: kaç piksel, kaç cm, kaç px/cm. Gizlenecek bir şey yok. */}
-                            {refPxCm ? (
-                              <p className="mt-1 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
-                                {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
-                                <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
-                              </p>
-                            ) : (
-                              <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
-                                {refOlcek?.sebep === 'cokKisa'
-                                  ? t('ref2.cokKisa') + ' (' + Math.round(refOlcek.pxMesafe || 0) + ' px < ' + EN_AZ_PIKSEL + ' px)'
-                                  : t('ref2.uzunlukGir')}
-                              </p>
-                            )}
-                          </>
-                        )}
-
-                        {/* ÖLÇÜ KUTUSU — referans kurulmadan açılmıyor. */}
-                        <div className="mt-3 flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
-                          <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-brand" />
-                          {t('ref.kutuBaslik')}
-                        </div>
-                        <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {kutuKurulabilir ? t('kutu.aciklama') : t('ref2.onceReferans')}
-                        </p>
                         {refEskidi && (
                           <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
                             {t('ref2.eskidi')}
                           </p>
                         )}
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={kutuEn}
-                            onChange={(e) => setKutuEn(e.target.value)}
-                            placeholder={t('ref.en')}
-                            disabled={!kutuKurulabilir}
-                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 disabled:opacity-45 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                          />
-                          <span className="text-[13px] text-neutral-400">×</span>
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={kutuBoy}
-                            onChange={(e) => setKutuBoy(e.target.value)}
-                            placeholder={t('ref.boy')}
-                            disabled={!kutuKurulabilir}
-                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 disabled:opacity-45 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                          />
-                          <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
-                        </div>
                         <button
                           type="button"
-                          onClick={olcuKutusunuKur}
-                          disabled={!kutuKurulabilir}
-                          className={`mt-1.5 w-full py-2 rounded-lg text-[14px] font-semibold transition-opacity ${
-                            kutuKurulabilir
-                              ? 'bg-brand text-white hover:opacity-90'
-                              : 'bg-neutral-200 text-neutral-400 cursor-not-allowed dark:bg-[#232936] dark:text-neutral-600'
-                          }`}
+                          onClick={sihirbaziBaslat}
+                          className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
                         >
-                          {t('ref2.kutuKur')}
+                          {olcuKutu || refPxCm ? t('sih.yeniden') : t('sih.basla')}
                         </button>
+                        {/*
+                          ÖLÇÜYÜ DEĞİŞTİR — referansı koruyarak 3. adıma dön.
+                        
+                          Olmadığında kutunun santimini değiştirmek için referansı da baştan
+                          kurmak gerekiyordu; oysa ölçek aynı fotoğrafta aynı kalıyor.
+                        */}
+                        {refPxCm && (
+                          <button
+                            type="button"
+                            onClick={() => setSihirbazAdim(3)}
+                            className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                          >
+                            {t('sih.olcuDegistir')}
+                          </button>
+                        )}
+
                         {olcuKutu && (
                           <>
+                            <div className="mt-3 flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
+                              <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-brand" />
+                              {t('ref.kutuBaslik')}
+                            </div>
+                            <p className="mt-0.5 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                              {olcuKutu.enCm} × {olcuKutu.boyCm} cm
+                            </p>
                             {/*
-                              KUTUYU KONUMLANDIR — açık/kapalı.
-
-                              Tasarım göründükten sonra kutuyu yeniden
-                              yerleştirmek için tek yol bu; kip kapalıyken
-                              kutuya dokunulamıyor ve açısı değişemiyor.
+                              KUTUYU KONUMLANDIR — açık/kapalı. Kip kapalıyken kutuya
+                              dokunulamıyor ve açısı değişemiyor.
                             */}
                             <button
                               type="button"
