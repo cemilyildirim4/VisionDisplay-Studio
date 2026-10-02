@@ -508,6 +508,11 @@ const dict = {
     en: 'Only this box RATIO is correct; its absolute size was not measured. Fit it to the wall by its corners.',
     ar: 'نسبة هذا المربع فقط صحيحة؛ لم يُقَس حجمه المطلق.',
   },
+  'kutu.tiklaGoster': {
+    tr: 'Tasarımı göstermek için kutuya tıklayın',
+    en: 'Click the box to show the design',
+    ar: 'انقر على المربع لعرض التصميم',
+  },
   'kutu.aciklama': {
     tr: 'Yerleşim alanının gerçek ölçüsünü ve çekim mesafesini yazın. Kamera verisi varsa kutu gerçek fiziksel büyüklükte kurulur; yoksa yalnızca oranı doğru bir görsel kutu kurulabilir.',
     en: 'Type the real size of the placement area. The box on the photo is only a visual guide; dragging its corners does not change the real size.',

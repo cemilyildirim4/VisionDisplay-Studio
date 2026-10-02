@@ -2309,6 +2309,36 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [izgaraAcik, setIzgaraAcik] = useState(false)
 
+  /*
+   * TASARIM KUTUYA TIKLANINCA AÇILIYOR.
+   *
+   * Eskiden kutu kurulur kurulmaz tasarım çiziliyordu: çizim kapısı
+   * koseTuval, o da hedefKose dolar dolmaz üretiliyor ve kutuyu kuran işlev
+   * hedefKose'yi hemen dolduruyor. Yani tasarımın görünmesi için ayrı bir
+   * onay yoktu.
+   *
+   * Yeni akış: kutu kurulur, kullanıcı onu taşıyıp köşelerinden duvara
+   * oturtur, sonra kutuya tıklar ve tasarım o zaman görünür. Tıklama tek
+   * yönlü — ikinci tıklama gizlemiyor; kutuyu ayarlamaya devam etmek
+   * tasarımı kapatmamalı.
+   *
+   * Fiziksel ölçü hesabına dokunulmuyor: koseTuval ve tasarimWm/tasarimHm
+   * aynen çalışıyor, yalnızca ÇİZİM gizleniyor.
+   */
+  const [tasarimAcik, setTasarimAcik] = useState(false)
+
+  /*
+   * Tasarım gizli mi? Yalnızca kendi fotoğrafında ve ortada bir ölçü kutusu
+   * varken geçerli; hazır mekânlarda ve kutusuz akışta tasarım her zaman
+   * görünüyor (orada tıklanacak bir kutu yok).
+   *
+   * BU SATIR tasarimAcik'TAN SONRA DURMAK ZORUNDA. Bir ara yukarıdaydı ve
+   * koşul kısa devre olduğu için hata ancak KUTU KURULUNCA ortaya çıkıyordu:
+   * son terim (!tasarimAcik) o zamana kadar hiç değerlendirilmiyor, sonra
+   * "Cannot access before initialization" ile uygulama hata ekranına düşüyordu.
+   */
+  const tasarimGizli = scene === 'ozel' && !!ozelSahne && !!olcuKutu && !!taslakKutu && !tasarimAcik
+
   const koseTuval = (() => {
     /*
      * DÜZELTME YALNIZCA ÇİZİM VARKEN.
@@ -3325,6 +3355,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefKose(kutu)
     setTaslakKutu(kutu)
     setHedefTur('taslak')
+    /* Yeni kutu: tasarım yeniden gizleniyor, kullanıcı kutuya tıklayınca açılacak. */
+    setTasarimAcik(false)
     setKutuMesaj(null)
   }
 
@@ -3377,6 +3409,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefKose(k.koseler)
     setTaslakKutu(k.koseler)
     setHedefTur('taslak')
+    setTasarimAcik(false)
     setKutuMesaj(k.tasiyor ? t('kam.kadrajaSigmaz') : null)
   }
 
@@ -3405,6 +3438,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefKose(k.koseler)
     setTaslakKutu(k.koseler)
     setHedefTur('taslak')
+    setTasarimAcik(false)
     setKutuMesaj(k.tasiyor ? t('kam.kadrajaSigmaz') : null)
   }
 
@@ -3957,9 +3991,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * (uc3dHazir); WebGL kapalıysa ya da katman yüklenemezse
                * ekranda hiçbir şey kalmasın.
                */
-              ekranGizle={uc3dHazir}
+              ekranGizle={uc3dHazir || tasarimGizli}
               uc3dKatman={
-                YERINDE_3B && surukleAktif
+                !tasarimGizli && YERINDE_3B && surukleAktif
                   ? ({ koseler, genislik, yukseklik }) => (
                       <Suspense fallback={null}>
                         <Mekan3D
@@ -4042,7 +4076,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
               onKose={olcuKutusuDegisti}
-              etiket={null}
+              /*
+               * TIKLAMA = "kutuyu yerleştirdim, tasarımı göster".
+               * TaslakKutu sürükleme ile tıklamayı ayırıyor: gövde
+               * sürüklendiyse onSec tetiklenmiyor (bkz. govdeSurukle).
+               */
+              onSec={() => setTasarimAcik(true)}
+              etiket={tasarimGizli ? t('kutu.tiklaGoster') : null}
             />
           )}
 
