@@ -1036,10 +1036,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        */
       setRefNokta([])
       setRefUzunlukCm('')
-      setRefKipi(false)
       setRefMesaj(null)
       setRefEskidi(false)
       setOlcuKutu(null)
+      /*
+       * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
+       *
+       * Fotoğraf yüklendiğinde yapılacak ilk ve tek iş ölçeği kurmak;
+       * kullanıcıyı önce bir "başla" düğmesine bastırmak boş bir adımdı.
+       * İşaretleme kipi de birlikte açılıyor ki tıklanacak yer hazır olsun.
+       */
+      setRefKipi(true)
+      setSihirbazAdim(1)
       let kayit = null
       try {
         kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM, tasarimWm, TASLAK_KIPI)
@@ -4041,35 +4049,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             kendi ölçüsüyle içine yerleşiyor ve kutu kayboluyor.
           */}
           {/*
-            ÖLÇÜ SİHİRBAZI — fotoğrafın altında, engellemeyen kart.
+            SİHİRBAZ BURADA DEĞİL, SAĞ PANELDE.
+
+            Bir ara fotoğrafın üstünde yüzen bir kart olarak duruyordu;
+            tuvalin önemli bir kısmını kapatıp tam da yapılması istenen işi
+            (nokta koyma, kutu taşıma) engelliyordu. Tuval artık tamamen
+            serbest; sihirbaz sağ panelde (bkz. OlcuSihirbazi).
           */}
-          {sihirbazAdim > 0 && scene === 'ozel' && ozelSahne && (
-            <OlcuSihirbazi
-              adim={sihirbazAdim}
-              t={t}
-              refNoktaSayisi={refNokta.length}
-              onIsaretle={() => {
-                setRefNokta([])
-                setRefKipi(true)
-              }}
-              refUzunlukCm={refUzunlukCm}
-              setRefUzunlukCm={setRefUzunlukCm}
-              refOlcek={refOlcek}
-              refPxCm={refPxCm}
-              kutuEn={kutuEn}
-              setKutuEn={setKutuEn}
-              kutuBoy={kutuBoy}
-              setKutuBoy={setKutuBoy}
-              kutuMesaj={kutuMesaj}
-              onGeri={sihirbazGeri}
-              onIleri={sihirbazIleri}
-              onKutuKur={sihirbazKutuKur}
-              onBitir={sihirbazBitir}
-              onKapat={sihirbaziKapat}
-            />
-          )}
 
           {/*
+            REFERANS KATMANI — iki nokta işaretleme.          {/*
             REFERANS KATMANI — iki nokta işaretleme.
 
             Ölçü kutusunun ÜSTÜNDE duruyor: referans kipi açıkken kutuyu
@@ -4892,81 +4881,98 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           </p>
                         )}
                         {/*
-                          SAĞ PANEL ARTIK ÖZET.
+                          SAĞ PANEL: SİHİRBAZ ya da ÖZET.
                         
-                          Adım adım giriş sihirbaz kartında yapılıyor (bkz. OlcuSihirbazi).
-                          Burada yalnızca o anki durum ve iki eylem duruyor: akışı baştan
-                          başlatmak ve kutuyu yeniden konumlandırmak.
+                          Akış sürerken adım kartı burada duruyor; bitince yerini o anki durumun
+                          özetine ve üç eyleme bırakıyor. Ayarların ikinci bir kopyası yok —
+                          bir ara hem panelde hem kartta aynı alanlar vardı ve hangisinin
+                          geçerli olduğu belirsizdi.
                         */}
-                        <div className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
-                          <span className={`inline-block h-2.5 w-2.5 rounded-[3px] ${refPxCm ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-[#39404d]'}`} />
-                          {t('ref2.baslik')}
-                        </div>
-                        {refPxCm ? (
-                          <p className="mt-0.5 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
-                            {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
-                            <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
-                          </p>
+                        {sihirbazAdim > 0 ? (
+                          <OlcuSihirbazi
+                            adim={sihirbazAdim}
+                            t={t}
+                            refNoktaSayisi={refNokta.length}
+                            onIsaretle={() => {
+                              setRefNokta([])
+                              setRefKipi(true)
+                            }}
+                            refUzunlukCm={refUzunlukCm}
+                            setRefUzunlukCm={setRefUzunlukCm}
+                            refOlcek={refOlcek}
+                            refPxCm={refPxCm}
+                            kutuEn={kutuEn}
+                            setKutuEn={setKutuEn}
+                            kutuBoy={kutuBoy}
+                            setKutuBoy={setKutuBoy}
+                            kutuMesaj={kutuMesaj}
+                            onGeri={sihirbazGeri}
+                            onIleri={sihirbazIleri}
+                            onKutuKur={sihirbazKutuKur}
+                            onBitir={sihirbazBitir}
+                            onKapat={sihirbaziKapat}
+                          />
                         ) : (
-                          <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                            {t('sih.ozetYok')}
-                          </p>
-                        )}
-                        {refEskidi && (
-                          <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
-                            {t('ref2.eskidi')}
-                          </p>
-                        )}
-                        <button
-                          type="button"
-                          onClick={sihirbaziBaslat}
-                          className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
-                        >
-                          {olcuKutu || refPxCm ? t('sih.yeniden') : t('sih.basla')}
-                        </button>
-                        {/*
-                          ÖLÇÜYÜ DEĞİŞTİR — referansı koruyarak 3. adıma dön.
-                        
-                          Olmadığında kutunun santimini değiştirmek için referansı da baştan
-                          kurmak gerekiyordu; oysa ölçek aynı fotoğrafta aynı kalıyor.
-                        */}
-                        {refPxCm && (
-                          <button
-                            type="button"
-                            onClick={() => setSihirbazAdim(3)}
-                            className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                          >
-                            {t('sih.olcuDegistir')}
-                          </button>
-                        )}
-
-                        {olcuKutu && (
                           <>
-                            <div className="mt-3 flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
-                              <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-brand" />
-                              {t('ref.kutuBaslik')}
+                            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
+                              <span className={`inline-block h-2.5 w-2.5 rounded-[3px] ${refPxCm ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-[#39404d]'}`} />
+                              {t('ref2.baslik')}
                             </div>
-                            <p className="mt-0.5 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                              {olcuKutu.enCm} × {olcuKutu.boyCm} cm
-                            </p>
-                            {/*
-                              KUTUYU KONUMLANDIR — açık/kapalı. Kip kapalıyken kutuya
-                              dokunulamıyor ve açısı değişemiyor.
-                            */}
+                            {refPxCm ? (
+                              <p className="mt-0.5 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
+                                {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
+                                <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
+                              </p>
+                            ) : (
+                              <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                                {t('sih.ozetYok')}
+                              </p>
+                            )}
+                            {olcuKutu && (
+                              <p className="mt-0.5 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                                {t('ref.kutuBaslik')}: {olcuKutu.enCm} × {olcuKutu.boyCm} cm
+                              </p>
+                            )}
+                            {refEskidi && (
+                              <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
+                                {t('ref2.eskidi')}
+                              </p>
+                            )}
                             <button
                               type="button"
-                              onClick={() => setKutuKipi((v) => !v)}
-                              className={`mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-semibold transition-opacity ${
-                                kutuKipi
-                                  ? 'bg-brand text-white hover:opacity-90'
-                                  : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
-                              }`}
+                              onClick={sihirbaziBaslat}
+                              className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
                             >
-                              {kutuKipi ? t('ref2.konumBitir') : t('ref2.konumla')}
+                              {olcuKutu || refPxCm ? t('sih.yeniden') : t('sih.basla')}
                             </button>
-                            <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                              {kutuKipi ? t('ref2.konumAciklama') : t('kutu.ipucu')}
-                            </p>
+                            {refPxCm && (
+                              <button
+                                type="button"
+                                onClick={() => setSihirbazAdim(3)}
+                                className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                              >
+                                {t('sih.olcuDegistir')}
+                              </button>
+                            )}
+                            {olcuKutu && (
+                              <>
+                                {/* Kip kapalıyken kutuya dokunulamıyor ve açısı değişemiyor. */}
+                                <button
+                                  type="button"
+                                  onClick={() => setKutuKipi((v) => !v)}
+                                  className={`mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium transition-opacity ${
+                                    kutuKipi
+                                      ? 'bg-brand text-white hover:opacity-90'
+                                      : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
+                                  }`}
+                                >
+                                  {kutuKipi ? t('ref2.konumBitir') : t('ref2.konumla')}
+                                </button>
+                                <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                                  {kutuKipi ? t('ref2.konumAciklama') : t('kutu.ipucu')}
+                                </p>
+                              </>
+                            )}
                           </>
                         )}
 

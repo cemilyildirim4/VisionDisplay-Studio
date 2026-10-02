@@ -303,3 +303,21 @@ html, body {
   opacity: 0.35;
   transition: opacity 0.15s ease;
 }
+
+/*
+ * ÖLÇÜ SİHİRBAZI ADIM GEÇİŞİ.
+ *
+ * Kart sağ panelde yerinde kalıyor, yalnızca içeriği değişiyor; geçiş
+ * olmadan adım atlandığı fark edilmiyordu. key={adim} ile her adımda
+ * yeniden oynuyor (bkz. OlcuSihirbazi.jsx).
+ */
+.sih-adim {
+  animation: sih-adim-in 0.22s ease-out both;
+}
+@keyframes sih-adim-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sih-adim { animation: none; }
+}
