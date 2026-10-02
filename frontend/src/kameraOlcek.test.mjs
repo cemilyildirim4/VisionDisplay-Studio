@@ -15,8 +15,7 @@ import {
   pikselSantim,
   gercekKutuDortgeni,
   kadrajAlani,
-  deneme96PikselSantim,
-  PPI96_PX_PER_CM,
+  metreyiSantime,
 } from './kameraOlcek.js'
 
 const KOK = path.dirname(fileURLToPath(import.meta.url))
@@ -284,49 +283,59 @@ const jpegOdakYok = exifliJpeg(temel, { exifW: 4000, exifH: 3000 })
 const odakSuz = odakPikseli(await exifOku(dosyaYap(jpegOdakYok)), 4000, 3000)
 dogru('EXIF var ama odak yok -> null', odakSuz.fpx === null, JSON.stringify(odakSuz.eksik))
 
-console.log('\nI) 96 PPI DENEME MODU — kalibrasyon DEGIL')
+console.log('\nI) ÇEKİM MESAFESİ: METRE -> SANTİM')
 /*
- * CSS tanimi: 1 inc = 96 px. Cevrim sabit ve fotografin olceginden bagimsiz.
- * Burada sinanan sey OLCU degil, ORAN: ayni cevrimden gecen kutu ile tasarim
- * birbirine dogru oranda cikmali.
+ * Arayuz METRE soruyor, hesap SANTIM uzerinden yuruyor. Cevrim tek bir
+ * yerde: metreyiSantime. Bir ara alan santim isterken kullanici metre
+ * yaziyordu ve olcek 100 kat sisiyordu; bu bolum tam o hatayi kolluyor.
  */
-esit('96/2,54 px/cm', PPI96_PX_PER_CM, 96 / 2.54, 1e-12)
-esit('px/cm degeri', PPI96_PX_PER_CM, 37.79527559055118, 1e-10)
-const p96 = deneme96PikselSantim()
-dogru('x ve y esit (kare piksel)', p96.x === p96.y)
-dogru('mesafe parametresi almiyor', deneme96PikselSantim.length === 0)
+esit('0,30 m -> cm (virgullu)', metreyiSantime('0,30'), 30, 0)
+esit('0.30 m -> cm (noktali)', metreyiSantime('0.30'), 30, 0)
+esit('0,3 m -> cm', metreyiSantime('0,3'), 30, 0)
+esit('sayi 0.3 -> cm', metreyiSantime(0.3), 30, 0)
+dogru('tam olarak 30 (kayan nokta artigi yok)', metreyiSantime('0,30') === 30, String(metreyiSantime('0,30')))
+/* Yuvarlama sus degil: bazi degerlerde ham carpim artik birakiyor. */
+dogru('ham carpim 0,29 x 100 artikli', 0.29 * 100 !== 29, String(0.29 * 100))
+esit('0,29 m -> tam 29 cm', metreyiSantime('0,29'), 29, 0)
+dogru('0,29 tam esit', metreyiSantime('0,29') === 29)
 
-/* Kullanicinin verdigi dort sayi birebir cikmali */
-const beklenen96 = [
-  [30, 1133.86],
-  [21, 793.7],
-  [32, 1209.45],
-  [16, 604.72],
-]
-for (const [cm, bek] of beklenen96) esit(`${cm} cm -> px`, Math.round(cm * PPI96_PX_PER_CM * 100) / 100, bek, 0.005)
+esit('1 m -> 100 cm', metreyiSantime('1'), 100, 0)
+esit('2,5 m -> 250 cm', metreyiSantime('2,5'), 250, 0)
+esit('0,05 m -> 5 cm', metreyiSantime('0,05'), 5, 0)
+esit('0,001 m -> 0,1 cm', metreyiSantime('0,001'), 0.1, 1e-12)
+dogru('bos -> null', metreyiSantime('') === null)
+dogru('0 -> null', metreyiSantime('0') === null)
+dogru('negatif -> null', metreyiSantime('-2') === null)
+dogru('metin -> null', metreyiSantime('abc') === null)
+dogru('null -> null', metreyiSantime(null) === null)
 
-/* Kutu 30x21, tasarim 32x16 — ayni cevrim, oran kesin */
-const KW = 1599
-const KH = 899
-const kutu96 = gercekKutuDortgeni(30, 21, p96, KW, KH)
-const tas96 = gercekKutuDortgeni(32, 16, p96, KW, KH)
-console.log(`     kutu    30 x 21 cm -> ${kutu96.pxW.toFixed(2)} x ${kutu96.pxH.toFixed(2)} px`)
-console.log(`     tasarim 32 x 16 cm -> ${tas96.pxW.toFixed(2)} x ${tas96.pxH.toFixed(2)} px`)
-esit('kutu pxW', kutu96.pxW, 1133.8582677165354, 1e-9)
-esit('kutu pxH', kutu96.pxH, 793.7007874015748, 1e-9)
-esit('tasarim pxW', tas96.pxW, 1209.4488188976377, 1e-9)
-esit('tasarim pxH', tas96.pxH, 604.7244094488189, 1e-9)
-esit('tasarim/kutu genislik orani', tas96.pxW / kutu96.pxW, 32 / 30, 1e-12)
-esit('tasarim/kutu yukseklik orani', tas96.pxH / kutu96.pxH, 16 / 21, 1e-12)
-esit('kutunun kendi orani', kutu96.pxW / kutu96.pxH, 30 / 21, 1e-12)
-esit('tasarimin kendi orani', tas96.pxW / tas96.pxH, 32 / 16, 1e-12)
-
-/* Fotografin olceginden bagimsiz: mesafe/odak ne olursa olsun ayni */
+/* Zincirin tamami: 0,30 m girildiginde px/cm = f_piksel / 30 olmali */
 {
-  const a = gercekKutuDortgeni(30, 21, deneme96PikselSantim(), 4000, 3000)
-  esit('baska cozunurlukte ayni piksel', a.pxW, kutu96.pxW, 1e-12)
-  dogru('normalize olcu cozunurlukle degisiyor (dogal)', Math.abs(a.koseler[1].x - kutu96.koseler[1].x) > 1e-6)
+  const W2 = 2048
+  const H2 = 1536
+  const j = exifliJpeg(temel, { odak35: 26, exifW: W2, exifH: H2 })
+  const ex = await exifOku(dosyaYap(j))
+  const o = odakPikseli(ex, W2, H2)
+  const cm = metreyiSantime('0,30')
+  const p = pikselSantim(o.fpx, cm)
+  const beklenen = o.fpx / 30
+  console.log(`     f_piksel ${o.fpx.toFixed(4)}  /  ${cm} cm  =  ${p.x.toFixed(6)} px/cm`)
+  esit('0,30 m girisi 30 cm olarak kullanildi', cm, 30, 0)
+  esit('px/cm = f_piksel / 30', p.x, beklenen, 1e-12)
+  /* Yanlis birim olsaydi (0,30 cm) olcek 100 kat sisecekti */
+  const yanlis = pikselSantim(o.fpx, 0.3)
+  dogru('0,30 cm olsaydi 100 kat sisecekti', Math.abs(yanlis.x / p.x - 100) < 1e-9, (yanlis.x / p.x).toFixed(1) + ' kat')
+  /* 30 x 21 cm kutu, bu olcekte */
+  const k = gercekKutuDortgeni(30, 21, p, W2, H2)
+  console.log(`     30 x 21 cm kutu -> ${k.pxW.toFixed(2)} x ${k.pxH.toFixed(2)} px`)
+  esit('kutu pxW = 30 x px/cm', k.pxW, 30 * beklenen, 1e-9)
+  esit('kutu pxH = 21 x px/cm', k.pxH, 21 * beklenen, 1e-9)
 }
+
+console.log('\nJ) 96 PPI MODU KALDIRILDI')
+const modul = await import('./kameraOlcek.js')
+dogru('PPI96_PX_PER_CM artik yok', modul.PPI96_PX_PER_CM === undefined)
+dogru('deneme96PikselSantim artik yok', modul.deneme96PikselSantim === undefined)
 
 console.log('\nH) MESAFE YOKSA')
 dogru('mesafe 0 -> null', pikselSantim(1479, 0) === null)

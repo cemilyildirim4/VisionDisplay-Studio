@@ -462,22 +462,12 @@ const dict = {
   'scene.cabinets': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
   'ref.en': { tr: 'en', en: 'width', ar: 'العرض' },
   'ref.boy': { tr: 'boy', en: 'height', ar: 'الارتفاع' },
-  'kam.mesafe': { tr: 'Çekim mesafesi', en: 'Shooting distance', ar: 'مسافة التصوير' },
-  'kam.mesafePh': { tr: 'mesafe', en: 'distance', ar: 'مسافة' },
+  'kam.mesafe': { tr: 'Çekim mesafesi (m)', en: 'Shooting distance (m)', ar: '(م) مسافة التصوير' },
+  'kam.mesafePh': { tr: 'metre', en: 'metres', ar: 'متر' },
   'kam.mesafeIpucu': {
-    tr: 'Objektifin optik merkezinden ölçüm düzlemine olan dik uzaklık. Gövdenin arkasından ya da ekrandan değil; yakın çekimde 1 santimetrelik kayma bile ölçeği bozar.',
-    en: 'Perpendicular distance from the lens optical centre to the measured plane — not from the back of the body or the screen.',
+    tr: 'METRE olarak yazın (30 cm için 0,30). Objektifin optik merkezinden ölçüm düzlemine olan dik uzaklık — gövdenin arkasından ya da ekrandan değil; yakın çekimde 1 santimetrelik kayma bile ölçeği bozar.',
+    en: 'Enter METRES (0.30 for 30 cm). Perpendicular distance from the lens optical centre to the measured plane — not from the back of the body or the screen.',
     ar: 'المسافة العمودية من المركز البصري للعدسة إلى المستوى المقاس.',
-  },
-  'kam.ppi96Kur': {
-    tr: '96 PPI deneme kutusu (oran testi)',
-    en: '96 PPI test box (ratio check)',
-    ar: 'مربع اختبار 96 PPI (فحص النسبة)',
-  },
-  'kam.kutuPpi96': {
-    tr: 'DENEME: sabit CSS çevrimi, fotoğraf kalibrasyonu DEĞİL. Yalnızca kutu ile tasarım arasındaki oranı sınar.',
-    en: 'TEST: fixed CSS conversion, NOT a photo calibration. It only checks the box-to-design ratio.',
-    ar: 'اختبار: تحويل CSS ثابت، ليس معايرة صورة.',
   },
   'kam.veriYok': {
     tr: 'Bu fotoğrafta gerçek fiziksel ölçek için yeterli kamera verisi yok.',

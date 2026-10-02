@@ -277,6 +277,9 @@ export function odakPikseli(exif, gorselW, gorselH) {
  * aralığı eşit olduğu için pxPerCmX = pxPerCmY. Dijital kameralarda bu
  * istisnasız böyle (anamorfik optik hariç, o da telefonlarda yok).
  *
+ * BURAYA SANTİM GELİR. Arayüz metre soruyor; çevrim metreyiSantime ile tek
+ * yerde yapılıyor.
+ *
  * MESAFE, OBJEKTİFİN OPTİK MERKEZİNDEN ölçüm düzlemine olan dik uzaklıktır —
  * gövdenin arkasından, ekrandan ya da ayaktan değil. Yakın çekimde fark
  * oransal olarak büyük: 30 cm'lik bir ölçümde 1 cm'lik kayma %3,3 hata.
@@ -317,29 +320,36 @@ export function gercekKutuDortgeni(enCm, boyCm, pxCm, gorselW, gorselH, merkez =
 }
 
 /*
- * 96 PPI DENEME MODU — KALİBRASYON DEĞİL.
+ * BURADA 96 PPI DENEME MODU VARDI VE KALDIRILDI.
  *
- * CSS, 1 inç = 96 piksel tanımlar. Buradan sabit bir çevrim çıkıyor:
- *   px = cm × 96 / 2,54 = cm × 37,795276
- *
- * BU BİR FOTOĞRAF KALİBRASYONU DEĞİLDİR ve öyle adlandırılmamalıdır.
- * Fotoğrafın gerçek ölçeğiyle hiçbir ilgisi yok: fotoğraf 30 cm'den de 3
- * metreden de çekilmiş olsa bu sayı aynı kalır. Dolayısıyla bu modda kurulan
- * kutu, fotoğraftaki gerçek bir nesneyle ÖLÇÜ KARŞILAŞTIRMASINA GİRMEZ.
- *
- * Tek işi fiziksel ORAN denetimi: aynı çevrimden geçen 30 × 21 cm kutu ile
- * 32 × 16 cm tasarımın birbirine oranı kesin doğru çıkıyor
- * (1209,45 / 1133,86 = 32/30). Ölçek bilinmediğinde oranın bozulmadığını
- * göstermek için.
+ * Sabit bir CSS çevrimiydi (px = cm × 96/2,54 = cm × 37,7953) ve fotoğrafın
+ * ölçeğiyle hiçbir ilgisi yoktu. Ölçülerek görüldü: 30 × 21 cm'lik gerçek bir
+ * kataloğun fotoğraftaki karşılığı 50,46 px/cm iken bu mod 37,80 px/cm
+ * diyordu — gerçeğin %75'i. "Deneme" diye etiketlense bile kutu ekranda ölçü
+ * gibi duruyor ve yanlış okunuyordu. Ölçü gibi görünen bir sayı, hiç sayı
+ * olmamasından kötü.
  *
  * Gerçek ölçek yalnızca kamera geometrisi + çekim mesafesinden çıkıyor
- * (bkz. odakPikseli / pikselSantim); o zincire dokunulmuyor.
+ * (odakPikseli + pikselSantim). Veri yoksa ölçek de yok.
  */
-export const PPI96_PX_PER_CM = 96 / 2.54
 
-/** 96 PPI deneme çevrimi. Mesafe almıyor — ölçekten bağımsız olduğu için. */
-export function deneme96PikselSantim() {
-  return { x: PPI96_PX_PER_CM, y: PPI96_PX_PER_CM }
+/**
+ * Metre cinsinden yazılan mesafeyi SANTİME çevirir.
+ *
+ * Alan metre istiyor (kullanıcı "0,30" yazıyor), hesap ise santim üzerinden
+ * yürüyor. Çevrim tek bir yerde duruyor ki iki birim arayüz ile hesap
+ * arasında karışmasın — bir ara alan santim isterken kullanıcı metre yazmış
+ * ve ölçek 100 kat şişmişti.
+ *
+ * Virgüllü yazım da kabul ediliyor ("0,30"). Sonuç 0,1 cm'ye yuvarlanıyor:
+ * 0.3 × 100 kayan noktada 30.000000000000004 veriyor ve "tam 30" olmuyor.
+ *
+ * @returns {number|null} santim, ya da geçersiz girdide null
+ */
+export function metreyiSantime(metre) {
+  const m = Number(String(metre).replace(',', '.'))
+  if (!(m > 0) || !Number.isFinite(m)) return null
+  return Math.round(m * 1000) / 10
 }
 
 /**
