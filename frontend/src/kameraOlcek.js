@@ -1,0 +1,289 @@
+/*
+ * KAMERA GEOMETRİSİNDEN GERÇEK PİKSEL/SANTİM.
+ *
+ * Tek bir fotoğraf kendi başına UZUNLUK taşımaz, açı taşır. 2 m uzaktaki 1
+ * m'lik bir nesne, 4 m uzaktaki 2 m'lik nesneyle piksel piksel aynıdır. Bu
+ * belirsizliği kırmanın iki dürüst yolu var:
+ *   1) Ölçüm düzleminde uzunluğu BİLİNEN bir nesne (referans) — kaldırıldı.
+ *   2) Kameranın odak uzaklığı + düzleme olan MESAFE — bu dosya.
+ *
+ * İkincisinin matematiği kesindir, tahmin içermez:
+ *
+ *   f_piksel = odakUzaklığı_mm × görselinUzunKenarı_px / sensörGenişliği_mm
+ *   px/cm    = f_piksel / mesafe_cm
+ *
+ * 35 mm EŞDEĞERİ verilmişse sensör genişliği tanım gereği 36 mm'dir ve hesap
+ * tek adımda çıkar. Verilmemişse gerçek odak uzaklığı + sensör genişliği
+ * gerekir; sensör genişliği EXIF'in FocalPlaneXResolution alanından türetilir.
+ *
+ * BURADA VARSAYIM YOK. Gerekli alan yoksa işlev null döner ve EKSİĞİ söyler;
+ * ortalama görüş açısı, sabit katsayı ya da "tipik telefon" değeri
+ * ÜRETİLMEZ. Eksik veriyle çizilen kutu, ölçü gibi görünen bir yalandır.
+ *
+ * GEÇERLİLİK ŞARTLARI — çağıran taraf bilmek zorunda:
+ *   - px/cm yalnızca optik eksene DİK düzlemde geçerli. Başlangıç kutusu
+ *     eksenlere paralel bir dikdörtgen olduğu için bu şart kendiliğinden
+ *     sağlanıyor; kullanıcı köşeleri çekip perspektif verdiğinde kutu artık
+ *     dik düzlemde değil ve o andan sonra px/cm tek bir sayı değil.
+ *   - Mesafe, lensten ölçüm DÜZLEMİNE olan dik uzaklık.
+ *   - Fotoğraf çekimden sonra KIRPILMAMIŞ olmalı. Yeniden boyutlandırma
+ *     sorun değil (f_piksel aynı oranda ölçeklenir), kırpma ölçeği bozar.
+ */
+
+/* Okunan EXIF etiketleri. Gerisi bu hesapta işe yaramıyor. */
+const ETIKET = {
+  0x010f: 'marka',
+  0x0110: 'model',
+  0x0112: 'yon',
+  0x8769: '_exifIfd',
+  0x920a: 'odakMm',
+  0xa405: 'odak35Mm',
+  0xa20e: 'sensorXYogunluk',
+  0xa20f: 'sensorYYogunluk',
+  0xa210: 'sensorBirim',
+  0xa002: 'exifW',
+  0xa003: 'exifH',
+  0xa434: 'lens',
+}
+
+/* EXIF tür kodlarının bayt boyu. */
+const TUR_BOYU = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8, 11: 4, 12: 8 }
+
+/* APP1 segmenti dosyanın başındadır; tamamını okumak gerekmiyor. */
+const OKUNACAK_BAYT = 256 * 1024
+
+/**
+ * JPEG'in APP1/Exif bloğunu ayrıştırır.
+ *
+ * Kütüphane eklenmedi: gereken alanlar on kadar etiket ve TIFF IFD yapısı yüz
+ * satırdan kısa. Dışarıdan bir ayrıştırıcı, bu hesabın en kritik adımını
+ * okunamayan bir kara kutuya taşırdı.
+ *
+ * @returns {Promise<object|null>} alanlar, ya da EXIF yoksa { yok: true }
+ */
+export async function exifOku(dosya) {
+  if (!dosya || typeof dosya.arrayBuffer !== 'function') return null
+  const parca = dosya.slice(0, Math.min(OKUNACAK_BAYT, dosya.size))
+  const ab = await parca.arrayBuffer()
+  const b = new DataView(ab)
+  if (b.byteLength < 4) return { yok: true, sebep: 'dosya çok küçük' }
+  if (b.getUint16(0) !== 0xffd8) return { yok: true, sebep: 'JPEG değil' }
+
+  /* APP1'i bul: segmentler ff<marker><uzunluk> diye zincirleniyor. */
+  let i = 2
+  let tiff = -1
+  while (i + 4 <= b.byteLength) {
+    if (b.getUint8(i) !== 0xff) break
+    const marker = b.getUint8(i + 1)
+    /* Görüntü verisi başladıysa EXIF yok. */
+    if (marker === 0xda || marker === 0xd9) break
+    const uz = b.getUint16(i + 2)
+    if (uz < 2) break
+    if (marker === 0xe1 && i + 10 <= b.byteLength) {
+      let imza = ''
+      for (let k = 0; k < 4; k++) imza += String.fromCharCode(b.getUint8(i + 4 + k))
+      if (imza === 'Exif') {
+        tiff = i + 10
+        break
+      }
+    }
+    i += 2 + uz
+  }
+  if (tiff < 0) return { yok: true, sebep: 'APP1/Exif segmenti yok' }
+  if (tiff + 8 > b.byteLength) return { yok: true, sebep: 'Exif bloğu kesik' }
+
+  /* TIFF başlığı bayt sırasını söylüyor: MM büyük uçlu, II küçük uçlu. */
+  const buyuk = b.getUint16(tiff) === 0x4d4d
+  const u16 = (o) => b.getUint16(tiff + o, !buyuk)
+  const u32 = (o) => b.getUint32(tiff + o, !buyuk)
+  const i32 = (o) => b.getInt32(tiff + o, !buyuk)
+
+  const alan = {}
+  let derinlik = 0
+  const ifdOku = (ofs) => {
+    if (derinlik++ > 4 || ofs <= 0 || tiff + ofs + 2 > b.byteLength) return
+    const n = u16(ofs)
+    if (n > 512) return
+    for (let k = 0; k < n; k++) {
+      const g = ofs + 2 + k * 12
+      if (tiff + g + 12 > b.byteLength) return
+      const etiket = u16(g)
+      const ad = ETIKET[etiket]
+      if (!ad) continue
+      const tur = u16(g + 2)
+      const say = u32(g + 4)
+      const bayt = (TUR_BOYU[tur] || 1) * say
+      const veri = bayt <= 4 ? g + 8 : u32(g + 8)
+      if (ad === '_exifIfd') {
+        /*
+         * Alt IFD işaretçisi bir LONG DEĞERİ; 4 bayta sığdığı için alanın
+         * içinde duruyor. Burada `veri` (alanın adresi) değil, o adresten
+         * OKUNAN sayı gerekiyor — ikisi karıştırılınca ExifIFD hiç
+         * ayrıştırılmıyor ve odak uzaklığı alanları sessizce kayboluyor.
+         */
+        ifdOku(u32(g + 8))
+        continue
+      }
+      if (tiff + veri + Math.max(bayt, 1) > b.byteLength) continue
+      try {
+        if (tur === 2) {
+          let t = ''
+          for (let j = 0; j < say; j++) {
+            const c = b.getUint8(tiff + veri + j)
+            if (!c) break
+            t += String.fromCharCode(c)
+          }
+          alan[ad] = t.trim()
+        } else if (tur === 3) alan[ad] = u16(veri)
+        else if (tur === 4) alan[ad] = u32(veri)
+        else if (tur === 5 || tur === 10) {
+          const p = tur === 5 ? u32(veri) : i32(veri)
+          const q = tur === 5 ? u32(veri + 4) : i32(veri + 4)
+          if (q) alan[ad] = p / q
+        }
+      } catch {
+        /* Bozuk alan atlanıyor; kalanlar hâlâ işe yarar. */
+      }
+    }
+  }
+  ifdOku(u32(4))
+  return Object.keys(alan).length ? alan : { yok: true, sebep: 'Exif bloğu boş' }
+}
+
+/**
+ * Sensör genişliğini mm olarak verir — EXIF'te varsa.
+ *
+ * FocalPlaneXResolution, sensör düzlemindeki piksel/birim yoğunluğu. Sensör
+ * genişliği = pikselSayısı / yoğunluk, birim de ayrı bir etiketten.
+ */
+function sensorGenisligiMm(exif) {
+  const yog = Number(exif?.sensorXYogunluk)
+  const px = Number(exif?.exifW)
+  if (!(yog > 0) || !(px > 0)) return null
+  /* 2 = inç, 3 = cm, 4 = mm. Belirtilmemişse EXIF varsayılanı inç. */
+  const birim = Number(exif?.sensorBirim) || 2
+  const mmKatsayi = birim === 3 ? 10 : birim === 4 ? 1 : 25.4
+  const mm = (px / yog) * mmKatsayi
+  /* Akla yatkınlık: 1 mm'den küçük ya da 100 mm'den büyük sensör yok. */
+  return mm > 1 && mm < 100 ? mm : null
+}
+
+/**
+ * Odak uzaklığını PİKSEL olarak verir.
+ *
+ * @param exif exifOku çıktısı
+ * @param gorselW yüklenen görselin gerçek piksel genişliği (naturalWidth)
+ * @param gorselH naturalHeight
+ */
+export function odakPikseli(exif, gorselW, gorselH) {
+  const eksik = []
+  if (!exif || exif.yok) {
+    return { fpx: null, eksik: ['EXIF bloğu'], sebep: exif?.sebep || 'EXIF yok' }
+  }
+  if (!(gorselW > 0) || !(gorselH > 0)) return { fpx: null, eksik: ['görsel çözünürlüğü'] }
+
+  /*
+   * KIRPMA DENETİMİ.
+   *
+   * f_piksel görselin uzun kenarına bağlı. EXIF'teki çözünürlük çekim anındaki
+   * çözünürlüktür; dosya o günden beri küçültülmüş olabilir (WhatsApp,
+   * e-posta). Saf küçültme ölçeği bozmaz: f_piksel aynı oranda küçülür ve
+   * zaten gorselW/gorselH ile hesaplandığı için kendiliğinden düzelir.
+   *
+   * KIRPMA bozar: kadrajın bir kısmı atıldığı için uzun kenar artık aynı
+   * görüş açısını kapsamıyor. Kırpmayı en/boy oranının değişmesinden
+   * anlıyoruz. Oran korunacak biçimde kırpılmışsa ayırt edilemez — bu yüzden
+   * GARANTİ değil, yakalanabilen hataların denetimi.
+   */
+  let kirpmaSuphesi = false
+  if (exif.exifW > 0 && exif.exifH > 0) {
+    const exifOran = exif.exifW / exif.exifH
+    const gorselOran = gorselW / gorselH
+    /* Yön etiketi 5..8 ise görsel 90 derece çevrilmiş sayılıyor. */
+    const cevrik = Number(exif.yon) >= 5 && Number(exif.yon) <= 8
+    const bekOran = cevrik ? 1 / exifOran : exifOran
+    if (Math.abs(bekOran - gorselOran) / gorselOran > 0.01) kirpmaSuphesi = true
+  }
+
+  /*
+   * 35 mm eşdeğeri kadrajın UZUN kenarına göre tanımlı. Dikey çekilmiş bir
+   * fotoğrafta uzun kenar yüksekliktir; 36 mm'yi doğrudan genişliğe uygulamak
+   * dikey fotoğrafta ölçeği şişiriyor.
+   */
+  const uzunKenar = Math.max(gorselW, gorselH)
+
+  /* 1. YOL: 35 mm eşdeğeri. Sensör genişliği tanım gereği 36 mm. */
+  const o35 = Number(exif.odak35Mm)
+  if (o35 > 0) {
+    return { fpx: (o35 * uzunKenar) / 36, yol: '35mm eşdeğeri', odak35Mm: o35, kirpmaSuphesi }
+  }
+
+  /* 2. YOL: gerçek odak uzaklığı + sensör genişliği. */
+  const oMm = Number(exif.odakMm)
+  const sMm = sensorGenisligiMm(exif)
+  if (oMm > 0 && sMm) {
+    return {
+      fpx: (oMm * uzunKenar) / sMm,
+      yol: 'odak uzaklığı + sensör genişliği',
+      odakMm: oMm,
+      sensorMm: sMm,
+      kirpmaSuphesi,
+    }
+  }
+
+  if (!(oMm > 0)) eksik.push('odak uzaklığı (FocalLength)')
+  if (!(o35 > 0)) eksik.push('35 mm eşdeğeri (FocalLengthIn35mmFilm)')
+  if (oMm > 0 && !sMm) eksik.push('sensör genişliği (FocalPlaneXResolution)')
+  return { fpx: null, eksik }
+}
+
+/**
+ * Gerçek piksel/santim.
+ *
+ * Kare piksel DIŞINDA varsayım yok: aynı sensörde yatay ve dikey piksel
+ * aralığı eşit olduğu için pxPerCmX = pxPerCmY. Dijital kameralarda bu
+ * istisnasız böyle (anamorfik optik hariç, o da telefonlarda yok).
+ */
+export function pikselSantim(fpx, mesafeCm) {
+  const d = Number(mesafeCm)
+  if (!(fpx > 0) || !(d > 0)) return null
+  const pxCm = fpx / d
+  return { x: pxCm, y: pxCm }
+}
+
+/**
+ * Kutunun GERÇEK başlangıç dörtgeni — normalize fotoğraf koordinatında.
+ *
+ * Mutlak büyüklük fiziksel hesaptan geliyor; "fotoğrafın %60'ı" gibi bir
+ * başlangıç boyutu yok. Kutu kadraja sığmıyorsa KÜÇÜLTÜLMÜYOR — ölçü
+ * yanlışlanmasın diye olduğu gibi dönüyor ve tasiyor ile bildiriliyor.
+ */
+export function gercekKutuDortgeni(enCm, boyCm, pxCm, gorselW, gorselH, merkez = { x: 0.5, y: 0.5 }) {
+  if (!pxCm || !(enCm > 0) || !(boyCm > 0) || !(gorselW > 0) || !(gorselH > 0)) return null
+  const pxW = enCm * pxCm.x
+  const pxH = boyCm * pxCm.y
+  const nW = pxW / gorselW
+  const nH = pxH / gorselH
+  const mx = Math.min(1 - nW / 2, Math.max(nW / 2, merkez.x))
+  const my = Math.min(1 - nH / 2, Math.max(nH / 2, merkez.y))
+  return {
+    pxW,
+    pxH,
+    koseler: [
+      { x: mx - nW / 2, y: my - nH / 2 },
+      { x: mx + nW / 2, y: my - nH / 2 },
+      { x: mx + nW / 2, y: my + nH / 2 },
+      { x: mx - nW / 2, y: my + nH / 2 },
+    ],
+    tasiyor: nW > 1 || nH > 1,
+  }
+}
+
+/**
+ * Kadrajın o mesafede kapsadığı gerçek alan — kullanıcıya ölçünün akla yatkın
+ * olup olmadığını gösteriyor ("30 cm'den 41,5 cm genişlik görüyorsun").
+ */
+export function kadrajAlani(fpx, mesafeCm, gorselW, gorselH) {
+  if (!(fpx > 0) || !(mesafeCm > 0)) return null
+  return { enCm: (gorselW * mesafeCm) / fpx, boyCm: (gorselH * mesafeCm) / fpx }
+}

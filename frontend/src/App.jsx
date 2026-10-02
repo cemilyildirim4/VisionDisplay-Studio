@@ -18,6 +18,7 @@ import ProfileMenu from './ProfileMenu.jsx'
 import ChatHelp from './ChatHelp.jsx'
 import Scene, { PANO_ID, SALON_ID, CEPHE_ID } from './Scene.jsx'
 import { salonOlcek } from './Salon.jsx'
+import { exifOku, odakPikseli, pikselSantim, gercekKutuDortgeni, kadrajAlani } from './kameraOlcek.js'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
@@ -624,6 +625,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [kutuMesaj, setKutuMesaj] = useState(null)
   /*
+   * KAMERA GEOMETRİSİ — fotoğrafın EXIF'inden.
+   *
+   * Yüklenen dosyanın baytları bir kez okunuyor ve odak uzaklığı piksel
+   * karşılığına çevriliyor (bkz. kameraOlcek.js). Veri yoksa kameraOdak.fpx
+   * null kalıyor ve gerçek ölçekli kutu KURULAMIYOR — tahmin üretilmiyor.
+   */
+  const [kameraExif, setKameraExif] = useState(null)
+  const [kameraOdak, setKameraOdak] = useState(null)
+  /* Lensten ölçüm düzlemine dik uzaklık, santimetre. Kullanıcı yazıyor. */
+  const [cekimMesafesiCm, setCekimMesafesiCm] = useState('')
+  /*
    * Kutu onaylandı mı. Onaydan sonra kutu EKRANDAN KALKMIYOR, yalnızca
    * soluyor: tasarımı taşırken duvarın nerede olduğunu görmek gerekiyor.
    * Önce onayla birlikte siliniyordu ve kullanıcı tasarımı kutusuz bir
@@ -970,6 +982,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       ozelSahneGorsel.current = gorsel
       setOzelInceleniyor(true)
       setOzelUyari(null)
+      /*
+       * EXIF BURADA OKUNUYOR, ÇÜNKÜ File NESNESİ YALNIZCA BURADA VAR.
+       *
+       * Aşağıda yalnızca blob adresi (url) saklanıyor; adresten EXIF okunamaz.
+       * Odak uzaklığının piksel karşılığı görselin GERÇEK çözünürlüğüne bağlı
+       * olduğu için naturalWidth/Height ile birlikte hesaplanıyor.
+       */
+      try {
+        const ex = await exifOku(dosya)
+        setKameraExif(ex)
+        setKameraOdak(odakPikseli(ex, gorsel.naturalWidth, gorsel.naturalHeight))
+      } catch {
+        setKameraExif({ yok: true, sebep: 'okunamadı' })
+        setKameraOdak({ fpx: null, eksik: ['EXIF bloğu'] })
+      }
       let kayit = null
       try {
         kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM, tasarimWm, TASLAK_KIPI)
@@ -3219,6 +3246,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * fotoğraftaki dörtgeni (hedefKose) kullanıcının çizdiği şekildir ve
    * fiziksel bir ölçüm iddiası taşımaz.
    */
+  /*
+   * DEĞİŞMEZLİK — BURAYA KABİN SAYISI YAZILMAZ.
+   *
+   * Kutu, tasarımı BARINDIRIR; tasarım kutudan TÜREMEZ. Bu effect'e asla
+   * setCols/setRows eklenmemeli ve tasarımın fiziksel ölçüsü (cols × cwM,
+   * rows × chM) kutu ölçüsünden okunmamalı.
+   *
+   * Kural bir kez bozulmuştu, iki yerden sızıyordu:
+   *   1) ekranWm = Math.min(width, cols × cwM)  — tasarımı duvara kırpıyordu
+   *   2) cols > colsMax ise setCols(colsMax)    — seçimi sessizce azaltıyordu
+   * İkisi de kaldırıldı. Aşağıdaki duvariEsitle yalnızca SOL PANELDEKİ duvar
+   * metresini yazıyor; o sayı tasarım hesabına hiçbir yerden girmiyor.
+   *
+   * Tasarım ölçüsünü değiştirmeye yetkili yalnızca iki şey: kullanıcının
+   * sütun/satır ayarı ve "Tasarımı duvara tam sığdır" düğmesi.
+   */
   useEffect(() => {
     if (!olcuKutu) return
     setDuvarOlcu({ wm: olcuKutu.enCm / 100, hm: olcuKutu.boyCm / 100 })
@@ -3248,7 +3291,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const olcuKutusunuKur = () => {
     const o = kutuOlcusuOku()
     if (!o) return
-    setOlcuKutu({ enCm: o.en, boyCm: o.boy })
+    /* gercek: false — bu kutunun ORANI doğru, mutlak büyüklüğü ölçülmedi. */
+    setOlcuKutu({ enCm: o.en, boyCm: o.boy, gercek: false })
     /*
      * DÖRTGEN HER ZAMAN YENİDEN KURULUYOR.
      *
@@ -3267,6 +3311,58 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setTaslakKutu(kutu)
     setHedefTur('taslak')
     setKutuMesaj(null)
+  }
+
+  /*
+   * ÇEKİM MESAFESİ + KAMERA GEOMETRİSİ -> GERÇEK px/cm.
+   *
+   * Zincirin her halkası ayrı ayrı null olabiliyor ve olduğunda sonuç da null
+   * oluyor: eksik veri hiçbir yerde varsayılanla doldurulmuyor.
+   */
+  const cekimMesafesiSayi = Number(String(cekimMesafesiCm).replace(',', '.'))
+  const gercekPxCm = useMemo(
+    () => pikselSantim(kameraOdak?.fpx, cekimMesafesiSayi),
+    [kameraOdak, cekimMesafesiSayi],
+  )
+  /* Kameradan ölçek çıkarmaya yetecek veri var mı? (mesafeden bağımsız) */
+  const kameraVeriVar = !!(kameraOdak?.fpx > 0)
+  /* Gerçek ölçekli kutu kurulabilir mi? (veri + mesafe + çözünürlük) */
+  const gercekKutuKurulabilir = !!(gercekPxCm && ozelSahne?.kaynak?.w > 0)
+  /* O mesafede kadrajın kapsadığı gerçek alan — akla yatkınlık denetimi. */
+  const gercekKadraj = useMemo(
+    () => kadrajAlani(kameraOdak?.fpx, cekimMesafesiSayi, ozelSahne?.kaynak?.w, ozelSahne?.kaynak?.h),
+    [kameraOdak, cekimMesafesiSayi, ozelSahne],
+  )
+
+  /*
+   * GERÇEK ÖLÇEKLİ KUTU.
+   *
+   * Kutunun MUTLAK piksel büyüklüğü fiziksel hesaptan geliyor:
+   *   kutuPx = enCm × px/cm,  px/cm = f_piksel / mesafe_cm
+   * Varsayılan bir başlangıç boyutu, "fotoğrafın yüzde şu kadarı" gibi bir
+   * pay yok. Kadraja sığmıyorsa küçültülmüyor; ölçü doğru kalsın diye taştığı
+   * söyleniyor.
+   */
+  const gercekOlcekliKutuKur = () => {
+    const o = kutuOlcusuOku()
+    if (!o) return
+    const kaynak = ozelSahne?.kaynak
+    if (!gercekPxCm || !(kaynak?.w > 0)) {
+      setKutuMesaj(t('kam.veriYok'))
+      return
+    }
+    const merkez = hedefKose ? koseMerkezi(hedefKose) : { x: 0.5, y: 0.5 }
+    const k = gercekKutuDortgeni(o.en, o.boy, gercekPxCm, kaynak.w, kaynak.h, merkez)
+    if (!k) {
+      setKutuMesaj(t('kam.veriYok'))
+      return
+    }
+    /* gercek: bu kutunun mutlak büyüklüğü ölçülmüş, tahmin edilmemiş. */
+    setOlcuKutu({ enCm: o.en, boyCm: o.boy, gercek: true })
+    setHedefKose(k.koseler)
+    setTaslakKutu(k.koseler)
+    setHedefTur('taslak')
+    setKutuMesaj(k.tasiyor ? t('kam.kadrajaSigmaz') : null)
   }
 
   /** Dörtgenin merkezi — köşelerin ortalaması. */
@@ -4701,13 +4797,112 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           />
                           <span className="text-[13px] text-neutral-400">cm</span>
                         </div>
+                        {/*
+                          ÇEKİM MESAFESİ.
+
+                          Tek başına hiçbir şey ifade etmiyor: kamera
+                          geometrisi olmadan mesafeden ölçek çıkmaz. İkisi bir
+                          arada gerçek px/cm veriyor (bkz. kameraOlcek.js).
+                        */}
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <span className="shrink-0 text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                            {t('kam.mesafe')}
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={cekimMesafesiCm}
+                            onChange={(e) => setCekimMesafesiCm(e.target.value)}
+                            placeholder={t('kam.mesafePh')}
+                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                          />
+                          <span className="text-[13px] text-neutral-400">cm</span>
+                        </div>
+
+                        {/*
+                          KAMERA VERİSİ — ne bulundu, ne eksik.
+
+                          Eksikse açıkça yazılıyor ve gerçek ölçekli kutu
+                          düğmesi kapalı kalıyor. Yaklaşık bir ölçek
+                          ÖNERİLMİYOR: ölçü gibi görünen bir tahmin,
+                          hiç ölçü olmamasından kötüdür.
+                        */}
+                        {kameraVeriVar ? (
+                          <p className="mt-1.5 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                            {[kameraExif?.marka, kameraExif?.model].filter(Boolean).join(' ') || t('kam.kameraBilinmiyor')}
+                            {' · '}
+                            {kameraOdak.odak35Mm
+                              ? kameraOdak.odak35Mm + ' mm (35 mm)'
+                              : kameraOdak.odakMm +
+                                ' mm / sensör ' +
+                                kameraOdak.sensorMm?.toFixed(2).replace('.', ',') +
+                                ' mm'}
+                            {' · f = '}
+                            {Math.round(kameraOdak.fpx)} px
+                            {gercekPxCm && (
+                              <>
+                                {' · '}
+                                {gercekPxCm.x.toFixed(2).replace('.', ',')} px/cm
+                              </>
+                            )}
+                            {gercekKadraj && (
+                              <>
+                                {' · '}
+                                {t('kam.kadraj')} {gercekKadraj.enCm.toFixed(1).replace('.', ',')} ×{' '}
+                                {gercekKadraj.boyCm.toFixed(1).replace('.', ',')} cm
+                              </>
+                            )}
+                          </p>
+                        ) : (
+                          ozelSahne && (
+                            <p className="mt-1.5 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
+                              {t('kam.veriYok')}
+                              {kameraOdak?.eksik?.length
+                                ? ' (' + t('kam.eksik') + ': ' + kameraOdak.eksik.join(', ') + ')'
+                                : ''}
+                            </p>
+                          )
+                        )}
+                        {kameraVeriVar && kameraOdak?.kirpmaSuphesi && (
+                          <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
+                            {t('kam.kirpmaSuphesi')}
+                          </p>
+                        )}
+
+                        {/* GERÇEK ÖLÇEKLİ KUTU — veri yoksa kapalı. */}
+                        <button
+                          type="button"
+                          onClick={gercekOlcekliKutuKur}
+                          disabled={!gercekKutuKurulabilir}
+                          className={`mt-1.5 w-full py-2 rounded-lg text-[14px] font-semibold transition-opacity ${
+                            gercekKutuKurulabilir
+                              ? 'bg-brand text-white hover:opacity-90'
+                              : 'bg-neutral-200 text-neutral-400 cursor-not-allowed dark:bg-[#232936] dark:text-neutral-600'
+                          }`}
+                        >
+                          {t('kam.gercekKur')}
+                        </button>
+
+                        {/*
+                          GÖRSEL KUTU — ayrı ve ayrı etiketli.
+
+                          Oranı doğru, mutlak büyüklüğü ölçülmemiş. Kullanıcı
+                          köşelerinden duvara oturtarak kullanıyor. "Gerçek
+                          ölçü" diye sunulmuyor.
+                        */}
                         <button
                           type="button"
                           onClick={olcuKutu ? olcuKutusunuGuncelle : olcuKutusunuKur}
-                          className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
+                          className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                         >
                           {olcuKutu ? t('ref.kutuGuncelle') : t('ref.kutuKur')}
                         </button>
+                        {olcuKutu && (
+                          <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-400 dark:text-neutral-500">
+                            {olcuKutu.gercek ? t('kam.kutuGercek') : t('kam.kutuGorsel')}
+                          </p>
+                        )}
                         {olcuKutu && (
                           <p className="mt-1 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
                             {t('kutu.ipucu')}
