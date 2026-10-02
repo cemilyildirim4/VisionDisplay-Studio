@@ -19,13 +19,13 @@ import ChatHelp from './ChatHelp.jsx'
 import Scene, { PANO_ID, SALON_ID, CEPHE_ID } from './Scene.jsx'
 import { salonOlcek } from './Salon.jsx'
 import {
-  exifOku,
-  odakPikseli,
-  pikselSantim,
-  gercekKutuDortgeni,
-  kadrajAlani,
-  metreyiSantime,
-} from './kameraOlcek.js'
+  santimOku,
+  referansOlcek,
+  refOrtaNokta,
+  kutuDortgeni,
+  EN_AZ_PIKSEL,
+} from './referansOlcek.js'
+import ReferansSecici from './ReferansSecici.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
@@ -632,22 +632,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [kutuMesaj, setKutuMesaj] = useState(null)
   /*
-   * KAMERA GEOMETRİSİ — fotoğrafın EXIF'inden.
+   * REFERANS ÖLÇÜ — FOTOĞRAFIN TEK ÖLÇEK KAYNAĞI.
    *
-   * Yüklenen dosyanın baytları bir kez okunuyor ve odak uzaklığı piksel
-   * karşılığına çevriliyor (bkz. kameraOlcek.js). Veri yoksa kameraOdak.fpx
-   * null kalıyor ve gerçek ölçekli kutu KURULAMIYOR — tahmin üretilmiyor.
+   * Kullanıcı ölçüm düzleminde iki nokta işaretliyor ve aralarındaki gerçek
+   * uzunluğu yazıyor; px/cm buradan çıkıyor (bkz. referansOlcek.js).
+   *
+   * Bir ara burada EXIF odak uzaklığı + çekim mesafesi vardı. Kullanıcının
+   * fotoğraflarının hiçbirinde odak uzaklığı yoktu (WhatsApp EXIF'i siliyor),
+   * yani o yol pratikte hiç çalışmadı. Yanında duran "görsel kutu" ve 96 PPI
+   * modu ise ölçü OLMADIĞI hâlde ölçü gibi görünüyordu. Üçü de kaldırıldı:
+   * tek akış iki nokta referansı.
+   *
+   * Noktalar normalize FOTOĞRAF koordinatında (0..1) tutuluyor — tuval
+   * pikselinde değil; yoksa pencere boyutu ve yakınlaştırma ölçeği
+   * değiştirirdi.
    */
-  const [kameraExif, setKameraExif] = useState(null)
-  const [kameraOdak, setKameraOdak] = useState(null)
+  const [refNokta, setRefNokta] = useState([])
+  const [refUzunlukCm, setRefUzunlukCm] = useState('')
+  const [refKipi, setRefKipi] = useState(false)
+  const [refMesaj, setRefMesaj] = useState(null)
   /*
-   * Lensten ölçüm düzlemine dik uzaklık — METRE. Kullanıcı yazıyor.
-   *
-   * Alan metre istiyor çünkü mekân ölçüleri bu projede hep metre; santim
-   * sorulduğunda kullanıcı metre yazıp ölçeği 100 kat şişiriyordu. Hesaba
-   * giderken metreyiSantime ile santime çevriliyor.
+   * Referans değişti ama kutu eski ölçekle kurulmuş. Kullanıcının yerleşimini
+   * ve perspektifini silmemek için kutu KENDİLİĞİNDEN yeniden kurulmuyor;
+   * bunun yerine uyarı gösteriliyor.
    */
-  const [cekimMesafesiM, setCekimMesafesiM] = useState('')
+  const [refEskidi, setRefEskidi] = useState(false)
   /*
    * Kutu onaylandı mı. Onaydan sonra kutu EKRANDAN KALKMIYOR, yalnızca
    * soluyor: tasarımı taşırken duvarın nerede olduğunu görmek gerekiyor.
@@ -996,20 +1005,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setOzelInceleniyor(true)
       setOzelUyari(null)
       /*
-       * EXIF BURADA OKUNUYOR, ÇÜNKÜ File NESNESİ YALNIZCA BURADA VAR.
-       *
-       * Aşağıda yalnızca blob adresi (url) saklanıyor; adresten EXIF okunamaz.
-       * Odak uzaklığının piksel karşılığı görselin GERÇEK çözünürlüğüne bağlı
-       * olduğu için naturalWidth/Height ile birlikte hesaplanıyor.
+       * YENİ FOTOĞRAF = YENİ ÖLÇEK. Eski referans buraya ait değil; kutu da
+       * onunla kurulmuştu, ikisi birden siliniyor.
        */
-      try {
-        const ex = await exifOku(dosya)
-        setKameraExif(ex)
-        setKameraOdak(odakPikseli(ex, gorsel.naturalWidth, gorsel.naturalHeight))
-      } catch {
-        setKameraExif({ yok: true, sebep: 'okunamadı' })
-        setKameraOdak({ fpx: null, eksik: ['EXIF bloğu'] })
-      }
+      setRefNokta([])
+      setRefUzunlukCm('')
+      setRefKipi(false)
+      setRefMesaj(null)
+      setRefEskidi(false)
+      setOlcuKutu(null)
       let kayit = null
       try {
         kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM, tasarimWm, TASLAK_KIPI)
@@ -3330,93 +3334,91 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return { en, boy }
   }
 
-  /**
-   * Kutuyu oluştur: gerçek ölçü kullanıcıdan, fotoğraftaki dörtgen
-   * varsayılan bir yerden.
+  /*
+   * REFERANSTAN ÖLÇEK.
    *
-   * Dörtgenin ilk ölçüsü FİZİKSEL BİR İDDİA DEĞİLDİR — yalnızca kullanıcının
-   * sürükleyerek duvara oturtacağı bir başlangıç. Fiziksel ölçü, yazılan
-   * santimetredir ve köşe sürüklemekle değişmez.
+   * Zincirin her halkası ayrı ayrı null olabiliyor ve olduğunda sonuç da null:
+   * eksik veri hiçbir yerde varsayılanla doldurulmuyor, tahmin üretilmiyor.
+   */
+  const refOlcek = useMemo(
+    () =>
+      referansOlcek(
+        refNokta[0],
+        refNokta[1],
+        refUzunlukCm,
+        ozelSahne?.kaynak?.w,
+        ozelSahne?.kaynak?.h,
+      ),
+    [refNokta, refUzunlukCm, ozelSahne],
+  )
+  const refPxCm = refOlcek?.pxPerCm || null
+  /* Kutu ancak referans kurulduktan sonra oluşturulabiliyor. */
+  const kutuKurulabilir = !!(refPxCm && ozelSahne?.kaynak?.w > 0)
+
+  /*
+   * ÖLÇÜ KUTUSU — TEK KURUCU.
+   *
+   * Mutlak piksel büyüklüğü doğrudan fiziksel hesaptan:
+   *   kutuPx = cm × px/cm,   px/cm = referansPikselMesafesi / referansCm
+   *
+   * Kutu, referans çizgisinin ORTASINA kuruluyor: iki noktalı ölçek
+   * perspektifli fotoğrafta yereldir ve ölçeğin ölçüldüğü yere en yakın
+   * nokta orasıdır. Kadraja sığmıyorsa KÜÇÜLTÜLMÜYOR (ölçüyü yalanlamamak
+   * için), yalnızca fotoğrafın içinde kalacak biçimde kaydırılıyor.
    */
   const olcuKutusunuKur = () => {
     const o = kutuOlcusuOku()
     if (!o) return
-    /* gercek: false — bu kutunun ORANI doğru, mutlak büyüklüğü ölçülmedi. */
-    setOlcuKutu({ enCm: o.en, boyCm: o.boy, gercek: false })
-    /*
-     * DÖRTGEN HER ZAMAN YENİDEN KURULUYOR.
-     *
-     * Eskiden burada `if (!hedefKose)` vardı ve bu blok pratikte hiç
-     * çalışmıyordu: fotoğraf yüklenirken otomatik yüzey tespiti hedefKose'yi
-     * zaten dolduruyor (bkz. setHedefKose(yuzey.koseler)). Sonuç, kutunun
-     * kullanıcının yazdığı santimetreyle hiç ilgisi olmayan, tespit edilmiş
-     * yüzeyin şeklinde kalmasıydı — o şekilde kutu gerçek nesneyle
-     * karşılaştırılamaz.
-     *
-     * Tespit edilen yerin MERKEZİ korunuyor; şekli korunmuyor.
-     */
-    const merkez = hedefKose ? koseMerkezi(hedefKose) : { x: 0.5, y: 0.5 }
-    const kutu = oranliDortgen(o.en, o.boy, merkez)
-    setHedefKose(kutu)
-    setTaslakKutu(kutu)
-    setHedefTur('taslak')
-    /* Yeni kutu: tasarım yeniden gizleniyor, kullanıcı kutuya tıklayınca açılacak. */
-    setTasarimAcik(false)
-    setKutuMesaj(null)
-  }
-
-  /*
-   * ÇEKİM MESAFESİ + KAMERA GEOMETRİSİ -> GERÇEK px/cm.
-   *
-   * Zincirin her halkası ayrı ayrı null olabiliyor ve olduğunda sonuç da null
-   * oluyor: eksik veri hiçbir yerde varsayılanla doldurulmuyor.
-   */
-  /* Metre -> santim, tek çevrim noktası (bkz. kameraOlcek.metreyiSantime). */
-  const cekimMesafesiSayi = metreyiSantime(cekimMesafesiM)
-  const gercekPxCm = useMemo(
-    () => pikselSantim(kameraOdak?.fpx, cekimMesafesiSayi),
-    [kameraOdak, cekimMesafesiSayi],
-  )
-  /* Kameradan ölçek çıkarmaya yetecek veri var mı? (mesafeden bağımsız) */
-  const kameraVeriVar = !!(kameraOdak?.fpx > 0)
-  /* Gerçek ölçekli kutu kurulabilir mi? (veri + mesafe + çözünürlük) */
-  const gercekKutuKurulabilir = !!(gercekPxCm && ozelSahne?.kaynak?.w > 0)
-  /* O mesafede kadrajın kapsadığı gerçek alan — akla yatkınlık denetimi. */
-  const gercekKadraj = useMemo(
-    () => kadrajAlani(kameraOdak?.fpx, cekimMesafesiSayi, ozelSahne?.kaynak?.w, ozelSahne?.kaynak?.h),
-    [kameraOdak, cekimMesafesiSayi, ozelSahne],
-  )
-
-  /*
-   * GERÇEK ÖLÇEKLİ KUTU.
-   *
-   * Kutunun MUTLAK piksel büyüklüğü fiziksel hesaptan geliyor:
-   *   kutuPx = enCm × px/cm,  px/cm = f_piksel / mesafe_cm
-   * Varsayılan bir başlangıç boyutu, "fotoğrafın yüzde şu kadarı" gibi bir
-   * pay yok. Kadraja sığmıyorsa küçültülmüyor; ölçü doğru kalsın diye taştığı
-   * söyleniyor.
-   */
-  const gercekOlcekliKutuKur = () => {
-    const o = kutuOlcusuOku()
-    if (!o) return
     const kaynak = ozelSahne?.kaynak
-    if (!gercekPxCm || !(kaynak?.w > 0)) {
-      setKutuMesaj(t('kam.veriYok'))
+    if (!refPxCm || !(kaynak?.w > 0)) {
+      setKutuMesaj(t('ref2.onceReferans'))
       return
     }
-    const merkez = hedefKose ? koseMerkezi(hedefKose) : { x: 0.5, y: 0.5 }
-    const k = gercekKutuDortgeni(o.en, o.boy, gercekPxCm, kaynak.w, kaynak.h, merkez)
+    const k = kutuDortgeni(
+      o.en,
+      o.boy,
+      refPxCm,
+      kaynak.w,
+      kaynak.h,
+      refOrtaNokta(refNokta[0], refNokta[1]),
+    )
     if (!k) {
-      setKutuMesaj(t('kam.veriYok'))
+      setKutuMesaj(t('ref2.onceReferans'))
       return
     }
-    /* gercek: bu kutunun mutlak büyüklüğü ölçülmüş, tahmin edilmemiş. */
-    setOlcuKutu({ enCm: o.en, boyCm: o.boy, gercek: true })
+    setOlcuKutu({ enCm: o.en, boyCm: o.boy })
     setHedefKose(k.koseler)
     setTaslakKutu(k.koseler)
     setHedefTur('taslak')
+    /* Yeni kutu: tasarım yeniden gizleniyor, kullanıcı kutuya tıklayınca açılacak. */
     setTasarimAcik(false)
-    setKutuMesaj(k.tasiyor ? t('kam.kadrajaSigmaz') : null)
+    setRefEskidi(false)
+    setKutuMesaj(k.tasiyor ? t('ref2.kadrajaSigmaz') : null)
+  }
+
+  /*
+   * REFERANS NOKTALARI DEĞİŞTİ.
+   *
+   * Noktalar tuval pikselinde geliyor (ReferansSecici), normalize fotoğraf
+   * koordinatına çevrilerek saklanıyor; tuval pikseli yakınlaştırmaya ve
+   * pencere boyutuna bağlı olduğu için ölçek ondan hesaplanamaz.
+   *
+   * Ortada bir kutu varsa o kutu ESKİ ölçekle kurulmuştu: kendiliğinden
+   * yeniden kurulmuyor (kullanıcının yerleşimi ve perspektifi gider),
+   * yalnızca uyarı işaretleniyor.
+   */
+  const refNoktaDegisti = (tuvalNoktalari) => {
+    setRefNokta(tuvalNoktalari.map(tuvalOrana))
+    setRefMesaj(null)
+    if (olcuKutu) setRefEskidi(true)
+  }
+
+  /** Referansı sıfırla ve işaretleme kipini aç. */
+  const referansiSifirla = () => {
+    setRefNokta([])
+    setRefUzunlukCm('')
+    setRefKipi(true)
+    setRefMesaj(null)
   }
 
   /** Dörtgenin merkezi — köşelerin ortalaması. */
@@ -3426,92 +3428,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })
 
   /*
-   * FİZİKSEL ORANDA BAŞLANGIÇ DÖRTGENİ.
+   * BURADA ESKİ KUTU KURUCULARI VARDI VE KALDIRILDI.
    *
-   * Kutunun fotoğraftaki ilk şekli, girilen en/boy oranını birebir vermek
-   * ZORUNDA: 21 × 30 cm yazıldığında ekranda da 21/30 oranında bir
-   * dikdörtgen durmalı. Bu bir görünüm tercihi değil — kutu, tasarımın
-   * fiziksel ölçüsünün karşılaştırıldığı referanstır.
+   * oranliDortgen ("fotoğrafın %60'ı" payıyla oranı doğru ama ölçüsü
+   * olmayan kutu), dikdortgenMi, kaynakOran ve olcuKutusunuGuncelle.
+   * Hepsi ölçüsüz kutu akışına aitti. Tek akış artık referans ölçek.
    *
-   * Dörtgen normalize FOTOĞRAF koordinatında (0..1) tutuluyor, yani kenarların
-   * piksel karşılığı fotoğrafın kendi en/boy oranıyla çarpılıyor. Bu yüzden
-   * normalize kenar oranı fotoğrafın oranına BÖLÜNÜYOR:
-   *   piksel oranı = (payW · W) / (payH · H) = (payW/payH) · fotoOran = en/boy
-   * Kullanıcının fotoğrafı tuvale SIĞDIRILDIĞI için (contain, bkz.
-   * fotoYerlesim) çizilen dikdörtgenin oranı kaynağın oranına eşit kalıyor.
+   * Ölçüyü değiştirmek de ayrı bir yol değil: ölçek belli olduğuna göre yeni
+   * santimetre yeni bir kutu demek, "Ölçü kutusunu oluştur" yeniden
+   * kuruyor.
    */
-  const oranliDortgen = (enCm, boyCm, merkez = { x: 0.5, y: 0.5 }) => {
-    const oran = enCm / boyCm
-    const fotoOran = kaynakOran()
-    const PAY = 0.6
-    let payW = PAY
-    let payH = payW / (oran / fotoOran)
-    if (payH > PAY) {
-      payH = PAY
-      payW = payH * (oran / fotoOran)
-    }
-    /* Merkez, dörtgen fotoğrafın dışına taşmayacak şekilde kısıtlanıyor. */
-    const mx = Math.min(1 - payW / 2, Math.max(payW / 2, merkez.x))
-    const my = Math.min(1 - payH / 2, Math.max(payH / 2, merkez.y))
-    return [
-      { x: mx - payW / 2, y: my - payH / 2 },
-      { x: mx + payW / 2, y: my - payH / 2 },
-      { x: mx + payW / 2, y: my + payH / 2 },
-      { x: mx - payW / 2, y: my + payH / 2 },
-    ]
-  }
-
-  /*
-   * Dörtgen hâlâ eksenlere paralel bir dikdörtgen mi, yani kullanıcı henüz
-   * perspektif vermemiş mi? Ölçü güncellenirken buna bakılıyor: perspektif
-   * verilmişse kullanıcının emeği korunuyor, verilmemişse dörtgen yeni orana
-   * göre yeniden kuruluyor.
-   */
-  const dikdortgenMi = (k) =>
-    Array.isArray(k) &&
-    k.length === 4 &&
-    Math.abs(k[0].y - k[1].y) < 1e-4 &&
-    Math.abs(k[3].y - k[2].y) < 1e-4 &&
-    Math.abs(k[0].x - k[3].x) < 1e-4 &&
-    Math.abs(k[1].x - k[2].x) < 1e-4
-
-  /** Fotoğrafın en/boy oranı — varsayılan kutuyu kurarken gerekiyor. */
-  const kaynakOran = () => {
-    const w = ozelSahne?.kaynak?.w || 0
-    const h = ozelSahne?.kaynak?.h || 0
-    return w > 0 && h > 0 ? w / h : 16 / 9
-  }
-
-  /*
-   * ÖLÇÜYÜ GÜNCELLE — kutuyu yeniden kurmadan.
-   *
-   * Ölçüyü değiştirmek için kutuyu baştan oluşturmak gerekiyordu, o da kutuyu
-   * ortaya geri atıyor ve kullanıcının yerleştirdiği yer kayboluyordu.
-   * Güncelleme yalnızca ölçüyü değiştiriyor, YERİ koruyor.
-   */
-  const olcuKutusunuGuncelle = () => {
-    if (!olcuKutu) return
-    const o = kutuOlcusuOku()
-    if (!o) return
-    setOlcuKutu((e) => (e ? { ...e, enCm: o.en, boyCm: o.boy } : e))
-    /*
-     * ORAN BURADA DA KORUNUYOR.
-     *
-     * Ölçüyü 21 × 30'dan 30 × 21'e çevirmek dörtgeni de çevirmek demektir;
-     * eski dörtgen kalırsa kutu artık yazılan ölçüyü göstermiyor.
-     *
-     * Ama kullanıcı köşeleri çekip perspektif verdiyse o dörtgen yeniden
-     * kurulamaz — verdiği açı kaybolur. O durumda yalnızca santimetre
-     * değişiyor ve kullanıcı isterse "Kutuyu oluştur" ile sıfırdan kurabilir.
-     */
-    if (dikdortgenMi(hedefKose)) {
-      const kutu = oranliDortgen(o.en, o.boy, koseMerkezi(hedefKose))
-      setHedefKose(kutu)
-      setTaslakKutu(kutu)
-      setHedefTur('taslak')
-    }
-    setKutuMesaj(null)
-  }
 
   /*
    * KUTUNUN DÖRTGENİ DEĞİŞTİ — FİZİKSEL ÖLÇÜ DEĞİŞMEDİ.
@@ -4040,6 +3966,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             çekerek gerçek duvara oturtuyor. Üstüne tıklayınca tasarım
             kendi ölçüsüyle içine yerleşiyor ve kutu kayboluyor.
           */}
+          {/*
+            REFERANS KATMANI — iki nokta işaretleme.
+
+            Ölçü kutusunun ÜSTÜNDE duruyor: referans kipi açıkken kutuyu
+            yanlışlıkla sürüklemek yerine nokta konmalı.
+          */}
+          {refKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+            <ReferansSecici
+              noktalar={refNokta.map(oranTuvale)}
+              onDegis={refNoktaDegisti}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+              ipucu={
+                refNokta.length === 0
+                  ? t('ref2.ipucu1')
+                  : refNokta.length === 1
+                    ? t('ref2.ipucu2')
+                    : t('ref2.ipucu3')
+              }
+            />
+          )}
+
           {/*
             ÖLÇÜ KUTUSU — tasarımın yerleşeceği alan.
 
@@ -4828,13 +4776,83 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             {kutuMesaj}
                           </p>
                         )}
+                        {/*
+                          REFERANS ÖLÇÜ — ÖNCE BU.
+                        
+                          Fotoğrafın ölçeği yalnızca buradan çıkıyor. Referans kurulmadan ölçü
+                          kutusu oluşturulamıyor; alternatif bir yol (EXIF, çekim mesafesi,
+                          görsel kutu, 96 PPI) bilerek bırakılmadı — hepsi ölçü olmadığı hâlde
+                          ölçü gibi görünüyordu.
+                        */}
                         <div className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
+                          <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-emerald-500" />
+                          {t('ref2.baslik')}
+                        </div>
+                        <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                          {t('ref2.aciklama')}
+                        </p>
+                        {/* Ölçeğin yerel olduğunu söyleyen uyarı: kod bunu denetleyemiyor. */}
+                        <p className="mt-1 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">
+                          {t('ref2.duzlemUyari')}
+                        </p>
+                        {refMesaj && (
+                          <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">{refMesaj}</p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={refKipi ? () => setRefKipi(false) : referansiSifirla}
+                          className={`mt-1.5 w-full py-2 rounded-lg text-[14px] font-semibold text-white transition-opacity hover:opacity-90 ${
+                            refKipi ? 'bg-emerald-600' : 'bg-brand'
+                          }`}
+                        >
+                          {refKipi ? t('ref2.bitir') : refNokta.length === 2 ? t('ref2.yeniden') : t('ref2.sec')}
+                        </button>
+                        {refNokta.length === 2 && (
+                          <>
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <span className="shrink-0 text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                                {t('ref2.uzunluk')}
+                              </span>
+                              <input
+                                type="number"
+                                min="0.1"
+                                step="0.1"
+                                value={refUzunlukCm}
+                                onChange={(e) => setRefUzunlukCm(e.target.value)}
+                                placeholder={t('ref2.uzunlukPh')}
+                                className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                              />
+                              <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
+                            </div>
+                            {/* Hesabın kendisi: kaç piksel, kaç cm, kaç px/cm. Gizlenecek bir şey yok. */}
+                            {refPxCm ? (
+                              <p className="mt-1 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
+                                {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
+                                <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
+                              </p>
+                            ) : (
+                              <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
+                                {refOlcek?.sebep === 'cokKisa'
+                                  ? t('ref2.cokKisa') + ' (' + Math.round(refOlcek.pxMesafe || 0) + ' px < ' + EN_AZ_PIKSEL + ' px)'
+                                  : t('ref2.uzunlukGir')}
+                              </p>
+                            )}
+                          </>
+                        )}
+
+                        {/* ÖLÇÜ KUTUSU — referans kurulmadan açılmıyor. */}
+                        <div className="mt-3 flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
                           <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-brand" />
                           {t('ref.kutuBaslik')}
                         </div>
                         <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {t('kutu.aciklama')}
+                          {kutuKurulabilir ? t('kutu.aciklama') : t('ref2.onceReferans')}
                         </p>
+                        {refEskidi && (
+                          <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
+                            {t('ref2.eskidi')}
+                          </p>
+                        )}
                         <div className="mt-1.5 flex items-center gap-2">
                           <input
                             type="number"
@@ -4843,7 +4861,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             value={kutuEn}
                             onChange={(e) => setKutuEn(e.target.value)}
                             placeholder={t('ref.en')}
-                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                            disabled={!kutuKurulabilir}
+                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 disabled:opacity-45 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
                           />
                           <span className="text-[13px] text-neutral-400">×</span>
                           <input
@@ -4853,125 +4872,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             value={kutuBoy}
                             onChange={(e) => setKutuBoy(e.target.value)}
                             placeholder={t('ref.boy')}
-                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
+                            disabled={!kutuKurulabilir}
+                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 disabled:opacity-45 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
                           />
-                          <span className="text-[13px] text-neutral-400">cm</span>
+                          <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
                         </div>
-                        {/*
-                          ÇEKİM MESAFESİ.
-
-                          Tek başına hiçbir şey ifade etmiyor: kamera
-                          geometrisi olmadan mesafeden ölçek çıkmaz. İkisi bir
-                          arada gerçek px/cm veriyor (bkz. kameraOlcek.js).
-                        */}
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <span
-                            className="shrink-0 text-[12.5px] text-neutral-500 dark:text-neutral-400"
-                            title={t('kam.mesafeIpucu')}
-                          >
-                            {t('kam.mesafe')}
-                          </span>
-                          <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={cekimMesafesiM}
-                            onChange={(e) => setCekimMesafesiM(e.target.value)}
-                            placeholder={t('kam.mesafePh')}
-                            className="w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100"
-                          />
-                          {/* Birim AÇIKÇA metre: santim sanılıp 100 kat sapma oluyordu. */}
-                          <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
-                        </div>
-                        <p className="mt-0.5 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {t('kam.mesafeIpucu')}
-                        </p>
-
-                        {/*
-                          KAMERA VERİSİ — ne bulundu, ne eksik.
-
-                          Eksikse açıkça yazılıyor ve gerçek ölçekli kutu
-                          düğmesi kapalı kalıyor. Yaklaşık bir ölçek
-                          ÖNERİLMİYOR: ölçü gibi görünen bir tahmin,
-                          hiç ölçü olmamasından kötüdür.
-                        */}
-                        {kameraVeriVar ? (
-                          <p className="mt-1.5 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                            {[kameraExif?.marka, kameraExif?.model].filter(Boolean).join(' ') || t('kam.kameraBilinmiyor')}
-                            {' · '}
-                            {kameraOdak.odak35Mm
-                              ? kameraOdak.odak35Mm + ' mm (35 mm)'
-                              : kameraOdak.odakMm +
-                                ' mm / sensör ' +
-                                kameraOdak.sensorMm?.toFixed(2).replace('.', ',') +
-                                ' mm'}
-                            {' · f = '}
-                            {Math.round(kameraOdak.fpx)} px
-                            {gercekPxCm && (
-                              <>
-                                {' · '}
-                                {gercekPxCm.x.toFixed(2).replace('.', ',')} px/cm
-                              </>
-                            )}
-                            {gercekKadraj && (
-                              <>
-                                {' · '}
-                                {t('kam.kadraj')} {gercekKadraj.enCm.toFixed(1).replace('.', ',')} ×{' '}
-                                {gercekKadraj.boyCm.toFixed(1).replace('.', ',')} cm
-                              </>
-                            )}
-                          </p>
-                        ) : (
-                          ozelSahne && (
-                            <p className="mt-1.5 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
-                              {t('kam.veriYok')}
-                              {kameraOdak?.eksik?.length
-                                ? ' (' + t('kam.eksik') + ': ' + kameraOdak.eksik.join(', ') + ')'
-                                : ''}
-                            </p>
-                          )
-                        )}
-                        {kameraVeriVar && kameraOdak?.kirpmaSuphesi && (
-                          <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
-                            {t('kam.kirpmaSuphesi')}
-                          </p>
-                        )}
-
-                        {/* GERÇEK ÖLÇEKLİ KUTU — veri yoksa kapalı. */}
                         <button
                           type="button"
-                          onClick={gercekOlcekliKutuKur}
-                          disabled={!gercekKutuKurulabilir}
+                          onClick={olcuKutusunuKur}
+                          disabled={!kutuKurulabilir}
                           className={`mt-1.5 w-full py-2 rounded-lg text-[14px] font-semibold transition-opacity ${
-                            gercekKutuKurulabilir
+                            kutuKurulabilir
                               ? 'bg-brand text-white hover:opacity-90'
                               : 'bg-neutral-200 text-neutral-400 cursor-not-allowed dark:bg-[#232936] dark:text-neutral-600'
                           }`}
                         >
-                          {t('kam.gercekKur')}
-                        </button>
-
-                        {/*
-                          GÖRSEL KUTU — ayrı ve ayrı etiketli.
-
-                          Oranı doğru, mutlak büyüklüğü ölçülmemiş. Kullanıcı
-                          köşelerinden duvara oturtarak kullanıyor. "Gerçek
-                          ölçü" diye sunulmuyor.
-                        */}
-                        <button
-                          type="button"
-                          onClick={olcuKutu ? olcuKutusunuGuncelle : olcuKutusunuKur}
-                          className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                        >
-                          {olcuKutu ? t('ref.kutuGuncelle') : t('ref.kutuKur')}
+                          {t('ref2.kutuKur')}
                         </button>
                         {olcuKutu && (
-                          <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-400 dark:text-neutral-500">
-                            {olcuKutu.gercek ? t('kam.kutuGercek') : t('kam.kutuGorsel')}
-                          </p>
-                        )}
-                        {olcuKutu && (
-                          <p className="mt-1 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                          <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
                             {t('kutu.ipucu')}
                           </p>
                         )}

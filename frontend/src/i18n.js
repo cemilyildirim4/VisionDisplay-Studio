@@ -462,41 +462,62 @@ const dict = {
   'scene.cabinets': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
   'ref.en': { tr: 'en', en: 'width', ar: 'العرض' },
   'ref.boy': { tr: 'boy', en: 'height', ar: 'الارتفاع' },
-  'kam.mesafe': { tr: 'Çekim mesafesi (m)', en: 'Shooting distance (m)', ar: '(م) مسافة التصوير' },
-  'kam.mesafePh': { tr: 'metre', en: 'metres', ar: 'متر' },
-  'kam.mesafeIpucu': {
-    tr: 'METRE olarak yazın (30 cm için 0,30). Objektifin optik merkezinden ölçüm düzlemine olan dik uzaklık — gövdenin arkasından ya da ekrandan değil; yakın çekimde 1 santimetrelik kayma bile ölçeği bozar.',
-    en: 'Enter METRES (0.30 for 30 cm). Perpendicular distance from the lens optical centre to the measured plane — not from the back of the body or the screen.',
-    ar: 'المسافة العمودية من المركز البصري للعدسة إلى المستوى المقاس.',
+  'ref2.baslik': { tr: 'Referans ölçü', en: 'Reference length', ar: 'الطول المرجعي' },
+  'ref2.aciklama': {
+    tr: 'Fotoğrafta gerçek uzunluğunu bildiğiniz bir yerin iki ucunu işaretleyin ve kaç santim olduğunu yazın. Fotoğrafın ölçeği yalnızca buradan çıkıyor.',
+    en: 'Mark the two ends of something whose real length you know, then type that length. This is the only source of scale for the photo.',
+    ar: 'حدّد طرفَي شيء تعرف طوله الحقيقي، ثم اكتب الطول.',
   },
-  'kam.veriYok': {
-    tr: 'Bu fotoğrafta gerçek fiziksel ölçek için yeterli kamera verisi yok.',
-    en: 'This photo does not carry enough camera data for a real physical scale.',
-    ar: 'لا تحتوي هذه الصورة على بيانات كاميرا كافية لمقياس فيزيائي حقيقي.',
+  'ref2.duzlemUyari': {
+    tr: 'Referansı, yerleşim alanıyla aynı düzlemde ve mümkün olduğunca yakın bir bölgede seçin.',
+    en: 'Choose the reference on the same plane as the placement area, and as close to it as possible.',
+    ar: 'اختر المرجع على نفس مستوى منطقة التركيب وأقرب ما يمكن إليها.',
   },
-  'kam.eksik': { tr: 'eksik', en: 'missing', ar: 'مفقود' },
-  'kam.gercekKur': { tr: 'Gerçek ölçekli kutu oluştur', en: 'Create real-scale box', ar: 'إنشاء مربع بمقياس حقيقي' },
-  'kam.kadraj': { tr: 'kadraj', en: 'frame', ar: 'الإطار' },
-  'kam.kadrajaSigmaz': {
-    tr: 'Bu ölçü, o mesafedeki kadrajdan büyük. Kutu küçültülmedi; fotoğrafın dışına taşıyor.',
-    en: 'This size is larger than the frame at that distance. The box was not shrunk; it extends beyond the photo.',
-    ar: 'هذا المقاس أكبر من الإطار على تلك المسافة.',
+  'ref2.sec': { tr: 'Referans seç', en: 'Pick reference', ar: 'اختر المرجع' },
+  'ref2.yeniden': { tr: 'Referansı yeniden seç', en: 'Pick reference again', ar: 'إعادة اختيار المرجع' },
+  'ref2.bitir': { tr: 'İşaretlemeyi bitir', en: 'Finish marking', ar: 'إنهاء التحديد' },
+  'ref2.uzunluk': { tr: 'Gerçek uzunluk', en: 'Real length', ar: 'الطول الحقيقي' },
+  'ref2.uzunlukPh': { tr: 'santim', en: 'cm', ar: 'سم' },
+  'ref2.uzunlukGir': {
+    tr: 'İki nokta arasındaki gerçek uzunluğu santim olarak yazın.',
+    en: 'Type the real length between the two points, in centimetres.',
+    ar: 'اكتب الطول الحقيقي بين النقطتين بالسنتيمتر.',
   },
-  'kam.kirpmaSuphesi': {
-    tr: 'Fotoğraf çekimden sonra kırpılmış görünüyor; ölçek bozulmuş olabilir.',
-    en: 'The photo appears to have been cropped after capture; the scale may be wrong.',
-    ar: 'تبدو الصورة مقتطعة بعد التصوير؛ قد يكون المقياس خاطئًا.',
+  'ref2.cokKisa': {
+    tr: 'Referans çizgisi çok kısa; daha uzun bir mesafe seçin.',
+    en: 'The reference line is too short; pick a longer distance.',
+    ar: 'خط المرجع قصير جدًا؛ اختر مسافة أطول.',
   },
-  'kam.kameraBilinmiyor': { tr: 'Kamera modeli yazılmamış', en: 'Camera model not recorded', ar: 'طراز الكاميرا غير مسجل' },
-  'kam.kutuGercek': {
-    tr: 'Bu kutunun büyüklüğü kamera geometrisi ve çekim mesafesinden ÖLÇÜLDÜ.',
-    en: 'This box size was MEASURED from camera geometry and shooting distance.',
-    ar: 'تم قياس حجم هذا المربع من هندسة الكاميرا ومسافة التصوير.',
+  'ref2.onceReferans': {
+    tr: 'Önce referans ölçüyü işaretleyin; ölçü kutusu ondan sonra oluşturulabilir.',
+    en: 'Mark the reference length first; the measurement box can only be created after that.',
+    ar: 'حدّد الطول المرجعي أولًا.',
   },
-  'kam.kutuGorsel': {
-    tr: 'Bu kutunun yalnızca ORANI doğru; mutlak büyüklüğü ölçülmedi. Köşelerinden duvara oturtun.',
-    en: 'Only this box RATIO is correct; its absolute size was not measured. Fit it to the wall by its corners.',
-    ar: 'نسبة هذا المربع فقط صحيحة؛ لم يُقَس حجمه المطلق.',
+  'ref2.eskidi': {
+    tr: 'Referans değişti. Yeni ölçeği kullanmak için ölçü kutusunu yeniden oluşturun.',
+    en: 'The reference changed. Create the measurement box again to use the new scale.',
+    ar: 'تغيّر المرجع. أعد إنشاء مربع القياس لاستخدام المقياس الجديد.',
+  },
+  'ref2.kutuKur': { tr: 'Ölçü kutusunu oluştur', en: 'Create measurement box', ar: 'إنشاء مربع القياس' },
+  'ref2.kadrajaSigmaz': {
+    tr: 'Bu ölçü fotoğrafın kadrajından büyük. Kutu küçültülmedi; dışarı taşıyor.',
+    en: 'This size is larger than the photo frame. The box was not shrunk; it extends beyond.',
+    ar: 'هذا المقاس أكبر من إطار الصورة.',
+  },
+  'ref2.ipucu1': {
+    tr: 'Bilinen uzunluğun BİRİNCİ ucuna tıklayın',
+    en: 'Click the FIRST end of the known length',
+    ar: 'انقر على الطرف الأول',
+  },
+  'ref2.ipucu2': {
+    tr: 'Şimdi İKİNCİ ucuna tıklayın',
+    en: 'Now click the SECOND end',
+    ar: 'انقر الآن على الطرف الثاني',
+  },
+  'ref2.ipucu3': {
+    tr: 'Noktaları sürükleyerek ayarlayın — ok tuşları 1 px, Shift ile 10 px',
+    en: 'Drag the points to adjust — arrow keys 1 px, Shift 10 px',
+    ar: 'اسحب النقاط للضبط',
   },
   'kutu.tiklaGoster': {
     tr: 'Tasarımı göstermek için kutuya tıklayın',
@@ -504,8 +525,8 @@ const dict = {
     ar: 'انقر على المربع لعرض التصميم',
   },
   'kutu.aciklama': {
-    tr: 'Yerleşim alanının gerçek ölçüsünü ve çekim mesafesini yazın. Kamera verisi varsa kutu gerçek fiziksel büyüklükte kurulur; yoksa yalnızca oranı doğru bir görsel kutu kurulabilir.',
-    en: 'Type the real size of the placement area. The box on the photo is only a visual guide; dragging its corners does not change the real size.',
+    tr: 'Yerleşim alanının gerçek ölçüsünü yazın. Kutu, referans ölçeğiyle gerçek fiziksel büyüklüğünde kurulur ve referans çizgisinin yakınına yerleşir.',
+    en: 'Type the real size of the placement area. The box is built at its true physical size using the reference scale, near the reference line.',
     ar: 'اكتب المقاس الحقيقي لمنطقة التركيب. المربع على الصورة دليل بصري فقط.',
   },
   'kutu.ipucu': {
@@ -514,8 +535,6 @@ const dict = {
     ar: 'اسحب الجسم للتحريك والزوايا لمطابقة منظور الجدار.',
   },
   'ref.kutuBaslik': { tr: 'Ölçü kutusu', en: 'Measurement box', ar: 'مربع القياس' },
-  'ref.kutuGuncelle': { tr: 'Ölçüyü güncelle', en: 'Update the size', ar: 'تحديث المقاس' },
-  'ref.kutuKur': { tr: 'Görsel kutu oluştur (ölçülmemiş)', en: 'Create visual box (not measured)', ar: 'إنشاء مربع بصري (غير مقيس)' },
   'ref.kutuIpucu': {
     tr: 'Kutunun ölçüsü girdiğiniz santimetreden geliyor; elle büyütülüp küçültülemez. Gövdesinden tutup istediğiniz yere taşıyın.',
     en: 'The box size comes from the centimetres you entered and cannot be resized by hand. Drag its body to move it.',
@@ -765,7 +784,7 @@ const dict = {
   },
   'scene.photoDistance': { tr: 'Fotoğraf kaç metreden çekildi?', en: 'From how many metres was the photo taken?', ar: 'من كم مترًا التقطت الصورة؟' },
   'scene.photoDistanceHint': {
-    tr: 'Kamera ile ekranın olacağı yer arasındaki yaklaşık mesafe. Ölçek buradan hesaplanıyor.',
+    tr: 'Kamera ile ekranın olacağı yer arasındaki yaklaşık mesafe. Yalnızca görünümü etkiler; ölçek referans ölçüden geliyor.',
     en: 'Approximate distance between the camera and where the screen will stand. The scale comes from this.',
     ar: 'المسافة التقريبية بين الكاميرا وموضع الشاشة. يُحسب المقياس من هذا.',
   },
