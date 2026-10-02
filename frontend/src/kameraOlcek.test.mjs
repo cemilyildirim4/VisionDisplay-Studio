@@ -9,7 +9,15 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { exifOku, odakPikseli, pikselSantim, gercekKutuDortgeni, kadrajAlani } from './kameraOlcek.js'
+import {
+  exifOku,
+  odakPikseli,
+  pikselSantim,
+  gercekKutuDortgeni,
+  kadrajAlani,
+  deneme96PikselSantim,
+  PPI96_PX_PER_CM,
+} from './kameraOlcek.js'
 
 const KOK = path.dirname(fileURLToPath(import.meta.url))
 
@@ -275,6 +283,50 @@ dogru('kutu dortgeni null', gercekKutuDortgeni(30, 21, pikselSantim(odakYok.fpx,
 const jpegOdakYok = exifliJpeg(temel, { exifW: 4000, exifH: 3000 })
 const odakSuz = odakPikseli(await exifOku(dosyaYap(jpegOdakYok)), 4000, 3000)
 dogru('EXIF var ama odak yok -> null', odakSuz.fpx === null, JSON.stringify(odakSuz.eksik))
+
+console.log('\nI) 96 PPI DENEME MODU — kalibrasyon DEGIL')
+/*
+ * CSS tanimi: 1 inc = 96 px. Cevrim sabit ve fotografin olceginden bagimsiz.
+ * Burada sinanan sey OLCU degil, ORAN: ayni cevrimden gecen kutu ile tasarim
+ * birbirine dogru oranda cikmali.
+ */
+esit('96/2,54 px/cm', PPI96_PX_PER_CM, 96 / 2.54, 1e-12)
+esit('px/cm degeri', PPI96_PX_PER_CM, 37.79527559055118, 1e-10)
+const p96 = deneme96PikselSantim()
+dogru('x ve y esit (kare piksel)', p96.x === p96.y)
+dogru('mesafe parametresi almiyor', deneme96PikselSantim.length === 0)
+
+/* Kullanicinin verdigi dort sayi birebir cikmali */
+const beklenen96 = [
+  [30, 1133.86],
+  [21, 793.7],
+  [32, 1209.45],
+  [16, 604.72],
+]
+for (const [cm, bek] of beklenen96) esit(`${cm} cm -> px`, Math.round(cm * PPI96_PX_PER_CM * 100) / 100, bek, 0.005)
+
+/* Kutu 30x21, tasarim 32x16 — ayni cevrim, oran kesin */
+const KW = 1599
+const KH = 899
+const kutu96 = gercekKutuDortgeni(30, 21, p96, KW, KH)
+const tas96 = gercekKutuDortgeni(32, 16, p96, KW, KH)
+console.log(`     kutu    30 x 21 cm -> ${kutu96.pxW.toFixed(2)} x ${kutu96.pxH.toFixed(2)} px`)
+console.log(`     tasarim 32 x 16 cm -> ${tas96.pxW.toFixed(2)} x ${tas96.pxH.toFixed(2)} px`)
+esit('kutu pxW', kutu96.pxW, 1133.8582677165354, 1e-9)
+esit('kutu pxH', kutu96.pxH, 793.7007874015748, 1e-9)
+esit('tasarim pxW', tas96.pxW, 1209.4488188976377, 1e-9)
+esit('tasarim pxH', tas96.pxH, 604.7244094488189, 1e-9)
+esit('tasarim/kutu genislik orani', tas96.pxW / kutu96.pxW, 32 / 30, 1e-12)
+esit('tasarim/kutu yukseklik orani', tas96.pxH / kutu96.pxH, 16 / 21, 1e-12)
+esit('kutunun kendi orani', kutu96.pxW / kutu96.pxH, 30 / 21, 1e-12)
+esit('tasarimin kendi orani', tas96.pxW / tas96.pxH, 32 / 16, 1e-12)
+
+/* Fotografin olceginden bagimsiz: mesafe/odak ne olursa olsun ayni */
+{
+  const a = gercekKutuDortgeni(30, 21, deneme96PikselSantim(), 4000, 3000)
+  esit('baska cozunurlukte ayni piksel', a.pxW, kutu96.pxW, 1e-12)
+  dogru('normalize olcu cozunurlukle degisiyor (dogal)', Math.abs(a.koseler[1].x - kutu96.koseler[1].x) > 1e-6)
+}
 
 console.log('\nH) MESAFE YOKSA')
 dogru('mesafe 0 -> null', pikselSantim(1479, 0) === null)

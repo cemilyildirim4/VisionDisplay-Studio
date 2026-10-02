@@ -316,6 +316,32 @@ export function gercekKutuDortgeni(enCm, boyCm, pxCm, gorselW, gorselH, merkez =
   }
 }
 
+/*
+ * 96 PPI DENEME MODU — KALİBRASYON DEĞİL.
+ *
+ * CSS, 1 inç = 96 piksel tanımlar. Buradan sabit bir çevrim çıkıyor:
+ *   px = cm × 96 / 2,54 = cm × 37,795276
+ *
+ * BU BİR FOTOĞRAF KALİBRASYONU DEĞİLDİR ve öyle adlandırılmamalıdır.
+ * Fotoğrafın gerçek ölçeğiyle hiçbir ilgisi yok: fotoğraf 30 cm'den de 3
+ * metreden de çekilmiş olsa bu sayı aynı kalır. Dolayısıyla bu modda kurulan
+ * kutu, fotoğraftaki gerçek bir nesneyle ÖLÇÜ KARŞILAŞTIRMASINA GİRMEZ.
+ *
+ * Tek işi fiziksel ORAN denetimi: aynı çevrimden geçen 30 × 21 cm kutu ile
+ * 32 × 16 cm tasarımın birbirine oranı kesin doğru çıkıyor
+ * (1209,45 / 1133,86 = 32/30). Ölçek bilinmediğinde oranın bozulmadığını
+ * göstermek için.
+ *
+ * Gerçek ölçek yalnızca kamera geometrisi + çekim mesafesinden çıkıyor
+ * (bkz. odakPikseli / pikselSantim); o zincire dokunulmuyor.
+ */
+export const PPI96_PX_PER_CM = 96 / 2.54
+
+/** 96 PPI deneme çevrimi. Mesafe almıyor — ölçekten bağımsız olduğu için. */
+export function deneme96PikselSantim() {
+  return { x: PPI96_PX_PER_CM, y: PPI96_PX_PER_CM }
+}
+
 /**
  * Kadrajın o mesafede kapsadığı gerçek alan — kullanıcıya ölçünün akla yatkın
  * olup olmadığını gösteriyor ("30 cm'den 41,5 cm genişlik görüyorsun").

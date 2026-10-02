@@ -18,7 +18,15 @@ import ProfileMenu from './ProfileMenu.jsx'
 import ChatHelp from './ChatHelp.jsx'
 import Scene, { PANO_ID, SALON_ID, CEPHE_ID } from './Scene.jsx'
 import { salonOlcek } from './Salon.jsx'
-import { exifOku, odakPikseli, pikselSantim, gercekKutuDortgeni, kadrajAlani } from './kameraOlcek.js'
+import {
+  exifOku,
+  odakPikseli,
+  pikselSantim,
+  gercekKutuDortgeni,
+  kadrajAlani,
+  deneme96PikselSantim,
+  PPI96_PX_PER_CM,
+} from './kameraOlcek.js'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
@@ -3299,7 +3307,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const o = kutuOlcusuOku()
     if (!o) return
     /* gercek: false — bu kutunun ORANI doğru, mutlak büyüklüğü ölçülmedi. */
-    setOlcuKutu({ enCm: o.en, boyCm: o.boy, gercek: false })
+    setOlcuKutu({ enCm: o.en, boyCm: o.boy, gercek: false, ppi96: false })
     /*
      * DÖRTGEN HER ZAMAN YENİDEN KURULUYOR.
      *
@@ -3365,7 +3373,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return
     }
     /* gercek: bu kutunun mutlak büyüklüğü ölçülmüş, tahmin edilmemiş. */
-    setOlcuKutu({ enCm: o.en, boyCm: o.boy, gercek: true })
+    setOlcuKutu({ enCm: o.en, boyCm: o.boy, gercek: true, ppi96: false })
+    setHedefKose(k.koseler)
+    setTaslakKutu(k.koseler)
+    setHedefTur('taslak')
+    setKutuMesaj(k.tasiyor ? t('kam.kadrajaSigmaz') : null)
+  }
+
+  /*
+   * 96 PPI DENEME KUTUSU — KALİBRASYON DEĞİL.
+   *
+   * Kutu sabit bir çevrimle kuruluyor: px = cm × 96 / 2,54. Fotoğrafın
+   * ölçeğiyle ilgisi yok, o yüzden "gerçek ölçü" sayılmıyor ve gercek: false
+   * işaretleniyor.
+   *
+   * Tasarıma AYRICA bir şey yapılmıyor: tasarım zaten kutunun dünyasından
+   * çiziliyor (bkz. duvarDunyasi + dunyaDortgeni), yani kutu hangi çevrimle
+   * kurulursa tasarım da aynı çevrimi alıyor. 30 × 21 cm kutu bu modda
+   * 1133,86 × 793,70 piksel olunca 32 × 16 cm tasarım kendiliğinden
+   * 1209,45 × 604,72 piksel çıkıyor; oran kesin korunuyor.
+   */
+  const deneme96KutuKur = () => {
+    const o = kutuOlcusuOku()
+    if (!o) return
+    const kaynak = ozelSahne?.kaynak
+    if (!(kaynak?.w > 0)) return
+    const merkez = hedefKose ? koseMerkezi(hedefKose) : { x: 0.5, y: 0.5 }
+    const k = gercekKutuDortgeni(o.en, o.boy, deneme96PikselSantim(), kaynak.w, kaynak.h, merkez)
+    if (!k) return
+    setOlcuKutu({ enCm: o.en, boyCm: o.boy, gercek: false, ppi96: true })
     setHedefKose(k.koseler)
     setTaslakKutu(k.koseler)
     setHedefTur('taslak')
@@ -4898,6 +4934,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         </button>
 
                         {/*
+                          96 PPI DENEME KUTUSU.
+
+                          Kamera verisi gerektirmiyor çünkü ölçekle ilgisi yok;
+                          sabit CSS çevrimi (96 PPI). Gerçek kalibrasyonun
+                          yanında ayrı bir düğme olarak duruyor ve adında
+                          "deneme" geçiyor — ölçü sanılmasın.
+                        */}
+                        <button
+                          type="button"
+                          onClick={deneme96KutuKur}
+                          className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                        >
+                          {t('kam.ppi96Kur')}
+                        </button>
+
+                        {/*
                           GÖRSEL KUTU — ayrı ve ayrı etiketli.
 
                           Oranı doğru, mutlak büyüklüğü ölçülmemiş. Kullanıcı
@@ -4913,7 +4965,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         </button>
                         {olcuKutu && (
                           <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-400 dark:text-neutral-500">
-                            {olcuKutu.gercek ? t('kam.kutuGercek') : t('kam.kutuGorsel')}
+                            {olcuKutu.gercek
+                              ? t('kam.kutuGercek')
+                              : olcuKutu.ppi96
+                                ? t('kam.kutuPpi96') + ' ' + PPI96_PX_PER_CM.toFixed(4).replace('.', ',') + ' px/cm.'
+                                : t('kam.kutuGorsel')}
                           </p>
                         )}
                         {olcuKutu && (

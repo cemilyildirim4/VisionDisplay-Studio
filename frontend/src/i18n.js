@@ -469,6 +469,16 @@ const dict = {
     en: 'Perpendicular distance from the lens optical centre to the measured plane — not from the back of the body or the screen.',
     ar: 'المسافة العمودية من المركز البصري للعدسة إلى المستوى المقاس.',
   },
+  'kam.ppi96Kur': {
+    tr: '96 PPI deneme kutusu (oran testi)',
+    en: '96 PPI test box (ratio check)',
+    ar: 'مربع اختبار 96 PPI (فحص النسبة)',
+  },
+  'kam.kutuPpi96': {
+    tr: 'DENEME: sabit CSS çevrimi, fotoğraf kalibrasyonu DEĞİL. Yalnızca kutu ile tasarım arasındaki oranı sınar.',
+    en: 'TEST: fixed CSS conversion, NOT a photo calibration. It only checks the box-to-design ratio.',
+    ar: 'اختبار: تحويل CSS ثابت، ليس معايرة صورة.',
+  },
   'kam.veriYok': {
     tr: 'Bu fotoğrafta gerçek fiziksel ölçek için yeterli kamera verisi yok.',
     en: 'This photo does not carry enough camera data for a real physical scale.',
