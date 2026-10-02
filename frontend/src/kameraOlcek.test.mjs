@@ -147,10 +147,17 @@ esit('exifW', exifA.exifW, W)
 esit('exifH', exifA.exifH, H)
 dogru('marka/model okundu', exifA.marka === 'Acme' && exifA.model === 'Telefon X')
 
-console.log('\nB) f_piksel — uzun kenara gore')
+console.log('\nB) f_piksel — KOSEGEN uzerinden')
+const DIAG35 = Math.hypot(36, 24)
 const odakA = odakPikseli(exifA, W, H)
-const fpxBek = (26 * 2048) / 36
+const fpxBek = (26 * Math.hypot(W, H)) / DIAG35
 esit('f_piksel', odakA.fpx, fpxBek, 1e-9)
+/* Eski (hatali) yontemle farki goster: 1536x2048 = 3:4, yani %4 sapma */
+const fpxEski = (26 * Math.max(W, H)) / 36
+console.log(
+  `     eski yontem (uzunKenar/36): ${fpxEski.toFixed(4)}  ->  dogru olanin %${(((fpxEski / fpxBek) - 1) * 100).toFixed(2)}'i`,
+)
+dogru('eski yontem %4 kucuk cikiyordu', Math.abs(fpxEski / fpxBek - 1 / 1.0401) < 0.001 || Math.abs((fpxBek / fpxEski - 1) * 100 - 4.01) < 0.05, `fark %${((fpxBek / fpxEski - 1) * 100).toFixed(2)}`)
 dogru('yol', odakA.yol === '35mm esdegeri' || odakA.yol === '35mm eşdeğeri', odakA.yol)
 dogru('kirpma suphesi yok', odakA.kirpmaSuphesi === false)
 
@@ -211,7 +218,50 @@ const kirpik = odakPikseli(exifF, 4000, 2000) /* 2:1 — 4:3 degil */
 dogru('kirpma yakalandi', kirpik.kirpmaSuphesi === true)
 const kucultulmus = odakPikseli(exifF, 1000, 750) /* saf kucultme, oran ayni */
 dogru('saf kucultme kirpma sayilmiyor', kucultulmus.kirpmaSuphesi === false)
-esit('kucultulmus f_piksel olcekli', kucultulmus.fpx, (26 * 1000) / 36, 1e-9)
+esit('kucultulmus f_piksel olcekli', kucultulmus.fpx, (26 * Math.hypot(1000, 750)) / DIAG35, 1e-9)
+
+console.log('\nF2) EN-BOY ORANINA GORE: KOSEGEN vs UZUN KENAR')
+/*
+ * Ayni 35 mm esdegeri (26 mm) ve ayni UZUN KENAR (4000 px) ile uc farkli
+ * oran. Eski yontem uzun kenara bakip hepsine ayni f_piksel veriyordu; bu
+ * yalnizca 3:2'de dogru.
+ */
+const UZUN = 4000
+const oranlar = [
+  ['4:3', UZUN, Math.round((UZUN * 3) / 4)],
+  ['3:2', UZUN, Math.round((UZUN * 2) / 3)],
+  ['16:9', UZUN, Math.round((UZUN * 9) / 16)],
+]
+console.log('     oran    goruntu px      kosegen f_px   eski f_px   eski/dogru   ')
+for (const [ad, w, h] of oranlar) {
+  const j = exifliJpeg(temel, { odak35: 26, exifW: w, exifH: h })
+  const ex = await exifOku(dosyaYap(j))
+  const o = odakPikseli(ex, w, h)
+  const dogruFpx = (26 * Math.hypot(w, h)) / DIAG35
+  const eskiFpx = (26 * Math.max(w, h)) / 36
+  console.log(
+    `     ${ad.padEnd(6)} ${String(w)}x${String(h).padEnd(6)} ${dogruFpx.toFixed(2).padStart(10)} ${eskiFpx
+      .toFixed(2)
+      .padStart(11)}   ${(((eskiFpx / dogruFpx) - 1) * 100).toFixed(2).padStart(7)}%`,
+  )
+  esit(`${ad} f_piksel kosegen`, o.fpx, dogruFpx, 1e-9)
+}
+/* 3:2'de iki yontem BIREBIR ayni olmali — 36:24 tam 3:2 */
+{
+  const w = 3600
+  const h = 2400
+  const j = exifliJpeg(temel, { odak35: 26, exifW: w, exifH: h })
+  const o = odakPikseli(await exifOku(dosyaYap(j)), w, h)
+  esit('3:2 kosegen == uzunKenar/36', o.fpx, (26 * w) / 36, 1e-9)
+}
+/* Dikey ve yatay ayni kosegeni verdigi icin ayni f_piksel cikmali */
+{
+  const jY = exifliJpeg(temel, { odak35: 26, exifW: 4000, exifH: 3000 })
+  const jD = exifliJpeg(temel, { odak35: 26, exifW: 3000, exifH: 4000 })
+  const oY = odakPikseli(await exifOku(dosyaYap(jY)), 4000, 3000)
+  const oD = odakPikseli(await exifOku(dosyaYap(jD)), 3000, 4000)
+  esit('yatay ve dikey ayni f_piksel', oD.fpx, oY.fpx, 1e-9)
+}
 
 console.log('\nG) VERI YOKSA: TAHMIN URETILMIYOR')
 const exifYok = await exifOku(dosyaYap(temel))

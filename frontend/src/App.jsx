@@ -3204,11 +3204,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kalibrasyon tamamlandığında ikisi eşitleniyor — duvar neyse ekranın
    * sığabileceği alan da o.
    */
-  const duvariEsitle = (w, h) => {
-    if (!(w > 0) || !(h > 0)) return
-    setWidth(Math.round(w * 1000) / 1000)
-    setHeight(Math.round(h * 1000) / 1000)
-  }
+  /*
+   * BURADA duvariEsitle VARDI VE KALDIRILDI.
+   *
+   * Ölçü kutusunun santimetresini sol panelin duvar metresine yazıyordu.
+   * Varlık sebebi, duvar ölçüsünden gelen sütun/satır üst sınırını (colsMax)
+   * büyütmekti; o sınır artık duvardan gelmiyor, dolayısıyla işlevsiz kaldı.
+   *
+   * Kaldırılma gerekçesi işsizlikten de öte: sol paneldeki duvarın kutuyu
+   * takip etmesi, ikisinin AYNI ŞEY olduğu izlenimi veriyordu. Üçü ayrı:
+   *   ölçü kutusu  -> fotoğraftaki yerleşim alanı (cm)
+   *   tasarım      -> cols × cwM, rows × chM
+   *   sol panel duvarı -> fotoğrafsız önizlemedeki duvar (m)
+   */
 
   /*
    * KUTUYA TIKLANDI: TASARIM İÇİNE YERLEŞİYOR.
@@ -3265,7 +3273,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   useEffect(() => {
     if (!olcuKutu) return
     setDuvarOlcu({ wm: olcuKutu.enCm / 100, hm: olcuKutu.boyCm / 100 })
-    duvariEsitle(olcuKutu.enCm / 100, olcuKutu.boyCm / 100)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [olcuKutu])
 
@@ -4805,7 +4812,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           arada gerçek px/cm veriyor (bkz. kameraOlcek.js).
                         */}
                         <div className="mt-1.5 flex items-center gap-2">
-                          <span className="shrink-0 text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                          <span
+                            className="shrink-0 text-[12.5px] text-neutral-500 dark:text-neutral-400"
+                            title={t('kam.mesafeIpucu')}
+                          >
                             {t('kam.mesafe')}
                           </span>
                           <input
@@ -4819,6 +4829,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           />
                           <span className="text-[13px] text-neutral-400">cm</span>
                         </div>
+                        <p className="mt-0.5 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                          {t('kam.mesafeIpucu')}
+                        </p>
 
                         {/*
                           KAMERA VERİSİ — ne bulundu, ne eksik.

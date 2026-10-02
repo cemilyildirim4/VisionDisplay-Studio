@@ -464,6 +464,11 @@ const dict = {
   'ref.boy': { tr: 'boy', en: 'height', ar: 'الارتفاع' },
   'kam.mesafe': { tr: 'Çekim mesafesi', en: 'Shooting distance', ar: 'مسافة التصوير' },
   'kam.mesafePh': { tr: 'mesafe', en: 'distance', ar: 'مسافة' },
+  'kam.mesafeIpucu': {
+    tr: 'Objektifin optik merkezinden ölçüm düzlemine olan dik uzaklık. Gövdenin arkasından ya da ekrandan değil; yakın çekimde 1 santimetrelik kayma bile ölçeği bozar.',
+    en: 'Perpendicular distance from the lens optical centre to the measured plane — not from the back of the body or the screen.',
+    ar: 'المسافة العمودية من المركز البصري للعدسة إلى المستوى المقاس.',
+  },
   'kam.veriYok': {
     tr: 'Bu fotoğrafta gerçek fiziksel ölçek için yeterli kamera verisi yok.',
     en: 'This photo does not carry enough camera data for a real physical scale.',

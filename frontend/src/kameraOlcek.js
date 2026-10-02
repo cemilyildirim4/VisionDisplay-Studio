@@ -9,12 +9,24 @@
  *
  * İkincisinin matematiği kesindir, tahmin içermez:
  *
- *   f_piksel = odakUzaklığı_mm × görselinUzunKenarı_px / sensörGenişliği_mm
+ *   f_piksel = odakUzaklığı_mm × görselinKöşegeni_px / sensörKöşegeni_mm
  *   px/cm    = f_piksel / mesafe_cm
  *
- * 35 mm EŞDEĞERİ verilmişse sensör genişliği tanım gereği 36 mm'dir ve hesap
- * tek adımda çıkar. Verilmemişse gerçek odak uzaklığı + sensör genişliği
- * gerekir; sensör genişliği EXIF'in FocalPlaneXResolution alanından türetilir.
+ * HESAP KÖŞEGEN ÜZERİNDEN YAPILIYOR, KENAR ÜZERİNDEN DEĞİL.
+ *
+ * "35 mm eşdeğeri odak uzaklığı" tanım gereği KÖŞEGEN oranıyla verilir:
+ *   f35 = f_gerçek × (köşegen35 / köşegenSensör),  köşegen35 = √(36² + 24²)
+ * Buradan piksel karşılığı türetilince sensör ölçüleri sadeleşiyor:
+ *   f_piksel = f_gerçek × W_px / sensörW
+ *            = f35 × (köşegenSensör/köşegen35) × W_px / sensörW
+ *            = f35 × köşegen_px / köşegen35          (sensörW/köşegenSensör = W_px/köşegen_px)
+ *
+ * Bir ara burada "uzunKenar_px / 36" kullanılıyordu. O yalnızca sensör oranı
+ * 3:2 iken (36:24) doğru; başka oranlarda sapıyor:
+ *   4:3  -> ölçek %4,01 KÜÇÜK çıkıyor
+ *   16:9 -> ölçek %4,75 BÜYÜK çıkıyor
+ * Telefonlar çoğunlukla 4:3 çektiği için bu, tipik fotoğrafta %4'lük
+ * sistematik bir hataydı. Köşegen yöntemi en/boy oranından bağımsız.
  *
  * BURADA VARSAYIM YOK. Gerekli alan yoksa işlev null döner ve EKSİĞİ söyler;
  * ortalama görüş açısı, sabit katsayı ya da "tipik telefon" değeri
@@ -29,6 +41,12 @@
  *   - Fotoğraf çekimden sonra KIRPILMAMIŞ olmalı. Yeniden boyutlandırma
  *     sorun değil (f_piksel aynı oranda ölçeklenir), kırpma ölçeği bozar.
  */
+
+/*
+ * 35 mm tam kare (full-frame) kadrajın köşegeni: 36 × 24 mm -> 43,2666 mm.
+ * "35 mm eşdeğeri" bu köşegene göre tanımlıdır.
+ */
+const DIAG35_MM = Math.hypot(36, 24)
 
 /* Okunan EXIF etiketleri. Gerisi bu hesapta işe yaramıyor. */
 const ETIKET = {
@@ -151,21 +169,35 @@ export async function exifOku(dosya) {
 }
 
 /**
- * Sensör genişliğini mm olarak verir — EXIF'te varsa.
+ * Sensörün mm ölçüleri — EXIF'te varsa.
  *
- * FocalPlaneXResolution, sensör düzlemindeki piksel/birim yoğunluğu. Sensör
- * genişliği = pikselSayısı / yoğunluk, birim de ayrı bir etiketten.
+ * FocalPlaneXResolution, sensör düzlemindeki piksel/birim yoğunluğu. Sensörün
+ * X kenarı = exifW / yoğunluk, birim de ayrı bir etiketten.
+ *
+ * KÖŞEGEN DE DÖNÜYOR, çünkü f_piksel köşegen üzerinden hesaplanıyor. Dikey
+ * çekilmiş ya da tarayıcının EXIF yönüne göre döndürdüğü fotoğrafta görselin
+ * genişliği sensörün X kenarına karşılık gelmeyebiliyor; köşegen dönmeden
+ * etkilenmediği için bu belirsizliği ortadan kaldırıyor.
+ *
+ * Y yoğunluğu yoksa sensörün en/boy oranı görüntünün EXIF oranına eşit
+ * sayılıyor — bu bir tahmin değil, aynı sensörün aynı piksel aralığına sahip
+ * olmasının sonucu (kare piksel).
  */
-function sensorGenisligiMm(exif) {
-  const yog = Number(exif?.sensorXYogunluk)
-  const px = Number(exif?.exifW)
-  if (!(yog > 0) || !(px > 0)) return null
+function sensorOlculeriMm(exif) {
+  const yogX = Number(exif?.sensorXYogunluk)
+  const pxW = Number(exif?.exifW)
+  const pxH = Number(exif?.exifH)
+  if (!(yogX > 0) || !(pxW > 0)) return null
   /* 2 = inç, 3 = cm, 4 = mm. Belirtilmemişse EXIF varsayılanı inç. */
   const birim = Number(exif?.sensorBirim) || 2
   const mmKatsayi = birim === 3 ? 10 : birim === 4 ? 1 : 25.4
-  const mm = (px / yog) * mmKatsayi
+  const wMm = (pxW / yogX) * mmKatsayi
   /* Akla yatkınlık: 1 mm'den küçük ya da 100 mm'den büyük sensör yok. */
-  return mm > 1 && mm < 100 ? mm : null
+  if (!(wMm > 1 && wMm < 100)) return null
+  const yogY = Number(exif?.sensorYYogunluk)
+  const hMm = yogY > 0 && pxH > 0 ? (pxH / yogY) * mmKatsayi : pxH > 0 ? (wMm * pxH) / pxW : null
+  if (!(hMm > 0.5 && hMm < 100)) return null
+  return { wMm, hMm, diagMm: Math.hypot(wMm, hMm) }
 }
 
 /**
@@ -206,34 +238,35 @@ export function odakPikseli(exif, gorselW, gorselH) {
   }
 
   /*
-   * 35 mm eşdeğeri kadrajın UZUN kenarına göre tanımlı. Dikey çekilmiş bir
-   * fotoğrafta uzun kenar yüksekliktir; 36 mm'yi doğrudan genişliğe uygulamak
-   * dikey fotoğrafta ölçeği şişiriyor.
+   * Görselin köşegeni. Köşegen, en/boy oranından ve 90 derece dönmeden
+   * etkilenmediği için ölçek dönüşümünün doğru dayanağı (bkz. başlık notu).
    */
-  const uzunKenar = Math.max(gorselW, gorselH)
+  const diagPx = Math.hypot(gorselW, gorselH)
 
-  /* 1. YOL: 35 mm eşdeğeri. Sensör genişliği tanım gereği 36 mm. */
+  /* 1. YOL: 35 mm eşdeğeri — doğrudan köşegen oranı. */
   const o35 = Number(exif.odak35Mm)
   if (o35 > 0) {
-    return { fpx: (o35 * uzunKenar) / 36, yol: '35mm eşdeğeri', odak35Mm: o35, kirpmaSuphesi }
+    return { fpx: (o35 * diagPx) / DIAG35_MM, yol: '35mm eşdeğeri', odak35Mm: o35, kirpmaSuphesi }
   }
 
-  /* 2. YOL: gerçek odak uzaklığı + sensör genişliği. */
+  /* 2. YOL: gerçek odak uzaklığı + sensör köşegeni. */
   const oMm = Number(exif.odakMm)
-  const sMm = sensorGenisligiMm(exif)
-  if (oMm > 0 && sMm) {
+  const s = sensorOlculeriMm(exif)
+  if (oMm > 0 && s) {
     return {
-      fpx: (oMm * uzunKenar) / sMm,
-      yol: 'odak uzaklığı + sensör genişliği',
+      fpx: (oMm * diagPx) / s.diagMm,
+      yol: 'odak uzaklığı + sensör ölçüsü',
       odakMm: oMm,
-      sensorMm: sMm,
+      sensorMm: s.wMm,
+      sensorBoyMm: s.hMm,
+      sensorDiagMm: s.diagMm,
       kirpmaSuphesi,
     }
   }
 
   if (!(oMm > 0)) eksik.push('odak uzaklığı (FocalLength)')
   if (!(o35 > 0)) eksik.push('35 mm eşdeğeri (FocalLengthIn35mmFilm)')
-  if (oMm > 0 && !sMm) eksik.push('sensör genişliği (FocalPlaneXResolution)')
+  if (oMm > 0 && !s) eksik.push('sensör ölçüsü (FocalPlaneXResolution)')
   return { fpx: null, eksik }
 }
 
@@ -243,6 +276,10 @@ export function odakPikseli(exif, gorselW, gorselH) {
  * Kare piksel DIŞINDA varsayım yok: aynı sensörde yatay ve dikey piksel
  * aralığı eşit olduğu için pxPerCmX = pxPerCmY. Dijital kameralarda bu
  * istisnasız böyle (anamorfik optik hariç, o da telefonlarda yok).
+ *
+ * MESAFE, OBJEKTİFİN OPTİK MERKEZİNDEN ölçüm düzlemine olan dik uzaklıktır —
+ * gövdenin arkasından, ekrandan ya da ayaktan değil. Yakın çekimde fark
+ * oransal olarak büyük: 30 cm'lik bir ölçümde 1 cm'lik kayma %3,3 hata.
  */
 export function pikselSantim(fpx, mesafeCm) {
   const d = Number(mesafeCm)
