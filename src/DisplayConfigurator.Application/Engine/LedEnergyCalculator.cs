@@ -27,6 +27,8 @@ public sealed class LedEnergyResult
     public decimal DailyCostTry { get; init; }
     public decimal MonthlyKwh { get; init; }
     public decimal MonthlyCostTry { get; init; }
+    public decimal YearlyKwh { get; init; }
+    public decimal YearlyCostTry { get; init; }
 }
 
 public sealed class LedEnergyValidationException : ArgumentException
@@ -42,10 +44,16 @@ public sealed class LedEnergyValidationException : ArgumentException
 
 /// <summary>
 /// Günlük kWh = m² × (W/m²) × saat / 1000.
-/// Tutar = kWh × ₺/kWh. Aylık = günlük × gün sayısı.
+/// Tutar = kWh × ₺/kWh. Aylık = günlük × gün sayısı. Yıllık = aylık × 12.
 /// </summary>
 public static class LedEnergyCalculator
 {
+    /// <summary>PDF varsayılanı. Örnek föydeki saatlik birim fiyat.</summary>
+    public const decimal DefaultPricePerKwh = 3.92m;
+
+    public const decimal DefaultDailyHours = 12m;
+
+    public const int DefaultDaysPerMonth = 30;
     public static LedEnergyResult Calculate(LedEnergyInput input)
     {
         var missing = new List<string>();
@@ -64,6 +72,8 @@ public static class LedEnergyCalculator
         decimal dailyCost = Round2(dailyKwh * input.PricePerKwh!.Value);
         decimal monthlyKwh = Round2(dailyKwh * input.DaysPerMonth!.Value);
         decimal monthlyCost = Round2(monthlyKwh * input.PricePerKwh.Value);
+        decimal yearlyKwh = Round2(monthlyKwh * 12m);
+        decimal yearlyCost = Round2(monthlyCost * 12m);
 
         return new LedEnergyResult
         {
@@ -79,6 +89,8 @@ public static class LedEnergyCalculator
             DailyCostTry = dailyCost,
             MonthlyKwh = monthlyKwh,
             MonthlyCostTry = monthlyCost,
+            YearlyKwh = yearlyKwh,
+            YearlyCostTry = yearlyCost,
         };
     }
 

@@ -1,3 +1,4 @@
+using System.Globalization;
 using DisplayConfigurator.Application.DTOs;
 using DisplayConfigurator.Application.Engine;
 using DisplayConfigurator.Domain.Entities;
@@ -388,8 +389,8 @@ public class ProfessionalReportDocument : IDocument
         double maxW = (double)_config.TotalMaxPowerKw * 1000.0;
         double avgW = _config.TotalAvgPowerKw > 0
             ? (double)_config.TotalAvgPowerKw * 1000.0
-            : Math.Round(maxW / 3.0);
-        double avgBtu = Math.Round(avgW * 3.412 + (double)_config.ModuleHeatDissipationBtu);
+            : Math.Round(maxW * 0.35);
+        double avgBtu = Math.Round(avgW * 3.412);
 
         long pixels = ParsePixels(_config.TotalResolution, out var mpxText);
         int minPorts = pixels > 0 ? (int)Math.Max(1, Math.Ceiling(pixels / 650000.0)) : Math.Max(1, _config.RequiredRj45Ports);
@@ -477,7 +478,7 @@ public class ProfessionalReportDocument : IDocument
                 AddRow(table, "Kabin / panel modeli", Empty(_config.CabinModelName, "Standart"), ref alt);
                 if (_cabin != null)
                 {
-                    AddRow(table, "Piksel aralığı", $"{_cabin.PixelPitchMm} mm", ref alt);
+                    AddRow(table, "Piksel aralığı", FormatPitch(_cabin.PixelPitchMm), ref alt);
                     AddRow(table, "Parlaklık", $"{_cabin.BrightnessNits:N0} nit", ref alt);
                     if (_cabin.RefreshRateHz > 0)
                         AddRow(table, "Yenileme hızı", $"{_cabin.RefreshRateHz} Hz", ref alt);
@@ -527,8 +528,8 @@ public class ProfessionalReportDocument : IDocument
                 c.Item().Text("* Değerler teorik fabrika verilerine dayanır; sahada farklılık gösterebilir.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
                 if (_isAdmin)
                 {
-                    c.Item().Text("* RJ45 port ihtiyacı port başına en fazla 650.000 piksel sınırına göredir.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
-                    c.Item().Text("* Isı: 1 W = 3.412 BTU/hr. Toplam BTU = (Watt × 3.412) + modül ısı yayılımı.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
+                    c.Item().Text("* RJ45 adedi, seçilen işlemcinin port başı piksel kapasitesi ile port en ve boy sınırından gelir.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
+                    c.Item().Text("* Isı: 1 W = 3,412 BTU/hr. Toplam ısı = toplam watt × 3,412. Modül satırı bu toplama eklenmez.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
                 }
             });
 
@@ -547,13 +548,13 @@ public class ProfessionalReportDocument : IDocument
     }
 
     /// <summary>
-    /// Günlük kWh = m² × (W/m²) × saat / 1000. Saat ve gün raporda varsayılan
-    /// olarak 12 ve 30'dur; tutar birim fiyata bağlı olduğu için basılmaz.
+    /// Günlük kWh = m² × (W/m²) × saat / 1000.
+    /// Tutar = kWh × 3,92 ₺. Yıllık = aylık × 12.
     /// </summary>
     private void ComposeEnergy(IContainer container, double areaM2, int panelCount)
     {
-        const decimal hours = 12m;
-        const int days = 30;
+        const decimal hours = LedEnergyCalculator.DefaultDailyHours;
+        const int days = LedEnergyCalculator.DefaultDaysPerMonth;
         decimal avgWatts = _config.TotalAvgPowerKw > 0
             ? _config.TotalAvgPowerKw * 1000m
             : _config.TotalMaxPowerKw * 1000m;
@@ -562,7 +563,7 @@ public class ProfessionalReportDocument : IDocument
         decimal wattsPerM2 = Math.Round(avgWatts / (decimal)areaM2, 2, MidpointRounding.AwayFromZero);
         decimal squareMeters = Math.Round((decimal)areaM2, 2, MidpointRounding.AwayFromZero);
         string panelType = _cabin is { PixelPitchMm: > 0 }
-            ? $"P {_cabin.PixelPitchMm:0.##}"
+            ? FormatPitch(_cabin.PixelPitchMm)
             : Empty(_config.CabinModelName, "LED");
 
         LedEnergyResult energy;
@@ -576,7 +577,7 @@ public class ProfessionalReportDocument : IDocument
                 DaysPerMonth = days,
                 WattsPerSquareMeter = wattsPerM2,
                 TotalSquareMeters = squareMeters,
-                PricePerKwh = 0m,
+                PricePerKwh = LedEnergyCalculator.DefaultPricePerKwh,
             });
         }
         catch (LedEnergyValidationException)
@@ -598,14 +599,18 @@ public class ProfessionalReportDocument : IDocument
                 bool alt = true;
                 AddRow(table, "Panel tipi", energy.PanelType, ref alt);
                 AddRow(table, "Panel sayısı", $"{energy.PanelCount} adet", ref alt);
-                AddRow(table, "Toplam LED alanı", $"{energy.TotalSquareMeters:F2} m²", ref alt);
-                AddRow(table, "1 m² saatlik tüketim", $"{energy.WattsPerSquareMeter:F2} W", ref alt);
-                AddRow(table, "Günlük çalışma", $"{energy.DailyHours:0} saat", ref alt);
-                AddRow(table, "Günlük tüketim", $"{energy.DailyKwh:F2} kWh", ref alt);
-                AddRow(table, "Aylık tüketim", $"{energy.MonthlyKwh:F2} kWh ({energy.DaysPerMonth} gün)", ref alt);
+                AddRow(table, "Toplam LED alanı", $"{energy.TotalSquareMeters.ToString("N2", Tr)} m²", ref alt);
+                AddRow(table, "1 m² saatlik tüketim", $"{energy.WattsPerSquareMeter.ToString("N2", Tr)} W", ref alt);
+                AddRow(table, "Günlük çalışma", $"{energy.DailyHours.ToString("0", Tr)} saat", ref alt);
+                AddRow(table, "Günlük tüketim", $"{energy.DailyKwh.ToString("N2", Tr)} kWh", ref alt);
+                AddRow(table, "Aylık tüketim", $"{energy.MonthlyKwh.ToString("N2", Tr)} kWh ({energy.DaysPerMonth} gün)", ref alt);
+                AddRow(table, "Saatlik elektrik birim fiyatı", $"{energy.PricePerKwh.ToString("N2", Tr)} ₺/kWh", ref alt);
+                AddRow(table, "Günlük toplam enerji maliyeti", $"{energy.DailyCostTry.ToString("N2", Tr)} ₺", ref alt);
+                AddRow(table, "Aylık toplam enerji maliyeti", $"{energy.MonthlyCostTry.ToString("N2", Tr)} ₺", ref alt);
+                AddRow(table, "Yıllık tahmini enerji maliyeti", $"{energy.YearlyCostTry.ToString("N2", Tr)} ₺", ref alt);
             });
             column.Item().PaddingTop(4).Text(
-                    "Varsayılan: günde 12 saat, ayda 30 gün. Tüketim tipik güçten hesaplanır. Elektrik tutarı birim fiyata bağlıdır ve bu raporda yer almaz.")
+                    "Varsayılan: günde 12 saat, ayda 30 gün, 3,92 ₺/kWh. Tüketim tipik güçten hesaplanır. Yıllık tutar, aylık tutarın 12 katıdır.")
                 .FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
         });
     }
@@ -801,11 +806,20 @@ public class ProfessionalReportDocument : IDocument
     private string ResolutionTag() =>
         _config.Is4K ? "4K Ultra HD" : (_config.IsFullHd ? "Full HD" : "Özel");
 
+    private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
+
+    /// <summary>2,5 mm → P2.5 mm. Nokta kültürden bağımsızdır.</summary>
+    private static string FormatPitch(decimal pitchMm)
+    {
+        var text = pitchMm.ToString("0.##", CultureInfo.InvariantCulture);
+        return $"P{text} mm";
+    }
+
     private static string ScreenTypeLabel(string? type) => type switch
     {
         "flat" => "Düz",
-        "concave" => "İçbükey",
-        "convex" => "Dışbükey",
+        "concave" or "curvedIn" => "İçbükey",
+        "convex" or "curved" => "Dışbükey",
         "lshape" => "L tipi",
         _ => string.IsNullOrWhiteSpace(type) ? "Belirtilmedi" : type,
     };

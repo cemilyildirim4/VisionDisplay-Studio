@@ -81,9 +81,12 @@ public class ConfigurationResponseDto
     public double TotalMaxPowerWatts => (double)TotalMaxPowerKw * 1000.0;
     public double TotalAvgPowerWatts => (double)TotalAvgPowerKw * 1000.0;
 
-    /// <summary>Toplam BTU = (Toplam Watt × 3.412) + Modül ısı yayılımı.</summary>
+    /// <summary>
+    /// Toplam ısı = toplam giriş watt × 3,412. Modül satırı bu toplama eklenmez;
+    /// modül wattı zaten toplam gücün içindedir.
+    /// </summary>
     public double HeatDissipationBtu =>
-        Math.Round(TotalMaxPowerWatts * 3.412 + (double)ModuleHeatDissipationBtu);
+        Math.Round(TotalMaxPowerWatts * 3.412);
 
     public bool HasMiniPc { get; set; }
     public decimal LaborCostMultiplier { get; set; } = 1m;

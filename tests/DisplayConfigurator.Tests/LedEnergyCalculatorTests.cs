@@ -25,6 +25,8 @@ public class LedEnergyCalculatorTests
         Assert.Equal(286.20m, result.DailyCostTry);
         Assert.Equal(2190.30m, result.MonthlyKwh);
         Assert.Equal(8585.98m, result.MonthlyCostTry);
+        Assert.Equal(26283.60m, result.YearlyKwh);
+        Assert.Equal(103031.76m, result.YearlyCostTry);
     }
 
     [Fact]

@@ -310,9 +310,9 @@ public class ConfigurationCalculatorTests
         Assert.Equal(2, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
         Assert.Equal(12160m, result.HardwareSubtotal);
 
-        // Modül ısı = 7200 × 3.412 = 24566.4; toplam BTU = (8000 × 3.412) + 24566.4
+        // Modül satırı yalnızca modül wattı. Toplam ısı giriş wattının bir kez çevrilmesidir.
         Assert.Equal(24566.4m, result.ModuleHeatDissipationBtu);
-        Assert.Equal(Math.Round(8000 * 3.412 + 24566.4), result.HeatDissipationBtu);
+        Assert.Equal(Math.Round(8000 * 3.412), result.HeatDissipationBtu);
     }
 
     [Fact]
