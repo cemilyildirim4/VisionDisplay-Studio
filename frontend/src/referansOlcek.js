@@ -1,3 +1,5 @@
+import { duvarDunyasi, dunyaDortgeni } from './homografi.js'
+
 /*
  * İKİ NOKTA REFERANSI → GERÇEK PİKSEL/SANTİM.
  *
@@ -177,5 +179,95 @@ export function kutuDortgeni(enCm, boyCm, pxCm, gorselW, gorselH, merkez = { x: 
     aciRad: a,
     koseler: yerel.map((p) => ({ x: mx + p.x / gorselW, y: my + p.y / gorselH })),
     tasiyor: nKapW > 1 || nKapH > 1,
+  }
+}
+
+/*
+ * DÖRT KÖŞE REFERANSI — PERSPEKTİF.
+ *
+ * İki nokta ölçek ve eğim veriyor ama PERSPEKTİF vermiyor: bir yön ve bir
+ * uzunluk derinlik hakkında hiçbir şey söylemez. Perspektif için ölçüsü
+ * bilinen bir DİKDÖRTGENİN dört köşesi gerekiyor — o zaman düzlemin
+ * homografisi tam olarak çıkıyor (8 bilinmeyen, 4 nokta çifti = 8 denklem).
+ *
+ * Alternatif, iki paralel çizgiden kaçış noktası çıkarmaktı; o yol
+ * "dikeyler görüntüde paralel" varsayımı gerektiriyor ve çizgiler görüntüde
+ * paralele yaklaştığında kaçış noktası sonsuza kaçıp sayısal olarak
+ * patlıyor. Dört köşe varsayımsız ve kararlı.
+ *
+ * DÜNYA BİRİMİ SANTİM. Projede metre de kullanılıyor ama referans ve kutu
+ * santim üzerinden konuşuyor; çevrimi tek yerde tutmak yerine burada hiç
+ * çevirmiyoruz.
+ *
+ * Köşeler normalize fotoğraf koordinatında geliyor, düzlem GÖRSEL
+ * PİKSELİNDE kuruluyor: normalize uzayda x ve y farklı ölçeklerle
+ * bölündüğü için oradaki açılar ve oranlar gerçek değil.
+ */
+export function referansDuzlemi(koseler, enCm, boyCm, gorselW, gorselH) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return null
+  if (!(gorselW > 0) || !(gorselH > 0)) return null
+  const en = santimOku(enCm)
+  const boy = santimOku(boyCm)
+  if (en === null || boy === null) return null
+  if (koseler.some((k) => !gecerliNokta(k))) return null
+  const px = koseler.map((k) => ({ x: k.x * gorselW, y: k.y * gorselH }))
+  /*
+   * ÇOK İNCE DÖRTGEN REDDEDİLİYOR.
+   *
+   * duvarDunyasi yalnızca alan/kapsayıcı oranına bakıyor; 100 × 1 piksellik
+   * bir şerit o denetimi geçiyor çünkü alanı kapsayıcısının tamamı. Oysa
+   * böyle bir referansta 1 piksellik işaretleme hatası homografiyi uçuruyor.
+   * Kısa kenar için iki nokta referansındakiyle aynı eşik kullanılıyor.
+   */
+  const kenar = [0, 1, 2, 3].map((i) => {
+    const a = px[i]
+    const b = px[(i + 1) % 4]
+    return Math.hypot(b.x - a.x, b.y - a.y)
+  })
+  if (Math.min(...kenar) < EN_AZ_PIKSEL) return null
+  const dunya = duvarDunyasi(px, en, boy)
+  if (!dunya) return null
+  return { dunya, enCm: en, boyCm: boy, gorselW, gorselH, enKisaKenarPx: Math.min(...kenar) }
+}
+
+/**
+ * Düzlemin ORTASI (dünya santimi) — kutunun varsayılan yeri.
+ */
+export function duzlemMerkezi(duzlem) {
+  if (!duzlem) return null
+  return { x: duzlem.enCm / 2, y: duzlem.boyCm / 2 }
+}
+
+/**
+ * Normalize fotoğraf noktası → düzlem üstünde santim.
+ */
+export function duzlemeDusur(duzlem, nokta) {
+  if (!duzlem || !gecerliNokta(nokta)) return null
+  return duzlem.dunya.geri(nokta.x * duzlem.gorselW, nokta.y * duzlem.gorselH)
+}
+
+/**
+ * Düzlem üstüne oturan kutunun dörtgeni — normalize fotoğraf koordinatında.
+ *
+ * Kutu dünyada bir DİKDÖRTGEN; fotoğrafta perspektif yüzünden yamuk
+ * görünüyor ve bu doğru olan. Dört köşe ayrı ayrı dönüştürülüyor: tek bir
+ * ölçekle çarpmak perspektifi yok sayardı.
+ *
+ * merkezDunya düzlemin dışına taşabilir — kutu referans dikdörtgeninden
+ * büyükse bu kaçınılmaz ve ölçüyü bozmamak için engellenmiyor.
+ */
+export function duzlemdeKutu(duzlem, enCm, boyCm, merkezDunya) {
+  if (!duzlem || !(enCm > 0) || !(boyCm > 0)) return null
+  const m = merkezDunya || duzlemMerkezi(duzlem)
+  if (!m || !Number.isFinite(m.x) || !Number.isFinite(m.y)) return null
+  const k = dunyaDortgeni(duzlem.dunya, m.x - enCm / 2, m.y - boyCm / 2, enCm, boyCm)
+  if (!k) return null
+  const n = k.map((q) => ({ x: q.x / duzlem.gorselW, y: q.y / duzlem.gorselH }))
+  if (n.some((q) => !Number.isFinite(q.x) || !Number.isFinite(q.y))) return null
+  return {
+    koseler: n,
+    dunyaMerkez: m,
+    /* Kadrajın tamamen dışına düşen kutu kullanıcıya bildirilsin. */
+    tasiyor: n.some((q) => q.x < 0 || q.x > 1 || q.y < 0 || q.y > 1),
   }
 }

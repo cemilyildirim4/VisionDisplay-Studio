@@ -470,6 +470,31 @@ const dict = {
     ar: 'لا يوجد مقياس بعد.',
   },
   'sih.olcuDegistir': { tr: 'Kutu ölçüsünü değiştir', en: 'Change box size', ar: 'تغيير مقاس المربع' },
+  'sih.tur.cizgi': { tr: 'İki nokta (uzunluk)', en: 'Two points (length)', ar: 'نقطتان (طول)' },
+  'sih.tur.dortgen': { tr: 'Dört köşe (perspektif)', en: 'Four corners (perspective)', ar: 'أربع زوايا (منظور)' },
+  'sih.1.aciklamaDort': {
+    tr: 'Ölçüsünü bildiğiniz bir DİKDÖRTGENİN dört köşesine sırayla tıklayın: sol üst, sağ üst, sağ alt, sol alt. Perspektif buradan çıkıyor.',
+    en: 'Click the four corners of a RECTANGLE whose size you know, in order: top-left, top-right, bottom-right, bottom-left. Perspective comes from this.',
+    ar: 'انقر على زوايا مستطيل تعرف مقاسه بالترتيب.',
+  },
+  'sih.1.durumDort': { tr: 'Köşe', en: 'Corner', ar: 'زاوية' },
+  'sih.2.aciklamaDort': {
+    tr: 'İşaretlediğiniz dikdörtgen gerçekte kaç santim? Önce eni, sonra boyu.',
+    en: 'What is the real size of the rectangle you marked? Width first, then height.',
+    ar: 'ما المقاس الحقيقي للمستطيل؟',
+  },
+  'sih.duzlemHazir': { tr: 'Düzlem hazır, perspektif hesaplandı', en: 'Plane ready, perspective solved', ar: 'المستوى جاهز' },
+  'sih.duzlemYok': {
+    tr: 'Dört köşenin gerçek en ve boyunu santim olarak yazın. Çok ince ya da bozuk bir dörtgen kabul edilmiyor.',
+    en: 'Type the real width and height in centimetres. A very thin or self-crossing quad is rejected.',
+    ar: 'اكتب العرض والارتفاع الحقيقيين بالسنتيمتر.',
+  },
+  'sih.4.aciklamaDuzlem': {
+    tr: 'Kutuyu gövdesinden tutup taşıyın. Perspektif düzlemden geliyor: kutu uzağa gittikçe kendiliğinden küçülüyor, köşe ayarı gerekmiyor.',
+    en: 'Drag the body to move the box. Perspective comes from the plane: it shrinks by itself as it moves away, no corner adjustment needed.',
+    ar: 'اسحب الجسم لتحريك المربع؛ المنظور يأتي من المستوى.',
+  },
+  'ref2.ipucuDort': { tr: 'Dikdörtgenin köşelerine sırayla tıklayın', en: 'Click the rectangle corners in order', ar: 'انقر على الزوايا بالترتيب' },
   'sih.egim': { tr: 'eğim', en: 'tilt', ar: 'الميل' },
   'sih.aciHizala': {
     tr: 'Kutuyu referansın eğimine göre döndür:',

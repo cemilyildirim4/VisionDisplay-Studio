@@ -20,7 +20,15 @@ import { useEffect, useRef, useState } from 'react'
 const R = 9
 const VURUS = 18
 
-export default function ReferansSecici({ noktalar = [], onDegis, tuvalW, tuvalH, ipucu, enAzPiksel = 0 }) {
+export default function ReferansSecici({
+  noktalar = [],
+  onDegis,
+  tuvalW,
+  tuvalH,
+  ipucu,
+  enAzPiksel = 0,
+  enCokNokta = 2,
+}) {
   const katmanRef = useRef(null)
   const surukleRef = useRef(null)
   const [secili, setSecili] = useState(0)
@@ -61,9 +69,9 @@ export default function ReferansSecici({ noktalar = [], onDegis, tuvalW, tuvalH,
     }
   }
 
-  /* Boş alana basmak yeni nokta koyuyor; iki nokta dolunca eklemiyor. */
+  /* Boş alana basmak yeni nokta koyuyor; kontenjan dolunca eklemiyor. */
   const katmanaBas = (e) => {
-    if (noktalar.length >= 2) return
+    if (noktalar.length >= enCokNokta) return
     const p = yerel(e)
     if (!p) return
     setSecili(noktalar.length)
@@ -91,9 +99,15 @@ export default function ReferansSecici({ noktalar = [], onDegis, tuvalW, tuvalH,
   }
 
   const [a, b] = noktalar
-  const uzunlukPx = a && b ? Math.hypot(b.x - a.x, b.y - a.y) : 0
-  const kisa = !!(a && b) && enAzPiksel > 0 && uzunlukPx < enAzPiksel
+  const cizgiKipi = enCokNokta === 2
+  const uzunlukPx = cizgiKipi && a && b ? Math.hypot(b.x - a.x, b.y - a.y) : 0
+  const kisa = cizgiKipi && !!(a && b) && enAzPiksel > 0 && uzunlukPx < enAzPiksel
   const renk = kisa ? '#d97706' : '#16a34a'
+  /*
+   * Dört köşe kipinde kapalı bir dörtgen çiziliyor: kullanıcı işaretlediği
+   * şeklin dikdörtgen olup olmadığını ancak böyle görüyor.
+   */
+  const dortgen = !cizgiKipi && noktalar.length === 4 ? noktalar.map((p) => `${p.x},${p.y}`).join(' ') : null
 
   return (
     <svg
@@ -101,7 +115,7 @@ export default function ReferansSecici({ noktalar = [], onDegis, tuvalW, tuvalH,
       width={tuvalW}
       height={tuvalH}
       className="absolute inset-0 z-30"
-      style={{ touchAction: 'none', cursor: noktalar.length < 2 ? 'crosshair' : 'default' }}
+      style={{ touchAction: 'none', cursor: noktalar.length < enCokNokta ? 'crosshair' : 'default' }}
       onPointerDown={katmanaBas}
       onPointerMove={hareket}
       onPointerUp={birak}
@@ -110,7 +124,11 @@ export default function ReferansSecici({ noktalar = [], onDegis, tuvalW, tuvalH,
       {/* Noktasız alan da tıklanabilir olmalı: saydam dolgu hedef oluyor. */}
       <rect x="0" y="0" width={tuvalW} height={tuvalH} fill="rgba(0,0,0,0.001)" />
 
-      {a && b && (
+      {dortgen && (
+        <polygon points={dortgen} fill="rgba(22,163,74,0.10)" stroke={renk} strokeWidth="2.5" strokeDasharray="8 5" />
+      )}
+
+      {cizgiKipi && a && b && (
         <>
           <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={renk} strokeWidth="2.5" strokeDasharray="8 5" />
           <g>

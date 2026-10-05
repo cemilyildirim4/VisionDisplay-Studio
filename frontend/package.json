@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node src/homografi.test.mjs && node src/referansOlcek.test.mjs"
+    "test": "node src/homografi.test.mjs && node src/referansOlcek.test.mjs && node src/referansDuzlem.test.mjs"
   },
   "dependencies": {
     "@fontsource/poppins": "^5.3.0",

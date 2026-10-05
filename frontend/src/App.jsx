@@ -23,6 +23,10 @@ import {
   santimOku,
   referansOlcek,
   referansAcisi,
+  referansDuzlemi,
+  duzlemMerkezi,
+  duzlemeDusur,
+  duzlemdeKutu,
   refOrtaNokta,
   kutuDortgeni,
   EN_AZ_PIKSEL,
@@ -652,6 +656,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [refNokta, setRefNokta] = useState([])
   const [refUzunlukCm, setRefUzunlukCm] = useState('')
+  /*
+   * REFERANS TÜRÜ.
+   *
+   *   'cizgi'   iki nokta + uzunluk  -> ölçek ve eğim, perspektif YOK
+   *   'dortgen' dört köşe + en × boy -> düzlemin tam homografisi, perspektif VAR
+   *
+   * İki nokta bir yön ve bir uzunluk verir; derinlik hakkında hiçbir şey
+   * söylemez. Perspektif ancak ölçüsü bilinen bir dikdörtgenin dört
+   * köşesinden çıkıyor (8 bilinmeyen, 4 nokta çifti = 8 denklem).
+   *
+   * İkisi birden duruyor: elinde uygun bir dikdörtgen yoksa çizgi kipi
+   * hâlâ ölçek veriyor.
+   */
+  const [refTur, setRefTur] = useState('cizgi')
+  const [refBoyCm, setRefBoyCm] = useState('')
   const [refKipi, setRefKipi] = useState(false)
   const [refMesaj, setRefMesaj] = useState(null)
   /*
@@ -1049,6 +1068,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        */
       setRefNokta([])
       setRefUzunlukCm('')
+      setRefBoyCm('')
+      setRefTur('cizgi')
       setRefMesaj(null)
       setRefEskidi(false)
       setOlcuKutu(null)
@@ -3415,13 +3436,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     [refNokta, refUzunlukCm, ozelSahne],
   )
   const refPxCm = refOlcek?.pxPerCm || null
+  /*
+   * DÜZLEM — yalnızca dört köşe kipinde.
+   *
+   * Varsa ölçek artık tek bir sayı değil: px/cm düzlemin her yerinde
+   * farklı ve bu doğru olan. Kutu dünyada santim cinsinden kurulup
+   * homografiyle fotoğrafa düşürülüyor.
+   */
+  const refDuzlem = useMemo(
+    () =>
+      refTur === 'dortgen'
+        ? referansDuzlemi(refNokta, refUzunlukCm, refBoyCm, ozelSahne?.kaynak?.w, ozelSahne?.kaynak?.h)
+        : null,
+    [refTur, refNokta, refUzunlukCm, refBoyCm, ozelSahne],
+  )
+
   /* Referans çizgisinin görseldeki eğimi — yalnızca düzlem içi dönme. */
   const refAci = useMemo(
     () => referansAcisi(refNokta[0], refNokta[1], ozelSahne?.kaynak?.w, ozelSahne?.kaynak?.h),
     [refNokta, ozelSahne],
   )
   /* Kutu ancak referans kurulduktan sonra oluşturulabiliyor. */
-  const kutuKurulabilir = !!(refPxCm && ozelSahne?.kaynak?.w > 0)
+  const kutuKurulabilir = !!((refPxCm || refDuzlem) && ozelSahne?.kaynak?.w > 0)
 
   /*
    * ÖLÇÜ KUTUSU — TEK KURUCU.
@@ -3438,19 +3474,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const o = kutuOlcusuOku()
     if (!o) return
     const kaynak = ozelSahne?.kaynak
-    if (!refPxCm || !(kaynak?.w > 0)) {
+    if ((!refPxCm && !refDuzlem) || !(kaynak?.w > 0)) {
       setKutuMesaj(t('ref2.onceReferans'))
       return
     }
-    const k = kutuDortgeni(
-      o.en,
-      o.boy,
-      refPxCm,
-      kaynak.w,
-      kaynak.h,
-      refOrtaNokta(refNokta[0], refNokta[1]),
-      refAciKullan ? refAci?.kutuAci || 0 : 0,
-    )
+    /*
+     * DÜZLEM VARSA KUTU ONUN ÜSTÜNE OTURUYOR.
+     *
+     * Kutu dünyada bir dikdörtgen; fotoğrafta perspektif yüzünden yamuk
+     * görünüyor ve bu doğru olan. Eğim ayrıca uygulanmıyor — düzlem
+     * zaten dönmeyi de içeriyor.
+     */
+    const k = refDuzlem
+      ? duzlemdeKutu(refDuzlem, o.en, o.boy, duzlemMerkezi(refDuzlem))
+      : kutuDortgeni(
+          o.en,
+          o.boy,
+          refPxCm,
+          kaynak.w,
+          kaynak.h,
+          refOrtaNokta(refNokta[0], refNokta[1]),
+          refAciKullan ? refAci?.kutuAci || 0 : 0,
+        )
     if (!k) {
       setKutuMesaj(t('ref2.onceReferans'))
       return
@@ -3563,6 +3608,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const olcuKutusuDegisti = (tuvalKoseler) => {
     if (!Array.isArray(tuvalKoseler) || tuvalKoseler.length !== 4) return
     const oranli = tuvalKoseler.map(tuvalOrana)
+    /*
+     * DÜZLEM KİPİNDE KUTU SERBEST BİR DÖRTGEN DEĞİL.
+     *
+     * Düzlem biliniyorsa kutunun perspektifi de belli; kullanıcının
+     * sürüklediği şekli olduğu gibi almak o bilgiyi çöpe atardı. Bunun
+     * yerine sürüklenen dörtgenin MERKEZİ dünyaya çevriliyor ve kutu o
+     * noktada yeniden kuruluyor. Sonuç: kutu taşındıkça perspektifi
+     * kendiliğinden düzeliyor — uzağa gidince küçülüyor.
+     */
+    if (refDuzlem && olcuKutu) {
+      const mn = {
+        x: oranli.reduce((t2, q) => t2 + q.x, 0) / 4,
+        y: oranli.reduce((t2, q) => t2 + q.y, 0) / 4,
+      }
+      const md = duzlemeDusur(refDuzlem, mn)
+      const k = md && duzlemdeKutu(refDuzlem, olcuKutu.enCm, olcuKutu.boyCm, md)
+      if (k) {
+        setHedefKose(k.koseler)
+        setTaslakKutu(k.koseler)
+        setHedefTur('taslak')
+        return
+      }
+    }
     setHedefKose(oranli)
     setTaslakKutu(oranli)
     setHedefTur('taslak')
@@ -4103,14 +4171,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             <ReferansSecici
               noktalar={refNokta.map(oranTuvale)}
               onDegis={refNoktaDegisti}
+              enCokNokta={refTur === 'dortgen' ? 4 : 2}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
               ipucu={
-                refNokta.length === 0
-                  ? t('ref2.ipucu1')
-                  : refNokta.length === 1
-                    ? t('ref2.ipucu2')
+                refTur === 'dortgen'
+                  ? refNokta.length < 4
+                    ? t('ref2.ipucuDort') + ' (' + (refNokta.length + 1) + '/4)'
                     : t('ref2.ipucu3')
+                  : refNokta.length === 0
+                    ? t('ref2.ipucu1')
+                    : refNokta.length === 1
+                      ? t('ref2.ipucu2')
+                      : t('ref2.ipucu3')
               }
             />
           )}
@@ -4145,7 +4218,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * tasarımı taşırken kutunun açısı yanlışlıkla bozulamıyor.
                */
               soluk={!kutuKipi}
-              koseKapali={!kutuKipi}
+              /*
+               * Düzlem kipinde köşe tutamağı yok: perspektif düzlemden
+               * geliyor, köşeyi elle çekmek o bilgiyi bozardı. Kutu yalnızca
+               * taşınıyor ve taşındıkça perspektifi kendiliğinden düzeliyor.
+               */
+              koseKapali={!kutuKipi || !!refDuzlem}
               etiket={tasarimGizli ? t('kutu.tiklaGoster') : kutuKipi ? t('ref2.konumIpucu') : null}
             />
           )}
@@ -4937,6 +5015,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             refOlcek={refOlcek}
                             refPxCm={refPxCm}
                             refAci={refAci}
+                            refTur={refTur}
+                            setRefTur={(tur) => {
+                              setRefTur(tur)
+                              setRefNokta([])
+                              setRefKipi(true)
+                            }}
+                            refBoyCm={refBoyCm}
+                            setRefBoyCm={setRefBoyCm}
+                            refDuzlem={refDuzlem}
                             refAciKullan={refAciKullan}
                             setRefAciKullan={setRefAciKullan}
                             kutuEn={kutuEn}

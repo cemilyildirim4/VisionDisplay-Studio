@@ -42,6 +42,11 @@ export default function OlcuSihirbazi({
   refAci,
   refAciKullan,
   setRefAciKullan,
+  refTur,
+  setRefTur,
+  refBoyCm,
+  setRefBoyCm,
+  refDuzlem,
   /* 3. adım */
   kutuEn,
   setKutuEn,
@@ -101,18 +106,47 @@ export default function OlcuSihirbazi({
         {/* 1 — İKİ NOKTA */}
         {adim === 1 && (
           <>
+            {/*
+              REFERANS TÜRÜ.
+
+              İki nokta ölçek ve eğim veriyor; perspektif ancak ölçüsü
+              bilinen bir dikdörtgenin dört köşesinden çıkıyor.
+            */}
+            <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+              {[
+                ['cizgi', t('sih.tur.cizgi')],
+                ['dortgen', t('sih.tur.dortgen')],
+              ].map(([tur, ad]) => (
+                <button
+                  key={tur}
+                  type="button"
+                  onClick={() => setRefTur(tur)}
+                  className={`rounded-md px-2 py-1.5 text-[12px] font-semibold leading-tight transition-colors ${
+                    refTur === tur
+                      ? 'bg-brand text-white'
+                      : 'border border-neutral-200 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400'
+                  }`}
+                >
+                  {ad}
+                </button>
+              ))}
+            </div>
             <p className="mt-1.5 mb-0 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
-              {t('sih.1.aciklama')}
+              {refTur === 'dortgen' ? t('sih.1.aciklamaDort') : t('sih.1.aciklama')}
             </p>
             <p className="mt-1 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">
               {t('ref2.duzlemUyari')}
             </p>
             <p className="mt-1.5 mb-0 text-[12.5px] font-medium text-brand">
-              {refNoktaSayisi === 0
-                ? t('sih.1.durum0')
-                : refNoktaSayisi === 1
-                  ? t('sih.1.durum1')
-                  : t('sih.1.durum2')}
+              {refTur === 'dortgen'
+                ? refNoktaSayisi < 4
+                  ? t('sih.1.durumDort') + ' ' + (refNoktaSayisi + 1) + '/4'
+                  : t('sih.1.durum2')
+                : refNoktaSayisi === 0
+                  ? t('sih.1.durum0')
+                  : refNoktaSayisi === 1
+                    ? t('sih.1.durum1')
+                    : t('sih.1.durum2')}
             </p>
             <div className="mt-2 flex items-center gap-1.5">
               {refNoktaSayisi > 0 && (
@@ -120,7 +154,12 @@ export default function OlcuSihirbazi({
                   {t('sih.1.tekrar')}
                 </button>
               )}
-              <button type="button" onClick={onIleri} disabled={refNoktaSayisi < 2} className={ana}>
+              <button
+                type="button"
+                onClick={onIleri}
+                disabled={refNoktaSayisi < (refTur === 'dortgen' ? 4 : 2)}
+                className={ana}
+              >
                 {t('sih.devam')}
               </button>
             </div>
@@ -131,9 +170,9 @@ export default function OlcuSihirbazi({
         {adim === 2 && (
           <>
             <p className="mt-1.5 mb-0 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
-              {t('sih.2.aciklama')}
+              {refTur === 'dortgen' ? t('sih.2.aciklamaDort') : t('sih.2.aciklama')}
             </p>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex items-center gap-1.5">
               <input
                 type="number"
                 min="0.1"
@@ -141,12 +180,36 @@ export default function OlcuSihirbazi({
                 autoFocus
                 value={refUzunlukCm}
                 onChange={(e) => setRefUzunlukCm(e.target.value)}
-                placeholder={t('ref2.uzunlukPh')}
+                placeholder={refTur === 'dortgen' ? t('ref.en') : t('ref2.uzunlukPh')}
                 className={girdi}
               />
+              {refTur === 'dortgen' && (
+                <>
+                  <span className="text-[13px] text-neutral-400">×</span>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={refBoyCm}
+                    onChange={(e) => setRefBoyCm(e.target.value)}
+                    placeholder={t('ref.boy')}
+                    className={girdi}
+                  />
+                </>
+              )}
               <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
             </div>
-            {refPxCm ? (
+            {refTur === 'dortgen' ? (
+              refDuzlem ? (
+                <p className="mt-1.5 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
+                  {t('sih.duzlemHazir')} — {refDuzlem.enCm} × {refDuzlem.boyCm} cm
+                </p>
+              ) : (
+                <p className="mt-1.5 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">
+                  {t('sih.duzlemYok')}
+                </p>
+              )
+            ) : refPxCm ? (
               <p className="mt-1.5 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
                 {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
                 <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
@@ -166,7 +229,12 @@ export default function OlcuSihirbazi({
               <button type="button" onClick={onGeri} className={yan}>
                 {t('sih.geri')}
               </button>
-              <button type="button" onClick={onIleri} disabled={!refPxCm} className={ana}>
+              <button
+                type="button"
+                onClick={onIleri}
+                disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                className={ana}
+              >
                 {t('sih.devam')}
               </button>
             </div>
@@ -209,7 +277,7 @@ export default function OlcuSihirbazi({
               buradan ÇIKMAZ, onu kullanıcı köşelerden veriyor. Kapatılabilir
               olması şart: köşegen bir referansın eğimi kutuyla ilgisizdir.
             */}
-            {refAci && Math.abs(refAci.kutuAci) > 0.0005 && (
+            {!refDuzlem && refAci && Math.abs(refAci.kutuAci) > 0.0005 && (
               <label className="mt-2 flex items-start gap-2 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
                 <input
                   type="checkbox"
@@ -241,7 +309,7 @@ export default function OlcuSihirbazi({
         {adim === 4 && (
           <>
             <p className="mt-1.5 mb-0 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
-              {t('sih.4.aciklama')}
+              {refDuzlem ? t('sih.4.aciklamaDuzlem') : t('sih.4.aciklama')}
             </p>
             <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
               {t('sih.4.ipucu')}
