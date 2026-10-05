@@ -10,6 +10,7 @@ import {
   referansOlcek,
   refOrtaNokta,
   kutuDortgeni,
+  referansAcisi,
   EN_AZ_PIKSEL,
 } from './referansOlcek.js'
 
@@ -190,5 +191,100 @@ console.log('\nI) OLCEK YAKINLASTIRMADAN BAGIMSIZ')
   esit('yari cozunurlukte olcek yari', yari.pxPerCm.x, a.pxPerCm.x / 2, 1e-9)
 }
 
+console.log()
+console.log('J) REFERANS ACISI — IKI NOKTADAN CIKAN TEK ACI')
+{
+  const d = (x, y) => ({ x: x / W, y: y / H })
+  /* Saf yatay ve saf dikey */
+  esit('yatay cizgi 0 derece', referansAcisi(d(100, 500), d(900, 500), W, H).derece, 0, 1e-9)
+  esit('dikey cizgi 90 derece', Math.abs(referansAcisi(d(500, 100), d(500, 900), W, H).derece), 90, 1e-9)
+  /* 3-4-5: 900 yatay, 1200 dikey -> atan(1200/900) = 53,13 derece */
+  esit('3-4-5 egimi', referansAcisi(d(100, 100), d(1000, 1300), W, H).derece, (Math.atan2(1200, 900) * 180) / Math.PI, 1e-9)
+  /* 45 derece */
+  esit('45 derece', referansAcisi(d(100, 100), d(600, 600), W, H).derece, 45, 1e-9)
+  /* Yon fark etmiyor: cizginin yonu yok */
+  esit('ters yonde ayni aci', referansAcisi(d(900, 560), d(100, 500), W, H).derece, referansAcisi(d(100, 500), d(900, 560), W, H).derece, 1e-9)
+  /* Normalize uzayda hesaplasaydik yanlis cikardi: x ve y farkli bolunuyor */
+  {
+    const a = referansAcisi(d(100, 100), d(900, 700), W, H)
+    const yanlis = (Math.atan2((700 - 100) / H, (900 - 100) / W) * 180) / Math.PI
+    console.log(`     gorsel pikselinde ${a.derece.toFixed(3)} derece, normalize uzayda ${yanlis.toFixed(3)} derece`)
+    dogru('normalize uzaydaki aci FARKLI (o yuzden piksel uzayinda hesaplaniyor)', Math.abs(a.derece - yanlis) > 1)
+  }
+  dogru('nokta yoksa null', referansAcisi(null, d(1, 1), W, H) === null)
+  dogru('ayni nokta -> null', referansAcisi(d(5, 5), d(5, 5), W, H) === null)
+}
+
+console.log()
+console.log('K) KUTUYU REFERANSA HIZALAMA')
+{
+  const d = (x, y) => ({ x: x / W, y: y / H })
+  /* Yataya yakin cizgi: kutunun ENI cizgiye paralel */
+  const yat = referansAcisi(d(100, 500), d(900, 560), W, H)
+  dogru('yataya yakin', yat.dikeyeYakin === false)
+  esit('kutuAci = cizgi acisi', yat.kutuAci, yat.rad, 1e-12)
+  /* Dikeye yakin cizgi: kutunun BOYU cizgiye paralel, kutu 90 derece donmuyor */
+  const dik = referansAcisi(d(500, 100), d(560, 900), W, H)
+  dogru('dikeye yakin', dik.dikeyeYakin === true)
+  dogru('kutuAci 45 dereceden kucuk', Math.abs((dik.kutuAci * 180) / Math.PI) < 45, ((dik.kutuAci * 180) / Math.PI).toFixed(2) + ' derece')
+}
+
+console.log()
+console.log('L) DONMUS KUTU — OLCU BOZULMUYOR')
+{
+  const pxCm = { x: 20, y: 20 }
+  const aci = (30 * Math.PI) / 180
+  const k = kutuDortgeni(30, 21, pxCm, W, H, { x: 0.5, y: 0.5 }, aci)
+  /* Kenarlari GORSEL pikselinde olc: normalize -> piksel */
+  const gp = (q) => ({ x: q.x * W, y: q.y * H })
+  const p = k.koseler.map(gp)
+  const uz = (i, j) => Math.hypot(p[j].x - p[i].x, p[j].y - p[i].y)
+  console.log(`     30x21 cm, 30 derece donmus -> kenarlar ${uz(0, 1).toFixed(3)} ve ${uz(1, 2).toFixed(3)} px`)
+  esit('en kenari 30 x 20 = 600 px', uz(0, 1), 600, 1e-6)
+  esit('karsi kenar ayni', uz(3, 2), 600, 1e-6)
+  esit('boy kenari 21 x 20 = 420 px', uz(1, 2), 420, 1e-6)
+  esit('karsi kenar ayni', uz(0, 3), 420, 1e-6)
+  /* Dik acilar korunuyor mu? */
+  const nokta = (i, j, k2) => {
+    const ux = p[j].x - p[i].x
+    const uy = p[j].y - p[i].y
+    const vx = p[k2].x - p[j].x
+    const vy = p[k2].y - p[j].y
+    return (ux * vx + uy * vy) / (Math.hypot(ux, uy) * Math.hypot(vx, vy))
+  }
+  esit('kose 1 dik (cos = 0)', nokta(0, 1, 2), 0, 1e-12)
+  esit('kose 2 dik (cos = 0)', nokta(1, 2, 3), 0, 1e-12)
+  /* Kutunun en ekseni gercekten 30 derecede mi? */
+  const enAci = (Math.atan2(p[1].y - p[0].y, p[1].x - p[0].x) * 180) / Math.PI
+  esit('en ekseni 30 derece', enAci, 30, 1e-9)
+  esit('aciRad geri donuyor', k.aciRad, aci, 1e-12)
+}
+
+console.log()
+console.log('M) KULLANICININ KATALOGU — kutu referans egiminde dogmali')
+{
+  /* Katalogun ust kenari: (415,70) -> (1900,150) */
+  const a = referansAcisi(k1, k2, W, H)
+  console.log(`     referans egimi: ${a.derece.toFixed(3)} derece`)
+  esit('egim atan2(80, 1485)', a.derece, (Math.atan2(80, 1485) * 180) / Math.PI, 1e-9)
+  dogru('yataya yakin, kutu eni hizalanacak', a.dikeyeYakin === false)
+  const olcek = referansOlcek(k1, k2, 30, W, H)
+  const kutu = kutuDortgeni(30, 21, olcek.pxPerCm, W, H, refOrtaNokta(k1, k2), a.kutuAci)
+  const p = kutu.koseler.map((q) => ({ x: q.x * W, y: q.y * H }))
+  const enAci = (Math.atan2(p[1].y - p[0].y, p[1].x - p[0].x) * 180) / Math.PI
+  esit('kutunun en ekseni referansla ayni acida', enAci, a.derece, 1e-9)
+  esit('kutu eni hala 30 x px/cm', Math.hypot(p[1].x - p[0].x, p[1].y - p[0].y), 30 * olcek.pxPerCm.x, 1e-6)
+  esit('kutu boyu hala 21 x px/cm', Math.hypot(p[3].x - p[0].x, p[3].y - p[0].y), 21 * olcek.pxPerCm.x, 1e-6)
+}
+
+console.log()
+console.log('N) ACI VERILMEZSE ESKI DAVRANIS')
+{
+  const pxCm = { x: 20, y: 20 }
+  const a = kutuDortgeni(30, 21, pxCm, W, H, { x: 0.5, y: 0.5 })
+  const b = kutuDortgeni(30, 21, pxCm, W, H, { x: 0.5, y: 0.5 }, 0)
+  dogru('aci yoksa eksenlere paralel', Math.abs(a.koseler[0].y - a.koseler[1].y) < 1e-12)
+  dogru('0 ile ayni sonuc', a.koseler.every((q, i) => Math.abs(q.x - b.koseler[i].x) < 1e-12))
+}
 console.log(`\n${kalan === 0 ? 'TUMU GECTI' : 'BASARISIZ'}  (gecen ${gecen}, kalan ${kalan})`)
 if (kalan > 0) process.exit(1)

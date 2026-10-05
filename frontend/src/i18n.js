@@ -470,6 +470,12 @@ const dict = {
     ar: 'لا يوجد مقياس بعد.',
   },
   'sih.olcuDegistir': { tr: 'Kutu ölçüsünü değiştir', en: 'Change box size', ar: 'تغيير مقاس المربع' },
+  'sih.egim': { tr: 'eğim', en: 'tilt', ar: 'الميل' },
+  'sih.aciHizala': {
+    tr: 'Kutuyu referansın eğimine göre döndür:',
+    en: 'Rotate the box to match the reference tilt:',
+    ar: 'تدوير المربع حسب ميل المرجع:',
+  },
   'sih.devam': { tr: 'Devam', en: 'Next', ar: 'التالي' },
   'sih.geri': { tr: 'Geri', en: 'Back', ar: 'رجوع' },
   'sih.kapat': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },

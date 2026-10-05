@@ -21,6 +21,7 @@ import { salonOlcek } from './Salon.jsx'
 import {
   santimOku,
   referansOlcek,
+  referansAcisi,
   refOrtaNokta,
   kutuDortgeni,
   EN_AZ_PIKSEL,
@@ -672,6 +673,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * konumlandırma kipine girmeden değişmiyor.
    */
   const [kutuKipi, setKutuKipi] = useState(false)
+  /*
+   * Kutu, referans çizgisinin eğiminde mi doğsun?
+   *
+   * İki noktadan çıkarılabilen tek açı bu (bkz. referansAcisi): düzlem içi
+   * dönme. Duvarın yatay bir kenarı referans alındıysa kutu da o eğimde
+   * doğuyor ve kullanıcının elle düzeltmesi gereken iş azalıyor.
+   *
+   * Kapatılabilir olması şart: köşegen bir mesafe referans alınırsa (örneğin
+   * kataloğun köşeden köşeye uzunluğu) o eğim kutuyla ilgisiz olur.
+   */
+  const [refAciKullan, setRefAciKullan] = useState(true)
   /*
    * ÖLÇÜ SİHİRBAZI — kaçıncı adım (0 = kapalı).
    *
@@ -3386,6 +3398,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     [refNokta, refUzunlukCm, ozelSahne],
   )
   const refPxCm = refOlcek?.pxPerCm || null
+  /* Referans çizgisinin görseldeki eğimi — yalnızca düzlem içi dönme. */
+  const refAci = useMemo(
+    () => referansAcisi(refNokta[0], refNokta[1], ozelSahne?.kaynak?.w, ozelSahne?.kaynak?.h),
+    [refNokta, ozelSahne],
+  )
   /* Kutu ancak referans kurulduktan sonra oluşturulabiliyor. */
   const kutuKurulabilir = !!(refPxCm && ozelSahne?.kaynak?.w > 0)
 
@@ -3415,6 +3432,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       kaynak.w,
       kaynak.h,
       refOrtaNokta(refNokta[0], refNokta[1]),
+      refAciKullan ? refAci?.kutuAci || 0 : 0,
     )
     if (!k) {
       setKutuMesaj(t('ref2.onceReferans'))
@@ -4901,6 +4919,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             setRefUzunlukCm={setRefUzunlukCm}
                             refOlcek={refOlcek}
                             refPxCm={refPxCm}
+                            refAci={refAci}
+                            refAciKullan={refAciKullan}
+                            setRefAciKullan={setRefAciKullan}
                             kutuEn={kutuEn}
                             setKutuEn={setKutuEn}
                             kutuBoy={kutuBoy}

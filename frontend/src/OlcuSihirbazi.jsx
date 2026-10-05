@@ -39,6 +39,9 @@ export default function OlcuSihirbazi({
   setRefUzunlukCm,
   refOlcek,
   refPxCm,
+  refAci,
+  refAciKullan,
+  setRefAciKullan,
   /* 3. adım */
   kutuEn,
   setKutuEn,
@@ -147,6 +150,12 @@ export default function OlcuSihirbazi({
               <p className="mt-1.5 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
                 {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
                 <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
+                {refAci && (
+                  <>
+                    {' · '}
+                    {t('sih.egim')} {refAci.derece.toFixed(1).replace('.', ',')}°
+                  </>
+                )}
               </p>
             ) : (
               <p className="mt-1.5 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">
@@ -193,6 +202,27 @@ export default function OlcuSihirbazi({
               />
               <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
             </div>
+            {/*
+              REFERANS EĞİMİNE HİZALAMA.
+
+              İki noktadan çıkarılabilen tek açı düzlem içi dönme; perspektif
+              buradan ÇIKMAZ, onu kullanıcı köşelerden veriyor. Kapatılabilir
+              olması şart: köşegen bir referansın eğimi kutuyla ilgisizdir.
+            */}
+            {refAci && Math.abs(refAci.kutuAci) > 0.0005 && (
+              <label className="mt-2 flex items-start gap-2 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={refAciKullan}
+                  onChange={(e) => setRefAciKullan(e.target.checked)}
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                />
+                <span>
+                  {t('sih.aciHizala')}{' '}
+                  <strong>{((refAci.kutuAci * 180) / Math.PI).toFixed(1).replace('.', ',')}°</strong>
+                </span>
+              </label>
+            )}
             {kutuMesaj && (
               <p className="mt-1.5 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">{kutuMesaj}</p>
             )}

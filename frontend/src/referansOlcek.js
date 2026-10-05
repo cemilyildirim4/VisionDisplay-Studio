@@ -95,6 +95,41 @@ export function refOrtaNokta(n1, n2) {
 }
 
 /**
+ * REFERANS ÇİZGİSİNİN GÖRSELDEKİ EĞİMİ.
+ *
+ * İki noktadan çıkarılabilen tek açı budur: çizginin DÜZLEM İÇİ dönmesi.
+ *   açı = atan2(dy, dx)   (orijinal görsel pikselinde)
+ *
+ * PERSPEKTİF BURADAN ÇIKMAZ. İki nokta bir yön ve bir uzunluk verir,
+ * derinlik hakkında hiçbir şey vermez; kaçış noktası için ya iki ayrı
+ * paralel çizgi çifti ya da dört köşe gerekir. Dörtgenin 8 serbestlik
+ * derecesi varken iki nokta 4 sayı veriyor. Bu yüzden kutu referansın
+ * EĞİMİNDE doğuyor, perspektifini kullanıcı köşelerden veriyor.
+ *
+ * Açı normalize koordinatta DEĞİL, görsel pikselinde hesaplanıyor: normalize
+ * uzayda x ve y farklı ölçeklerle bölündüğü için oradaki açı gerçek açı
+ * değil.
+ *
+ * kutuAci, kutuya uygulanacak dönme: çizgi yataya yakınsa kutunun ENİ,
+ * dikeye yakınsa BOYU çizgiye paralel oluyor. Böylece kapı yüksekliğini
+ * referans alan kullanıcıda kutu 90 derece yan dönmüyor.
+ */
+export function referansAcisi(n1, n2, gorselW, gorselH) {
+  if (!gecerliNokta(n1) || !gecerliNokta(n2)) return null
+  if (!(gorselW > 0) || !(gorselH > 0)) return null
+  const dx = (n2.x - n1.x) * gorselW
+  const dy = (n2.y - n1.y) * gorselH
+  if (!dx && !dy) return null
+  /* Çizginin yönü yok: açı 180°'de tekrar ediyor, (-90°, 90°] aralığına indiriliyor. */
+  let rad = Math.atan2(dy, dx)
+  if (rad > Math.PI / 2) rad -= Math.PI
+  if (rad <= -Math.PI / 2) rad += Math.PI
+  const dikeyeYakin = Math.abs(rad) > Math.PI / 4
+  const kutuAci = dikeyeYakin ? rad - Math.sign(rad) * (Math.PI / 2) : rad
+  return { rad, derece: (rad * 180) / Math.PI, kutuAci, dikeyeYakin }
+}
+
+/**
  * Kutunun başlangıç dörtgeni — normalize fotoğraf koordinatında.
  *
  * Mutlak büyüklük doğrudan fiziksel hesaptan geliyor:
@@ -104,25 +139,43 @@ export function refOrtaNokta(n1, n2) {
  * Kadraja sığmıyorsa KÜÇÜLTÜLMÜYOR: küçültmek ölçüyü yalanlamak olurdu.
  * Olduğu gibi dönüyor ve `tasiyor` ile bildiriliyor.
  */
-export function kutuDortgeni(enCm, boyCm, pxCm, gorselW, gorselH, merkez = { x: 0.5, y: 0.5 }) {
+export function kutuDortgeni(enCm, boyCm, pxCm, gorselW, gorselH, merkez = { x: 0.5, y: 0.5 }, aciRad = 0) {
   if (!pxCm || !(pxCm.x > 0) || !(pxCm.y > 0)) return null
   if (!(enCm > 0) || !(boyCm > 0) || !(gorselW > 0) || !(gorselH > 0)) return null
   const pxW = enCm * pxCm.x
   const pxH = boyCm * pxCm.y
-  const nW = pxW / gorselW
-  const nH = pxH / gorselH
-  /* Merkez, dörtgen fotoğrafın dışına taşmayacak biçimde kısıtlanıyor. */
-  const mx = Math.min(1 - nW / 2, Math.max(nW / 2, merkez?.x ?? 0.5))
-  const my = Math.min(1 - nH / 2, Math.max(nH / 2, merkez?.y ?? 0.5))
+  const a = Number.isFinite(aciRad) ? aciRad : 0
+  const cos = Math.cos(a)
+  const sin = Math.sin(a)
+
+  /*
+   * DÖRTGEN ÖNCE GÖRSEL PİKSELİNDE KURULUYOR, SONRA NORMALİZE EDİLİYOR.
+   *
+   * Normalize uzayda x ve y farklı sayılara bölünüyor; orada uygulanan bir
+   * dönme dikdörtgeni EĞREK yapar — dik açılar bozulur, kenar uzunlukları
+   * değişir. Köşeler bu yüzden piksel uzayında döndürülüp öyle normalize
+   * ediliyor.
+   */
+  const yariW = pxW / 2
+  const yariH = pxH / 2
+  const yerel = [
+    { x: -yariW, y: -yariH },
+    { x: yariW, y: -yariH },
+    { x: yariW, y: yariH },
+    { x: -yariW, y: yariH },
+  ].map((p) => ({ x: p.x * cos - p.y * sin, y: p.x * sin + p.y * cos }))
+
+  /* Dönmüş dörtgenin kapsayıcı kutusu — merkezi kadrajın içinde tutmak için. */
+  const nKapW = (2 * Math.max(...yerel.map((p) => Math.abs(p.x)))) / gorselW
+  const nKapH = (2 * Math.max(...yerel.map((p) => Math.abs(p.y)))) / gorselH
+  const mx = Math.min(1 - nKapW / 2, Math.max(nKapW / 2, merkez?.x ?? 0.5))
+  const my = Math.min(1 - nKapH / 2, Math.max(nKapH / 2, merkez?.y ?? 0.5))
+
   return {
     pxW,
     pxH,
-    koseler: [
-      { x: mx - nW / 2, y: my - nH / 2 },
-      { x: mx + nW / 2, y: my - nH / 2 },
-      { x: mx + nW / 2, y: my + nH / 2 },
-      { x: mx - nW / 2, y: my + nH / 2 },
-    ],
-    tasiyor: nW > 1 || nH > 1,
+    aciRad: a,
+    koseler: yerel.map((p) => ({ x: mx + p.x / gorselW, y: my + p.y / gorselH })),
+    tasiyor: nKapW > 1 || nKapH > 1,
   }
 }
