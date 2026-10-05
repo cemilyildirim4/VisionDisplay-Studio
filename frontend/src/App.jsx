@@ -705,6 +705,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [refAciKullan, setRefAciKullan] = useState(true)
   /*
+   * PERSPEKTİF — TEK ÇUBUKLA.
+   *
+   * İki noktadan perspektif ÇIKMAZ: bir yön ve bir uzunluk derinlik
+   * bilgisi taşımaz, kaçış noktası için ikinci bir paralel çizgi ya da
+   * dört köşe gerekir. Bu sayı o yüzden ÖLÇÜLMÜŞ değil, kullanıcının
+   * verdiği bir ayar — ama dört köşeyi tek tek çekmek yerine tek çubukla.
+   * Dört köşe referansı (refDuzlem) varken gizli: orada perspektif zaten
+   * ölçülmüş oluyor.
+   */
+  const [refPerspektif, setRefPerspektif] = useState({ yatay: 0, dikey: 0 })
+  /*
    * ÖLÇÜ SİHİRBAZI — kaçıncı adım (0 = kapalı).
    *
    * Dört iş tek blokta duruyordu ve sırası belli olmuyordu: noktaları
@@ -1070,6 +1081,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setRefUzunlukCm('')
       setRefBoyCm('')
       setRefTur('cizgi')
+      setRefPerspektif({ yatay: 0, dikey: 0 })
       setRefMesaj(null)
       setRefEskidi(false)
       setOlcuKutu(null)
@@ -3493,6 +3505,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             refAciKullan ? refAci?.kutuAci || 0 : 0,
           ),
           refAciKullan ? refAci?.kutuAci || 0 : 0,
+          refPerspektif,
         )
     if (!k) {
       setKutuMesaj(t('ref2.onceReferans'))
@@ -3567,6 +3580,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setRefNokta(tuvalNoktalari.map(tuvalOrana))
     setRefMesaj(null)
     if (olcuKutu) setRefEskidi(true)
+  }
+
+  /*
+   * PERSPEKTİF ÇUBUĞU OYNATILDI — KUTUYU YENİDEN KUR.
+   *
+   * Kutunun o anki MERKEZİ korunuyor, yalnızca şekli değişiyor. Fiziksel
+   * ölçü (enCm/boyCm) hiç değişmiyor: kutu dünyada aynı dikdörtgen,
+   * yalnızca fotoğraftaki görünümü yamuluyor.
+   */
+  const perspektifiAyarla = (yeni) => {
+    setRefPerspektif(yeni)
+    const kaynak = ozelSahne?.kaynak
+    if (!olcuKutu || refDuzlem || !refPxCm || !(kaynak?.w > 0)) return
+    if (!Array.isArray(hedefKose) || hedefKose.length !== 4) return
+    const k = kutuDortgeni(
+      olcuKutu.enCm,
+      olcuKutu.boyCm,
+      refPxCm,
+      kaynak.w,
+      kaynak.h,
+      koseMerkezi(hedefKose),
+      refAciKullan ? refAci?.kutuAci || 0 : 0,
+      yeni,
+    )
+    if (!k) return
+    setHedefKose(k.koseler)
+    setTaslakKutu(k.koseler)
+    setHedefTur('taslak')
   }
 
   /** Referansı sıfırla ve işaretleme kipini aç. */
@@ -5033,6 +5074,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             refBoyCm={refBoyCm}
                             setRefBoyCm={setRefBoyCm}
                             refDuzlem={refDuzlem}
+                            refPerspektif={refPerspektif}
+                            onPerspektif={perspektifiAyarla}
                             refAciKullan={refAciKullan}
                             setRefAciKullan={setRefAciKullan}
                             kutuEn={kutuEn}
@@ -5093,7 +5136,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 {/* Kip kapalıyken kutuya dokunulamıyor ve açısı değişemiyor. */}
                                 <button
                                   type="button"
-                                  onClick={() => setKutuKipi((v) => !v)}
+                                  /*
+                                   * Konumlandırma 4. adımda yapılıyor; perspektif
+                                   * çubuğu da orada. Aynı işi iki ayrı yerde yapmak
+                                   * hangisinin geçerli olduğunu belirsizleştiriyordu.
+                                   */
+                                  onClick={() => {
+                                    setKutuKipi(true)
+                                    setSihirbazAdim(4)
+                                  }}
                                   className={`mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium transition-opacity ${
                                     kutuKipi
                                       ? 'bg-brand text-white hover:opacity-90'

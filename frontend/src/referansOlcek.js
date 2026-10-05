@@ -226,7 +226,16 @@ export function kutuYerlesimMerkezi(n1, n2, enCm, boyCm, pxCm, gorselW, gorselH,
  * Kadraja sığmıyorsa KÜÇÜLTÜLMÜYOR: küçültmek ölçüyü yalanlamak olurdu.
  * Olduğu gibi dönüyor ve `tasiyor` ile bildiriliyor.
  */
-export function kutuDortgeni(enCm, boyCm, pxCm, gorselW, gorselH, merkez = { x: 0.5, y: 0.5 }, aciRad = 0) {
+export function kutuDortgeni(
+  enCm,
+  boyCm,
+  pxCm,
+  gorselW,
+  gorselH,
+  merkez = { x: 0.5, y: 0.5 },
+  aciRad = 0,
+  perspektif = null,
+) {
   if (!pxCm || !(pxCm.x > 0) || !(pxCm.y > 0)) return null
   if (!(enCm > 0) || !(boyCm > 0) || !(gorselW > 0) || !(gorselH > 0)) return null
   const pxW = enCm * pxCm.x
@@ -245,12 +254,39 @@ export function kutuDortgeni(enCm, boyCm, pxCm, gorselW, gorselH, merkez = { x: 
    */
   const yariW = pxW / 2
   const yariH = pxH / 2
+
+  /*
+   * PERSPEKTİF — TEK SAYIYLA.
+   *
+   * İki noktadan perspektif ÇIKMAZ: bir yön ve bir uzunluk derinlik
+   * hakkında hiçbir şey söylemez, kaçış noktası için ikinci bir paralel
+   * çizgi ya da dört köşe gerekir. Buradaki sayı o yüzden ÖLÇÜLMÜŞ değil,
+   * kullanıcının verdiği bir ayar — ama dört köşeyi tek tek çekmek yerine
+   * tek bir çubukla veriliyor.
+   *
+   * yatay > 0  : sağ kenar uzakta (kısalıyor)
+   * yatay < 0  : sol kenar uzakta
+   * dikey > 0  : alt kenar uzakta
+   *
+   * Sonuç bir YAMUK. Her dışbükey dörtgen bir dikdörtgenin geçerli
+   * perspektif görüntüsüdür, dolayısıyla buradan kurulan düzlem de
+   * geçerli: tasarım o düzleme oturunca doğru küçülüyor.
+   */
+  const py = Math.max(-0.8, Math.min(0.8, Number(perspektif?.yatay) || 0))
+  const pd = Math.max(-0.8, Math.min(0.8, Number(perspektif?.dikey) || 0))
+  /* Uzak kenarın yakın kenara oranı. */
+  const sagOlcek = (1 - py) / (1 + py)
+  const altOlcek = (1 - pd) / (1 + pd)
+  /* Köşe sırası: sol üst, sağ üst, sağ alt, sol alt. */
   const yerel = [
     { x: -yariW, y: -yariH },
-    { x: yariW, y: -yariH },
-    { x: yariW, y: yariH },
+    { x: yariW, y: -yariH * sagOlcek },
+    { x: yariW, y: yariH * sagOlcek },
     { x: -yariW, y: yariH },
-  ].map((p) => ({ x: p.x * cos - p.y * sin, y: p.x * sin + p.y * cos }))
+  ]
+    /* Dikey perspektif: üst/alt kenarların genişliği değişiyor. */
+    .map((p, i) => (i === 2 || i === 3 ? { x: p.x * altOlcek, y: p.y } : p))
+    .map((p) => ({ x: p.x * cos - p.y * sin, y: p.x * sin + p.y * cos }))
 
   /* Dönmüş dörtgenin kapsayıcı kutusu — merkezi kadrajın içinde tutmak için. */
   const nKapW = (2 * Math.max(...yerel.map((p) => Math.abs(p.x)))) / gorselW
@@ -262,6 +298,7 @@ export function kutuDortgeni(enCm, boyCm, pxCm, gorselW, gorselH, merkez = { x: 
     pxW,
     pxH,
     aciRad: a,
+    perspektif: { yatay: py, dikey: pd },
     koseler: yerel.map((p) => ({ x: mx + p.x / gorselW, y: my + p.y / gorselH })),
     tasiyor: nKapW > 1 || nKapH > 1,
   }
