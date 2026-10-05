@@ -22,6 +22,7 @@ import {
   santimOku,
   referansOlcek,
   referansAcisi,
+  kutuYerlesimMerkezi,
   referansDuzlemi,
   duzlemMerkezi,
   duzlemeDusur,
@@ -3476,7 +3477,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           refPxCm,
           kaynak.w,
           kaynak.h,
-          refOrtaNokta(refNokta[0], refNokta[1]),
+          /*
+           * Kutu referansın ORTASINA değil, YANINA kuruluyor: referans
+           * çizgisi kutunun kenarı oluyor ve kutu boş tarafa açılıyor.
+           * Hangi tarafın boş olduğu ölçülüyor (bkz. kutuYerlesimMerkezi).
+           */
+          kutuYerlesimMerkezi(
+            refNokta[0],
+            refNokta[1],
+            o.en,
+            o.boy,
+            refPxCm,
+            kaynak.w,
+            kaynak.h,
+            refAciKullan ? refAci?.kutuAci || 0 : 0,
+          ),
           refAciKullan ? refAci?.kutuAci || 0 : 0,
         )
     if (!k) {

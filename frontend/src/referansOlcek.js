@@ -132,6 +132,91 @@ export function referansAcisi(n1, n2, gorselW, gorselH) {
 }
 
 /**
+ * KUTUNUN BAŞLANGIÇ MERKEZİ — REFERANSTAN YANA DOĞRU.
+ *
+ * Kutu önce referans çizgisinin TAM ORTASINA kuruluyordu. Kullanıcı
+ * fotoğrafın solunda bir yeri referans aldığında kutu o referansın üstüne
+ * biniyor ve sağdaki boş alan kullanılmıyordu.
+ *
+ * Yeni kural: referans çizgisi kutunun KENARI oluyor, kutu da boş tarafa
+ * doğru açılıyor. Solda işaretlenirse sağa, sağda işaretlenirse sola.
+ *
+ * Hangi taraf "boş": iki aday merkez de (referans yönünde ileri ve geri)
+ * denenip kadrajdan taşma miktarı ölçülüyor, az taşan seçiliyor. Eşitlikte
+ * fotoğrafın ortasına yakın olan kazanıyor. Yön tahmin edilmiyor,
+ * ÖLÇÜLÜYOR — eğik bir referansta "sol/sağ" bakmak yanıltırdı.
+ *
+ * Hesap görsel pikselinde: normalize uzayda x ve y farklı ölçeklerle
+ * bölündüğü için oradaki yön ve uzunluk gerçek değil.
+ */
+export function kutuYerlesimMerkezi(n1, n2, enCm, boyCm, pxCm, gorselW, gorselH, aciRad = 0) {
+  const orta = refOrtaNokta(n1, n2)
+  if (!gecerliNokta(n1) || !gecerliNokta(n2)) return orta
+  if (!pxCm || !(pxCm.x > 0) || !(enCm > 0) || !(boyCm > 0)) return orta
+  if (!(gorselW > 0) || !(gorselH > 0)) return orta
+
+  const pxW = enCm * pxCm.x
+  const pxH = boyCm * pxCm.y
+  const yariW = pxW / 2
+  const yariH = pxH / 2
+  const cos = Math.cos(aciRad)
+  const sin = Math.sin(aciRad)
+  /* Dönmüş kutunun köşeleri, merkeze göre. */
+  const yerel = [
+    { x: -yariW, y: -yariH },
+    { x: yariW, y: -yariH },
+    { x: yariW, y: yariH },
+    { x: -yariW, y: yariH },
+  ].map((p) => ({ x: p.x * cos - p.y * sin, y: p.x * sin + p.y * cos }))
+
+  const ortaPx = { x: orta.x * gorselW, y: orta.y * gorselH }
+  /* Taşma: dört köşenin kadraj dışında kalan toplam uzaklığı. */
+  const tasma = (m) =>
+    yerel.reduce((t, p) => {
+      const x = m.x + p.x
+      const y = m.y + p.y
+      return (
+        t +
+        Math.max(0, -x) +
+        Math.max(0, x - gorselW) +
+        Math.max(0, -y) +
+        Math.max(0, y - gorselH)
+      )
+    }, 0)
+
+  /*
+   * KAYDIRMA YÖNÜ KUTUNUN KENDİ EN EKSENİ, REFERANSIN YÖNÜ DEĞİL.
+   *
+   * Kullanıcı dikey bir şeyi (kapı yüksekliği gibi) referans aldığında
+   * kutunun BOYU o çizgiye paralel oluyor; referans yönünde kaydırmak kutuyu
+   * aşağı itiyordu. Kutu kendi genişlik ekseninde kaydırılıyor.
+   */
+  const ex = cos
+  const ey = sin
+
+  /*
+   * ÜÇ ADAY: referansın sağına, soluna, ya da tam üstüne ortalanmış.
+   * Kadrajdan en az taşan kazanıyor. "Ortala" adayı da yarışta, çünkü
+   * referans fotoğrafın ortasındaysa kenara dayamanın anlamı yok.
+   */
+  const adaylar = [
+    { ad: 20, m: { x: ortaPx.x + ex * yariW, y: ortaPx.y + ey * yariW } },
+    { ad: 20, m: { x: ortaPx.x - ex * yariW, y: ortaPx.y - ey * yariW } },
+    /* Ortalama adayına küçük bir ceza: eşit taşmada kenar tercih edilsin. */
+    { ad: 0, m: ortaPx },
+  ].map((a) => ({ ...a, puan: tasma(a.m) }))
+
+  const mx = gorselW / 2
+  const my = gorselH / 2
+  adaylar.sort((a, b) => {
+    if (Math.abs(a.puan - b.puan) > 1) return a.puan - b.puan
+    if (a.ad !== b.ad) return b.ad - a.ad
+    return Math.hypot(a.m.x - mx, a.m.y - my) - Math.hypot(b.m.x - mx, b.m.y - my)
+  })
+  const secilen = adaylar[0].m
+  return { x: secilen.x / gorselW, y: secilen.y / gorselH }
+}
+/**
  * Kutunun başlangıç dörtgeni — normalize fotoğraf koordinatında.
  *
  * Mutlak büyüklük doğrudan fiziksel hesaptan geliyor:
