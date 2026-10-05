@@ -33,6 +33,7 @@ import {
 } from './referansOlcek.js'
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
+import KalinlikKatmani from './KalinlikKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
@@ -4176,6 +4177,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Ölçü kutusunun ÜSTÜNDE duruyor: referans kipi açıkken kutuyu
             yanlışlıkla sürüklemek yerine nokta konmalı.
           */}
+          {/*
+            KABİN KALINLIĞI — tasarımın yan yüzü.
+
+            Yalnızca duvarın düzlemi biliniyorken çiziliyor: orada tasarımın
+            dörtgeni kesin (dunyaDortgeni) ve yan yüz doğrudan ondan
+            türetiliyor, yerleşime hiç dokunmuyor. Düz bakışta kendiliğinden
+            gizleniyor (bkz. KalinlikKatmani).
+          */}
+          {duvarDunya && !tasarimGizli && koseMutlak && scene === 'ozel' && ozelSahne && (
+            <KalinlikKatmani
+              koseler={koseMutlak}
+              derinlikMm={previewModel?.depthMm}
+              tasarimHm={tasarimHm}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+            />
+          )}
+
           {refKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
               noktalar={refNokta.map(oranTuvale)}
