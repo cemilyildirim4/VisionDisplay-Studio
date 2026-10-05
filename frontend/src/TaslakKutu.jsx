@@ -97,17 +97,25 @@ export default function TaslakKutu({
   const mx = koseler.reduce((t, k) => t + k.x, 0) / 4
   const my = koseler.reduce((t, k) => t + k.y, 0) / 4
 
-  /* Bir köşeyi sürükle: fare hareketi doğrudan o köşeye gidiyor. */
+  /*
+   * Bir köşeyi sürükle.
+   *
+   * Köşe FARENİN BULUNDUĞU NOKTAYA değil, farenin GİTTİĞİ KADAR gidiyor.
+   * Mutlak konum kullanılınca tutamağın ortasından değil kenarından tutmak
+   * köşeyi o fark kadar anında atlatıyordu; vuruş alanı tutamaktan geniş
+   * olduğu için bu fark 16 piksele kadar çıkabiliyordu.
+   */
   const koseSurukle = (i) => (e) => {
     e.preventDefault()
     e.stopPropagation()
     const hedef = e.currentTarget
     hedef.setPointerCapture?.(e.pointerId)
-    const kutu = hedef.ownerSVGElement.getBoundingClientRect()
+    const fareX = e.clientX
+    const fareY = e.clientY
+    const bas = koseler[i]
     const tasi = (ev) => {
-      const yeni = koseler.map((k, j) =>
-        j === i ? kis({ x: ev.clientX - kutu.left, y: ev.clientY - kutu.top }) : k,
-      )
+      const p = kis({ x: bas.x + (ev.clientX - fareX), y: bas.y + (ev.clientY - fareY) })
+      const yeni = koseler.map((k, j) => (j === i ? p : k))
       /*
        * BOZUK DÖRTGEN KABUL EDİLMİYOR.
        *

@@ -15,7 +15,36 @@ import { dortgenGecerli, perspektifGecerli } from './homografi.js'
 
 const ADLAR = ['Sol üst', 'Sağ üst', 'Sağ alt', 'Sol alt']
 
-export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH }) {
+export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH, sinir = null }) {
+  /*
+   * KÖŞE FAREYE SIÇRAMIYOR, FAREYLE BİRLİKTE GİDİYOR.
+   *
+   * Sürükleme köşeyi doğrudan FARENİN BULUNDUĞU NOKTAYA koyuyordu. İki
+   * sonucu vardı ve ikincisi yıkıcıydı:
+   *
+   *  1. Tutamağın ortasından değil kenarından tutulursa köşe o farkı
+   *     anında atlıyordu.
+   *  2. Tutamak, köşe kadrajın dışına düşerse kenara sabitleniyor (aşağıda,
+   *     "TUTAMAK HER ZAMAN KADRAJIN İÇİNDE"). O tutamağa dokunulduğu anda
+   *     köşe gerçek yerinden tutamağın bulunduğu kenara IŞINLANIYORDU —
+   *     tek piksellik bir harekette dörtgenin tamamı değişiyordu.
+   *
+   * Artık basıldığı andaki fare ve köşe konumu saklanıp köşeye yalnızca
+   * ARADAKİ FARK uygulanıyor. Tutamağın neresinden tutulduğunun önemi yok.
+   *
+   * Köşeler fotoğrafın dışına da çıkamıyor; çıkamadığı için tutamak da
+   * gerçek köşeden kopmuyor, yani ışınlanmanın zemini tamamen kalkıyor.
+   */
+  const S = {
+    sol: sinir?.sol ?? 0,
+    ust: sinir?.ust ?? 0,
+    sag: sinir?.sag ?? tuvalW,
+    alt: sinir?.alt ?? tuvalH,
+  }
+  const kis = (p) => ({
+    x: Math.max(S.sol, Math.min(S.sag, p.x)),
+    y: Math.max(S.ust, Math.min(S.alt, p.y)),
+  })
   const [secili, setSecili] = useState(0)
   const surukleRef = useRef(null)
   const katmanRef = useRef(null)
@@ -31,7 +60,7 @@ export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH }) {
       e.preventDefault()
       const adim = e.shiftKey ? 10 : 1
       const yeni = koseler.map((k, i) =>
-        i === secili ? { x: k.x + yon[0] * adim, y: k.y + yon[1] * adim } : k,
+        i === secili ? kis({ x: k.x + yon[0] * adim, y: k.y + yon[1] * adim }) : k,
       )
       /* Perspektif paydası sıfırı geçerse çizim yalanıyor; o hareket de kabul edilmiyor. */
       if (dortgenGecerli(yeni) && perspektifGecerli(yeni)) onDegis(yeni)
@@ -46,15 +75,15 @@ export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH }) {
     setSecili(i)
     e.currentTarget.setPointerCapture?.(e.pointerId)
     const kutu = katmanRef.current?.getBoundingClientRect()
-    surukleRef.current = { i, kutu }
+    /* Fare ve köşenin BAŞLANGIÇ konumu: hareket bunların farkından çıkıyor. */
+    surukleRef.current = { i, kutu, fareX: e.clientX, fareY: e.clientY, bas: koseler[i] }
   }
 
   const hareket = (e) => {
     const s = surukleRef.current
-    if (!s || !s.kutu) return
-    const x = Math.max(0, Math.min(tuvalW, e.clientX - s.kutu.left))
-    const y = Math.max(0, Math.min(tuvalH, e.clientY - s.kutu.top))
-    const yeni = koseler.map((k, i) => (i === s.i ? { x, y } : k))
+    if (!s || !s.kutu || !s.bas) return
+    const p = kis({ x: s.bas.x + (e.clientX - s.fareX), y: s.bas.y + (e.clientY - s.fareY) })
+    const yeni = koseler.map((k, i) => (i === s.i ? p : k))
     /*
      * Geçersiz (kendini kesen) dörtgen kabul edilmiyor: kelebek biçimine giren
      * bir dörtgende homografi ekranı ters çeviriyor.

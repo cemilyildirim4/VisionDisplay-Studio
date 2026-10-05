@@ -104,20 +104,28 @@ export default function ReferansSecici({
     onDegis([...noktalar, p])
   }
 
+  /*
+   * İŞARET FAREYE SIÇRAMIYOR.
+   *
+   * Sürükleme işareti doğrudan farenin bulunduğu noktaya koyuyordu; vuruş
+   * alanı işaretten geniş olduğu için (VURUS 18, halka 4,5) tutamağın
+   * kenarından tutmak işareti 18 piksele kadar atlatabiliyordu. Referansın
+   * hassasiyeti doğrudan ölçeğe geçtiği için bu kabul edilemez. Artık
+   * yalnızca farenin gittiği kadar gidiyor.
+   */
   const noktayaBas = (i) => (e) => {
     e.preventDefault()
     e.stopPropagation()
     setSecili(i)
     e.currentTarget.setPointerCapture?.(e.pointerId)
-    surukleRef.current = i
+    surukleRef.current = { i, fareX: e.clientX, fareY: e.clientY, bas: noktalar[i] }
   }
 
   const hareket = (e) => {
-    const i = surukleRef.current
-    if (i === null || i === undefined) return
-    const p = yerel(e)
-    if (!p) return
-    onDegis(noktalar.map((q, j) => (j === i ? p : q)))
+    const s = surukleRef.current
+    if (!s || !s.bas) return
+    const p = kis({ x: s.bas.x + (e.clientX - s.fareX), y: s.bas.y + (e.clientY - s.fareY) })
+    onDegis(noktalar.map((q, j) => (j === s.i ? p : q)))
   }
 
   const birak = () => {

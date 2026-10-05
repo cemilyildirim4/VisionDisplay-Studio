@@ -4517,6 +4517,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               onDegis={koseleriTasi}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
+              /* Köşeler fotoğrafın dışına çıkamıyor. */
+              sinir={fotoSinir}
             />
           )}
         </main>
