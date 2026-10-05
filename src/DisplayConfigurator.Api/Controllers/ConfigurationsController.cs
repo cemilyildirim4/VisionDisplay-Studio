@@ -182,8 +182,12 @@ public class ConfigurationsController : ControllerBase
 
         try
         {
+            var reportKind = ResolvePdfKind(dto.Kind);
+            if (reportKind == PdfReportKind.Admin)
+                ApplyAdminDefaults(dto);
+
             var pdfBytes = await _configurationService.GenerateSpecSheetPdfFromDtoAsync(
-                dto, dto.ToExtras(), PdfReportKind.Client);
+                dto, dto.ToExtras(), reportKind);
 
             if (pdfBytes == null || pdfBytes.Length == 0)
             {
@@ -192,7 +196,8 @@ public class ConfigurationsController : ControllerBase
                     statusCode: StatusCodes.Status400BadRequest);
             }
 
-            return File(pdfBytes, "application/pdf", "Musteri_Rapor.pdf");
+            var fileName = reportKind == PdfReportKind.Admin ? "Ic_Rapor.pdf" : "Musteri_Rapor.pdf";
+            return File(pdfBytes, "application/pdf", fileName);
         }
         catch (ArgumentException ex)
         {
@@ -209,6 +214,29 @@ public class ConfigurationsController : ControllerBase
                 detail: null,
                 statusCode: StatusCodes.Status500InternalServerError);
         }
+    }
+
+    /// <summary>
+    /// Admin raporu iletişim formu beklemez. Boş kalan müşteri alanları oturum
+    /// ve firma kartındaki sabit metinlerle doldurulur.
+    /// </summary>
+    private void ApplyAdminDefaults(PdfReportRequestDto dto)
+    {
+        var name = User.FindFirstValue("displayName");
+        var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+
+        if (string.IsNullOrWhiteSpace(dto.ProjectName))
+            dto.ProjectName = "Admin raporu";
+        if (string.IsNullOrWhiteSpace(dto.CustomerName))
+            dto.CustomerName = string.IsNullOrWhiteSpace(name) ? "Admin" : name.Trim();
+        if (string.IsNullOrWhiteSpace(dto.Phone))
+            dto.Phone = "(0216) 415 52 52";
+        if (string.IsNullOrWhiteSpace(dto.Email))
+            dto.Email = string.IsNullOrWhiteSpace(email) ? "info@masaustutasarim.com.tr" : email.Trim();
+        if (string.IsNullOrWhiteSpace(dto.Address))
+            dto.Address = "İnönü Mah., Kayışdağı Cd. No: 198/A, 34750 Ataşehir/İstanbul";
+        if (string.IsNullOrWhiteSpace(dto.Message))
+            dto.Message = "İç kullanım raporu. Alanlar admin oturumuna göre otomatik dolduruldu.";
     }
 
     private PdfReportKind ResolvePdfKind(string? kind)

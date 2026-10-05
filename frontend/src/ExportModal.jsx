@@ -8,6 +8,7 @@ import PrivacyModal from './PrivacyModal.jsx'
 import { API_URL, apiFetch } from './apiClient.js'
 import { rowsToXlsxBlob } from './xlsx.js'
 import { useSession } from './SessionContext.jsx'
+import { CONTACT } from './contactInfo.js'
 import {
   compactPhone,
   parseProblemErrors,
@@ -81,7 +82,7 @@ async function resolveMiniPcFields(hasMiniPc) {
 
 export default function ExportModal({ open, onClose, summary }) {
   const { t, lang } = useLang()
-  const { isAuthenticated, session } = useSession()
+  const { isAuthenticated, isAdmin, session, displayName, email: accountEmail } = useSession()
   /*
    * FİRMA BİLGİLERİ ARTIK BURADA SORULMUYOR.
    *
@@ -91,11 +92,15 @@ export default function ExportModal({ open, onClose, summary }) {
    * farklı kayıtlar oluşturuyordu. Bu ekranda yalnızca RAPORA ÖZGÜ iki şey
    * kaldı: model onayı ve aydınlatma metni.
    */
-  const customer = session?.firma || session?.displayName || ''
-  const phone = session?.firmaTelefon || ''
-  const email = session?.firmaEposta || session?.email || ''
-  const address = ''
-  const message = session?.firmaNot || ''
+  const customer = isAdmin
+    ? (displayName || 'Admin')
+    : (session?.firma || session?.displayName || '')
+  const phone = isAdmin ? CONTACT.phoneDisplay : (session?.firmaTelefon || '')
+  const email = isAdmin ? (accountEmail || CONTACT.email) : (session?.firmaEposta || session?.email || '')
+  const address = isAdmin ? CONTACT.address : ''
+  const message = isAdmin
+    ? 'İç kullanım raporu. Alanlar admin oturumuna göre otomatik dolduruldu.'
+    : (session?.firmaNot || '')
   // Model seçimi onayı — zorunlu, yalnızca PDF'e not olarak geçer ('yes' | 'no')
   const [modelOnay, setModelOnay] = useState('')
   const [consent, setConsent] = useState(false)
@@ -170,9 +175,9 @@ export default function ExportModal({ open, onClose, summary }) {
    * Müşterinin kendi mesajı varsa altında, olduğu gibi korunur.
    */
   const onayNotu = modelOnay ? `${t('exp.modelSureNote')}: ${modelOnay === 'yes' ? t('common.yes') : t('common.no')}` : ''
-  const mesajNotlu = [onayNotu, message.trim()].filter(Boolean).join('\n')
-  // PDF/Excel: KVKK onayı + model sorusu + oturum, üçü birden
-  const hazir = consent && !!modelOnay && isAuthenticated
+  const mesajNotlu = isAdmin ? message : [onayNotu, message.trim()].filter(Boolean).join('\n')
+  // Admin raporu form beklemez. Bayi tarafında KVKK + model onayı + oturum gerekir.
+  const hazir = isAuthenticated && (isAdmin || (consent && !!modelOnay))
   /*
    * NEDEN KAPALI OLDUĞUNU SÖYLE.
    *
@@ -180,11 +185,13 @@ export default function ExportModal({ open, onClose, summary }) {
    * hiçbir şey olmuyordu ve kullanıcı "çalışmıyor" diye düşünüyordu.
    * Eksik olan ne varsa artık düğmenin hemen altında yazıyor.
    */
-  const eksikler = [
-    !modelOnay && t('exp.missingModel'),
-    !consent && t('exp.missingConsent'),
-    !isAuthenticated && t('exp.missingLogin'),
-  ].filter(Boolean)
+  const eksikler = isAdmin
+    ? [!isAuthenticated && t('exp.missingLogin')].filter(Boolean)
+    : [
+        !modelOnay && t('exp.missingModel'),
+        !consent && t('exp.missingConsent'),
+        !isAuthenticated && t('exp.missingLogin'),
+      ].filter(Boolean)
 
   /**
    * İndirme kaydını sunucuya bildirir.
@@ -241,7 +248,7 @@ export default function ExportModal({ open, onClose, summary }) {
   const handleExport = async () => {
     if (busy) return
     // Zorunlu alan: düğme zaten kilitli, bu ikinci koruma (klavye/otomasyon)
-    if (!modelOnay) {
+    if (!isAdmin && !modelOnay) {
       alert(t('exp.modelSureMissing'))
       return
     }
@@ -281,6 +288,7 @@ export default function ExportModal({ open, onClose, summary }) {
           email: email.trim() || null,
           address: address.trim() || null,
           message: mesajNotlu || null,
+          kind: isAdmin ? 'admin' : 'client',
           screenType: summary.screenType || null,
           resolution: summary.resolution || null,
           screensSummary: screensText.join(' · '),
@@ -306,6 +314,7 @@ export default function ExportModal({ open, onClose, summary }) {
         const fieldErrors = parseProblemErrors(err)
         if (Object.keys(fieldErrors).length > 0) {
           setErrors(fieldErrors)
+          setFormError(Object.values(fieldErrors).join(' '))
           return
         }
         throw new Error(err.detail || (err.title && err.title !== 'Doğrulama Hatası' ? err.title : null) || t('exp.error'))
@@ -314,7 +323,7 @@ export default function ExportModal({ open, onClose, summary }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `Musteri_Rapor_${summary.modelCode || belgeNo}.pdf`
+      a.download = `${isAdmin ? 'Ic_Rapor' : 'Musteri_Rapor'}_${summary.modelCode || belgeNo}.pdf`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -444,7 +453,7 @@ export default function ExportModal({ open, onClose, summary }) {
         {(customer || phone || email) && (
           <div className="mb-4 rounded-xl border border-neutral-200 dark:border-[#2c333f] px-3.5 py-2.5">
             <div className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">
-              {t('exp.company')}
+              {isAdmin ? 'Admin raporu' : t('exp.company')}
             </div>
             <div className="mt-0.5 text-[14px] font-semibold text-neutral-900 dark:text-neutral-100">{customer || '—'}</div>
             {(phone || email) && (
@@ -452,17 +461,18 @@ export default function ExportModal({ open, onClose, summary }) {
                 {[phone, email].filter(Boolean).join(' · ')}
               </div>
             )}
+            {isAdmin && address && (
+              <div className="mt-0.5 text-[13px] text-neutral-500 dark:text-neutral-400">{address}</div>
+            )}
+            {isAdmin && (
+              <p className="mt-1.5 mb-0 text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                Alanlar admin oturumuna göre doldurulur. Ek bilgi girmeniz gerekmez.
+              </p>
+            )}
           </div>
         )}
-        {/*
-          MODEL SEÇİMİ ONAYI — zorunlu.
-
-          Rapor, müşterinin seçtiği modele göre üretiliyor; satış tarafında
-          "müşteri modelden emin miydi?" sorusunun cevabı sonradan
-          bilinemiyordu. Bu yüzden Evet/Hayır zorunlu: boş bırakılamaz,
-          seçilmeden PDF/Excel düğmeleri açılmaz. Cevap yalnızca PDF'e NOT
-          olarak yazılır — tasarımı, ölçüleri veya fiyatı etkilemez.
-        */}
+        {!isAdmin && (
+        <>
         <div className="mb-4">
           <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
             {t('exp.modelSure')} <span className="text-brand">*</span>
@@ -498,6 +508,8 @@ export default function ExportModal({ open, onClose, summary }) {
         </button>
 
         <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
+        </>
+        )}
 
         {!hazir && eksikler.length > 0 && (
           <p className="mb-4 m-0 text-[13px] leading-relaxed text-amber-600 dark:text-amber-400">

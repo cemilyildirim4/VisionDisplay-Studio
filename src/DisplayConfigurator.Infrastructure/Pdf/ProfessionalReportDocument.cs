@@ -532,6 +532,8 @@ public class ProfessionalReportDocument : IDocument
                 }
             });
 
+            column.Item().Element(c => ComposeEnergy(c, areaM2, total));
+
             if (_isAdmin)
             {
                 column.Item().Element(c => ComposeAdminHardware(c, areaM2, maxW, avgW, avgBtu));
@@ -541,6 +543,70 @@ public class ProfessionalReportDocument : IDocument
                 column.Item().Element(ComposeClientPackage);
                 column.Item().Element(ComposeClientTotalPrice);
             }
+        });
+    }
+
+    /// <summary>
+    /// Günlük kWh = m² × (W/m²) × saat / 1000. Saat ve gün raporda varsayılan
+    /// olarak 12 ve 30'dur; tutar birim fiyata bağlı olduğu için basılmaz.
+    /// </summary>
+    private void ComposeEnergy(IContainer container, double areaM2, int panelCount)
+    {
+        const decimal hours = 12m;
+        const int days = 30;
+        decimal avgWatts = _config.TotalAvgPowerKw > 0
+            ? _config.TotalAvgPowerKw * 1000m
+            : _config.TotalMaxPowerKw * 1000m;
+        if (avgWatts <= 0 || areaM2 <= 0 || panelCount <= 0) return;
+
+        decimal wattsPerM2 = Math.Round(avgWatts / (decimal)areaM2, 2, MidpointRounding.AwayFromZero);
+        decimal squareMeters = Math.Round((decimal)areaM2, 2, MidpointRounding.AwayFromZero);
+        string panelType = _cabin is { PixelPitchMm: > 0 }
+            ? $"P {_cabin.PixelPitchMm:0.##}"
+            : Empty(_config.CabinModelName, "LED");
+
+        LedEnergyResult energy;
+        try
+        {
+            energy = LedEnergyCalculator.Calculate(new LedEnergyInput
+            {
+                PanelType = panelType,
+                PanelCount = panelCount,
+                DailyHours = hours,
+                DaysPerMonth = days,
+                WattsPerSquareMeter = wattsPerM2,
+                TotalSquareMeters = squareMeters,
+                PricePerKwh = 0m,
+            });
+        }
+        catch (LedEnergyValidationException)
+        {
+            return;
+        }
+
+        container.PaddingTop(12).Column(column =>
+        {
+            column.Item().Text("LED enerji tüketimi").FontSize(12).Bold().FontColor(BrandBlue);
+            column.Item().PaddingTop(5).Table(table =>
+            {
+                table.ColumnsDefinition(c =>
+                {
+                    c.RelativeColumn(2);
+                    c.RelativeColumn(3);
+                });
+
+                bool alt = true;
+                AddRow(table, "Panel tipi", energy.PanelType, ref alt);
+                AddRow(table, "Panel sayısı", $"{energy.PanelCount} adet", ref alt);
+                AddRow(table, "Toplam LED alanı", $"{energy.TotalSquareMeters:F2} m²", ref alt);
+                AddRow(table, "1 m² saatlik tüketim", $"{energy.WattsPerSquareMeter:F2} W", ref alt);
+                AddRow(table, "Günlük çalışma", $"{energy.DailyHours:0} saat", ref alt);
+                AddRow(table, "Günlük tüketim", $"{energy.DailyKwh:F2} kWh", ref alt);
+                AddRow(table, "Aylık tüketim", $"{energy.MonthlyKwh:F2} kWh ({energy.DaysPerMonth} gün)", ref alt);
+            });
+            column.Item().PaddingTop(4).Text(
+                    "Varsayılan: günde 12 saat, ayda 30 gün. Tüketim tipik güçten hesaplanır. Elektrik tutarı birim fiyata bağlıdır ve bu raporda yer almaz.")
+                .FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
         });
     }
 

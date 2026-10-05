@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using DisplayConfigurator.Application.Validation;
 
 namespace DisplayConfigurator.Application.DTOs;
 
@@ -8,11 +7,19 @@ namespace DisplayConfigurator.Application.DTOs;
 /// </summary>
 public class PdfReportRequestDto : CreateConfigurationDto
 {
-    [RequiredFilled, StringLength(500)]
+    /// <summary>
+    /// Adres ve mesaj raporda varsa yazılır. Dışa aktarma formu bunları artık
+    /// sormuyor; boş gitmeleri doğrulama hatası değildir.
+    /// </summary>
+    [StringLength(500)]
     public string? Address { get; set; }
 
-    [RequiredFilled, StringLength(2000)]
+    [StringLength(2000)]
     public string? Message { get; set; }
+
+    /// <summary>admin veya client. Admin olmayan çağrıda yok sayılır.</summary>
+    [StringLength(20)]
+    public string? Kind { get; set; }
 
     [StringLength(20)]
     public string? ScreenType { get; set; }

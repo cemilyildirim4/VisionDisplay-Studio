@@ -6,7 +6,6 @@ import MultiScreenModal from './MultiScreenModal.jsx'
 import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
-import EnergyEstimate from './EnergyEstimate.jsx'
 import { useConfigurationPreview } from './useConfigurationPreview.js'
 import Oturtma from './Oturtma.jsx'
 import { computeSpecs, fmt } from './specsData.js'
@@ -1532,22 +1531,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     hasMiniPc,
     enabled: !!selectedModel?.id,
   })
-
-  const energyDefaults = useMemo(() => {
-    if (!previewModel) return null
-    const w = (previewModel.widthMm || 0) / 1000
-    const h = (previewModel.heightMm || 0) / 1000
-    const cabinetArea = w * h
-    const watt = cabinetArea > 0
-      ? Math.round((Number(previewModel.powerTypicalWatts || previewModel.powerMaxWatts || 0) / cabinetArea) * 100) / 100
-      : ''
-    return {
-      panelType: previewModel.pixelPitchMm ? `P ${previewModel.pixelPitchMm}` : '',
-      panelCount: cols * rows,
-      totalSquareMeters: Math.round(cabinetArea * cols * rows * 100) / 100,
-      wattsPerSquareMeter: watt || '',
-    }
-  }, [previewModel, cols, rows])
 
   const cwM = (previewModel?.widthMm || 500) / 1000
   const chM = (previewModel?.heightMm || 500) / 1000
@@ -5510,8 +5493,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             {t('pdf.professional')}
           </button>
           </div>
-
-          <EnergyEstimate defaults={energyDefaults} />
 
           {/*
             Gizlilik ve Güvenlik Notu — sağ panelin en altında, iletişim/PDF
