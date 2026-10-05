@@ -494,7 +494,6 @@ const dict = {
     en: 'Drag the body to move the box. Perspective comes from the plane: it shrinks by itself as it moves away, no corner adjustment needed.',
     ar: 'اسحب الجسم لتحريك المربع؛ المنظور يأتي من المستوى.',
   },
-  'ref2.ipucuDort': { tr: 'Dikdörtgenin köşelerine sırayla tıklayın', en: 'Click the rectangle corners in order', ar: 'انقر على الزوايا بالترتيب' },
   'sih.egim': { tr: 'eğim', en: 'tilt', ar: 'الميل' },
   'sih.aciHizala': {
     tr: 'Kutuyu referansın eğimine göre döndür:',
@@ -591,21 +590,6 @@ const dict = {
     tr: 'Bu ölçü fotoğrafın kadrajından büyük. Kutu küçültülmedi; dışarı taşıyor.',
     en: 'This size is larger than the photo frame. The box was not shrunk; it extends beyond.',
     ar: 'هذا المقاس أكبر من إطار الصورة.',
-  },
-  'ref2.ipucu1': {
-    tr: 'Bilinen uzunluğun BİRİNCİ ucuna tıklayın',
-    en: 'Click the FIRST end of the known length',
-    ar: 'انقر على الطرف الأول',
-  },
-  'ref2.ipucu2': {
-    tr: 'Şimdi İKİNCİ ucuna tıklayın',
-    en: 'Now click the SECOND end',
-    ar: 'انقر الآن على الطرف الثاني',
-  },
-  'ref2.ipucu3': {
-    tr: 'Noktaları sürükleyerek ayarlayın — ok tuşları 1 px, Shift ile 10 px',
-    en: 'Drag the points to adjust — arrow keys 1 px, Shift 10 px',
-    ar: 'اسحب النقاط للضبط',
   },
   'kutu.tiklaGoster': {
     tr: 'Tasarımı göstermek için kutuya tıklayın',

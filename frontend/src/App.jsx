@@ -4202,17 +4202,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               enCokNokta={refTur === 'dortgen' ? 4 : 2}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
-              ipucu={
-                refTur === 'dortgen'
-                  ? refNokta.length < 4
-                    ? t('ref2.ipucuDort') + ' (' + (refNokta.length + 1) + '/4)'
-                    : t('ref2.ipucu3')
-                  : refNokta.length === 0
-                    ? t('ref2.ipucu1')
-                    : refNokta.length === 1
-                      ? t('ref2.ipucu2')
-                      : t('ref2.ipucu3')
-              }
+              /*
+               * Tuvalin üstünde yönerge şeridi YOK.
+               *
+               * Bir ara "Bilinen uzunluğun BİRİNCİ ucuna tıklayın" diye koyu
+               * bir şerit çiziliyordu; fotoğrafın üstünü kapatıyordu ve aynı
+               * bilgi zaten sağ paneldeki adım kartında yazıyor. Tuvalin içi
+               * temiz kalıyor.
+               */
             />
           )}
 

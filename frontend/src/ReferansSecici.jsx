@@ -25,7 +25,6 @@ export default function ReferansSecici({
   onDegis,
   tuvalW,
   tuvalH,
-  ipucu,
   enAzPiksel = 0,
   enCokNokta = 2,
 }) {
@@ -189,14 +188,6 @@ export default function ReferansSecici({
         </g>
       ))}
 
-      {ipucu && (
-        <g pointerEvents="none">
-          <rect x={tuvalW / 2 - 190} y="14" width="380" height="30" rx="8" fill="rgba(17,24,39,0.86)" />
-          <text x={tuvalW / 2} y="34" textAnchor="middle" fontSize="13" fontWeight="600" fill="#fff">
-            {ipucu}
-          </text>
-        </g>
-      )}
     </svg>
   )
 }
