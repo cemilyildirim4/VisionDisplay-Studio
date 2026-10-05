@@ -3546,10 +3546,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Her adım yalnızca kendi işini yapıyor; ölçek ve kutu mantığı aşağıdaki
    * mevcut işlevlerde kalıyor (referansiSifirla, olcuKutusunuKur).
    */
+  /*
+   * BAŞTAN BAŞLA GERÇEKTEN BAŞTAN BAŞLATIYOR.
+   *
+   * Eskiden yalnızca referans noktaları ve uzunluk siliniyordu; ölçü kutusu,
+   * tasarımın yerleşimi, eğim ve yazılan santimetreler ekranda duruyordu.
+   * Kullanıcının gördüğü şey "hiçbir şey silinmedi" idi — haklıydı, çünkü
+   * ekranda duran her şey ESKİ ölçeğe aitti ve yeni referansla ilgisi yoktu.
+   *
+   * Sıfırlanan şeyler üç kümede: referansın kendisi, referanstan türeyen
+   * kutu/tasarım yerleşimi, ve kullanıcının yazdığı ölçüler. Fotoğraf
+   * duruyor — baştan başlamak fotoğrafı değiştirmek değil.
+   */
   const sihirbaziBaslat = () => {
+    /* 1) Referans */
     setRefNokta([])
     setRefUzunlukCm('')
+    setRefBoyCm('')
     setRefMesaj(null)
+    setRefEskidi(false)
+    setRefAciKullan(true)
+    /* 2) Referanstan türeyen her şey */
+    setOlcuKutu(null)
+    setTaslakKutu(null)
+    setHedefKose(null)
+    setHedefTur(null)
+    setElleKose(null)
+    setDuvarOlcu(null)
+    setKutuDurus({ yaw: 0, pitch: 0 })
+    setKutuKipi(false)
+    setTasarimAcik(false)
+    setKutuMesaj(null)
+    /* 3) Yazılan ölçüler */
+    setKutuEn('')
+    setKutuBoy('')
+    /* 4) İlk adım */
     setRefKipi(true)
     setSihirbazAdim(1)
   }
