@@ -47,8 +47,6 @@ export default function OlcuSihirbazi({
   refBoyCm,
   setRefBoyCm,
   refDuzlem,
-  refPerspektif,
-  onPerspektif,
   /* 3. adım */
   kutuEn,
   setKutuEn,
@@ -316,48 +314,6 @@ export default function OlcuSihirbazi({
             <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
               {t('sih.4.ipucu')}
             </p>
-            {/*
-              PERSPEKTİF — tek çubukla. Dört köşe referansı varken gizli:
-              orada perspektif zaten ölçülmüş oluyor.
-            */}
-            {!refDuzlem && onPerspektif && (
-              <div className="mt-2 rounded-md bg-neutral-50 p-2 dark:bg-[#1b2029]">
-                <div className="text-[12px] font-semibold text-neutral-600 dark:text-neutral-300">
-                  {t('sih.persp.baslik')}
-                </div>
-                {[
-                  ['yatay', t('sih.persp.yatay')],
-                  ['dikey', t('sih.persp.dikey')],
-                ].map(([eksen, ad]) => (
-                  <div key={eksen} className="mt-1.5 flex items-center gap-2">
-                    <span className="w-12 shrink-0 text-[11.5px] text-neutral-500 dark:text-neutral-400">
-                      {ad}
-                    </span>
-                    <input
-                      type="range"
-                      min="-60"
-                      max="60"
-                      step="1"
-                      value={Math.round((refPerspektif?.[eksen] || 0) * 100)}
-                      onChange={(e) =>
-                        onPerspektif({ ...refPerspektif, [eksen]: Number(e.target.value) / 100 })
-                      }
-                      className="h-1 flex-1 cursor-pointer"
-                    />
-                    <span className="w-7 shrink-0 text-right text-[11px] text-neutral-400">
-                      {Math.round((refPerspektif?.[eksen] || 0) * 100)}
-                    </span>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => onPerspektif({ yatay: 0, dikey: 0 })}
-                  className="mt-1.5 text-[11.5px] font-medium text-neutral-500 hover:text-brand dark:text-neutral-400"
-                >
-                  {t('sih.persp.sifirla')}
-                </button>
-              </div>
-            )}
             <div className="mt-2 flex items-center gap-1.5">
               <button type="button" onClick={onGeri} className={yan}>
                 {t('sih.geri')}

@@ -495,10 +495,6 @@ const dict = {
     ar: 'اسحب الجسم لتحريك المربع؛ المنظور يأتي من المستوى.',
   },
   'ref2.ipucuDort': { tr: 'Dikdörtgenin köşelerine sırayla tıklayın', en: 'Click the rectangle corners in order', ar: 'انقر على الزوايا بالترتيب' },
-  'sih.persp.baslik': { tr: 'Perspektif', en: 'Perspective', ar: 'المنظور' },
-  'sih.persp.yatay': { tr: 'Yatay', en: 'Horizontal', ar: 'أفقي' },
-  'sih.persp.dikey': { tr: 'Dikey', en: 'Vertical', ar: 'رأسي' },
-  'sih.persp.sifirla': { tr: 'Perspektifi sıfırla', en: 'Reset perspective', ar: 'إعادة تعيين المنظور' },
   'sih.egim': { tr: 'eğim', en: 'tilt', ar: 'الميل' },
   'sih.aciHizala': {
     tr: 'Kutuyu referansın eğimine göre döndür:',
