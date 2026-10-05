@@ -125,7 +125,13 @@ export default function TaslakKutu({
        * hareket kabul edilmiyor, köşe olduğu yerde kalıyor.
        */
       if (!dortgenGecerli(yeni) || !perspektifGecerli(yeni)) return
-      onKose?.(yeni)
+      /*
+       * Köşe sürüklemesi ile gövde sürüklemesi AYNI şey değil: köşe şekli
+       * değiştiriyor, gövde yalnızca taşıyor. Üst katman ikisine farklı
+       * davranıyor (köşede kutu gerçek ölçüsüne yeniden oturtuluyor), bu
+       * yüzden hangisi olduğu söyleniyor.
+       */
+      onKose?.(yeni, 'kose')
     }
     const bitir = () => {
       window.removeEventListener('pointermove', tasi)
@@ -220,7 +226,7 @@ export default function TaslakKutu({
       sonX = x
       sonY = y
       simdiki = otele(simdiki.map((k) => ({ x: k.x + dx, y: k.y + dy })))
-      onKose?.(simdiki)
+      onKose?.(simdiki, 'govde')
     }
     const bitir = () => {
       window.removeEventListener('pointermove', tasi)

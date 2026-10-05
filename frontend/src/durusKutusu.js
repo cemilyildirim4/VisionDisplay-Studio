@@ -200,3 +200,169 @@ export function faredenDurus(durus, dx, dy) {
     pitch: d.pitch + (Number.isFinite(dy) ? dy : 0) * hiz,
   }
 }
+
+/*
+ * KUTUYU ÇEKİLEN KÖŞELERE OTURTMA.
+ *
+ * Kullanıcı kutunun bir köşesini tutup duvarın köşesine çekiyor. Köşeyi
+ * olduğu gibi oraya koymak kolay ama yanlış: dört köşe birbirinden bağımsız
+ * oynayınca dörtgen artık 30 × 21 cm'lik bir dikdörtgenin görüntüsü olmaktan
+ * çıkıyor, yani ekranda duran şekil fiziksel bir iddia taşımıyor.
+ *
+ * Burada yapılan şey ters yönden: dikdörtgen hep GERÇEK ölçüsünde kalıyor ve
+ * ona en çok benzeyen DURUŞ aranıyor. Aranan beş sayı —
+ *
+ *   merkez (x, y), düzlem içi dönme (roll), çevirme (yaw), yatırma (pitch)
+ *
+ * — kullanıcının çektiği dört köşeye en yakın görüntüyü veren değerler.
+ * Dört köşe sekiz sayı ediyor, aranan beş: fazladan bilgi var, bu yüzden
+ * tam çözüm yerine EN YAKIN çözüm aranıyor (en küçük kareler).
+ *
+ * Yöntem örüntü araması: her sayıyı sırayla bir adım ileri geri deneyip
+ * hatayı düşüren değişiklikleri kabul ediyor, hiçbiri düşürmezse adımı
+ * yarıya indiriyor. Türev istemiyor, patlamıyor ve birkaç yüz denemede
+ * bitiyor — sürükleme sırasında her karede çalışacak kadar ucuz.
+ *
+ * Sonuç: çekilen köşe farenin tam altına gelmeyebilir. Gelmemesi doğru —
+ * o nokta, o ölçüdeki bir dikdörtgenin ulaşabileceği bir yer değilse kutu
+ * oraya ancak yalan söyleyerek giderdi.
+ */
+
+/* Örüntü aramasının başlangıç adımları ve kaç tur döneceği. */
+const ADIM_MERKEZ = 0.03
+const ADIM_ACI = 0.2
+const EN_KUCUK_ADIM = 1e-4
+const EN_COK_TUR = 60
+
+function tekArama(
+  hedef,
+  enCm,
+  boyCm,
+  pxCm,
+  gorselW,
+  gorselH,
+  baslangic,
+  mesafeCm = 0,
+) {
+  if (!Array.isArray(hedef) || hedef.length !== 4) return null
+  if (!baslangic) return null
+
+  /* Bir duruşun hatası: dört köşenin GÖRSEL PİKSELİNDEKİ kare uzaklıkları. */
+  const olc = (p) => {
+    const k = durusDortgeni(
+      enCm,
+      boyCm,
+      pxCm,
+      gorselW,
+      gorselH,
+      { x: p.cx, y: p.cy },
+      p.roll,
+      p.yaw,
+      p.pitch,
+      mesafeCm,
+    )
+    if (!k) return { hata: Infinity, k: null }
+    let toplam = 0
+    for (let i = 0; i < 4; i++) {
+      const dx = (k.koseler[i].x - hedef[i].x) * gorselW
+      const dy = (k.koseler[i].y - hedef[i].y) * gorselH
+      toplam += dx * dx + dy * dy
+    }
+    return { hata: toplam, k }
+  }
+
+  let p = {
+    cx: baslangic.cx,
+    cy: baslangic.cy,
+    roll: baslangic.roll || 0,
+    yaw: baslangic.yaw || 0,
+    pitch: baslangic.pitch || 0,
+  }
+  let en = olc(p)
+  if (!Number.isFinite(en.hata)) return null
+
+  let adimMerkez = ADIM_MERKEZ
+  let adimAci = ADIM_ACI
+  for (let tur = 0; tur < EN_COK_TUR; tur++) {
+    let gelisti = false
+    const denemeler = [
+      ['cx', adimMerkez],
+      ['cx', -adimMerkez],
+      ['cy', adimMerkez],
+      ['cy', -adimMerkez],
+      ['roll', adimAci],
+      ['roll', -adimAci],
+      ['yaw', adimAci],
+      ['yaw', -adimAci],
+      ['pitch', adimAci],
+      ['pitch', -adimAci],
+    ]
+    for (const [ad, d] of denemeler) {
+      const q = { ...p, [ad]: p[ad] + d }
+      const r = olc(q)
+      if (r.hata < en.hata) {
+        p = q
+        en = r
+        gelisti = true
+      }
+    }
+    if (!gelisti) {
+      adimMerkez /= 2
+      adimAci /= 2
+      if (adimAci < EN_KUCUK_ADIM) break
+    }
+  }
+  if (!en.k) return null
+  return {
+    koseler: en.k.koseler,
+    roll: p.roll,
+    yawRad: en.k.yawRad,
+    pitchRad: en.k.pitchRad,
+    merkez: { x: p.cx, y: p.cy },
+    /* Ortalama köşe sapması (görsel pikseli) — ne kadar oturduğunun ölçüsü. */
+    sapmaPx: Math.sqrt(en.hata / 4),
+    tasiyor: en.k.tasiyor,
+  }
+}
+
+/*
+ * AYNA ÇÖZÜM TUZAĞI — neden birden çok başlangıç.
+ *
+ * Zayıf perspektifte bir dikdörtgenin görüntüsü, açıların İŞARETİ ters
+ * çevrildiğinde neredeyse aynı kalıyor: sağa dönmüş kutu ile sola dönmüş
+ * kutu kâğıt üstünde birbirine çok benziyor (Necker kübü belirsizliği).
+ * Tek başlangıçla arama bu yanlış tepeye düşebiliyor; ölçüldü, gerçek
+ * duruş 0 piksel hata verirken ayna çözüm 3,54 pikselde takılıp kalıyordu.
+ *
+ * Çözüm basit: aynı arama birkaç farklı başlangıçtan yapılıp en iyisi
+ * alınıyor. İlk tohum mevcut duruş (sürükleme sırasında sürekliliği o
+ * sağlıyor), ikincisi onun aynası, üçüncüsü düz başlangıç.
+ */
+export function durusaOturt(hedef, enCm, boyCm, pxCm, gorselW, gorselH, baslangic, mesafeCm = 0) {
+  if (!baslangic) return null
+  const b = {
+    cx: baslangic.cx,
+    cy: baslangic.cy,
+    roll: baslangic.roll || 0,
+    yaw: baslangic.yaw || 0,
+    pitch: baslangic.pitch || 0,
+  }
+  const ara = (tohum) => tekArama(hedef, enCm, boyCm, pxCm, gorselW, gorselH, tohum, mesafeCm)
+
+  /*
+   * Önce mevcut duruştan ara. Çıkan sonucun AYNASINDAN bir kez daha ara:
+   * tohumun kendi aynasını denemek yetmiyor, çünkü düz başlangıçta (açılar
+   * sıfır) ayna da aynı yer oluyor ve iki arama aynı tepeye çıkıyor.
+   * Belirsizlik sonucun etrafında, başlangıcın değil.
+   */
+  const ilk = ara(b)
+  if (!ilk) return null
+  const ayna = ara({
+    cx: ilk.merkez.x,
+    cy: ilk.merkez.y,
+    roll: ilk.roll,
+    yaw: -ilk.yawRad,
+    pitch: -ilk.pitchRad,
+  })
+  return ayna && ayna.sapmaPx < ilk.sapmaPx ? ayna : ilk
+}

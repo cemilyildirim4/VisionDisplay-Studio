@@ -31,7 +31,7 @@ import {
   kutuDortgeni,
   EN_AZ_PIKSEL,
 } from './referansOlcek.js'
-import { durusDortgeni, faredenDurus } from './durusKutusu.js'
+import { durusDortgeni, faredenDurus, durusaOturt } from './durusKutusu.js'
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
@@ -717,7 +717,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * açılardan yeniden üretiliyor. Böylece sürüklemeler birikmiyor ve şekil
    * her zaman gerçek bir dikdörtgenin izdüşümü kalıyor (bkz. durusKutusu.js).
    */
-  const [kutuDurus, setKutuDurus] = useState({ yaw: 0, pitch: 0 })
+  const [kutuDurus, setKutuDurus] = useState({ roll: 0, yaw: 0, pitch: 0 })
   /*
    * ÖLÇÜ SİHİRBAZI — kaçıncı adım (0 = kapalı).
    *
@@ -3548,8 +3548,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefTur('taslak')
     /* Yeni kutu: tasarım yeniden gizleniyor, kullanıcı kutuya tıklayınca açılacak. */
     setTasarimAcik(false)
-    /* Yeni kutu düz doğuyor: eski duruş yeni ölçüye taşınmıyor. */
-    setKutuDurus({ yaw: 0, pitch: 0 })
+    /*
+     * Yeni kutunun duruşu: referanstan gelen düzlem içi eğim var, çevirme
+     * ve yatırma yok. Eğim artık DURUŞUN parçası — köşelerden oturtma onu
+     * da değiştirebiliyor, dolayısıyla tek yerde tutulması gerekiyor.
+     */
+    setKutuDurus({ roll: refAciKullan ? refAci?.kutuAci || 0 : 0, yaw: 0, pitch: 0 })
     /* Yeni kutu doğrudan konumlandırılabilir olsun; ilk iş onu yerine koymak. */
     setKutuKipi(true)
     setRefEskidi(false)
@@ -3589,7 +3593,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefTur(null)
     setElleKose(null)
     setDuvarOlcu(null)
-    setKutuDurus({ yaw: 0, pitch: 0 })
+    setKutuDurus({ roll: 0, yaw: 0, pitch: 0 })
     setKutuKipi(false)
     setTasarimAcik(false)
     setKutuMesaj(null)
@@ -3674,7 +3678,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const refEgimi = refAci?.kutuAci || 0
   const egimVar =
-    (refAciKullan && Math.abs(refEgimi) > 0.0087) ||
+    Math.abs(kutuDurus.roll) > 0.0087 ||
     Math.abs(kutuDurus.yaw) > 0.0087 ||
     Math.abs(kutuDurus.pitch) > 0.0087
   /*
@@ -3703,8 +3707,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefKose(k.koseler)
     setTaslakKutu(k.koseler)
     setHedefTur('taslak')
-    /* Fareyle verilen perspektif her iki yönde de sıfırlanıyor. */
-    setKutuDurus({ yaw: 0, pitch: 0 })
+    /* Çevirme ve yatırma her iki yönde de sıfırlanıyor. */
+    setKutuDurus({ roll: hedefAci, yaw: 0, pitch: 0 })
     /* Kutu bir daha kurulursa aynı kararla başlasın. */
     setRefAciKullan(!egimVar)
   }
@@ -3733,7 +3737,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       kaynak.w,
       kaynak.h,
       koseMerkezi(hedefKose),
-      refAciKullan ? refEgimi : 0,
+      kutuDurus.roll,
       kutuDurus.yaw,
       kutuDurus.pitch,
       (izlemeMesafesi || 0) * 100,
@@ -3774,7 +3778,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       kaynak.w,
       kaynak.h,
       koseMerkezi(hedefKose),
-      refAciKullan ? refAci?.kutuAci || 0 : 0,
+      kutuDurus.roll,
       istek.yaw,
       istek.pitch,
       /* Perspektifin sertliği çekim mesafesinden — metre, santime çevriliyor. */
@@ -3782,7 +3786,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     )
     if (!k) return
     /* Sınırda sürüklemeye devam edince açı büyümesin: kırpılmış hâli geri alınıyor. */
-    setKutuDurus({ yaw: k.yawRad, pitch: k.pitchRad })
+    setKutuDurus({ roll: kutuDurus.roll, yaw: k.yawRad, pitch: k.pitchRad })
     setHedefKose(k.koseler)
     setTaslakKutu(k.koseler)
     setHedefTur('taslak')
@@ -3814,9 +3818,46 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * enCm/boyCm'e DOKUNULMUYOR — fiziksel ölçü kullanıcının yazdığı sayıdır
    * ve gözle ayarlanamaz.
    */
-  const olcuKutusuDegisti = (tuvalKoseler) => {
+  const olcuKutusuDegisti = (tuvalKoseler, tur) => {
     if (!Array.isArray(tuvalKoseler) || tuvalKoseler.length !== 4) return
     const oranli = tuvalKoseler.map(tuvalOrana)
+    /*
+     * KÖŞEDEN ÇEKİNCE KUTU SERBEST BİR DÖRTGENE DÖNMÜYOR.
+     *
+     * Dört köşe birbirinden bağımsız oynayınca dörtgen, 30 × 21 cm'lik bir
+     * dikdörtgenin görüntüsü olmaktan çıkıyor; ekranda duran şekil fiziksel
+     * bir iddia taşımaz oluyordu. Oysa köşeleri çekmenin amacı kutuyu
+     * duvarın köşelerine OTURTMAK — şekli bozmak değil.
+     *
+     * Bu yüzden çekilen köşeler bir HEDEF sayılıyor ve gerçek ölçüsündeki
+     * dikdörtgenin o hedefe en çok benzeyen duruşu aranıyor (bkz.
+     * durusaOturt). Ölçü hiç değişmiyor; değişen yalnızca kutunun duruşu:
+     * merkezi, düzlem içi eğimi, çevirmesi ve yatırması.
+     *
+     * Gövde sürüklemesi bunun dışında: orası saf öteleme, şekle hiç
+     * dokunmuyor ve yeniden oturtmaya gerek yok.
+     */
+    const kaynak = ozelSahne?.kaynak
+    if (tur === 'kose' && !refDuzlem && olcuKutu && refPxCm && kaynak?.w > 0) {
+      const m = koseMerkezi(oranli)
+      const o = durusaOturt(
+        oranli,
+        olcuKutu.enCm,
+        olcuKutu.boyCm,
+        refPxCm,
+        kaynak.w,
+        kaynak.h,
+        { cx: m.x, cy: m.y, roll: kutuDurus.roll, yaw: kutuDurus.yaw, pitch: kutuDurus.pitch },
+        (izlemeMesafesi || 0) * 100,
+      )
+      if (o) {
+        setKutuDurus({ roll: o.roll, yaw: o.yawRad, pitch: o.pitchRad })
+        setHedefKose(o.koseler)
+        setTaslakKutu(o.koseler)
+        setHedefTur('taslak')
+        return
+      }
+    }
     /*
      * DÜZLEM KİPİNDE KUTU SERBEST BİR DÖRTGEN DEĞİL.
      *
