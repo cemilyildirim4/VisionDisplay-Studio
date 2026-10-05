@@ -11,6 +11,10 @@
  * Adım değişince kart kısa bir geçişle yenileniyor (bkz. .sih-adim, index.css)
  * — kullanıcı neyin değiştiğini görüyor.
  *
+ * KART BİLEREK ÖNE ÇIKIYOR. Panelin geri kalanıyla aynı görünümdeyken
+ * kullanıcı işini orada yapacağını fark etmiyordu: kalın marka kenarlığı,
+ * renkli başlık şeridi, gölge ve "ŞİMDİ BURADA" rozeti bunun için.
+ *
  * Bileşen durum tutmuyor: hangi adımda olunduğu ve veriler App.jsx'ten
  * geliyor, düğmeler oradaki işlevleri çağırıyor. Sihirbaz yalnızca bir SUNUM
  * katmanı; ölçek ve kutu mantığı tek yerde kalıyor.
@@ -21,8 +25,8 @@ const ADIM_SAYISI = 4
 function Nokta({ dolu, etkin }) {
   return (
     <span
-      className={`inline-block h-1.5 rounded-full transition-all duration-200 ${
-        etkin ? 'w-4 bg-brand' : dolu ? 'w-1.5 bg-brand/60' : 'w-1.5 bg-neutral-300 dark:bg-[#39404d]'
+      className={`inline-block h-2 rounded-full transition-all duration-200 ${
+        etkin ? 'w-5 bg-white' : dolu ? 'w-2 bg-white/70' : 'w-2 bg-white/35'
       }`}
     />
   )
@@ -53,6 +57,10 @@ export default function OlcuSihirbazi({
   kutuBoy,
   setKutuBoy,
   kutuMesaj,
+  /* 4. adım — çekim mesafesi (yalnızca görünümü etkiler) */
+  mesafeM,
+  onMesafe,
+  mesafeKilitli = false,
   /* eylemler */
   onGeri,
   onIleri,
@@ -63,11 +71,13 @@ export default function OlcuSihirbazi({
   if (!adim) return null
 
   const girdi =
-    'w-full min-w-0 rounded-md border border-neutral-200 px-2 py-1.5 text-[14px] text-neutral-800 dark:border-[#2c333f] dark:bg-[#1b2029] dark:text-neutral-100'
+    'w-full min-w-0 rounded-md border border-neutral-300 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-100'
   const ana =
-    'flex-1 rounded-lg px-3 py-2 text-[13.5px] font-semibold text-white bg-brand hover:opacity-90 transition-opacity disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed dark:disabled:bg-[#232936] dark:disabled:text-neutral-600'
+    'flex-1 rounded-lg px-3 py-2.5 text-[14.5px] font-semibold text-white bg-brand hover:opacity-90 transition-opacity disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed dark:disabled:bg-[#232936] dark:disabled:text-neutral-600'
   const yan =
-    'rounded-lg px-2.5 py-2 text-[13px] font-medium text-neutral-500 hover:text-brand transition-colors dark:text-neutral-400'
+    'rounded-lg px-3 py-2.5 text-[14px] font-medium text-neutral-500 hover:text-brand transition-colors dark:text-neutral-400'
+  const aciklama = 'mt-2 mb-0 text-[13.5px] leading-snug text-neutral-700 dark:text-neutral-300'
+  const kucuk = 'mt-1.5 mb-0 text-[13px] leading-snug'
 
   const basliklar = {
     1: t('sih.1.baslik'),
@@ -76,254 +86,298 @@ export default function OlcuSihirbazi({
     4: t('sih.4.baslik'),
   }
 
+  /* Mesafe adımı: + / − ile 0,1 m, alt sınır 0,2 m. */
+  const mesafeDegis = (fark) => {
+    if (!onMesafe) return
+    const v = Math.max(0.2, Math.round(((Number(mesafeM) || 0) + fark) * 10) / 10)
+    onMesafe(v)
+  }
+
   return (
-    <div className="rounded-lg border border-brand/35 bg-brand/[0.045] p-2.5 dark:border-brand/45 dark:bg-brand/[0.08]">
-      {/* Başlık şeridi: kaçıncı adım, adı, kapatma. */}
-      <div className="flex items-center gap-1.5">
+    <div className="overflow-hidden rounded-xl border-2 border-brand shadow-[0_4px_16px_rgba(41,98,173,0.18)]">
+      {/* Başlık şeridi dolu renkte: panelde göz önce buraya gelsin. */}
+      <div className="flex items-center gap-2 bg-brand px-2.5 py-2 text-white">
         <span className="flex items-center gap-1">
           {[1, 2, 3, 4].map((i) => (
             <Nokta key={i} dolu={i < adim} etkin={i === adim} />
           ))}
         </span>
-        <span className="text-[10.5px] font-semibold tracking-wide text-neutral-400">
+        <span className="text-[11.5px] font-bold tabular-nums text-white/80">
           {adim}/{ADIM_SAYISI}
         </span>
-        <span className="flex-1 truncate text-[13px] font-semibold text-neutral-800 dark:text-neutral-100">
-          {basliklar[adim]}
-        </span>
+        {/* Panel dar: başlık kesilmek yerine ikinci satıra sarıyor. */}
+        <span className="flex-1 text-[14.5px] font-bold leading-tight">{basliklar[adim]}</span>
         <button
           type="button"
           onClick={onKapat}
           aria-label={t('sih.kapat')}
-          className="shrink-0 rounded px-1.5 py-0.5 text-[15px] leading-none text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+          className="shrink-0 rounded px-1.5 py-0.5 text-[18px] leading-none text-white/75 hover:text-white"
         >
           ×
         </button>
       </div>
 
-      {/* key={adim}: adım değişince geçiş yeniden oynasın. */}
-      <div key={adim} className="sih-adim">
-        {/* 1 — İKİ NOKTA */}
-        {adim === 1 && (
-          <>
-            {/*
-              REFERANS TÜRÜ.
+      <div className="bg-brand/[0.05] px-2.5 pb-2.5 pt-1 dark:bg-brand/[0.1]">
+        {/* key={adim}: adım değişince geçiş yeniden oynasın. */}
+        <div key={adim} className="sih-adim">
+          {/* 1 — İKİ NOKTA */}
+          {adim === 1 && (
+            <>
+              {/*
+                REFERANS TÜRÜ.
 
-              İki nokta ölçek ve eğim veriyor; perspektif ancak ölçüsü
-              bilinen bir dikdörtgenin dört köşesinden çıkıyor.
-            */}
-            <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-              {[
-                ['cizgi', t('sih.tur.cizgi')],
-                ['dortgen', t('sih.tur.dortgen')],
-              ].map(([tur, ad]) => (
+                İki nokta ölçek ve eğim veriyor; perspektif ancak ölçüsü
+                bilinen bir dikdörtgenin dört köşesinden çıkıyor.
+              */}
+              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                {[
+                  ['cizgi', t('sih.tur.cizgi')],
+                  ['dortgen', t('sih.tur.dortgen')],
+                ].map(([tur, ad]) => (
+                  <button
+                    key={tur}
+                    type="button"
+                    onClick={() => setRefTur(tur)}
+                    className={`rounded-md px-2 py-2 text-[13px] font-semibold leading-tight transition-colors ${
+                      refTur === tur
+                        ? 'bg-brand text-white'
+                        : 'border border-neutral-300 bg-white text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-400'
+                    }`}
+                  >
+                    {ad}
+                  </button>
+                ))}
+              </div>
+              <p className={aciklama}>
+                {refTur === 'dortgen' ? t('sih.1.aciklamaDort') : t('sih.1.aciklama')}
+              </p>
+              <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('ref2.duzlemUyari')}</p>
+              {/* Sıradaki iş: fotoğrafa tıklamak. Belirgin dursun. */}
+              <p className="mt-2 mb-0 rounded-md bg-brand/15 px-2 py-1.5 text-[13.5px] font-semibold text-brand dark:bg-brand/25">
+                {refTur === 'dortgen'
+                  ? refNoktaSayisi < 4
+                    ? t('sih.1.durumDort') + ' ' + (refNoktaSayisi + 1) + '/4'
+                    : t('sih.1.durum2')
+                  : refNoktaSayisi === 0
+                    ? t('sih.1.durum0')
+                    : refNoktaSayisi === 1
+                      ? t('sih.1.durum1')
+                      : t('sih.1.durum2')}
+              </p>
+              <div className="mt-2 flex items-center gap-1.5">
+                {refNoktaSayisi > 0 && (
+                  <button type="button" onClick={onIsaretle} className={yan}>
+                    {t('sih.1.tekrar')}
+                  </button>
+                )}
                 <button
-                  key={tur}
                   type="button"
-                  onClick={() => setRefTur(tur)}
-                  className={`rounded-md px-2 py-1.5 text-[12px] font-semibold leading-tight transition-colors ${
-                    refTur === tur
-                      ? 'bg-brand text-white'
-                      : 'border border-neutral-200 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400'
-                  }`}
+                  onClick={onIleri}
+                  disabled={refNoktaSayisi < (refTur === 'dortgen' ? 4 : 2)}
+                  className={ana}
                 >
-                  {ad}
+                  {t('sih.devam')}
                 </button>
-              ))}
-            </div>
-            <p className="mt-1.5 mb-0 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
-              {refTur === 'dortgen' ? t('sih.1.aciklamaDort') : t('sih.1.aciklama')}
-            </p>
-            <p className="mt-1 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">
-              {t('ref2.duzlemUyari')}
-            </p>
-            <p className="mt-1.5 mb-0 text-[12.5px] font-medium text-brand">
-              {refTur === 'dortgen'
-                ? refNoktaSayisi < 4
-                  ? t('sih.1.durumDort') + ' ' + (refNoktaSayisi + 1) + '/4'
-                  : t('sih.1.durum2')
-                : refNoktaSayisi === 0
-                  ? t('sih.1.durum0')
-                  : refNoktaSayisi === 1
-                    ? t('sih.1.durum1')
-                    : t('sih.1.durum2')}
-            </p>
-            <div className="mt-2 flex items-center gap-1.5">
-              {refNoktaSayisi > 0 && (
-                <button type="button" onClick={onIsaretle} className={yan}>
-                  {t('sih.1.tekrar')}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={onIleri}
-                disabled={refNoktaSayisi < (refTur === 'dortgen' ? 4 : 2)}
-                className={ana}
-              >
-                {t('sih.devam')}
-              </button>
-            </div>
-          </>
-        )}
+              </div>
+            </>
+          )}
 
-        {/* 2 — GERÇEK UZUNLUK */}
-        {adim === 2 && (
-          <>
-            <p className="mt-1.5 mb-0 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
-              {refTur === 'dortgen' ? t('sih.2.aciklamaDort') : t('sih.2.aciklama')}
-            </p>
-            <div className="mt-2 flex items-center gap-1.5">
-              <input
-                type="number"
-                min="0.1"
-                step="0.1"
-                autoFocus
-                value={refUzunlukCm}
-                onChange={(e) => setRefUzunlukCm(e.target.value)}
-                placeholder={refTur === 'dortgen' ? t('ref.en') : t('ref2.uzunlukPh')}
-                className={girdi}
-              />
-              {refTur === 'dortgen' && (
-                <>
-                  <span className="text-[13px] text-neutral-400">×</span>
-                  <input
-                    type="number"
-                    min="0.1"
-                    step="0.1"
-                    value={refBoyCm}
-                    onChange={(e) => setRefBoyCm(e.target.value)}
-                    placeholder={t('ref.boy')}
-                    className={girdi}
-                  />
-                </>
-              )}
-              <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
-            </div>
-            {refTur === 'dortgen' ? (
-              refDuzlem ? (
-                <p className="mt-1.5 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
-                  {t('sih.duzlemHazir')} — {refDuzlem.enCm} × {refDuzlem.boyCm} cm
-                </p>
-              ) : (
-                <p className="mt-1.5 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">
-                  {t('sih.duzlemYok')}
-                </p>
-              )
-            ) : refPxCm ? (
-              <p className="mt-1.5 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
-                {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
-                <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
-                {refAci && (
+          {/* 2 — GERÇEK UZUNLUK */}
+          {adim === 2 && (
+            <>
+              <p className={aciklama}>
+                {refTur === 'dortgen' ? t('sih.2.aciklamaDort') : t('sih.2.aciklama')}
+              </p>
+              <div className="mt-2 flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  autoFocus
+                  value={refUzunlukCm}
+                  onChange={(e) => setRefUzunlukCm(e.target.value)}
+                  placeholder={refTur === 'dortgen' ? t('ref.en') : t('ref2.uzunlukPh')}
+                  className={girdi}
+                />
+                {refTur === 'dortgen' && (
                   <>
-                    {' · '}
-                    {t('sih.egim')} {refAci.derece.toFixed(1).replace('.', ',')}°
+                    <span className="text-[14px] text-neutral-400">×</span>
+                    <input
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      value={refBoyCm}
+                      onChange={(e) => setRefBoyCm(e.target.value)}
+                      placeholder={t('ref.boy')}
+                      className={girdi}
+                    />
                   </>
                 )}
-              </p>
-            ) : (
-              <p className="mt-1.5 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">
-                {refOlcek?.sebep === 'cokKisa' ? t('ref2.cokKisa') : t('ref2.uzunlukGir')}
-              </p>
-            )}
-            <div className="mt-2 flex items-center gap-1.5">
-              <button type="button" onClick={onGeri} className={yan}>
-                {t('sih.geri')}
-              </button>
-              <button
-                type="button"
-                onClick={onIleri}
-                disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
-                className={ana}
-              >
-                {t('sih.devam')}
-              </button>
-            </div>
-          </>
-        )}
+                <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
+              </div>
+              {refTur === 'dortgen' ? (
+                refDuzlem ? (
+                  <p className={`${kucuk} text-emerald-700 dark:text-emerald-400`}>
+                    {t('sih.duzlemHazir')} — {refDuzlem.enCm} × {refDuzlem.boyCm} cm
+                  </p>
+                ) : (
+                  <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.duzlemYok')}</p>
+                )
+              ) : refPxCm ? (
+                <p className={`${kucuk} text-emerald-700 dark:text-emerald-400`}>
+                  {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
+                  <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
+                  {refAci && (
+                    <>
+                      {' · '}
+                      {t('sih.egim')} {refAci.derece.toFixed(1).replace('.', ',')}°
+                    </>
+                  )}
+                </p>
+              ) : (
+                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>
+                  {refOlcek?.sebep === 'cokKisa' ? t('ref2.cokKisa') : t('ref2.uzunlukGir')}
+                </p>
+              )}
+              <div className="mt-2 flex items-center gap-1.5">
+                <button type="button" onClick={onGeri} className={yan}>
+                  {t('sih.geri')}
+                </button>
+                <button
+                  type="button"
+                  onClick={onIleri}
+                  disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                  className={ana}
+                >
+                  {t('sih.devam')}
+                </button>
+              </div>
+            </>
+          )}
 
-        {/* 3 — KUTU ÖLÇÜSÜ */}
-        {adim === 3 && (
-          <>
-            <p className="mt-1.5 mb-0 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
-              {t('sih.3.aciklama')}
-            </p>
-            <div className="mt-2 flex items-center gap-1.5">
-              <input
-                type="number"
-                min="1"
-                step="1"
-                autoFocus
-                value={kutuEn}
-                onChange={(e) => setKutuEn(e.target.value)}
-                placeholder={t('ref.en')}
-                className={girdi}
-              />
-              <span className="text-[13px] text-neutral-400">×</span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={kutuBoy}
-                onChange={(e) => setKutuBoy(e.target.value)}
-                placeholder={t('ref.boy')}
-                className={girdi}
-              />
-              <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
-            </div>
-            {/*
-              REFERANS EĞİMİNE HİZALAMA.
-
-              İki noktadan çıkarılabilen tek açı düzlem içi dönme; perspektif
-              buradan ÇIKMAZ, onu kullanıcı köşelerden veriyor. Kapatılabilir
-              olması şart: köşegen bir referansın eğimi kutuyla ilgisizdir.
-            */}
-            {!refDuzlem && refAci && Math.abs(refAci.kutuAci) > 0.0005 && (
-              <label className="mt-2 flex items-start gap-2 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
+          {/* 3 — KUTU ÖLÇÜSÜ */}
+          {adim === 3 && (
+            <>
+              <p className={aciklama}>{t('sih.3.aciklama')}</p>
+              <div className="mt-2 flex items-center gap-1.5">
                 <input
-                  type="checkbox"
-                  checked={refAciKullan}
-                  onChange={(e) => setRefAciKullan(e.target.checked)}
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                  type="number"
+                  min="1"
+                  step="1"
+                  autoFocus
+                  value={kutuEn}
+                  onChange={(e) => setKutuEn(e.target.value)}
+                  placeholder={t('ref.en')}
+                  className={girdi}
                 />
-                <span>
-                  {t('sih.aciHizala')}{' '}
-                  <strong>{((refAci.kutuAci * 180) / Math.PI).toFixed(1).replace('.', ',')}°</strong>
-                </span>
-              </label>
-            )}
-            {kutuMesaj && (
-              <p className="mt-1.5 mb-0 text-[12px] leading-snug text-amber-600 dark:text-amber-400">{kutuMesaj}</p>
-            )}
-            <div className="mt-2 flex items-center gap-1.5">
-              <button type="button" onClick={onGeri} className={yan}>
-                {t('sih.geri')}
-              </button>
-              <button type="button" onClick={onKutuKur} className={ana}>
-                {t('ref2.kutuKur')}
-              </button>
-            </div>
-          </>
-        )}
+                <span className="text-[14px] text-neutral-400">×</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={kutuBoy}
+                  onChange={(e) => setKutuBoy(e.target.value)}
+                  placeholder={t('ref.boy')}
+                  className={girdi}
+                />
+                <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
+              </div>
+              {/*
+                REFERANS EĞİMİNE HİZALAMA.
 
-        {/* 4 — KONUMLANDIR */}
-        {adim === 4 && (
-          <>
-            <p className="mt-1.5 mb-0 text-[12.5px] leading-snug text-neutral-600 dark:text-neutral-300">
-              {refDuzlem ? t('sih.4.aciklamaDuzlem') : t('sih.4.aciklama')}
-            </p>
-            <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-              {t('sih.4.ipucu')}
-            </p>
-            <div className="mt-2 flex items-center gap-1.5">
-              <button type="button" onClick={onGeri} className={yan}>
-                {t('sih.geri')}
-              </button>
-              <button type="button" onClick={onBitir} className={ana}>
-                {t('sih.4.bitir')}
-              </button>
-            </div>
-          </>
-        )}
+                İki noktadan çıkarılabilen tek açı düzlem içi dönme; perspektif
+                buradan ÇIKMAZ, onu kullanıcı köşelerden veriyor. Kapatılabilir
+                olması şart: köşegen bir referansın eğimi kutuyla ilgisizdir.
+              */}
+              {!refDuzlem && refAci && Math.abs(refAci.kutuAci) > 0.0005 && (
+                <label className="mt-2 flex items-start gap-2 text-[13.5px] leading-snug text-neutral-700 dark:text-neutral-300">
+                  <input
+                    type="checkbox"
+                    checked={refAciKullan}
+                    onChange={(e) => setRefAciKullan(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                  />
+                  <span>
+                    {t('sih.aciHizala')}{' '}
+                    <strong>{((refAci.kutuAci * 180) / Math.PI).toFixed(1).replace('.', ',')}°</strong>
+                  </span>
+                </label>
+              )}
+              {kutuMesaj && (
+                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{kutuMesaj}</p>
+              )}
+              <div className="mt-2 flex items-center gap-1.5">
+                <button type="button" onClick={onGeri} className={yan}>
+                  {t('sih.geri')}
+                </button>
+                <button type="button" onClick={onKutuKur} className={ana}>
+                  {t('ref2.kutuKur')}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* 4 — KONUMLANDIR */}
+          {adim === 4 && (
+            <>
+              <p className={aciklama}>
+                {refDuzlem ? t('sih.4.aciklamaDuzlem') : t('sih.4.aciklama')}
+              </p>
+              <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.4.ipucu')}</p>
+
+              {/*
+                ÇEKİM MESAFESİ — ölçeği DEĞİL görünümü etkiliyor.
+
+                Ölçek referanstan geliyor; bu sayı yalnızca kadrajın ne kadar
+                yakın göründüğünü belirliyor. Panelde ayrı bir kutuda durunca
+                akışla ilgisi yokmuş gibi görünüyordu, bu yüzden adımın içine
+                alındı. Kutu yerleştikten sonra kilitli: o noktadan sonra
+                oynatmak kutuyla tasarımın ilişkisini bozuyor.
+              */}
+              {mesafeM != null && (
+                <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1.5 dark:border-[#2c333f] dark:bg-[#1b2029]">
+                  <span className="text-[13.5px] text-neutral-600 dark:text-neutral-400">
+                    {t('scene.viewDist')}
+                  </span>
+                  {mesafeKilitli || !onMesafe ? (
+                    <span className="text-[14px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-200">
+                      {Number(mesafeM).toFixed(2).replace('.', ',')} m
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => mesafeDegis(-0.1)}
+                        className="h-7 w-7 rounded-md border border-neutral-300 text-[16px] leading-none text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+                      >
+                        −
+                      </button>
+                      <span className="w-14 text-center text-[14px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-200">
+                        {Number(mesafeM).toFixed(1).replace('.', ',')} m
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => mesafeDegis(0.1)}
+                        className="h-7 w-7 rounded-md border border-neutral-300 text-[16px] leading-none text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+                      >
+                        +
+                      </button>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-2 flex items-center gap-1.5">
+                <button type="button" onClick={onGeri} className={yan}>
+                  {t('sih.geri')}
+                </button>
+                <button type="button" onClick={onBitir} className={ana}>
+                  {t('sih.4.bitir')}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -5062,37 +5062,46 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             onKutuKur={sihirbazKutuKur}
                             onBitir={sihirbazBitir}
                             onKapat={sihirbaziKapat}
+                            /*
+                             * Çekim mesafesi 4. adımın içinde: ölçeği değil görünümü
+                             * etkiliyor ve panelde ayrı bir kutuda durunca akışla ilgisi
+                             * yokmuş gibi görünüyordu. Kutu yerleştikten sonra kilitli —
+                             * o noktadan sonra oynatmak kutuyla tasarımın ilişkisini bozar.
+                             */
+                            mesafeM={izlemeMesafesi}
+                            onMesafe={setIzlemeM}
+                            mesafeKilitli={!!taslakKutu}
                           />
                         ) : (
                           <>
-                            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
+                            <div className="flex items-center gap-1.5 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
                               <span className={`inline-block h-2.5 w-2.5 rounded-[3px] ${refPxCm ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-[#39404d]'}`} />
                               {t('ref2.baslik')}
                             </div>
                             {refPxCm ? (
-                              <p className="mt-0.5 mb-0 text-[12px] leading-snug text-emerald-700 dark:text-emerald-400">
+                              <p className="mt-0.5 mb-0 text-[13px] leading-snug text-emerald-700 dark:text-emerald-400">
                                 {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
                                 <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
                               </p>
                             ) : (
-                              <p className="mt-0.5 mb-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                              <p className="mt-0.5 mb-0 text-[13.5px] leading-snug text-neutral-500 dark:text-neutral-400">
                                 {t('sih.ozetYok')}
                               </p>
                             )}
                             {olcuKutu && (
-                              <p className="mt-0.5 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                              <p className="mt-0.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                                 {t('ref.kutuBaslik')}: {olcuKutu.enCm} × {olcuKutu.boyCm} cm
                               </p>
                             )}
                             {refEskidi && (
-                              <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
+                              <p className="mt-1 mb-0 text-[13.5px] leading-snug text-amber-600 dark:text-amber-400">
                                 {t('ref2.eskidi')}
                               </p>
                             )}
                             <button
                               type="button"
                               onClick={sihirbaziBaslat}
-                              className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
+                              className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
                             >
                               {olcuKutu || refPxCm ? t('sih.yeniden') : t('sih.basla')}
                             </button>
@@ -5100,7 +5109,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               <button
                                 type="button"
                                 onClick={() => setSihirbazAdim(3)}
-                                className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                                className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                               >
                                 {t('sih.olcuDegistir')}
                               </button>
@@ -5111,7 +5120,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 <button
                                   type="button"
                                   onClick={() => setKutuKipi((v) => !v)}
-                                  className={`mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium transition-opacity ${
+                                  className={`mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium transition-opacity ${
                                     kutuKipi
                                       ? 'bg-brand text-white hover:opacity-90'
                                       : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
@@ -5119,7 +5128,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 >
                                   {kutuKipi ? t('ref2.konumBitir') : t('ref2.konumla')}
                                 </button>
-                                <p className="mt-1 mb-0 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                                <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                                   {kutuKipi ? t('ref2.konumAciklama') : t('kutu.ipucu')}
                                 </p>
                               </>
@@ -5128,7 +5137,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         )}
 
                         {/* YERLEŞİM — tasarımın kabin hesabı, olduğu gibi. */}
-                        <div className="mt-3 text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">
+                        <div className="mt-3 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
                           {t('scene.placeHeading')}
                         </div>
                         {duvarOlcu && (
@@ -5144,7 +5153,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           <button
                             type="button"
                             onClick={() => setIzgaraAcik((v) => !v)}
-                            className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                            className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                           >
                             {izgaraAcik ? t('scene.gridOff') : t('scene.gridOn')}
                           </button>
@@ -5245,7 +5254,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   Varsayılanı modelin önerilen mesafesi; artırınca ekran
                   uzaktan bakılmış gibi küçülür.
                 */}
-                {surukleAktif && mesafeKartiVar && (
+                {/*
+                  Sihirbaz açıkken mesafe onun 4. adımında gösteriliyor;
+                  aynı sayıyı iki yerde göstermek hangisinin geçerli olduğunu
+                  belirsizleştiriyordu.
+                */}
+                {surukleAktif && mesafeKartiVar && !(sihirbazAdim > 0) && (
                   <div className="mt-2 border border-neutral-200 dark:border-[#2c333f] rounded-lg p-2.5">
                     {/*
                       TASLAK KUTU VARKEN BU SATIR YOK.
