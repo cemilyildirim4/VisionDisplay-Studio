@@ -4227,16 +4227,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               tuvalH={tuvalBoyut.h}
               onKose={olcuKutusuDegisti}
               /*
-               * TIKLAMA = "kutuyu yerleştirdim, tasarımı göster".
-               * TaslakKutu sürükleme ile tıklamayı ayırıyor: gövde
-               * sürüklendiyse onSec tetiklenmiyor (bkz. govdeSurukle).
+               * KONUMLANDIRIRKEN TIKLAMA TASARIMI AÇMIYOR.
+               *
+               * Kutuya tıklamak bir ara "tasarımı göster" demekti. Ama
+               * konumlandırma kipinde kullanıcı kutuyu TUTMAK için tıklıyor;
+               * sürüklemeden önceki o tıklama kipi kapatıyor ve kutu bir daha
+               * sürüklenemiyordu — sağdaki düğmeye basmak gerekiyordu.
+               *
+               * Tasarımı açmanın yeri artık 4. adımdaki "Bitir ve tasarımı
+               * göster" düğmesi. Kip kapalıyken kutu zaten soluk ve tıklanamaz
+               * olduğu için bu kanca hiç gerekmiyor.
                */
-              onSec={() => {
-                setTasarimAcik(true)
-                setKutuKipi(false)
-                /* Son adımdaysak sihirbaz da bitmiş demektir. */
-                setSihirbazAdim(0)
-              }}
               /*
                * Kip kapalıyken kutu SOLUK ve köşeleri KAPALI: gövdesi
                * pointerEvents almıyor, tutamakları hiç çizilmiyor. Böylece
