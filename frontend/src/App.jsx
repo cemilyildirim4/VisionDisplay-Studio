@@ -4399,7 +4399,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             <KalinlikKatmani
               koseler={koseMutlak}
               derinlikMm={previewModel?.depthMm}
+              /*
+               * Tasarımın gerçek eni de gerekiyor: yan yüzün ne kadarının
+               * görüneceği ön yüzün DARALMA oranından çıkıyor.
+               */
+              tasarimWm={tasarimWm}
               tasarimHm={tasarimHm}
+              /*
+               * Kutu tutamakla çevrildiyse açı zaten biliniyor; dörtgenden
+               * tahmin etmekten kesin.
+               */
+              yawRad={refDuzlem ? null : kutuDurus.yaw}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
             />
