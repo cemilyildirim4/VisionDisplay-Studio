@@ -34,11 +34,25 @@ window.addEventListener('unhandledrejection', (event) => {
  *
  * Sonsuz döngü koruması: yenileme yalnızca controller gerçekten
  * değiştiğinde ve oturumda bir kez yapılıyor.
+ *
+ * ZORLA YENİLEMEDEN SONRA İKİNCİ BİR YENİLEME YOK.
+ *
+ * Ctrl+Shift+R service worker'ı atlıyor: sayfa doğrudan ağdan geliyor, yani
+ * elimizdeki kod ZATEN en yenisi ve sayfa DENETLEYİCİSİZ (controller null)
+ * açılıyor. Hemen ardından yeni SW kurulup bu sekmeyi devralınca
+ * controllerchange tetikleniyordu ve sayfa 1-2 saniye sonra kendiliğinden bir
+ * daha yenileniyordu — kullanıcının gördüğü "iki kere yeniliyor" buydu.
+ * Aynısı siteye ilk girişte de oluyordu.
+ *
+ * Yenilemenin GEREKLİ olduğu tek durum, sayfanın bir SW tarafından
+ * SERVİS EDİLMİŞ olması: o zaman ekrandaki dosyalar önbellekten gelen eski
+ * sürüm olabilir. Açılışta denetleyici yoksa yenilenecek eski bir şey yok.
  */
 if ('serviceWorker' in navigator) {
   let yenilendi = false
+  const acilistaDenetleyici = !!navigator.serviceWorker.controller
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (yenilendi) return
+    if (yenilendi || !acilistaDenetleyici) return
     yenilendi = true
     window.location.reload()
   })
