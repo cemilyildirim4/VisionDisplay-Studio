@@ -4062,9 +4062,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * (uc3dHazir); WebGL kapalıysa ya da katman yüklenemezse
                * ekranda hiçbir şey kalmasın.
                */
-              ekranGizle={uc3dHazir || tasarimGizli}
+              /*
+               * KALİBRE DUVARDA 2B KATMAN GÖRÜNÜR KALIYOR.
+               *
+               * Duvarın düzlemi biliniyorsa tasarımın dörtgeni kesin olarak
+               * hesaplanıyor (dunyaDortgeni) ve 2B katman onu birebir çiziyor —
+               * ölçüldü, 1 piksel içinde tutuyor. 3B katman ise dörtgenden
+               * yaklaşık bir duruş (yaw/pitch/roll) türetiyor ve küçük
+               * perspektifi yutuyor: kutu 47,7 piksel yamukken tasarım 9,9
+               * piksel kalıyor, üstelik açısı 2,6 derece sapıyordu. Ekranda
+               * tasarım duvarın düzleminde DURMUYOR gibi görünüyordu.
+               */
+              ekranGizle={(uc3dHazir && !duvarDunya) || tasarimGizli}
               uc3dKatman={
-                !tasarimGizli && YERINDE_3B && surukleAktif
+                !tasarimGizli && !duvarDunya && YERINDE_3B && surukleAktif
                   ? ({ koseler, genislik, yukseklik }) => (
                       <Suspense fallback={null}>
                         <Mekan3D
