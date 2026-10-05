@@ -494,6 +494,11 @@ const dict = {
     en: 'Drag the body to move the box. Perspective comes from the plane: it shrinks by itself as it moves away, no corner adjustment needed.',
     ar: 'اسحب الجسم لتحريك المربع؛ المنظور يأتي من المستوى.',
   },
+  'sih.egimSifirla': {
+    tr: 'Eğimi sıfırla (kutuyu düzleştir)',
+    en: 'Reset tilt (flatten the box)',
+    ar: 'إعادة تعيين الميل',
+  },
   'sih.egim': { tr: 'eğim', en: 'tilt', ar: 'الميل' },
   'sih.aciHizala': {
     tr: 'Kutuyu referansın eğimine göre döndür:',

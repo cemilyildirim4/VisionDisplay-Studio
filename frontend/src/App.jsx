@@ -3578,6 +3578,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setRefMesaj(null)
   }
 
+  /*
+   * EĞİMİ SIFIRLA — kutuyu düz hâline döndür.
+   *
+   * Kutu referansın eğiminde doğuyor ve kullanıcı köşelerinden perspektif
+   * verebiliyor. Bir noktadan sonra "baştan düz başlayayım" demek
+   * gerekiyordu; tek yol kutuyu yeniden kurmaktı ve o da yerini
+   * kaybettiriyordu.
+   *
+   * Burada kutunun o anki MERKEZİ korunuyor, yalnızca şekli eksenlere
+   * paralel dikdörtgene dönüyor. Fiziksel ölçü (enCm/boyCm) değişmiyor.
+   *
+   * Düzlem kipinde anlamsız: orada perspektif referanstan ÖLÇÜLÜYOR,
+   * sıfırlanacak bir elle ayar yok.
+   */
+  const kutuEgiminiSifirla = () => {
+    const kaynak = ozelSahne?.kaynak
+    if (!olcuKutu || refDuzlem || !refPxCm || !(kaynak?.w > 0)) return
+    if (!Array.isArray(hedefKose) || hedefKose.length !== 4) return
+    const k = kutuDortgeni(
+      olcuKutu.enCm,
+      olcuKutu.boyCm,
+      refPxCm,
+      kaynak.w,
+      kaynak.h,
+      koseMerkezi(hedefKose),
+      0,
+    )
+    if (!k) return
+    setHedefKose(k.koseler)
+    setTaslakKutu(k.koseler)
+    setHedefTur('taslak')
+    /* Bir daha kurulursa yine düz başlasın. */
+    setRefAciKullan(false)
+  }
+
   /** Dörtgenin merkezi — köşelerin ortalaması. */
   const koseMerkezi = (k) => ({
     x: k.reduce((t, q) => t + q.x, 0) / k.length,
@@ -5071,6 +5106,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             mesafeM={izlemeMesafesi}
                             onMesafe={setIzlemeM}
                             mesafeKilitli={!!taslakKutu}
+                            onEgimSifirla={refDuzlem ? null : kutuEgiminiSifirla}
                           />
                         ) : (
                           <>

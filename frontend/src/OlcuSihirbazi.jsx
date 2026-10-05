@@ -61,6 +61,7 @@ export default function OlcuSihirbazi({
   mesafeM,
   onMesafe,
   mesafeKilitli = false,
+  onEgimSifirla,
   /* eylemler */
   onGeri,
   onIleri,
@@ -367,6 +368,19 @@ export default function OlcuSihirbazi({
                 </div>
               )}
 
+              {/*
+                EĞİMİ SIFIRLA — kutuyu düz hâline döndür.
+                Düzlem kipinde yok: orada perspektif ölçülmüş oluyor.
+              */}
+              {onEgimSifirla && (
+                <button
+                  type="button"
+                  onClick={onEgimSifirla}
+                  className="mt-2 w-full rounded-md border border-neutral-300 bg-white py-2 text-[13.5px] font-medium text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-300"
+                >
+                  {t('sih.egimSifirla')}
+                </button>
+              )}
               <div className="mt-2 flex items-center gap-1.5">
                 <button type="button" onClick={onGeri} className={yan}>
                   {t('sih.geri')}
