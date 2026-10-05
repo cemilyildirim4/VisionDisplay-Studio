@@ -3206,6 +3206,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       y: mY + (yer.ust + k.y * yer.yukseklik - mY) * z,
     }
   }
+  /*
+   * FOTOĞRAFIN TUVALDEKİ DİKDÖRTGENİ.
+   *
+   * Tuval fotoğraftan büyük olabiliyor (en-boy oranları tutmayınca kenarlarda
+   * şerit kalıyor). İşaretleme ve kutu katmanları bu sınırı kullanıyor ki
+   * hiçbir şey fotoğrafın dışına taşmasın.
+   */
+  const fotoSinir = (() => {
+    if (!(fotoYer?.genislik > 0) || !(fotoYer?.yukseklik > 0)) return null
+    const a = oranTuvale({ x: 0, y: 0 })
+    const b = oranTuvale({ x: 1, y: 1 })
+    return { sol: Math.min(a.x, b.x), ust: Math.min(a.y, b.y), sag: Math.max(a.x, b.x), alt: Math.max(a.y, b.y) }
+  })()
+
   const tuvalOrana = (k) => {
     const yer = fotoYer
     if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return k
@@ -4354,6 +4368,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               }
               /* Kısa referans uyarısı artık aynı birimde: görsel pikseli. */
               enAzPiksel={EN_AZ_PIKSEL}
+              /* İşaretler fotoğrafın dışına çıkamıyor. */
+              sinir={fotoSinir}
               /*
                * Tuvalin üstünde yönerge şeridi YOK.
                *
@@ -4408,6 +4424,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * bozardı.
                */
               onDurus={refDuzlem ? null : kutuDurusunuCevir}
+              /* Kutu da tutamakları da fotoğrafın içinde kalıyor. */
+              sinir={fotoSinir}
               etiket={tasarimGizli ? t('kutu.tiklaGoster') : kutuKipi ? t('ref2.konumIpucu') : null}
             />
           )}

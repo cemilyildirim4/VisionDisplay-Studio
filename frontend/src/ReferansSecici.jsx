@@ -39,7 +39,30 @@ export default function ReferansSecici({
   enAzPiksel = 0,
   enCokNokta = 2,
   gorselCarpani = 1,
+  sinir = null,
 }) {
+  /*
+   * HER ŞEY FOTOĞRAFIN İÇİNDE KALIYOR.
+   *
+   * Tuval fotoğraftan büyük: kenarlarda boş şerit var. Noktalar tuvalin
+   * tamamına kıstırılıyordu, dolayısıyla o boş şeride — fotoğrafın DIŞINA —
+   * bırakılabiliyordu. Fotoğrafın dışında kalan bir nokta hiçbir şeyi
+   * göstermiyor ama ölçeğe giriyor: işaretlenmemiş bir yerin uzunluğu
+   * ölçülmüş oluyordu.
+   *
+   * Sınır App'ten geliyor (fotoğrafın tuvaldeki dikdörtgeni). Yoksa eski
+   * davranış: tuvalin kendisi.
+   */
+  const S = {
+    sol: sinir?.sol ?? 0,
+    ust: sinir?.ust ?? 0,
+    sag: sinir?.sag ?? tuvalW,
+    alt: sinir?.alt ?? tuvalH,
+  }
+  const kis = (p) => ({
+    x: Math.max(S.sol, Math.min(S.sag, p.x)),
+    y: Math.max(S.ust, Math.min(S.alt, p.y)),
+  })
   const katmanRef = useRef(null)
   const surukleRef = useRef(null)
   const [secili, setSecili] = useState(0)
@@ -58,12 +81,7 @@ export default function ReferansSecici({
       const adim = e.shiftKey ? 10 : 1
       onDegis(
         noktalar.map((p, i) =>
-          i === secili
-            ? {
-                x: Math.max(0, Math.min(tuvalW, p.x + yon[0] * adim)),
-                y: Math.max(0, Math.min(tuvalH, p.y + yon[1] * adim)),
-              }
-            : p,
+          i === secili ? kis({ x: p.x + yon[0] * adim, y: p.y + yon[1] * adim }) : p,
         ),
       )
     }
@@ -74,10 +92,7 @@ export default function ReferansSecici({
   const yerel = (e) => {
     const r = katmanRef.current?.getBoundingClientRect()
     if (!r) return null
-    return {
-      x: Math.max(0, Math.min(tuvalW, e.clientX - r.left)),
-      y: Math.max(0, Math.min(tuvalH, e.clientY - r.top)),
-    }
+    return kis({ x: e.clientX - r.left, y: e.clientY - r.top })
   }
 
   /* Boş alana basmak yeni nokta koyuyor; kontenjan dolunca eklemiyor. */
@@ -134,6 +149,23 @@ export default function ReferansSecici({
    */
   const dortgen = !cizgiKipi && noktalar.length === 4 ? noktalar.map((p) => `${p.x},${p.y}`).join(' ') : null
 
+  /*
+   * ROZETİN YERİ. Varsayılan yer çizginin ortasının üstü. Fotoğrafın
+   * tepesine yakınsa yukarıda yer yok: çizginin altına geçiyor. Yatayda da
+   * kendi genişliği kadar içeri çekiliyor — kenara yakın bir referansta
+   * rozet fotoğrafın dışına sarkıyordu.
+   */
+  const rozet = (() => {
+    if (!cizgiKipi || !a || !b) return { x: 0, y: 0 }
+    const ox = (a.x + b.x) / 2
+    const oy = (a.y + b.y) / 2
+    const ust = oy - 30 >= S.ust ? oy - 30 : Math.min(oy + 10, S.alt - 24)
+    return {
+      x: Math.max(S.sol + 48, Math.min(S.sag - 48, ox)),
+      y: Math.max(S.ust + 2, ust),
+    }
+  })()
+
   return (
     <svg
       ref={katmanRef}
@@ -158,8 +190,8 @@ export default function ReferansSecici({
           <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={renk} strokeWidth="2.5" strokeDasharray="8 5" />
           <g>
             <rect
-              x={(a.x + b.x) / 2 - 46}
-              y={(a.y + b.y) / 2 - 30}
+              x={rozet.x - 46}
+              y={rozet.y}
               width="92"
               height="22"
               rx="6"
@@ -167,8 +199,8 @@ export default function ReferansSecici({
               opacity="0.92"
             />
             <text
-              x={(a.x + b.x) / 2}
-              y={(a.y + b.y) / 2 - 14}
+              x={rozet.x}
+              y={rozet.y + 16}
               textAnchor="middle"
               fontSize="12.5"
               fontWeight="700"
@@ -221,8 +253,9 @@ export default function ReferansSecici({
             okunacak kadar büyütmeyi zorunlu kılıyordu.
           */}
           <text
-            x={p.x + R_SECILI + 4}
-            y={p.y - R_SECILI - 2}
+            x={p.x + R_SECILI + 4 > S.sag - 10 ? p.x - R_SECILI - 4 : p.x + R_SECILI + 4}
+            textAnchor={p.x + R_SECILI + 4 > S.sag - 10 ? 'end' : 'start'}
+            y={p.y - R_SECILI - 2 < S.ust + 10 ? p.y + R_SECILI + 11 : p.y - R_SECILI - 2}
             fontSize="11"
             fontWeight="700"
             fill={renk}

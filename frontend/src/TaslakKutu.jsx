@@ -35,6 +35,7 @@ export default function TaslakKutu({
   onSec,
   onKose,
   onDurus,
+  sinir = null,
   etiket,
   soluk = false,
   renk = '#2962ad',
@@ -42,6 +43,40 @@ export default function TaslakKutu({
   koseKapali = false,
 }) {
   if (!Array.isArray(koseler) || koseler.length !== 4) return null
+
+  /*
+   * KUTU FOTOĞRAFIN DIŞINA ÇIKMIYOR.
+   *
+   * Tuval fotoğraftan büyük; kutu o boş şeride sürüklenebiliyordu ve
+   * fotoğrafta olmayan bir duvara yerleşmiş gibi görünüyordu. Sınır App'ten
+   * geliyor (fotoğrafın tuvaldeki dikdörtgeni); yoksa tuvalin kendisi.
+   */
+  const S = {
+    sol: sinir?.sol ?? 0,
+    ust: sinir?.ust ?? 0,
+    sag: sinir?.sag ?? tuvalW,
+    alt: sinir?.alt ?? tuvalH,
+  }
+  const kis = (p) => ({
+    x: Math.max(S.sol, Math.min(S.sag, p.x)),
+    y: Math.max(S.ust, Math.min(S.alt, p.y)),
+  })
+  /*
+   * Gövde sürüklerken köşeler TEK TEK kıstırılamaz: o zaman dörtgen ezilir.
+   * Bunun yerine dörtgenin tamamı, sınırı aşan kadar geri öteleniyor — şekil
+   * hiç bozulmuyor. Kutu fotoğraftan büyükse o eksende öteleme yapılmıyor.
+   */
+  const otele = (k) => {
+    const minX = Math.min(...k.map((q) => q.x))
+    const maxX = Math.max(...k.map((q) => q.x))
+    const minY = Math.min(...k.map((q) => q.y))
+    const maxY = Math.max(...k.map((q) => q.y))
+    let dx = 0
+    let dy = 0
+    if (maxX - minX <= S.sag - S.sol) dx = minX < S.sol ? S.sol - minX : maxX > S.sag ? S.sag - maxX : 0
+    if (maxY - minY <= S.alt - S.ust) dy = minY < S.ust ? S.ust - minY : maxY > S.alt ? S.alt - maxY : 0
+    return dx || dy ? k.map((q) => ({ x: q.x + dx, y: q.y + dy })) : k
+  }
 
   const nokta = koseler.map((k) => `${k.x},${k.y}`).join(' ')
   const mx = koseler.reduce((t, k) => t + k.x, 0) / 4
@@ -56,7 +91,7 @@ export default function TaslakKutu({
     const kutu = hedef.ownerSVGElement.getBoundingClientRect()
     const tasi = (ev) => {
       const yeni = koseler.map((k, j) =>
-        j === i ? { x: ev.clientX - kutu.left, y: ev.clientY - kutu.top } : k,
+        j === i ? kis({ x: ev.clientX - kutu.left, y: ev.clientY - kutu.top }) : k,
       )
       /*
        * BOZUK DÖRTGEN KABUL EDİLMİYOR.
@@ -119,9 +154,19 @@ export default function TaslakKutu({
     const boy = Math.hypot(dx, dy)
     if (!(boy > 0)) return null
     const UZAKLIK = 30
+    /*
+     * Tutamak kutunun DIŞINDA duruyor; kutu fotoğrafın kenarındayken o dış
+     * nokta fotoğrafın dışına düşüyordu. Yarıçapı kadar pay bırakılarak
+     * içeri çekiliyor.
+     */
+    const PAY = 14
+    const ham = { x: altOrta.x + (dx / boy) * UZAKLIK, y: altOrta.y + (dy / boy) * UZAKLIK }
     return {
       bas: altOrta,
-      uc: { x: altOrta.x + (dx / boy) * UZAKLIK, y: altOrta.y + (dy / boy) * UZAKLIK },
+      uc: {
+        x: Math.max(S.sol + PAY, Math.min(S.sag - PAY, ham.x)),
+        y: Math.max(S.ust + PAY, Math.min(S.alt - PAY, ham.y)),
+      },
     }
   }
 
@@ -145,7 +190,7 @@ export default function TaslakKutu({
       oynadi = true
       sonX = x
       sonY = y
-      simdiki = simdiki.map((k) => ({ x: k.x + dx, y: k.y + dy }))
+      simdiki = otele(simdiki.map((k) => ({ x: k.x + dx, y: k.y + dy })))
       onKose?.(simdiki)
     }
     const bitir = () => {
