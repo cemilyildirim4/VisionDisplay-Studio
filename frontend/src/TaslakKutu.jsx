@@ -34,6 +34,7 @@ export default function TaslakKutu({
   tuvalH,
   onSec,
   onKose,
+  onDurus,
   etiket,
   soluk = false,
   renk = '#2962ad',
@@ -75,6 +76,56 @@ export default function TaslakKutu({
     window.addEventListener('pointermove', tasi)
     window.addEventListener('pointerup', bitir)
   }
+
+  /*
+   * PERSPEKTİF TUTAMAĞI — sürükledikçe kutu çevriliyor.
+   *
+   * Köşeleri tek tek çekmek yerine tek tutamak: yatay hareket kutuyu dikey
+   * eksende çeviriyor, dikey hareket yatay eksende yatırıyor. Fare hareketi
+   * ARTIM olarak gidiyor (mutlak konum değil); böylece tutamağın kutuyla
+   * birlikte yer değiştirmesi sürüklemeyi bozmuyor.
+   */
+  const durusSurukle = (e) => {
+    if (e.button != null && e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    let sonX = e.clientX
+    let sonY = e.clientY
+    const tasi = (ev) => {
+      const dx = ev.clientX - sonX
+      const dy = ev.clientY - sonY
+      if (!dx && !dy) return
+      sonX = ev.clientX
+      sonY = ev.clientY
+      onDurus?.(dx, dy)
+    }
+    const bitir = () => {
+      window.removeEventListener('pointermove', tasi)
+      window.removeEventListener('pointerup', bitir)
+    }
+    window.addEventListener('pointermove', tasi)
+    window.addEventListener('pointerup', bitir)
+  }
+
+  /*
+   * Tutamağın yeri: alt kenarın ortasından DIŞARI doğru. Kutunun içinde
+   * olsaydı gövde sürüklemesiyle (taşıma) çakışırdı.
+   */
+  const durusTutamagi = () => {
+    const altOrta = { x: (koseler[2].x + koseler[3].x) / 2, y: (koseler[2].y + koseler[3].y) / 2 }
+    const dx = altOrta.x - mx
+    const dy = altOrta.y - my
+    const boy = Math.hypot(dx, dy)
+    if (!(boy > 0)) return null
+    const UZAKLIK = 30
+    return {
+      bas: altOrta,
+      uc: { x: altOrta.x + (dx / boy) * UZAKLIK, y: altOrta.y + (dy / boy) * UZAKLIK },
+    }
+  }
+
+  const tutamakYeri = !soluk && onDurus ? durusTutamagi() : null
 
   /* Kutunun tamamını taşı: içeriden tutup sürükleme. */
   const govdeSurukle = (e) => {
@@ -169,6 +220,45 @@ export default function TaslakKutu({
             style={{ cursor: 'grab', pointerEvents: 'auto' }}
           />
         ))}
+        {/*
+          PERSPEKTİF TUTAMAĞI — köşelerden ayrı renk.
+          Köşe tutamakları kutuyu BOZARAK şekil veriyor; bu tutamak kutuyu
+          ÇEVİRİYOR, şekli hep gerçek bir dikdörtgenin izdüşümü kalıyor.
+          Karıştırılmasın diye mavi değil turuncu.
+        */}
+        {!soluk && onDurus && tutamakYeri && (
+          <g>
+            <line
+              x1={tutamakYeri.bas.x}
+              y1={tutamakYeri.bas.y}
+              x2={tutamakYeri.uc.x}
+              y2={tutamakYeri.uc.y}
+              stroke="#d97706"
+              strokeWidth="2"
+              style={{ pointerEvents: 'none' }}
+            />
+            <circle
+              cx={tutamakYeri.uc.x}
+              cy={tutamakYeri.uc.y}
+              r="11"
+              fill="#d97706"
+              stroke="#ffffff"
+              strokeWidth="2.5"
+              onPointerDown={durusSurukle}
+              style={{ cursor: 'move', pointerEvents: 'auto' }}
+            />
+            {/* Dört yön oku: bu tutamağın her yöne sürüklendiğini anlatıyor. */}
+            <path
+              d={`M ${tutamakYeri.uc.x - 6} ${tutamakYeri.uc.y} L ${tutamakYeri.uc.x + 6} ${tutamakYeri.uc.y}
+                  M ${tutamakYeri.uc.x} ${tutamakYeri.uc.y - 6} L ${tutamakYeri.uc.x} ${tutamakYeri.uc.y + 6}`}
+              stroke="#ffffff"
+              strokeWidth="2"
+              strokeLinecap="round"
+              fill="none"
+              style={{ pointerEvents: 'none' }}
+            />
+          </g>
+        )}
       </svg>
     </div>
   )

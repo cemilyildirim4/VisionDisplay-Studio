@@ -31,6 +31,7 @@ import {
   kutuDortgeni,
   EN_AZ_PIKSEL,
 } from './referansOlcek.js'
+import { durusDortgeni, faredenDurus } from './durusKutusu.js'
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
@@ -705,6 +706,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kataloğun köşeden köşeye uzunluğu) o eğim kutuyla ilgisiz olur.
    */
   const [refAciKullan, setRefAciKullan] = useState(true)
+  /*
+   * KUTUNUN DURUŞU — fareyle verilen perspektif.
+   *
+   * İki nokta referansı perspektif VERMİYOR; dört köşe referansı veriyor ama
+   * her fotoğrafta işaretlenecek düzgün bir dikdörtgen yok. Arası burada:
+   * kullanıcı kutunun turuncu tutamağını sürüklüyor, kutu çevriliyor.
+   *
+   * Açılar burada tutuluyor, dörtgende değil: dörtgen her seferinde bu
+   * açılardan yeniden üretiliyor. Böylece sürüklemeler birikmiyor ve şekil
+   * her zaman gerçek bir dikdörtgenin izdüşümü kalıyor (bkz. durusKutusu.js).
+   */
+  const [kutuDurus, setKutuDurus] = useState({ yaw: 0, pitch: 0 })
   /*
    * ÖLÇÜ SİHİRBAZI — kaçıncı adım (0 = kapalı).
    *
@@ -3505,6 +3518,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefTur('taslak')
     /* Yeni kutu: tasarım yeniden gizleniyor, kullanıcı kutuya tıklayınca açılacak. */
     setTasarimAcik(false)
+    /* Yeni kutu düz doğuyor: eski duruş yeni ölçüye taşınmıyor. */
+    setKutuDurus({ yaw: 0, pitch: 0 })
     /* Yeni kutu doğrudan konumlandırılabilir olsun; ilk iş onu yerine koymak. */
     setKutuKipi(true)
     setRefEskidi(false)
@@ -3609,8 +3624,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefKose(k.koseler)
     setTaslakKutu(k.koseler)
     setHedefTur('taslak')
+    /* Fareyle verilen perspektif de sıfırlanıyor: "düz" demek bu. */
+    setKutuDurus({ yaw: 0, pitch: 0 })
     /* Bir daha kurulursa yine düz başlasın. */
     setRefAciKullan(false)
+  }
+
+  /*
+   * FAREYLE PERSPEKTİF — tutamağın her hareketi duruşu çeviriyor.
+   *
+   * Kutunun MERKEZİ sabit kalıyor, yalnızca duruşu değişiyor. Düzlem
+   * kipinde çalışmıyor: orada perspektif referanstan ölçülüyor ve elle
+   * ayarlamak o ölçümü yalanlardı.
+   */
+  const kutuDurusunuCevir = (dx, dy) => {
+    const kaynak = ozelSahne?.kaynak
+    if (!olcuKutu || refDuzlem || !refPxCm || !(kaynak?.w > 0)) return
+    if (!Array.isArray(hedefKose) || hedefKose.length !== 4) return
+    const istek = faredenDurus(kutuDurus, dx, dy)
+    const k = durusDortgeni(
+      olcuKutu.enCm,
+      olcuKutu.boyCm,
+      refPxCm,
+      kaynak.w,
+      kaynak.h,
+      koseMerkezi(hedefKose),
+      refAciKullan ? refAci?.kutuAci || 0 : 0,
+      istek.yaw,
+      istek.pitch,
+    )
+    if (!k) return
+    /* Sınırda sürüklemeye devam edince açı büyümesin: kırpılmış hâli geri alınıyor. */
+    setKutuDurus({ yaw: k.yawRad, pitch: k.pitchRad })
+    setHedefKose(k.koseler)
+    setTaslakKutu(k.koseler)
+    setHedefTur('taslak')
   }
 
   /** Dörtgenin merkezi — köşelerin ortalaması. */
@@ -4285,6 +4333,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * taşınıyor ve taşındıkça perspektifi kendiliğinden düzeliyor.
                */
               koseKapali={!kutuKipi || !!refDuzlem}
+              /*
+               * Perspektif tutamağı yalnızca iki nokta kipinde: düzlem
+               * kipinde perspektif ölçülmüş durumda, elle çevirmek o ölçümü
+               * bozardı.
+               */
+              onDurus={refDuzlem ? null : kutuDurusunuCevir}
               etiket={tasarimGizli ? t('kutu.tiklaGoster') : kutuKipi ? t('ref2.konumIpucu') : null}
             />
           )}
