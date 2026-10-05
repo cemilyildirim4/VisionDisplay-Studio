@@ -4342,6 +4342,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
               /*
+               * Rozetteki piksel sayısı ölçeğe giren sayı olmalı: tuval
+               * pikseli değil, fotoğrafın kendi çözünürlüğündeki piksel.
+               * Çarpan ikisi arasındaki oran — fotoğraf tuvale en-boy oranı
+               * korunarak oturduğu için tek bir sayı iki eksen için de geçerli.
+               */
+              gorselCarpani={
+                ozelSahne?.kaynak?.w > 0 && fotoYer?.genislik > 0
+                  ? ozelSahne.kaynak.w / (fotoYer.genislik * (sahneYakinlik || 1))
+                  : 1
+              }
+              /* Kısa referans uyarısı artık aynı birimde: görsel pikseli. */
+              enAzPiksel={EN_AZ_PIKSEL}
+              /*
                * Tuvalin üstünde yönerge şeridi YOK.
                *
                * Bir ara "Bilinen uzunluğun BİRİNCİ ucuna tıklayın" diye koyu

@@ -38,6 +38,7 @@ export default function ReferansSecici({
   tuvalH,
   enAzPiksel = 0,
   enCokNokta = 2,
+  gorselCarpani = 1,
 }) {
   const katmanRef = useRef(null)
   const surukleRef = useRef(null)
@@ -111,7 +112,21 @@ export default function ReferansSecici({
   const [a, b] = noktalar
   const cizgiKipi = enCokNokta === 2
   const uzunlukPx = cizgiKipi && a && b ? Math.hypot(b.x - a.x, b.y - a.y) : 0
-  const kisa = cizgiKipi && !!(a && b) && enAzPiksel > 0 && uzunlukPx < enAzPiksel
+  /*
+   * ROZETTE YAZAN SAYI ORİJİNAL GÖRSEL PİKSELİ.
+   *
+   * Noktalar tuval pikselinde tutuluyor ve rozet de bir ara o mesafeyi
+   * yazıyordu. Ama ölçek tuval pikselinden HESAPLANMIYOR: fotoğrafın kendi
+   * çözünürlüğündeki mesafeden hesaplanıyor (bkz. ikiNoktaPikselMesafesi).
+   * İkisi aynı sayı değil — tuval, fotoğrafı küçülterek gösteriyor — ve
+   * tuvaldeki sayı pencere boyutuyla da değişiyordu. Yani ekranda, hesaba
+   * HİÇ girmeyen bir rakam duruyordu.
+   *
+   * Çarpan, bir tuval pikselinin kaç görsel pikseli ettiği; App'ten geliyor
+   * çünkü fotoğrafın tuvale nasıl oturduğunu bu bileşen bilmiyor.
+   */
+  const gorselUzunlukPx = uzunlukPx * (gorselCarpani > 0 ? gorselCarpani : 1)
+  const kisa = cizgiKipi && !!(a && b) && enAzPiksel > 0 && gorselUzunlukPx < enAzPiksel
   const renk = kisa ? '#d97706' : '#16a34a'
   /*
    * Dört köşe kipinde kapalı bir dörtgen çiziliyor: kullanıcı işaretlediği
@@ -159,7 +174,7 @@ export default function ReferansSecici({
               fontWeight="700"
               fill="#fff"
             >
-              {Math.round(uzunlukPx)} px
+              {Math.round(gorselUzunlukPx)} px
             </text>
           </g>
         </>
