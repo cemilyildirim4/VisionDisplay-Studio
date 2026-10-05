@@ -16,8 +16,19 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-/* Tutamak yarıçapı ve tıklama alanı. */
-const R = 9
+/*
+ * İŞARET KÜÇÜK, VURUŞ ALANI BÜYÜK.
+ *
+ * İşaret eskiden içine sıra numarası yazılan dolgulu bir daireydi (r=9, yani
+ * 22 piksel genişlik): oturtulmak istenen köşe işaretin ALTINDA kalıyor,
+ * görünmediği için hassas ayar yapılamıyordu.
+ *
+ * Şimdi işaret içi boş küçük bir halka: ortasındaki delikten hedef piksel
+ * görünüyor, merkezde de 1 pikselik bir nokta var. Tıklama/sürükleme alanı
+ * ayrı ve hâlâ geniş (VURUS) — küçük işaret fareyle tutmayı zorlaştırmıyor.
+ */
+const R = 4.5
+const R_SECILI = 6
 const VURUS = 18
 
 export default function ReferansSecici({
@@ -165,22 +176,44 @@ export default function ReferansSecici({
             onPointerDown={noktayaBas(i)}
             style={{ cursor: 'grab' }}
           />
+          {/*
+            Beyaz dış hat: işaret hem açık hem koyu zeminde görünür kalıyor.
+            İç halka boş — altındaki piksel okunuyor.
+          */}
           <circle
             cx={p.x}
             cy={p.y}
-            r={R}
-            fill="#fff"
-            stroke={renk}
-            strokeWidth={i === secili ? 4 : 2.5}
+            r={i === secili ? R_SECILI : R}
+            fill="none"
+            stroke="#fff"
+            strokeWidth={i === secili ? 3.5 : 3}
+            opacity="0.9"
             pointerEvents="none"
           />
+          <circle
+            cx={p.x}
+            cy={p.y}
+            r={i === secili ? R_SECILI : R}
+            fill="none"
+            stroke={renk}
+            strokeWidth={i === secili ? 2 : 1.4}
+            pointerEvents="none"
+          />
+          {/* Tam konum: halkanın ortasındaki tek nokta. */}
+          <circle cx={p.x} cy={p.y} r="1.1" fill={renk} pointerEvents="none" />
+          {/*
+            Sıra numarası işaretin İÇİNDE değil YANINDA: içine yazmak işareti
+            okunacak kadar büyütmeyi zorunlu kılıyordu.
+          */}
           <text
-            x={p.x}
-            y={p.y + 4}
-            textAnchor="middle"
+            x={p.x + R_SECILI + 4}
+            y={p.y - R_SECILI - 2}
             fontSize="11"
             fontWeight="700"
             fill={renk}
+            stroke="#fff"
+            strokeWidth="2.5"
+            paintOrder="stroke"
             pointerEvents="none"
           >
             {i + 1}
