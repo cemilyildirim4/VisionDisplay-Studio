@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { dortgenGecerli } from './homografi.js'
+import { dortgenGecerli, perspektifGecerli } from './homografi.js'
 
 const ADLAR = ['Sol üst', 'Sağ üst', 'Sağ alt', 'Sol alt']
 
@@ -33,7 +33,8 @@ export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH }) {
       const yeni = koseler.map((k, i) =>
         i === secili ? { x: k.x + yon[0] * adim, y: k.y + yon[1] * adim } : k,
       )
-      if (dortgenGecerli(yeni)) onDegis(yeni)
+      /* Perspektif paydası sıfırı geçerse çizim yalanıyor; o hareket de kabul edilmiyor. */
+      if (dortgenGecerli(yeni) && perspektifGecerli(yeni)) onDegis(yeni)
     }
     window.addEventListener('keydown', tus)
     return () => window.removeEventListener('keydown', tus)
@@ -58,7 +59,8 @@ export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH }) {
      * Geçersiz (kendini kesen) dörtgen kabul edilmiyor: kelebek biçimine giren
      * bir dörtgende homografi ekranı ters çeviriyor.
      */
-    if (dortgenGecerli(yeni)) onDegis(yeni)
+    /* Perspektif paydası sıfırı geçerse çizim yalanıyor; o hareket de kabul edilmiyor. */
+      if (dortgenGecerli(yeni) && perspektifGecerli(yeni)) onDegis(yeni)
   }
 
   const kalkti = (e) => {

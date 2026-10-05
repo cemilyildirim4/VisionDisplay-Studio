@@ -26,6 +26,8 @@
  * girilen santimetreden gelir, elle çekilerek değiştirilemez (yoksa fiziksel
  * ölçü bozulurdu); yalnızca yeri değişir.
  */
+import { dortgenGecerli, perspektifGecerli } from './homografi.js'
+
 export default function TaslakKutu({
   koseler,
   tuvalW,
@@ -55,6 +57,15 @@ export default function TaslakKutu({
       const yeni = koseler.map((k, j) =>
         j === i ? { x: ev.clientX - kutu.left, y: ev.clientY - kutu.top } : k,
       )
+      /*
+       * BOZUK DÖRTGEN KABUL EDİLMİYOR.
+       *
+       * Köşe karşı köşenin ötesine geçerse dörtgen kelebek oluyor;
+       * perspektif paydası sıfırı geçerse de içerik ekranı boydan boya
+       * kesen dev bir yalamaya dönüşüyor. İkisi de burada durduruluyor:
+       * hareket kabul edilmiyor, köşe olduğu yerde kalıyor.
+       */
+      if (!dortgenGecerli(yeni) || !perspektifGecerli(yeni)) return
       onKose?.(yeni)
     }
     const bitir = () => {

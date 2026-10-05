@@ -96,6 +96,7 @@ export function koseDonusumu(w, h, koseler) {
 
   const H = birimKaredenHomografi(koseler)
   if (!H) return null
+  if (!perspektifPaydasiGecerli(H)) return null
 
   /*
    * Birim kare yerine w×h kutusu: önce 1/w, 1/h ile ölçekleniyor. Yani
@@ -113,6 +114,45 @@ export function koseDonusumu(w, h, koseler) {
   ]
   if (M.some((v) => !Number.isFinite(v))) return null
   return `matrix3d(${M.map((v) => (Math.abs(v) < 1e-12 ? 0 : Number(v.toFixed(8)))).join(', ')})`
+}
+
+/*
+ * PERSPEKTİF PAYDASI — YALAMANIN ASIL SEBEBİ.
+ *
+ * Homografide her noktanın ölçeği bir paydaya bölünüyor:
+ *   w(u,v) = g·u + h·v + 1
+ * Birim karenin köşelerinde bu payda sırasıyla 1, 1+g, 1+g+h, 1+h.
+ *
+ * Payda sıfırı geçerse o nokta SONSUZA gidiyor: kaçış çizgisi dörtgenin
+ * içinden geçiyor ve içerik ekranı boydan boya kesen dev bir yalamaya
+ * dönüşüyor. Alan denetimi bunu yakalamıyor — dörtgen dışbükey ve
+ * geniş olabilir, yine de payda sıfırlanabilir.
+ *
+ * Alt sınır 0,08: uzak kenar yakın kenarın 12,5 katına kadar
+ * küçülebiliyor. Gerçek bir duvar perspektifi için fazlasıyla yeterli,
+ * ama patlamadan önce duruyor.
+ */
+const EN_AZ_PAYDA = 0.08
+
+function perspektifPaydasiGecerli(H) {
+  if (!H) return false
+  const g = H[6]
+  const h = H[7]
+  const payda = [1, 1 + g, 1 + g + h, 1 + h]
+  return payda.every((p) => Number.isFinite(p) && p > EN_AZ_PAYDA)
+}
+
+/**
+ * Dörtgen çizilebilir bir perspektif veriyor mu?
+ *
+ * Köşe sürüklerken kullanılıyor: hareketi kabul etmeden önce sonucun
+ * patlayıp patlamayacağına bakılıyor. Patlayacaksa köşe olduğu yerde
+ * kalıyor — bozuk bir kareyi çizip sonra düzeltmeye çalışmaktan iyi.
+ */
+export function perspektifGecerli(koseler) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return false
+  if (koseler.some((k) => !k || !Number.isFinite(k.x) || !Number.isFinite(k.y))) return false
+  return perspektifPaydasiGecerli(birimKaredenHomografi(koseler))
 }
 
 /**
