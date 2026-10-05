@@ -2430,6 +2430,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const tasarimGizli = scene === 'ozel' && !!ozelSahne && !!olcuKutu && !!taslakKutu && !tasarimAcik
 
+  /*
+   * ÖLÇÜ ETİKETLERİ KUTU KURULANA KADAR GİZLİ.
+   *
+   * Tasarımın kendi ölçü etiketleri (+/− düğmeleriyle birlikte) fotoğrafın
+   * üstünde, kutunun kurulacağı alanın tam ortasında duruyordu. Kullanıcı o
+   * sırada nokta işaretliyor ve kutuyu yerleştiriyor: etiketler hem görüşü
+   * kapatıyor hem de henüz ÖLÇEĞİ OLMAYAN bir tasarımın ölçüsünü söylüyor,
+   * yani o anda yanlış bilgi.
+   *
+   * Kullanıcının kendi "Ölçüleri gizle" tercihine dokunulmuyor: bu yalnızca
+   * kendi fotoğrafında ve yalnızca kutu hazır olana kadar geçerli bir
+   * bastırma. Kutu kurulup tasarım gösterildiği anda etiketler geri geliyor.
+   */
+  const olcuKutusuHazir = !(scene === 'ozel' && !!ozelSahne && (sihirbazAdim > 0 || tasarimGizli || !olcuKutu))
+  const olculerGorunsun = showMeasurements && olcuKutusuHazir
+
   const koseTuval = (() => {
     /*
      * DÜZELTME YALNIZCA ÇİZİM VARKEN.
@@ -4203,7 +4219,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                */
               kioskGizle={lTipiVar || !kioskVar}
               /* Mekânın gerçek ölçüleri, ölçü gösterimi açıkken görünüyor. */
-              olcuGoster={showMeasurements}
+              olcuGoster={olculerGorunsun}
               /* Duvar etiketi kullanıcının kendi ölçüsünü yazıyor */
               duvarWmEtiket={mekanDuvarWm}
               duvarHmEtiket={mekanDuvarHm}
@@ -4229,7 +4245,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               screenType={screenType}
               resolution={resolution}
               curveAmount={curveAmount}
-              showMeasurements={showMeasurements}
+              showMeasurements={olculerGorunsun}
               onColsChange={setCols}
               onRowsChange={setRows}
               colsMax={colsMax}
