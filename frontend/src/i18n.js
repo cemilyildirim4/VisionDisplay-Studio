@@ -499,6 +499,11 @@ const dict = {
     en: 'Reset tilt (flatten the box)',
     ar: 'إعادة تعيين الميل',
   },
+  'sih.egimAyarla': {
+    tr: 'Eğimi ayarla (referans eğimini uygula)',
+    en: 'Apply tilt (use the reference angle)',
+    ar: 'تطبيق الميل (زاوية المرجع)',
+  },
   'sih.egim': { tr: 'eğim', en: 'tilt', ar: 'الميل' },
   'sih.aciHizala': {
     tr: 'Kutuyu referansın eğimine göre döndür:',

@@ -3607,10 +3607,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Düzlem kipinde anlamsız: orada perspektif referanstan ÖLÇÜLÜYOR,
    * sıfırlanacak bir elle ayar yok.
    */
-  const kutuEgiminiSifirla = () => {
+  /*
+   * Kutuda şu an eğim var mı? Üç kaynaktan biri yeter: referanstan gelen
+   * düzlem içi dönme, ya da fareyle verilen çevirme/yatırma.
+   */
+  const refEgimi = refAci?.kutuAci || 0
+  const egimVar =
+    (refAciKullan && Math.abs(refEgimi) > 0.0087) ||
+    Math.abs(kutuDurus.yaw) > 0.0087 ||
+    Math.abs(kutuDurus.pitch) > 0.0087
+  /*
+   * Düğme ancak yapacak bir iş varsa duruyor: eğim varsa sıfırlanır, yoksa
+   * geri yüklenecek bir referans eğimi varsa uygulanır. Referans da düzse
+   * iki yönde de yapacak iş yok, düğme hiç çıkmıyor.
+   */
+  const egimDugmesiVar = egimVar || Math.abs(refEgimi) > 0.0087
+
+  const kutuEgiminiCevir = () => {
     const kaynak = ozelSahne?.kaynak
     if (!olcuKutu || refDuzlem || !refPxCm || !(kaynak?.w > 0)) return
     if (!Array.isArray(hedefKose) || hedefKose.length !== 4) return
+    /* Eğim varsa düzleştiriyoruz, yoksa referansın eğimini geri veriyoruz. */
+    const hedefAci = egimVar ? 0 : refEgimi
     const k = kutuDortgeni(
       olcuKutu.enCm,
       olcuKutu.boyCm,
@@ -3618,17 +3636,53 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       kaynak.w,
       kaynak.h,
       koseMerkezi(hedefKose),
-      0,
+      hedefAci,
     )
     if (!k) return
     setHedefKose(k.koseler)
     setTaslakKutu(k.koseler)
     setHedefTur('taslak')
-    /* Fareyle verilen perspektif de sıfırlanıyor: "düz" demek bu. */
+    /* Fareyle verilen perspektif her iki yönde de sıfırlanıyor. */
     setKutuDurus({ yaw: 0, pitch: 0 })
-    /* Bir daha kurulursa yine düz başlasın. */
-    setRefAciKullan(false)
+    /* Kutu bir daha kurulursa aynı kararla başlasın. */
+    setRefAciKullan(!egimVar)
   }
+
+  /*
+   * MESAFE DEĞİŞİNCE EĞİMLİ KUTU YENİDEN ÇİZİLİYOR.
+   *
+   * Çekim mesafesi perspektifin sertliğini belirliyor (bkz. durusKutusu.js).
+   * Kutu düzken görünür bir etkisi yok — izdüşüm ölçeği açı sıfırken 1 — ama
+   * çevrilmiş bir kutuda var. Burada yeniden üretilmezse panelde yazan sayı
+   * ekranda duran şekle uymuyordu.
+   *
+   * Bağımlılık listesi kasten kısa: yalnızca mesafe değişince çalışması
+   * gerekiyor, hedefKose'yi kendisi yazdığı için onu listeye koymak döngü
+   * yapardı.
+   */
+  useEffect(() => {
+    if (refDuzlem || !olcuKutu || !refPxCm) return
+    if (!Math.abs(kutuDurus.yaw) && !Math.abs(kutuDurus.pitch)) return
+    const kaynak = ozelSahne?.kaynak
+    if (!(kaynak?.w > 0) || !Array.isArray(hedefKose) || hedefKose.length !== 4) return
+    const k = durusDortgeni(
+      olcuKutu.enCm,
+      olcuKutu.boyCm,
+      refPxCm,
+      kaynak.w,
+      kaynak.h,
+      koseMerkezi(hedefKose),
+      refAciKullan ? refEgimi : 0,
+      kutuDurus.yaw,
+      kutuDurus.pitch,
+      (izlemeMesafesi || 0) * 100,
+    )
+    if (!k) return
+    setHedefKose(k.koseler)
+    setTaslakKutu(k.koseler)
+    setHedefTur('taslak')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [izlemeMesafesi])
 
   /*
    * FAREYLE PERSPEKTİF — tutamağın her hareketi duruşu çeviriyor.
@@ -3652,6 +3706,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       refAciKullan ? refAci?.kutuAci || 0 : 0,
       istek.yaw,
       istek.pitch,
+      /* Perspektifin sertliği çekim mesafesinden — metre, santime çevriliyor. */
+      (izlemeMesafesi || 0) * 100,
     )
     if (!k) return
     /* Sınırda sürüklemeye devam edince açı büyümesin: kırpılmış hâli geri alınıyor. */
@@ -5152,15 +5208,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             onBitir={sihirbazBitir}
                             onKapat={sihirbaziKapat}
                             /*
-                             * Çekim mesafesi 4. adımın içinde: ölçeği değil görünümü
-                             * etkiliyor ve panelde ayrı bir kutuda durunca akışla ilgisi
-                             * yokmuş gibi görünüyordu. Kutu yerleştikten sonra kilitli —
-                             * o noktadan sonra oynatmak kutuyla tasarımın ilişkisini bozar.
+                             * ÇEKİM MESAFESİ ARTIK KİLİTLİ DEĞİL.
+                             *
+                             * Kutu kurulduktan sonra kilitlenmesinin sebebi, mesafenin o
+                             * noktadan sonra ölçeği değiştirmesiydi — ölçek referanstan
+                             * geldiği için mesafe işsiz kalmış, kilit de anlamını
+                             * yitirmişti. Şimdi mesafenin gerçek bir işi var:
+                             * perspektifin sertliğini belirliyor (bkz. durusKutusu.js),
+                             * yani kameranın kutudan ne kadar uzakta durduğunu. Ölçüye
+                             * hâlâ dokunmuyor, bu yüzden serbest bırakmak güvenli.
                              */
                             mesafeM={izlemeMesafesi}
                             onMesafe={setIzlemeM}
-                            mesafeKilitli={!!taslakKutu}
-                            onEgimSifirla={refDuzlem ? null : kutuEgiminiSifirla}
+                            mesafeKilitli={false}
+                            onEgim={refDuzlem || !egimDugmesiVar ? null : kutuEgiminiCevir}
+                            egimVar={egimVar}
                           />
                         ) : (
                           <>

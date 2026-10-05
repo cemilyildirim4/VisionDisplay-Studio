@@ -57,11 +57,13 @@ export default function OlcuSihirbazi({
   kutuBoy,
   setKutuBoy,
   kutuMesaj,
-  /* 4. adım — çekim mesafesi (yalnızca görünümü etkiler) */
+  /* 4. adım — eğim düğmesi: eğim varsa sıfırlar, yoksa referans eğimini uygular */
+  onEgim,
+  egimVar = false,
+  /* 4. adım — çekim mesafesi: perspektifin sertliği (kameranın uzaklığı) */
   mesafeM,
   onMesafe,
   mesafeKilitli = false,
-  onEgimSifirla,
   /* eylemler */
   onGeri,
   onIleri,
@@ -327,13 +329,12 @@ export default function OlcuSihirbazi({
               <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.4.ipucu')}</p>
 
               {/*
-                ÇEKİM MESAFESİ — ölçeği DEĞİL görünümü etkiliyor.
+                ÇEKİM MESAFESİ — ölçeği DEĞİL perspektifi etkiliyor.
 
-                Ölçek referanstan geliyor; bu sayı yalnızca kadrajın ne kadar
-                yakın göründüğünü belirliyor. Panelde ayrı bir kutuda durunca
-                akışla ilgisi yokmuş gibi görünüyordu, bu yüzden adımın içine
-                alındı. Kutu yerleştikten sonra kilitli: o noktadan sonra
-                oynatmak kutuyla tasarımın ilişkisini bozuyor.
+                Ölçek referanstan geliyor, bu sayı ona hiç karışmıyor. İşi
+                kameranın kutudan ne kadar uzakta durduğunu söylemek: aynı
+                açıda çevrilen bir dikdörtgen yakından çok, uzaktan az yamuk
+                görünür (bkz. durusKutusu.js). Bu yüzden artık kilitli değil.
               */}
               {mesafeM != null && (
                 <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1.5 dark:border-[#2c333f] dark:bg-[#1b2029]">
@@ -369,16 +370,19 @@ export default function OlcuSihirbazi({
               )}
 
               {/*
-                EĞİMİ SIFIRLA — kutuyu düz hâline döndür.
-                Düzlem kipinde yok: orada perspektif ölçülmüş oluyor.
+                EĞİM DÜĞMESİ İKİ YÖNLÜ.
+                Eğimli kutuda "sıfırla", düz kutuda "ayarla" yazıyor; ikincisi
+                referansın ölçülen eğimini geri veriyor. Tek yönlü olduğunda
+                sıfırladıktan sonra geri dönmenin yolu yoktu.
+                Düzlem kipinde hiç yok: orada perspektif ölçülmüş oluyor.
               */}
-              {onEgimSifirla && (
+              {onEgim && (
                 <button
                   type="button"
-                  onClick={onEgimSifirla}
+                  onClick={onEgim}
                   className="mt-2 w-full rounded-md border border-neutral-300 bg-white py-2 text-[13.5px] font-medium text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-300"
                 >
-                  {t('sih.egimSifirla')}
+                  {egimVar ? t('sih.egimSifirla') : t('sih.egimAyarla')}
                 </button>
               )}
               <div className="mt-2 flex items-center gap-1.5">

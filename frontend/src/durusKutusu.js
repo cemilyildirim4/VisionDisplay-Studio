@@ -21,11 +21,27 @@
  * karşılığı da referans ölçeğinden (px/cm). Çevirince kenarın kısalması
  * küçülme değil, kısalma — açılı bakılan bir ekran gerçekten daha dar görünür.
  *
- * KAMERA NEREDE. Perspektifin ne kadar güçlü olacağı kameranın uzaklığına
- * bağlı ve o uzaklık bilinmiyor. Sabit bir oran seçiliyor: kamera, kutunun
- * büyük kenarının KAMERA_ORANI katı uzakta. Odak uzaklığı da aynı sayıya
- * eşitleniyor, böylece açı sıfırken izdüşüm ölçeği tam 1 oluyor — yani
- * duruşu sıfırlamak kutuDortgeni'nin verdiği dörtgenin aynısını veriyor.
+ * KAMERA NEREDE — ÇEKİM MESAFESİNİN İŞİ BU.
+ *
+ * Aynı açıda çevrilen bir dikdörtgen, kameraya yakınken çok, uzaktan bakınca
+ * az yamuk görünür. Yani perspektifin SERTLİĞİNİ kameranın uzaklığı
+ * belirliyor ve bu, kullanıcının panele yazdığı çekim mesafesinin tam
+ * karşılığı.
+ *
+ * Çevrim doğrudan referans ölçeğinden çıkıyor. İğnedelik kamerada
+ *   px/cm = odak / uzaklık
+ * olduğu için, uzaklığın PİKSEL cinsinden karşılığı
+ *   d = mesafeCm × px/cm
+ * Yani 3 metreden çekilmiş bir fotoğrafta kamera, kutunun bulunduğu düzlemden
+ * tam 300 cm uzakta duruyor — uydurma bir katsayı değil, ölçülen ölçek.
+ *
+ * Mesafe bilinmiyorsa (ya da saçma küçükse) kutunun kendi boyuna göre bir
+ * oran kullanılıyor: kamera, büyük yarı kenarın KAMERA_ORANI katı uzakta.
+ *
+ * Odak uzaklığı her durumda uzaklığa eşitleniyor; böylece açı sıfırken
+ * izdüşüm ölçeği tam 1 oluyor — duruşu sıfırlamak kutuDortgeni'nin verdiği
+ * dörtgenin aynısını veriyor ve mesafeyi değiştirmek DÜZ kutuyu hiç
+ * oynatmıyor.
  */
 
 /* Fareyle ulaşılabilecek en büyük açılar. Ötesinde şekil inandırıcılığını
@@ -43,6 +59,13 @@ export const DERECE_PX = 0.35
  * içinden çekilmiş tipik bir fotoğrafa yakın duruyor.
  */
 const KAMERA_ORANI = 3.2
+
+/*
+ * Kamera kutunun içine giremez. Çok küçük bir mesafe girildiğinde (ya da kutu
+ * çok büyükken) izdüşüm patlıyor; uzaklık büyük yarı kenarın bu katından
+ * aşağı inmiyor.
+ */
+const EN_YAKIN_ORAN = 1.5
 
 /* Düzlem kameranın hizasına gelirse izdüşüm patlar; o kadarına izin yok. */
 const EN_AZ_Z = 0.15
@@ -62,6 +85,7 @@ function kirp(v, sinir) {
  * @param rollRad      düzlem içi eğim (referanstan)
  * @param yawRad       dikey eksen etrafında çevirme
  * @param pitchRad     yatay eksen etrafında yatırma
+ * @param mesafeCm     çekim mesafesi (santim); yoksa kutunun boyundan oran
  * @returns {{koseler:Array, yawRad:number, pitchRad:number, tasiyor:boolean}}
  *          ya da geçersiz girdide null
  *
@@ -78,6 +102,7 @@ export function durusDortgeni(
   rollRad = 0,
   yawRad = 0,
   pitchRad = 0,
+  mesafeCm = 0,
 ) {
   if (!pxCm || !(pxCm.x > 0) || !(pxCm.y > 0)) return null
   if (!(enCm > 0) || !(boyCm > 0) || !(gorselW > 0) || !(gorselH > 0)) return null
@@ -91,8 +116,14 @@ export function durusDortgeni(
   const yaw = kirp(yawRad, EN_COK_YAW)
   const pitch = kirp(pitchRad, EN_COK_PITCH)
 
-  /* Kamera uzaklığı = odak uzaklığı: açı sıfırken ölçek birebir. */
-  const d = KAMERA_ORANI * Math.max(yariW, yariH)
+  /*
+   * Kamera uzaklığı = odak uzaklığı: açı sıfırken ölçek birebir.
+   * Mesafe verildiyse piksel karşılığı ölçekten çıkıyor, yoksa kutunun
+   * kendi boyuna göre bir oran kullanılıyor.
+   */
+  const olcekPx = (pxCm.x + pxCm.y) / 2
+  const mesafePx = mesafeCm > 0 ? mesafeCm * olcekPx : 0
+  const d = Math.max(EN_YAKIN_ORAN * Math.max(yariW, yariH), mesafePx || KAMERA_ORANI * Math.max(yariW, yariH))
   const f = d
 
   const cr = Math.cos(roll)
