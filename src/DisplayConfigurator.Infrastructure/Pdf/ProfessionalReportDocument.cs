@@ -386,11 +386,10 @@ public class ProfessionalReportDocument : IDocument
             ? (double)ConfigurationCalculator.ViewingDistanceM(_cabin, cols, rows)
             : 0;
         double diag = hMm > 0 ? Math.Round(Math.Sqrt(wMm * wMm + hMm * hMm) / 25.4) : 0;
-        double maxW = (double)_config.TotalMaxPowerKw * 1000.0;
-        double avgW = _config.TotalAvgPowerKw > 0
-            ? (double)_config.TotalAvgPowerKw * 1000.0
-            : Math.Round(maxW * 0.35);
-        double avgBtu = Math.Round(avgW * 3.412);
+        decimal maxWatts = _config.MaxGridWatts;
+        decimal avgWatts = _config.AvgGridWatts > 0
+            ? _config.AvgGridWatts
+            : maxWatts * 0.35m;
 
         long pixels = ParsePixels(_config.TotalResolution, out var mpxText);
         int minPorts = pixels > 0 ? (int)Math.Max(1, Math.Ceiling(pixels / 650000.0)) : Math.Max(1, _config.RequiredRj45Ports);
@@ -504,10 +503,10 @@ public class ProfessionalReportDocument : IDocument
                 AddRow(table, "Tahmini toplam ağırlık", $"{_config.TotalWeightKg:N1} kg", ref alt);
                 if (_isAdmin)
                 {
-                    AddRow(table, "Maksimum güç", $"{_config.TotalMaxPowerKw:F2} kW ({maxW:N0} W)", ref alt);
-                    AddRow(table, "Ortalama / tipik güç", $"{avgW / 1000.0:F2} kW ({avgW:N0} W)", ref alt);
-                    AddRow(table, "Maksimum ısı", $"{_config.HeatDissipationBtu:N0} BTU/hr", ref alt);
-                    AddRow(table, "Ortalama ısı", $"{avgBtu:N0} BTU/hr", ref alt);
+                    AddRow(table, "Maksimum güç", PowerPair(maxWatts), ref alt);
+                    AddRow(table, "Ortalama / tipik güç", PowerPair(avgWatts), ref alt);
+                    AddRow(table, "Maksimum ısı", BtuText(maxWatts), ref alt);
+                    AddRow(table, "Ortalama ısı", BtuText(avgWatts), ref alt);
                 }
 
                 if (_cabin != null)
@@ -529,7 +528,7 @@ public class ProfessionalReportDocument : IDocument
                 if (_isAdmin)
                 {
                     c.Item().Text("* RJ45 adedi, seçilen işlemcinin port başı piksel kapasitesi ile port en ve boy sınırından gelir.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
-                    c.Item().Text("* Isı: 1 W = 3,412 BTU/hr. Toplam ısı = toplam watt × 3,412. Modül satırı bu toplama eklenmez.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
+                    c.Item().Text("* Isı: 1 W = 3,412 BTU/saat. Toplam ısı ham wattan bir kez hesaplanır. Modül satırı bu toplama eklenmez.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
                 }
             });
 
@@ -537,7 +536,7 @@ public class ProfessionalReportDocument : IDocument
 
             if (_isAdmin)
             {
-                column.Item().Element(c => ComposeAdminHardware(c, areaM2, maxW, avgW, avgBtu));
+                column.Item().Element(c => ComposeAdminHardware(c, areaM2, maxWatts, avgWatts));
             }
             else
             {
@@ -555,9 +554,9 @@ public class ProfessionalReportDocument : IDocument
     {
         const decimal hours = LedEnergyCalculator.DefaultDailyHours;
         const int days = LedEnergyCalculator.DefaultDaysPerMonth;
-        decimal avgWatts = _config.TotalAvgPowerKw > 0
-            ? _config.TotalAvgPowerKw * 1000m
-            : _config.TotalMaxPowerKw * 1000m;
+        decimal avgWatts = _config.AvgGridWatts > 0
+            ? _config.AvgGridWatts
+            : _config.MaxGridWatts;
         if (avgWatts <= 0 || areaM2 <= 0 || panelCount <= 0) return;
 
         decimal wattsPerM2 = Math.Round(avgWatts / (decimal)areaM2, 2, MidpointRounding.AwayFromZero);
@@ -676,7 +675,7 @@ public class ProfessionalReportDocument : IDocument
             });
     }
 
-    private void ComposeAdminHardware(IContainer container, double areaM2, double maxW, double avgW, double avgBtu)
+    private void ComposeAdminHardware(IContainer container, double areaM2, decimal maxWatts, decimal avgWatts)
     {
         container.PaddingTop(14).Column(column =>
         {
@@ -757,13 +756,23 @@ public class ProfessionalReportDocument : IDocument
 
                 bool alt = true;
                 var eta = _config.PsuEfficiencyRatio is > 0 ? _config.PsuEfficiencyRatio.Value : 1m;
+                var supply = PowerHeatMath.RecommendSupply(maxWatts);
+                decimal maxBtu = maxWatts * ConfigurationCalculator.WattsToBtu;
+                string phaseVolt = supply.ThreePhase ? "3 faz, 380 V" : "tek faz, 220 V";
                 AddRow(table, "Güç kaynağı verim oranı", $"{eta:P1} ({eta:N4})", ref alt);
-                AddRow(table, "Maksimum güç tüketimi", $"{maxW:N0} W ({_config.TotalMaxPowerKw:F2} kW)", ref alt);
-                AddRow(table, "Tipik güç tüketimi", $"{avgW:N0} W ({avgW / 1000.0:F2} kW)", ref alt);
-                AddRow(table, "Maksimum ısı yayılımı", $"{_config.HeatDissipationBtu:N0} BTU/hr", ref alt);
-                AddRow(table, "Tipik ısı yayılımı", $"{avgBtu:N0} BTU/hr", ref alt);
-                AddRow(table, "Modül ısı yayılımı", $"{_config.ModuleHeatDissipationBtu:N1} BTU", ref alt);
+                AddRow(table, "Maksimum güç tüketimi", PowerPair(maxWatts), ref alt);
+                AddRow(table, "Tipik güç tüketimi", PowerPair(avgWatts), ref alt);
+                AddRow(table, "Maksimum ısı yayılımı", BtuText(maxWatts), ref alt);
+                AddRow(table, "Tipik ısı yayılımı", BtuText(avgWatts), ref alt);
+                AddRow(table, "Modül ısı yayılımı (bilgi)", $"{_config.ModuleHeatDissipationBtu.ToString("N1", Tr)} BTU", ref alt);
+                AddRow(table, "Maksimum çekilen akım", $"{supply.CurrentAmps.ToString("N2", Tr)} A ({phaseVolt})", ref alt);
+                AddRow(table, "Önerilen sigorta", supply.Label, ref alt);
+                AddRow(table, "Gerekli soğutma kapasitesi", $"{PowerHeatMath.CoolingTons(maxBtu).ToString("N2", Tr)} ton", ref alt);
+                AddRow(table, "Gerekli soğutma gücü", $"{PowerHeatMath.CoolingKw(maxBtu).ToString("N2", Tr)} kW", ref alt);
             });
+            column.Item().PaddingTop(4).Text(
+                    "Akım = watt / (volt × 0,95). Sigorta = akım × 1,25, yukarı yönde en yakın C tipi. Tek faz 32 A’yı aşarsa 3 faz 380 V kullanılır. Klima tonu = maksimum BTU / 12.000. Soğutma kW = maksimum BTU / 3,412 / 1.000. Modül ısı satırı toplama eklenmez.")
+                .FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
         });
     }
 
@@ -805,6 +814,12 @@ public class ProfessionalReportDocument : IDocument
 
     private string ResolutionTag() =>
         _config.Is4K ? "4K Ultra HD" : (_config.IsFullHd ? "Full HD" : "Özel");
+
+    private static string PowerPair(decimal watts) =>
+        $"{watts.ToString("N2", Tr)} W ({(watts / 1000m).ToString("N2", Tr)} kW)";
+
+    private static string BtuText(decimal watts) =>
+        $"{PowerHeatMath.RoundBtu(watts).ToString("N0", Tr)} BTU/saat";
 
     private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
 

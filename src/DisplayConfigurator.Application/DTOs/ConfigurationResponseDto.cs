@@ -74,19 +74,22 @@ public class ConfigurationResponseDto
     public decimal TotalMaxPowerKw { get; set; }
     public decimal TotalAvgPowerKw { get; set; }
 
-    /// <summary>Modüllerin kendi ısı yayılımı (BTU). Toplam BTU'ya watt dönüşümünün üstüne eklenir.</summary>
+    /// <summary>Modül maksimum watt × 3,412. Bilgi satırıdır; toplam ısıya eklenmez.</summary>
     public decimal ModuleHeatDissipationBtu { get; set; }
 
-    // Otomatik Türetilen Güç & Isı Bilgileri
-    public double TotalMaxPowerWatts => (double)TotalMaxPowerKw * 1000.0;
-    public double TotalAvgPowerWatts => (double)TotalAvgPowerKw * 1000.0;
+    /// <summary>Şebeke maksimum watt. Yuvarlanmamış. PDF bunu kW ve BTU'ya çevirir.</summary>
+    public decimal TotalMaxPowerWatts { get; set; }
 
-    /// <summary>
-    /// Toplam ısı = toplam giriş watt × 3,412. Modül satırı bu toplama eklenmez;
-    /// modül wattı zaten toplam gücün içindedir.
-    /// </summary>
-    public double HeatDissipationBtu =>
-        Math.Round(TotalMaxPowerWatts * 3.412);
+    /// <summary>Şebeke tipik watt. Yuvarlanmamış.</summary>
+    public decimal TotalAvgPowerWatts { get; set; }
+
+    /// <summary>Toplam ısı = ham maksimum watt × 3,412. Gösterimde yuvarlanır.</summary>
+    public decimal HeatDissipationBtu => MaxGridWatts * 3.412m;
+
+    /// <summary>Kayıtlı kW yuvarlanmış olsa bile canlı hesap wattı önceliklidir.</summary>
+    public decimal MaxGridWatts => TotalMaxPowerWatts > 0 ? TotalMaxPowerWatts : TotalMaxPowerKw * 1000m;
+
+    public decimal AvgGridWatts => TotalAvgPowerWatts > 0 ? TotalAvgPowerWatts : TotalAvgPowerKw * 1000m;
 
     public bool HasMiniPc { get; set; }
     public decimal LaborCostMultiplier { get; set; } = 1m;

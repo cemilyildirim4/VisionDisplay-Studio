@@ -168,8 +168,8 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
         </Kart>
 
         <Kart baslik={t('sp.power')}>
-          <Veri buyuk label={t('sp.max')} value={has ? `${fmt(s.pMax)} (W/h)` : DASH} />
-          <Veri buyuk label={t('sp.typical')} value={has ? `${fmt(s.pTyp)} (W/h)` : DASH} />
+            <Veri buyuk label={t('sp.max')} value={has ? `${fmt(s.pMax, 2)} (W/h)` : DASH} />
+            <Veri buyuk label={t('sp.typical')} value={has ? `${fmt(s.pTyp, 2)} (W/h)` : DASH} />
         </Kart>
       </Izgara>
     )
@@ -208,8 +208,8 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
 
         {has && (
           <Kart baslik={t('sp.power')} genis>
-            <Veri buyuk label={t('sp.max')} value={`${fmt(s.pMax)} ${t('sp.watt')}`} />
-            <Veri buyuk label={t('sp.typical')} value={`${fmt(s.pTyp)} ${t('sp.watt')}`} />
+            <Veri buyuk label={t('sp.max')} value={`${fmt(s.pMax, 2)} ${t('sp.watt')}`} />
+            <Veri buyuk label={t('sp.typical')} value={`${fmt(s.pTyp, 2)} ${t('sp.watt')}`} />
             <Veri label={`110V 20A ${t('sp.circuits')}`} value={circuitText(s.circuits.c110_20)} />
             <Veri label={`208V 20A ${t('sp.circuits')}`} value={circuitText(s.circuits.c208_20)} />
             <Veri label={`230V 13A ${t('sp.circuits')}`} value={circuitText(s.circuits.c230_13)} />

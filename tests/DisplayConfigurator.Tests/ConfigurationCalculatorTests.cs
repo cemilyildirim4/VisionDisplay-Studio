@@ -305,14 +305,19 @@ public class ConfigurationCalculatorTests
 
         // 12 modül × 600 W = 7,2 kW; η=0,9 → 8 kW. PSU 4000 W → 2 × 80 $ = 160 $.
         Assert.Equal(8.00m, result.TotalMaxPowerKw);
-        Assert.Equal(2.67m, result.TotalAvgPowerKw); // 2400 / 0.9 = 2666.6… → 2.67 kW
+        Assert.Equal(2400m / 0.9m / 1000m, result.TotalAvgPowerKw);
+        Assert.Equal(2400m / 0.9m, result.TotalAvgPowerWatts);
+        Assert.Equal(8000m, result.TotalMaxPowerWatts);
         Assert.Equal(160m, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").LineTotal);
         Assert.Equal(2, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
         Assert.Equal(12160m, result.HardwareSubtotal);
 
-        // Modül satırı yalnızca modül wattı. Toplam ısı giriş wattının bir kez çevrilmesidir.
-        Assert.Equal(24566.4m, result.ModuleHeatDissipationBtu);
-        Assert.Equal(Math.Round(8000 * 3.412), result.HeatDissipationBtu);
+        Assert.Equal(7200m * 3.412m, result.ModuleHeatDissipationBtu);
+        Assert.Equal(8000m * 3.412m, result.HeatDissipationBtu);
+        Assert.Equal(9099m, PowerHeatMath.RoundBtu(result.TotalAvgPowerWatts));
+        var supply = PowerHeatMath.RecommendSupply(result.TotalMaxPowerWatts);
+        Assert.True(supply.ThreePhase);
+        Assert.Equal("C16 A, 3 faz", supply.Label);
     }
 
     [Fact]

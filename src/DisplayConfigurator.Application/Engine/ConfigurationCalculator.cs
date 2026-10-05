@@ -146,11 +146,10 @@ public static class ConfigurationCalculator
         decimal totalMaxWatts = ApplyPsuLosses(moduleMaxWatts + accessoryWatts, efficiency);
         decimal totalAvgWatts = ApplyPsuLosses(moduleAvgWatts + accessoryWatts, efficiency);
 
-        decimal maxPowerKw = Math.Round(totalMaxWatts / 1000m, 2);
-        decimal avgPowerKw = Math.Round(totalAvgWatts / 1000m, 2);
-        decimal moduleHeatBtu = Math.Round(
-            moduleMaxWatts * WattsToBtu
-            + powerSupplyQty * (hw.PowerSupply?.HeatDissipationBtu ?? 0m), 2);
+        // kW ve BTU burada yuvarlanmaz. PDF ve arayüz gösterirken yuvarlar.
+        decimal maxPowerKw = totalMaxWatts / 1000m;
+        decimal avgPowerKw = totalAvgWatts / 1000m;
+        decimal moduleHeatBtu = moduleMaxWatts * WattsToBtu;
         decimal totalWeightKg = Math.Round(totalModules * (cabin.WeightKg ?? 0m), 2);
 
         decimal widthM = screenWidthMm / 1000m;
@@ -188,6 +187,8 @@ public static class ConfigurationCalculator
             TotalWeightKg = totalWeightKg,
             TotalMaxPowerKw = maxPowerKw,
             TotalAvgPowerKw = avgPowerKw,
+            TotalMaxPowerWatts = totalMaxWatts,
+            TotalAvgPowerWatts = totalAvgWatts,
             ModuleHeatDissipationBtu = moduleHeatBtu,
             AspectRatio = aspectRatio,
             IsFullHd = isFullHd,
