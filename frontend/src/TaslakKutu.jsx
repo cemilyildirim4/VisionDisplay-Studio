@@ -28,6 +28,20 @@
  */
 import { dortgenGecerli, perspektifGecerli } from './homografi.js'
 
+/*
+ * KÖŞE TUTAMAĞI KÜÇÜK, VURUŞ ALANI BÜYÜK.
+ *
+ * Tutamak dolgulu beyaz bir daireydi (r=9): kutuyu tam oturtmak istenen köşe
+ * tutamağın ALTINDA kalıyor, görünmediği için nereye geldiği anlaşılmıyordu.
+ * Şimdi içi boş küçük bir halka — ortasındaki delikten altındaki piksel
+ * okunuyor, tam konumu merkezdeki nokta gösteriyor. Tıklama alanı ayrı ve
+ * geniş, yani küçülmesi tutmayı zorlaştırmıyor (bkz. ReferansSecici, aynı
+ * düzen).
+ */
+const KOSE_R = 5
+const KOSE_R_SOLUK = 4
+const KOSE_VURUS = 16
+
 export default function TaslakKutu({
   koseler,
   tuvalW,
@@ -35,6 +49,7 @@ export default function TaslakKutu({
   onSec,
   onKose,
   onDurus,
+  onDurusBasla,
   sinir = null,
   etiket,
   soluk = false,
@@ -116,24 +131,30 @@ export default function TaslakKutu({
    * PERSPEKTİF TUTAMAĞI — sürükledikçe kutu çevriliyor.
    *
    * Köşeleri tek tek çekmek yerine tek tutamak: yatay hareket kutuyu dikey
-   * eksende çeviriyor, dikey hareket yatay eksende yatırıyor. Fare hareketi
-   * ARTIM olarak gidiyor (mutlak konum değil); böylece tutamağın kutuyla
-   * birlikte yer değiştirmesi sürüklemeyi bozmuyor.
+   * eksende çeviriyor, dikey hareket yatay eksende yatırıyor.
+   *
+   * SÜRÜKLEME TOPLAM OLARAK GİDİYOR, ARTIM OLARAK DEĞİL.
+   *
+   * Önce her hareketin FARKI gönderiliyor ve açıya ekleniyordu. Olmadı:
+   * sürükleme başlarken kurulan dinleyici, o andaki açıyı gören işlevi
+   * tutuyor; her hareket açıyı hep AYNI başlangıçtan hesaplıyor, yani
+   * birikmiyordu. Ölçüldü: 120 piksellik sürüklemede kenarlar 0,5 piksel
+   * oynuyordu, olması gereken 42 derecelik bir dönüştü.
+   *
+   * Artık basıldığı andan itibaren TOPLAM yer değiştirme gönderiliyor; açı
+   * her seferinde sürükleme başındaki açıdan hesaplanıyor. Eski değeri
+   * okumak gerekmediği için bayat kapanış sorunu da kalmıyor.
    */
   const durusSurukle = (e) => {
     if (e.button != null && e.button !== 0) return
     e.preventDefault()
     e.stopPropagation()
     e.currentTarget.setPointerCapture?.(e.pointerId)
-    let sonX = e.clientX
-    let sonY = e.clientY
+    const basX = e.clientX
+    const basY = e.clientY
+    onDurusBasla?.()
     const tasi = (ev) => {
-      const dx = ev.clientX - sonX
-      const dy = ev.clientY - sonY
-      if (!dx && !dy) return
-      sonX = ev.clientX
-      sonY = ev.clientY
-      onDurus?.(dx, dy)
+      onDurus?.(ev.clientX - basX, ev.clientY - basY)
     }
     const bitir = () => {
       window.removeEventListener('pointermove', tasi)
@@ -252,19 +273,40 @@ export default function TaslakKutu({
         )}
         {!koseKapali &&
           koseler.map((k, i) => (
-          <circle
-            key={i}
-            cx={k.x}
-            cy={k.y}
-            r={soluk ? 7 : 9}
-            fill="#ffffff"
-            stroke={renk}
-            strokeWidth="3"
-            opacity={soluk ? 0.6 : 1}
-            onPointerDown={koseSurukle(i)}
-            style={{ cursor: 'grab', pointerEvents: 'auto' }}
-          />
-        ))}
+            <g key={i} opacity={soluk ? 0.6 : 1}>
+              {/* Görünmeyen geniş vuruş alanı: küçük halkayı tutturmak zor. */}
+              <circle
+                cx={k.x}
+                cy={k.y}
+                r={KOSE_VURUS}
+                fill="rgba(0,0,0,0.001)"
+                onPointerDown={koseSurukle(i)}
+                style={{ cursor: 'grab', pointerEvents: 'auto' }}
+              />
+              {/* Beyaz dış hat: hem açık hem koyu zeminde görünür kalıyor. */}
+              <circle
+                cx={k.x}
+                cy={k.y}
+                r={soluk ? KOSE_R_SOLUK : KOSE_R}
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="3"
+                opacity="0.9"
+                pointerEvents="none"
+              />
+              <circle
+                cx={k.x}
+                cy={k.y}
+                r={soluk ? KOSE_R_SOLUK : KOSE_R}
+                fill="none"
+                stroke={renk}
+                strokeWidth="1.6"
+                pointerEvents="none"
+              />
+              {/* Tam konum: halkanın ortasındaki tek nokta. */}
+              <circle cx={k.x} cy={k.y} r="1.1" fill={renk} pointerEvents="none" />
+            </g>
+          ))}
         {/*
           PERSPEKTİF TUTAMAĞI — köşelerden ayrı renk.
           Köşe tutamakları kutuyu BOZARAK şekil veriyor; bu tutamak kutuyu

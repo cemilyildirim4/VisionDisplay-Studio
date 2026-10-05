@@ -3736,11 +3736,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kipinde çalışmıyor: orada perspektif referanstan ölçülüyor ve elle
    * ayarlamak o ölçümü yalanlardı.
    */
-  const kutuDurusunuCevir = (dx, dy) => {
+  /*
+   * Sürükleme başındaki açı. State yerine ref: sürükleme sırasında çalışan
+   * dinleyici, basıldığı andaki kapanışı tutuyor ve state'in yeni değerini
+   * GÖREMİYOR. Toplam yer değiştirme hep bu sabit başlangıca ekleniyor.
+   */
+  const durusBaslangici = useRef({ yaw: 0, pitch: 0 })
+  const kutuDurusuBasladi = () => {
+    durusBaslangici.current = kutuDurus
+  }
+
+  const kutuDurusunuCevir = (toplamDx, toplamDy) => {
     const kaynak = ozelSahne?.kaynak
     if (!olcuKutu || refDuzlem || !refPxCm || !(kaynak?.w > 0)) return
     if (!Array.isArray(hedefKose) || hedefKose.length !== 4) return
-    const istek = faredenDurus(kutuDurus, dx, dy)
+    const istek = faredenDurus(durusBaslangici.current, toplamDx, toplamDy)
     const k = durusDortgeni(
       olcuKutu.enCm,
       olcuKutu.boyCm,
@@ -4455,6 +4465,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * bozardı.
                */
               onDurus={refDuzlem ? null : kutuDurusunuCevir}
+              onDurusBasla={kutuDurusuBasladi}
               /* Kutu da tutamakları da fotoğrafın içinde kalıyor. */
               sinir={fotoSinir}
               etiket={tasarimGizli ? t('kutu.tiklaGoster') : kutuKipi ? t('ref2.konumIpucu') : null}

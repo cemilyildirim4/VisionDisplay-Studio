@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 /**
  * ÖLÇÜ SİHİRBAZI — sağ panelde, adım adım.
  *
@@ -89,9 +91,31 @@ export default function OlcuSihirbazi({
     4: t('sih.4.baslik'),
   }
 
+  /*
+   * MESAFE YAZILABİLİR.
+   *
+   * Yalnızca + / − vardı; 0,1'lik adımlarla 6,2 metreye ulaşmak altmış
+   * tıklama demekti. Artık doğrudan yazılıyor, düğmeler ince ayar için
+   * duruyor.
+   *
+   * Yazarken alan KENDİ metnini gösteriyor (mesafeYazi): aradaki yarım
+   * yazımlar — "6," gibi — sayıya çevrilip geri yazılsaydı imleç kayardı.
+   * Düğmeye basınca ya da alandan çıkınca yerel metin bırakılıyor ve
+   * gösterilen değer yine dışarıdan geliyor.
+   */
+  const [mesafeYazi, setMesafeYazi] = useState(null)
+  const mesafeGoster =
+    mesafeYazi ?? (mesafeM == null ? '' : Number(mesafeM).toFixed(1).replace('.', ','))
+  const mesafeYaz = (metin) => {
+    setMesafeYazi(metin)
+    const n = Number(String(metin).replace(',', '.'))
+    if (onMesafe && Number.isFinite(n) && n >= 0.2) onMesafe(Math.round(n * 100) / 100)
+  }
+
   /* Mesafe adımı: + / − ile 0,1 m, alt sınır 0,2 m. */
   const mesafeDegis = (fark) => {
     if (!onMesafe) return
+    setMesafeYazi(null)
     const v = Math.max(0.2, Math.round(((Number(mesafeM) || 0) + fark) * 10) / 10)
     onMesafe(v)
   }
@@ -354,8 +378,16 @@ export default function OlcuSihirbazi({
                       >
                         −
                       </button>
-                      <span className="w-14 text-center text-[14px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-200">
-                        {Number(mesafeM).toFixed(1).replace('.', ',')} m
+                      <span className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={mesafeGoster}
+                          onChange={(e) => mesafeYaz(e.target.value)}
+                          onBlur={() => setMesafeYazi(null)}
+                          className="w-14 rounded-md border border-neutral-300 bg-white px-1.5 py-1 text-center text-[14px] font-semibold tabular-nums text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                        />
+                        <span className="text-[13.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
                       </span>
                       <button
                         type="button"
