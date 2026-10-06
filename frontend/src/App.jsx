@@ -2462,7 +2462,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * son terim (!tasarimAcik) o zamana kadar hiç değerlendirilmiyor, sonra
    * "Cannot access before initialization" ile uygulama hata ekranına düşüyordu.
    */
-  const tasarimGizli = scene === 'ozel' && !!ozelSahne && !!olcuKutu && !!taslakKutu && !tasarimAcik
+  /*
+   * TASARIM HER ZAMAN GÖRÜNÜR.
+   *
+   * Ölçü kutusu kurulunca tasarım gizleniyordu; kullanıcı onu kutuya
+   * tıklayarak açacaktı. Niyet, kutuyu yerleştirirken tasarımın üstünü
+   * kapatmamasıydı. Sonuç ters oldu: arka plan eklenince kullanıcının
+   * tasarımın yerinde gördüğü şey mavi bir dikdörtgen — yani kutunun
+   * kendisi — ve bunu "tasarım mavi oldu" diye okudu. Haklı okuma:
+   * tasarım ekranında siyah diyot dokusu duruyorken burada mavi bir leke
+   * duruyordu.
+   *
+   * Artık tasarım hiç gizlenmiyor; kutu zaten yarı saydam ve kesikli, ikisi
+   * birlikte okunuyor. Tasarım ekranında ne görünüyorsa fotoğrafın üstünde de
+   * aynısı görünüyor.
+   *
+   * tasarimAcik durumu yerinde kalıyor: kutuyu düzenleme kipine sokan
+   * düğmeler onu hâlâ yazıyor ve ileride bir "yalnızca kutuyu göster"
+   * ihtiyacı doğarsa bağlanacak yer orası.
+   */
+  const tasarimGizli = false
 
   /*
    * ÖLÇÜ ETİKETLERİ KUTU KURULANA KADAR GİZLİ.
