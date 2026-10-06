@@ -35,6 +35,7 @@ import { durusDortgeni, faredenDurus, durusaOturt, kutuGovdesi } from './durusKu
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
+import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
 // çünkü kayıtlı bir mekân geri açılırsa ölçek hesabı ondan çıkıyor.
@@ -4673,6 +4674,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             türetiliyor, yerleşime hiç dokunmuyor. Düz bakışta kendiliğinden
             gizleniyor (bkz. KalinlikKatmani).
           */}
+          {/*
+            TASMA — tasarimin duvarin disinda kalan kismi.
+
+            Olculen alandan buyuk bir tasarim gercek olcusunde ciziliyor ve
+            onizleme penceresinden tasip kenarlardan kirpiliyor. Cizim dogru
+            ama kirpilmis bir kare genis bir bant gibi gorundugu icin
+            kullanicida "oran bozuldu" izlenimi birakiyordu. Tasarim
+            kucultulmuyor; yalnizca duvarin disinda kalan bolge taraniyor.
+          */}
+          {duvarTuval && koseMutlak && scene === 'ozel' && ozelSahne && (
+            <TasmaKatmani
+              tasarim={koseMutlak}
+              duvar={duvarTuval}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+            />
+          )}
+
           {duvarDunya && !tasarimGizli && kabinYuzleri && scene === 'ozel' && ozelSahne && (
             <KalinlikKatmani yuzler={kabinYuzleri} tuvalW={tuvalBoyut.w} tuvalH={tuvalBoyut.h} />
           )}
