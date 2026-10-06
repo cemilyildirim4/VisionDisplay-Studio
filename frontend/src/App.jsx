@@ -3367,14 +3367,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * hesap cwM/chM üzerinden yapılıyor.
    */
   const tasarimiDuvaraSigdir = () => {
-    if (!duvarOlcu || !(cwM > 0) || !(chM > 0)) return
-    const c = Math.max(1, Math.floor(duvarOlcu.wm / cwM + EPS))
-    const r = Math.max(1, Math.floor(duvarOlcu.hm / chM + EPS))
+    if (!duvarOlcu) return
+    /*
+     * YÖN DE SEÇİLİYOR — EN ÇOK LED HANGİSİNDEYSE O.
+     *
+     * Düğme hesabı o anki yönün kabin ölçüsüyle (cwM/chM) yapıyordu, yani
+     * kabini yan çevirmeyi hiç denemiyordu. Yatay varsayılan olduğu için
+     * sonuç hep yatay çıkıyordu; dikey dizilim duvara daha çok kabin
+     * sığdırıyor olsa bile.
+     *
+     * Artık iki yön de hesaplanıp LED sayısı fazla olan seçiliyor. Eşitlikte
+     * yatay kalıyor: kabin döndüğünde LED sayısı değişmez, yalnızca yer
+     * değiştirir, bu yüzden iki dizilim sık sık birebir aynı çıkıyor ve
+     * eşitlik bir üstünlük sayılmıyor (aynı kural yüzey önerisinde de var).
+     */
+    const m = previewModel || selectedModel
+    const secenek = yerlesimSecenekleri(m, duvarOlcu.wm, duvarOlcu.hm)
+    if (!secenek) return
+    const { yatay, dikey } = secenek
+    const dikeySec = dikey.piksel > yatay.piksel
+    const kazanan = dikeySec ? dikey : yatay
+    /* Kazanan yönün kabin ölçüsü: dikeyde kabin yan yatıyor. */
+    const cwM2 = ((dikeySec ? m.heightMm : m.widthMm) || 500) / 1000
+    const chM2 = ((dikeySec ? m.widthMm : m.heightMm) || 500) / 1000
+    const c = kazanan.cols
+    const r = kazanan.rows
+    setOrientation(dikeySec ? 'portrait' : 'landscape')
     setCols(c)
     setRows(r)
     /* Duvar alanı da en az bu kadar olmalı, yoksa üst sınır kabinleri kırpar. */
-    setWidth((e) => Math.max(e, +(c * cwM).toFixed(2)))
-    setHeight((e) => Math.max(e, +(r * chM).toFixed(2)))
+    setWidth((e) => Math.max(e, +(c * cwM2).toFixed(2)))
+    setHeight((e) => Math.max(e, +(r * chM2).toFixed(2)))
     /*
      * SONUCU SÖYLE.
      *
@@ -3392,9 +3415,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         ' ' +
         t('scene.cabinets') +
         ' (' +
-        (c * cwM).toFixed(2).replace('.', ',') +
+        (c * cwM2).toFixed(2).replace('.', ',') +
         ' × ' +
-        (r * chM).toFixed(2).replace('.', ',') +
+        (r * chM2).toFixed(2).replace('.', ',') +
         ' m)',
     )
   }
