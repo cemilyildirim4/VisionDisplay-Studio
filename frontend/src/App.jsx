@@ -2444,7 +2444,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * bastırma. Kutu kurulup tasarım gösterildiği anda etiketler geri geliyor.
    */
   const olcuKutusuHazir = !(scene === 'ozel' && !!ozelSahne && (sihirbazAdim > 0 || tasarimGizli || !olcuKutu))
-  const olculerGorunsun = showMeasurements && olcuKutusuHazir
+  /*
+   * ARKA PLANDA FOTOĞRAF VARSA ETİKETLER HİÇ ÇİZİLMİYOR.
+   *
+   * Etiketler ve +/− düğmeleri tasarımın üstünde, mekânın ortasında duruyor:
+   * fotoğrafı kapatıyorlar ve amaç zaten ekranın o mekânda NASIL DURACAĞINI
+   * görmek. Kabin sayısı sağ paneldeki Sütunlar/Satırlar adımlayıcılarından
+   * değiştirilebildiği için tuvaldeki düğmeler kaybedilmiş bir yetenek değil.
+   *
+   * Fotoğrafsız önizlemede (mekân Kapalı) etiketler duruyor; orada arka
+   * planda kapatacak bir şey yok ve ölçüyü okumanın tek yeri orası.
+   *
+   * olcuKutusuHazir bunun içinde kalıyor: kendi fotoğrafında kutu kurulana
+   * kadar etiketler zaten yanlış bilgi veriyordu (ölçek henüz yok).
+   */
+  const olculerGorunsun = showMeasurements && scene === 'none' && olcuKutusuHazir
 
   const koseTuval = (() => {
     /*
