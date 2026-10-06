@@ -1999,7 +1999,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * ÖLÇEĞİ belirliyor, yani tasarımın o karede kaç piksel ettiğini
      * (kadraj genişliği = mesafe × 1,11 — bkz. ozelMekan.js).
      */
-    if (fotoSahne?.tamGorunsun) return 1
+    if (fotoSahne?.tamGorunsun) {
+      /*
+       * TASARIM KADRAJA SIĞMIYORSA KAMERA GERİ ÇEKİLİYOR.
+       *
+       * Ölçü kutusundan büyük bir tasarım fotoğrafta gerçek ölçüsünde
+       * çizilir ve önizleme penceresinden taşar; kenarlardan kırpılınca
+       * geriye yalnızca bir bant kalır ve kare bir tasarım bile geniş bir
+       * dikdörtgen gibi görünür. Ölçüldü: oran bozulmuyor (dikey 1×1 tasarım
+       * 102 × 204 piksel, oran 0,500), bozulan şey yalnızca görünürlük.
+       *
+       * Tasarımı küçültmek yalan olurdu. Doğrusu kamerayı geri çekmek:
+       * fotoğraf, kutu ve tasarım AYNI oranda küçülüyor, birbirlerine oranı
+       * — yani ölçü doğruluğu — hiç değişmiyor. Gerçekte de bir şeyin
+       * tamamını görmek için geri çekilirsin.
+       *
+       * Sığıyorsa 1 dönüyor, yani fotoğraf hiç oynamıyor.
+       */
+      const yer2 = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)
+      if (!yer2 || !(duvarOlcu?.wm > 0) || !(duvarOlcu?.hm > 0)) return 1
+      if (!Array.isArray(hedefKose) || hedefKose.length !== 4) return 1
+      const xs = hedefKose.map((k) => k.x)
+      const ys = hedefKose.map((k) => k.y)
+      const kutuW = (Math.max(...xs) - Math.min(...xs)) * yer2.genislik
+      const kutuH = (Math.max(...ys) - Math.min(...ys)) * yer2.yukseklik
+      if (!(kutuW > 0) || !(kutuH > 0) || !(tasarimWm > 0) || !(tasarimHm > 0)) return 1
+      /* Tasarımın kadrajdaki piksel ölçüsü, kutunun ölçüsünden oranla. */
+      const tasW = (tasarimWm / duvarOlcu.wm) * kutuW
+      const tasH = (tasarimHm / duvarOlcu.hm) * kutuH
+      const sigma = Math.min((tuvalBoyut.w * 0.92) / tasW, (tuvalBoyut.h * 0.92) / tasH)
+      /* Alt sınır: fotoğraf tanınmaz hâle gelecek kadar küçülmesin. */
+      return Math.max(0.25, Math.min(1, sigma))
+    }
     /*
      * DUVARI ESNEYEN SAHNELERDE YAKINLAŞTIRMA YOK.
      *
@@ -2080,7 +2111,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return Math.max(0.3, Math.min(2.2, kadraj * Math.max(0.3, Math.min(1.8, oran))))
     }
     return taban
-  }, [fotoSahne, izlemeMesafesi, otoIzlemeM, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm, mekanDuvarWm])
+  }, [fotoSahne, izlemeMesafesi, otoIzlemeM, ozelMesafeM, tuvalBoyut.w, tuvalBoyut.h, tasarimWm, tasarimHm, mekanDuvarWm, hedefKose, duvarOlcu])
 
   /*
    * FOTOĞRAFLI MEKÂNDA ÇİZİM ÖLÇEĞİ.
