@@ -529,13 +529,13 @@ const dict = {
   'sih.1.durum2': { tr: 'İki nokta hazır', en: 'Both points are set', ar: 'النقطتان جاهزتان' },
   'sih.1.durumDortHazir': { tr: 'Dört köşe hazır', en: 'All four corners are set', ar: 'الزوايا الأربع جاهزة' },
   'sih.1.tekrar': { tr: 'Temizle', en: 'Clear', ar: 'مسح' },
-  'sih.2.baslik': { tr: 'Gerçek uzunluğu yaz', en: 'Type the real length', ar: 'اكتب الطول الحقيقي' },
+  'sih.2.baslik': { tr: 'Gerçek uzunluğu yaz (cm)', en: 'Type the real length (cm)', ar: 'اكتب الطول الحقيقي (سم)' },
   'sih.2.aciklama': {
     tr: 'İşaretlediğiniz iki nokta arasındaki mesafe gerçekte kaç santim? Fotoğrafın ölçeği bundan çıkıyor.',
     en: 'How many centimetres is the distance between the two points in reality? The photo scale comes from this.',
     ar: 'كم سنتيمترًا بين النقطتين في الواقع؟',
   },
-  'sih.3.baslik': { tr: 'Yerleşim alanının ölçüsü', en: 'Placement area size', ar: 'مقاس منطقة التركيب' },
+  'sih.3.baslik': { tr: 'Yerleşim alanının ölçüsü (cm)', en: 'Placement area size (cm)', ar: 'مقاس منطقة التركيب (سم)' },
   'sih.3.aciklama': {
     tr: 'LED ekranın yerleşeceği alan gerçekte kaç santim? Kutu bu ölçüde, referans çizgisinin yakınında kurulacak.',
     en: 'How large is the area where the LED screen will go? The box will be built at that size, near the reference line.',
@@ -567,7 +567,7 @@ const dict = {
   'ref2.sec': { tr: 'Referans seç', en: 'Pick reference', ar: 'اختر المرجع' },
   'ref2.yeniden': { tr: 'Referansı yeniden seç', en: 'Pick reference again', ar: 'إعادة اختيار المرجع' },
   'ref2.bitir': { tr: 'İşaretlemeyi bitir', en: 'Finish marking', ar: 'إنهاء التحديد' },
-  'ref2.uzunluk': { tr: 'Gerçek uzunluk', en: 'Real length', ar: 'الطول الحقيقي' },
+  'ref2.uzunluk': { tr: 'Gerçek uzunluk (cm)', en: 'Real length (cm)', ar: 'الطول الحقيقي (سم)' },
   'ref2.uzunlukPh': { tr: 'santim', en: 'cm', ar: 'سم' },
   'ref2.uzunlukGir': {
     tr: 'İki nokta arasındaki gerçek uzunluğu santim olarak yazın.',

@@ -5164,14 +5164,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('wall.heading')}</h2>
 
+          {/*
+            BİRİM ALANIN YANINDA YAZIYOR.
+
+            Bu iki alan METRE ile çalışıyor ama ekranda hiçbir yerde "m"
+            yazmıyordu. Ölçü kutusu ise SANTİM istiyor. Kullanıcı buradaki
+            0,96'yı okuyup santim alanına da 0,96 yazdığında 1 santimlik bir
+            yerleşim alanı oluşuyor ve her şey bozuluyor. Birim artık sayının
+            hemen yanında — tahmin edilecek bir şey kalmıyor.
+          */}
           <Card>
             <div className="flex items-center justify-between mb-3">
               <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
-              <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
+              <div className="flex items-center gap-1.5">
+                <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
+                <span className="w-4 text-[15px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
-              <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
+              <div className="flex items-center gap-1.5">
+                <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
+                <span className="w-4 text-[15px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+              </div>
             </div>
           </Card>
 
