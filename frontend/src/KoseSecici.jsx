@@ -115,7 +115,20 @@ export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH, sinir = n
       style={{ touchAction: 'none' }}
     >
       <svg width={tuvalW} height={tuvalH} className="absolute inset-0 pointer-events-none">
-        <polygon points={nokta} fill="rgba(41,98,173,0.18)" stroke="#2962ad" strokeWidth="2" />
+        {/*
+          DOLGU YOK — ALTINDAKİ TASARIM GERÇEK RENGİNDE KALSIN.
+
+          Dörtgen saydam mavi bir dolguyla çiziliyordu. Duvar, tasarımın da
+          üstünü kaplayan büyük bir alan olduğu için bu dolgu doğrudan
+          tasarımın üstüne biniyor ve siyah LED paneli maviye boyuyordu:
+          kullanıcının "tasarım mavi oluyor" dediği şey buydu. Ölçüldü —
+          panelin kendi rengi rgb(18,18,21), yani sorun panelde değil, üstüne
+          binen katmandaydı.
+
+          Dörtgenin nerede olduğunu çizgi ve köşe tutamakları zaten
+          gösteriyor; dolguya gerek yok.
+        */}
+        <polygon points={nokta} fill="none" stroke="#2962ad" strokeWidth="2" />
       </svg>
       {koseler.map((k, i) => (
         <button

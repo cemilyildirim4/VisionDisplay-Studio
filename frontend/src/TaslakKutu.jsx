@@ -64,7 +64,16 @@ export default function TaslakKutu({
   etiket,
   soluk = false,
   renk = '#2962ad',
-  dolgu = 'rgba(41,98,173,0.14)',
+  /*
+   * DOLGU NEREDEYSE GÖRÜNMEZ.
+   *
+   * Dolgu saydam maviydi ve kutunun içindeki tasarımı maviye boyuyordu.
+   * Tamamen kaldırmak da olmuyor: SVG'de 'none' dolgu fareyi hiç almıyor ve
+   * kutu gövdesinden tutulup taşınamaz oluyor. Bu yüzden görünmeyecek kadar
+   * saydam ama tıklanabilir bir dolgu kalıyor; kutunun yerini kesikli çizgi
+   * ve köşe tutamakları gösteriyor.
+   */
+  dolgu = 'rgba(41,98,173,0.004)',
   koseKapali = false,
 }) {
   if (!Array.isArray(koseler) || koseler.length !== 4) return null
