@@ -3120,17 +3120,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       }))
     }
     /*
-     * Tutamaklar ekranda KAYMA UYGULANMIŞ hâli gösteriyor; kaydedilen değer
-     * ise kaymasız olmalı, yoksa kayma iki kez toplanır ve köşe tutamağın
-     * altından kaçar.
+     * HANGİ DÖRTGEN DÜZENLENİYOR — HATANIN KAYNAĞI BURASIYDI.
+     *
+     * Katman, duvar kalibre edilmişse DUVARIN dörtgenini (duvarTuval)
+     * gösteriyor; kalibre değilse tasarımın kendi dörtgenini. Oysa hareket
+     * her iki durumda da TASARIMIN dörtgeniyle (koseMutlak) karşılaştırılıyor
+     * ve yeni dörtgen onun köşelerinden kuruluyordu.
+     *
+     * İkisi ayrı dörtgen: duvar büyük, tasarım onun içinde küçük. Sonuç,
+     * tek bir tutamağı bir piksel oynatınca duvarın tasarımın şekline
+     * atlaması oluyordu — kullanıcının gördüğü "ufacık oynattım, her şey
+     * bozuldu" tam olarak buydu.
+     *
+     * Artık karşılaştırma ekranda GÖSTERİLEN dörtgenle yapılıyor.
      */
-    noktalar = noktalar.map((k) => ({
-      x: k.x - (elleKayma?.x || 0),
-      y: k.y - (elleKayma?.y || 0),
-    }))
-    const oncekiler = elleKose || koseMutlak
+    const kalibreDuvar = !!duvarOlcu && fotoYer?.genislik > 0 && fotoYer?.yukseklik > 0
+    /*
+     * Kayma düzeltmesi yalnızca elle dörtgen dalına ait: orada tutamaklar
+     * kayma uygulanmış hâli gösteriyor ve kaydedilen değer kaymasız olmalı.
+     * Duvar dalında duvarTuval'da kayma yok; çıkarmak dörtgeni kaydırırdı.
+     */
+    if (!kalibreDuvar) {
+      noktalar = noktalar.map((k) => ({
+        x: k.x - (elleKayma?.x || 0),
+        y: k.y - (elleKayma?.y || 0),
+      }))
+    }
+    const oncekiler = kalibreDuvar ? duvarTuval : elleKose || koseMutlak
     if (!oncekiler) {
-      setElleKose(noktalar)
+      if (!kalibreDuvar) setElleKose(noktalar)
       return
     }
 
