@@ -499,6 +499,11 @@ const dict = {
     en: 'Reset tilt (flatten the box)',
     ar: 'إعادة تعيين الميل',
   },
+  'sih.egimDuzleme': {
+    tr: 'Ölçülen perspektife döndür',
+    en: 'Back to the measured perspective',
+    ar: 'العودة إلى المنظور المقاس',
+  },
   'sih.egimAyarla': {
     tr: 'Eğimi ayarla (referans eğimini uygula)',
     en: 'Apply tilt (use the reference angle)',

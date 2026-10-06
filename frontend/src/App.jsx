@@ -712,6 +712,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * o adıma iki düğme daha eklemek olurdu. Ayrım, kurulmuş bir kutuyu sonradan
    * düzeltirken anlamlı — kazara bozmanın olduğu yer orası.
    */
+  /*
+   * DÜZLEM KİPİNDE KUTU ÖLÇÜLEN PERSPEKTİFTE Mİ?
+   *
+   * Dört köşe referansında perspektif ölçülüyor ve kutu o düzleme oturuyor.
+   * Eğim düğmesi orada gizliydi — "ölçülmüş bir şeyi elle sıfırlamak yanlış"
+   * gerekçesiyle. Ama kullanıcı bazen kutuyu düpedüz düz istiyor; düğmenin
+   * hiç olmaması ona o seçeneği kapatıyordu.
+   *
+   * Artık düzlem kipinde de düğme var ve iki durum arasında gidip geliyor:
+   * ölçülen perspektif (true) ↔ eksenlere paralel düz kutu (false).
+   */
+  const [duzlemeOtur, setDuzlemeOtur] = useState(true)
   const [kutuDuzen, setKutuDuzen] = useState(null)
   const kutuKipi = !!kutuDuzen
   /* Sağ paneldeki "Düzenle" bölümü açık mı? */
@@ -3729,6 +3741,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setElleKose(null)
     setDuvarOlcu(null)
     setKutuDurus({ roll: 0, yaw: 0, pitch: 0 })
+    setDuzlemeOtur(true)
     setKutuDuzen(null)
     setDuzenleAcik(false)
     kutuYedek.current = null
@@ -3814,21 +3827,45 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * düzlem içi dönme, ya da fareyle verilen çevirme/yatırma.
    */
   const refEgimi = refAci?.kutuAci || 0
-  const egimVar =
-    Math.abs(kutuDurus.roll) > 0.0087 ||
-    Math.abs(kutuDurus.yaw) > 0.0087 ||
-    Math.abs(kutuDurus.pitch) > 0.0087
+  const egimVar = refDuzlem
+    ? duzlemeOtur
+    : Math.abs(kutuDurus.roll) > 0.0087 ||
+      Math.abs(kutuDurus.yaw) > 0.0087 ||
+      Math.abs(kutuDurus.pitch) > 0.0087
   /*
    * Düğme ancak yapacak bir iş varsa duruyor: eğim varsa sıfırlanır, yoksa
    * geri yüklenecek bir referans eğimi varsa uygulanır. Referans da düzse
    * iki yönde de yapacak iş yok, düğme hiç çıkmıyor.
    */
-  const egimDugmesiVar = egimVar || Math.abs(refEgimi) > 0.0087
+  /* Düzlem kipinde düğmenin her zaman işi var: ölçülen perspektif ↔ düz. */
+  const egimDugmesiVar = !!refDuzlem || egimVar || Math.abs(refEgimi) > 0.0087
 
   const kutuEgiminiCevir = () => {
     const kaynak = ozelSahne?.kaynak
-    if (!olcuKutu || refDuzlem || !refPxCm || !(kaynak?.w > 0)) return
+    if (!olcuKutu || !(kaynak?.w > 0)) return
     if (!Array.isArray(hedefKose) || hedefKose.length !== 4) return
+    /*
+     * DÜZLEM KİPİ: ölçülen perspektif ile düz kutu arasında gidip geliyor.
+     * Düzleştirmek ölçeği bozmuyor — kutu yine enCm × boyCm, yalnızca
+     * düzlemin yamukluğu uygulanmıyor.
+     */
+    if (refDuzlem) {
+      if (!refPxCm) return
+      const merkez = koseMerkezi(hedefKose)
+      const k2 = duzlemeOtur
+        ? kutuDortgeni(olcuKutu.enCm, olcuKutu.boyCm, refPxCm, kaynak.w, kaynak.h, merkez, 0)
+        : (() => {
+            const md = duzlemeDusur(refDuzlem, merkez)
+            return md && duzlemdeKutu(refDuzlem, olcuKutu.enCm, olcuKutu.boyCm, md)
+          })()
+      if (!k2) return
+      setHedefKose(k2.koseler)
+      setTaslakKutu(k2.koseler)
+      setHedefTur('taslak')
+      setDuzlemeOtur((v) => !v)
+      return
+    }
+    if (!refPxCm) return
     /* Eğim varsa düzleştiriyoruz, yoksa referansın eğimini geri veriyoruz. */
     const hedefAci = egimVar ? 0 : refEgimi
     const k = kutuDortgeni(
@@ -4132,7 +4169,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * noktada yeniden kuruluyor. Sonuç: kutu taşındıkça perspektifi
      * kendiliğinden düzeliyor — uzağa gidince küçülüyor.
      */
-    if (refDuzlem && olcuKutu) {
+    if (refDuzlem && duzlemeOtur && olcuKutu) {
       const mn = {
         x: oranli.reduce((t2, q) => t2 + q.x, 0) / 4,
         y: oranli.reduce((t2, q) => t2 + q.y, 0) / 4,
@@ -5652,7 +5689,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             mesafeM={izlemeMesafesi}
                             onMesafe={setIzlemeM}
                             mesafeKilitli={false}
-                            onEgim={refDuzlem || !egimDugmesiVar ? null : kutuEgiminiCevir}
+                            onEgim={egimDugmesiVar ? kutuEgiminiCevir : null}
                             egimVar={egimVar}
                           />
                         ) : (
@@ -5819,7 +5856,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                       </div>
                                     )}
 
-                                    {olcuKutu && !refDuzlem && egimDugmesiVar && (
+                                    {olcuKutu && egimDugmesiVar && (
                                       <button
                                         type="button"
                                         onClick={kutuEgiminiCevir}

@@ -415,7 +415,12 @@ export default function OlcuSihirbazi({
                   onClick={onEgim}
                   className="mt-2 w-full rounded-md border border-neutral-300 bg-white py-2 text-[13.5px] font-medium text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-300"
                 >
-                  {egimVar ? t('sih.egimSifirla') : t('sih.egimAyarla')}
+                  {egimVar
+                    ? t('sih.egimSifirla')
+                    : /* Düzlemde geri dönüş ÖLÇÜLEN perspektife; iki noktada referans eğimine. */
+                      refDuzlem
+                      ? t('sih.egimDuzleme')
+                      : t('sih.egimAyarla')}
                 </button>
               )}
               <div className="mt-2 flex items-center gap-1.5">
