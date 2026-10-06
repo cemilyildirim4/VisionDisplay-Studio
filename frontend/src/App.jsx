@@ -7186,15 +7186,27 @@ function Stepper({ value, onChange, min = 0, max = Infinity, step = 1, decimals 
     onChange(round(Math.min(max, next)))
   }
 
+  /*
+   * VİRGÜL DE ONDALIK AYIRACI.
+   *
+   * Alan type="number" idi ve tarayıcı virgüllü yazımı geçersiz sayıp
+   * değeri boşaltıyordu; odaktan çıkınca da boş değer EN KÜÇÜK sınıra
+   * düşüyordu. Kullanıcının gördüğü "virgüllü sayıyı kabul etmiyor,
+   * yuvarlıyor" tam olarak buydu — yuvarlama değil, sıfırlamaydı.
+   *
+   * Alan artık metin; sayıya çevirirken virgül noktaya dönüyor. Telefonda
+   * sayı tuş takımı yine açılıyor (inputMode="decimal").
+   */
+  const sayiya = (metin) => Number(String(metin).replace(',', '.'))
   const handleChange = (e) => {
     const t = e.target.value
     setDraft(t)
     if (t === '') return // boş bırakmaya izin ver; kırpma odaktan çıkınca
-    const n = Number(t)
+    const n = sayiya(t)
     if (!Number.isNaN(n)) onChange(Math.min(max, n))
   }
   const handleBlur = () => {
-    const n = Number(draft)
+    const n = sayiya(draft)
     if (draft === '' || draft === null || Number.isNaN(n)) onChange(min)
     else onChange(round(Math.min(max, Math.max(min, n))))
     setDraft(null)
@@ -7215,8 +7227,8 @@ function Stepper({ value, onChange, min = 0, max = Infinity, step = 1, decimals 
         </svg>
       </button>
       <input
-        type="number"
-        step="any"
+        type="text"
+        inputMode="decimal"
         value={draft !== null ? draft : value}
         onChange={handleChange}
         onBlur={handleBlur}
