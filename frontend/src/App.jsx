@@ -4826,16 +4826,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             oturtuluyor, gerekirse perspektif veriliyor. Bu ayar kutunun
             GERÇEK ölçüsünü değiştirmiyor — o, panele yazılan santimetredir.
           */}
-          {/*
-            KUTU YALNIZCA DUZENLERKEN GORUNUYOR.
-
-            Duzenleme bitince kutu soluk bir kesikli dortgen olarak ekranda
-            kaliyordu. Isi bitmisti: duvari tanitti, tasarim yerine oturdu.
-            Oradan sonra gosterdigi tek sey, musteriye gosterilecek karenin
-            uzerindeki cizgilerdi. Artik yalnizca sihirbaz ya da Duzenle
-            acikken ciziliyor.
-          */}
-          {kutuKipi && olcuKutu && taslakKutu && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+          {olcuKutu && taslakKutu && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <TaslakKutu
               koseler={taslakKutu.map(oranTuvale)}
               tuvalW={tuvalBoyut.w}
