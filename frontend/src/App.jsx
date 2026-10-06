@@ -3822,6 +3822,70 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHedefTur('taslak')
   }
 
+  /*
+   * ÖLÇÜYÜ YERİNDE GÜNCELLE.
+   *
+   * Santimetreyi değiştirmenin tek yolu kutuyu YENİDEN KURMAKTI; o da kutuyu
+   * referansın yanına geri götürüp kullanıcının yerleştirmesini ve duruşunu
+   * siliyordu. Oysa ölçüyü düzeltmek ayrı bir iş: kutu olduğu yerde, olduğu
+   * duruşta kalmalı, yalnızca büyüyüp küçülmeli.
+   *
+   * Merkez ve duruş korunuyor, dörtgen yeni santimetreyle yeniden üretiliyor.
+   */
+  const olcuyuGuncelle = () => {
+    const o = kutuOlcusuOku()
+    if (!o) return
+    const kaynak = ozelSahne?.kaynak
+    if (!olcuKutu || !(kaynak?.w > 0)) return
+    if (!Array.isArray(hedefKose) || hedefKose.length !== 4) return
+    const merkez = koseMerkezi(hedefKose)
+    /* Düzlem kipinde perspektif ölçülmüş: kutu o düzlemde yeniden kuruluyor. */
+    const k = refDuzlem
+      ? (() => {
+          const md = duzlemeDusur(refDuzlem, merkez)
+          return md && duzlemdeKutu(refDuzlem, o.en, o.boy, md)
+        })()
+      : refPxCm &&
+        durusDortgeni(
+          o.en,
+          o.boy,
+          refPxCm,
+          kaynak.w,
+          kaynak.h,
+          merkez,
+          kutuDurus.roll,
+          kutuDurus.yaw,
+          kutuDurus.pitch,
+          (izlemeMesafesi || 0) * 100,
+        )
+    if (!k) return
+    setOlcuKutu({ enCm: o.en, boyCm: o.boy })
+    setHedefKose(k.koseler)
+    setTaslakKutu(k.koseler)
+    setHedefTur('taslak')
+    setKutuMesaj(k.tasiyor ? t('ref2.kadrajaSigmaz') : null)
+  }
+
+  /* Panelde yazılan mesafenin ham metni (bkz. OlcuSihirbazi, aynı gerekçe). */
+  const [mesafeYazi, setMesafeYazi] = useState(null)
+  const mesafeGoster =
+    mesafeYazi ?? (izlemeMesafesi == null ? '' : Number(izlemeMesafesi).toFixed(1).replace('.', ','))
+  const mesafeYaz = (metin) => {
+    setMesafeYazi(metin)
+    const n = Number(String(metin).replace(',', '.'))
+    if (Number.isFinite(n) && n >= 0.2) setIzlemeM(Math.round(n * 100) / 100)
+  }
+  const mesafeAdim = (fark) => {
+    setMesafeYazi(null)
+    setIzlemeM(Math.max(0.2, Math.round(((Number(izlemeMesafesi) || 0) + fark) * 10) / 10))
+  }
+
+  /** Dörtgenin merkezi, durusaOturt'un beklediği {cx, cy} adlarıyla. */
+  const koseMerkeziCx = (k) => ({
+    cx: k.reduce((t, q) => t + q.x, 0) / k.length,
+    cy: k.reduce((t, q) => t + q.y, 0) / k.length,
+  })
+
   /** Dörtgenin merkezi — köşelerin ortalaması. */
   const koseMerkezi = (k) => ({
     x: k.reduce((t, q) => t + q.x, 0) / k.length,
@@ -3846,7 +3910,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (refDuzlem || !refPxCm || !(kaynak?.w > 0)) return null
     if (!Array.isArray(koseMutlak) || koseMutlak.length !== 4) return null
     if (!(previewModel?.depthMm > 0) || !(tasarimWm > 0) || !(tasarimHm > 0)) return null
+    const mesafeCm = (izlemeMesafesi || 0) * 100
     const n = koseMutlak.map(tuvalOrana)
+    /*
+     * DURUŞ, SAKLANAN DEĞERDEN DEĞİL EKRANDAKİ ŞEKİLDEN.
+     *
+     * Köşeler serbest sürüklenebildiği için kutuDurus artık ekranda duran
+     * şekli anlatmıyor olabilir. Gövdeyi ona göre çizmek kabini tasarımdan
+     * koparırdı. Bu yüzden duruş her seferinde dörtgenin KENDİSİNDEN
+     * çıkarılıyor; saklanan duruş yalnızca aramanın başlangıcı oluyor
+     * (sürüklerken sürekliliği o sağlıyor).
+     */
+    const poz = durusaOturt(
+      n,
+      tasarimWm * 100,
+      tasarimHm * 100,
+      refPxCm,
+      kaynak.w,
+      kaynak.h,
+      { ...koseMerkeziCx(n), roll: kutuDurus.roll, yaw: kutuDurus.yaw, pitch: kutuDurus.pitch },
+      mesafeCm,
+    )
+    if (!poz) return null
     const g = kutuGovdesi(
       tasarimWm * 100,
       tasarimHm * 100,
@@ -3854,14 +3939,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       refPxCm,
       kaynak.w,
       kaynak.h,
-      koseMerkezi(n),
-      kutuDurus.roll,
-      kutuDurus.yaw,
-      kutuDurus.pitch,
-      (izlemeMesafesi || 0) * 100,
+      poz.merkez,
+      poz.roll,
+      poz.yawRad,
+      poz.pitchRad,
+      mesafeCm,
     )
     if (!g || g.yuzler.length === 0) return null
-    return g.yuzler.map((y) => ({ ...y, koseler: y.koseler.map(oranTuvale) }))
+
+    /*
+     * GÖVDEYİ DÖRTGENE YAPIŞTIRMA.
+     *
+     * Elle bozulmuş bir dörtgen gerçek bir dikdörtgenin görüntüsü olmak
+     * zorunda değil; o yüzden bulunan duruşun ön yüzü ekrandaki dörtgene tam
+     * oturmayabiliyor. İkisi arasındaki fark bir DÜZLEM dönüşümü, yani
+     * homografi: bulunan ön yüzden birim kareye, oradan gerçek dörtgene.
+     * Aynı dönüşüm sekiz köşeye birden uygulanınca gövde dörtgenin üstüne
+     * birebir oturuyor ve perspektifi bozulmuyor.
+     */
+    const onTuval = g.on.map(oranTuvale)
+    const A = duvarDunyasi(onTuval, 1, 1)
+    const B = duvarDunyasi(koseMutlak, 1, 1)
+    if (!A || !B) return null
+    const yapistir = (p) => {
+      const u = A.geri(p.x, p.y)
+      return u && B.ileri(u.x, u.y)
+    }
+    const yuzler = []
+    for (const y of g.yuzler) {
+      const k = y.koseler.map(oranTuvale).map(yapistir)
+      if (k.some((q) => !q)) continue
+      yuzler.push({ ...y, koseler: k })
+    }
+    return yuzler.length ? yuzler : null
   })()
 
   /*
@@ -3888,42 +3998,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!Array.isArray(tuvalKoseler) || tuvalKoseler.length !== 4) return
     const oranli = tuvalKoseler.map(tuvalOrana)
     /*
-     * KÖŞEDEN ÇEKİNCE KUTU SERBEST BİR DÖRTGENE DÖNMÜYOR.
+     * KÖŞE SÜRÜKLEME SERBEST.
      *
-     * Dört köşe birbirinden bağımsız oynayınca dörtgen, 30 × 21 cm'lik bir
-     * dikdörtgenin görüntüsü olmaktan çıkıyor; ekranda duran şekil fiziksel
-     * bir iddia taşımaz oluyordu. Oysa köşeleri çekmenin amacı kutuyu
-     * duvarın köşelerine OTURTMAK — şekli bozmak değil.
+     * Bir ara çekilen köşeler HEDEF sayılıp gerçek ölçüsündeki dikdörtgenin
+     * o hedefe en yakın duruşu aranıyordu (durusaOturt). Niyet doğruydu —
+     * şekil hep gerçek bir dikdörtgenin görüntüsü kalsın — ama kullanımda
+     * tutmadı: ulaşılamayan bir köşe istendiğinde arama bambaşka bir duruşa
+     * atlıyor ve tek bir köşenin ufak hareketi dörtgenin tamamını
+     * değiştiriyordu. Kullanıcının elinde kalan şey öngörülemezlikti.
      *
-     * Bu yüzden çekilen köşeler bir HEDEF sayılıyor ve gerçek ölçüsündeki
-     * dikdörtgenin o hedefe en çok benzeyen duruşu aranıyor (bkz.
-     * durusaOturt). Ölçü hiç değişmiyor; değişen yalnızca kutunun duruşu:
-     * merkezi, düzlem içi eğimi, çevirmesi ve yatırması.
+     * Artık köşe nereye çekilirse oraya gidiyor. Şeklin gerçek bir
+     * dikdörtgenin görüntüsü olma zorunluluğu kalktı; bozuk dörtgen ve
+     * yalayan perspektif denetimleri yerinde (bkz. TaslakKutu).
      *
-     * Gövde sürüklemesi bunun dışında: orası saf öteleme, şekle hiç
-     * dokunmuyor ve yeniden oturtmaya gerek yok.
+     * 3B GÖVDE KAYBOLMUYOR. Kabinin yüzleri artık duruş durumundan değil,
+     * ekrandaki dörtgenin KENDİSİNDEN çıkarılan duruştan çiziliyor ve
+     * dörtgene homografiyle yapıştırılıyor (bkz. kabinYuzleri). Yani şekli
+     * elle bozsan da kutu üç boyutlu kalıyor.
      */
-    const kaynak = ozelSahne?.kaynak
-    if (tur === 'kose' && !refDuzlem && olcuKutu && refPxCm && kaynak?.w > 0) {
-      const m = koseMerkezi(oranli)
-      const o = durusaOturt(
-        oranli,
-        olcuKutu.enCm,
-        olcuKutu.boyCm,
-        refPxCm,
-        kaynak.w,
-        kaynak.h,
-        { cx: m.x, cy: m.y, roll: kutuDurus.roll, yaw: kutuDurus.yaw, pitch: kutuDurus.pitch },
-        (izlemeMesafesi || 0) * 100,
-      )
-      if (o) {
-        setKutuDurus({ roll: o.roll, yaw: o.yawRad, pitch: o.pitchRad })
-        setHedefKose(o.koseler)
-        setTaslakKutu(o.koseler)
-        setHedefTur('taslak')
-        return
-      }
-    }
     /*
      * DÜZLEM KİPİNDE KUTU SERBEST BİR DÖRTGEN DEĞİL.
      *
@@ -4577,8 +4669,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                */
               koseKapali={!kutuKipi || !!refDuzlem}
               /* Taşıma kipinde açı, eğim kipinde yer yanlışlıkla bozulamıyor. */
-              tasimaAcik={kutuDuzen === 'tasi' || kutuDuzen === 'hepsi'}
-              egimAcik={kutuDuzen === 'eg' || kutuDuzen === 'hepsi'}
+              /*
+               * Düzenleme açıkken taşıma da eğim de açık: kullanıcı iki ayrı
+               * düğme arasında gidip gelmek istemiyor, tek kip yetiyor.
+               */
+              tasimaAcik={kutuKipi}
+              egimAcik={kutuKipi}
               /*
                * Perspektif tutamağı yalnızca iki nokta kipinde: düzlem
                * kipinde perspektif ölçülmüş durumda, elle çevirmek o ölçümü
@@ -5474,12 +5570,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    /* Bölüm kapanırken düzenleme kipi de kapanıyor:
-                                       görünmeyen bir kipte kutu kazara oynamasın. */
-                                    setDuzenleAcik((v) => {
-                                      if (v) setKutuDuzen(null)
-                                      return !v
-                                    })
+                                    const acilacak = !duzenleAcik
+                                    setDuzenleAcik(acilacak)
+                                    /*
+                                     * Açılınca düzenlemenin tamamı açılıyor: kutu hem
+                                     * taşınabiliyor hem çevrilebiliyor, santim alanları
+                                     * da o anki ölçüyle doluyor. Kapanınca kip kapanıyor
+                                     * ki görünmeyen bir kipte kutu kazara oynamasın.
+                                     */
+                                    setKutuDuzen(acilacak ? 'hepsi' : null)
+                                    if (acilacak) {
+                                      setTasarimAcik(true)
+                                      if (olcuKutu) {
+                                        setKutuEn(String(olcuKutu.enCm))
+                                        setKutuBoy(String(olcuKutu.boyCm))
+                                      }
+                                    }
                                   }}
                                   className={`mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium transition-colors ${
                                     duzenleAcik
@@ -5491,74 +5597,116 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 </button>
                                 {duzenleAcik && (
                                   <div className="mt-1.5 rounded-lg border border-neutral-200 p-2 dark:border-[#2c333f]">
-                                    {refPxCm && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setSihirbazAdim(3)}
-                                        className="w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                                      >
-                                        {t('sih.olcuDegistir')}
-                                      </button>
-                                    )}
+                                    {/*
+                                      DÜZENLEMENİN TAMAMI TEK YERDE.
+
+                                      Önce her iş ayrı bir düğmenin arkasındaydı — ölçü
+                                      için sihirbaz açılıyor, taşımak ve eğmek için iki
+                                      ayrı kip seçiliyordu. Kullanıcı aynı anda yapmak
+                                      istiyor: kutuyu tutup oynatırken santimi de
+                                      düzeltebilmeli. Araçlar burada yan yana, kip ayrımı
+                                      yok.
+                                    */}
                                     {olcuKutu && (
                                       <>
+                                        <div className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-300">
+                                          {t('sih.3.baslik')}
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-1.5">
+                                          <input
+                                            type="number"
+                                            min="1"
+                                            value={kutuEn}
+                                            onChange={(e) => setKutuEn(e.target.value)}
+                                            placeholder={t('ref.en')}
+                                            className="w-full min-w-0 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[15px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                                          />
+                                          <span className="text-[14px] text-neutral-400">×</span>
+                                          <input
+                                            type="number"
+                                            min="1"
+                                            value={kutuBoy}
+                                            onChange={(e) => setKutuBoy(e.target.value)}
+                                            placeholder={t('ref.boy')}
+                                            className="w-full min-w-0 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[15px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                                          />
+                                          <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">
+                                            cm
+                                          </span>
+                                        </div>
                                         {/*
-                                          TAŞIMA VE EĞİM AYRI DÜĞME.
-
-                                          Tek kip varken kutuyu yerine koyarken
-                                          açısı, açısını verirken yeri kayıyordu.
-                                          Hangi düğme basılıysa yalnızca o iş
-                                          yapılabiliyor (bkz. TaslakKutu
-                                          tasimaAcik / egimAcik).
+                                          Ölçü YERİNDE güncelleniyor: kutu referansın
+                                          yanına geri dönmüyor, merkezi ve duruşu
+                                          korunuyor (bkz. olcuyuGuncelle).
                                         */}
                                         <button
                                           type="button"
-                                          onClick={() => {
-                                            setKutuDuzen((k) => (k === 'tasi' ? null : 'tasi'))
-                                            /* Tasarım görünür olsun ki kutuyla birlikte hareket ettiği görülsün. */
-                                            setTasarimAcik(true)
-                                          }}
-                                          className={`mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium transition-opacity ${
-                                            kutuDuzen === 'tasi'
-                                              ? 'bg-brand text-white hover:opacity-90'
-                                              : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
-                                          }`}
+                                          onClick={olcuyuGuncelle}
+                                          className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                                         >
-                                          {kutuDuzen === 'tasi' ? t('ref2.konumBitir') : t('ref2.konumla')}
+                                          {t('ref2.olcuUygula')}
                                         </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            setKutuDuzen((k) => (k === 'eg' ? null : 'eg'))
-                                            setTasarimAcik(true)
-                                          }}
-                                          className={`mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium transition-opacity ${
-                                            kutuDuzen === 'eg'
-                                              ? 'bg-brand text-white hover:opacity-90'
-                                              : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
-                                          }`}
-                                        >
-                                          {kutuDuzen === 'eg' ? t('ref2.egBitir') : t('ref2.egVer')}
-                                        </button>
-                                        {/* Eğimi sıfırlama/geri verme artık sihirbazı açmadan burada. */}
-                                        {kutuDuzen === 'eg' && !refDuzlem && egimDugmesiVar && (
-                                          <button
-                                            type="button"
-                                            onClick={kutuEgiminiCevir}
-                                            className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 bg-white text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-300"
-                                          >
-                                            {egimVar ? t('sih.egimSifirla') : t('sih.egimAyarla')}
-                                          </button>
-                                        )}
-                                        <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                                          {kutuDuzen === 'eg'
-                                            ? t('ref2.egAciklama')
-                                            : kutuDuzen === 'tasi'
-                                              ? t('ref2.konumAciklama')
-                                              : t('kutu.ipucu')}
-                                        </p>
                                       </>
                                     )}
+
+                                    {/* Çekim mesafesi: perspektifin sertliği. */}
+                                    {!refDuzlem && (
+                                      <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1.5 dark:border-[#2c333f] dark:bg-[#1b2029]">
+                                        <span className="text-[13px] text-neutral-600 dark:text-neutral-400">
+                                          {t('scene.viewDist')}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => mesafeAdim(-0.1)}
+                                            className="h-7 w-7 rounded-md border border-neutral-300 text-[16px] leading-none text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+                                          >
+                                            −
+                                          </button>
+                                          <input
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={mesafeGoster}
+                                            onChange={(e) => mesafeYaz(e.target.value)}
+                                            onBlur={() => setMesafeYazi(null)}
+                                            className="w-12 rounded-md border border-neutral-300 bg-white px-1 py-1 text-center text-[14px] font-semibold tabular-nums text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                                          />
+                                          <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400">
+                                            m
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => mesafeAdim(0.1)}
+                                            className="h-7 w-7 rounded-md border border-neutral-300 text-[16px] leading-none text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+                                          >
+                                            +
+                                          </button>
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {olcuKutu && !refDuzlem && egimDugmesiVar && (
+                                      <button
+                                        type="button"
+                                        onClick={kutuEgiminiCevir}
+                                        className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 bg-white text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-300"
+                                      >
+                                        {egimVar ? t('sih.egimSifirla') : t('sih.egimAyarla')}
+                                      </button>
+                                    )}
+
+                                    {/* Referansı yeniden işaretlemek de bir düzenleme. */}
+                                    <button
+                                      type="button"
+                                      onClick={() => setSihirbazAdim(1)}
+                                      className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                                    >
+                                      {t('ref2.yeniden')}
+                                    </button>
+
+                                    <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                                      {t('ref2.duzenleIpucu')}
+                                    </p>
                                   </div>
                                 )}
                               </>

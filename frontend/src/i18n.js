@@ -584,6 +584,12 @@ const dict = {
     ar: 'تغيّر المرجع. أعد إنشاء مربع القياس لاستخدام المقياس الجديد.',
   },
   'ref2.duzenle': { tr: 'Düzenle', en: 'Edit', ar: 'تحرير' },
+  'ref2.olcuUygula': { tr: 'Ölçüyü uygula', en: 'Apply the size', ar: 'تطبيق المقاس' },
+  'ref2.duzenleIpucu': {
+    tr: 'Kutuyu gövdesinden tutup taşıyın, turuncu tutamakla çevirin, köşelerinden çekip duvara oturtun. Tasarım kutuyla birlikte hareket eder; ölçü değişmez.',
+    en: 'Drag the body to move it, turn it with the orange handle, drag the corners onto the wall. The design moves with the box; the size never changes.',
+    ar: 'اسحب الجسم للتحريك، ودوّره بالمقبض البرتقالي، واسحب الزوايا إلى الجدار.',
+  },
   'ref2.duzenleKapat': { tr: 'Düzenlemeyi kapat', en: 'Close editing', ar: 'إغلاق التحرير' },
   'ref2.egVer': { tr: 'Eğim ver', en: 'Set the tilt', ar: 'ضبط الميل' },
   'ref2.egBitir': { tr: 'Eğim vermeyi bitir', en: 'Finish tilting', ar: 'إنهاء ضبط الميل' },
