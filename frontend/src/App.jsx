@@ -3583,11 +3583,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }, [olcuKutu])
 
   /** Girilen santimetreyi okur; geçersizse mesaj yazıp null döner. */
+  /*
+   * SANTİM METRE SANILDI MI?
+   *
+   * Alan SANTİMETRE isteniyor ama soldaki "Duvar" bölümü METRE ile çalışıyor;
+   * kullanıcı oradan okuyup 0,96 × 1,91 yazabiliyor. Alt sınır 0,5 cm olduğu
+   * için bu kabul ediliyordu ve sonuç yaklaşık 1 SANTİMLİK bir ölçü kutusuydu:
+   * ekranda 7 piksel, yani tutulup taşınamayan bir nokta. Tasarım da o kutudan
+   * yüz kat büyük kaldığı için her yer taşma taramasına dönüyordu.
+   *
+   * En küçük kabin 160 mm; bundan küçük bir yerleşim alanı hiçbir kurulumda
+   * işe yaramaz. Sessizce düzeltmiyoruz — metreyi santime çevirmek kullanıcının
+   * kararı — ama ne yazması gerektiğini söylüyoruz.
+   */
+  const EN_AZ_KUTU_CM = 5
+
   const kutuOlcusuOku = () => {
     const en = Number(String(kutuEn).replace(',', '.'))
     const boy = Number(String(kutuBoy).replace(',', '.'))
-    if (!(en > 0.5) || !(boy > 0.5)) {
+    if (!(en > 0) || !(boy > 0)) {
       setKutuMesaj(t('ref.hata.olcuYok'))
+      return null
+    }
+    if (en < EN_AZ_KUTU_CM || boy < EN_AZ_KUTU_CM) {
+      setKutuMesaj(
+        t('ref2.olcuCokKucuk') +
+          ' ' +
+          Math.round(en * 100) +
+          ' × ' +
+          Math.round(boy * 100) +
+          ' cm',
+      )
       return null
     }
     return { en, boy }

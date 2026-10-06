@@ -616,6 +616,11 @@ const dict = {
     en: 'Move · set the angle from the corners · turn with the orange handle',
     ar: 'حرّك · اضبط الزاوية من الزوايا · دوّر بالمقبض البرتقالي',
   },
+  'ref2.olcuCokKucuk': {
+    tr: 'Bu ölçü bir LED alanı için çok küçük. Alan SANTİMETRE olarak yazılıyor — metre yazdıysanız şunu deneyin:',
+    en: 'This is far too small for an LED area. The area is entered in CENTIMETRES — if you typed metres, try:',
+    ar: 'هذا المقاس صغير جدًا. المساحة تُكتب بالسنتيمتر — إن كتبت بالمتر جرّب:',
+  },
   'ref2.kutuKur': { tr: 'Ölçü kutusunu oluştur', en: 'Create measurement box', ar: 'إنشاء مربع القياس' },
   'ref2.kadrajaSigmaz': {
     tr: 'Bu ölçü fotoğrafın kadrajından büyük. Kutu küçültülmedi; dışarı taşıyor.',
