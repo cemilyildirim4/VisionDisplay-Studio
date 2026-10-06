@@ -5852,6 +5852,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             {t('scene.fitWall')}
                           </button>
                         )}
+                        {/*
+                          SONUCU SÖYLE.
+
+                          Düğme sonucu ozelUyari'ya yazıyordu ama o değer
+                          hiçbir yerde çizilmiyordu. Duvara sığan en büyük
+                          düzen zaten seçiliyse ekranda hiçbir şey değişmiyor
+                          ve kullanıcı düğmenin bozuk olduğunu sanıyordu —
+                          oysa düğme doğru çalışıyor, söyleyecek yeri yoktu.
+                        */}
+                        {duvarOlcu && ozelUyari && (
+                          <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-600 dark:text-neutral-300">
+                            {ozelUyari}
+                          </p>
+                        )}
                         {duvarDunya && (
                           <button
                             type="button"
@@ -5882,29 +5896,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           {adayKipi ? t('scene.spotsOff') : t('scene.spots')}
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => (koseKipi ? setKoseKipi(false) : koseKipiAc())}
-                        className={`py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors ${koseKipi ? 'border-brand text-brand' : ''} ${!TASLAK_KIPI && adaylar.length > 0 ? '' : 'col-span-2'}`}
-                      >
-                        {koseKipi ? t('scene.cornersOff') : t('scene.cornersManual')}
-                      </button>
+                      {/*
+                        "DUVARI KÖŞELERDEN KALİBRE ET" KALKTI.
+
+                        Aynı işi ölçü kutusunun kendi düzenleme kipi yapıyor:
+                        orada köşeler serbestçe çekiliyor ve tasarım kutuyla
+                        birlikte gidiyor. İki ayrı yerden aynı dörtgeni
+                        düzenlemek, hangisinin geçerli olduğunu belirsiz
+                        bırakıyordu.
+                      */}
                     </div>
-                    {koseKipi && (
-                      <>
-                        <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {t('scene.cornersHint')}
-                        </p>
-                        {/* Köşeleri dağıtan kullanıcı için geri dönüş yolu. */}
-                        <button
-                          type="button"
-                          onClick={koseAyariniSifirla}
-                          className="mt-2 w-full rounded-lg border border-neutral-200 py-2 text-[13px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-300"
-                        >
-                          {t('scene.cornersReset')}
-                        </button>
-                      </>
-                    )}
                     {adayKipi && adaylar.length > 0 && (
                       <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                         {t('scene.spotsHint')}
