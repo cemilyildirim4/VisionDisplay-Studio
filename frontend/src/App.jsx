@@ -5804,7 +5804,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                       düzeltebilmeli. Araçlar burada yan yana, kip ayrımı
                                       yok.
                                     */}
-                                    {olcuKutu && (
+                                    {/*
+                                      ÖLÇÜ ALANLARI KUTU YOKKEN DE DURUYOR.
+
+                                      Alanlar `olcuKutu` varken çiziliyordu. Ölçü
+                                      reddedildiğinde (örneğin metre yerine santim
+                                      yazıldığında) kutu kurulamıyor, kutu olmayınca da
+                                      bu alanlar kayboluyordu: kullanıcı ölçüyü
+                                      düzeltmek için gereken tek yeri kaybediyor ve
+                                      "her şeyi kaldırmışsın" durumuna düşüyordu.
+                                      Çıkış yolu yalnızca "Baştan başla" idi.
+
+                                      Artık referans varsa alanlar her zaman duruyor;
+                                      düğme kutu yoksa KURUYOR, varsa yerinde
+                                      güncelliyor.
+                                    */}
+                                    {(refPxCm || refDuzlem) && (
                                       <>
                                         <div className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-300">
                                           {t('sih.3.baslik')}
@@ -5838,11 +5853,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                         */}
                                         <button
                                           type="button"
-                                          onClick={olcuyuGuncelle}
+                                          onClick={olcuKutu ? olcuyuGuncelle : olcuKutusunuKur}
                                           className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                                         >
-                                          {t('ref2.olcuUygula')}
+                                          {olcuKutu ? t('ref2.olcuUygula') : t('ref2.kutuKur')}
                                         </button>
+                                        {/* Reddedilen ölçünün sebebi burada da görünsün. */}
+                                        {kutuMesaj && (
+                                          <p className="mt-1.5 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                                            {kutuMesaj}
+                                          </p>
+                                        )}
                                       </>
                                     )}
 
