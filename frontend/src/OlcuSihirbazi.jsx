@@ -184,7 +184,8 @@ export default function OlcuSihirbazi({
                 {refTur === 'dortgen'
                   ? refNoktaSayisi < 4
                     ? t('sih.1.durumDort') + ' ' + (refNoktaSayisi + 1) + '/4'
-                    : t('sih.1.durum2')
+                    : /* Dört köşe kipinde iki nokta kipinin yazısı çıkıyordu. */
+                      t('sih.1.durumDortHazir')
                   : refNoktaSayisi === 0
                     ? t('sih.1.durum0')
                     : refNoktaSayisi === 1

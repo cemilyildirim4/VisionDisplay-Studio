@@ -522,6 +522,7 @@ const dict = {
   'sih.1.durum0': { tr: 'Birinci noktayı koyun', en: 'Place the first point', ar: 'ضع النقطة الأولى' },
   'sih.1.durum1': { tr: 'Şimdi ikinci noktayı koyun', en: 'Now place the second point', ar: 'ضع النقطة الثانية' },
   'sih.1.durum2': { tr: 'İki nokta hazır', en: 'Both points are set', ar: 'النقطتان جاهزتان' },
+  'sih.1.durumDortHazir': { tr: 'Dört köşe hazır', en: 'All four corners are set', ar: 'الزوايا الأربع جاهزة' },
   'sih.1.tekrar': { tr: 'Temizle', en: 'Clear', ar: 'مسح' },
   'sih.2.baslik': { tr: 'Gerçek uzunluğu yaz', en: 'Type the real length', ar: 'اكتب الطول الحقيقي' },
   'sih.2.aciklama': {
