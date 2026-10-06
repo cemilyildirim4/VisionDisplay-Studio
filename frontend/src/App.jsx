@@ -1694,9 +1694,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Duvara sığan yatay/dikey dizilim seçenekleri.
    * Kartlara tıklanınca oryantasyon + sütun/satır uygulanır.
    */
+  /*
+   * DİZİLİM KARTLARI ÖLÇÜLEN DUVARA GÖRE.
+   *
+   * Kartlar sol paneldeki "Duvar" ölçüsünden hesaplanıyordu; o alan kendi
+   * fotoğrafıyla ilgisiz, varsayılanı 1 × 1 metre. Kullanıcı fotoğrafta 30 × 21
+   * santimlik bir alan ölçtükten sonra "maksimum kapasite" kartına basınca
+   * 3 × 6 dizilim, yani 0,96 × 0,96 metrelik bir tasarım seçiliyordu: ölçtüğü
+   * alanın üç katı. Tasarım fotoğrafı baştan aşağı kaplıyor ve öyle kalıyordu.
+   *
+   * Fotoğrafta ölçülmüş bir alan varsa kartlar ONA göre hesaplanıyor. Ölçü
+   * kutusu hâlâ seçimi ENGELLEMİYOR (bkz. EN_COK_KABIN_EKSEN yorumu) —
+   * sütun/satır elle istenildiği kadar artırılabiliyor; değişen tek şey,
+   * kartların önerdiği dizilimin artık gerçekten o duvara ait olması.
+   */
   const yerlesimBilgisi = useMemo(
-    () => yerlesimSecenekleri(selectedModel, width, height),
-    [selectedModel, width, height],
+    () =>
+      yerlesimSecenekleri(
+        selectedModel,
+        duvarOlcu?.wm > 0 ? duvarOlcu.wm : width,
+        duvarOlcu?.hm > 0 ? duvarOlcu.hm : height,
+      ),
+    [selectedModel, width, height, duvarOlcu],
   )
 
   /*
