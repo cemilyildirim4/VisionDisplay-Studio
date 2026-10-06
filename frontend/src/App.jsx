@@ -31,7 +31,7 @@ import {
   kutuDortgeni,
   EN_AZ_PIKSEL,
 } from './referansOlcek.js'
-import { durusDortgeni, faredenDurus, durusaOturt } from './durusKutusu.js'
+import { durusDortgeni, faredenDurus, durusaOturt, kutuGovdesi } from './durusKutusu.js'
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
@@ -3829,6 +3829,42 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })
 
   /*
+   * KABİNİN GÖRÜNEN YÜZLERİ.
+   *
+   * Tasarımın dörtgeni zaten bir duruştan üretiliyor; aynı duruş ve aynı
+   * kamera kabinin sekiz köşesini de veriyor (bkz. kutuGovdesi). Böylece
+   * gövde tasarımdan kopamıyor — ayrı bir 3B sahne ve yaklaşık bir duruş
+   * yok. Ölçüldü: gövdenin ön yüzü tasarımın dörtgeniyle 0,000 piksel farklı.
+   *
+   * Derinlik gerçek veri: kabinin depthMm alanı.
+   *
+   * Düzlem kipinde kapalı — orada duruş ölçülmüş bir homografiden geliyor,
+   * açılara ayrılmış hâli elimizde yok.
+   */
+  const kabinYuzleri = (() => {
+    const kaynak = ozelSahne?.kaynak
+    if (refDuzlem || !refPxCm || !(kaynak?.w > 0)) return null
+    if (!Array.isArray(koseMutlak) || koseMutlak.length !== 4) return null
+    if (!(previewModel?.depthMm > 0) || !(tasarimWm > 0) || !(tasarimHm > 0)) return null
+    const n = koseMutlak.map(tuvalOrana)
+    const g = kutuGovdesi(
+      tasarimWm * 100,
+      tasarimHm * 100,
+      previewModel.depthMm / 10,
+      refPxCm,
+      kaynak.w,
+      kaynak.h,
+      koseMerkezi(n),
+      kutuDurus.roll,
+      kutuDurus.yaw,
+      kutuDurus.pitch,
+      (izlemeMesafesi || 0) * 100,
+    )
+    if (!g || g.yuzler.length === 0) return null
+    return g.yuzler.map((y) => ({ ...y, koseler: y.koseler.map(oranTuvale) }))
+  })()
+
+  /*
    * BURADA ESKİ KUTU KURUCULARI VARDI VE KALDIRILDI.
    *
    * oranliDortgen ("fotoğrafın %60'ı" payıyla oranı doğru ama ölçüsü
@@ -4466,24 +4502,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             türetiliyor, yerleşime hiç dokunmuyor. Düz bakışta kendiliğinden
             gizleniyor (bkz. KalinlikKatmani).
           */}
-          {duvarDunya && !tasarimGizli && koseMutlak && scene === 'ozel' && ozelSahne && (
-            <KalinlikKatmani
-              koseler={koseMutlak}
-              derinlikMm={previewModel?.depthMm}
-              /*
-               * Tasarımın gerçek eni de gerekiyor: yan yüzün ne kadarının
-               * görüneceği ön yüzün DARALMA oranından çıkıyor.
-               */
-              tasarimWm={tasarimWm}
-              tasarimHm={tasarimHm}
-              /*
-               * Kutu tutamakla çevrildiyse açı zaten biliniyor; dörtgenden
-               * tahmin etmekten kesin.
-               */
-              yawRad={refDuzlem ? null : kutuDurus.yaw}
-              tuvalW={tuvalBoyut.w}
-              tuvalH={tuvalBoyut.h}
-            />
+          {duvarDunya && !tasarimGizli && kabinYuzleri && scene === 'ozel' && ozelSahne && (
+            <KalinlikKatmani yuzler={kabinYuzleri} tuvalW={tuvalBoyut.w} tuvalH={tuvalBoyut.h} />
           )}
 
           {refKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (

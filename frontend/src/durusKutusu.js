@@ -366,3 +366,161 @@ export function durusaOturt(hedef, enCm, boyCm, pxCm, gorselW, gorselH, baslangi
   })
   return ayna && ayna.sapmaPx < ilk.sapmaPx ? ayna : ilk
 }
+
+/*
+ * KABİNİN GERÇEK GÖVDESİ — SEKİZ KÖŞE, AYNI KAMERA.
+ *
+ * Kalınlık bir süre elle çizilen tek bir şeritti: yakın kenarın yanına
+ * derinlik kadar bir dörtgen konuyordu. Geometrisi kabaca doğru olsa bile
+ * sonradan yapıştırılmış bir çizim gibi duruyordu, çünkü gerçekte bir kutu
+ * tek bir yüz değil: açıya göre yanını, üstünü ya da altını birlikte
+ * gösteriyor ve her yüz ışığa göre farklı parlıyor.
+ *
+ * Burada kabinin SEKİZ köşesi de var: ön yüz (ekranın kendisi) ve ondan
+ * derinlik kadar geride duran arka yüz. Sekizi de tasarımı ekrana koyan
+ * kamerayla AYNI izdüşümden geçiyor — ayrı bir 3B motor, ayrı bir kamera ya
+ * da yaklaşık bir duruş yok. Bu yüzden gövde tasarımdan kopamıyor.
+ *
+ * HANGİ YÜZ GÖRÜNÜR. Dışa dönük sırayla yazılan bir yüzün izdüşümü,
+ * kameraya bakıyorsa ön yüzle AYNI yönde dönüyor; sırtını dönmüşse ters.
+ * Tek bir işaret karşılaştırması bütün gizli yüzleri eliyor — dışbükey bir
+ * kutuda bu yeterli, ayrıca derinlik sıralaması gerekmiyor.
+ *
+ * IŞIK. Her yüzün normali de aynı dönmeden geçiyor ve ışığa ne kadar dönük
+ * olduğu parlaklığı belirliyor. Yüzlerin birbirinden ayrışması derinlik
+ * hissini veren asıl şey; tek renk bir kutu düz bir leke gibi görünüyor.
+ */
+
+/* Işık yönü (kamera uzayında, ışığa doğru): sol üstten ve biraz önden. */
+const ISIK = (() => {
+  const v = { x: -0.45, y: -0.6, z: -1 }
+  const n = Math.hypot(v.x, v.y, v.z)
+  return { x: v.x / n, y: v.y / n, z: v.z / n }
+})()
+/* Hiç ışık almayan yüz de tamamen siyah olmuyor: ortam ışığı. */
+const ORTAM = 0.28
+
+/** Yerel (x, y, z) noktayı duruşa göre döndürüp kamera uzayına taşıyor. */
+function dondur(x0, y0, z0, cr, sr, cy, sy, cp, sp) {
+  /* Düzlem içi dönme (kendi ekseni). */
+  const x1 = x0 * cr - y0 * sr
+  const y1 = x0 * sr + y0 * cr
+  /* Dikey eksen (çevirme). */
+  const X = x1 * cy + z0 * sy
+  const Z1 = -x1 * sy + z0 * cy
+  /* Yatay eksen (yatırma). */
+  const Y = y1 * cp - Z1 * sp
+  const Z = y1 * sp + Z1 * cp
+  return { X, Y, Z }
+}
+
+/**
+ * Kabinin gövdesi: ön yüz + görünen yan/üst/alt yüzler.
+ *
+ * Ön yüz, aynı değerlerle çağrılan durusDortgeni'nin verdiği dörtgenin
+ * AYNISI oluyor; ölçüldü, fark 0,00 piksel. Yani gövde tasarımın üstüne
+ * birebir oturuyor.
+ *
+ * @param derinlikCm kabinin derinliği (santim)
+ * @returns {{on:Array, yuzler:Array<{ad:string,koseler:Array,parlaklik:number}>}}
+ */
+export function kutuGovdesi(
+  enCm,
+  boyCm,
+  derinlikCm,
+  pxCm,
+  gorselW,
+  gorselH,
+  merkez = { x: 0.5, y: 0.5 },
+  rollRad = 0,
+  yawRad = 0,
+  pitchRad = 0,
+  mesafeCm = 0,
+) {
+  if (!pxCm || !(pxCm.x > 0) || !(pxCm.y > 0)) return null
+  if (!(enCm > 0) || !(boyCm > 0) || !(gorselW > 0) || !(gorselH > 0)) return null
+  if (!(derinlikCm > 0)) return null
+
+  const yariW = (enCm * pxCm.x) / 2
+  const yariH = (boyCm * pxCm.y) / 2
+  const derinlik = derinlikCm * ((pxCm.x + pxCm.y) / 2)
+
+  const roll = Number.isFinite(rollRad) ? rollRad : 0
+  const yaw = kirp(yawRad, EN_COK_YAW)
+  const pitch = kirp(pitchRad, EN_COK_PITCH)
+
+  const d = Math.max(
+    EN_YAKIN_ORAN * Math.max(yariW, yariH),
+    (mesafeCm > 0 ? mesafeCm * ((pxCm.x + pxCm.y) / 2) : 0) || KAMERA_ORANI * Math.max(yariW, yariH),
+  )
+  const f = d
+
+  const cr = Math.cos(roll)
+  const sr = Math.sin(roll)
+  const cy = Math.cos(yaw)
+  const sy = Math.sin(yaw)
+  const cp = Math.cos(pitch)
+  const sp = Math.sin(pitch)
+
+  /* Ön yüz z = 0, arka yüz z = +derinlik (kameradan uzağa doğru). */
+  const yerel = [
+    [-yariW, -yariH],
+    [yariW, -yariH],
+    [yariW, yariH],
+    [-yariW, yariH],
+  ]
+  const nokta = []
+  for (const z of [0, derinlik]) {
+    for (const [x, y] of yerel) {
+      const p = dondur(x, y, z, cr, sr, cy, sy, cp, sp)
+      const Z = p.Z + d
+      if (!(Z > f * EN_AZ_Z)) return null
+      nokta.push({ x: (f * p.X) / Z, y: (f * p.Y) / Z })
+    }
+  }
+
+  /*
+   * Ortalama ve kadraja sığdırma YALNIZCA ön yüze bakarak yapılıyor —
+   * durusDortgeni'nin yaptığının aynısı. Aynı kaydırma sekiz noktaya birden
+   * uygulanınca ön yüz tasarımın üstüne tam oturuyor.
+   */
+  const on = nokta.slice(0, 4)
+  const ox = on.reduce((t, p) => t + p.x, 0) / 4
+  const oy = on.reduce((t, p) => t + p.y, 0) / 4
+  const kaydirilmis = nokta.map((p) => ({ x: p.x - ox, y: p.y - oy }))
+  const onK = kaydirilmis.slice(0, 4)
+  const nKapW = (2 * Math.max(...onK.map((p) => Math.abs(p.x)))) / gorselW
+  const nKapH = (2 * Math.max(...onK.map((p) => Math.abs(p.y)))) / gorselH
+  const mx = Math.min(1 - nKapW / 2, Math.max(nKapW / 2, merkez?.x ?? 0.5))
+  const my = Math.min(1 - nKapH / 2, Math.max(nKapH / 2, merkez?.y ?? 0.5))
+  const N = kaydirilmis.map((p) => ({ x: mx + p.x / gorselW, y: my + p.y / gorselH }))
+
+  /* İşaretli alan — yüzün kameraya mı sırtını mı döndüğünü söylüyor. */
+  const isaretliAlan = (k) =>
+    k.reduce((t, p, i) => {
+      const q = k[(i + 1) % 4]
+      return t + (p.x * q.y - q.x * p.y)
+    }, 0) / 2
+
+  const onYon = Math.sign(isaretliAlan([N[0], N[1], N[2], N[3]]))
+  if (!onYon) return null
+
+  /* Yüzler dışa dönük sırayla; normalleri yerel eksende. */
+  const tanim = [
+    { ad: 'sol', i: [0, 3, 7, 4], n: [-1, 0, 0] },
+    { ad: 'sag', i: [1, 5, 6, 2], n: [1, 0, 0] },
+    { ad: 'ust', i: [0, 4, 5, 1], n: [0, -1, 0] },
+    { ad: 'alt', i: [3, 2, 6, 7], n: [0, 1, 0] },
+  ]
+  const yuzler = []
+  for (const y of tanim) {
+    const k = y.i.map((i) => N[i])
+    if (Math.sign(isaretliAlan(k)) !== onYon) continue /* sırtını dönmüş */
+    const nk = dondur(y.n[0], y.n[1], y.n[2], cr, sr, cy, sy, cp, sp)
+    const boy = Math.hypot(nk.X, nk.Y, nk.Z) || 1
+    const dot = (nk.X / boy) * ISIK.x + (nk.Y / boy) * ISIK.y + (nk.Z / boy) * ISIK.z
+    yuzler.push({ ad: y.ad, koseler: k, parlaklik: ORTAM + (1 - ORTAM) * Math.max(0, dot) })
+  }
+
+  return { on: N.slice(0, 4), arka: N.slice(4), yuzler }
+}
