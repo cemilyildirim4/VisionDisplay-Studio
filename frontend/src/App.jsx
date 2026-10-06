@@ -2618,9 +2618,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           ym = hedef.y - tasarimHm / 2
         }
       }
-      /* Sınır metreyle: ekran duvardan büyükse ortalanıyor, değilse içeride kalıyor. */
-      xm = duvarOlcu.wm > tasarimWm ? Math.max(0, Math.min(duvarOlcu.wm - tasarimWm, xm)) : ortaX
-      ym = duvarOlcu.hm > tasarimHm ? Math.max(0, Math.min(duvarOlcu.hm - tasarimHm, ym)) : ortaY
+      /*
+       * TASARIM DUVARIN İÇİNE HAPSEDİLMİYOR.
+       *
+       * Burada iki kilit vardı ve ikisi de sürüklemeyi yiyordu:
+       *
+       *  1. Tasarım duvardan küçükse konumu duvarın içine kıstırılıyordu;
+       *     ekranı duvarın biraz dışına taşırmak mümkün değildi.
+       *  2. Tasarım duvardan BÜYÜKSE konum doğrudan ortaya zorlanıyordu
+       *     (xm = ortaX). Yani sürükleme tamamen yok sayılıyor, tasarım
+       *     çivilenmiş gibi duruyordu — kullanıcının "sabitleme, hareket
+       *     ettirebileyim" dediği durum buydu.
+       *
+       * Duvar bir ölçü kaynağı, bir kafes değil. Konum artık sürüklemenin
+       * söylediği yer. Tasarımın kadrajdan büsbütün kaçmasına karşı koruma
+       * aşağıda duruyor (kadrajaCek), duvara sığmayan kısım da taramayla
+       * işaretleniyor (bkz. TasmaKatmani) — yani bilgi kaybolmuyor.
+       */
       ekranDunyaRef.current = { x: xm, y: ym }
       kaydirilmis =
         dunyaDortgeni(duvarDunya, xm, ym, tasarimWm, tasarimHm) || tuvalKose
