@@ -3863,8 +3863,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * geri yüklenecek bir referans eğimi varsa uygulanır. Referans da düzse
    * iki yönde de yapacak iş yok, düğme hiç çıkmıyor.
    */
-  /* Düzlem kipinde düğmenin her zaman işi var: ölçülen perspektif ↔ düz. */
-  const egimDugmesiVar = !!refDuzlem || egimVar || Math.abs(refEgimi) > 0.0087
+  /*
+   * EĞİM DÜĞMESİ KUTU VARKEN HER ZAMAN DURUYOR.
+   *
+   * Düğme "yapacak bir işi varsa" gösteriliyordu: referans düzse ve kutu da
+   * düzse ortadan kayboluyordu. Niyet iyiydi ama sonuç kötü — kullanıcı
+   * eğimle ilgili aracı arayıp bulamıyor ve kaldırıldığını sanıyordu.
+   * Kutu varsa düğme de var; ne yapacağını da üstünde yazan derece söylüyor.
+   */
+  const egimDugmesiVar = !!olcuKutu
 
   const kutuEgiminiCevir = () => {
     const kaynak = ozelSahne?.kaynak
@@ -5900,7 +5907,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                         onClick={kutuEgiminiCevir}
                                         className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 bg-white text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-300"
                                       >
-                                        {egimVar ? t('sih.egimSifirla') : t('sih.egimAyarla')}
+                                        {/*
+                                          DERECE DÜĞMENİN ÜSTÜNDE.
+
+                                          Düğme referansın eğimini uyguluyor; o eğim
+                                          1 derece ise kutuda birkaç piksellik dönme
+                                          oluyor ve düğme "hiçbir şey yapmıyor" gibi
+                                          görünüyordu. Kaç derece uygulanacağı yazınca
+                                          ne bekleneceği belli oluyor.
+                                        */}
+                                        {egimVar
+                                          ? t('sih.egimSifirla')
+                                          : refDuzlem
+                                            ? t('sih.egimDuzleme')
+                                            : t('sih.egimAyarla') +
+                                              ': ' +
+                                              ((refEgimi * 180) / Math.PI).toFixed(1).replace('.', ',') +
+                                              '°'}
                                       </button>
                                     )}
 

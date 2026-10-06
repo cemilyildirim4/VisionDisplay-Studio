@@ -505,9 +505,9 @@ const dict = {
     ar: 'العودة إلى المنظور المقاس',
   },
   'sih.egimAyarla': {
-    tr: 'Eğimi ayarla (referans eğimini uygula)',
-    en: 'Apply tilt (use the reference angle)',
-    ar: 'تطبيق الميل (زاوية المرجع)',
+    tr: 'Eğimi ayarla — referans eğimi',
+    en: 'Apply tilt — reference angle',
+    ar: 'تطبيق الميل — زاوية المرجع',
   },
   'sih.egim': { tr: 'eğim', en: 'tilt', ar: 'الميل' },
   'sih.aciHizala': {

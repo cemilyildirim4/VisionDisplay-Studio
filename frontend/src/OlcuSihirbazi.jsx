@@ -420,7 +420,10 @@ export default function OlcuSihirbazi({
                     : /* Düzlemde geri dönüş ÖLÇÜLEN perspektife; iki noktada referans eğimine. */
                       refDuzlem
                       ? t('sih.egimDuzleme')
-                      : t('sih.egimAyarla')}
+                      : t('sih.egimAyarla') +
+                        ': ' +
+                        (((refAci?.kutuAci || 0) * 180) / Math.PI).toFixed(1).replace('.', ',') +
+                        '°'}
                 </button>
               )}
               <div className="mt-2 flex items-center gap-1.5">
