@@ -631,6 +631,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kullanıcının yazdığı sayıdır.
    */
   const [olcuKutu, setOlcuKutu] = useState(null)
+  /*
+   * Mekân değişince silinen kutunun kopyası; fotoğrafa geri dönülünce buradan
+   * geri konuyor (bkz. "SAHNE DEĞİŞİNCE KUTU KALMIYOR").
+   */
+  const kutuYedek = useRef(null)
   const [kutuEn, setKutuEn] = useState('')
   const [kutuBoy, setKutuBoy] = useState('')
   /*
@@ -1171,6 +1176,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         setTaslakKutu(null)
         setHedefKose(null)
         setDuvarOlcu(null)
+        /* Yedek de düşüyor: o kutu ESKİ fotoğrafa aitti. */
+        kutuYedek.current = null
       }
     }
     gorsel.src = url
@@ -3494,17 +3501,36 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * görevi bitti, duvarı tanıttı.
    */
   /*
-   * SAHNE DEĞİŞİNCE KUTU KALMIYOR.
+   * SAHNE DEĞİŞİNCE KUTU KALMIYOR — AMA GERİ DÖNÜNCE GERİ GELİYOR.
    *
-   * Kutu yalnızca kullanıcının kendi fotoğrafına ait. Başka bir mekâna
-   * geçilince ekranda asılı kalması, oraya ait olmayan bir duvarı
-   * göstermek demek.
+   * Kutu yalnızca kullanıcının kendi fotoğrafına ait; başka bir mekâna
+   * geçilince ekranda asılı kalması, oraya ait olmayan bir duvarı göstermek
+   * demek. Bu yüzden siliniyordu.
+   *
+   * Ama yalnızca SİLİNİYORDU. Mekânı "Kapalı" yapıp sonra fotoğrafa geri
+   * dönen kullanıcı yarım bir durumla kalıyordu: referans ve ölçü kutusunun
+   * santimetresi panelde hâlâ yazıyor (onlar silinmiyor), oysa kutunun
+   * dörtgeni ve duvar ölçüsü gitmiş oluyor. Duvar ölçüsü olmayınca tasarım
+   * duvarın koordinat sisteminden değil, çekim mesafesinden ölçekleniyor ve
+   * fotoğrafın ortasında minicik kalıyordu.
+   *
+   * Çözüm: silmeden önce bir kopya alınıyor, fotoğrafa dönüldüğünde geri
+   * konuyor. Yeni bir fotoğraf yüklenirse kopya da düşüyor (bkz. fotoğraf
+   * yükleme dalındaki kutuYedek temizliği) — çünkü o kutu o fotoğrafa aitti.
    */
   useEffect(() => {
     if (scene !== 'ozel' || !ozelSahne) {
+      if (taslakKutu || duvarOlcu) kutuYedek.current = { taslak: taslakKutu, olcu: duvarOlcu }
       setTaslakKutu(null)
       setDuvarOlcu(null)
+      return
     }
+    if (!taslakKutu && kutuYedek.current) {
+      setTaslakKutu(kutuYedek.current.taslak)
+      setDuvarOlcu(kutuYedek.current.olcu)
+      kutuYedek.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, ozelSahne])
 
   /*
@@ -3705,6 +3731,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setKutuDurus({ roll: 0, yaw: 0, pitch: 0 })
     setKutuDuzen(null)
     setDuzenleAcik(false)
+    kutuYedek.current = null
     setTasarimAcik(false)
     setKutuMesaj(null)
     /* 3) Yazılan ölçüler */
