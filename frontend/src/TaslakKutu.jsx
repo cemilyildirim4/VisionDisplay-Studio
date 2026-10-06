@@ -50,6 +50,16 @@ export default function TaslakKutu({
   onKose,
   onDurus,
   onDurusBasla,
+  /*
+   * İKİ KİP, İKİ AYRI YETKİ.
+   *
+   * Taşıma ve eğim aynı anda açıkken kutuyu yerine koymaya çalışırken açısı,
+   * açısını ayarlarken yeri kayıyordu. Artık hangi işi yaptığı belli:
+   * taşırken kutu eğilemiyor, eğerken kutu taşınamıyor. Yanlışlıkla bozma
+   * ihtimali kalkıyor.
+   */
+  tasimaAcik = true,
+  egimAcik = true,
   sinir = null,
   etiket,
   soluk = false,
@@ -205,7 +215,7 @@ export default function TaslakKutu({
     }
   }
 
-  const tutamakYeri = !soluk && onDurus ? durusTutamagi() : null
+  const tutamakYeri = !soluk && egimAcik && onDurus ? durusTutamagi() : null
 
   /* Kutunun tamamını taşı: içeriden tutup sürükleme. */
   const govdeSurukle = (e) => {
@@ -269,8 +279,11 @@ export default function TaslakKutu({
           strokeWidth={soluk ? 1.5 : 2}
           strokeOpacity={soluk ? 0.55 : 1}
           strokeDasharray="7 5"
-          onPointerDown={soluk ? undefined : govdeSurukle}
-          style={{ cursor: soluk ? 'default' : 'move', pointerEvents: soluk ? 'none' : 'auto' }}
+          onPointerDown={soluk || !tasimaAcik ? undefined : govdeSurukle}
+          style={{
+            cursor: soluk || !tasimaAcik ? 'default' : 'move',
+            pointerEvents: soluk || !tasimaAcik ? 'none' : 'auto',
+          }}
         />
         {etiket && (
           <text
@@ -285,7 +298,7 @@ export default function TaslakKutu({
             {etiket}
           </text>
         )}
-        {!koseKapali &&
+        {!koseKapali && egimAcik &&
           koseler.map((k, i) => (
             <g key={i} opacity={soluk ? 0.6 : 1}>
               {/* Görünmeyen geniş vuruş alanı: küçük halkayı tutturmak zor. */}
@@ -327,7 +340,7 @@ export default function TaslakKutu({
           ÇEVİRİYOR, şekli hep gerçek bir dikdörtgenin izdüşümü kalıyor.
           Karıştırılmasın diye mavi değil turuncu.
         */}
-        {!soluk && onDurus && tutamakYeri && (
+        {!soluk && egimAcik && onDurus && tutamakYeri && (
           <g>
             <line
               x1={tutamakYeri.bas.x}

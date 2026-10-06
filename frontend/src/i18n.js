@@ -583,6 +583,15 @@ const dict = {
     en: 'The reference changed. Create the measurement box again to use the new scale.',
     ar: 'تغيّر المرجع. أعد إنشاء مربع القياس لاستخدام المقياس الجديد.',
   },
+  'ref2.duzenle': { tr: 'Düzenle', en: 'Edit', ar: 'تحرير' },
+  'ref2.duzenleKapat': { tr: 'Düzenlemeyi kapat', en: 'Close editing', ar: 'إغلاق التحرير' },
+  'ref2.egVer': { tr: 'Eğim ver', en: 'Set the tilt', ar: 'ضبط الميل' },
+  'ref2.egBitir': { tr: 'Eğim vermeyi bitir', en: 'Finish tilting', ar: 'إنهاء ضبط الميل' },
+  'ref2.egAciklama': {
+    tr: 'Turuncu tutamağı sürükleyerek çevirin, köşelerden çekerek duvara oturtun. Tasarım kutuyla birlikte eğiliyor; kutu yerinden oynamıyor.',
+    en: 'Drag the orange handle to turn it, drag the corners onto the wall. The design tilts with the box; the box does not move.',
+    ar: 'اسحب المقبض البرتقالي للتدوير، واسحب الزوايا إلى الجدار. التصميم يميل مع المربع.',
+  },
   'ref2.konumla': { tr: 'Kutuyu konumlandır', en: 'Position the box', ar: 'تحديد موضع المربع' },
   'ref2.konumBitir': { tr: 'Konumlandırmayı bitir', en: 'Finish positioning', ar: 'إنهاء تحديد الموضع' },
   'ref2.konumAciklama': {

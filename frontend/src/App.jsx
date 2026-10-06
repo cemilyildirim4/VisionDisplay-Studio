@@ -694,7 +694,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kutunun köşesini çekip AÇIYI bozabilirdi. Açı, kullanıcı bilerek
    * konumlandırma kipine girmeden değişmiyor.
    */
-  const [kutuKipi, setKutuKipi] = useState(false)
+  /*
+   * KUTU DÜZENLEME KİPİ: null (kapalı) | 'tasi' | 'eg'
+   *
+   * Tek bir "konumlandır" kipi vardı ve içinde her şey açıktı: kutuyu yerine
+   * koyarken açısı, açısını verirken yeri kayıyordu. İkiye ayrıldı; hangi
+   * işin yapıldığı belli ve öteki yanlışlıkla bozulamıyor.
+   *
+   * SİHİRBAZDA AYRIM YOK ('hepsi'). Orada kullanıcı kutuyu ilk kez kuruyor ve
+   * tek bir adımda hem yerine koyması hem oturtması gerekiyor; ikiye bölmek
+   * o adıma iki düğme daha eklemek olurdu. Ayrım, kurulmuş bir kutuyu sonradan
+   * düzeltirken anlamlı — kazara bozmanın olduğu yer orası.
+   */
+  const [kutuDuzen, setKutuDuzen] = useState(null)
+  const kutuKipi = !!kutuDuzen
+  /* Sağ paneldeki "Düzenle" bölümü açık mı? */
+  const [duzenleAcik, setDuzenleAcik] = useState(false)
   /*
    * Kutu, referans çizgisinin eğiminde mi doğsun?
    *
@@ -3569,7 +3584,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     setKutuDurus({ roll: refAciKullan ? refAci?.kutuAci || 0 : 0, yaw: 0, pitch: 0 })
     /* Yeni kutu doğrudan konumlandırılabilir olsun; ilk iş onu yerine koymak. */
-    setKutuKipi(true)
+    setKutuDuzen('hepsi')
     setRefEskidi(false)
     setKutuMesaj(k.tasiyor ? t('ref2.kadrajaSigmaz') : null)
   }
@@ -3608,7 +3623,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setElleKose(null)
     setDuvarOlcu(null)
     setKutuDurus({ roll: 0, yaw: 0, pitch: 0 })
-    setKutuKipi(false)
+    setKutuDuzen(null)
+    setDuzenleAcik(false)
     setTasarimAcik(false)
     setKutuMesaj(null)
     /* 3) Yazılan ölçüler */
@@ -3629,7 +3645,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const sihirbazGeri = () => {
     setSihirbazAdim((a) => {
       if (a === 3) setRefKipi(true)
-      if (a === 4) setKutuKipi(true)
+      if (a === 4) setKutuDuzen('hepsi')
       return Math.max(1, a - 1)
     })
   }
@@ -3638,7 +3654,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setSihirbazAdim(4)
   }
   const sihirbazBitir = () => {
-    setKutuKipi(false)
+    setKutuDuzen(null)
     setTasarimAcik(true)
     setSihirbazAdim(0)
   }
@@ -4540,6 +4556,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * taşınıyor ve taşındıkça perspektifi kendiliğinden düzeliyor.
                */
               koseKapali={!kutuKipi || !!refDuzlem}
+              /* Taşıma kipinde açı, eğim kipinde yer yanlışlıkla bozulamıyor. */
+              tasimaAcik={kutuDuzen === 'tasi' || kutuDuzen === 'hepsi'}
+              egimAcik={kutuDuzen === 'eg' || kutuDuzen === 'hepsi'}
               /*
                * Perspektif tutamağı yalnızca iki nokta kipinde: düzlem
                * kipinde perspektif ölçülmüş durumda, elle çevirmek o ölçümü
@@ -4549,7 +4568,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               onDurusBasla={kutuDurusuBasladi}
               /* Kutu da tutamakları da fotoğrafın içinde kalıyor. */
               sinir={fotoSinir}
-              etiket={tasarimGizli ? t('kutu.tiklaGoster') : kutuKipi ? t('ref2.konumIpucu') : null}
+              etiket={
+                tasarimGizli
+                  ? t('kutu.tiklaGoster')
+                  : kutuDuzen === 'tasi' || kutuDuzen === 'hepsi'
+                    ? t('ref2.konumIpucu')
+                    : null
+              }
             />
           )}
 
@@ -5413,32 +5438,109 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             >
                               {olcuKutu || refPxCm ? t('sih.yeniden') : t('sih.basla')}
                             </button>
-                            {refPxCm && (
-                              <button
-                                type="button"
-                                onClick={() => setSihirbazAdim(3)}
-                                className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                              >
-                                {t('sih.olcuDegistir')}
-                              </button>
-                            )}
-                            {olcuKutu && (
+                            {/*
+                              İKİ ANA EYLEM: BAŞTAN BAŞLA ve DÜZENLE.
+
+                              Önce dört düğme alt alta duruyordu — ölçüyü
+                              değiştir, konumlandır, baştan başla — ve her
+                              küçük düzeltme için hangisine basılacağı belli
+                              olmuyordu. Artık üstte yalnızca iki şey var:
+                              her şeyi silip baştan kurmak, ya da duran kutuyu
+                              düzenlemek. Düzenlemenin ayrıntıları açılır
+                              bölümün içinde.
+                            */}
+                            {(refPxCm || olcuKutu) && (
                               <>
-                                {/* Kip kapalıyken kutuya dokunulamıyor ve açısı değişemiyor. */}
                                 <button
                                   type="button"
-                                  onClick={() => setKutuKipi((v) => !v)}
-                                  className={`mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium transition-opacity ${
-                                    kutuKipi
+                                  onClick={() => {
+                                    /* Bölüm kapanırken düzenleme kipi de kapanıyor:
+                                       görünmeyen bir kipte kutu kazara oynamasın. */
+                                    setDuzenleAcik((v) => {
+                                      if (v) setKutuDuzen(null)
+                                      return !v
+                                    })
+                                  }}
+                                  className={`mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium transition-colors ${
+                                    duzenleAcik
                                       ? 'bg-brand text-white hover:opacity-90'
                                       : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
                                   }`}
                                 >
-                                  {kutuKipi ? t('ref2.konumBitir') : t('ref2.konumla')}
+                                  {duzenleAcik ? t('ref2.duzenleKapat') : t('ref2.duzenle')}
                                 </button>
-                                <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                                  {kutuKipi ? t('ref2.konumAciklama') : t('kutu.ipucu')}
-                                </p>
+                                {duzenleAcik && (
+                                  <div className="mt-1.5 rounded-lg border border-neutral-200 p-2 dark:border-[#2c333f]">
+                                    {refPxCm && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setSihirbazAdim(3)}
+                                        className="w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                                      >
+                                        {t('sih.olcuDegistir')}
+                                      </button>
+                                    )}
+                                    {olcuKutu && (
+                                      <>
+                                        {/*
+                                          TAŞIMA VE EĞİM AYRI DÜĞME.
+
+                                          Tek kip varken kutuyu yerine koyarken
+                                          açısı, açısını verirken yeri kayıyordu.
+                                          Hangi düğme basılıysa yalnızca o iş
+                                          yapılabiliyor (bkz. TaslakKutu
+                                          tasimaAcik / egimAcik).
+                                        */}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setKutuDuzen((k) => (k === 'tasi' ? null : 'tasi'))
+                                            /* Tasarım görünür olsun ki kutuyla birlikte hareket ettiği görülsün. */
+                                            setTasarimAcik(true)
+                                          }}
+                                          className={`mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium transition-opacity ${
+                                            kutuDuzen === 'tasi'
+                                              ? 'bg-brand text-white hover:opacity-90'
+                                              : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
+                                          }`}
+                                        >
+                                          {kutuDuzen === 'tasi' ? t('ref2.konumBitir') : t('ref2.konumla')}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setKutuDuzen((k) => (k === 'eg' ? null : 'eg'))
+                                            setTasarimAcik(true)
+                                          }}
+                                          className={`mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium transition-opacity ${
+                                            kutuDuzen === 'eg'
+                                              ? 'bg-brand text-white hover:opacity-90'
+                                              : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
+                                          }`}
+                                        >
+                                          {kutuDuzen === 'eg' ? t('ref2.egBitir') : t('ref2.egVer')}
+                                        </button>
+                                        {/* Eğimi sıfırlama/geri verme artık sihirbazı açmadan burada. */}
+                                        {kutuDuzen === 'eg' && !refDuzlem && egimDugmesiVar && (
+                                          <button
+                                            type="button"
+                                            onClick={kutuEgiminiCevir}
+                                            className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 bg-white text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-300"
+                                          >
+                                            {egimVar ? t('sih.egimSifirla') : t('sih.egimAyarla')}
+                                          </button>
+                                        )}
+                                        <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                                          {kutuDuzen === 'eg'
+                                            ? t('ref2.egAciklama')
+                                            : kutuDuzen === 'tasi'
+                                              ? t('ref2.konumAciklama')
+                                              : t('kutu.ipucu')}
+                                        </p>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
                               </>
                             )}
                           </>
