@@ -616,6 +616,17 @@ const dict = {
     en: 'Move · set the angle from the corners · turn with the orange handle',
     ar: 'حرّك · اضبط الزاوية من الزوايا · دوّر بالمقبض البرتقالي',
   },
+  'scene.kutuyaYerlestir': {
+    tr: 'Tasarımı kutuya yerleştir',
+    en: 'Place the design in the box',
+    ar: 'ضع التصميم داخل المربع',
+  },
+  'scene.kutuyaTam': { tr: 'Tasarım kutuya tam oturdu.', en: 'The design fills the box exactly.', ar: 'التصميم يملأ المربع تمامًا.' },
+  'scene.kutuyaOrtalandi': {
+    tr: 'Tasarım kutunun ortasına yerleşti:',
+    en: 'The design is centred in the box:',
+    ar: 'تم توسيط التصميم داخل المربع:',
+  },
   'ref2.olcuCokKucuk': {
     tr: 'Bu ölçü bir LED alanı için çok küçük. Alan SANTİMETRE olarak yazılıyor — metre yazdıysanız şunu deneyin:',
     en: 'This is far too small for an LED area. The area is entered in CENTIMETRES — if you typed metres, try:',

@@ -3408,6 +3408,40 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kalıyor. Kabin ölçüsü ekranın yönüne göre (yatay/dikey) değiştiği için
    * hesap cwM/chM üzerinden yapılıyor.
    */
+  /*
+   * TASARIMI KUTUYA YERLEŞTİR.
+   *
+   * Tasarımı kutunun içine fareyle oturtmak zordu: kutu küçükse hedef birkaç
+   * piksel ve her denemede kayıyordu. Oysa doğru yer zaten hesaplanabiliyor —
+   * sürükleme kayması sıfırken tasarım kutunun TAM ORTASINA düşüyor
+   * (bkz. ortaX/ortaY). Düğme yalnızca o kaymayı sıfırlıyor.
+   *
+   * Ölçüler eşitse ortalamak = tam oturmak; değilse kutunun ortasında
+   * duruyor, taşan kısım da taramayla işaretli kalıyor.
+   */
+  const tasarimiKutuyaYerlestir = () => {
+    if (!duvarOlcu) return
+    mekaniOrtala()
+    const tam =
+      Math.abs(duvarOlcu.wm - tasarimWm) < 0.005 && Math.abs(duvarOlcu.hm - tasarimHm) < 0.005
+    setOzelUyari(
+      tam
+        ? t('scene.kutuyaTam')
+        : t('scene.kutuyaOrtalandi') +
+            ' ' +
+            t('ref.kutuBaslik') +
+            ' ' +
+            duvarOlcu.wm.toFixed(2).replace('.', ',') +
+            ' × ' +
+            duvarOlcu.hm.toFixed(2).replace('.', ',') +
+            ' m, ' +
+            tasarimWm.toFixed(2).replace('.', ',') +
+            ' × ' +
+            tasarimHm.toFixed(2).replace('.', ',') +
+            ' m',
+    )
+  }
+
   const tasarimiDuvaraSigdir = () => {
     if (!duvarOlcu) return
     /*
@@ -5987,6 +6021,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         <div className="mt-3 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
                           {t('scene.placeHeading')}
                         </div>
+                        {/*
+                          KUTUYA YERLEŞTİR — fareyle uğraşmadan.
+                          Kutu küçükken tasarımı elle içine oturtmak neredeyse
+                          imkânsızdı; bu düğme sürükleme kaymasını sıfırlayıp
+                          tasarımı kutunun ortasına koyuyor.
+                        */}
+                        {duvarOlcu && (
+                          <button
+                            type="button"
+                            onClick={tasarimiKutuyaYerlestir}
+                            className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                          >
+                            {t('scene.kutuyaYerlestir')}
+                          </button>
+                        )}
                         {duvarOlcu && (
                           <button
                             type="button"
