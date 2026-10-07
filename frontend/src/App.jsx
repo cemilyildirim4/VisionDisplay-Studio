@@ -5290,7 +5290,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             kullanicida "oran bozuldu" izlenimi birakiyordu. Tasarim
             kucultulmuyor; yalnizca duvarin disinda kalan bolge taraniyor.
           */}
-          {duvarTuval && koseMutlak && scene === 'ozel' && ozelSahne && (
+          {/*
+            KÖŞE KİPİNDE ÇİZİLMİYOR.
+
+            Taşma, tasarımın DÜZ dörtgeninden (koseMutlak) hesaplanıyor. Köşede
+            ekran o dörtgende değil, iki ayrı düzlemde duruyor; düz dörtgene
+            göre taranan bölge ekranla ilgisiz bir yere düşüyor ve ikinci bir
+            tasarım gibi görünüyor.
+          */}
+          {duvarTuval && koseMutlak && !lKoseCizimi && scene === 'ozel' && ozelSahne && (
             <TasmaKatmani
               tasarim={koseMutlak}
               duvar={duvarTuval}
@@ -5299,7 +5307,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             />
           )}
 
-          {duvarDunya && !tasarimGizli && kabinYuzleri && scene === 'ozel' && ozelSahne && (
+          {/*
+            KÖŞE KİPİNDE ÇİZİLMİYOR — ikinci tasarımın asıl sebebi buydu.
+
+            Kabin gövdesi tasarımın düz dörtgeninden türüyor: tek bir kutu,
+            tek bir duruş. Köşede ekran katlı olduğu için o kutu ekranın
+            durduğu yerde değil, düz hâlinin durduğu yerde çiziliyor ve
+            kullanıcı aynı tasarımı iki kere görüyor. Köşenin kendi gövdesi
+            ayrı bir iş (bkz. LKoseEkran).
+          */}
+          {duvarDunya && !tasarimGizli && kabinYuzleri && !lKoseCizimi && scene === 'ozel' && ozelSahne && (
             <KalinlikKatmani
               yuzler={kabinYuzleri.yuzler}
               on={kabinYuzleri.on}
