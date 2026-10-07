@@ -550,6 +550,56 @@ const dict = {
     en: 'How many centimetres is the distance between the two points in reality? The photo scale comes from this.',
     ar: 'كم سنتيمترًا بين النقطتين في الواقع؟',
   },
+  /*
+   * L TİPİNDE YERLEŞİM ADIMI BAŞKA.
+   *
+   * Düz ekranda yerleşim bir ALAN: dikdörtgen bir ölçü kutusu kurulup tasarım
+   * onun içine oturuyor. L'de yerleşimi belirleyen şey alan değil, ekranın
+   * kırıldığı yer — yani mekânın köşesi. Bu yüzden L seçiliyken bu adım
+   * kutuyu değil KÖŞE ÇİZGİSİNİ soruyor.
+   */
+  'sihL.3.baslik': {
+    tr: 'Köşe çizgisini işaretle',
+    en: 'Mark the corner line',
+    ar: 'حدد خط الزاوية',
+  },
+  'sihL.3.aciklama': {
+    tr: 'Ekranın oturacağı 90°lik köşenin ÜST ve ALT ucuna tıklayın. L ekranın kırım çizgisi tam oraya gelecek.',
+    en: 'Click the TOP and BOTTOM ends of the 90° corner the screen will sit on. The L screen’s fold will land exactly there.',
+    ar: 'انقر على الطرفين العلوي والسفلي للزاوية 90° التي ستوضع عليها الشاشة.',
+  },
+  'sihL.3.durum0': { tr: 'Köşenin üst ucunu koyun', en: 'Place the top end of the corner', ar: 'ضع الطرف العلوي للزاوية' },
+  'sihL.3.durum1': { tr: 'Köşenin alt ucunu koyun', en: 'Place the bottom end of the corner', ar: 'ضع الطرف السفلي للزاوية' },
+  'sihL.3.durum2': { tr: 'Köşe çizgisi hazır', en: 'Corner line ready', ar: 'خط الزاوية جاهز' },
+  'sihL.3.boy': {
+    tr: 'İşaretlediğiniz köşe gerçekte kaç santim yüksekliğinde? Ekranın boyu bu ölçüye göre oturuyor.',
+    en: 'How tall is the marked corner in real life? The screen’s height is set against this.',
+    ar: 'كم يبلغ ارتفاع الزاوية المحددة فعليًا؟',
+  },
+  'sihL.3.boyPh': { tr: 'yükseklik', en: 'height', ar: 'الارتفاع' },
+  'sihL.3.eksik': {
+    tr: 'Önce köşenin iki ucunu işaretleyin, sonra gerçek yüksekliğini yazın.',
+    en: 'Mark both ends of the corner first, then type its real height.',
+    ar: 'حدد طرفي الزاوية أولاً ثم اكتب ارتفاعها الحقيقي.',
+  },
+  'sihL.3.hazir': {
+    tr: 'Ekran köşenin',
+    en: 'Screen covers',
+    ar: 'تغطي الشاشة',
+  },
+  'sihL.3.tasiyor': {
+    tr: 'Ekran işaretlenen köşeden uzun: köşe çizgisinin dışına taşacak.',
+    en: 'The screen is taller than the marked corner: it will extend past the line.',
+    ar: 'الشاشة أطول من الزاوية المحددة.',
+  },
+  'sihL.3.kur': { tr: 'Köşeyi kur', en: 'Build the corner', ar: 'أنشئ الزاوية' },
+  'sihL.3.tekrar': { tr: 'Yeniden işaretle', en: 'Mark again', ar: 'حدد مرة أخرى' },
+  'sihL.4.aciklama': {
+    tr: 'Ekran köşeye oturdu. Çekim mesafesi perspektifin sertliğini, köşe seçimi hangi kanadın hangi duvarda olduğunu belirliyor.',
+    en: 'The screen sits on the corner. Shooting distance sets how strong the perspective is; the corner choice sets which wing is on which wall.',
+    ar: 'الشاشة على الزاوية.',
+  },
+  'refL.ozet': { tr: 'Köşe çizgisi', en: 'Corner line', ar: 'خط الزاوية' },
   'sih.3.baslik': { tr: 'Yerleşim alanının ölçüsü (cm)', en: 'Placement area size (cm)', ar: 'مقاس منطقة التركيب (سم)' },
   'sih.3.aciklama': {
     tr: 'LED ekranın yerleşeceği alan gerçekte kaç santim? Kutu bu ölçüde, referans çizgisinin yakınında kurulacak.',

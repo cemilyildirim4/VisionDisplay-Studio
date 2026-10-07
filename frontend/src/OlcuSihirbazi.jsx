@@ -53,6 +53,23 @@ export default function OlcuSihirbazi({
   refBoyCm,
   setRefBoyCm,
   refDuzlem,
+  /*
+   * L TİPİNDE 3. ADIM BAŞKA: KUTU DEĞİL KÖŞE ÇİZGİSİ.
+   *
+   * Düz ekranda yerleşim bir ALAN (dikdörtgen ölçü kutusu). L'de yerleşimi
+   * belirleyen şey alan değil, ekranın kırıldığı yer — mekânın köşesi. Bu
+   * yüzden L seçiliyken 3. adım köşenin iki ucunu ve gerçek yüksekliğini
+   * soruyor; kutu hiç kurulmuyor.
+   *
+   * Bayrak yanlışsa hiçbir şey değişmiyor: lKose verilmezse eski akış.
+   */
+  lKose = false,
+  lKoseNoktaSayisi = 0,
+  lKoseBoyCm,
+  setLKoseBoyCm,
+  lKoseIsaretle,
+  lKoseOran = null,
+  onKoseKur,
   /* 3. adım */
   kutuEn,
   setKutuEn,
@@ -87,7 +104,7 @@ export default function OlcuSihirbazi({
   const basliklar = {
     1: t('sih.1.baslik'),
     2: t('sih.2.baslik'),
-    3: t('sih.3.baslik'),
+    3: lKose ? t('sihL.3.baslik') : t('sih.3.baslik'),
     4: t('sih.4.baslik'),
   }
 
@@ -283,8 +300,67 @@ export default function OlcuSihirbazi({
             </>
           )}
 
+          {/* 3 — L TİPİNDE KÖŞE ÇİZGİSİ */}
+          {adim === 3 && lKose && (
+            <>
+              <p className={aciklama}>{t('sihL.3.aciklama')}</p>
+              {/* Sıradaki iş fotoğrafa tıklamak; adımın durumu belirgin dursun. */}
+              <p className="mt-2 mb-0 rounded-md bg-brand/15 px-2 py-1.5 text-[13.5px] font-semibold text-brand dark:bg-brand/25">
+                {lKoseNoktaSayisi === 0
+                  ? t('sihL.3.durum0')
+                  : lKoseNoktaSayisi === 1
+                    ? t('sihL.3.durum1')
+                    : t('sihL.3.durum2')}
+              </p>
+              <p className={aciklama}>{t('sihL.3.boy')}</p>
+              <div className="mt-2 flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={lKoseBoyCm}
+                  onChange={(e) => setLKoseBoyCm(e.target.value)}
+                  placeholder={t('sihL.3.boyPh')}
+                  className={girdi}
+                />
+                <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
+              </div>
+              {/*
+                CANLI KONTROL.
+
+                Ekranın boyu köşe çizgisinin yüzde kaçını kaplıyor — sayı
+                saçmaysa (yüzde 400 gibi) kullanıcı yazdığı santimi anında
+                sorgular. Tahminle değil, girilen iki ölçünün oranıyla.
+              */}
+              {lKoseOran > 0 ? (
+                lKoseOran > 1 ? (
+                  <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sihL.3.tasiyor')}</p>
+                ) : (
+                  <p className={`${kucuk} text-emerald-700 dark:text-emerald-400`}>
+                    {t('sihL.3.hazir')} <strong>%{Math.round(lKoseOran * 100)}</strong>
+                  </p>
+                )
+              ) : (
+                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sihL.3.eksik')}</p>
+              )}
+              <div className="mt-2 flex items-center gap-1.5">
+                <button type="button" onClick={onGeri} className={yan}>
+                  {t('sih.geri')}
+                </button>
+                {lKoseNoktaSayisi > 0 && (
+                  <button type="button" onClick={lKoseIsaretle} className={yan}>
+                    {t('sihL.3.tekrar')}
+                  </button>
+                )}
+                <button type="button" onClick={onKoseKur} disabled={!(lKoseOran > 0)} className={ana}>
+                  {t('sihL.3.kur')}
+                </button>
+              </div>
+            </>
+          )}
+
           {/* 3 — KUTU ÖLÇÜSÜ */}
-          {adim === 3 && (
+          {adim === 3 && !lKose && (
             <>
               <p className={aciklama}>{t('sih.3.aciklama')}</p>
               <div className="mt-2 flex items-center gap-1.5">
@@ -349,9 +425,12 @@ export default function OlcuSihirbazi({
           {adim === 4 && (
             <>
               <p className={aciklama}>
-                {refDuzlem ? t('sih.4.aciklamaDuzlem') : t('sih.4.aciklama')}
+                {lKose ? t('sihL.4.aciklama') : refDuzlem ? t('sih.4.aciklamaDuzlem') : t('sih.4.aciklama')}
               </p>
-              <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.4.ipucu')}</p>
+              {/* Kutu ipucu L'de yanlış: orada taşınacak bir kutu yok. */}
+              {!lKose && (
+                <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.4.ipucu')}</p>
+              )}
 
               {/*
                 ÇEKİM MESAFESİ — ölçeği DEĞİL perspektifi etkiliyor.
@@ -409,7 +488,8 @@ export default function OlcuSihirbazi({
                 sıfırladıktan sonra geri dönmenin yolu yoktu.
                 Düzlem kipinde hiç yok: orada perspektif ölçülmüş oluyor.
               */}
-              {onEgim && (
+              {/* Eğim kutuyu düzeltiyor; L'de kutu yok, köşe çizgisi var. */}
+              {onEgim && !lKose && (
                 <button
                   type="button"
                   onClick={onEgim}
