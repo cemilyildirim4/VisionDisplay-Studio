@@ -95,8 +95,17 @@ export function lKoseGeometri({
   const ust = cy - hPx / 2
   const alt = cy + hPx / 2
 
+  /*
+   * KÖŞE NEREDE: duvarın solunda, sağında ya da TAM ORTASINDA.
+   *
+   * 'orta' mekânın kendi köşesine değil, duvarın ortasına kurulan serbest bir
+   * köşe: ekran duvardan öne doğru katlanıyor. Yön olarak sol köşe gibi
+   * davranıyor (ön kanat sağa, yan kanat izleyiciye doğru), yalnızca dikişin
+   * yeri duvarın ortası.
+   */
+  const ortaMi = kose === 'orta'
   const solMu = kose !== 'sag'
-  const xk = solMu ? duvarSol : duvarSag
+  const xk = ortaMi ? cx : solMu ? duvarSol : duvarSag
   /* Ön kanat köşeden duvarın İÇİNE doğru uzuyor. */
   const xa = solMu ? xk + onM * m : xk - onM * m
 
@@ -302,8 +311,9 @@ export function cepheYanYuzu({
   const f = (D * k) / (k - 1)
   const d = Math.min(derinlikM, f * 0.85)
 
+  const ortaMi = kose === 'orta'
   const solMu = kose !== 'sag'
-  const xk = solMu ? duvarSol : duvarSag
+  const xk = ortaMi ? cx : solMu ? duvarSol : duvarSag
   const nokta = (derinlik, y) => {
     const s = f / (f - derinlik)
     return { x: kx + (xk - kx) * s, y: ky + (y - ky) * s }

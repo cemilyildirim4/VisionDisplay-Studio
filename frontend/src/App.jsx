@@ -4378,8 +4378,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!(kaynak?.w > 0) || !(cizimOlcek > 0)) return null
     const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
     const sagK = Math.max(1, lEkran.cols - solK)
-    const onCols = lKose === 'sol' ? sagK : solK
-    const yanCols = lKose === 'sol' ? solK : sagK
+    /* Fotoğrafta da mekânın köşesi yok: 'orta' sol gibi katlanıyor. */
+    const yon = lKose === 'sag' ? 'sag' : 'sol'
+    const onCols = yon === 'sol' ? sagK : solK
+    const yanCols = yon === 'sol' ? solK : sagK
     const onM = onCols * cwM
     const yanM = yanCols * cwM
     const boyM = lEkran.rows * chM
@@ -4400,7 +4402,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       gorselW: kaynak.w,
       gorselH: kaynak.h,
       mesafeCm: (izlemeMesafesi || 0) * 100,
-      kose: lKose,
+      kose: yon,
       arac: { durusaOturt, kutuGovdesi, duvarDunyasi },
     })
     if (!yanNorm) return null
@@ -4408,8 +4410,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const yanPx = yanM * cizimOlcek
     const hPx = boyM * cizimOlcek
     return {
-      on: { koseler: onTuval, wPx: onPx, hPx, kaydir: lKose === 'sol' ? yanPx : 0 },
-      yan: { koseler: yanNorm.map(oranTuvale), wPx: yanPx, hPx, kaydir: lKose === 'sol' ? 0 : onPx },
+      on: { koseler: onTuval, wPx: onPx, hPx, kaydir: yon === 'sol' ? yanPx : 0 },
+      yan: { koseler: yanNorm.map(oranTuvale), wPx: yanPx, hPx, kaydir: yon === 'sol' ? 0 : onPx },
       toplamWpx: onPx + yanPx,
     }
   })()
@@ -4437,13 +4439,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!surukleAktif || !(cizimOlcek > 0) || !(tuvalBoyut.w > 0)) return null
     const sol = Math.max(1, Math.ceil(lEkran.cols / 2))
     const sag = Math.max(1, lEkran.cols - sol)
-    const onM = (lKose === 'sol' ? sag : sol) * cwM
-    const yanM = (lKose === 'sol' ? sol : sag) * cwM
+    /*
+     * Burada mekânın köşesi yok, yalnızca ürünün duruşu var; 'orta' da bu
+     * yüzden sol köşe gibi katlanıyor. Fark duvardaki YERİNDE, katlama
+     * yönünde değil.
+     */
+    const lYon = lKose === 'sag' ? 'sag' : 'sol'
+    const onM = (lYon === 'sol' ? sag : sol) * cwM
+    const yanM = (lYon === 'sol' ? sol : sag) * cwM
     const boyM = lEkran.rows * chM
     if (!(onM > 0) || !(yanM > 0) || !(boyM > 0)) return null
     /* Tuval pikseli üzerinden çalışılıyor: 1 cm = çizim ölçeğinin yüzde biri. */
     const pxCm = { x: cizimOlcek / 100, y: cizimOlcek / 100 }
-    const yaw = lKose === 'sol' ? -L_SABIT_ACI : L_SABIT_ACI
+    const yaw = lYon === 'sol' ? -L_SABIT_ACI : L_SABIT_ACI
     /* Kamera uzaklığı ekranın kendi eninin üç katı: makul bir bakış mesafesi. */
     const mesafeCm = onM * 100 * 3
     const g = kutuGovdesi(
@@ -4460,20 +4468,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       mesafeCm,
     )
     if (!g) return null
-    const yuz = g.yuzler.find((y) => y.ad === (lKose === 'sol' ? 'sol' : 'sag'))
+    const yuz = g.yuzler.find((y) => y.ad === lYon)
     if (!yuz) return null
     const tuvale = (k) => k.map((q) => ({ x: q.x * tuvalBoyut.w, y: q.y * tuvalBoyut.h }))
     const onPx = onM * cizimOlcek
     const yanPx = yanM * cizimOlcek
     const hPx = boyM * cizimOlcek
     return {
-      on: { koseler: tuvale(g.on), wPx: onPx, hPx, kaydir: lKose === 'sol' ? yanPx : 0 },
+      on: { koseler: tuvale(g.on), wPx: onPx, hPx, kaydir: lYon === 'sol' ? yanPx : 0 },
       yan: {
         /* İçerik sırası: dilim doğru köşeden başlasın (bkz. icerikSirasi). */
-        koseler: tuvale(icerikSirasi(yuz.koseler, lKose === 'sol' ? 'sol' : 'sag')),
+        koseler: tuvale(icerikSirasi(yuz.koseler, lYon)),
         wPx: yanPx,
         hPx,
-        kaydir: lKose === 'sol' ? 0 : onPx,
+        kaydir: lYon === 'sol' ? 0 : onPx,
       },
       toplamWpx: onPx + yanPx,
     }
@@ -6131,11 +6139,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       {t('screen.lKoseBaslik')}
                     </div>
                     <Segmented
-                      cols={2}
+                      cols={3}
                       value={lKose}
                       onChange={setLKose}
                       options={[
                         { v: 'sol', l: t('screen.lKoseSol') },
+                        { v: 'orta', l: t('screen.lKoseOrta') },
                         { v: 'sag', l: t('screen.lKoseSag') },
                       ]}
                     />

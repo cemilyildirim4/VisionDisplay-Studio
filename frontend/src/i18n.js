@@ -257,6 +257,7 @@ const dict = {
   'screen.curvedIn': { tr: 'İçe Kavisli', en: 'Concave Curved', ar: 'مقعرة' },
   'screen.lKose': { tr: 'L köşesi', en: 'L corner', ar: 'زاوية L' },
   'screen.lKoseSol': { tr: 'Sol köşe', en: 'Left corner', ar: 'الزاوية اليسرى' },
+  'screen.lKoseOrta': { tr: 'Orta', en: 'Middle', ar: 'الوسط' },
   'screen.lKoseSag': { tr: 'Sağ köşe', en: 'Right corner', ar: 'الزاوية اليمنى' },
   'screen.lKoseGorunmez': {
     tr: 'Bu açıdan seçilen köşe görünmüyor: o yüz kameraya sırtını dönmüş durumda. Kutuyu ters yöne çevirin ya da öteki köşeyi seçin.',
