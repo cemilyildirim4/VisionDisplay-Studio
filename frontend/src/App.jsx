@@ -36,7 +36,7 @@ import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
-import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icerikSirasi } from './lKose.js'
+import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu } from './lKose.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -2277,7 +2277,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * geometri kullanılıyor; değişen tek şey ölçek kaynağı.
    */
   const lCizimMekan = scene === SALON_ID || scene === CEPHE_ID
-  const lOlcek = scene === SALON_ID ? salonOlcegi : scene === CEPHE_ID ? cepheOlcegi : null
+  /*
+   * HAZIR FOTOĞRAFLI MEKÂNDA DA GERÇEK KÖŞE (AVM koridoru, şehir meydanı).
+   *
+   * Bu iki sahnede duvarın fotoğraftaki dikdörtgeni ÖLÇÜLMÜŞ (sahneler.js
+   * duvarKutu) ve duvar, kullanıcının girdiği ölçüye göre tuvalin ortasında
+   * esnetilerek çiziliyor (bkz. DuvarDilim). Yani elimizde çizilmiş mekândaki
+   * ile AYNI yapı var: ortalanmış, ölçeği bilinen bir duvar dikdörtgeni.
+   *
+   * Daha önce bu sahnelerde köşe mekândan değil ürünün kendi duruşundan
+   * kuruluyordu (sabit açıyla çevrilmiş bir kutu). Ekran havada duruyordu:
+   * duvar düz kalıyor, L onun önünde kendi başına katlanıyordu. Artık köşe
+   * aynı lKoseGeometri ile duvarın kenarına kuruluyor — iç ve dış mekânla
+   * birebir aynı hesap — ve duvarın kendisi de köşeden dönüyor
+   * (bkz. fotoDuvarKosesi, DuvarKose.jsx).
+   */
+  const lFotoDuvarMekan = surukleAktif && !!fotoSahne?.duvarKutu
+  const lDuvarMekan = lCizimMekan || lFotoDuvarMekan
+  const lOlcek =
+    scene === SALON_ID
+      ? salonOlcegi
+      : scene === CEPHE_ID
+        ? cepheOlcegi
+        : lFotoDuvarMekan
+          ? cizimOlcek
+          : null
   const lDuvarWpx = (lOlcek || 0) * mekanDuvarWm
   const lTipiAktif = !!lEkran
   const lKacisKaymasi = (() => {
@@ -2349,7 +2373,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * dönüyor ve L eskisi gibi düz çiziliyor.
    */
   const lKoseGeo = (() => {
-    if (!lCizimMekan || !lEkran) return null
+    if (!lDuvarMekan || !lEkran) return null
     if (!(lOlcek > 0) || !(tuvalBoyut.w > 0)) return null
     const sol = Math.max(1, Math.ceil(lEkran.cols / 2))
     const sag = Math.max(1, lEkran.cols - sol)
@@ -2365,7 +2389,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       onM: onCols * cwM,
       yanM: yanCols * cwM,
       boyM: lEkran.rows * chM,
-      kacisKaymasi: lKacisKaymasi,
+      /* Fotoğrafta kamerayı çeviremiyoruz: kare sabit, dönüş yalnızca çizimde. */
+      kacisKaymasi: lCizimMekan ? lKacisKaymasi : 0,
     })
   })()
 
@@ -2400,6 +2425,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       derinlikM: yanM * 1.35,
       kacisKaymasi: lKacisKaymasi,
     })
+  })()
+
+  /*
+   * FOTOĞRAFLI MEKÂNDA DUVARIN DÖNEN YÜZÜ.
+   *
+   * Dörtgen cephedekiyle aynı formülden geliyor; farkı yüzün ne ile
+   * doldurulduğu: cephede düz bir yüzey gradyanı, burada fotoğrafın KENDİ
+   * duvar dokusu (bkz. DuvarKose.jsx). Böylece duvar gerçekten köşeden
+   * dönüyormuş gibi duruyor, üstüne yapıştırılmış bir şekil gibi değil.
+   *
+   * 'orta' köşede duvar katlanmıyor: orada köşe duvarın kenarında değil,
+   * ekranın kendi serbest köşesi duvarın önünde duruyor.
+   */
+  const fotoDuvarKosesi = (() => {
+    if (!lFotoDuvarMekan || !lEkran || lKose === 'orta') return null
+    if (!(cizimOlcek > 0) || !(tuvalBoyut.w > 0)) return null
+    const sol = Math.max(1, Math.ceil(lEkran.cols / 2))
+    const sag = Math.max(1, lEkran.cols - sol)
+    const yanM = (lKose === 'sol' ? sol : sag) * cwM
+    if (!(yanM > 0)) return null
+    /* Duvar ekranın bittiği yerde bitmiyor, köşeden biraz daha devam ediyor. */
+    const derinlikM = yanM * 1.35
+    const koseler = cepheYanYuzu({
+      tuvalW: tuvalBoyut.w,
+      tuvalH: tuvalBoyut.h,
+      pxPerM: cizimOlcek,
+      duvarWm: mekanDuvarWm,
+      duvarHm: mekanDuvarHm,
+      kose: lKose,
+      derinlikM,
+    })
+    if (!koseler) return null
+    return { koseler, derinlikM, duvarWm: mekanDuvarWm, kose: lKose }
   })()
 
   const sahneOlcekVarsayilan = panoOlcek || fotoOlcek || salonOlcegi || cepheOlcegi
@@ -4416,81 +4474,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
   })()
 
-  /*
-   * HAZIR FOTOĞRAFLI MEKÂNDA L KÖŞESİ (AVM koridoru, şehir meydanı).
-   *
-   * Burada iki şey birden yok: fotoğrafta köşe diye bir yüzey yok ve kamerayı
-   * çeviremiyoruz — kare sabit. Çizilmiş mekânda köşeyi odanın geometrisi,
-   * kullanıcının fotoğrafında ölçülen düzlem veriyordu; burada ikisi de yok.
-   *
-   * Bu yüzden köşe MEKÂNDAN değil ÜRÜNÜN KENDİ DURUŞUNDAN kuruluyor: ekran
-   * hafifçe çevrilmiş duruyor ve ikinci kanat o duruşun 90 derece katlanmış
-   * yüzü. Hesap yine aynı iğnedelik kamera (kutuGovdesi), yani iki kanadın
-   * birbirine oranı ve perspektifi doğru. Uydurulan tek şey ekranın mekâna
-   * göre açısı — fotoğraf onu söylemiyor, söyleyemez de.
-   *
-   * Çevirme yönü köşe seçimini izliyor: sol köşede sol yüz, sağ köşede sağ
-   * yüz görünüyor.
-   */
-  const L_SABIT_ACI = (32 * Math.PI) / 180
 
-  const lKoseSabitGeo = (() => {
-    if (!lEkran || lCizimMekan || lKoseFotoGeo) return null
-    if (!surukleAktif || !(cizimOlcek > 0) || !(tuvalBoyut.w > 0)) return null
-    const sol = Math.max(1, Math.ceil(lEkran.cols / 2))
-    const sag = Math.max(1, lEkran.cols - sol)
-    /*
-     * Burada mekânın köşesi yok, yalnızca ürünün duruşu var; 'orta' da bu
-     * yüzden sol köşe gibi katlanıyor. Fark duvardaki YERİNDE, katlama
-     * yönünde değil.
-     */
-    const lYon = lKose === 'sag' ? 'sag' : 'sol'
-    const onM = (lYon === 'sol' ? sag : sol) * cwM
-    const yanM = (lYon === 'sol' ? sol : sag) * cwM
-    const boyM = lEkran.rows * chM
-    if (!(onM > 0) || !(yanM > 0) || !(boyM > 0)) return null
-    /* Tuval pikseli üzerinden çalışılıyor: 1 cm = çizim ölçeğinin yüzde biri. */
-    const pxCm = { x: cizimOlcek / 100, y: cizimOlcek / 100 }
-    /*
-     * Ortada köşe tam karşıda duruyor: 90 derecelik köşeye karşıdan bakmak,
-     * her iki kanadı da 45 derecede göstermek demek. Sol/sağ köşede ise
-     * kanatlardan biri duvara yakın kalıyor, o yüzden açı daha az.
-     */
-    const yaw = (lYon === 'sol' ? -1 : 1) * (lKose === 'orta' ? Math.PI / 4 : L_SABIT_ACI)
-    /* Kamera uzaklığı ekranın kendi eninin üç katı: makul bir bakış mesafesi. */
-    const mesafeCm = onM * 100 * 3
-    const g = kutuGovdesi(
-      onM * 100,
-      boyM * 100,
-      yanM * 100,
-      pxCm,
-      tuvalBoyut.w,
-      tuvalBoyut.h,
-      { x: 0.5, y: 0.5 },
-      0,
-      yaw,
-      0,
-      mesafeCm,
-    )
-    if (!g) return null
-    const yuz = g.yuzler.find((y) => y.ad === lYon)
-    if (!yuz) return null
-    const tuvale = (k) => k.map((q) => ({ x: q.x * tuvalBoyut.w, y: q.y * tuvalBoyut.h }))
-    const onPx = onM * cizimOlcek
-    const yanPx = yanM * cizimOlcek
-    const hPx = boyM * cizimOlcek
-    return {
-      on: { koseler: tuvale(g.on), wPx: onPx, hPx, kaydir: lYon === 'sol' ? yanPx : 0 },
-      yan: {
-        /* İçerik sırası: dilim doğru köşeden başlasın (bkz. icerikSirasi). */
-        koseler: tuvale(icerikSirasi(yuz.koseler, lYon)),
-        wPx: yanPx,
-        hPx,
-        kaydir: lYon === 'sol' ? 0 : onPx,
-      },
-      toplamWpx: onPx + yanPx,
-    }
-  })()
+  /*
+   * KÖŞE KİPİNDE MİYİZ — düz şerit de 3B katman da o zaman çizilmiyor.
+   *
+   * lKoseFotoGeo bu satırın üstünde hesaplandığı için kısayol burada duruyor;
+   * daha yukarıda tanımlanırsa henüz başlatılmamış değişkeni okur.
+   */
+  const lKoseCizimi = lKoseGeo || lKoseFotoGeo
 
   /** Dörtgenin merkezi, durusaOturt'un beklediği {cx, cy} adlarıyla. */
   const koseMerkeziCx = (k) => ({
@@ -5040,6 +5031,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               kacisKaymasi={lKacisKaymasi}
               /* Dış mekânda binanın dönen yan yüzü (yalnızca L tipinde). */
               yanYuz={cepheKoseYuzu}
+              /* Fotoğraflı mekânda duvarın dönen yüzü (yalnızca L tipinde). */
+              duvarKosesi={fotoDuvarKosesi}
               ekranWpx={tasarimWm * (cizimOlcek || 0)}
               ekranHpx={tasarimHm * (cizimOlcek || 0)}
               /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
@@ -5144,15 +5137,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * var. Köşede iki ayrı düzlem, yani iki ayrı dönüşüm gerekiyor;
                * tek şeride sığmıyor. Ekranı o kipte LKoseEkran çiziyor.
                */
-              ekranGizle={
-                (uc3dHazir && !duvarDunya) ||
-                tasarimGizli ||
-                !!lKoseGeo ||
-                !!lKoseFotoGeo ||
-                !!lKoseSabitGeo
-              }
+              ekranGizle={(uc3dHazir && !duvarDunya) || tasarimGizli || !!lKoseCizimi}
               uc3dKatman={
-                !tasarimGizli && !duvarDunya && YERINDE_3B && surukleAktif
+                !tasarimGizli && !duvarDunya && YERINDE_3B && surukleAktif && !lKoseCizimi
                   ? ({ koseler, genislik, yukseklik }) => (
                       <Suspense fallback={null}>
                         <Mekan3D
@@ -5273,9 +5260,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             />
           )}
 
-          {(lKoseGeo || lKoseFotoGeo || lKoseSabitGeo) && (
+          {lKoseCizimi && (
             <LKoseEkran
-              geo={lKoseGeo || lKoseFotoGeo || lKoseSabitGeo}
+              geo={lKoseCizimi}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
               cols={lEkran?.cols || cols}

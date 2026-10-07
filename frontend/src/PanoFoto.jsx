@@ -25,6 +25,7 @@
 import { fotoYerlesim, govdeOlculeri } from './sahneler.js'
 import { yonDonusumu } from './hooks/useYon.js'
 import DuvarDilim from './DuvarDilim.jsx'
+import DuvarKose from './DuvarKose.jsx'
 
 /**
  * ÖLÇÜ ETİKETİNİN METNİ.
@@ -89,6 +90,15 @@ export default function PanoFoto({
   kioskGizle = false,
   duvarWmEtiket = 0,
   duvarHmEtiket = 0,
+  /*
+   * DUVARIN DÖNEN YÜZÜ — yalnızca L tipi ekranda, duvarı ölçülmüş sahnelerde.
+   *
+   * L bir KÖŞE ürünü; ikinci kanadın oturacağı bir yüzey gerekiyor. Dörtgeni
+   * App.jsx hesaplıyor (iç/dış mekânla aynı formül), dokusunu DuvarKose
+   * fotoğrafın kendi duvarından alıyor. Verilmezse hiç çizilmiyor: düz ve
+   * kavisli ekranlarda sahne eskisi gibi.
+   */
+  duvarKosesi = null,
   kayma = null,
   /*
    * KIOSK TİPİ: duvar | dokunmatik | totem | masa | disMekan
@@ -288,6 +298,15 @@ export default function PanoFoto({
               willChange: 'transform',
             }}
           />
+          )}
+          {/*
+            DUVARIN KÖŞEDEN DÖNEN YÜZÜ — yalnızca L tipi ekranda.
+
+            Dilimlerden SONRA çiziliyor: dilimler fotoğrafın tamamını yeniden
+            boyadığı için önce çizilse üstünü kapatırlardı.
+          */}
+          {dilimliDuvar && duvarKosesi && (
+            <DuvarKose sahne={sahne} kutu={sahne.duvarKutu} yuz={duvarKosesi} />
           )}
           {/*
             MEKÂNIN GERÇEK ÖLÇÜLERİ.

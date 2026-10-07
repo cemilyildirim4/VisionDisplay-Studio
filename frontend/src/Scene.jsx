@@ -34,6 +34,8 @@ export default function Scene({
   kacisKaymasi = 0,
   /* Dış mekânda binanın dönen yan yüzü (bkz. Cephe.jsx yanYuz). */
   yanYuz = null,
+  /* Fotoğraflı mekânda duvarın dönen yüzü (bkz. PanoFoto.jsx duvarKosesi). */
+  duvarKosesi = null,
   id,
   tuvalW,
   tuvalH,
@@ -67,6 +69,7 @@ export default function Scene({
     return (
       <PanoFoto
         sahne={sahne}
+        duvarKosesi={duvarKosesi}
         tuvalW={tuvalW}
         tuvalH={tuvalH}
         ekranWpx={ekranWpx}
