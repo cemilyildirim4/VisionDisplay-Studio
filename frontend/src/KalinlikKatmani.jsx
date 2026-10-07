@@ -138,8 +138,16 @@ export default function KalinlikKatmani({ yuzler, on, tuvalW, tuvalH }) {
               y1={on[u[0]].y}
               x2={on[u[1]].x}
               y2={on[u[1]].y}
-              stroke="rgba(226,232,240,0.75)"
-              strokeWidth="1.1"
+              /*
+                KENAR IŞIĞI KIL İNCELİĞİNDE.
+
+                İlk hâli (beyaza yakın, %75 opak, 1,1 piksel) ekranın kenarında
+                belirgin beyaz bir şerit gibi duruyordu. Amaç kutunun sınırını
+                sezdirmek, parlak bir çizgi çizmek değil: yüzler zaten ortam
+                ışığıyla zeminden ayrışıyor, bu yalnızca köşeyi okutuyor.
+              */
+              stroke="rgba(226,232,240,0.22)"
+              strokeWidth="0.7"
               strokeLinecap="round"
             />
           )
