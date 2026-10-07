@@ -621,6 +621,9 @@ const dict = {
     en: 'Place the design in the box',
     ar: 'ضع التصميم داخل المربع',
   },
+  'scene.olcuKarsilastir': { tr: 'Kutu', en: 'Box', ar: 'المربع' },
+  'scene.olcuTasarim': { tr: 'tasarım', en: 'design', ar: 'التصميم' },
+  'scene.olcuTamOturuyor': { tr: 'tam oturuyor', en: 'exact fit', ar: 'مطابق تمامًا' },
   'scene.kutuyaTam': { tr: 'Tasarım kutuya tam oturdu.', en: 'The design fills the box exactly.', ar: 'التصميم يملأ المربع تمامًا.' },
   'scene.kutuyaOrtalandi': {
     tr: 'Tasarım kutunun ortasına yerleşti:',

@@ -3458,25 +3458,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const tasarimiKutuyaYerlestir = () => {
     if (!duvarOlcu) return
     mekaniOrtala()
-    const tam =
-      Math.abs(duvarOlcu.wm - tasarimWm) < 0.005 && Math.abs(duvarOlcu.hm - tasarimHm) < 0.005
-    setOzelUyari(
-      tam
-        ? t('scene.kutuyaTam')
-        : t('scene.kutuyaOrtalandi') +
-            ' ' +
-            t('ref.kutuBaslik') +
-            ' ' +
-            duvarOlcu.wm.toFixed(2).replace('.', ',') +
-            ' × ' +
-            duvarOlcu.hm.toFixed(2).replace('.', ',') +
-            ' m, ' +
-            tasarimWm.toFixed(2).replace('.', ',') +
-            ' × ' +
-            tasarimHm.toFixed(2).replace('.', ',') +
-            ' m',
-    )
+    /*
+     * BURADA MESAJ BIRAKILMIYOR.
+     *
+     * Düğme bir ara sonucu ozelUyari'ya yazıyordu: "Tasarım kutuya tam
+     * oturdu." Sorun, o cümlenin BASILDIĞI ANIN fotoğrafı olması — kullanıcı
+     * sonra kutuyu 96 × 192'den 106 × 224'e çıkarıyor, tasarım artık kutudan
+     * küçük kalıyor ama ekranda hâlâ "tam oturdu" yazıyor. Doğru çizim ile
+     * yanlış yazı yan yana durunca hangisine inanacağı belirsizleşiyordu.
+     *
+     * Yerine aşağıda CANLI bir karşılaştırma satırı var: iki ölçüyü o anki
+     * değerleriyle yazıyor, dolayısıyla eskiyemiyor.
+     */
   }
+
+  /*
+   * SIĞDIR MESAJI SÜTUN/SATIR DEĞİŞİNCE DÜŞÜYOR.
+   *
+   * O cümle bir EYLEMİN sonucu; kullanıcı sonrasında kabin sayısını
+   * değiştirdiğinde artık doğru değil. Eskimiş bir cümleyi ekranda tutmak,
+   * hiç yazmamaktan kötü.
+   */
+  useEffect(() => {
+    setOzelUyari(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cols, rows, olcuKutu])
 
   const tasarimiDuvaraSigdir = () => {
     if (!duvarOlcu) return
@@ -6146,6 +6152,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           >
                             {t('scene.fitWall')}
                           </button>
+                        )}
+                        {/*
+                          CANLI ÖLÇÜ KARŞILAŞTIRMASI.
+
+                          Kutunun ve tasarımın o ANKİ ölçüsü yan yana yazıyor.
+                          Eskiyen bir cümle değil, her değişiklikte kendiliğinden
+                          güncellenen bir satır: hangisi büyük, eşit mi, tek
+                          bakışta görünüyor.
+                        */}
+                        {duvarOlcu && (
+                          <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-600 dark:text-neutral-300">
+                            {t('scene.olcuKarsilastir')}{' '}
+                            <strong>
+                              {duvarOlcu.wm.toFixed(2).replace('.', ',')} ×{' '}
+                              {duvarOlcu.hm.toFixed(2).replace('.', ',')} m
+                            </strong>{' '}
+                            · {t('scene.olcuTasarim')}{' '}
+                            <strong>
+                              {tasarimWm.toFixed(2).replace('.', ',')} ×{' '}
+                              {tasarimHm.toFixed(2).replace('.', ',')} m
+                            </strong>
+                            {Math.abs(duvarOlcu.wm - tasarimWm) < 0.005 &&
+                            Math.abs(duvarOlcu.hm - tasarimHm) < 0.005
+                              ? ' · ' + t('scene.olcuTamOturuyor')
+                              : ''}
+                          </p>
                         )}
                         {/*
                           SONUCU SÖYLE.
