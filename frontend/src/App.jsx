@@ -2274,9 +2274,58 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const lKacisKaymasi = (() => {
     if (!lTipiAktif || scene !== SALON_ID || !(lDuvarWpx > 0)) return 0
     const varsayilan = (lKose === 'sol' ? 1 : -1) * lDuvarWpx * 0.22
-    const deger = lKacis == null ? varsayilan : lKacis
+    const istek = lKacis == null ? varsayilan : lKacis
     const sinir = lDuvarWpx * 0.45
-    return Math.max(-sinir, Math.min(sinir, deger))
+    const kirpik = Math.max(-sinir, Math.min(sinir, istek))
+    if (!lEkran || !(salonOlcegi > 0) || !(tuvalBoyut.w > 0)) return kirpik
+
+    /*
+     * DÖNÜŞ, EKRANI KADRAJIN DIŞINA ÇIKARMIYOR.
+     *
+     * Kamera çok dönünce yan kanadın YAKIN ucu tuvalin kenarını aşıyor ve
+     * ekran yarım görünüyordu — sabit bir yüzde sınırı bunu önlemiyor, çünkü
+     * taşma kanadın derinliğine, ekranın boyuna ve duvarın ölçüsüne göre
+     * değişiyor.
+     *
+     * Bu yüzden sınır sayıdan değil ÖLÇÜMDEN geliyor: istenen dönüş için iki
+     * kanadın dörtgeni hesaplanıp kadraja sığıp sığmadığına bakılıyor.
+     * Sığmıyorsa dönüş, sığan en yakın değere çekiliyor. Kullanıcı sürüklemeye
+     * devam edebiliyor ama ekran kesilmiyor.
+     */
+    const sol = Math.max(1, Math.ceil(lEkran.cols / 2))
+    const sag = Math.max(1, lEkran.cols - sol)
+    const olcu = {
+      tuvalW: tuvalBoyut.w,
+      tuvalH: tuvalBoyut.h,
+      pxPerM: salonOlcegi,
+      duvarWm: mekanDuvarWm,
+      duvarHm: mekanDuvarHm,
+      kose: lKose,
+      onM: (lKose === 'sol' ? sag : sol) * cwM,
+      yanM: (lKose === 'sol' ? sol : sag) * cwM,
+      boyM: lEkran.rows * chM,
+    }
+    const PAY = 8
+    const sigiyor = (deger) => {
+      const g = lKoseGeometri({ ...olcu, kacisKaymasi: deger })
+      if (!g) return false
+      const h = [...g.on.koseler, ...g.yan.koseler]
+      const xs = h.map((q) => q.x)
+      const ys = h.map((q) => q.y)
+      return (
+        Math.min(...xs) >= PAY &&
+        Math.max(...xs) <= tuvalBoyut.w - PAY &&
+        Math.min(...ys) >= PAY &&
+        Math.max(...ys) <= tuvalBoyut.h - PAY
+      )
+    }
+    if (sigiyor(kirpik)) return kirpik
+    /* Sığan en büyük dönüşü ara: istenen değerden sıfıra doğru. */
+    for (let i = 23; i >= 1; i--) {
+      const d = (kirpik * i) / 24
+      if (sigiyor(d)) return d
+    }
+    return 0
   })()
 
   /*
