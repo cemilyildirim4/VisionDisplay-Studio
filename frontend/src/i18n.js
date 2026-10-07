@@ -258,6 +258,11 @@ const dict = {
   'screen.lKose': { tr: 'L köşesi', en: 'L corner', ar: 'زاوية L' },
   'screen.lKoseSol': { tr: 'Sol köşe', en: 'Left corner', ar: 'الزاوية اليسرى' },
   'screen.lKoseSag': { tr: 'Sağ köşe', en: 'Right corner', ar: 'الزاوية اليمنى' },
+  'screen.lKoseGorunmez': {
+    tr: 'Bu açıdan seçilen köşe görünmüyor: o yüz kameraya sırtını dönmüş durumda. Kutuyu ters yöne çevirin ya da öteki köşeyi seçin.',
+    en: 'The chosen corner is not visible from this angle — that face points away from the camera. Turn the box the other way or pick the other corner.',
+    ar: 'الزاوية المختارة غير مرئية من هذه الزاوية. أدر المربع أو اختر الزاوية الأخرى.',
+  },
   'screen.lKoseIpucu': {
     tr: 'L ekran mekânın köşesini sarıyor: bir kanat ön duvarda, öteki yan duvarda. Kanatların kabin sayısını Sütunlar bölümünden ayarlıyorsunuz.',
     en: 'The L screen wraps the room corner: one wing on the front wall, the other on the side wall.',

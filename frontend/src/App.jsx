@@ -36,7 +36,7 @@ import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
-import { lKoseGeometri } from './lKose.js'
+import { lKoseGeometri, lKoseYanKanat } from './lKose.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -4223,6 +4223,61 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setIzlemeM(Math.max(0.2, Math.round(((Number(izlemeMesafesi) || 0) + fark) * 10) / 10))
   }
 
+  /*
+   * FOTOĞRAFLI MEKÂNDA L KÖŞESİ.
+   *
+   * Çizilmiş iç mekânda köşe hazırdı. Kullanıcının kendi fotoğrafında ise
+   * çizim yok; elimizde ölçülmüş bir DÜZLEM var. Ama o düzlemin duruşu
+   * çıkarılabiliyor, dolayısıyla ikinci kanat tahmin değil: ön kanadı dikiş
+   * kenarından 90 derece katlamak (bkz. lKoseYanKanat).
+   *
+   * Ön kanat tasarımın durduğu yerde başlıyor; yan kanat oradan köşeyi dönüyor.
+   * Seçilen köşe kameraya sırtını dönmüşse yan kanat çizilmiyor — o açıdan o
+   * köşe gerçekten görünmez, uydurmak yanlış olurdu.
+   */
+  const lKoseFotoGeo = (() => {
+    if ((screenType || 'flat') !== 'lshape' || cokluAktif) return null
+    if (!duvarDunya || !(duvarDunyaOlcu?.wm > 0) || !refPxCm) return null
+    const kaynak = ozelSahne?.kaynak
+    if (!(kaynak?.w > 0) || !(cizimOlcek > 0)) return null
+    const solK = Math.max(1, Math.ceil(Math.max(1, cols) / 2))
+    const sagK = Math.max(1, Math.max(1, cols) - solK)
+    const onCols = lKose === 'sol' ? sagK : solK
+    const yanCols = lKose === 'sol' ? solK : sagK
+    const onM = onCols * cwM
+    const yanM = yanCols * cwM
+    const boyM = Math.max(1, rows) * chM
+    if (!(onM > 0) || !(yanM > 0) || !(boyM > 0)) return null
+    /* Ön kanadın duvardaki yeri: tasarım nerede duruyorsa orada. */
+    const yer = ekranDunyaRef.current || {
+      x: (duvarDunyaOlcu.wm - onM) / 2,
+      y: (duvarDunyaOlcu.hm - boyM) / 2,
+    }
+    const onTuval = dunyaDortgeni(duvarDunya, yer.x, yer.y, onM, boyM)
+    if (!onTuval) return null
+    const yanNorm = lKoseYanKanat({
+      on: onTuval.map(tuvalOrana),
+      enCm: onM * 100,
+      boyCm: boyM * 100,
+      yanCm: yanM * 100,
+      pxCm: refPxCm,
+      gorselW: kaynak.w,
+      gorselH: kaynak.h,
+      mesafeCm: (izlemeMesafesi || 0) * 100,
+      kose: lKose,
+      arac: { durusaOturt, kutuGovdesi, duvarDunyasi },
+    })
+    if (!yanNorm) return null
+    const onPx = onM * cizimOlcek
+    const yanPx = yanM * cizimOlcek
+    const hPx = boyM * cizimOlcek
+    return {
+      on: { koseler: onTuval, wPx: onPx, hPx, kaydir: lKose === 'sol' ? yanPx : 0 },
+      yan: { koseler: yanNorm.map(oranTuvale), wPx: yanPx, hPx, kaydir: lKose === 'sol' ? 0 : onPx },
+      toplamWpx: onPx + yanPx,
+    }
+  })()
+
   /** Dörtgenin merkezi, durusaOturt'un beklediği {cx, cy} adlarıyla. */
   const koseMerkeziCx = (k) => ({
     cx: k.reduce((t, q) => t + q.x, 0) / k.length,
@@ -4871,7 +4926,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * var. Köşede iki ayrı düzlem, yani iki ayrı dönüşüm gerekiyor;
                * tek şeride sığmıyor. Ekranı o kipte LKoseEkran çiziyor.
                */
-              ekranGizle={(uc3dHazir && !duvarDunya) || tasarimGizli || !!lKoseGeo}
+              ekranGizle={(uc3dHazir && !duvarDunya) || tasarimGizli || !!lKoseGeo || !!lKoseFotoGeo}
               uc3dKatman={
                 !tasarimGizli && !duvarDunya && YERINDE_3B && surukleAktif
                   ? ({ koseler, genislik, yukseklik }) => (
@@ -4967,9 +5022,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             perspektifi biliniyor. Diğer mekânlarda lKoseGeo null kalıyor ve
             ekran eskisi gibi WallPreview tarafından düz çiziliyor.
           */}
-          {lKoseGeo && (
+          {(lKoseGeo || lKoseFotoGeo) && (
             <LKoseEkran
-              geo={lKoseGeo}
+              geo={lKoseGeo || lKoseFotoGeo}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
               cols={cols}
@@ -5563,6 +5618,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                             {t('screen.lKoseIpucu')}
                           </p>
+                          {/*
+                            SEÇİLEN KÖŞE GÖRÜNMÜYORSA SÖYLE.
+
+                            Fotoğrafta köşe duruştan çıkıyor; kutu ters yöne
+                            çevrilmişse o yüz kameraya sırtını dönmüş olur ve
+                            çizilmez. Sessizce düz ekran göstermek kullanıcıya
+                            "çalışmıyor" dedirtiyordu.
+                          */}
+                          {duvarDunya && !lKoseFotoGeo && (
+                            <p className="mt-1 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                              {t('screen.lKoseGorunmez')}
+                            </p>
+                          )}
                         </div>
                       )}
 

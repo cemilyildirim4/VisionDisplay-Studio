@@ -140,3 +140,98 @@ export function lKoseGeometri({
     kose: solMu ? 'sol' : 'sag',
   }
 }
+
+/*
+ * FOTOĞRAFLI MEKÂNDA KÖŞE — DURUŞTAN KATLAMA.
+ *
+ * Çizilmiş iç mekânda köşe hazırdı: arka duvarın kenarı bir köşe, yan duvarın
+ * perspektifi de çizimden biliniyor. Kullanıcının kendi fotoğrafında ise böyle
+ * bir çizim yok; elimizde yalnızca ölçülmüş bir DÜZLEM var.
+ *
+ * Ama o düzlemin duruşu çıkarılabiliyor (bkz. durusaOturt): dörtgene en çok
+ * benzeyen dönme/çevirme/yatırma. Duruş bilinince ikinci kanat bir tahmin
+ * değil, basit bir geometri: ön kanadı dikiş kenarından 90 derece katlamak.
+ * Katlanmış yüzü çizen hesap zaten var — kutuGovdesi kabinin yan yüzünü tam
+ * olarak böyle üretiyor; tek fark derinliğin kabin derinliği değil, yan
+ * kanadın genişliği olması.
+ *
+ * SON ADIM: YAPIŞTIRMA. Elle bozulmuş bir dörtgen gerçek bir dikdörtgenin
+ * görüntüsü olmak zorunda değil, dolayısıyla bulunan duruşun ön yüzü ekrandaki
+ * dörtgene tam oturmayabiliyor. Aradaki fark bir düzlem dönüşümü; aynı
+ * homografi yan kanada da uygulanınca kanat ön kanada birebir yapışıyor.
+ */
+
+/**
+ * Ön kanattan 90 derece katlanmış yan kanat.
+ *
+ * @param on          ön kanadın dörtgeni (normalize fotoğraf koordinatı)
+ * @param enCm,boyCm  ön kanadın gerçek ölçüsü
+ * @param yanCm       yan kanadın derinliği (santim)
+ * @param kose        'sol' | 'sag' — hangi kenardan katlanacağı
+ * @param arac        { durusaOturt, kutuGovdesi, duvarDunyasi }
+ * @returns yan kanadın dörtgeni (normalize) ya da görünmüyorsa null
+ */
+export function lKoseYanKanat({
+  on,
+  enCm,
+  boyCm,
+  yanCm,
+  pxCm,
+  gorselW,
+  gorselH,
+  mesafeCm,
+  kose,
+  arac,
+}) {
+  if (!Array.isArray(on) || on.length !== 4) return null
+  if (!(enCm > 0) || !(boyCm > 0) || !(yanCm > 0)) return null
+  if (!arac?.durusaOturt || !arac?.kutuGovdesi || !arac?.duvarDunyasi) return null
+
+  const merkez = {
+    cx: on.reduce((t, p) => t + p.x, 0) / 4,
+    cy: on.reduce((t, p) => t + p.y, 0) / 4,
+  }
+  const poz = arac.durusaOturt(
+    on,
+    enCm,
+    boyCm,
+    pxCm,
+    gorselW,
+    gorselH,
+    { ...merkez, roll: 0, yaw: 0, pitch: 0 },
+    mesafeCm,
+  )
+  if (!poz) return null
+
+  const govde = arac.kutuGovdesi(
+    enCm,
+    boyCm,
+    yanCm,
+    pxCm,
+    gorselW,
+    gorselH,
+    poz.merkez,
+    poz.roll,
+    poz.yawRad,
+    poz.pitchRad,
+    mesafeCm,
+  )
+  if (!govde) return null
+
+  const istenen = kose === 'sag' ? 'sag' : 'sol'
+  const yuz = govde.yuzler.find((y) => y.ad === istenen)
+  if (!yuz) return null
+
+  /* Bulunan ön yüzü ekrandaki dörtgene taşıyan homografi; aynısı kanada da. */
+  const olcek = (k) => k.map((p) => ({ x: p.x * gorselW, y: p.y * gorselH }))
+  const A = arac.duvarDunyasi(olcek(govde.on), 1, 1)
+  const B = arac.duvarDunyasi(olcek(on), 1, 1)
+  if (!A || !B) return null
+  const yapistir = (p) => {
+    const u = A.geri(p.x * gorselW, p.y * gorselH)
+    const q = u && B.ileri(u.x, u.y)
+    return q ? { x: q.x / gorselW, y: q.y / gorselH } : null
+  }
+  const k = yuz.koseler.map(yapistir)
+  return k.some((q) => !q) ? null : k
+}
