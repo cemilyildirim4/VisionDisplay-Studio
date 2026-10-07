@@ -1728,14 +1728,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * sütun/satır elle istenildiği kadar artırılabiliyor; değişen tek şey,
    * kartların önerdiği dizilimin artık gerçekten o duvara ait olması.
    */
+  /*
+   * KARTLAR DÜĞMEYLE AYNI DUVARA BAKIYOR.
+   *
+   * Bir ara kartlar ölçü kutusuna (duvarOlcu) göre hesaplanmıştı. Niyet
+   * iyiydi ama yanlıştı: hemen yanlarındaki "Duvara sığdır" düğmesi SOL
+   * PANELDEKİ Duvar ölçüsünü kullanıyor. İkisi ayrışınca kartta yazan
+   * dizilim ile düğmenin uyguladığı dizilim farklı çıkıyordu.
+   *
+   * Bu bölümün işi tek cümleyle: SOL PANELDEKİ duvara en çok LED'i
+   * yerleştirmek ve yatay/dikey dizilimi karşılaştırmak. Ölçü kutusuyla
+   * karşılaştırma ayrı bir iş ve sağ paneldeki "Tasarımı duvara tam sığdır"
+   * onu yapıyor; taşma da taramayla işaretleniyor.
+   */
   const yerlesimBilgisi = useMemo(
-    () =>
-      yerlesimSecenekleri(
-        selectedModel,
-        duvarOlcu?.wm > 0 ? duvarOlcu.wm : width,
-        duvarOlcu?.hm > 0 ? duvarOlcu.hm : height,
-      ),
-    [selectedModel, width, height, duvarOlcu],
+    () => yerlesimSecenekleri(selectedModel, width, height),
+    [selectedModel, width, height],
   )
 
   /*
