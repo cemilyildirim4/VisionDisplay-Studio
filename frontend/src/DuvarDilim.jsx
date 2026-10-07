@@ -27,25 +27,50 @@ export default function DuvarDilim({ sahne, kutu, tuvalW, tuvalH, duvarWpx, duva
   const ust = kutu.y0
   const alt = kh - kutu.y1
 
-  /* Dış dilimler sabit ölçekte; yalnızca duvar dilimi esniyor. */
-  const solPx = sol * disOlcek
-  const sagPx = sag * disOlcek
-  const ustPx = ust * disOlcek
-  const altPx = alt * disOlcek
-
   /* Duvar tuvalin ortasında duruyor; çevresi ona göre diziliyor. */
   const duvarSol = tuvalW / 2 - duvarWpx / 2
   const duvarUst = tuvalH / 2 - duvarHpx / 2
 
+  /*
+   * KADRAJ HER ZAMAN DOLU — dış dilimler gerektiğinde büyüyor.
+   *
+   * Dış dilimler fotoğrafın kendi ölçeğinde (disOlcek) çiziliyordu. O ölçek
+   * fotoğrafın TAMAMI için hesaplanmış bir kaplama ölçeği; ama burada duvar
+   * dilimi esniyor ve duvar yeniden ORTALANıyor, yani fotoğraf artık o
+   * hesabın varsaydığı yerde durmuyor. Duvar kısaldıkça çevresi de yetişemez
+   * oluyor ve kenarda beyaz bir şerit kalıyordu.
+   *
+   * AVM koridorunda bu üstte görülüyordu: duvarın üstünde kaynakta yalnızca
+   * 178 piksel tavan var (şehir meydanında 410). Duvar ortalanınca o tavan
+   * tuvalin üst yarısını dolduramıyor.
+   *
+   * Çözüm, dış dilimleri kadrajı kapatacak kadar BÜYÜTMEK. Dört kenar ayrı
+   * ayrı hesaplanıp en büyüğü alınıyor; ölçek tek olduğu için hiçbir dilimin
+   * en-boy oranı bozulmuyor — mekân sadece biraz yakından görünüyor.
+   */
+  const gerek = (pay, bosluk) => (pay > 0 ? bosluk / 2 / pay : 0)
+  const olcek = Math.max(
+    disOlcek,
+    gerek(sol, tuvalW - duvarWpx),
+    gerek(sag, tuvalW - duvarWpx),
+    gerek(ust, tuvalH - duvarHpx),
+    gerek(alt, tuvalH - duvarHpx),
+  )
+
+  const solPx = sol * olcek
+  const sagPx = sag * olcek
+  const ustPx = ust * olcek
+  const altPx = alt * olcek
+
   const sutun = [
-    { x: duvarSol - solPx, w: solPx, sx: disOlcek, kx: 0 },
+    { x: duvarSol - solPx, w: solPx, sx: olcek, kx: 0 },
     { x: duvarSol, w: duvarWpx, sx: duvarWpx / (kutu.x1 - kutu.x0), kx: kutu.x0 },
-    { x: duvarSol + duvarWpx, w: sagPx, sx: disOlcek, kx: kutu.x1 },
+    { x: duvarSol + duvarWpx, w: sagPx, sx: olcek, kx: kutu.x1 },
   ]
   const satir = [
-    { y: duvarUst - ustPx, h: ustPx, sy: disOlcek, ky: 0 },
+    { y: duvarUst - ustPx, h: ustPx, sy: olcek, ky: 0 },
     { y: duvarUst, h: duvarHpx, sy: duvarHpx / (kutu.y1 - kutu.y0), ky: kutu.y0 },
-    { y: duvarUst + duvarHpx, h: altPx, sy: disOlcek, ky: kutu.y1 },
+    { y: duvarUst + duvarHpx, h: altPx, sy: olcek, ky: kutu.y1 },
   ]
 
   const dilimler = []
