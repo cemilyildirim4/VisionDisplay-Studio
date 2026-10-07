@@ -398,7 +398,7 @@ const ISIK = (() => {
   return { x: v.x / n, y: v.y / n, z: v.z / n }
 })()
 /* Hiç ışık almayan yüz de tamamen siyah olmuyor: ortam ışığı. */
-const ORTAM = 0.28
+const ORTAM = 0.42
 
 /** Yerel (x, y, z) noktayı duruşa göre döndürüp kamera uzayına taşıyor. */
 function dondur(x0, y0, z0, cr, sr, cy, sy, cp, sp) {

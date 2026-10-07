@@ -22,6 +22,18 @@
  * tasarımın dörtgeni ondan ÜRETİLİYOR — dolayısıyla gövde tasarımdan
  * kopamıyor. Ölçüldü: ön yüz, tasarımın dörtgeniyle 0,000 piksel farklı.
  *
+ * KOYU ARKA PLANDA KENAR IŞIĞI.
+ *
+ * Kabin koyu gri bir kutu. Beyaz zeminde gövde hemen okunuyor ama koyu bir
+ * fotoğrafın (siyah kapı, gece sahnesi) önünde koyu yüz koyu zemine karışıyor
+ * ve ekran yine düz görünüyordu — kullanıcının "arka planın dışında 3B
+ * duruyor, içinde durmuyor" dediği durum buydu: gövde çiziliyordu ama
+ * görünmüyordu.
+ *
+ * Ön yüzle yan yüzün paylaştığı kenara ince bir açık çizgi konuyor. Gerçek
+ * bir kabinin kenarındaki ışık yansıması bu; açık zeminde göze batmıyor,
+ * koyu zeminde kutunun sınırını çiziyor.
+ *
  * DÜZ BAKIŞTA DERİNLİĞİ GÖLGE OKUTUYOR.
  *
  * Ekrana tam karşıdan bakıldığında kabinin hiçbir yanı görünmez — bu doğru,
@@ -42,6 +54,9 @@ function renk(parlaklik) {
   const p = Math.max(0, Math.min(1, parlaklik))
   return `rgb(${Math.round(KASA.r * p)},${Math.round(KASA.g * p)},${Math.round(KASA.b * p)})`
 }
+
+/* Ön yüzün hangi kenarını paylaştığı: kenar ışığı oraya çiziliyor. */
+const PAYLASILAN_KENAR = { sol: [0, 3], sag: [1, 2], ust: [0, 1], alt: [3, 2] }
 
 const dortgenMi = (k) =>
   Array.isArray(k) && k.length === 4 && k.every((p) => Number.isFinite(p?.x) && Number.isFinite(p?.y))
@@ -110,6 +125,25 @@ export default function KalinlikKatmani({ yuzler, on, tuvalW, tuvalH }) {
           strokeLinejoin="round"
         />
       ))}
+
+      {/* Kenar ışığı: ön yüzle yan yüzün paylaştığı kenar. */}
+      {onVar &&
+        gecerli.map((y) => {
+          const u = PAYLASILAN_KENAR[y.ad]
+          if (!u) return null
+          return (
+            <line
+              key={'kenar-' + y.ad}
+              x1={on[u[0]].x}
+              y1={on[u[0]].y}
+              x2={on[u[1]].x}
+              y2={on[u[1]].y}
+              stroke="rgba(226,232,240,0.75)"
+              strokeWidth="1.1"
+              strokeLinecap="round"
+            />
+          )
+        })}
     </svg>
   )
 }
