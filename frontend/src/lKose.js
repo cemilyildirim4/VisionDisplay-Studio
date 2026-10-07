@@ -119,6 +119,60 @@ export function lKoseGeometri({
   const yanPx = yanM * m
   const toplamWpx = onPx + yanPx
 
+  /*
+   * ORTA — KÖŞE TAM KARŞIDA, İKİ KANAT DA GÖRÜNÜR.
+   *
+   * Sol ve sağ köşede dikiş duvarın kenarında ve bir kanat duvarda düz
+   * duruyor. Ortada ise köşe serbest: dikiş izleyiciye en YAKIN nokta ve iki
+   * kanat oradan geriye, sağa ve sola açılıyor — küpün köşesine karşıdan
+   * bakmak gibi. İlk denemede orta, dikişi ortaya alıp kanadı yine yana
+   * katlıyordu; o da duvara yapışık bir kırım veriyordu, köşe görünmüyordu.
+   *
+   * 90 derecelik bir köşeye tam karşıdan bakıldığında her kanat 45 derece
+   * duruyor: w genişliğindeki bir kanat yanda w/√2 kadar yer kaplıyor ve
+   * dikiş izleyiciye w/√2 kadar yaklaşıyor. Dikiş tek bir nokta olduğu için
+   * derinliği iki kanadın büyüğüne göre seçiliyor; küçük kanadın uzak ucu da
+   * kendi payınca geride kalıyor.
+   */
+  if (ortaMi) {
+    const KOK2 = Math.SQRT2
+    const yanYer = (yanM * m) / KOK2
+    const onYer = (onM * m) / KOK2
+    const dikisDerinlik = Math.max(onM, yanM) / KOK2
+    const yanUcDerinlik = Math.max(0, dikisDerinlik - yanM / KOK2)
+    const onUcDerinlik = Math.max(0, dikisDerinlik - onM / KOK2)
+
+    const nokta = (xDuvar, derinlik, y) => {
+      const s2 = f / (f - Math.min(derinlik, f * 0.85))
+      return { x: kx + (xDuvar - kx) * s2, y: ky + (y - ky) * s2 }
+    }
+    const dikisUst = nokta(cx, dikisDerinlik, ust)
+    const dikisAlt = nokta(cx, dikisDerinlik, alt)
+    const yanUcUst = nokta(cx - yanYer, yanUcDerinlik, ust)
+    const yanUcAlt = nokta(cx - yanYer, yanUcDerinlik, alt)
+    const onUcUst = nokta(cx + onYer, onUcDerinlik, ust)
+    const onUcAlt = nokta(cx + onYer, onUcDerinlik, alt)
+
+    return {
+      /* Sol kanat içeriğin sol parçası: uzak uçtan dikişe. */
+      yan: {
+        koseler: [yanUcUst, dikisUst, dikisAlt, yanUcAlt],
+        wPx: yanM * m,
+        hPx,
+        kaydir: 0,
+      },
+      /* Sağ kanat dikişten uzak uca. */
+      on: {
+        koseler: [dikisUst, onUcUst, onUcAlt, dikisAlt],
+        wPx: onM * m,
+        hPx,
+        kaydir: yanM * m,
+      },
+      toplamWpx,
+      kose: 'orta',
+    }
+  }
+
   const onKanat = solMu
     ? [
         { x: xk, y: ust },

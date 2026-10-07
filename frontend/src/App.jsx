@@ -4451,7 +4451,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!(onM > 0) || !(yanM > 0) || !(boyM > 0)) return null
     /* Tuval pikseli üzerinden çalışılıyor: 1 cm = çizim ölçeğinin yüzde biri. */
     const pxCm = { x: cizimOlcek / 100, y: cizimOlcek / 100 }
-    const yaw = lYon === 'sol' ? -L_SABIT_ACI : L_SABIT_ACI
+    /*
+     * Ortada köşe tam karşıda duruyor: 90 derecelik köşeye karşıdan bakmak,
+     * her iki kanadı da 45 derecede göstermek demek. Sol/sağ köşede ise
+     * kanatlardan biri duvara yakın kalıyor, o yüzden açı daha az.
+     */
+    const yaw = (lYon === 'sol' ? -1 : 1) * (lKose === 'orta' ? Math.PI / 4 : L_SABIT_ACI)
     /* Kamera uzaklığı ekranın kendi eninin üç katı: makul bir bakış mesafesi. */
     const mesafeCm = onM * 100 * 3
     const g = kutuGovdesi(
@@ -6133,7 +6138,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   mekân bölümü. Yalnızca L tipi seçiliyken görünüyor; başka
                   hiçbir ekran türünde panel değişmiyor.
                 */}
-                {lTipiAktif && (
+                {/* Mekân seçilmeden köşe kararı anlamsız: hangi mekânın köşesi? */}
+                {lTipiAktif && scene !== 'none' && (
                   <div className="mt-2">
                     <div className="mb-1 text-[15px] font-semibold text-neutral-600 dark:text-neutral-400">
                       {t('screen.lKoseBaslik')}
