@@ -4434,9 +4434,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   /* Duvar ölçüsünden bağımsız — bkz. EN_COK_KABIN_EKSEN. */
   const rowsMax = EN_COK_KABIN_EKSEN
-  // Duvarın alt sınırı: mevcut ekranı barındıran en küçük ölçü, 0,1 m'ye yuvarlanır
-  const widthMin = hasModel ? Math.max(0.1, Math.ceil(cols * cwM * 10 - EPS) / 10) : 0
-  const heightMin = hasModel ? Math.max(0.1, Math.ceil(rows * chM * 10 - EPS) / 10) : 0
+  /*
+   * DUVARIN ALT SINIRI TASARIMA BAĞLI DEĞİL.
+   *
+   * Alt sınır "mevcut ekranı barındıran en küçük ölçü" idi ve 0,1 m'ye YUKARI
+   * yuvarlanıyordu: 3 × 32 cm'lik bir tasarımda sınır 0,96 değil 1,00 oluyor,
+   * kullanıcı 0,96 yazınca alan sessizce 1'e çekiliyordu. Yani gerçek duvar
+   * ölçüsünü yazmak mümkün değildi.
+   *
+   * Aynı kararı projenin geri kalanı çoktan verdi: sütun/satır üst sınırı da
+   * duvardan koparıldı, taşma engellenmiyor yalnızca söyleniyor (bkz.
+   * EN_COK_KABIN_EKSEN ve "Tasarım bu duvara sığmıyor" uyarısı). Duvar da
+   * aynı kurala giriyor: ne yazıldıysa o. Tasarım sığmıyorsa uyarı zaten var
+   * ve çizimde taşan kısım taramayla işaretli.
+   *
+   * Alt sınır yalnızca sıfır/eksi olmasın diye: 0,1 m.
+   */
+  const widthMin = hasModel ? 0.1 : 0
+  const heightMin = hasModel ? 0.1 : 0
 
   /*
    * BURADA ESKİDEN BİR "GÜVENLİK AĞI" VARDI VE KALDIRILDI.
