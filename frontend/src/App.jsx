@@ -2449,10 +2449,45 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * piksel arasındaki bağ bu dönüşümde. Ekranın fotoğrafta kaç piksel ettiği
    * bir sonuç; fiziksel oranı belirleyen şey değil.
    */
-  const duvarDunya =
-    duvarTuval && duvarOlcu?.wm > 0 && duvarOlcu?.hm > 0
-      ? duvarDunyasi(duvarTuval, duvarOlcu.wm, duvarOlcu.hm)
-      : null
+  /*
+   * DUVARIN "EN" EKSENİ EKRANDA YATAY OLAN KENAR.
+   *
+   * Dünya dönüşümü kutunun köşe SIRASINDAN kuruluyor: 0→1 kenarı duvarın
+   * eni, 0→3 kenarı boyu sayılıyor. Kutunun köşeleri serbestçe
+   * sürüklenebildiği (ve dört köşe referansı başka bir sırayla
+   * işaretlenebildiği) için 0→1 kenarı ekranda DİKEY kalabiliyor. O zaman
+   * duvarın eni dikey eksen oluyor ve o duvara çizilen her şey — tasarım ve
+   * içindeki görsel — 90 derece yan dönmüş görünüyor. Kullanıcının
+   * "görsel bazen yan dönüyor" dediği durum tam olarak bu.
+   *
+   * Düzeltme köşeleri OYNATMADAN yapılıyor: dizi, 0→1 kenarı en yataya
+   * yakın olana gelene kadar kaydırılıyor (en çok üç adım) ve en/boy da
+   * birlikte takas ediliyor. Dörtgen aynı dörtgen, dönme yönü aynı; değişen
+   * tek şey hangi kenarın "en" sayıldığı.
+   *
+   * Takas edilmiş ölçü aşağıda yerleşim hesabında da kullanılıyor
+   * (duvarDunyaOlcu), yoksa eksenler ile metreler birbirini tutmazdı.
+   */
+  const duvarEkseni = (() => {
+    if (!duvarTuval || !(duvarOlcu?.wm > 0) || !(duvarOlcu?.hm > 0)) return null
+    let k = duvarTuval
+    let wm = duvarOlcu.wm
+    let hm = duvarOlcu.hm
+    for (let i = 0; i < 3; i++) {
+      const dx = Math.abs(k[1].x - k[0].x)
+      const dy = Math.abs(k[1].y - k[0].y)
+      if (dx >= dy) break
+      k = [k[1], k[2], k[3], k[0]]
+      const t = wm
+      wm = hm
+      hm = t
+    }
+    return { koseler: k, wm, hm }
+  })()
+  const duvarDunyaOlcu = duvarEkseni ? { wm: duvarEkseni.wm, hm: duvarEkseni.hm } : duvarOlcu
+  const duvarDunya = duvarEkseni
+    ? duvarDunyasi(duvarEkseni.koseler, duvarEkseni.wm, duvarEkseni.hm)
+    : null
 
   /* Ekranın duvar üzerindeki yeri (metre) — panelde gösteriliyor. */
   const ekranDunyaRef = useRef(null)
@@ -2614,8 +2649,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     let kaydirilmis
     if (duvarDunya) {
-      const ortaX = (duvarOlcu.wm - tasarimWm) / 2
-      const ortaY = (duvarOlcu.hm - tasarimHm) / 2
+      /* Eksenler düzeltilmişse metreler de onunla birlikte takas edilmiş. */
+      const ortaX = (duvarDunyaOlcu.wm - tasarimWm) / 2
+      const ortaY = (duvarDunyaOlcu.hm - tasarimHm) / 2
       let xm = ortaX
       let ym = ortaY
       if (elleKayma && (elleKayma.x || elleKayma.y)) {
@@ -3909,11 +3945,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * düzlem içi dönme, ya da fareyle verilen çevirme/yatırma.
    */
   const refEgimi = refAci?.kutuAci || 0
+  /*
+   * EĞİM EKRANDAKİ DÖRTGENDEN OKUNUYOR, SAKLANAN AÇIDAN DEĞİL.
+   *
+   * "Eğim var mı" sorusu kutuDurus'a (roll/yaw/pitch) bakılarak
+   * cevaplanıyordu. Ama köşeler serbestçe sürüklenebiliyor: kullanıcı kutuyu
+   * elle eğdiğinde dörtgen eğik duruyor, kutuDurus ise sıfır kalıyor. Düğme
+   * de "Eğimi ayarla" yazmaya devam ediyor, oysa ortada kaldırılacak bir
+   * eğim var.
+   *
+   * İki ölçü birlikte bakılıyor:
+   *   DÖNME    — üst kenarın yatayla açısı (düzlem içi eğim)
+   *   YAMUKLUK — sol ve sağ kenarın uzunluk farkı (perspektif)
+   * Biri bile eşiği aşıyorsa kutu eğiktir.
+   *
+   * Hesap görsel pikselinde: normalize uzayda x ve y farklı sayılara
+   * bölündüğü için oradaki açı gerçek açı değil.
+   */
+  const kutuEgimi = (() => {
+    const kaynak = ozelSahne?.kaynak
+    if (!Array.isArray(hedefKose) || hedefKose.length !== 4) return { derece: 0, yamuk: 0 }
+    if (!(kaynak?.w > 0) || !(kaynak?.h > 0)) return { derece: 0, yamuk: 0 }
+    const k = hedefKose.map((q) => ({ x: q.x * kaynak.w, y: q.y * kaynak.h }))
+    const uz = (a2, b2) => Math.hypot(b2.x - a2.x, b2.y - a2.y)
+    const derece = (Math.atan2(k[1].y - k[0].y, k[1].x - k[0].x) * 180) / Math.PI
+    const sol = uz(k[0], k[3])
+    const sag = uz(k[1], k[2])
+    const ort = (sol + sag) / 2
+    return { derece, yamuk: ort > 0 ? Math.abs(sol - sag) / ort : 0 }
+  })()
   const egimVar = refDuzlem
     ? duzlemeOtur
-    : Math.abs(kutuDurus.roll) > 0.0087 ||
-      Math.abs(kutuDurus.yaw) > 0.0087 ||
-      Math.abs(kutuDurus.pitch) > 0.0087
+    : Math.abs(kutuEgimi.derece) > 0.5 || kutuEgimi.yamuk > 0.01
   /*
    * Düğme ancak yapacak bir iş varsa duruyor: eğim varsa sıfırlanır, yoksa
    * geri yüklenecek bir referans eğimi varsa uygulanır. Referans da düzse
