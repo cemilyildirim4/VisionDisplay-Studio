@@ -175,6 +175,19 @@ export function lKoseGeometri({
  * @param arac        { durusaOturt, kutuGovdesi, duvarDunyasi }
  * @returns yan kanadın dörtgeni (normalize) ya da görünmüyorsa null
  */
+/*
+ * YAN YÜZÜN KÖŞE SIRASI İÇERİĞE GÖRE.
+ *
+ * kutuGovdesi yüzleri DIŞA DÖNÜK sırayla veriyor; o sıra görünürlük hesabı
+ * için doğru ama içerik için değil. İçerik kanada bir dilim olarak çiziliyor
+ * ve sol üst köşesinin nerede olduğunu bilmek zorunda: sol kanatta içeriğin
+ * sol ucu YAKIN uçta, sağ kanatta köşede. Sıra düzeltilmezse görüntü bir
+ * kanatta doksan derece dönük çıkıyor.
+ */
+function icerikSirasi(k, kose) {
+  return kose === 'sag' ? k : [k[3], k[0], k[1], k[2]]
+}
+
 export function lKoseYanKanat({
   on,
   enCm,
@@ -236,7 +249,7 @@ export function lKoseYanKanat({
     const q = u && B.ileri(u.x, u.y)
     return q ? { x: q.x / gorselW, y: q.y / gorselH } : null
   }
-  const k = yuz.koseler.map(yapistir)
+  const k = icerikSirasi(yuz.koseler, istenen).map(yapistir)
   return k.some((q) => !q) ? null : k
 }
 
@@ -255,6 +268,8 @@ export function lKoseYanKanat({
  * Yalnızca L tipi seçiliyken çiziliyor; düz ve kavisli ekranlarda cephe
  * eskisi gibi düz kalıyor.
  */
+export { icerikSirasi }
+
 export function cepheYanYuzu({
   tuvalW,
   tuvalH,

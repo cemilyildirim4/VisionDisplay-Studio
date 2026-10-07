@@ -36,7 +36,7 @@ import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
-import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu } from './lKose.js'
+import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icerikSirasi } from './lKose.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -4414,6 +4414,71 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
   })()
 
+  /*
+   * HAZIR FOTOĞRAFLI MEKÂNDA L KÖŞESİ (AVM koridoru, şehir meydanı).
+   *
+   * Burada iki şey birden yok: fotoğrafta köşe diye bir yüzey yok ve kamerayı
+   * çeviremiyoruz — kare sabit. Çizilmiş mekânda köşeyi odanın geometrisi,
+   * kullanıcının fotoğrafında ölçülen düzlem veriyordu; burada ikisi de yok.
+   *
+   * Bu yüzden köşe MEKÂNDAN değil ÜRÜNÜN KENDİ DURUŞUNDAN kuruluyor: ekran
+   * hafifçe çevrilmiş duruyor ve ikinci kanat o duruşun 90 derece katlanmış
+   * yüzü. Hesap yine aynı iğnedelik kamera (kutuGovdesi), yani iki kanadın
+   * birbirine oranı ve perspektifi doğru. Uydurulan tek şey ekranın mekâna
+   * göre açısı — fotoğraf onu söylemiyor, söyleyemez de.
+   *
+   * Çevirme yönü köşe seçimini izliyor: sol köşede sol yüz, sağ köşede sağ
+   * yüz görünüyor.
+   */
+  const L_SABIT_ACI = (32 * Math.PI) / 180
+
+  const lKoseSabitGeo = (() => {
+    if (!lEkran || lCizimMekan || lKoseFotoGeo) return null
+    if (!surukleAktif || !(cizimOlcek > 0) || !(tuvalBoyut.w > 0)) return null
+    const sol = Math.max(1, Math.ceil(lEkran.cols / 2))
+    const sag = Math.max(1, lEkran.cols - sol)
+    const onM = (lKose === 'sol' ? sag : sol) * cwM
+    const yanM = (lKose === 'sol' ? sol : sag) * cwM
+    const boyM = lEkran.rows * chM
+    if (!(onM > 0) || !(yanM > 0) || !(boyM > 0)) return null
+    /* Tuval pikseli üzerinden çalışılıyor: 1 cm = çizim ölçeğinin yüzde biri. */
+    const pxCm = { x: cizimOlcek / 100, y: cizimOlcek / 100 }
+    const yaw = lKose === 'sol' ? -L_SABIT_ACI : L_SABIT_ACI
+    /* Kamera uzaklığı ekranın kendi eninin üç katı: makul bir bakış mesafesi. */
+    const mesafeCm = onM * 100 * 3
+    const g = kutuGovdesi(
+      onM * 100,
+      boyM * 100,
+      yanM * 100,
+      pxCm,
+      tuvalBoyut.w,
+      tuvalBoyut.h,
+      { x: 0.5, y: 0.5 },
+      0,
+      yaw,
+      0,
+      mesafeCm,
+    )
+    if (!g) return null
+    const yuz = g.yuzler.find((y) => y.ad === (lKose === 'sol' ? 'sol' : 'sag'))
+    if (!yuz) return null
+    const tuvale = (k) => k.map((q) => ({ x: q.x * tuvalBoyut.w, y: q.y * tuvalBoyut.h }))
+    const onPx = onM * cizimOlcek
+    const yanPx = yanM * cizimOlcek
+    const hPx = boyM * cizimOlcek
+    return {
+      on: { koseler: tuvale(g.on), wPx: onPx, hPx, kaydir: lKose === 'sol' ? yanPx : 0 },
+      yan: {
+        /* İçerik sırası: dilim doğru köşeden başlasın (bkz. icerikSirasi). */
+        koseler: tuvale(icerikSirasi(yuz.koseler, lKose === 'sol' ? 'sol' : 'sag')),
+        wPx: yanPx,
+        hPx,
+        kaydir: lKose === 'sol' ? 0 : onPx,
+      },
+      toplamWpx: onPx + yanPx,
+    }
+  })()
+
   /** Dörtgenin merkezi, durusaOturt'un beklediği {cx, cy} adlarıyla. */
   const koseMerkeziCx = (k) => ({
     cx: k.reduce((t, q) => t + q.x, 0) / k.length,
@@ -5066,7 +5131,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * var. Köşede iki ayrı düzlem, yani iki ayrı dönüşüm gerekiyor;
                * tek şeride sığmıyor. Ekranı o kipte LKoseEkran çiziyor.
                */
-              ekranGizle={(uc3dHazir && !duvarDunya) || tasarimGizli || !!lKoseGeo || !!lKoseFotoGeo}
+              ekranGizle={
+                (uc3dHazir && !duvarDunya) ||
+                tasarimGizli ||
+                !!lKoseGeo ||
+                !!lKoseFotoGeo ||
+                !!lKoseSabitGeo
+              }
               uc3dKatman={
                 !tasarimGizli && !duvarDunya && YERINDE_3B && surukleAktif
                   ? ({ koseler, genislik, yukseklik }) => (
@@ -5189,9 +5260,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             />
           )}
 
-          {(lKoseGeo || lKoseFotoGeo) && (
+          {(lKoseGeo || lKoseFotoGeo || lKoseSabitGeo) && (
             <LKoseEkran
-              geo={lKoseGeo || lKoseFotoGeo}
+              geo={lKoseGeo || lKoseFotoGeo || lKoseSabitGeo}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
               cols={lEkran?.cols || cols}
@@ -6045,6 +6116,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     </button>
                   ))}
                 </div>
+
+                {/*
+                  L KÖŞESİ — MEKÂN SEÇİMİNİN YANINDA.
+
+                  Köşe seçimi bir EKRAN ayarı değil, bir YERLEŞİM kararı:
+                  ekran mekânın hangi köşesine kuruluyor. Bu yüzden yeri
+                  mekân bölümü. Yalnızca L tipi seçiliyken görünüyor; başka
+                  hiçbir ekran türünde panel değişmiyor.
+                */}
+                {lTipiAktif && (
+                  <div className="mt-2">
+                    <div className="mb-1 text-[15px] font-semibold text-neutral-600 dark:text-neutral-400">
+                      {t('screen.lKoseBaslik')}
+                    </div>
+                    <Segmented
+                      cols={2}
+                      value={lKose}
+                      onChange={setLKose}
+                      options={[
+                        { v: 'sol', l: t('screen.lKoseSol') },
+                        { v: 'sag', l: t('screen.lKoseSag') },
+                      ]}
+                    />
+                  </div>
+                )}
 
                 {/*
                   KAMERADA DENE — akışın içinde, mekân seçiminin hemen altında.
