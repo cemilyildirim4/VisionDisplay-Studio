@@ -46,6 +46,18 @@ export default function Salon({
   duvarWm,
   duvarHm,
   ekranSekli,
+  /*
+   * KAÇIŞ NOKTASININ YATAY KAYMASI (px).
+   *
+   * Tek kaçış noktalı bir çizimde kaçış noktasını yana kaydırmak, KAMERAYI
+   * ÇEVİRMENİN tam karşılığıdır: bir yan duvar açılır, öteki kapanır. Sahte
+   * bir efekt değil — arka duvar yerinde kalır, yalnızca bakış yönü döner.
+   *
+   * L tipi ekranda köşenin iki kanadı da okunsun diye kullanılıyor. Sıfırken
+   * oda eskisi gibi tam karşıdan görünüyor, yani L seçili değilken hiçbir şey
+   * değişmiyor.
+   */
+  kacisKaymasi = 0,
 }) {
   if (!wPx || !hPx || !tuvalW || !tuvalH || !pxPerM) return null
   if (!(duvarWm > 0) || !(duvarHm > 0)) return null
@@ -53,6 +65,9 @@ export default function Salon({
   const m = pxPerM // 1 metrenin piksel karşılığı
   const cx = tuvalW / 2
   const cy = tuvalH / 2
+  /* Kaçış noktası: merkezden kaydırılmış hâli. Arka duvar merkezde kalıyor. */
+  const kx = cx + (Number(kacisKaymasi) || 0)
+  const ky = cy
 
   // Ekranın tuvaldeki yeri (gerçek ekran da tam buraya çizilir)
   const eSol = cx - wPx / 2
@@ -86,13 +101,18 @@ export default function Salon({
    * görünmüyor (SVG tuvali kırpıyor).
    */
   const k = Math.max(tuvalW / duvarW, tuvalH / duvarH) * 1.06
-  const onSol = cx - (duvarW / 2) * k
-  const onSag = cx + (duvarW / 2) * k
-  const onUst = cy - (duvarH / 2) * k
-  const onAlt = cy + (duvarH / 2) * k
+  /*
+   * Ön çerçeve, arka duvarın KAÇIŞ NOKTASI etrafında k katı büyütülmüş hâli.
+   * Kaçış noktası kaydığında bu dört kenar da onunla birlikte kayıyor; sekiz
+   * kenar yine tek noktada birleşiyor, perspektif tutarlı kalıyor.
+   */
+  const onSol = kx + (duvarSol - kx) * k
+  const onSag = kx + (duvarSag - kx) * k
+  const onUst = ky + (tavanY - ky) * k
+  const onAlt = ky + (sahneY - ky) * k
 
   /** Arka duvar kenarındaki bir noktanın ön çerçevedeki karşılığı. */
-  const ileri = (x, y) => [cx + (x - cx) * k, cy + (y - cy) * k]
+  const ileri = (x, y) => [kx + (x - kx) * k, ky + (y - ky) * k]
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">

@@ -30,6 +30,8 @@ export const SALON_ID = 'salon' // çizilmiş iç mekân
 export const CEPHE_ID = 'cephe' // çizilmiş dış mekân (bina cephesi)
 
 export default function Scene({
+  /* Çizilmiş mekânda kameranın yatay dönüşü (bkz. Salon.jsx kacisKaymasi). */
+  kacisKaymasi = 0,
   id,
   tuvalW,
   tuvalH,
@@ -92,6 +94,7 @@ export default function Scene({
         duvarWm={duvarWm}
         duvarHm={duvarHm}
         ekranSekli={ekranSekli}
+        kacisKaymasi={kacisKaymasi}
       />
     )
   }

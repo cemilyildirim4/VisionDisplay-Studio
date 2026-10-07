@@ -297,6 +297,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ayna simetrik (bkz. lKose.js).
    */
   const [lKose, setLKose] = useState('sol')
+  /*
+   * ÇİZİLMİŞ MEKÂNDA KAMERANIN YATAY DÖNÜŞÜ (px).
+   *
+   * null iken otomatik: L seçilince oda kendiliğinden köşeyi açacak kadar
+   * dönüyor. Kullanıcı fareyle sürüklerse kendi değeri yazılıyor ve o
+   * kazanıyor. L seçili değilken hiç uygulanmıyor — oda tam karşıdan.
+   */
+  const [lKacis, setLKacis] = useState(null)
   const [orientation, setOrientation] = useState('landscape') // landscape | portrait (video duvarı)
   const [curveAmount, setCurveAmount] = useState(60) // 0..100 — panelde kaydırıcıyla ayarlanır
   const [cols, setCols] = useState(1)
@@ -2241,6 +2249,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       ? cepheOlcek(tuvalBoyut.w, tuvalBoyut.h, mekanDuvarWm, mekanDuvarHm)
       : null
   /*
+   * AKTİF L EKRANI — tek ekranda da çoklu ekranda da.
+   *
+   * L tipi EKRAN TÜRÜ panelinde yok; çoklu ekran kurgusundan seçiliyor. Köşe
+   * yerleşimi de oradan gelen L'yi tanımalı, yoksa özellik hiç ulaşılamaz
+   * kalıyordu. Çoklu kurguda birden çok ekran varsa köşe çizilmiyor: o zaman
+   * sahne tek bir köşeye değil, yan yana dizilmiş birden çok ekrana ait.
+   */
+  const lEkran = (() => {
+    if (!cokluAktif) {
+      return (screenType || 'flat') === 'lshape'
+        ? { cols: Math.max(1, cols), rows: Math.max(1, rows) }
+        : null
+    }
+    if (screens.length !== 1) return null
+    const e = screens[0]
+    return (e?.type || 'flat') === 'lshape'
+      ? { cols: Math.max(1, e.cols), rows: Math.max(1, e.rows) }
+      : null
+  })()
+
+  const lDuvarWpx = (salonOlcegi || 0) * mekanDuvarWm
+  const lTipiAktif = !!lEkran
+  const lKacisKaymasi = (() => {
+    if (!lTipiAktif || scene !== SALON_ID || !(lDuvarWpx > 0)) return 0
+    const varsayilan = (lKose === 'sol' ? 1 : -1) * lDuvarWpx * 0.22
+    const deger = lKacis == null ? varsayilan : lKacis
+    const sinir = lDuvarWpx * 0.45
+    return Math.max(-sinir, Math.min(sinir, deger))
+  })()
+
+  /*
    * L KÖŞE GEOMETRİSİ — yalnızca çizilmiş iç mekânda.
    *
    * Orada köşe gerçekten var: arka duvarın sol/sağ kenarı bir köşe ve yan
@@ -2252,10 +2291,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * dönüyor ve L eskisi gibi düz çiziliyor.
    */
   const lKoseGeo = (() => {
-    if (scene !== SALON_ID || (screenType || 'flat') !== 'lshape' || cokluAktif) return null
+    if (scene !== SALON_ID || !lEkran) return null
     if (!(salonOlcegi > 0) || !(tuvalBoyut.w > 0)) return null
-    const sol = Math.max(1, Math.ceil(Math.max(1, cols) / 2))
-    const sag = Math.max(1, Math.max(1, cols) - sol)
+    const sol = Math.max(1, Math.ceil(lEkran.cols / 2))
+    const sag = Math.max(1, lEkran.cols - sol)
     const onCols = lKose === 'sol' ? sag : sol
     const yanCols = lKose === 'sol' ? sol : sag
     return lKoseGeometri({
@@ -2267,10 +2306,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       kose: lKose,
       onM: onCols * cwM,
       yanM: yanCols * cwM,
-      boyM: Math.max(1, rows) * chM,
+      boyM: lEkran.rows * chM,
+      kacisKaymasi: lKacisKaymasi,
     })
   })()
 
+  /*
+   * KAMERANIN DÖNÜŞÜ — yalnızca L tipinde ve çizilmiş mekânda.
+   *
+   * Köşe tam karşıdan bakıldığında iki kanat üst üste biniyor ve L hiç
+   * okunmuyordu. Oda biraz dönünce köşe açılıyor: bir kanat ön duvarda, öteki
+   * yan duvarda ayrı ayrı görünüyor. Varsayılan dönüş duvarın %22'si kadar;
+   * kullanıcı fareyle değiştirebiliyor.
+   *
+   * Sınır %45: ötesinde arka duvar iyice daralıyor ve oda tünele dönüyor.
+   */
   const sahneOlcekVarsayilan = panoOlcek || fotoOlcek || salonOlcegi || cepheOlcegi
 
   /*
@@ -4235,18 +4285,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Seçilen köşe kameraya sırtını dönmüşse yan kanat çizilmiyor — o açıdan o
    * köşe gerçekten görünmez, uydurmak yanlış olurdu.
    */
+  /* Ekran türü ya da mekân değişince kamera otomatik açıya dönüyor. */
+  useEffect(() => {
+    setLKacis(null)
+  }, [screenType, scene, lKose, cokluAktif])
+
   const lKoseFotoGeo = (() => {
-    if ((screenType || 'flat') !== 'lshape' || cokluAktif) return null
+    if (!lEkran) return null
     if (!duvarDunya || !(duvarDunyaOlcu?.wm > 0) || !refPxCm) return null
     const kaynak = ozelSahne?.kaynak
     if (!(kaynak?.w > 0) || !(cizimOlcek > 0)) return null
-    const solK = Math.max(1, Math.ceil(Math.max(1, cols) / 2))
-    const sagK = Math.max(1, Math.max(1, cols) - solK)
+    const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
+    const sagK = Math.max(1, lEkran.cols - solK)
     const onCols = lKose === 'sol' ? sagK : solK
     const yanCols = lKose === 'sol' ? solK : sagK
     const onM = onCols * cwM
     const yanM = yanCols * cwM
-    const boyM = Math.max(1, rows) * chM
+    const boyM = lEkran.rows * chM
     if (!(onM > 0) || !(yanM > 0) || !(boyM > 0)) return null
     /* Ön kanadın duvardaki yeri: tasarım nerede duruyorsa orada. */
     const yer = ekranDunyaRef.current || {
@@ -4822,6 +4877,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               /* Toplantı salonunda arka duvar bu ölçülerden çiziliyor */
               duvarWm={mekanDuvarWm}
               duvarHm={mekanDuvarHm}
+              /* L tipinde oda köşeyi gösterecek kadar dönüyor. */
+              kacisKaymasi={lKacisKaymasi}
               ekranWpx={tasarimWm * (cizimOlcek || 0)}
               ekranHpx={tasarimHm * (cizimOlcek || 0)}
               /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
@@ -5022,13 +5079,40 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             perspektifi biliniyor. Diğer mekânlarda lKoseGeo null kalıyor ve
             ekran eskisi gibi WallPreview tarafından düz çiziliyor.
           */}
+          {/*
+            ODAYI FAREYLE ÇEVİRME — yalnızca L tipinde ve çizilmiş mekânda.
+
+            Katman yalnızca o kipte var; başka hiçbir durumda tuvale
+            dokunmuyor, dolayısıyla tasarımın kendi sürüklemesini çalmıyor.
+          */}
+          {lTipiAktif && scene === SALON_ID && lKoseGeo && (
+            <div
+              className="absolute inset-0 z-10"
+              style={{ cursor: 'ew-resize', touchAction: 'none' }}
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture?.(e.pointerId)
+                const basX = e.clientX
+                const bas = lKacisKaymasi
+                const tasi = (ev) => setLKacis(bas + (ev.clientX - basX))
+                const bitir = () => {
+                  window.removeEventListener('pointermove', tasi)
+                  window.removeEventListener('pointerup', bitir)
+                }
+                window.addEventListener('pointermove', tasi)
+                window.addEventListener('pointerup', bitir)
+              }}
+              /* Çift tıklama otomatik açıya döndürüyor. */
+              onDoubleClick={() => setLKacis(null)}
+            />
+          )}
+
           {(lKoseGeo || lKoseFotoGeo) && (
             <LKoseEkran
               geo={lKoseGeo || lKoseFotoGeo}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
-              cols={cols}
-              rows={rows}
+              cols={lEkran?.cols || cols}
+              rows={lEkran?.rows || rows}
               content={content}
               contentUrl={contentUrl}
               model={previewModel}

@@ -65,6 +65,8 @@ export function lKoseGeometri({
   yanM,
   boyM,
   odaDerinlikM,
+  /* Salon ile AYNI kaçış noktası; ayrışırsa ekran duvarla hizalanmaz. */
+  kacisKaymasi = 0,
 }) {
   if (!(tuvalW > 0) || !(tuvalH > 0) || !(pxPerM > 0)) return null
   if (!(duvarWm > 0) || !(duvarHm > 0)) return null
@@ -81,6 +83,8 @@ export function lKoseGeometri({
   /* Salon.jsx ile BİREBİR aynı k; ayrışırsa ekran duvarla hizalanmaz. */
   const k = Math.max(tuvalW / duvarW, tuvalH / duvarH) * 1.06
   if (!(k > 1)) return null
+  const kx = cx + (Number(kacisKaymasi) || 0)
+  const ky = cy
 
   const D = odaDerinlikM > 0 ? odaDerinlikM : duvarWm * VARSAYILAN_ODA_DERINLIGI_ORANI
   const f = (D * k) / (k - 1)
@@ -99,7 +103,7 @@ export function lKoseGeometri({
   /* Yan duvardaki bir nokta: derinlik d, arka duvar düzlemindeki yüksekliği y. */
   const yanNokta = (d, y) => {
     const s = f / (f - d)
-    return { x: cx + (xk - cx) * s, y: cy + (y - cy) * s }
+    return { x: kx + (xk - kx) * s, y: ky + (y - ky) * s }
   }
 
   const onPx = onM * m
