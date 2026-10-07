@@ -5571,68 +5571,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     /* LED: Ekran Türü */
                     <div className="mb-2">
                       <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.type')}</div>
-                      {/*
-                        L TİPİ TEK EKRANDA DA SEÇİLEBİLİYOR.
-
-                        L yalnızca çoklu ekran kurgusunda vardı; oysa L kendi
-                        başına bir ÜRÜN — mekânın köşesini saran tek bir ekran.
-                        Tek ekranda seçilemediği için köşe yerleşimi hiç
-                        kurulamıyordu.
-                      */}
                       <Segmented
                         buyuk
-                        cols={2}
+                        cols={3}
                         value={screenType}
                         onChange={setScreenType}
                         options={[
                           { v: 'flat', l: t('screen.flat') },
                           { v: 'curved', l: t('screen.curved') },
                           { v: 'curvedIn', l: t('screen.curvedIn') },
-                          { v: 'lshape', l: t('screen.lshape') },
                         ]}
                       />
-
-                      {/*
-                        L KÖŞESİ — hangi köşeye oturacağı.
-
-                        Mekânın sol ya da sağ köşesi. Çizim ikisinde de ayna
-                        simetrik: bir kanat ön duvarda, öteki yan duvarda
-                        (bkz. lKose.js). Yalnızca köşenin tanımlı olduğu
-                        çizilmiş mekânlarda bir işe yarıyor; o yüzden ipucu
-                        orada yazıyor.
-                      */}
-                      {screenType === 'lshape' && (
-                        <div className="mt-2">
-                          <div className="mb-1 text-[15px] font-semibold text-neutral-600 dark:text-neutral-400">
-                            {t('screen.lKose')}
-                          </div>
-                          <Segmented
-                            cols={2}
-                            value={lKose}
-                            onChange={setLKose}
-                            options={[
-                              { v: 'sol', l: t('screen.lKoseSol') },
-                              { v: 'sag', l: t('screen.lKoseSag') },
-                            ]}
-                          />
-                          <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                            {t('screen.lKoseIpucu')}
-                          </p>
-                          {/*
-                            SEÇİLEN KÖŞE GÖRÜNMÜYORSA SÖYLE.
-
-                            Fotoğrafta köşe duruştan çıkıyor; kutu ters yöne
-                            çevrilmişse o yüz kameraya sırtını dönmüş olur ve
-                            çizilmez. Sessizce düz ekran göstermek kullanıcıya
-                            "çalışmıyor" dedirtiyordu.
-                          */}
-                          {duvarDunya && !lKoseFotoGeo && (
-                            <p className="mt-1 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
-                              {t('screen.lKoseGorunmez')}
-                            </p>
-                          )}
-                        </div>
-                      )}
 
                       {/*
                         KAVİS MİKTARI — yalnızca kavisli tiplerde görünür.
