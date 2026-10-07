@@ -35,6 +35,8 @@ import { durusDortgeni, faredenDurus, durusaOturt, kutuGovdesi } from './durusKu
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
+import LKoseEkran from './LKoseEkran.jsx'
+import { lKoseGeometri } from './lKose.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -287,6 +289,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [selectedModel, setSelectedModel] = useState(null)
   const [screenMode, setScreenMode] = useState('single') // single | multi
   const [screenType, setScreenType] = useState('flat') // flat | curved
+  /*
+   * L TİPİ HANGİ KÖŞEYE OTURUYOR.
+   *
+   * L bir köşe ürünü: bir kanadı ön duvarda, öteki o duvarın döndüğü yan
+   * duvarda. Mekânın sol ya da sağ köşesi seçilebiliyor; çizim ikisinde de
+   * ayna simetrik (bkz. lKose.js).
+   */
+  const [lKose, setLKose] = useState('sol')
   const [orientation, setOrientation] = useState('landscape') // landscape | portrait (video duvarı)
   const [curveAmount, setCurveAmount] = useState(60) // 0..100 — panelde kaydırıcıyla ayarlanır
   const [cols, setCols] = useState(1)
@@ -2230,6 +2240,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     scene === CEPHE_ID
       ? cepheOlcek(tuvalBoyut.w, tuvalBoyut.h, mekanDuvarWm, mekanDuvarHm)
       : null
+  /*
+   * L KÖŞE GEOMETRİSİ — yalnızca çizilmiş iç mekânda.
+   *
+   * Orada köşe gerçekten var: arka duvarın sol/sağ kenarı bir köşe ve yan
+   * duvarlar oradan izleyiciye açılıyor. Kanatların kabin sayısı L tipinin
+   * kendi alanlarından (leftCols/rightCols) geliyor; yoksa sütunlar ikiye
+   * bölünüyor.
+   *
+   * Hazır mekânlarda ve kendi fotoğrafında köşe tanımlı olmadığı için null
+   * dönüyor ve L eskisi gibi düz çiziliyor.
+   */
+  const lKoseGeo = (() => {
+    if (scene !== SALON_ID || (screenType || 'flat') !== 'lshape' || cokluAktif) return null
+    if (!(salonOlcegi > 0) || !(tuvalBoyut.w > 0)) return null
+    const sol = Math.max(1, Math.ceil(Math.max(1, cols) / 2))
+    const sag = Math.max(1, Math.max(1, cols) - sol)
+    const onCols = lKose === 'sol' ? sag : sol
+    const yanCols = lKose === 'sol' ? sol : sag
+    return lKoseGeometri({
+      tuvalW: tuvalBoyut.w,
+      tuvalH: tuvalBoyut.h,
+      pxPerM: salonOlcegi,
+      duvarWm: mekanDuvarWm,
+      duvarHm: mekanDuvarHm,
+      kose: lKose,
+      onM: onCols * cwM,
+      yanM: yanCols * cwM,
+      boyM: Math.max(1, rows) * chM,
+    })
+  })()
+
   const sahneOlcekVarsayilan = panoOlcek || fotoOlcek || salonOlcegi || cepheOlcegi
 
   /*
@@ -4823,7 +4864,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * piksel kalıyor, üstelik açısı 2,6 derece sapıyordu. Ekranda
                * tasarım duvarın düzleminde DURMUYOR gibi görünüyordu.
                */
-              ekranGizle={(uc3dHazir && !duvarDunya) || tasarimGizli}
+              /*
+               * L KÖŞE KİPİNDE ŞERİT ÇİZİLMİYOR.
+               *
+               * Burada tek bir şerit ve ona uygulanan TEK bir dörtgen dönüşümü
+               * var. Köşede iki ayrı düzlem, yani iki ayrı dönüşüm gerekiyor;
+               * tek şeride sığmıyor. Ekranı o kipte LKoseEkran çiziyor.
+               */
+              ekranGizle={(uc3dHazir && !duvarDunya) || tasarimGizli || !!lKoseGeo}
               uc3dKatman={
                 !tasarimGizli && !duvarDunya && YERINDE_3B && surukleAktif
                   ? ({ koseler, genislik, yukseklik }) => (
@@ -4911,6 +4959,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Ölçü kutusunun ÜSTÜNDE duruyor: referans kipi açıkken kutuyu
             yanlışlıkla sürüklemek yerine nokta konmalı.
           */}
+          {/*
+            L KÖŞE EKRANI — iki duvara oturan iki kanat.
+
+            Yalnızca çizilmiş iç mekânda ve L tipi seçiliyken çiziliyor;
+            orada köşe gerçekten var (arka duvarın kenarı) ve yan duvarın
+            perspektifi biliniyor. Diğer mekânlarda lKoseGeo null kalıyor ve
+            ekran eskisi gibi WallPreview tarafından düz çiziliyor.
+          */}
+          {lKoseGeo && (
+            <LKoseEkran
+              geo={lKoseGeo}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+              cols={cols}
+              rows={rows}
+              content={content}
+              contentUrl={contentUrl}
+              model={previewModel}
+            />
+          )}
+
           {/*
             KABİN KALINLIĞI — tasarımın yan yüzü.
 
@@ -5447,17 +5516,55 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     /* LED: Ekran Türü */
                     <div className="mb-2">
                       <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.type')}</div>
+                      {/*
+                        L TİPİ TEK EKRANDA DA SEÇİLEBİLİYOR.
+
+                        L yalnızca çoklu ekran kurgusunda vardı; oysa L kendi
+                        başına bir ÜRÜN — mekânın köşesini saran tek bir ekran.
+                        Tek ekranda seçilemediği için köşe yerleşimi hiç
+                        kurulamıyordu.
+                      */}
                       <Segmented
                         buyuk
-                        cols={3}
+                        cols={2}
                         value={screenType}
                         onChange={setScreenType}
                         options={[
                           { v: 'flat', l: t('screen.flat') },
                           { v: 'curved', l: t('screen.curved') },
                           { v: 'curvedIn', l: t('screen.curvedIn') },
+                          { v: 'lshape', l: t('screen.lshape') },
                         ]}
                       />
+
+                      {/*
+                        L KÖŞESİ — hangi köşeye oturacağı.
+
+                        Mekânın sol ya da sağ köşesi. Çizim ikisinde de ayna
+                        simetrik: bir kanat ön duvarda, öteki yan duvarda
+                        (bkz. lKose.js). Yalnızca köşenin tanımlı olduğu
+                        çizilmiş mekânlarda bir işe yarıyor; o yüzden ipucu
+                        orada yazıyor.
+                      */}
+                      {screenType === 'lshape' && (
+                        <div className="mt-2">
+                          <div className="mb-1 text-[15px] font-semibold text-neutral-600 dark:text-neutral-400">
+                            {t('screen.lKose')}
+                          </div>
+                          <Segmented
+                            cols={2}
+                            value={lKose}
+                            onChange={setLKose}
+                            options={[
+                              { v: 'sol', l: t('screen.lKoseSol') },
+                              { v: 'sag', l: t('screen.lKoseSag') },
+                            ]}
+                          />
+                          <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                            {t('screen.lKoseIpucu')}
+                          </p>
+                        </div>
+                      )}
 
                       {/*
                         KAVİS MİKTARI — yalnızca kavisli tiplerde görünür.
