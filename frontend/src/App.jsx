@@ -4866,6 +4866,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }, [duvarOlcu, tasarimWm])
 
   const duvaraSigma = useMemo(() => {
+    if (lTipiVar) return null
     if (!duvarOlcu || !(tasarimWm > 0) || !(tasarimHm > 0)) return null
     const sigiyor = tasarimWm <= duvarOlcu.wm + 1e-6 && tasarimHm <= duvarOlcu.hm + 1e-6
     if (sigiyor) return null
@@ -4880,7 +4881,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       wm: enCokSutun * kw,
       hm: enCokSatir * kh,
     }
-  }, [duvarOlcu, tasarimWm, tasarimHm, previewModel])
+  }, [lTipiVar, duvarOlcu, tasarimWm, tasarimHm, previewModel])
 
   /*
    * MESAFE KARTI BOŞSA HİÇ ÇİZİLMİYOR.
@@ -5481,7 +5482,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             göre taranan bölge ekranla ilgisiz bir yere düşüyor ve ikinci bir
             tasarım gibi görünüyor.
           */}
-          {duvarTuval && koseMutlak && !lKoseCizimi && scene === 'ozel' && ozelSahne && (
+          {duvarTuval && koseMutlak && !lTipiVar && scene === 'ozel' && ozelSahne && (
             <TasmaKatmani
               tasarim={koseMutlak}
               duvar={duvarTuval}
@@ -5499,7 +5500,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             kullanıcı aynı tasarımı iki kere görüyor. Köşenin kendi gövdesi
             ayrı bir iş (bkz. LKoseEkran).
           */}
-          {duvarDunya && !tasarimGizli && kabinYuzleri && !lKoseCizimi && scene === 'ozel' && ozelSahne && (
+          {duvarDunya && !tasarimGizli && kabinYuzleri && !lTipiVar && scene === 'ozel' && ozelSahne && (
             <KalinlikKatmani
               yuzler={kabinYuzleri.yuzler}
               on={kabinYuzleri.on}
