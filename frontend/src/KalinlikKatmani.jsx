@@ -21,27 +21,50 @@
  * kalıyor, açısı 2,6 derece sapıyordu. Burada duruş zaten biliniyor —
  * tasarımın dörtgeni ondan ÜRETİLİYOR — dolayısıyla gövde tasarımdan
  * kopamıyor. Ölçüldü: ön yüz, tasarımın dörtgeniyle 0,000 piksel farklı.
+ *
+ * DÜZ BAKIŞTA DERİNLİĞİ GÖLGE OKUTUYOR.
+ *
+ * Ekrana tam karşıdan bakıldığında kabinin hiçbir yanı görünmez — bu doğru,
+ * ama ekran da duvara yapışık bir kâğıt gibi durur. Gerçekte duvardan çıkan
+ * bir cisim duvara GÖLGE düşürür ve o konumda derinliği okutan tek şey odur.
+ * Gölge, ön yüzün ışığın tersine ötelenmiş ve yumuşatılmış kopyası; ön yüzün
+ * altında kalan kısmı maskeyle çıkarılıyor, yani yalnızca ekranın DIŞINDA
+ * görünüyor, üstüne binmiyor.
  */
 
 /* Kabinin kasa rengi, tam ışık alırken. Yüzler bunun parlaklıkla çarpımı. */
 const KASA = { r: 86, g: 94, b: 107 }
+
+/* Işık sol üstten geldiği için gölge sağ alta düşüyor (birim yön). */
+const GOLGE_YON = { x: 0.62, y: 0.78 }
 
 function renk(parlaklik) {
   const p = Math.max(0, Math.min(1, parlaklik))
   return `rgb(${Math.round(KASA.r * p)},${Math.round(KASA.g * p)},${Math.round(KASA.b * p)})`
 }
 
-export default function KalinlikKatmani({ yuzler, tuvalW, tuvalH }) {
-  if (!Array.isArray(yuzler) || yuzler.length === 0) return null
-  const gecerli = yuzler.filter(
-    (y) =>
-      Array.isArray(y?.koseler) &&
-      y.koseler.length === 4 &&
-      y.koseler.every((p) => Number.isFinite(p?.x) && Number.isFinite(p?.y)),
-  )
-  if (gecerli.length === 0) return null
+const dortgenMi = (k) =>
+  Array.isArray(k) && k.length === 4 && k.every((p) => Number.isFinite(p?.x) && Number.isFinite(p?.y))
+
+export default function KalinlikKatmani({ yuzler, on, tuvalW, tuvalH }) {
+  const onVar = dortgenMi(on)
+  const gecerli = (Array.isArray(yuzler) ? yuzler : []).filter((y) => dortgenMi(y?.koseler))
+  if (!onVar && gecerli.length === 0) return null
 
   const nokta = (k) => k.map((p) => `${p.x},${p.y}`).join(' ')
+
+  /* Gölgenin ötelenmesi ve yumuşaması ekranın kendi boyuna oranlı. */
+  const golge = (() => {
+    if (!onVar) return null
+    const uz = (a, b) => Math.hypot(b.x - a.x, b.y - a.y)
+    const olcu = (uz(on[0], on[1]) + uz(on[1], on[2])) / 2
+    if (!(olcu > 0)) return null
+    const kayma = Math.max(3, olcu * 0.045)
+    return {
+      koseler: on.map((p) => ({ x: p.x + GOLGE_YON.x * kayma, y: p.y + GOLGE_YON.y * kayma })),
+      bulanik: Math.max(2, olcu * 0.022),
+    }
+  })()
 
   return (
     <svg
@@ -51,6 +74,27 @@ export default function KalinlikKatmani({ yuzler, tuvalW, tuvalH }) {
       style={{ pointerEvents: 'none', zIndex: 5 }}
       data-pdf-gizle="hayir"
     >
+      <defs>
+        {golge && (
+          <>
+            <filter id="kabinGolge" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation={golge.bulanik} />
+            </filter>
+            <mask id="kabinGolgeMaske">
+              <rect x="0" y="0" width={tuvalW} height={tuvalH} fill="#fff" />
+              <polygon points={nokta(on)} fill="#000" />
+            </mask>
+          </>
+        )}
+        {/* Yan yüz dışa doğru koyulaşmıyor; düz renk + kenar çizgisi yetiyor. */}
+      </defs>
+
+      {golge && (
+        <g mask="url(#kabinGolgeMaske)">
+          <polygon points={nokta(golge.koseler)} fill="rgba(8,10,14,0.42)" filter="url(#kabinGolge)" />
+        </g>
+      )}
+
       {gecerli.map((y) => (
         <polygon
           key={y.ad}

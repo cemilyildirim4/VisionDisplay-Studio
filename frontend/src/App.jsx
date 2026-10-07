@@ -4140,7 +4140,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const kabinYuzleri = (() => {
     const kaynak = ozelSahne?.kaynak
-    if (refDuzlem || !refPxCm || !(kaynak?.w > 0)) return null
+    /*
+     * DÜZLEM KİPİNDE DE GÖVDE VAR.
+     *
+     * Dört köşe referansında gövde hiç çizilmiyordu, çünkü duruş açıları
+     * orada kullanılmıyor. Gerek de yok: duruş zaten ekrandaki dörtgenden
+     * çıkarılıyor (durusaOturt) ve gövde ona yapıştırılıyor. Dörtgenin
+     * nereden geldiğinin önemi yok.
+     */
+    if (!refPxCm || !(kaynak?.w > 0)) return null
     if (!Array.isArray(koseMutlak) || koseMutlak.length !== 4) return null
     if (!(previewModel?.depthMm > 0) || !(tasarimWm > 0) || !(tasarimHm > 0)) return null
     const mesafeCm = (izlemeMesafesi || 0) * 100
@@ -4178,7 +4186,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       poz.pitchRad,
       mesafeCm,
     )
-    if (!g || g.yuzler.length === 0) return null
+    if (!g) return null
 
     /*
      * GÖVDEYİ DÖRTGENE YAPIŞTIRMA.
@@ -4204,7 +4212,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       if (k.some((q) => !q)) continue
       yuzler.push({ ...y, koseler: k })
     }
-    return yuzler.length ? yuzler : null
+    return { yuzler, on: koseMutlak }
   })()
 
   /*
@@ -4846,7 +4854,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {duvarDunya && !tasarimGizli && kabinYuzleri && scene === 'ozel' && ozelSahne && (
-            <KalinlikKatmani yuzler={kabinYuzleri} tuvalW={tuvalBoyut.w} tuvalH={tuvalBoyut.h} />
+            <KalinlikKatmani
+              yuzler={kabinYuzleri.yuzler}
+              on={kabinYuzleri.on}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+            />
           )}
 
           {refKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
@@ -4889,7 +4902,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             oturtuluyor, gerekirse perspektif veriliyor. Bu ayar kutunun
             GERÇEK ölçüsünü değiştirmiyor — o, panele yazılan santimetredir.
           */}
-          {olcuKutu && taslakKutu && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+          {/*
+            DÜZENLEME KAPALIYKEN KUTU ÇİZİLMİYOR.
+
+            Kutunun işi duvarı tanıtmak; tanıttıktan sonra müşteriye
+            gösterilecek karenin üstünde çizgi bırakmasının anlamı yok.
+            Bir ara bu yapılmış ama geri alınmıştı: o zaman kutu olmayınca
+            Düzenle bölümü de boşalıyor ve kullanıcı araçları kaybediyordu.
+            O sebep ortadan kalktı (Düzenle artık kutu yokken de ölçü alanı
+            ve kurma düğmesi gösteriyor), dolayısıyla kutu yalnızca sihirbaz
+            ya da Düzenle açıkken çiziliyor.
+          */}
+          {kutuKipi && olcuKutu && taslakKutu && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <TaslakKutu
               koseler={taslakKutu.map(oranTuvale)}
               tuvalW={tuvalBoyut.w}
