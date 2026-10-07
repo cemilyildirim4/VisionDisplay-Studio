@@ -38,6 +38,18 @@ export default function Cephe({
   duvarWm,
   duvarHm,
   ekranSekli,
+  /*
+   * BİNANIN DÖNEN YAN YÜZÜ — yalnızca L tipi ekranda.
+   *
+   * Cephe bugüne kadar düz bir yüzeydi: tam karşıdan görünen bir dikdörtgen,
+   * derinlik yok. L bir KÖŞE ürünü olduğu için ikinci kanadın oturacağı bir
+   * yüzey gerekiyor; bina köşeden dönüyor ve yan yüzü izleyiciye doğru
+   * kaçıyor. Dörtgen App'te, iç mekânla AYNI formülden hesaplanıyor
+   * (bkz. lKose.js cepheYanYuzu) — iki mekânda köşe aynı mantıkla okunuyor.
+   *
+   * Verilmezse hiç çizilmiyor: düz ve kavisli ekranlarda cephe eskisi gibi.
+   */
+  yanYuz,
 }) {
   if (!wPx || !hPx || !tuvalW || !tuvalH || !pxPerM) return null
   if (!(duvarWm > 0) || !(duvarHm > 0)) return null
@@ -315,8 +327,31 @@ export default function Cephe({
           opacity="0.28"
         />
 
+        {/*
+          BİNANIN DÖNEN YAN YÜZÜ — cepheden ÖNCE çiziliyor ki köşe dikişi
+          cephenin altında kalsın, üstüne binmesin.
+        */}
+        {yanYuz && (
+          <polygon
+            points={yanYuz.map((p) => `${p.x},${p.y}`).join(' ')}
+            fill="url(#cephe-yuzey)"
+            /* Yan yüz ışığı daha az alıyor: köşeyi okutan şey bu fark. */
+            opacity="0.82"
+          />
+        )}
         {/* CEPHE — ekranın monte edildiği yüzey */}
         <rect x={sol} y={ust} width={duvarW} height={duvarH} fill="url(#cephe-yuzey)" />
+        {/* Köşe dikişi: iki yüzün birleştiği dikey çizgi. */}
+        {yanYuz && (
+          <line
+            x1={yanYuz[1].x}
+            y1={yanYuz[1].y}
+            x2={yanYuz[2].x}
+            y2={yanYuz[2].y}
+            stroke="rgba(90,100,115,0.45)"
+            strokeWidth="1"
+          />
+        )}
         {/*
           CEPHEYE KARAKTER — üç ince ayrıntı, hiçbiri ekranla yarışmıyor:
             • Panel derzleri: düz beyaz levha kâğıt gibi duruyordu; ince

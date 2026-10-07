@@ -36,7 +36,7 @@ import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
-import { lKoseGeometri, lKoseYanKanat } from './lKose.js'
+import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu } from './lKose.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -2269,15 +2269,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       : null
   })()
 
-  const lDuvarWpx = (salonOlcegi || 0) * mekanDuvarWm
+  /*
+   * KÖŞE İKİ ÇİZİLMİŞ MEKÂNDA DA ÇALIŞIYOR.
+   *
+   * İç mekânda köşe odanın kendi köşesi, dış mekânda binanın döndüğü köşe.
+   * İkisinin de ölçeği ve duvar dikdörtgeni aynı yapıda olduğu için aynı
+   * geometri kullanılıyor; değişen tek şey ölçek kaynağı.
+   */
+  const lCizimMekan = scene === SALON_ID || scene === CEPHE_ID
+  const lOlcek = scene === SALON_ID ? salonOlcegi : scene === CEPHE_ID ? cepheOlcegi : null
+  const lDuvarWpx = (lOlcek || 0) * mekanDuvarWm
   const lTipiAktif = !!lEkran
   const lKacisKaymasi = (() => {
-    if (!lTipiAktif || scene !== SALON_ID || !(lDuvarWpx > 0)) return 0
+    if (!lTipiAktif || !lCizimMekan || !(lDuvarWpx > 0)) return 0
     const varsayilan = (lKose === 'sol' ? 1 : -1) * lDuvarWpx * 0.22
     const istek = lKacis == null ? varsayilan : lKacis
     const sinir = lDuvarWpx * 0.45
     const kirpik = Math.max(-sinir, Math.min(sinir, istek))
-    if (!lEkran || !(salonOlcegi > 0) || !(tuvalBoyut.w > 0)) return kirpik
+    if (!lEkran || !(lOlcek > 0) || !(tuvalBoyut.w > 0)) return kirpik
 
     /*
      * DÖNÜŞ, EKRANI KADRAJIN DIŞINA ÇIKARMIYOR.
@@ -2297,7 +2306,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const olcu = {
       tuvalW: tuvalBoyut.w,
       tuvalH: tuvalBoyut.h,
-      pxPerM: salonOlcegi,
+      pxPerM: lOlcek,
       duvarWm: mekanDuvarWm,
       duvarHm: mekanDuvarHm,
       kose: lKose,
@@ -2340,8 +2349,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * dönüyor ve L eskisi gibi düz çiziliyor.
    */
   const lKoseGeo = (() => {
-    if (scene !== SALON_ID || !lEkran) return null
-    if (!(salonOlcegi > 0) || !(tuvalBoyut.w > 0)) return null
+    if (!lCizimMekan || !lEkran) return null
+    if (!(lOlcek > 0) || !(tuvalBoyut.w > 0)) return null
     const sol = Math.max(1, Math.ceil(lEkran.cols / 2))
     const sag = Math.max(1, lEkran.cols - sol)
     const onCols = lKose === 'sol' ? sag : sol
@@ -2349,7 +2358,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return lKoseGeometri({
       tuvalW: tuvalBoyut.w,
       tuvalH: tuvalBoyut.h,
-      pxPerM: salonOlcegi,
+      pxPerM: lOlcek,
       duvarWm: mekanDuvarWm,
       duvarHm: mekanDuvarHm,
       kose: lKose,
@@ -2370,6 +2379,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    *
    * Sınır %45: ötesinde arka duvar iyice daralıyor ve oda tünele dönüyor.
    */
+  /*
+   * BİNANIN DÖNEN YAN YÜZÜ — dış mekânda, yalnızca L tipinde.
+   *
+   * Derinliği yan kanadın derinliğinden biraz fazla: ekran köşeyi sarıyor ama
+   * bina ekranın bittiği yerde bitmiyor, biraz daha devam ediyor.
+   */
+  const cepheKoseYuzu = (() => {
+    if (scene !== CEPHE_ID || !lEkran || !(cepheOlcegi > 0)) return null
+    const sol = Math.max(1, Math.ceil(lEkran.cols / 2))
+    const sag = Math.max(1, lEkran.cols - sol)
+    const yanM = (lKose === 'sol' ? sol : sag) * cwM
+    return cepheYanYuzu({
+      tuvalW: tuvalBoyut.w,
+      tuvalH: tuvalBoyut.h,
+      pxPerM: cepheOlcegi,
+      duvarWm: mekanDuvarWm,
+      duvarHm: mekanDuvarHm,
+      kose: lKose,
+      derinlikM: yanM * 1.35,
+      kacisKaymasi: lKacisKaymasi,
+    })
+  })()
+
   const sahneOlcekVarsayilan = panoOlcek || fotoOlcek || salonOlcegi || cepheOlcegi
 
   /*
@@ -4928,6 +4960,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               duvarHm={mekanDuvarHm}
               /* L tipinde oda köşeyi gösterecek kadar dönüyor. */
               kacisKaymasi={lKacisKaymasi}
+              /* Dış mekânda binanın dönen yan yüzü (yalnızca L tipinde). */
+              yanYuz={cepheKoseYuzu}
               ekranWpx={tasarimWm * (cizimOlcek || 0)}
               ekranHpx={tasarimHm * (cizimOlcek || 0)}
               /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
@@ -5134,7 +5168,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Katman yalnızca o kipte var; başka hiçbir durumda tuvale
             dokunmuyor, dolayısıyla tasarımın kendi sürüklemesini çalmıyor.
           */}
-          {lTipiAktif && scene === SALON_ID && lKoseGeo && (
+          {lTipiAktif && lCizimMekan && lKoseGeo && (
             <div
               className="absolute inset-0 z-10"
               style={{ cursor: 'ew-resize', touchAction: 'none' }}

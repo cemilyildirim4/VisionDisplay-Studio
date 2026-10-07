@@ -239,3 +239,68 @@ export function lKoseYanKanat({
   const k = yuz.koseler.map(yapistir)
   return k.some((q) => !q) ? null : k
 }
+
+/*
+ * CEPHENİN DÖNEN YAN YÜZÜ.
+ *
+ * Dış mekân bugüne kadar düz bir cepheydi: tam karşıdan görünen bir
+ * dikdörtgen, derinlik yok. L tipi bir KÖŞE ürünü olduğu için ikinci kanadın
+ * oturacağı bir yüzey gerekiyor — bina köşeden dönmeli.
+ *
+ * Yan yüz, cephenin köşe kenarından izleyiciye doğru kaçan bir yamuk. Hesap
+ * iç mekândakiyle AYNI: kaçış noktası, k katı ön çerçeve ve s(d) = f/(f−d)
+ * derinlik ölçeği. İkisi aynı formülü kullandığı için iç ve dış mekânda köşe
+ * aynı mantıkla okunuyor.
+ *
+ * Yalnızca L tipi seçiliyken çiziliyor; düz ve kavisli ekranlarda cephe
+ * eskisi gibi düz kalıyor.
+ */
+export function cepheYanYuzu({
+  tuvalW,
+  tuvalH,
+  pxPerM,
+  duvarWm,
+  duvarHm,
+  kose = 'sol',
+  derinlikM,
+  kacisKaymasi = 0,
+  odaDerinlikM,
+}) {
+  if (!(tuvalW > 0) || !(tuvalH > 0) || !(pxPerM > 0)) return null
+  if (!(duvarWm > 0) || !(duvarHm > 0) || !(derinlikM > 0)) return null
+
+  const m = pxPerM
+  const cx = tuvalW / 2
+  const cy = tuvalH / 2
+  const duvarW = duvarWm * m
+  const duvarH = duvarHm * m
+  const duvarSol = cx - duvarW / 2
+  const duvarSag = cx + duvarW / 2
+  const tavanY = cy - duvarH / 2
+  const tabanY = cy + duvarH / 2
+
+  const k = Math.max(tuvalW / duvarW, tuvalH / duvarH) * 1.06
+  if (!(k > 1)) return null
+  const kx = cx + (Number(kacisKaymasi) || 0)
+  const ky = cy
+  const D = odaDerinlikM > 0 ? odaDerinlikM : duvarWm
+  const f = (D * k) / (k - 1)
+  const d = Math.min(derinlikM, f * 0.85)
+
+  const solMu = kose !== 'sag'
+  const xk = solMu ? duvarSol : duvarSag
+  const nokta = (derinlik, y) => {
+    const s = f / (f - derinlik)
+    return { x: kx + (xk - kx) * s, y: ky + (y - ky) * s }
+  }
+
+  /* Köşe kenarı (derinlik 0) ve yakın uç (derinlik d), yukarıdan aşağıya. */
+  const koseUst = { x: xk, y: tavanY }
+  const koseAlt = { x: xk, y: tabanY }
+  const yakinUst = nokta(d, tavanY)
+  const yakinAlt = nokta(d, tabanY)
+
+  return solMu
+    ? [yakinUst, koseUst, koseAlt, yakinAlt]
+    : [koseUst, yakinUst, yakinAlt, koseAlt]
+}

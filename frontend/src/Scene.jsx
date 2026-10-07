@@ -32,6 +32,8 @@ export const CEPHE_ID = 'cephe' // çizilmiş dış mekân (bina cephesi)
 export default function Scene({
   /* Çizilmiş mekânda kameranın yatay dönüşü (bkz. Salon.jsx kacisKaymasi). */
   kacisKaymasi = 0,
+  /* Dış mekânda binanın dönen yan yüzü (bkz. Cephe.jsx yanYuz). */
+  yanYuz = null,
   id,
   tuvalW,
   tuvalH,
@@ -101,6 +103,7 @@ export default function Scene({
   if (id === CEPHE_ID) {
     return (
       <Cephe
+        yanYuz={yanYuz}
         wPx={ekranWpx}
         hPx={ekranHpx}
         tuvalW={tuvalW}
