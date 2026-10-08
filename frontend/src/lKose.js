@@ -357,30 +357,26 @@ export { icerikSirasi }
  * @param {number} boyM  ekranın gerçek yüksekliği (m)
  * @param {number} mesafeM  kameranın köşeden uzaklığı (m)
  */
-export function icBukeyKose({
-  ust,
-  alt,
-  solM,
-  sagM,
-  boyM,
-  mesafeM,
-  aci = 0,
-  ufukY = null,
-  /* Her duvarın KENDİ yatay kaçış noktasının x'i (tuval pikseli, olmayabilir). */
-  vSol = null,
-  vSag = null,
-}) {
+export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, aci = 0, ufukY = null }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
   const dx = alt.x - ust.x
   const dy = alt.y - ust.y
   const dikisPx = Math.hypot(dx, dy)
   if (!(dikisPx > 2)) return null
-  /* Dikiş dik olmak zorunda (yatay çizgide kanatlar üst üste biniyor). */
+  /*
+   * DİKİŞ DİK OLMAK ZORUNDA.
+   *
+   * 90 derecelik bir köşe fotoğrafta dikey bir kenardır; kamera yan yatmadıkça
+   * yataya yakın olamaz. Yatay bir dikiş verilirse kanatlar o çizginin iki
+   * yanına değil ÜSTÜNE katlanıyor: ikisi de ince birer şeride dönüp üst üste
+   * biniyor. Sınır geniş (dikeyden 60 dereceye kadar).
+   */
   if (Math.abs(dy) < dikisPx * 0.5) return null
 
-  /* Dikiş hizasında 1 metre kaç piksel. cm/px sistemi bunun dışında değişmiyor. */
+  /* Dikişin bulunduğu derinlikte 1 metre kaç piksel. */
   const m = dikisPx / boyM
+  /* Kamera uzaklığı metre; çok küçük değer perspektifi patlatıyor. */
   const f = Math.max(0.6, Number(mesafeM) || 3)
 
   const ux = dx / dikisPx
@@ -391,87 +387,70 @@ export function icBukeyKose({
   const cx = (ust.x + alt.x) / 2
   const cy = (ust.y + alt.y) / 2
   const yari = dikisPx / 2
-  const yatay = Number.isFinite(ufukY) ? ufukY : cy
+  const CEYREK = Math.PI / 4
 
   /*
-   * AÇI TAM 45 DERECEYE ÇIKMIYOR (bkz. "tasarım düz görünüyor").
-   * 45'te bir kanat tam 0, öteki tam 90 derece olur; 90 derecelik yüz
-   * kenarından görünüp kaybolur.
+   * KÖŞE BİR BÜTÜN OLARAK DÖNÜYOR.
+   *
+   * Önce bir kanat duvarda DÜZ, öteki köşeyi dönen diye ikiye ayrılıyordu ve
+   * hangisinin hangisi olduğu dikişin kadrajdaki yerine bakılarak seçiliyordu.
+   * Tasarım taşınıp ortayı geçtiğinde bu seçim anında yer değiştiriyor,
+   * kanatlar birbirinin yerine geçiyordu — ölçüldü: sol kanat 3,4 pikselden
+   * 220,5'e fırlıyor, sağ 220,5'ten 1,7'ye düşüyordu. Kullanıcının gördüğü
+   * sıçrama buydu.
+   *
+   * Oysa 90 derecelik bir köşeye hangi yönden bakıldığı sürekli bir şey: iki
+   * yüz her zaman birbirine dik, bakış açısı değiştikçe biri yassılırken
+   * öteki açılıyor. Açılar 45 ± aci; 'aci' sıfırken köşeye tam karşıdan
+   * bakılıyor (iki kanat eşit), +45 derecede sağ kanat duvarda düz ve sol
+   * kanat kenarından, −45 derecede tersi. Yer değiştirme diye bir şey yok,
+   * tek bir sayı sürekli değişiyor.
+   */
+  /*
+   * AÇI TAM 45 DERECEYE ÇIKMIYOR.
+   *
+   * Açılar 45 ± aci olduğu için 45'te bir kanat tam 0 (duvara yapışık), öteki
+   * tam 90 derece oluyor — yani kenarından bakılıyor ve ekranda sıfır
+   * genişlikte kalıyor. Dörtgen yozlaşınca o kanat hiç çizilmiyor ve tasarım
+   * DÜZ bir dikdörtgen gibi görünüyor. Kullanıcı "L tipinde tasarım düz
+   * görünüyor" derken bunu görüyordu: köşe seçimi düğmesi açıyı tam 45'e
+   * götürüyordu.
+   *
+   * Sınır 35 derece: baskın kanat genişliğinin %82'sini koruyor, öteki kanat
+   * %57'sinde kalıyor — köşe net okunuyor ama hiçbir yüz kaybolmuyor.
    */
   const EN_COK = (35 * Math.PI) / 180
   const a = Math.max(-EN_COK, Math.min(EN_COK, Number(aci) || 0))
-  const CEYREK = Math.PI / 4
   const aciSol = CEYREK - a
   const aciSag = CEYREK + a
 
   /*
-   * ───────────────────────────────────────────────────────────────────────
-   * GENİŞLİK EKRANIN KENDİ ÖLÇÜSÜNDEN, YÖN DUVARDAN.
+   * Bir kanadın uzak kenarı. Kanat düzlemle alfa açısı yapıyorsa yanda
+   * w·cos(alfa) kadar yer kaplıyor ve ucu izleyiciye w·sin(alfa) kadar
+   * yaklaşıyor; yaklaşmanın büyütmesi f/(f−d).
    *
-   * Bir yüzün ekrandaki ENİ, o kanadın gerçek genişliğinden geliyor:
-   * w·cos(açı)·m. Bu satır değişmiyor — perspektif düzeltmesi ekranın
-   * fiziksel ölçüsüne karışmıyor, yalnızca fotoğraftaki görünüşüne.
-   *
-   * Değişen tek şey uzak kenarın UÇLARININ nereye konduğu. Bir duvar
-   * üzerindeki bütün yatay doğrular — tavan birleşimi, zemin birleşimi, o
-   * duvara asılmış bir pencerenin üst ve alt kenarı — fotoğrafta tek bir
-   * noktada buluşur. Uzak kenarın iki ucu, dikişin uçlarından O NOKTAYA
-   * giden doğruların üzerine oturtuluyor. Böylece yüzün üst ve alt sınırı
-   * duvarın kendi kaçış doğrultusunu izliyor ama eni hiç değişmiyor.
-   *
-   * Bir önceki denemede uzak kenarın yeri de kaçış noktasından türetiliyordu;
-   * kaçış noktası dikişe yaklaştığında kanat sıfıra çöküyordu. Hata buydu:
-   * "duvarın çizgisi üzerinde olmak" ile "duvar düzleminde doğru ölçüyle
-   * projekte olmak" ayrı şeyler.
-   *
-   * GÜVENLİK: sonuç kenar, dikişin dörtte birinden kısa ya da dört katından
-   * uzun çıkarsa kullanılmıyor — ölçüm bozuk demektir ve eski güvenli
-   * geometri korunuyor.
-   * ───────────────────────────────────────────────────────────────────────
+   * Dikey büyüme GÖZ HİZASINA göre: ekranın göz hizasının üstünde kalan kısmı
+   * yukarı, altında kalan kısmı aşağı açılır. Göz hizası verilmezse dikişin
+   * kendi ortası kullanılıyor.
    */
-  const kanat = (wM, alfa, yon, vx) => {
+  const yatay = ufukY == null ? cy : ufukY
+  const kanat = (wM, alfa, yon) => {
     const d = Math.min(wM * Math.sin(alfa), f * 0.85)
     const s = f / (f - d)
-    /* Yüzün ekrandaki eni — DEĞİŞMİYOR. */
     const yanal = wM * Math.cos(alfa) * m * s
     const px = cx + nx * yanal * yon
     const py = cy + ny * yanal * yon
-
-    /* Güvenli geometri: uzak kenar dikişe paralel, ufka göre büyüyor. */
-    const yedek = () => [
-      { x: px - ux * yari, y: yatay + (py - uy * yari - yatay) * s },
-      { x: px + ux * yari, y: yatay + (py + uy * yari - yatay) * s },
+    /* Üst ve alt uç göz hizasından uzaklaşarak büyüyor. */
+    const u = { x: px - ux * yari, y: py - uy * yari }
+    const l = { x: px + ux * yari, y: py + uy * yari }
+    return [
+      { x: u.x, y: yatay + (u.y - yatay) * s },
+      { x: l.x, y: yatay + (l.y - yatay) * s },
     ]
-    if (!Number.isFinite(vx)) return yedek()
-
-    /*
-     * Uzak kenar: (px, py) noktasından geçen, dikişe PARALEL doğru.
-     * Uçları, dikişin uçlarından kaçış noktasına giden doğrularla kesişim.
-     */
-    const V = { x: vx, y: yatay }
-    const kesis = (p) => {
-      const d1x = V.x - p.x
-      const d1y = V.y - p.y
-      const det = d1x * uy - d1y * ux
-      if (!(Math.abs(det) > 1e-9)) return null
-      const t = ((px - p.x) * uy - (py - p.y) * ux) / det
-      if (!Number.isFinite(t)) return null
-      return { x: p.x + d1x * t, y: p.y + d1y * t }
-    }
-    const u2 = kesis(ust)
-    const l2 = kesis(alt)
-    if (!u2 || !l2) return yedek()
-    const boy = Math.hypot(u2.x - l2.x, u2.y - l2.y)
-    if (!(boy > dikisPx * 0.25) || !(boy < dikisPx * 4)) return yedek()
-    /* Enin korunduğunu da doğrula: uzak kenar beklenen yerde mi. */
-    const enFark = Math.abs((u2.x + l2.x) / 2 - px) + Math.abs((u2.y + l2.y) / 2 - py)
-    if (enFark > dikisPx * 2) return yedek()
-    return [u2, l2]
   }
 
-  const [solUst, solAlt] = kanat(solM, aciSol, 1, vSol)
-  const [sagUst, sagAlt] = kanat(sagM, aciSag, -1, vSag)
-
+  const [solUst, solAlt] = kanat(solM, aciSol, 1)
+  const [sagUst, sagAlt] = kanat(sagM, aciSag, -1)
   return {
     /* Sol kanat: uzak ucundan dikişe (soldan sağa). */
     sol: [solUst, ust, alt, solAlt],

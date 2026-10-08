@@ -37,7 +37,6 @@ import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
 import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
-import { duzlemUyumu } from './derinlikBul.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -4514,19 +4513,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /*
    * GÖZ HİZASI — işaretlenen köşe çizgisinden.
    *
-   * Köşe zeminden yukarı uzanıyor ve gerçek yüksekliği yazılı. Kamera tipik
+   * Köşe zeminden tavana uzanıyor ve gerçek yüksekliği yazılı. Kamera tipik
    * olarak yerden 1,5 metrede tutulur; o hâlde göz hizası çizginin alt
-   * ucundan yukarı doğru 1,5/yükseklik oranında bir yerdedir.
-   *
-   * ORAN BİRİ GEÇEBİLİR ve bu bir hata değil: işaretlenen köşe kameradan
-   * alçaksa (örneğin 120 cm'lik bir köşe) göz hizası o çizginin ÜSTÜNDE
-   * kalır. O zaman ekranın tamamı göz hizasının altındadır ve köşe aşağı
-   * doğru açılır — dikiş en üstte kalır, dış uçlar düşer. Gerçekte olan da
-   * budur; bir ara oran 0,9'da kıstırılıyordu ve ekran hep yukarı doğru
-   * açılıyordu.
-   *
-   * Sınır yalnızca saçma değerler için: çok küçük bir ölçü yazılırsa göz
-   * hizası kadrajdan kilometrelerce uzağa düşüyor ve perspektif patlıyor.
+   * ucundan yukarı doğru 1,5/yükseklik oranında bir yerdedir. Yazılan ölçü
+   * küçükse (kullanıcı tavana kadar değil, bir panelin köşesini işaretlemiş
+   * olabilir) oran sınırlanıyor: çizginin dışına düşen bir göz hizası
+   * perspektifi tersine çeviriyor.
    */
   const KAMERA_YUKSEKLIGI_CM = 150
 
@@ -4538,7 +4530,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const b = oranTuvale(lKoseNokta[1])
     const cUst = a.y <= b.y ? a : b
     const cAlt = a.y <= b.y ? b : a
-    const oran = Math.max(0.05, Math.min(3, KAMERA_YUKSEKLIGI_CM / koseBoyCm))
+    const oran = Math.max(0.1, Math.min(0.9, KAMERA_YUKSEKLIGI_CM / koseBoyCm))
     return cAlt.y - oran * (cAlt.y - cUst.y)
   })()
 
@@ -4605,76 +4597,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
-   * BİR DUVARIN YATAY KAÇIŞ NOKTASI — FOTOĞRAFTAN.
-   *
-   * Derinlik haritası (ozelSahne.derinlik) ters derinlik veriyor: yakın yer
-   * büyük, uzak yer küçük. Bir DÜZLEM üzerinde ters derinlik, görüntü
-   * koordinatlarının birinci dereceden bir fonksiyonudur — iğnedelik kamerada
-   * bu kesindir, yaklaşım değil:
-   *
-   *     1/Z = a·x + b·y + c
-   *
-   * Dolayısıyla 1/Z'nin sıfırlandığı yer (a·x + b·y + c = 0) o düzlemin
-   * SONSUZDAKİ çizgisi, yani KAÇIŞ ÇİZGİSİdir. O duvarın bütün yatay
-   * doğruları — tavan birleşimi, zemin birleşimi, duvara asılmış bir
-   * pencerenin kenarları — bu çizgi üzerinde bir noktada buluşur. Aranan
-   * nokta, kaçış çizgisinin UFUK çizgisiyle kesiştiği yer.
-   *
-   * a ≈ 0 ise duvar görüntü düzlemine paralel demektir: kaçış noktası
-   * sonsuza gider ve o yüzde kısalma olmaz. Bu bir istisna dalı değil, aynı
-   * formülün doğal sonucu.
-   *
-   * Düzlem, ekranın gerçekten oturacağı bölgeden uyduruluyor (dikişin o
-   * yanındaki şerit). Uyum kötüyse — önünde eşya varsa ya da artık büyükse —
-   * null dönüyor ve çağıran taraf eski varsayıma düşüyor; kötü bir ölçüm,
-   * ölçüm olmamasından daha kötü.
-   */
-  const duvarKacisX = (dikisUst, dikisAlt, yon, ufukTuvalY) => {
-    const harita = ozelSahne?.derinlik
-    if (!harita?.w || !harita?.h || !harita?.veri) return null
-    if (!Number.isFinite(ufukTuvalY)) return null
-
-    /* Tuval pikseli → fotoğrafın 0..1'i → derinlik haritasının pikseli. */
-    const haritaya = (p) => {
-      const o = tuvalOrana(p)
-      return { x: o.x * harita.w, y: o.y * harita.h }
-    }
-    const a1 = haritaya(dikisUst)
-    const a2 = haritaya(dikisAlt)
-    const dikisX = (a1.x + a2.x) / 2
-    const ustY = Math.min(a1.y, a2.y)
-    const altY = Math.max(a1.y, a2.y)
-
-    /* Dikişin o yanındaki şerit: duvarın ekranın oturacağı parçası. */
-    const serit = Math.max(6, Math.round(harita.w * 0.2))
-    const x0 = Math.round(yon > 0 ? dikisX - serit : dikisX + 1)
-    const gx0 = Math.max(0, Math.min(harita.w - 2, x0))
-    const gw = Math.max(4, Math.min(harita.w - gx0, serit))
-    /* Dikey olarak ekranın bandı, biraz genişletilmiş. */
-    const pay = (altY - ustY) * 0.25
-    const gy0 = Math.max(0, Math.round(ustY - pay))
-    const gh = Math.max(4, Math.min(harita.h - gy0, Math.round(altY - ustY + 2 * pay)))
-    if (gw < 4 || gh < 4) return null
-
-    const uyum = duzlemUyumu(harita, gx0, gy0, gw, gh)
-    if (!uyum || !Number.isFinite(uyum.egimX) || !Number.isFinite(uyum.sabit)) return null
-    /* Düzlem değilse (eşya, köşe, bozuk derinlik) kullanma. */
-    if (uyum.artik > 0.06 || uyum.onundeki > 0.3) return null
-
-    const ufukHarita = tuvalOrana({ x: dikisUst.x, y: ufukTuvalY }).y * harita.h
-    const a = uyum.egimX
-    const b = uyum.egimY
-    const c = uyum.sabit
-    /* Kaçış çizgisi ufku kesmiyor (duvar karşıdan): sonsuz. */
-    if (!(Math.abs(a) > 1e-7)) return null
-    const vxHarita = -(b * ufukHarita + c) / a
-    if (!Number.isFinite(vxHarita)) return null
-    /* Geri çevir: harita pikseli → 0..1 → tuval pikseli. */
-    const vx = oranTuvale({ x: vxHarita / harita.w, y: ufukHarita / harita.h }).x
-    return Number.isFinite(vx) ? vx : null
-  }
-
-  /*
    * DİKİŞTEN İKİ KANAT — iç bükey köşe, iki yolun ortak kurucusu.
    *
    * Hem işaretlenen köşe çizgisi hem de ölçü öncesi varsayılan köşe aynı
@@ -4721,19 +4643,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         ? oranTuvale(olcum.kacis)
         : { x: oranTuvale({ x: 0.5, y: 0.5 }).x, y: lUfukY ?? oranTuvale({ x: 0.5, y: 0.5 }).y }
     /*
-     * HANGİ YÜZ YAN DUVARDA.
+     * KÖŞENİN AÇISI — dikişin kadrajdaki yerinden, sürekli.
      *
-     * Elle seçim varsa o geçerli. Yoksa dikişin kaçış noktasına göre yeri
-     * karar veriyor: köşeden hangi tarafa düşüyorsan o duvar sana doğru
-     * gelir. Seçeneklerin anlamı değişmedi; yalnızca her yüzün kendi duvar
-     * düzleminin perspektifine oturtulması eklendi (bkz. icBukeyKose).
-     */
-    /*
-     * KÖŞENİN AÇISI — dikişin kadrajdaki yerinden, sürekli (değişmedi).
-     * Kanatların ENİ bundan geliyor; perspektif düzeltmesi buna karışmıyor.
+     * Köşeye hangi yönden bakıldığını dikişin kaçış noktasına olan yatay
+     * uzaklığı söylüyor: tam üstündeyse karşıdan bakılıyor (açı 0, iki kanat
+     * eşit), kenara gittikçe bir kanat duvara yatıp öteki kenarından
+     * görünüyor. Kadrajın kenarında açı ±45 derece, yani bir kanat tam düz.
+     *
+     * Elle seçim varsa sabit: 'sol' sol kanadı kenara alıyor, 'sag' sağı,
+     * 'orta' köşeyi tam karşıya.
      */
     const dikisX = (ust.x + alt.x) / 2
     const yariKadraj = Math.max(1, (fotoYer?.genislik || tuvalBoyut.w) / 2)
+    /*
+     * Sınır 35 derece (bkz. icBukeyKose): 45'te bir kanat kenarından
+     * görünüp kayboluyor ve tasarım düz bir dikdörtgene dönüyor.
+     */
     const EN_COK_KOSE_ACI = (35 * Math.PI) / 180
     const aci =
       lKose === 'orta'
@@ -4745,14 +4670,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             : kacis
               ? Math.max(-1, Math.min(1, (dikisX - kacis.x) / yariKadraj)) * EN_COK_KOSE_ACI
               : 0
-    /*
-     * Her kanadın kaçış noktası KENDİ duvarından: yalnızca uzak kenarın
-     * uçlarının YÖNÜNÜ belirliyor, enini değil. Fotoğraftan çıkmıyorsa null
-     * gidiyor ve eski güvenli geometri kullanılıyor.
-     */
-    const ufukTuvalY = kacis?.y ?? null
-    const vSol = duvarKacisX(ust, alt, 1, ufukTuvalY)
-    const vSag = duvarKacisX(ust, alt, -1, ufukTuvalY)
     const k = icBukeyKose({
       ust,
       alt,
@@ -4761,9 +4678,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       boyM,
       mesafeM: izlemeMesafesi,
       aci,
-      ufukY: ufukTuvalY,
-      vSol,
-      vSag,
+      ufukY: kacis?.y ?? null,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
