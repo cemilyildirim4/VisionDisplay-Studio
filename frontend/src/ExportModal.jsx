@@ -16,7 +16,7 @@ import {
 } from './contactFormValidation.js'
 
 async function captureScreenPreview() {
-  const el = document.getElementById('pdf-onizleme')
+  const el = document.querySelector('[data-tasarim-katman]') || document.getElementById('pdf-onizleme')
   if (!el) return null
   const modal = document.getElementById('export-modal-root')
   const prevVis = modal?.style.visibility
@@ -30,7 +30,13 @@ async function captureScreenPreview() {
       logging: false,
       ignoreElements: (n) => n.hasAttribute?.('data-pdf-gizle'),
     })
-    return canvas.toDataURL('image/jpeg', 0.92)
+    let quality = 0.9
+    let url = canvas.toDataURL('image/jpeg', quality)
+    while (url.length > 5_500_000 && quality > 0.5) {
+      quality -= 0.15
+      url = canvas.toDataURL('image/jpeg', quality)
+    }
+    return url
   } catch (err) {
     console.error('Ekran önizlemesi yakalanamadı:', err)
     return null

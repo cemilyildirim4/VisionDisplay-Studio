@@ -6,7 +6,7 @@ namespace DisplayConfigurator.Application.DTOs;
 /// </summary>
 public static class PreviewImageCodec
 {
-    public const int MaxStoredBytes = 4 * 1024 * 1024;
+    public const int MaxStoredBytes = 6 * 1024 * 1024;
 
     public static byte[]? Decode(string? raw, int maxBytes = MaxStoredBytes)
     {

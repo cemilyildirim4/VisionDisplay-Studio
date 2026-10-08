@@ -141,16 +141,7 @@ public class ProfessionalReportDocument : IDocument
             {
                 row.RelativeItem(3).Height(268).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
                     .Background(Color.FromHex("#f8fafc")).Padding(6)
-                    .Element(c =>
-                    {
-                        if (_extras.PreviewImage is { Length: > 0 })
-                        {
-                            c.AlignCenter().AlignMiddle().Image(_extras.PreviewImage).FitArea();
-                            return;
-                        }
-
-                        c.AlignCenter().AlignMiddle().Element(DrawSchematic);
-                    });
+                    .AlignCenter().AlignMiddle().Element(DrawSchematic);
                 row.ConstantItem(10);
                 row.RelativeItem(2).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
                     .Background(Color.FromHex("#f5f7fb")).Padding(10)
@@ -166,6 +157,16 @@ public class ProfessionalReportDocument : IDocument
                     });
             });
             col.Item().Element(DrawScreenTypeLegend);
+
+            if (_extras.PreviewImage is { Length: > 0 })
+            {
+                col.Item().PaddingTop(12).Text("Müşteri görseli").FontSize(11).Bold().FontColor(BrandBlue);
+                col.Item().PaddingTop(6).Height(340).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
+                    .Background(Color.FromHex("#f8fafc")).Padding(6)
+                    .AlignCenter().AlignMiddle()
+                    .Image(_extras.PreviewImage)
+                    .FitArea();
+            }
         });
     }
 
@@ -481,10 +482,7 @@ public class ProfessionalReportDocument : IDocument
                 Summary(row, "İZLEME MESAFESİ", $"{viewDist:F1} m", "önerilen");
             });
 
-            // ---- 2. YAPILANDIRMA GÖRSELİ ----
-            column.Item().PaddingTop(12).ShowEntire().Element(ComposeScreenVisual);
-
-            // ---- 3. TEKNİK TABLO ----
+            // ---- 2. TEKNİK TABLO ----
             column.Item().PaddingTop(12).Text("Teknik özellikler").FontSize(12).Bold().FontColor(BrandBlue);
             column.Item().PaddingTop(5).Table(table =>
             {
@@ -568,6 +566,8 @@ public class ProfessionalReportDocument : IDocument
             {
                 column.Item().Element(ComposeClientTotalPrice);
             }
+
+            column.Item().PaddingTop(16).Element(ComposeScreenVisual);
         });
     }
 
