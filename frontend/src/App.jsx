@@ -4585,6 +4585,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
 
   /*
+   * KÖŞEDEN ÇIKAN ÖLÇEK.
+   *
+   * İşaretlenen çizginin fotoğraf pikseli, yazılan santime bölününce o
+   * derinlikte 1 cm kaç piksel ediyor çıkıyor. Ayrı bir referans adımına
+   * gerek bırakmayan şey bu: köşe hem YERİ hem ÖLÇEĞİ veriyor. Üstelik
+   * ölçek tam köşenin bulunduğu derinlikte ölçülmüş oluyor — uzaktaki bir
+   * yüzeyden alınan referanstan daha doğru.
+   */
+  const lKoseOlcek = (() => {
+    if (lKoseNokta.length !== 2 || !(ozelSahne?.kaynak?.w > 0)) return null
+    const koseBoyCm = Number(String(lKoseBoyCm).replace(',', '.'))
+    if (!(koseBoyCm > 0)) return null
+    const a = lKoseNokta[0]
+    const b = lKoseNokta[1]
+    const px = Math.hypot((b.x - a.x) * ozelSahne.kaynak.w, (b.y - a.y) * ozelSahne.kaynak.h)
+    if (!(px > 1)) return null
+    return { px, cm: koseBoyCm, pxCm: px / koseBoyCm }
+  })()
+
+  /*
    * İŞARETLENEN ÇİZGİ DİK Mİ.
    *
    * Köşe fotoğrafta dikey bir kenardır. Kullanıcı yanlışlıkla duvar boyunca
@@ -6547,11 +6567,36 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           />
                         ) : (
                           <>
+                            {/*
+                              L'DE ÖZET DE BAŞKA.
+
+                              Orada ayrı bir referans adımı yok: ölçek köşe
+                              çizgisinin kendisinden geliyor. "Henüz ölçek yok"
+                              yazmak yanlıştı — eksik bir şey yokken eksikmiş
+                              gibi duruyordu.
+                            */}
                             <div className="flex items-center gap-1.5 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
-                              <span className={`inline-block h-2.5 w-2.5 rounded-[3px] ${refPxCm ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-[#39404d]'}`} />
-                              {t('ref2.baslik')}
+                              <span
+                                className={`inline-block h-2.5 w-2.5 rounded-[3px] ${
+                                  (lYerlesimKipi ? lKoseOlcek : refPxCm)
+                                    ? 'bg-emerald-500'
+                                    : 'bg-neutral-300 dark:bg-[#39404d]'
+                                }`}
+                              />
+                              {lYerlesimKipi ? t('refL.baslik') : t('ref2.baslik')}
                             </div>
-                            {refPxCm ? (
+                            {lYerlesimKipi ? (
+                              lKoseOlcek ? (
+                                <p className="mt-0.5 mb-0 text-[13px] leading-snug text-emerald-700 dark:text-emerald-400">
+                                  {Math.round(lKoseOlcek.px)} px / {Math.round(lKoseOlcek.cm)} cm ={' '}
+                                  <strong>{lKoseOlcek.pxCm.toFixed(3).replace('.', ',')} px/cm</strong>
+                                </p>
+                              ) : (
+                                <p className="mt-0.5 mb-0 text-[13.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                                  {t('refL.yok')}
+                                </p>
+                              )
+                            ) : refPxCm ? (
                               <p className="mt-0.5 mb-0 text-[13px] leading-snug text-emerald-700 dark:text-emerald-400">
                                 {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
                                 <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
@@ -6561,7 +6606,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 {t('sih.ozetYok')}
                               </p>
                             )}
-                            {olcuKutu && (
+                            {olcuKutu && !lYerlesimKipi && (
                               <p className="mt-0.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                                 {t('ref.kutuBaslik')}: {olcuKutu.enCm} × {olcuKutu.boyCm} cm
                               </p>
@@ -6583,7 +6628,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               onClick={sihirbaziBaslat}
                               className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
                             >
-                              {olcuKutu || refPxCm ? t('sih.yeniden') : t('sih.basla')}
+                              {lYerlesimKipi
+                                ? lKoseOlcek
+                                  ? t('refL.yeniden')
+                                  : t('refL.basla')
+                                : olcuKutu || refPxCm
+                                  ? t('sih.yeniden')
+                                  : t('sih.basla')}
                             </button>
                             {/*
                               İKİ ANA EYLEM: BAŞTAN BAŞLA ve DÜZENLE.

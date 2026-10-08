@@ -623,6 +623,14 @@ const dict = {
     en: 'The screen sits on the corner. Shooting distance sets how strong the perspective is; the corner choice sets which wing is on which wall.',
     ar: 'الشاشة على الزاوية.',
   },
+  'refL.baslik': { tr: 'Köşe ölçüsü', en: 'Corner measurement', ar: 'قياس الزاوية' },
+  'refL.yok': {
+    tr: 'Henüz köşe yok. Fotoğrafta köşenin üst ve alt ucunu işaretleyerek başlayın; ölçek de oradan geliyor.',
+    en: 'No corner yet. Start by marking the top and bottom of the corner — the scale comes from it too.',
+    ar: 'لا توجد زاوية بعد. ابدأ بتحديد أعلى الزاوية وأسفلها.',
+  },
+  'refL.basla': { tr: 'Köşeyi işaretle', en: 'Mark the corner', ar: 'حدد الزاوية' },
+  'refL.yeniden': { tr: 'Köşeyi yeniden işaretle', en: 'Mark the corner again', ar: 'حدد الزاوية مرة أخرى' },
   'refL.ozet': { tr: 'Köşe çizgisi', en: 'Corner line', ar: 'خط الزاوية' },
   'sih.3.baslik': { tr: 'Yerleşim alanının ölçüsü (cm)', en: 'Placement area size (cm)', ar: 'مقاس منطقة التركيب (سم)' },
   'sih.3.aciklama': {
