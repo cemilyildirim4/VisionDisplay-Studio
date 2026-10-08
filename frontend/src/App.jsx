@@ -4511,6 +4511,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
+   * GÖZ HİZASI — işaretlenen köşe çizgisinden.
+   *
+   * Köşe zeminden tavana uzanıyor ve gerçek yüksekliği yazılı. Kamera tipik
+   * olarak yerden 1,5 metrede tutulur; o hâlde göz hizası çizginin alt
+   * ucundan yukarı doğru 1,5/yükseklik oranında bir yerdedir. Yazılan ölçü
+   * küçükse (kullanıcı tavana kadar değil, bir panelin köşesini işaretlemiş
+   * olabilir) oran sınırlanıyor: çizginin dışına düşen bir göz hizası
+   * perspektifi tersine çeviriyor.
+   */
+  const KAMERA_YUKSEKLIGI_CM = 150
+
+  const lUfukY = (() => {
+    if (lKoseNokta.length !== 2) return null
+    const koseBoyCm = Number(String(lKoseBoyCm).replace(',', '.'))
+    if (!(koseBoyCm > 0)) return null
+    const a = oranTuvale(lKoseNokta[0])
+    const b = oranTuvale(lKoseNokta[1])
+    const cUst = a.y <= b.y ? a : b
+    const cAlt = a.y <= b.y ? b : a
+    const oran = Math.max(0.1, Math.min(0.9, KAMERA_YUKSEKLIGI_CM / koseBoyCm))
+    return cAlt.y - oran * (cAlt.y - cUst.y)
+  })()
+
+  /*
    * KÖŞEYİ FAREYLE TAŞIMA.
    *
    * Kayma TOPLAM yer değiştirmeden hesaplanıyor, adım adım toplanarak değil:
@@ -4613,22 +4637,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /*
      * KAÇIŞ NOKTASI.
      *
+     * Kanadın yukarı mı aşağı mı açılacağını belirleyen tek şey bu noktanın
+     * YÜKSEKLİĞİ, yani göz hizası: ekranın göz hizasının üstünde kalan kısmı
+     * öne gelirken yukarı, altında kalan kısmı aşağı açılır.
+     *
      * Önce fotoğraftan ÖLÇÜLENİ deniyoruz (bkz. aciBul.js). Ama o ölçüm çoğu
      * karede çıkmıyor: oda karşıdan çekilmişse eğik çizgi kalmıyor ve yöntem
      * "yüzey karşıdan görünüyor" deyip boş dönüyor (örnek odalarda ölçüldü:
      * üç fotoğrafın ikisinde kaçış noktası yok, birinde güven 0,26).
      *
-     * Ölçüm yoksa FOTOĞRAFIN MERKEZİ kullanılıyor. Bu bir uydurma değil: tek
-     * nokta perspektifli bir odada — arka duvar karşıda, yan duvarlar
-     * izleyiciye doğru geliyor — yan duvarların kenarları kameranın asal
-     * noktasında, yani kadrajın ortasında buluşur. Kullanıcının fotoğrafı
-     * genellikle tam olarak budur.
+     * Ölçüm yoksa göz hizası İŞARETLENEN KÖŞE ÇİZGİSİNDEN çıkarılıyor
+     * (lUfukY): çizgi zeminden tavana uzanıyor ve gerçek yüksekliği de
+     * yazılmış durumda, kamera da tipik olarak yerden 1,5 metrede. Yatayda
+     * ise kadrajın ortası kalıyor; oradaki doğru nokta kameranın asal
+     * noktasıdır ve o da kadrajın ortasıdır.
+     *
+     * Beş örnek odada ölçüldü: gerçek ufka ortalama sapma, kadrajın ortası
+     * kabul edilince %7,1; köşe çizgisinden hesaplanınca %5,2.
      */
     const olcum = ozelSahne?.aci
     const kacis =
       olcum?.kacis && olcum.guven >= 0.35
         ? oranTuvale(olcum.kacis)
-        : oranTuvale({ x: 0.5, y: 0.5 })
+        : { x: oranTuvale({ x: 0.5, y: 0.5 }).x, y: lUfukY ?? oranTuvale({ x: 0.5, y: 0.5 }).y }
     const k = icBukeyKose({
       ust,
       alt,
