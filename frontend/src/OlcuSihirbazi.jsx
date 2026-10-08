@@ -185,6 +185,7 @@ export default function OlcuSihirbazi({
           {lKose && adim === 1 && (
             <>
               <p className={aciklama}>{t('sihL.3.aciklama')}</p>
+              <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sihL.3.gizli')}</p>
               <p className="mt-2 mb-0 rounded-md bg-brand/15 px-2 py-1.5 text-[13.5px] font-semibold text-brand dark:bg-brand/25">
                 {lKoseNoktaSayisi === 0
                   ? t('sihL.3.durum0')

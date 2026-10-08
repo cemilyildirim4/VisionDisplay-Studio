@@ -5691,7 +5691,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             />
           )}
 
-          {lKoseCizimi && (
+          {/*
+            İŞARETLERKEN TASARIM GİZLİ.
+
+            Köşe çizgisi tasarımın tam durduğu yere konuyor; tasarım ekranda
+            dururken altındaki köşeyi ne görmek ne de tıklamak mümkün oluyordu.
+            Bu adımda katman hiç çizilmiyor — düz şerit de çizilmiyor, çünkü
+            lKoseCizimi hâlâ dolu (bkz. ekranGizle). Ölçüler sihirbazda yazılı
+            olarak görünmeye devam ediyor; tasarım "Köşeyi kur" ile geri geliyor.
+          */}
+          {lKoseCizimi && !lKoseKipi && (
             <LKoseEkran
               /*
                 İşaretleme sürerken taşıma kapalı: o sırada tuvale yapılan

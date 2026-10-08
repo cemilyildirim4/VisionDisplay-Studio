@@ -614,6 +614,11 @@ const dict = {
   /* Hesaplanan kanat genişlikleri — kullanıcı neyin yerleştiğini görsün. */
   'sihL.kanatlar': { tr: 'Kanatlar', en: 'Wings', ar: 'الجناحان' },
   'sihL.bitir': { tr: 'Köşeyi kur ve bitir', en: 'Build the corner and finish', ar: 'أنشئ الزاوية وأنهِ' },
+  'sihL.3.gizli': {
+    tr: 'Tasarım bu adımda gizli: altındaki köşeyi görebilesiniz diye.',
+    en: 'The design is hidden in this step so you can see the corner underneath.',
+    ar: 'التصميم مخفي في هذه الخطوة لترى الزاوية تحته.',
+  },
   'sihL.3.dikDegil': {
     tr: 'Köşe çizgisi dik olmalı. Duvar boyunca değil, köşenin ÜST ve ALT ucuna tıklayın.',
     en: 'The corner line must be upright. Click the TOP and BOTTOM of the corner, not along the wall.',
