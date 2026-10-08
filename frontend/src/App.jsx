@@ -4650,33 +4650,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         ? oranTuvale(olcum.kacis)
         : { x: oranTuvale({ x: 0.5, y: 0.5 }).x, y: lUfukY ?? oranTuvale({ x: 0.5, y: 0.5 }).y }
     /*
-     * KÖŞENİN AÇISI — dikişin kadrajdaki yerinden, sürekli.
+     * HANGİ YÜZ YAN DUVARDA.
      *
-     * Köşeye hangi yönden bakıldığını dikişin kaçış noktasına olan yatay
-     * uzaklığı söylüyor: tam üstündeyse karşıdan bakılıyor (açı 0, iki kanat
-     * eşit), kenara gittikçe bir kanat duvara yatıp öteki kenarından
-     * görünüyor. Kadrajın kenarında açı ±45 derece, yani bir kanat tam düz.
-     *
-     * Elle seçim varsa sabit: 'sol' sol kanadı kenara alıyor, 'sag' sağı,
-     * 'orta' köşeyi tam karşıya.
+     * Elle seçim varsa o geçerli. Yoksa dikişin kaçış noktasına göre yeri
+     * karar veriyor: köşeden hangi tarafa düşüyorsan o duvar sana doğru
+     * gelir. Seçeneklerin anlamı değişmedi; yalnızca her yüzün kendi duvar
+     * düzleminin perspektifine oturtulması eklendi (bkz. icBukeyKose).
      */
     const dikisX = (ust.x + alt.x) / 2
-    const yariKadraj = Math.max(1, (fotoYer?.genislik || tuvalBoyut.w) / 2)
-    /*
-     * Sınır 35 derece (bkz. icBukeyKose): 45'te bir kanat kenarından
-     * görünüp kayboluyor ve tasarım düz bir dikdörtgene dönüyor.
-     */
-    const EN_COK_KOSE_ACI = (35 * Math.PI) / 180
-    const aci =
+    const etkinKose =
       lKose === 'orta'
-        ? 0
-        : lKoseSecim === 'sol'
-          ? -EN_COK_KOSE_ACI
-          : lKoseSecim === 'sag'
-            ? EN_COK_KOSE_ACI
-            : kacis
-              ? Math.max(-1, Math.min(1, (dikisX - kacis.x) / yariKadraj)) * EN_COK_KOSE_ACI
-              : 0
+        ? 'orta'
+        : (lKoseSecim ?? (kacis && dikisX > kacis.x ? 'sag' : 'sol'))
     const k = icBukeyKose({
       ust,
       alt,
@@ -4684,7 +4669,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       sagM,
       boyM,
       mesafeM: izlemeMesafesi,
-      aci,
+      kose: etkinKose,
+      kacisX: kacis?.x ?? null,
       ufukY: kacis?.y ?? null,
     })
     if (!k) return null
