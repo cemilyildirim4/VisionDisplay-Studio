@@ -4580,7 +4580,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const solM = lEkran.solCols * cwM
     const sagM = lEkran.sagCols * cwM
     const boyM = lEkran.rows * chM
-    const k = icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM: izlemeMesafesi, kose: lKose })
+    /*
+     * KAÇIŞ NOKTASI.
+     *
+     * Önce fotoğraftan ÖLÇÜLENİ deniyoruz (bkz. aciBul.js). Ama o ölçüm çoğu
+     * karede çıkmıyor: oda karşıdan çekilmişse eğik çizgi kalmıyor ve yöntem
+     * "yüzey karşıdan görünüyor" deyip boş dönüyor (örnek odalarda ölçüldü:
+     * üç fotoğrafın ikisinde kaçış noktası yok, birinde güven 0,26).
+     *
+     * Ölçüm yoksa FOTOĞRAFIN MERKEZİ kullanılıyor. Bu bir uydurma değil: tek
+     * nokta perspektifli bir odada — arka duvar karşıda, yan duvarlar
+     * izleyiciye doğru geliyor — yan duvarların kenarları kameranın asal
+     * noktasında, yani kadrajın ortasında buluşur. Kullanıcının fotoğrafı
+     * genellikle tam olarak budur.
+     */
+    const olcum = ozelSahne?.aci
+    const kacis =
+      olcum?.kacis && olcum.guven >= 0.35
+        ? oranTuvale(olcum.kacis)
+        : oranTuvale({ x: 0.5, y: 0.5 })
+    const k = icBukeyKose({
+      ust,
+      alt,
+      solM,
+      sagM,
+      boyM,
+      mesafeM: izlemeMesafesi,
+      kose: lKose,
+      kacis,
+    })
     if (!k) return null
     const solPx = solM * k.pxPerM
     const sagPx = sagM * k.pxPerM

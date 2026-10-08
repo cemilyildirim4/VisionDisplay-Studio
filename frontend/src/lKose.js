@@ -357,7 +357,7 @@ export { icerikSirasi }
  * @param {number} boyM  ekranın gerçek yüksekliği (m)
  * @param {number} mesafeM  kameranın köşeden uzaklığı (m)
  */
-export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, kose = 'sol' }) {
+export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, kose = 'sol', kacis = null }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
   const dx = alt.x - ust.x
@@ -426,9 +426,49 @@ export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, kose = 'sol' 
     const d = duzMu ? 0 : Math.min(wM / KOK2, f * 0.85)
     const s = f / (f - d)
     const yanal = (duzMu ? wM : wM / KOK2) * m * s
+    const h = yari * s
+
+    /*
+     * DÖNEN KANAT FOTOĞRAFIN KENDİ PERSPEKTİFİNİ İZLİYOR.
+     *
+     * İzleyiciye doğru gelen bir duvarın üst ve alt kenarları fotoğrafta
+     * KAÇIŞ NOKTASINDA buluşur — odanın yan duvarında bunu gözle görüyoruz.
+     * Kanat dikişin kendi ekseninde açıldığında bu olmuyordu: kenarlar
+     * simetrik olarak açılıyor, tasarımın perspektifi fotoğrafınkine
+     * uymuyordu (kullanıcının gördüğü buydu).
+     *
+     * Kaçış noktası fotoğraftan ölçülüyor (bkz. aciBul.js). Yaklaşan bir
+     * nokta o noktadan UZAKLAŞARAK büyüyor: dikişin iki ucunu aynı oranda
+     * uzaklaştırmak, kanadın kenarlarını kaçış noktasına nişanlıyor — tıpkı
+     * odanın kendi duvarı gibi.
+     *
+     * Ölçüm yoksa, güvenilmezse ya da kanadı yanlış tarafa açıyorsa dikişin
+     * kendi eksenine göre kurulan yedek kullanılıyor.
+     */
+    if (!duzMu && kacis) {
+      const ku = { x: kacis.x + (ust.x - kacis.x) * s, y: kacis.y + (ust.y - kacis.y) * s }
+      const ka = { x: kacis.x + (alt.x - kacis.x) * s, y: kacis.y + (alt.y - kacis.y) * s }
+      /*
+       * Kanadın dışa açılma payı: beklenen yönde ve görünür genişlikte mi?
+       *
+       * Eşik KÜÇÜK olmak zorunda. Perspektifin verdiği genişlik, dikişin
+       * kaçış noktasına uzaklığıyla orantılı ve çoğu zaman yedek modelin
+       * verdiğinden çok daha dar çıkıyor (ölçüldü: 41,8 piksele karşı 143,4).
+       * Doğru olan dar olanı; önceki eşik (yedeğin %35'i) tam da doğru cevabı
+       * eliyordu ve tasarım fotoğraftan daha az perspektifli duruyordu.
+       *
+       * Eşik yalnızca gözle görülmeyecek kadar ince kanadı eliyor: dikiş
+       * kaçış noktasının üstündeyse yan duvar gerçekten görünmez olur, orada
+       * yedek model daha okunur bir sonuç veriyor.
+       */
+      const ofx = (ku.x + ka.x) / 2 - cx
+      const ofy = (ku.y + ka.y) / 2 - cy
+      const pay = (ofx * nx + ofy * ny) * yon
+      if (pay > Math.max(3, yanal * 0.06)) return [ku, ka]
+    }
+
     const px = cx + nx * yanal * yon
     const py = cy + ny * yanal * yon
-    const h = yari * s
     return [
       { x: px - ux * h, y: py - uy * h },
       { x: px + ux * h, y: py + uy * h },
