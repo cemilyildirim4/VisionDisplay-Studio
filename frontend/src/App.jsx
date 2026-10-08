@@ -714,15 +714,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [lKoseNokta, setLKoseNokta] = useState([])
   const [lKoseKipi, setLKoseKipi] = useState(false)
   const [lKoseBoyCm, setLKoseBoyCm] = useState('')
-  /*
-   * KANAT GENİŞLİKLERİ KULLANICIDAN.
-   *
-   * Kabin sayısı kanadın kaç kabin olduğunu söylüyor ama duvardaki yerini
-   * söylemiyor: iki kanat farklı duvarlarda ve kullanıcı birini daha geniş
-   * isteyebiliyor. Boş bırakılırsa kabin sayısından hesaplanıyor.
-   */
-  const [lKoseSolCm, setLKoseSolCm] = useState('')
-  const [lKoseSagCm, setLKoseSagCm] = useState('')
   const [refMesaj, setRefMesaj] = useState(null)
   /*
    * Referans değişti ama kutu eski ölçekle kurulmuş. Kullanıcının yerleşimini
@@ -4141,8 +4132,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setKutuBoy('')
     setLKoseNokta([])
     setLKoseBoyCm('')
-    setLKoseSolCm('')
-    setLKoseSagCm('')
     setLKoseKipi(false)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
@@ -4485,17 +4474,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * sağınki. Koyu çizilen kanat köşe seçimine göre değişiyor — sol köşede
    * yan kanat solda, sağ köşede sağda.
    */
-  const lKanatlariKur = (ust, alt, solYazi, sagYazi) => {
+  const lKanatlariKur = (ust, alt) => {
     if (!lEkran) return null
+    /*
+     * Kanat genişlikleri sütun sayısından: sol kanat kaç kabinse o kadar
+     * geniş. Kullanıcıya sorulmuyor, zaten girilmiş bir bilgi.
+     */
     const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
     const sagK = Math.max(1, lEkran.cols - solK)
-    /* Yazılan ölçü varsa o geçerli; yoksa kabin sayısı. */
-    const yaz = (metin) => {
-      const n = Number(String(metin ?? '').replace(',', '.'))
-      return Number.isFinite(n) && n > 0 ? n / 100 : 0
-    }
-    const solM = yaz(solYazi) || solK * cwM
-    const sagM = yaz(sagYazi) || sagK * cwM
+    const solM = solK * cwM
+    const sagM = sagK * cwM
     const boyM = lEkran.rows * chM
     const k = icBukeyKose({
       ust,
@@ -4644,8 +4632,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return lKanatlariKur(
       { x: ortaX - yariX, y: ortaY - yariY },
       { x: ortaX + yariX, y: ortaY + yariY },
-      lKoseSolCm,
-      lKoseSagCm,
     )
   })()
 
@@ -6513,10 +6499,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             lKoseNoktaSayisi={lKoseNokta.length}
                             lKoseBoyCm={lKoseBoyCm}
                             setLKoseBoyCm={setLKoseBoyCm}
-                            lKoseSolCm={lKoseSolCm}
-                            setLKoseSolCm={setLKoseSolCm}
-                            lKoseSagCm={lKoseSagCm}
-                            setLKoseSagCm={setLKoseSagCm}
                             lKoseKabinSolCm={lKabinGenislik.sol}
                             lKoseKabinSagCm={lKabinGenislik.sag}
                             lKoseIsaretle={() => {
@@ -6571,14 +6553,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             {lKoseCizgiGeo && (
                               <p className="mt-0.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                                 {t('refL.ozet')}: {Math.round(Number(String(lKoseBoyCm).replace(',', '.')))} cm ·{' '}
-                                {Math.round(
-                                  Number(String(lKoseSolCm).replace(',', '.')) || lKabinGenislik.sol,
-                                )}{' '}
-                                +{' '}
-                                {Math.round(
-                                  Number(String(lKoseSagCm).replace(',', '.')) || lKabinGenislik.sag,
-                                )}{' '}
-                                cm
+                                {Math.round(lKabinGenislik.sol)} + {Math.round(lKabinGenislik.sag)} cm
                               </p>
                             )}
                             {refEskidi && (

@@ -77,11 +77,7 @@ export default function OlcuSihirbazi({
   lKoseNoktaSayisi = 0,
   lKoseBoyCm,
   setLKoseBoyCm,
-  lKoseSolCm,
-  setLKoseSolCm,
-  lKoseSagCm,
-  setLKoseSagCm,
-  /* Kabin sayısından çıkan genişlikler — yazılan ölçüyle karşılaştırmak için. */
+  /* Sütun sayısından hesaplanan kanat genişlikleri — yalnızca gösteriliyor. */
   lKoseKabinSolCm = 0,
   lKoseKabinSagCm = 0,
   lKoseIsaretle,
@@ -227,44 +223,16 @@ export default function OlcuSihirbazi({
                 />
                 <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-1.5">
-                <div>
-                  <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
-                    {t('sihL.sol')}
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={lKoseSolCm}
-                    onChange={(e) => setLKoseSolCm(e.target.value)}
-                    placeholder={String(Math.round(lKoseKabinSolCm) || '')}
-                    className={`${girdi} mt-1`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
-                    {t('sihL.sag')}
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={lKoseSagCm}
-                    onChange={(e) => setLKoseSagCm(e.target.value)}
-                    placeholder={String(Math.round(lKoseKabinSagCm) || '')}
-                    className={`${girdi} mt-1`}
-                  />
-                </div>
-              </div>
               {/*
-                KABİN SAYISINDAN ÇIKAN GENİŞLİK HEP GÖRÜNÜYOR.
+                KANAT GENİŞLİKLERİ SORULMUYOR, HESAPLANIYOR.
 
-                Yazılan ölçü kabinlerle tutmuyorsa bu bir hata değil — duvarda
-                o kadar yer vardır — ama kullanıcının görmesi gerekir.
+                Sütun sayısı ve kabin ölçüsü zaten biliniyor: sol kanat kaç
+                kabinse o kadar geniş. Kullanıcıya sormak aynı sayıyı ikinci
+                kez istemek olurdu. Yine de yazılıyor — neyin yerleştiği
+                görünsün.
               */}
               <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
-                {t('sihL.kabinFark')}: {Math.round(lKoseKabinSolCm)} + {Math.round(lKoseKabinSagCm)} cm
+                {t('sihL.kanatlar')}: {Math.round(lKoseKabinSolCm)} + {Math.round(lKoseKabinSagCm)} cm
               </p>
               {lKoseOran > 0 ? (
                 lKoseOran > 1 ? (
