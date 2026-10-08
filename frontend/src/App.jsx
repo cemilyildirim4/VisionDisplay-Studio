@@ -296,7 +296,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * duvarda. Mekânın sol ya da sağ köşesi seçilebiliyor; çizim ikisinde de
    * ayna simetrik (bkz. lKose.js).
    */
-  const [lKose, setLKose] = useState('sol')
+  /*
+   * KÖŞE SEÇİMİ: null = OTOMATİK.
+   *
+   * Hangi kanadın duvarda düz durup hangisinin köşeyi döneceği kullanıcının
+   * elle seçmesi gereken bir şey değil — fotoğraf zaten söylüyor. Yine de
+   * üstüne yazılabiliyor; otomatik yanılırsa düğmeye basmak yetiyor.
+   */
+  const [lKoseSecim, setLKoseSecim] = useState(null)
   /*
    * ÇİZİLMİŞ MEKÂNDA KAMERANIN YATAY DÖNÜŞÜ (px).
    *
@@ -2315,6 +2322,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * İkisinin de ölçeği ve duvar dikdörtgeni aynı yapıda olduğu için aynı
    * geometri kullanılıyor; değişen tek şey ölçek kaynağı.
    */
+  /*
+   * KATLANAN KANAT KÖŞENİN KADRAJDAKİ YERİNDEN.
+   *
+   * Gerçek bir odada kural şu: köşeden hangi tarafa düşüyorsan o duvar sana
+   * doğru gelir. Köşe kadrajın sağındaysa sağdaki duvar izleyiciye açılıyor,
+   * solundaysa soldaki. Kullanıcının fotoğrafında köşenin yeri belli
+   * (işaretlenen çizgi), dolayısıyla bu seçim tahmin değil.
+   *
+   * Çizilmiş ve hazır mekânlarda köşe duvarın kenarında ve seçim zaten bir
+   * YERLEŞİM kararı; orada otomatik bir şey yok, varsayılan sol köşe.
+   */
+  const lKoseOtomatik = (() => {
+    if (scene !== 'ozel' || !ozelSahne || lKoseNokta.length !== 2) return 'sol'
+    const orta = (lKoseNokta[0].x + lKoseNokta[1].x) / 2
+    return orta > 0.5 ? 'sag' : 'sol'
+  })()
+  const lKose = lKoseSecim ?? lKoseOtomatik
+
   const lCizimMekan = scene === SALON_ID || scene === CEPHE_ID
   /*
    * HAZIR FOTOĞRAFLI MEKÂNDA DA GERÇEK KÖŞE (AVM koridoru, şehir meydanı).
@@ -6467,13 +6492,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     <Segmented
                       cols={3}
                       value={lKose}
-                      onChange={setLKose}
+                      onChange={setLKoseSecim}
                       options={[
                         { v: 'sol', l: t('screen.lKoseSol') },
                         { v: 'orta', l: t('screen.lKoseOrta') },
                         { v: 'sag', l: t('screen.lKoseSag') },
                       ]}
                     />
+                    {/*
+                      OTOMATİK SEÇİM GÖRÜNÜR OLUYOR.
+
+                      Seçim kendiliğinden yapıldıysa bunun söylenmesi gerekiyor;
+                      yoksa kullanıcı düğmenin neden o tarafta durduğunu bilmiyor.
+                      Elle değiştirildiyse geri dönüş yolu duruyor.
+                    */}
+                    {scene === 'ozel' && ozelSahne && lKoseNokta.length === 2 && (
+                      <div className="mt-1 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {lKoseSecim == null ? (
+                          <span>
+                            {t('screen.lKoseOto')}{' '}
+                            {lKoseOtomatik === 'sag' ? t('screen.lKoseOtoSag') : t('screen.lKoseOtoSol')}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setLKoseSecim(null)}
+                            className="text-brand hover:underline"
+                          >
+                            {t('screen.lKoseOtoDon')}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

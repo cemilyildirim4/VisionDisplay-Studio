@@ -264,6 +264,14 @@ const dict = {
     en: 'The chosen corner is not visible from this angle — that face points away from the camera. Turn the box the other way or pick the other corner.',
     ar: 'الزاوية المختارة غير مرئية من هذه الزاوية. أدر المربع أو اختر الزاوية الأخرى.',
   },
+  'screen.lKoseOto': {
+    tr: 'Otomatik: köşe kadrajın',
+    en: 'Automatic: the corner is in the',
+    ar: 'تلقائي: الزاوية في',
+  },
+  'screen.lKoseOtoSag': { tr: 'sağında', en: 'right half', ar: 'النصف الأيمن' },
+  'screen.lKoseOtoSol': { tr: 'solunda', en: 'left half', ar: 'النصف الأيسر' },
+  'screen.lKoseOtoDon': { tr: 'Otomatiğe dön', en: 'Back to automatic', ar: 'العودة إلى التلقائي' },
   'screen.lKoseBaslik': { tr: 'L köşesi', en: 'L corner', ar: 'زاوية L' },
   'screen.lKoseIpucu': {
     tr: 'L ekran mekânın köşesini sarıyor: bir kanat ön duvarda, öteki yan duvarda. Kanatların kabin sayısını Sütunlar bölümünden ayarlıyorsunuz.',
