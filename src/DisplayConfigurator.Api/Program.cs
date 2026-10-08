@@ -4,6 +4,8 @@ using System.Threading.RateLimiting;
 using Dapper;
 using DisplayConfigurator.Api.Data;
 using DisplayConfigurator.Api.ExceptionHandling;
+using DisplayConfigurator.Api.Serialization;
+using DisplayConfigurator.Api.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
@@ -51,6 +53,10 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // 1. Controller servisleri
 builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
+    })
     .ConfigureApiBehaviorOptions(options =>
     {
         options.InvalidModelStateResponseFactory = ValidationProblemFactory.Create;
@@ -74,6 +80,11 @@ builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
 builder.Services.AddScoped<IHardwareCatalogRepository, HardwareCatalogRepository>();
 builder.Services.AddScoped<ISystemSettingsRepository, SystemSettingsRepository>();
+builder.Services.AddHttpClient<IUsdTryRateSource, TcmbUsdTryRateSource>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(4);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("VisionDisplayStudio/1.0");
+});
 builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
 builder.Services.AddScoped<IPdfReportService, PdfReportService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();

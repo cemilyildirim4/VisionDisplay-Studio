@@ -69,6 +69,9 @@ public class QuoteInputDto
 
     public int? MiniPcId { get; set; }
 
+    /// <summary>Seçilen kabin. Tekliften PDF yeniden üretilirken bu kimlik gerekir.</summary>
+    public int? CabinId { get; set; }
+
     /// <summary>Tuval görüntüsü. Listeye yazılmaz; teklif kaydında saklanır.</summary>
     public string? PreviewImageBase64 { get; set; }
 }

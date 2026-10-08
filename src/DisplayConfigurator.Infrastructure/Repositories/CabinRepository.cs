@@ -103,6 +103,26 @@ public class CabinRepository : ICabinRepository
         return result.FirstOrDefault();
     }
 
+    public async Task<Cabin?> GetByModelCodeAsync(string modelCode)
+    {
+        if (string.IsNullOrWhiteSpace(modelCode)) return null;
+        using var connection = await _connectionFactory.CreateConnectionAsync();
+        string sql = $@"
+            SELECT {SelectColumns}
+            FROM cabins c
+            LEFT JOIN series s ON c.series_id = s.id
+            WHERE LOWER(c.model_code) = LOWER(@ModelCode)
+            ORDER BY c.id ASC";
+
+        var result = await connection.QueryAsync<Cabin, Series, Cabin>(
+            sql,
+            MapWithSeries,
+            new { ModelCode = modelCode.Trim() },
+            splitOn: "Id");
+
+        return result.FirstOrDefault();
+    }
+
     public async Task<IEnumerable<Cabin>> GetBySeriesIdAsync(int seriesId)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();

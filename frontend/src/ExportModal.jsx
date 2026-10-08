@@ -14,6 +14,7 @@ import {
   parseProblemErrors,
   validateContactValue,
 } from './contactFormValidation.js'
+import { istanbulSimdi, turkiyeTarihSaat } from './turkiyeSaati.js'
 
 async function captureScreenPreview() {
   const el = document.getElementById('pdf-onizleme')
@@ -94,7 +95,7 @@ async function resolveMiniPcFields(hasMiniPc) {
 }
 
 export default function ExportModal({ open, onClose, summary }) {
-  const { t, lang } = useLang()
+  const { t } = useLang()
   const { isAuthenticated, isAdmin, session, displayName, email: accountEmail } = useSession()
   /*
    * FİRMA BİLGİLERİ ARTIK BURADA SORULMUYOR.
@@ -154,10 +155,9 @@ export default function ExportModal({ open, onClose, summary }) {
   const enBuyuk = olculu.reduce((a, s) => (s.wm * s.hm > a.wm * a.hm ? s : a), olculu[0])
   const izleme = model ? viewingDistanceFor(model, enBuyuk.cols, enBuyuk.rows) : null
 
-  const simdi = new Date()
-  const iki = (n) => String(n).padStart(2, '0')
-  const belgeNo = `${simdi.getFullYear()}${iki(simdi.getMonth() + 1)}${iki(simdi.getDate())}-${iki(simdi.getHours())}${iki(simdi.getMinutes())}`
-  const tarih = simdi.toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang, { day: '2-digit', month: 'long', year: 'numeric' })
+  const simdi = istanbulSimdi()
+  const belgeNo = `${simdi.year}${simdi.month}${simdi.day}-${simdi.hour}${simdi.minute}`
+  const tarih = turkiyeTarihSaat(new Date().toISOString(), { withTime: false })
 
   const screensText =
     coklu
@@ -379,6 +379,7 @@ export default function ExportModal({ open, onClose, summary }) {
         configJson: summary.tasarim ? JSON.stringify(summary.tasarim) : null,
         hasMiniPc: miniPc.hasMiniPc,
         miniPcId: miniPc.miniPcId,
+        cabinId: model.id,
         previewImageBase64,
       }
       const sendQuote = (body) =>

@@ -6,6 +6,7 @@ public interface ICabinRepository
 {
     Task<IEnumerable<Cabin>> GetAllAsync(string? category = null, string? productType = null);
     Task<Cabin?> GetByIdAsync(int id);
+    Task<Cabin?> GetByModelCodeAsync(string modelCode);
     Task<IEnumerable<Cabin>> GetBySeriesIdAsync(int seriesId);
     Task<Cabin> CreateAsync(Cabin cabin);
     Task<bool> UpdateAsync(Cabin cabin);

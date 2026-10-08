@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -16,17 +17,20 @@ public class QuotesController : ControllerBase
 {
     private readonly IQuoteRepository _quoteRepository;
     private readonly IConfigurationService _configurations;
+    private readonly ICabinRepository _cabins;
     private readonly IEmailService _emailService;
     private readonly IConfiguration _config;
 
     public QuotesController(
         IQuoteRepository quoteRepository,
         IConfigurationService configurations,
+        ICabinRepository cabins,
         IEmailService emailService,
         IConfiguration config)
     {
         _quoteRepository = quoteRepository;
         _configurations = configurations;
+        _cabins = cabins;
         _emailService = emailService;
         _config = config;
     }
@@ -54,7 +58,7 @@ public class QuotesController : ControllerBase
         return Ok(quotes);
     }
 
-    /// <summary>Teklif sahibi (veya admin) müşteri PDF'ini yeniden indirir. Izgara görseli bu raporda yok.</summary>
+    /// <summary>Teklif sahibi (veya admin) müşteri PDF'ini yeniden indirir.</summary>
     [Authorize]
     [HttpGet("{id:int}/pdf")]
     public async Task<IActionResult> DownloadPdf(int id)
@@ -67,7 +71,14 @@ public class QuotesController : ControllerBase
         if (!IsAdmin() && (userId == null || quote.UserId != userId))
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "Bu teklife erişim yetkiniz yok." });
 
-        if (quote.CabinId is not > 0)
+        var draft = ReadDraft(quote.ConfigJson);
+        var cabinId = quote.CabinId is > 0 ? quote.CabinId : draft.ModelId;
+        if (cabinId is not > 0 && !string.IsNullOrWhiteSpace(quote.ModelCode ?? draft.ModelCode))
+        {
+            var cabin = await _cabins.GetByModelCodeAsync((quote.ModelCode ?? draft.ModelCode)!);
+            cabinId = cabin?.Id;
+        }
+        if (cabinId is not > 0)
             return BadRequest(new { message = "Bu teklifte model kaydı yok; PDF yeniden üretilemez." });
 
         var dto = new CreateConfigurationDto
@@ -79,9 +90,9 @@ public class QuotesController : ControllerBase
             WallWidthM = quote.WallWidthM,
             WallHeightM = quote.WallHeightM,
             ScreenMode = quote.ScreenMode,
-            CabinId = quote.CabinId.Value,
-            Cols = Math.Clamp(quote.Columns ?? 1, 1, 50),
-            Rows = Math.Clamp(quote.Rows ?? 1, 1, 50),
+            CabinId = cabinId.Value,
+            Cols = Math.Clamp(quote.Columns ?? draft.Cols ?? 1, 1, 50),
+            Rows = Math.Clamp(quote.Rows ?? draft.Rows ?? 1, 1, 50),
             HasMiniPc = quote.HasMiniPc,
             MiniPcId = quote.MiniPcId,
             LaborCostMultiplier = quote.LaborCostMultiplier > 0 ? quote.LaborCostMultiplier : null,
@@ -101,6 +112,7 @@ public class QuotesController : ControllerBase
             WallWidthM = quote.WallWidthM,
             WallHeightM = quote.WallHeightM,
             ScreenMode = quote.ScreenMode,
+            PreviewImage = await _quoteRepository.GetPreviewImageAsync(id),
         };
 
         try
@@ -155,6 +167,7 @@ public class QuotesController : ControllerBase
             ConfigJson = input.ConfigJson,
             HasMiniPc = input.HasMiniPc,
             MiniPcId = input.MiniPcId,
+            CabinId = input.CabinId is > 0 ? input.CabinId : null,
             Status = "Beklemede",
             Revision = 1,
             UserId = GetUserId(),
@@ -213,6 +226,29 @@ public class QuotesController : ControllerBase
         if (User.Identity?.IsAuthenticated != true) return false;
         var role = User.FindFirstValue(ClaimTypes.Role) ?? User.FindFirstValue("role");
         return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private readonly record struct DraftBits(int? ModelId, string? ModelCode, int? Cols, int? Rows);
+
+    private static DraftBits ReadDraft(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return default;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            int? modelId = root.TryGetProperty("modelId", out var id) && id.TryGetInt32(out var n) && n > 0 ? n : null;
+            string? modelCode = root.TryGetProperty("modelCode", out var code) && code.ValueKind == JsonValueKind.String
+                ? code.GetString()
+                : null;
+            int? cols = root.TryGetProperty("cols", out var c) && c.TryGetInt32(out var cv) && cv > 0 ? cv : null;
+            int? rows = root.TryGetProperty("rows", out var r) && r.TryGetInt32(out var rv) && rv > 0 ? rv : null;
+            return new DraftBits(modelId, modelCode, cols, rows);
+        }
+        catch (JsonException)
+        {
+            return default;
+        }
     }
 
     private static bool HasCustomerPii(QuoteInputDto input) =>

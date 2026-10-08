@@ -25,6 +25,10 @@ public class InMemoryCabinRepository : ICabinRepository
     public Task<Cabin?> GetByIdAsync(int id) =>
         Task.FromResult(_cabins.TryGetValue(id, out var c) ? c : null);
 
+    public Task<Cabin?> GetByModelCodeAsync(string modelCode) =>
+        Task.FromResult(_cabins.Values.FirstOrDefault(c =>
+            string.Equals(c.ModelCode, modelCode, StringComparison.OrdinalIgnoreCase)));
+
     public Task<IEnumerable<Cabin>> GetBySeriesIdAsync(int seriesId) =>
         Task.FromResult<IEnumerable<Cabin>>(_cabins.Values.Where(c => c.SeriesId == seriesId).ToList());
 

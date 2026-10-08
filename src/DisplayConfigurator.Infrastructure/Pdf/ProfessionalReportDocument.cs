@@ -134,7 +134,9 @@ public class ProfessionalReportDocument : IDocument
             ? (double)_config.ScreenAreaM2
             : Math.Round(wM * hM, 2);
 
-        container.Border(1).BorderColor(Color.FromHex("#e2e8f0")).Background(Colors.White).Padding(10).Column(col =>
+        container.Column(outer =>
+        {
+        outer.Item().ShowEntire().Border(1).BorderColor(Color.FromHex("#e2e8f0")).Background(Colors.White).Padding(10).Column(col =>
         {
             col.Item().Text("Yapılandırma görseli").FontSize(12).Bold().FontColor(BrandBlue);
             col.Item().PaddingTop(8).Row(row =>
@@ -157,16 +159,56 @@ public class ProfessionalReportDocument : IDocument
                     });
             });
             col.Item().Element(DrawScreenTypeLegend);
+        });
 
             if (_extras.PreviewImage is { Length: > 0 })
             {
-                col.Item().PaddingTop(12).Text("Müşteri görseli").FontSize(11).Bold().FontColor(BrandBlue);
-                col.Item().PaddingTop(6).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
-                    .Background(Color.FromHex("#f8fafc")).Padding(6)
-                    .Image(_extras.PreviewImage)
-                    .FitWidth();
+                outer.Item().PaddingTop(12).ShowEntire().Column(img =>
+                {
+                    img.Item().Text("Müşteri görseli").FontSize(11).Bold().FontColor(BrandBlue);
+                    img.Item().PaddingTop(6).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
+                        .Background(Color.FromHex("#f8fafc")).Padding(6)
+                        .MaxHeight(280)
+                        .AlignCenter().AlignMiddle()
+                        .Image(_extras.PreviewImage)
+                        .FitArea();
+                });
             }
         });
+    }
+
+    /// <summary>
+    /// Müşteri raporunda tuval fotoğrafı, matris satırının hemen üstünde, çerçeve içinde.
+    /// Izgara şeması ve insan figürü bu raporda yok.
+    /// </summary>
+    private void ComposeClientVisual(IContainer container)
+    {
+        if (_extras.PreviewImage is not { Length: > 0 }) return;
+
+        int cols = Math.Max(1, _config.Cols);
+        int rows = Math.Max(1, _config.Rows);
+        double wM = _config.TotalWidthMm / 1000.0;
+        double hM = _config.TotalHeightMm / 1000.0;
+        double areaM2 = _config.ScreenAreaM2 > 0
+            ? (double)_config.ScreenAreaM2
+            : Math.Round(wM * hM, 2);
+
+        container.PaddingBottom(12).ShowEntire().Border(1.5f).BorderColor(BrandBlue)
+            .Background(Colors.White).Padding(10).Column(col =>
+            {
+                col.Item().Text("Yapılandırma görseli").FontSize(12).Bold().FontColor(BrandBlue);
+                col.Item().PaddingTop(8).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
+                    .Background(Color.FromHex("#f8fafc")).Padding(6)
+                    .MaxHeight(220)
+                    .AlignCenter().AlignMiddle()
+                    .Image(_extras.PreviewImage)
+                    .FitArea();
+                col.Item().PaddingTop(10).Text("Ekran matrisi").FontSize(8).Bold().FontColor(Colors.Grey.Darken1);
+                col.Item().PaddingTop(2).Text($"{cols} × {rows}").FontSize(14).Bold().FontColor(Ink);
+                col.Item().PaddingTop(2)
+                    .Text($"{wM:F2} × {hM:F2} m  ·  {areaM2:F2} m²")
+                    .FontSize(9).FontColor(Colors.Grey.Darken1);
+            });
     }
 
     private static void InfoLine(ColumnDescriptor card, string label, string value)
@@ -428,6 +470,9 @@ public class ProfessionalReportDocument : IDocument
 
         container.PaddingTop(12).Column(column =>
         {
+            if (!_isAdmin && _extras.PreviewImage is { Length: > 0 })
+                column.Item().Element(ComposeClientVisual);
+
             if (_isAdmin && _config.HasUnmetHardwareRequirements)
             {
                 column.Item().PaddingBottom(10).Border(1.5f).BorderColor(Color.FromHex("#b45309"))
@@ -480,9 +525,11 @@ public class ProfessionalReportDocument : IDocument
                 Summary(row, "İZLEME MESAFESİ", $"{viewDist:F1} m", "önerilen");
             });
 
-            // ---- 2. TEKNİK TABLO ----
-            column.Item().PaddingTop(12).Text("Teknik özellikler").FontSize(12).Bold().FontColor(BrandBlue);
-            column.Item().PaddingTop(5).Table(table =>
+            // Başlık ile tablo aynı blokta kalır; başlık sayfa sonunda yalnız kalmaz.
+            column.Item().PaddingTop(12).ShowEntire().Column(tech =>
+            {
+            tech.Item().Text("Teknik özellikler").FontSize(12).Bold().FontColor(BrandBlue);
+            tech.Item().PaddingTop(5).Table(table =>
             {
                 table.ColumnsDefinition(c =>
                 {
@@ -545,7 +592,7 @@ public class ProfessionalReportDocument : IDocument
                 }
             });
 
-            column.Item().PaddingTop(10).Column(c =>
+            tech.Item().PaddingTop(10).Column(c =>
             {
                 c.Item().Text("* Değerler teorik fabrika verilerine dayanır; sahada farklılık gösterebilir.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
                 if (_isAdmin)
@@ -553,6 +600,7 @@ public class ProfessionalReportDocument : IDocument
                     c.Item().Text("* RJ45 adedi, seçilen işlemcinin port başı piksel kapasitesi ile port en ve boy sınırından gelir.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
                     c.Item().Text("* Isı: 1 W = 3,412 BTU/saat. Toplam ısı ham wattan bir kez hesaplanır. Modül satırı bu toplama eklenmez.").FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
                 }
+            });
             });
 
             if (_isAdmin)
@@ -608,7 +656,7 @@ public class ProfessionalReportDocument : IDocument
             return;
         }
 
-        container.PaddingTop(12).Column(column =>
+        container.ShowEntire().PaddingTop(12).Column(column =>
         {
             column.Item().Text("LED enerji tüketimi").FontSize(12).Bold().FontColor(BrandBlue);
             column.Item().PaddingTop(5).Table(table =>
@@ -703,8 +751,10 @@ public class ProfessionalReportDocument : IDocument
     {
         container.PaddingTop(14).Column(column =>
         {
-            column.Item().Text("Donanım dökümü (iç)").FontSize(12).Bold().FontColor(BrandBlue);
-            column.Item().PaddingTop(5).Table(table =>
+            column.Item().ShowEntire().Column(block =>
+            {
+            block.Item().Text("Donanım dökümü (iç)").FontSize(12).Bold().FontColor(BrandBlue);
+            block.Item().PaddingTop(5).Table(table =>
             {
                 table.ColumnsDefinition(c =>
                 {
@@ -737,9 +787,12 @@ public class ProfessionalReportDocument : IDocument
                         .Text("Donanım kalemleri hesaplanamadı (katalog seçilmemiş olabilir).").FontSize(8).FontColor(Colors.Grey.Darken1);
                 }
             });
+            });
 
-            column.Item().PaddingTop(10).Text("İşçilik ve satış fiyatı").FontSize(12).Bold().FontColor(BrandBlue);
-            column.Item().PaddingTop(5).Table(table =>
+            column.Item().PaddingTop(10).ShowEntire().Column(block =>
+            {
+            block.Item().Text("İşçilik ve satış fiyatı").FontSize(12).Bold().FontColor(BrandBlue);
+            block.Item().PaddingTop(5).Table(table =>
             {
                 table.ColumnsDefinition(c =>
                 {
@@ -757,14 +810,17 @@ public class ProfessionalReportDocument : IDocument
                 AddRow(table, "Nihai satış fiyatı", $"${_config.TotalPrice:N2}", ref alt);
             });
 
-            column.Item().PaddingTop(8).AlignRight().Border(1).BorderColor(Color.FromHex("#e2e8f0")).Background(Color.FromHex("#f5f7fb")).Padding(8).Column(c =>
+            block.Item().PaddingTop(8).AlignRight().Border(1).BorderColor(Color.FromHex("#e2e8f0")).Background(Color.FromHex("#f5f7fb")).Padding(8).Column(c =>
             {
                 c.Item().Text("Nihai toplam satış fiyatı").FontSize(8).FontColor(Colors.Grey.Darken1);
                 c.Item().Text($"${_config.TotalPrice:N2}").FontSize(16).Bold().FontColor(BrandBlue);
             });
+            });
 
-            column.Item().PaddingTop(12).Text("Güç ve ısı (iç)").FontSize(12).Bold().FontColor(BrandBlue);
-            column.Item().PaddingTop(5).Table(table =>
+            column.Item().PaddingTop(12).ShowEntire().Column(block =>
+            {
+            block.Item().Text("Güç ve ısı (iç)").FontSize(12).Bold().FontColor(BrandBlue);
+            block.Item().PaddingTop(5).Table(table =>
             {
                 table.ColumnsDefinition(c =>
                 {
@@ -794,9 +850,10 @@ public class ProfessionalReportDocument : IDocument
                 AddRow(table, "Gerekli soğutma kapasitesi", $"{PowerHeatMath.CoolingTons(maxBtu).ToString("N2", Tr)} ton", ref alt);
                 AddRow(table, "Gerekli soğutma gücü", $"{PowerHeatMath.CoolingKw(maxBtu).ToString("N2", Tr)} kW", ref alt);
             });
-            column.Item().PaddingTop(4).Text(
+            block.Item().PaddingTop(4).Text(
                     "Akım = watt / (volt × 0,95). Sigorta = akım × 1,25, yukarı yönde en yakın C tipi. Tek faz 32 A’yı aşarsa 3 faz 380 V kullanılır. Klima tonu = maksimum BTU / 12.000. Soğutma kW = maksimum BTU / 3,412 / 1.000. Modül ısı satırı toplama eklenmez.")
                 .FontSize(7.5f).Italic().FontColor(Colors.Grey.Medium);
+            });
         });
     }
 
@@ -929,6 +986,12 @@ public class ProfessionalReportDocument : IDocument
     {
         container.Column(col =>
         {
+            if (_isAdmin && _extras.UsdTryRate is > 0)
+            {
+                col.Item().PaddingBottom(3).Text(
+                        $"*Hesaplamalarda kullanılan TCMB Dolar Kuru: 1 USD = {_extras.UsdTryRate.Value.ToString("0.00", CultureInfo.InvariantCulture)} TL")
+                    .FontSize(7.5f).Italic().FontColor(Colors.Grey.Darken1);
+            }
             col.Item().LineHorizontal(0.5f).LineColor(Color.FromHex("#e2e8f0"));
             col.Item().PaddingTop(4).Row(row =>
             {

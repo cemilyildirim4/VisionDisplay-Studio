@@ -5,6 +5,7 @@ import { BrandMark, BrandStripe, goToConfigurator } from './BrandChrome.jsx'
 import { API_URL, apiFetch } from './apiClient.js'
 import { duzenlemeyeGonder, taslakDolu } from './tasarimTaslagi.js'
 import { rowsToXlsxBlob } from './xlsx.js'
+import { turkiyeTarihSaat } from './turkiyeSaati.js'
 
 
 
@@ -22,9 +23,7 @@ function parseTabFromHash() {
 }
 
 function tarihMetni(iso) {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString()
+  return turkiyeTarihSaat(iso)
 }
 
 function olcuMetni(g, y) {
@@ -200,7 +199,7 @@ export default function ControlCenter() {
       [t('cc.quotes.f.customer'), q.customerName || ''],
       [t('cc.quotes.f.note'), q.adminNote || ''],
       [t('cc.quotes.status'), q.status || ''],
-      [t('cc.quotes.date'), q.createdAt ? new Date(q.createdAt).toLocaleDateString('tr-TR') : ''],
+      [t('cc.quotes.date'), turkiyeTarihSaat(q.createdAt)],
     ]
     const blob = rowsToXlsxBlob(satirlar, { sheetName: t('sp.title'), colWidths: [34, 42] })
     const url = URL.createObjectURL(blob)

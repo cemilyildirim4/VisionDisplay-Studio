@@ -12,19 +12,22 @@ public class ConfigurationService : IConfigurationService
     private readonly IHardwareCatalogRepository _hardwareCatalogRepository;
     private readonly ISystemSettingsRepository _systemSettingsRepository;
     private readonly IPdfReportService _pdfReportService;
+    private readonly IUsdTryRateSource? _usdTry;
 
     public ConfigurationService(
         IConfigurationRepository configurationRepository,
         ICabinRepository cabinRepository,
         IHardwareCatalogRepository hardwareCatalogRepository,
         ISystemSettingsRepository systemSettingsRepository,
-        IPdfReportService pdfReportService)
+        IPdfReportService pdfReportService,
+        IUsdTryRateSource? usdTry = null)
     {
         _configurationRepository = configurationRepository;
         _cabinRepository = cabinRepository;
         _hardwareCatalogRepository = hardwareCatalogRepository;
         _systemSettingsRepository = systemSettingsRepository;
         _pdfReportService = pdfReportService;
+        _usdTry = usdTry;
     }
 
     public async Task<PagedResultDto<ConfigurationResponseDto>> GetPagedAsync(PagedQueryDto query)
@@ -171,6 +174,7 @@ public class ConfigurationService : IConfigurationService
             ScreenMode = entity.ScreenMode,
             PreviewImage = await _configurationRepository.GetPreviewImageAsync(id),
         };
+        await ApplyAdminRateAsync(extras, kind);
         return _pdfReportService.Generate(configDto, extras, cabin, kind);
     }
 
@@ -189,7 +193,15 @@ public class ConfigurationService : IConfigurationService
         var configDto = CalculateConfigurationDto(dto, cabin, hardware, requireComplete: false, unmet);
         if (createdAt is { } kayit && kayit != default)
             configDto.CreatedAt = kayit;
+        extras ??= new PdfReportExtras();
+        await ApplyAdminRateAsync(extras, kind);
         return _pdfReportService.Generate(configDto, extras, cabin, kind);
+    }
+
+    private async Task ApplyAdminRateAsync(PdfReportExtras extras, PdfReportKind kind)
+    {
+        if (kind != PdfReportKind.Admin || _usdTry == null) return;
+        extras.UsdTryRate = await _usdTry.TryGetAsync();
     }
 
     private static CreateConfigurationDto ToCreateDto(Configuration entity) => new()

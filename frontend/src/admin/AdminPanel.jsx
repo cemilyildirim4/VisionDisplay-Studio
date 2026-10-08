@@ -10,6 +10,7 @@ import { useSession } from '../SessionContext.jsx'
 import HardwareCatalogSection from './HardwareCatalogSection.jsx'
 import LaborMultiplierSection from './LaborMultiplierSection.jsx'
 import { mmYazi } from '../birim.js'
+import { turkiyeTarihSaat } from '../turkiyeSaati.js'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
@@ -282,7 +283,7 @@ const money = (v) =>
   v === null || v === undefined
     ? '—'
     : `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
-const dt = (v) => (v ? new Date(v).toLocaleString('tr-TR') : '—')
+const dt = (v) => turkiyeTarihSaat(v)
 
 function Field({ label, hint, children }) {
   return (
@@ -2202,7 +2203,7 @@ export default function AdminPanel() {
                             (k.usedCount ?? 0) + " / " + k.maxUses
                           )}
                         </td>
-                        <td className="px-5 py-3">{k.expiresAt ? new Date(k.expiresAt).toLocaleDateString('tr-TR') : '—'}</td>
+                        <td className="px-5 py-3">{turkiyeTarihSaat(k.expiresAt, { withTime: false })}</td>
                         <td className="px-5 py-3 text-right whitespace-nowrap">
                           {inviteEditId === k.id ? (
                             <>

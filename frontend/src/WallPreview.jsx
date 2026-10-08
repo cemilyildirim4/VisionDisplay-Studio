@@ -17,6 +17,8 @@ import { koseDonusumu } from './homografi.js'
  */
 
 const HUMAN_HEIGHT_M = 1.8
+/** Ayakta duran silüetin en / boy oranı (viewBox 72 × 200). Kollar yanda; fotoğraftaki boşluk yok. */
+const HUMAN_FIG_W_RATIO = 72 / 200
 // Duvar YÜKSEKLİĞİ bundan azsa silüet gösterilmez. Eşik figürün kendi boyu:
 // duvar 1,80 m ise figür tam duvar kadardır, hâlâ doğru bir ölçek referansıdır.
 // (Eşik 2 m iken duvarı 1,80'e indirince silüet ortadan kayboluyordu.)
@@ -606,35 +608,8 @@ function HLine({ top, left, width }) {
   return <div style={{ position: 'absolute', top, left, width, borderTop: `1px dashed ${koyuTema() ? '#525a67' : '#cbd5e1'}` }} />
 }
 
-/*
- * public/human.png içinde figürün etrafında saydam boşluk var. Bu yüzden
- * görselin tamamını HUMAN_HEIGHT_M saymak figürü olduğundan kısa gösterir ve
- * ayakları duvarın altından yukarıda kalır.
- *
- * Aşağıdaki oranlar PNG'nin alfa kanalı çözülerek ÖLÇÜLDÜ:
- *   görsel 1024 × 1536 · figür x 232..749 · y 138..1352
- * Silüet görselini değiştirirseniz bu beş sayı yeniden ölçülmeli.
- */
-const HUMAN_FIG_RATIO = 1215 / 1536 // figür yüksekliği / görsel yüksekliği
-const HUMAN_BOTTOM_PAD = 183 / 1536 // ayakların altındaki saydam boşluk oranı
-const HUMAN_IMG_AR = 1024 / 1536 // görselin en/boy oranı
-const HUMAN_LEFT_PAD = 232 / 1024 // figürün solundaki saydam boşluk oranı
-// Figürün genişlik/yükseklik oranı. Kutunun en/boyunu buradan kuruyoruz ki
-// görsel hiçbir yerde ezilmesin. (Uzatılmış kol da bu genişliğe dâhil.)
-const HUMAN_FIG_W_RATIO = 518 / 1215
-
 function HumanSilhouette({ height, showMeasure = true }) {
-  // height = figürün olması gereken yükseklik (HUMAN_HEIGHT_M). Görseli, FİGÜR o boyda
-  // olacak şekilde büyüt; saydam payları negatif margin ile dışarı taşır →
-  // ayak hizası duvarın alt kenarına oturur ve kutu yatayda gereksiz yer kaplamaz.
-  const imgH = height / HUMAN_FIG_RATIO
-  const imgW = imgH * HUMAN_IMG_AR
   return (
-    /*
-     * Kutu tam FİGÜR kadar (ölçü çizgisi baş ve ayak hizasına otursun).
-     * Görsel MUTLAK konumlu: flex çocuğu olsaydı esneyip yatayda ezilirdi.
-     * flexShrink:0 da bu kutunun dış flex akışında daralmasını engeller.
-     */
     <div
       style={{
         position: 'relative',
@@ -643,19 +618,36 @@ function HumanSilhouette({ height, showMeasure = true }) {
         flexShrink: 0,
       }}
     >
-      <img
-        src="/human.png"
-        alt=""
-        style={{
-          position: 'absolute',
-          height: imgH,
-          width: imgW,
-          maxWidth: 'none',
-          left: -(imgW * HUMAN_LEFT_PAD),
-          bottom: -(imgH * HUMAN_BOTTOM_PAD),
-          display: 'block',
-        }}
-      />
+      <svg
+        viewBox="0 0 72 200"
+        width="100%"
+        height="100%"
+        aria-hidden="true"
+        style={{ display: 'block' }}
+      >
+        <circle cx="36" cy="16" r="13" fill="#64748b" />
+        <path
+          fill="#64748b"
+          d="M36 31
+             C24 33 14 42 12 56
+             L8 102
+             C8 108 14 110 17 105
+             L22 78
+             L26 118
+             C24 148 20 176 18 196
+             L30 196
+             L33 132
+             L39 132
+             L42 196
+             L54 196
+             C52 176 48 148 46 118
+             L50 78
+             L55 105
+             C58 110 64 108 64 102
+             L60 56
+             C58 42 48 33 36 31 Z"
+        />
+      </svg>
 
       {/* Boy ölçüsü — ölçeğin doğruluğu gözle doğrulanabilsin diye */}
       {showMeasure && (

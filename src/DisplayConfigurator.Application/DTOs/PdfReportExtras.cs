@@ -25,4 +25,7 @@ public class PdfReportExtras
     /// boşsa o sayfalar hiç basılmaz.
     /// </summary>
     public List<byte[]> ArImages { get; set; } = new();
+
+    /// <summary>TCMB forex satış. Yalnızca admin PDF dipnotunda basılır.</summary>
+    public decimal? UsdTryRate { get; set; }
 }
