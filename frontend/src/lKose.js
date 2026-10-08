@@ -357,7 +357,7 @@ export { icerikSirasi }
  * @param {number} boyM  ekranın gerçek yüksekliği (m)
  * @param {number} mesafeM  kameranın köşeden uzaklığı (m)
  */
-export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, kose = 'sol', kacis = null }) {
+export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, aci = 0, ufukY = null }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
   const dx = alt.x - ust.x
@@ -370,9 +370,7 @@ export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, kose = 'sol',
    * 90 derecelik bir köşe fotoğrafta dikey bir kenardır; kamera yan yatmadıkça
    * yataya yakın olamaz. Yatay bir dikiş verilirse kanatlar o çizginin iki
    * yanına değil ÜSTÜNE katlanıyor: ikisi de ince birer şeride dönüp üst üste
-   * biniyor. Böyle bir girdide hiç çizmemek doğru — çağıran taraf varsayılan
-   * köşeye düşüyor. Sınır geniş (dikeyden 60 dereceye kadar): eğik çekilmiş
-   * fotoğraflar çalışsın, yalnızca anlamsız girdi elensin.
+   * biniyor. Sınır geniş (dikeyden 60 dereceye kadar).
    */
   if (Math.abs(dy) < dikisPx * 0.5) return null
 
@@ -381,19 +379,6 @@ export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, kose = 'sol',
   /* Kamera uzaklığı metre; çok küçük değer perspektifi patlatıyor. */
   const f = Math.max(0.6, Number(mesafeM) || 3)
 
-  /*
-   * KURULUM DİKİŞE GÖRE SİMETRİK.
-   *
-   * Önce kanatlar kadrajın kaçış noktasına göre ölçekleniyordu; o zaman aynı
-   * genişlikteki iki kanat ekranda farklı çıkıyordu — dikiş kadrajın
-   * ortasından ne kadar uzaksa fark o kadar büyüyordu. Oysa kullanıcının
-   * işaretlediği çizgi ekranın ORTA ÇİZGİSİ: iki yanı eşit olmalı.
-   *
-   * Bu yüzden her şey dikişin kendi eksenine göre kuruluyor: dikiş yönü (u)
-   * ve ona dik yön (n). Eşit genişlikteki iki kanat birbirinin tam aynası
-   * oluyor. Köşenin kadrajdaki yerine göre değişmesi gereken şey ayrı bir
-   * iş (bakış açısı) ve buraya karışmıyor.
-   */
   const ux = dx / dikisPx
   const uy = dy / dikisPx
   /* Dikiş yukarıdan aşağıya bakarken bu yön SOL tarafı gösteriyor. */
@@ -402,88 +387,56 @@ export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, kose = 'sol',
   const cx = (ust.x + alt.x) / 2
   const cy = (ust.y + alt.y) / 2
   const yari = dikisPx / 2
-  const KOK2 = Math.SQRT2
+  const CEYREK = Math.PI / 4
 
   /*
-   * BİR KANAT DUVARDA DÜZ DURUYOR, ÖTEKİ KÖŞEYİ DÖNÜYOR.
+   * KÖŞE BİR BÜTÜN OLARAK DÖNÜYOR.
    *
-   * Önce iki kanat da 45 derecede çiziliyordu; köşe serbest duran bir prizma
-   * gibi görünüyor, ekran duvara oturmuş gibi durmuyordu. Çizilmiş mekânlarda
-   * (iç/dış mekân, AVM) böyle değil: ÖN kanat arka duvarda düz duruyor,
-   * yalnızca YAN kanat köşeden dönüp izleyiciye doğru açılıyor. Burada da
-   * öyle olmalı.
+   * Önce bir kanat duvarda DÜZ, öteki köşeyi dönen diye ikiye ayrılıyordu ve
+   * hangisinin hangisi olduğu dikişin kadrajdaki yerine bakılarak seçiliyordu.
+   * Tasarım taşınıp ortayı geçtiğinde bu seçim anında yer değiştiriyor,
+   * kanatlar birbirinin yerine geçiyordu — ölçüldü: sol kanat 3,4 pikselden
+   * 220,5'e fırlıyor, sağ 220,5'ten 1,7'ye düşüyordu. Kullanıcının gördüğü
+   * sıçrama buydu.
    *
-   * Düz kanat: derinliği yok, yani kısalmıyor — genişliği neyse ekranda o
-   * kadar yer kaplıyor ve yüksekliği dikişle aynı kalıyor. Dönen kanat:
-   * 90 derecelik köşenin öteki yüzü, yani 45 derece; w genişliğindeki kanat
-   * yanda w/√2 kadar yer kaplıyor ve ucu izleyiciye w/√2 kadar yaklaşıyor,
-   * yaklaşmanın büyütmesi f/(f−d).
-   *
-   * 'orta' bunun dışında: orada köşe duvarın değil, ekranın kendi köşesi ve
-   * karşıdan bakılıyor — iki kanat da 45 derece.
+   * Oysa 90 derecelik bir köşeye hangi yönden bakıldığı sürekli bir şey: iki
+   * yüz her zaman birbirine dik, bakış açısı değiştikçe biri yassılırken
+   * öteki açılıyor. Açılar 45 ± aci; 'aci' sıfırken köşeye tam karşıdan
+   * bakılıyor (iki kanat eşit), +45 derecede sağ kanat duvarda düz ve sol
+   * kanat kenarından, −45 derecede tersi. Yer değiştirme diye bir şey yok,
+   * tek bir sayı sürekli değişiyor.
    */
-  const kanat = (wM, yon, duzMu) => {
-    const d = duzMu ? 0 : Math.min(wM / KOK2, f * 0.85)
+  const a = Math.max(-CEYREK, Math.min(CEYREK, Number(aci) || 0))
+  const aciSol = CEYREK - a
+  const aciSag = CEYREK + a
+
+  /*
+   * Bir kanadın uzak kenarı. Kanat düzlemle alfa açısı yapıyorsa yanda
+   * w·cos(alfa) kadar yer kaplıyor ve ucu izleyiciye w·sin(alfa) kadar
+   * yaklaşıyor; yaklaşmanın büyütmesi f/(f−d).
+   *
+   * Dikey büyüme GÖZ HİZASINA göre: ekranın göz hizasının üstünde kalan kısmı
+   * yukarı, altında kalan kısmı aşağı açılır. Göz hizası verilmezse dikişin
+   * kendi ortası kullanılıyor.
+   */
+  const yatay = ufukY == null ? cy : ufukY
+  const kanat = (wM, alfa, yon) => {
+    const d = Math.min(wM * Math.sin(alfa), f * 0.85)
     const s = f / (f - d)
-    const yanal = (duzMu ? wM : wM / KOK2) * m * s
-    const h = yari * s
-
-    /*
-     * DÖNEN KANAT FOTOĞRAFIN KENDİ PERSPEKTİFİNİ İZLİYOR.
-     *
-     * İzleyiciye doğru gelen bir duvarın üst ve alt kenarları fotoğrafta
-     * KAÇIŞ NOKTASINDA buluşur — odanın yan duvarında bunu gözle görüyoruz.
-     * Kanat dikişin kendi ekseninde açıldığında bu olmuyordu: kenarlar
-     * simetrik olarak açılıyor, tasarımın perspektifi fotoğrafınkine
-     * uymuyordu (kullanıcının gördüğü buydu).
-     *
-     * Kaçış noktası fotoğraftan ölçülüyor (bkz. aciBul.js). Yaklaşan bir
-     * nokta o noktadan UZAKLAŞARAK büyüyor: dikişin iki ucunu aynı oranda
-     * uzaklaştırmak, kanadın kenarlarını kaçış noktasına nişanlıyor — tıpkı
-     * odanın kendi duvarı gibi.
-     *
-     * Ölçüm yoksa, güvenilmezse ya da kanadı yanlış tarafa açıyorsa dikişin
-     * kendi eksenine göre kurulan yedek kullanılıyor.
-     */
-    if (!duzMu && kacis) {
-      const ku = { x: kacis.x + (ust.x - kacis.x) * s, y: kacis.y + (ust.y - kacis.y) * s }
-      const ka = { x: kacis.x + (alt.x - kacis.x) * s, y: kacis.y + (alt.y - kacis.y) * s }
-      /*
-       * Kanadın dışa açılma payı: beklenen yönde ve görünür genişlikte mi?
-       *
-       * Eşik KÜÇÜK olmak zorunda. Perspektifin verdiği genişlik, dikişin
-       * kaçış noktasına uzaklığıyla orantılı ve çoğu zaman yedek modelin
-       * verdiğinden çok daha dar çıkıyor (ölçüldü: 41,8 piksele karşı 143,4).
-       * Doğru olan dar olanı; önceki eşik (yedeğin %35'i) tam da doğru cevabı
-       * eliyordu ve tasarım fotoğraftan daha az perspektifli duruyordu.
-       *
-       * Eşik yalnızca gözle görülmeyecek kadar ince kanadı eliyor: dikiş
-       * kaçış noktasının üstündeyse yan duvar gerçekten görünmez olur, orada
-       * yedek model daha okunur bir sonuç veriyor.
-       */
-      const ofx = (ku.x + ka.x) / 2 - cx
-      const ofy = (ku.y + ka.y) / 2 - cy
-      const pay = (ofx * nx + ofy * ny) * yon
-      if (pay > Math.max(3, yanal * 0.06)) return [ku, ka]
-    }
-
+    const yanal = wM * Math.cos(alfa) * m * s
     const px = cx + nx * yanal * yon
     const py = cy + ny * yanal * yon
+    /* Üst ve alt uç göz hizasından uzaklaşarak büyüyor. */
+    const u = { x: px - ux * yari, y: py - uy * yari }
+    const l = { x: px + ux * yari, y: py + uy * yari }
     return [
-      { x: px - ux * h, y: py - uy * h },
-      { x: px + ux * h, y: py + uy * h },
+      { x: u.x, y: yatay + (u.y - yatay) * s },
+      { x: l.x, y: yatay + (l.y - yatay) * s },
     ]
   }
 
-  /*
-   * Hangi kanat dönüyor: sol köşede yan kanat solda, sağ köşede sağda.
-   * Ortada ikisi de dönüyor.
-   */
-  const ortaMi = kose === 'orta'
-  const solDonuyor = ortaMi || kose !== 'sag'
-  const sagDonuyor = ortaMi || kose === 'sag'
-  const [solUst, solAlt] = kanat(solM, 1, !solDonuyor)
-  const [sagUst, sagAlt] = kanat(sagM, -1, !sagDonuyor)
+  const [solUst, solAlt] = kanat(solM, aciSol, 1)
+  const [sagUst, sagAlt] = kanat(sagM, aciSag, -1)
   return {
     /* Sol kanat: uzak ucundan dikişe (soldan sağa). */
     sol: [solUst, ust, alt, solAlt],
@@ -491,6 +444,8 @@ export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, kose = 'sol',
     sag: [ust, sagUst, sagAlt, alt],
     /* Dikiş hizasındaki ölçek — kanatların piksel ölçüsü buradan. */
     pxPerM: m,
+    /* Hangi kanat daha çok dönüyor — gölge onu izliyor. */
+    donenSol: aciSol >= aciSag,
   }
 }
 

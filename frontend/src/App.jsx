@@ -4660,6 +4660,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       olcum?.kacis && olcum.guven >= 0.35
         ? oranTuvale(olcum.kacis)
         : { x: oranTuvale({ x: 0.5, y: 0.5 }).x, y: lUfukY ?? oranTuvale({ x: 0.5, y: 0.5 }).y }
+    /*
+     * KÖŞENİN AÇISI — dikişin kadrajdaki yerinden, sürekli.
+     *
+     * Köşeye hangi yönden bakıldığını dikişin kaçış noktasına olan yatay
+     * uzaklığı söylüyor: tam üstündeyse karşıdan bakılıyor (açı 0, iki kanat
+     * eşit), kenara gittikçe bir kanat duvara yatıp öteki kenarından
+     * görünüyor. Kadrajın kenarında açı ±45 derece, yani bir kanat tam düz.
+     *
+     * Elle seçim varsa sabit: 'sol' sol kanadı kenara alıyor, 'sag' sağı,
+     * 'orta' köşeyi tam karşıya.
+     */
+    const dikisX = (ust.x + alt.x) / 2
+    const yariKadraj = Math.max(1, (fotoYer?.genislik || tuvalBoyut.w) / 2)
+    const aci =
+      lKose === 'orta'
+        ? 0
+        : lKoseSecim === 'sol'
+          ? -Math.PI / 4
+          : lKoseSecim === 'sag'
+            ? Math.PI / 4
+            : kacis
+              ? Math.max(-1, Math.min(1, (dikisX - kacis.x) / yariKadraj)) * (Math.PI / 4)
+              : 0
     const k = icBukeyKose({
       ust,
       alt,
@@ -4667,8 +4690,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       sagM,
       boyM,
       mesafeM: izlemeMesafesi,
-      kose: lKose,
-      kacis,
+      aci,
+      ufukY: kacis?.y ?? null,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
@@ -4676,7 +4699,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const hPx = boyM * k.pxPerM
     const solKanat = { koseler: k.sol, wPx: solPx, hPx, kaydir: 0 }
     const sagKanat = { koseler: k.sag, wPx: sagPx, hPx, kaydir: solPx }
-    const yanSolda = lKose !== 'sag'
+    /*
+     * Koyu çizilen kanat daha çok DÖNEN olanı: köşeyi dönen yüz ışığı daha az
+     * alır. Açı sürekli değiştiği için bu da kendiliğinden yer değiştiriyor,
+     * tam karşıdan bakıldığında (iki kanat eşitken) sınırda kalıyor.
+     */
+    const yanSolda = k.donenSol
     return {
       on: yanSolda ? sagKanat : solKanat,
       yan: yanSolda ? solKanat : sagKanat,
