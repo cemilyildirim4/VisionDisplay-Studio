@@ -509,7 +509,7 @@ public class ProfessionalReportDocument : IDocument
                     AddRow(table, "Ortalama ısı", BtuText(avgWatts), ref alt);
                 }
 
-                if (_cabin != null)
+                if (_isAdmin && _cabin != null)
                 {
                     if (!string.IsNullOrWhiteSpace(_cabin.SboxCode))
                         AddRow(table, "S-Kutu", _cabin.SboxCode, ref alt);
@@ -532,15 +532,13 @@ public class ProfessionalReportDocument : IDocument
                 }
             });
 
-            column.Item().Element(c => ComposeEnergy(c, areaM2, total));
-
             if (_isAdmin)
             {
+                column.Item().Element(c => ComposeEnergy(c, areaM2, total));
                 column.Item().Element(c => ComposeAdminHardware(c, areaM2, maxWatts, avgWatts));
             }
             else
             {
-                column.Item().Element(ComposeClientPackage);
                 column.Item().Element(ComposeClientTotalPrice);
             }
         });

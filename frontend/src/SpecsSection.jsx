@@ -21,6 +21,7 @@
 import { useEffect } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
+import { useSession } from './SessionContext.jsx'
 import { DASH, fmt, computeSpecs } from './specsData.js'
 
 /* ------------------------------------------------------------- yapı taşları */
@@ -122,6 +123,7 @@ function Izgara({ children }) {
 /** Pop-up içeriği (Teknik Özellikler + Bileşenler tek ızgarada). */
 function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null }) {
   const { t } = useLang()
+  const { isAdmin } = useSession()
   const has = !!model
   const total = cols * rows
   const s = computeSpecs(model, cols, rows)
@@ -167,10 +169,12 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           <Veri label={t('sp.weight')} value={has ? `${fmt(s.weight, 1)} kg` : DASH} />
         </Kart>
 
+        {isAdmin && (
         <Kart baslik={t('sp.power')}>
             <Veri buyuk label={t('sp.max')} value={has ? `${fmt(s.pMax, 2)} (W/h)` : DASH} />
             <Veri buyuk label={t('sp.typical')} value={has ? `${fmt(s.pTyp, 2)} (W/h)` : DASH} />
         </Kart>
+        )}
       </Izgara>
     )
   }
@@ -178,7 +182,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
   // Teknik özellikler ve bileşenler TEK ızgarada.
   return (
     <>
-      {has && matchError && (
+      {has && isAdmin && matchError && (
         <div className="mb-4 rounded-xl border border-amber-300/60 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10">
           <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-amber-700 dark:text-amber-400">
             {t('sp.hwMatchError')}
@@ -206,7 +210,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           </Kart>
         )}
 
-        {has && (
+        {has && isAdmin && (
           <Kart baslik={t('sp.power')} genis>
             <Veri buyuk label={t('sp.max')} value={`${fmt(s.pMax, 2)} ${t('sp.watt')}`} />
             <Veri buyuk label={t('sp.typical')} value={`${fmt(s.pTyp, 2)} ${t('sp.watt')}`} />
@@ -217,7 +221,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           </Kart>
         )}
 
-        {has && (
+        {has && isAdmin && (
           <Kart baslik={t('sp.heat')}>
             <Veri buyuk label={t('sp.max')} value={`${fmt(s.btuMax)} BTU`} />
             <Veri buyuk label={t('sp.typical')} value={`${fmt(s.btuTyp)} BTU`} />
@@ -232,7 +236,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           </Kart>
         )}
 
-        {has && breakdown.length > 0 && (
+        {has && isAdmin && breakdown.length > 0 && (
           <Kart baslik={t('sp.matchedHardware')} genis>
             {breakdown.filter((x) => x.quantity > 0).map((x) => (
               <Veri key={x.key} label={x.name} value={`${fmt(x.quantity)} ${t('sp.unit')}`} />
@@ -240,7 +244,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           </Kart>
         )}
 
-        {has && (
+        {has && isAdmin && (
           <Kart baslik={t('sp.package')} genis vurgulu>
             <Veri label={t('sp.pkg.module')} value={`${fmt(total)} ${t('sp.unit')}`} />
             <Veri label={t('sp.pkg.processor')} value={lineQty('processor', 1)} />
@@ -262,28 +266,28 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           {has && <Veri label={`${t('sp.totalCabinets')} (${model.modelCode})`} value={`${fmt(total)} ${t('sp.units')}`} />}
         </Kart>
 
-        {has && (
+        {has && isAdmin && (
           <Kart baslik={t('sp.sbox')}>
             <Veri label={t('sp.model')} value={model.sboxCode || DASH} />
             <Veri label={t('sp.spare')} value={`${sboxRedundancy === 'yes' ? 1 : 0} ${t('sp.unit')}`} />
           </Kart>
         )}
 
-        {has && (
+        {has && isAdmin && (
           <Kart baslik={t('sp.jig')}>
             <Veri label={t('sp.model')} value={model.jigCode || DASH} />
           </Kart>
         )}
 
-        {has && (
+        {has && isAdmin && (
           <Kart baslik={t('sp.powerCord')}>
             <Veri label="110V" value={model.powerCord110Code || DASH} />
             <Veri label="220V" value={model.powerCord220Code || DASH} />
           </Kart>
         )}
 
-        {has && <KitKarti genis baslik={t('sp.frameKit')} eylem={t('sp.viewQuantity')} />}
-        {has && <KitKarti genis baslik={t('sp.decoKit')} eylem={t('sp.viewQuantity')} />}
+        {has && isAdmin && <KitKarti genis baslik={t('sp.frameKit')} eylem={t('sp.viewQuantity')} />}
+        {has && isAdmin && <KitKarti genis baslik={t('sp.decoKit')} eylem={t('sp.viewQuantity')} />}
       </Izgara>
     </>
   )

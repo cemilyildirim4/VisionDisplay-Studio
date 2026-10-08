@@ -42,6 +42,45 @@ function teklifteMiniPc(q) {
   }
 }
 
+/** Teklif kaydını konfigüratörün okuduğu taslağa çevirir. */
+function teklifTaslagi(q) {
+  if (q?.configJson) {
+    try {
+      const parsed = JSON.parse(q.configJson)
+      if (taslakDolu(parsed)) return parsed
+    } catch {
+      /* eski kayıtlarda JSON bozuk olabilir; alanlardan kurulur */
+    }
+  }
+  return {
+    surum: 1,
+    modelCode: q?.modelCode ?? null,
+    modelId: q?.cabinId ?? q?.modelId ?? null,
+    width: Number(q?.wallWidthM) || 0,
+    height: Number(q?.wallHeightM) || 0,
+    cols: Number(q?.columns ?? q?.cols) || 1,
+    rows: Number(q?.rows) || 1,
+    screenMode: q?.screenMode || 'single',
+    screenType: q?.screenType || 'flat',
+    orientation: q?.orientation || 'landscape',
+    curveAmount: q?.curveAmount ?? 60,
+    resolution: q?.resolution || 'FHD',
+    sboxRedundancy: q?.sboxRedundancy || 'no',
+    hasMiniPc: teklifteMiniPc(q || {}),
+    scene: q?.scene || 'none',
+    screens: Array.isArray(q?.screens) ? q.screens : [],
+    content: 'led',
+    icerikDustu: false,
+  }
+}
+
+function teklifiDuzenle(q) {
+  const taslak = teklifTaslagi(q)
+  if (!taslakDolu(taslak)) return
+  duzenlemeyeGonder(taslak)
+  goToConfigurator()
+}
+
 function TabButton({ active, onClick, children }) {
   return (
     <button

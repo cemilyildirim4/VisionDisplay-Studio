@@ -227,9 +227,13 @@ export default function ExportModal({ open, onClose, summary }) {
       [t('sp.area'), `${fmt(toplamAlan, 2)} m2`],
       [t('sp.weight'), `${fmt(agirlik, 1)} kg`],
       [t('sp.viewingDistance'), izleme ? `${fmt(izleme, 1)} m` : ''],
-      [`${t('sp.power')} (${t('sp.max')})`, `${fmt(gucMax)} W`],
-      [`${t('sp.power')} (${t('sp.typical')})`, `${fmt(gucTip)} W`],
-      [`${t('sp.heat')} (${t('sp.max')})`, `${fmt(isi)} BTU/h`],
+      ...(isAdmin
+        ? [
+            [`${t('sp.power')} (${t('sp.max')})`, `${fmt(gucMax)} W`],
+            [`${t('sp.power')} (${t('sp.typical')})`, `${fmt(gucTip)} W`],
+            [`${t('sp.heat')} (${t('sp.max')})`, `${fmt(isi)} BTU/h`],
+          ]
+        : []),
       [t('exp.docNo'), belgeNo],
       [t('exp.date'), tarih],
     ]
