@@ -4495,7 +4495,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const solM = lEkran.solCols * cwM
     const sagM = lEkran.sagCols * cwM
     const boyM = lEkran.rows * chM
-    const k = icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM: izlemeMesafesi })
+    const k = icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM: izlemeMesafesi, kose: lKose })
     if (!k) return null
     const solPx = solM * k.pxPerM
     const sagPx = sagM * k.pxPerM

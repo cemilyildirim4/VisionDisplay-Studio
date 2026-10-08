@@ -357,7 +357,7 @@ export { icerikSirasi }
  * @param {number} boyM  ekranın gerçek yüksekliği (m)
  * @param {number} mesafeM  kameranın köşeden uzaklığı (m)
  */
-export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM }) {
+export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, kose = 'sol' }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
   const dx = alt.x - ust.x
@@ -405,14 +405,27 @@ export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM }) {
   const KOK2 = Math.SQRT2
 
   /*
-   * Bir kanadın uzak kenarı. 90 derecelik köşenin her yüzü 45 derece durduğu
-   * için w genişliğindeki kanat yanda w/√2 kadar yer kaplıyor ve ucu
-   * izleyiciye w/√2 kadar yaklaşıyor; yaklaşmanın büyütmesi f/(f−d).
+   * BİR KANAT DUVARDA DÜZ DURUYOR, ÖTEKİ KÖŞEYİ DÖNÜYOR.
+   *
+   * Önce iki kanat da 45 derecede çiziliyordu; köşe serbest duran bir prizma
+   * gibi görünüyor, ekran duvara oturmuş gibi durmuyordu. Çizilmiş mekânlarda
+   * (iç/dış mekân, AVM) böyle değil: ÖN kanat arka duvarda düz duruyor,
+   * yalnızca YAN kanat köşeden dönüp izleyiciye doğru açılıyor. Burada da
+   * öyle olmalı.
+   *
+   * Düz kanat: derinliği yok, yani kısalmıyor — genişliği neyse ekranda o
+   * kadar yer kaplıyor ve yüksekliği dikişle aynı kalıyor. Dönen kanat:
+   * 90 derecelik köşenin öteki yüzü, yani 45 derece; w genişliğindeki kanat
+   * yanda w/√2 kadar yer kaplıyor ve ucu izleyiciye w/√2 kadar yaklaşıyor,
+   * yaklaşmanın büyütmesi f/(f−d).
+   *
+   * 'orta' bunun dışında: orada köşe duvarın değil, ekranın kendi köşesi ve
+   * karşıdan bakılıyor — iki kanat da 45 derece.
    */
-  const kanat = (wM, yon) => {
-    const d = Math.min(wM / KOK2, f * 0.85)
+  const kanat = (wM, yon, duzMu) => {
+    const d = duzMu ? 0 : Math.min(wM / KOK2, f * 0.85)
     const s = f / (f - d)
-    const yanal = (wM / KOK2) * m * s
+    const yanal = (duzMu ? wM : wM / KOK2) * m * s
     const px = cx + nx * yanal * yon
     const py = cy + ny * yanal * yon
     const h = yari * s
@@ -422,8 +435,15 @@ export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM }) {
     ]
   }
 
-  const [solUst, solAlt] = kanat(solM, 1)
-  const [sagUst, sagAlt] = kanat(sagM, -1)
+  /*
+   * Hangi kanat dönüyor: sol köşede yan kanat solda, sağ köşede sağda.
+   * Ortada ikisi de dönüyor.
+   */
+  const ortaMi = kose === 'orta'
+  const solDonuyor = ortaMi || kose !== 'sag'
+  const sagDonuyor = ortaMi || kose === 'sag'
+  const [solUst, solAlt] = kanat(solM, 1, !solDonuyor)
+  const [sagUst, sagAlt] = kanat(sagM, -1, !sagDonuyor)
   return {
     /* Sol kanat: uzak ucundan dikişe (soldan sağa). */
     sol: [solUst, ust, alt, solAlt],
