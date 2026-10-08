@@ -36,7 +36,7 @@ import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
-import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icerikSirasi } from './lKose.js'
+import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -4456,6 +4456,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
+   * DİKİŞTEN İKİ KANAT — iç bükey köşe, iki yolun ortak kurucusu.
+   *
+   * Hem işaretlenen köşe çizgisi hem de ölçü öncesi varsayılan köşe aynı
+   * şeyi istiyor: elimizdeki dikiş parçasından iki kanat çıkarmak. Tek fark
+   * dikişin nereden geldiği.
+   *
+   * İçerik tek bir şerit gibi düşünülüyor: önce sol kanadın dilimi, sonra
+   * sağınki. Koyu çizilen kanat köşe seçimine göre değişiyor — sol köşede
+   * yan kanat solda, sağ köşede sağda.
+   */
+  const lKanatlariKur = (ust, alt) => {
+    if (!lEkran) return null
+    const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
+    const sagK = Math.max(1, lEkran.cols - solK)
+    const solM = solK * cwM
+    const sagM = sagK * cwM
+    const boyM = lEkran.rows * chM
+    const k = icBukeyKose({
+      ust,
+      alt,
+      solM,
+      sagM,
+      boyM,
+      mesafeM: izlemeMesafesi,
+      tuvalW: tuvalBoyut.w,
+      tuvalH: tuvalBoyut.h,
+    })
+    if (!k) return null
+    const solPx = solM * k.pxPerM
+    const sagPx = sagM * k.pxPerM
+    const hPx = boyM * k.pxPerM
+    const solKanat = { koseler: k.sol, wPx: solPx, hPx, kaydir: 0 }
+    const sagKanat = { koseler: k.sag, wPx: sagPx, hPx, kaydir: solPx }
+    const yanSolda = lKose !== 'sag'
+    return {
+      on: yanSolda ? sagKanat : solKanat,
+      yan: yanSolda ? solKanat : sagKanat,
+      toplamWpx: solPx + sagPx,
+    }
+  }
+
+  /*
    * FOTOĞRAFLI MEKÂNDA L KÖŞESİ.
    *
    * Çizilmiş iç mekânda köşe hazırdı. Kullanıcının kendi fotoğrafında ise
@@ -4475,46 +4517,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const lKoseFotoGeo = (() => {
     if (!lEkran) return null
     if (!duvarDunya || !(duvarDunyaOlcu?.wm > 0) || !refPxCm) return null
-    const kaynak = ozelSahne?.kaynak
-    if (!(kaynak?.w > 0) || !(cizimOlcek > 0)) return null
+    if (!(cizimOlcek > 0) || !(tuvalBoyut.w > 0)) return null
     const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
     const sagK = Math.max(1, lEkran.cols - solK)
-    /* Fotoğrafta da mekânın köşesi yok: 'orta' sol gibi katlanıyor. */
-    const yon = lKose === 'sag' ? 'sag' : 'sol'
-    const onCols = yon === 'sol' ? sagK : solK
-    const yanCols = yon === 'sol' ? solK : sagK
-    const onM = onCols * cwM
-    const yanM = yanCols * cwM
+    const solM = solK * cwM
+    const sagM = sagK * cwM
+    const tamM = solM + sagM
     const boyM = lEkran.rows * chM
-    if (!(onM > 0) || !(yanM > 0) || !(boyM > 0)) return null
-    /* Ön kanadın duvardaki yeri: tasarım nerede duruyorsa orada. */
+    if (!(tamM > 0) || !(boyM > 0)) return null
+    /* Ekranın duvardaki yeri: kullanıcı taşıdıysa oradan, yoksa ortalanmış. */
     const yer = ekranDunyaRef.current || {
-      x: (duvarDunyaOlcu.wm - onM) / 2,
+      x: (duvarDunyaOlcu.wm - tamM) / 2,
       y: (duvarDunyaOlcu.hm - boyM) / 2,
     }
-    const onTuval = dunyaDortgeni(duvarDunya, yer.x, yer.y, onM, boyM)
-    if (!onTuval) return null
-    const yanNorm = lKoseYanKanat({
-      on: onTuval.map(tuvalOrana),
-      enCm: onM * 100,
-      boyCm: boyM * 100,
-      yanCm: yanM * 100,
-      pxCm: refPxCm,
-      gorselW: kaynak.w,
-      gorselH: kaynak.h,
-      mesafeCm: (izlemeMesafesi || 0) * 100,
-      kose: yon,
-      arac: { durusaOturt, kutuGovdesi, duvarDunyasi },
-    })
-    if (!yanNorm) return null
-    const onPx = onM * cizimOlcek
-    const yanPx = yanM * cizimOlcek
-    const hPx = boyM * cizimOlcek
-    return {
-      on: { koseler: onTuval, wPx: onPx, hPx, kaydir: yon === 'sol' ? yanPx : 0 },
-      yan: { koseler: yanNorm.map(oranTuvale), wPx: yanPx, hPx, kaydir: yon === 'sol' ? 0 : onPx },
-      toplamWpx: onPx + yanPx,
-    }
+    /*
+     * DUVAR YALNIZCA DİKİŞİN YERİNİ VERİYOR.
+     *
+     * Ölçülmüş düzlem ekranın duvarda nerede durduğunu ve o noktadaki
+     * perspektifi biliyor; kırımın kendisi ise bir KÖŞE davranışı ve onu
+     * ortak kurucu açıyor (bkz. icBukeyKose). Böylece ölçülmüş duvarla,
+     * işaretlenmiş köşe çizgisiyle ve ölçü öncesi varsayılanla kurulan köşe
+     * birbirinin aynısı görünüyor — üçü de içe dönük.
+     */
+    const q = dunyaDortgeni(duvarDunya, yer.x, yer.y, tamM, boyM)
+    if (!q) return null
+    const t = solM / tamM
+    const ara = (a, b) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })
+    return lKanatlariKur(ara(q[0], q[1]), ara(q[3], q[2]))
   })()
 
 
@@ -4542,6 +4571,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Uydurulan tek şey kanatların açılma açısı: fotoğraf onu söylemiyor.
    * Köşeye karşıdan bakmak varsayılıyor (her kanat 45°).
    */
+
   /* Sihirbazdaki canlı kontrol: ekranın boyu köşenin yüzde kaçı. */
   const lKoseOran = (() => {
     if (!lEkran || lKoseNokta.length !== 2) return 0
@@ -4559,103 +4589,61 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const koseBoyCm = Number(String(lKoseBoyCm).replace(',', '.'))
     if (!(koseBoyCm > 0)) return null
 
-    /* Çizgi, fotoğrafın kendi pikselinde. */
-    const a = { x: lKoseNokta[0].x * kaynak.w, y: lKoseNokta[0].y * kaynak.h }
-    const b = { x: lKoseNokta[1].x * kaynak.w, y: lKoseNokta[1].y * kaynak.h }
-    const cizgiPx = Math.hypot(b.x - a.x, b.y - a.y)
-    if (!(cizgiPx > 4)) return null
+    /* İşaretlenen çizgi, tuval pikselinde. */
+    const a = oranTuvale(lKoseNokta[0])
+    const b = oranTuvale(lKoseNokta[1])
+    if (!(Math.hypot(b.x - a.x, b.y - a.y) > 4)) return null
     /* Kullanıcı hangi ucu önce koyarsa koysun: üstteki üst sayılıyor. */
-    const ust = a.y <= b.y ? a : b
-    const alt = a.y <= b.y ? b : a
-
-    const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
-    const sagK = Math.max(1, lEkran.cols - solK)
-    /* Fotoğrafta mekânın köşesi yok; 'orta' da sol gibi katlanıyor. */
-    const yon = lKose === 'sag' ? 'sag' : 'sol'
-    const onM = (yon === 'sol' ? sagK : solK) * cwM
-    const yanM = (yon === 'sol' ? solK : sagK) * cwM
-    const boyM = lEkran.rows * chM
-    if (!(onM > 0) || !(yanM > 0) || !(boyM > 0)) return null
-
-    const pxCm = { x: cizgiPx / koseBoyCm, y: cizgiPx / koseBoyCm }
-    /* Dünyada dik duran kenarın fotoğraftaki yatıklığı. */
-    const roll = Math.atan2(alt.x - ust.x, alt.y - ust.y)
-    const yaw = (yon === 'sol' ? -1 : 1) * (Math.PI / 4)
-    const mesafeCm = Math.max(50, (izlemeMesafesi || 0) * 100)
-    const merkez = {
-      x: (ust.x + alt.x) / 2 / kaynak.w,
-      y: (ust.y + alt.y) / 2 / kaynak.h,
-    }
-
-    const g = kutuGovdesi(
-      onM * 100,
-      boyM * 100,
-      yanM * 100,
-      pxCm,
-      kaynak.w,
-      kaynak.h,
-      merkez,
-      roll,
-      yaw,
-      0,
-      mesafeCm,
-    )
-    if (!g) return null
-    const yuz = g.yuzler.find((y) => y.ad === yon)
-    if (!yuz) return null
-
-    /* Hedef: çizginin ORTASINDA, ekranın boyu kadar uzunlukta parça. */
-    const oran = (boyM * 100) / koseBoyCm
-    const ortaX = (ust.x + alt.x) / 2
-    const ortaY = (ust.y + alt.y) / 2
-    const yariX = ((alt.x - ust.x) / 2) * oran
-    const yariY = ((alt.y - ust.y) / 2) * oran
-    const hedefUst = oranTuvale({ x: (ortaX - yariX) / kaynak.w, y: (ortaY - yariY) / kaynak.h })
-    const hedefAlt = oranTuvale({ x: (ortaX + yariX) / kaynak.w, y: (ortaY + yariY) / kaynak.h })
-
-    /* Dikiş kenarı ön yüzün hangi kenarı: yan kanat soldaysa sol, sağdaysa sağ. */
-    const onTuval = g.on.map(oranTuvale)
-    const k1 = onTuval[yon === 'sol' ? 0 : 1]
-    const k2 = onTuval[yon === 'sol' ? 3 : 2]
+    const cUst = a.y <= b.y ? a : b
+    const cAlt = a.y <= b.y ? b : a
 
     /*
-     * BENZERLİK DÖNÜŞÜMÜ — döndür, ölçekle, taşı.
+     * DİKİŞ ÇİZGİNİN ORTASINDA.
      *
-     * Karmaşık sayı gibi: z → p·z + q. İki noktayı iki noktaya götüren tek
-     * dönüşüm bu ve açıları koruyor, yani gövdenin perspektifi bozulmuyor.
+     * İşaretlenen çizgi köşenin TAMAMI (örneğin tavandan zemine); ekran onun
+     * bir parçası. Oran iki yazılı ölçüden geliyor, tahmin yok.
      */
-    const ax = k2.x - k1.x
-    const ay = k2.y - k1.y
-    const payda = ax * ax + ay * ay
-    if (!(payda > 0.0001)) return null
-    const bx = hedefAlt.x - hedefUst.x
-    const by = hedefAlt.y - hedefUst.y
-    const pr = (bx * ax + by * ay) / payda
-    const pi = (by * ax - bx * ay) / payda
-    const don = (z) => ({
-      x: pr * (z.x - k1.x) - pi * (z.y - k1.y) + hedefUst.x,
-      y: pi * (z.x - k1.x) + pr * (z.y - k1.y) + hedefUst.y,
-    })
+    const boyCm = lEkran.rows * chM * 100
+    const oran = boyCm / koseBoyCm
+    const ortaX = (cUst.x + cAlt.x) / 2
+    const ortaY = (cUst.y + cAlt.y) / 2
+    const yariX = ((cAlt.x - cUst.x) / 2) * oran
+    const yariY = ((cAlt.y - cUst.y) / 2) * oran
+    return lKanatlariKur(
+      { x: ortaX - yariX, y: ortaY - yariY },
+      { x: ortaX + yariX, y: ortaY + yariY },
+    )
+  })()
 
-    const onK = onTuval.map(don)
-    const yanK = yuz.koseler.map(oranTuvale).map(don)
-    /* Ölçek: dikişin ekrandaki boyu, ekranın gerçek boyuna bölününce. */
-    const seritOlcek = Math.hypot(hedefAlt.x - hedefUst.x, hedefAlt.y - hedefUst.y) / boyM
-    const onPx = onM * seritOlcek
-    const yanPx = yanM * seritOlcek
-    const hPx = boyM * seritOlcek
-    if (!(onPx > 0) || !(yanPx > 0) || !(hPx > 0)) return null
-    return {
-      on: { koseler: onK, wPx: onPx, hPx, kaydir: yon === 'sol' ? yanPx : 0 },
-      yan: {
-        /* İçerik sırası: dilim doğru köşeden başlasın (bkz. icerikSirasi). */
-        koseler: icerikSirasi(yanK, yon),
-        wPx: yanPx,
-        hPx,
-        kaydir: yon === 'sol' ? 0 : onPx,
-      },
-      toplamWpx: onPx + yanPx,
-    }
+  /*
+   * ÖLÇÜ YAPILMADAN ÖNCEKİ KÖŞE — kullanıcının kendi fotoğrafında.
+   *
+   * L bir KÖŞE ürünü; fotoğraf eklenir eklenmez düz bir dikdörtgen olarak
+   * görünmesi yanlış. Ama o anda köşeyi kuracak hiçbir ölçü yok: duvarın
+   * düzlemi ölçülmemiş (lKoseFotoGeo), köşe çizgisi de işaretlenmemiş
+   * (lKoseCizgiGeo). Bu yüzden köşe MEKÂNDAN değil ÜRÜNÜN KENDİ DURUŞUNDAN
+   * kuruluyor: ekran hafifçe çevrilmiş duruyor ve ikinci kanat o duruşun
+   * 90 derece katlanmış yüzü.
+   *
+   * Hesap yine aynı iğnedelik kamera (kutuGovdesi), yani iki kanadın
+   * birbirine oranı ve perspektifi doğru. Uydurulan tek şey ekranın mekâna
+   * göre açısı — fotoğraf onu söylemiyor, söyleyemez de. Kullanıcı köşe
+   * çizgisini işaretleyince bu yol susuyor ve yerini ölçülmüş köşeye
+   * bırakıyor.
+   *
+   * Hazır fotoğraflı mekânlarda (AVM, meydan) gerekmiyor: orada duvarın
+   * dikdörtgeni ölçülü, köşe lKoseGeo'dan geliyor.
+   */
+  const lKoseHamGeo = (() => {
+    if (!lEkran || scene !== 'ozel' || !ozelSahne) return null
+    if (lKoseCizgiGeo || lKoseGeo || lKoseFotoGeo) return null
+    if (!(cizimOlcek > 0) || !(tuvalBoyut.w > 0) || !(tuvalBoyut.h > 0)) return null
+    const hPx = lEkran.rows * chM * cizimOlcek
+    if (!(hPx > 2)) return null
+    /* Dikiş önerilen yerleşim alanının ortasında, dik. */
+    const cx = fotoYer?.merkezXpx > 0 ? fotoYer.merkezXpx : tuvalBoyut.w / 2
+    const cy = fotoYer?.merkezYpx > 0 ? fotoYer.merkezYpx : tuvalBoyut.h / 2
+    return lKanatlariKur({ x: cx, y: cy - hPx / 2 }, { x: cx, y: cy + hPx / 2 })
   })()
 
   /*
@@ -4664,7 +4652,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * lKoseFotoGeo bu satırın üstünde hesaplandığı için kısayol burada duruyor;
    * daha yukarıda tanımlanırsa henüz başlatılmamış değişkeni okur.
    */
-  const lKoseCizimi = lKoseCizgiGeo || lKoseGeo || lKoseFotoGeo
+  const lKoseCizimi = lKoseCizgiGeo || lKoseGeo || lKoseFotoGeo || lKoseHamGeo
 
   /** Dörtgenin merkezi, durusaOturt'un beklediği {cx, cy} adlarıyla. */
   const koseMerkeziCx = (k) => ({

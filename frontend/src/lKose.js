@@ -333,6 +333,68 @@ export function lKoseYanKanat({
  */
 export { icerikSirasi }
 
+/**
+ * İÇ BÜKEY KÖŞE — odanın köşesine bakar gibi.
+ *
+ * NEDEN AYRI BİR HESAP. Fotoğraflı mekânda köşe şimdiye kadar ÜRÜNÜN
+ * gövdesinden türüyordu (kutuGovdesi): bir kutuyu çevirip ön ve yan yüzünü
+ * almak. O kutunun köşesi DIŞA dönüktür — kutuya dışarıdan bakarsınız, dikiş
+ * izleyiciye en yakın noktadır. Oysa iç L tipi ekran bir odanın köşesini
+ * SARIYOR: dikiş en uzaktaki nokta, iki kanat oradan izleyiciye doğru
+ * açılıyor. Ekranda tam tersi görünüyordu.
+ *
+ * Hesap doğrudan: dikiş zaten elimizde (kullanıcı işaretledi ya da öneriden
+ * geldi) ve onun ekrandaki boyu, ekranın gerçek boyuna bölününce o
+ * derinlikteki ölçeği veriyor. Kanatlar 90 derecelik köşenin iki yüzü olduğu
+ * için her biri 45 derece duruyor: w genişliğindeki bir kanat yanda w/√2
+ * kadar yer kaplıyor ve ucu izleyiciye w/√2 kadar yaklaşıyor. Yaklaşma
+ * perspektifte büyüme demek — bunu f/(f−d) veriyor.
+ *
+ * @param {{x:number,y:number}} ust  dikişin üst ucu (tuval pikseli)
+ * @param {{x:number,y:number}} alt  dikişin alt ucu (tuval pikseli)
+ * @param {number} solM  sol kanadın gerçek genişliği (m)
+ * @param {number} sagM  sağ kanadın gerçek genişliği (m)
+ * @param {number} boyM  ekranın gerçek yüksekliği (m)
+ * @param {number} mesafeM  kameranın köşeden uzaklığı (m)
+ */
+export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, tuvalW, tuvalH }) {
+  if (!ust || !alt) return null
+  if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
+  if (!(tuvalW > 0) || !(tuvalH > 0)) return null
+  const dikisPx = Math.hypot(alt.x - ust.x, alt.y - ust.y)
+  if (!(dikisPx > 2)) return null
+
+  /* Dikişin bulunduğu derinlikte 1 metre kaç piksel. */
+  const m = dikisPx / boyM
+  /* Kamera uzaklığı metre; çok küçük değer perspektifi patlatıyor. */
+  const f = Math.max(0.6, Number(mesafeM) || 3)
+  const vx = tuvalW / 2
+  const vy = tuvalH / 2
+
+  /*
+   * Dikiş üzerindeki bir noktadan yanal uM metre, dM metre izleyiciye doğru.
+   * Yaklaşan nokta kaçış noktasından uzaklaşarak büyüyor — Salon.jsx ve
+   * lKoseGeometri ile aynı formül, ayrışırsa köşeler birbirini tutmaz.
+   */
+  const nokta = (p, uM, dM) => {
+    const s = f / (f - Math.min(dM, f * 0.85))
+    const x0 = p.x + uM * m
+    return { x: vx + (x0 - vx) * s, y: vy + (p.y - vy) * s }
+  }
+
+  const KOK2 = Math.SQRT2
+  const solYer = solM / KOK2
+  const sagYer = sagM / KOK2
+  return {
+    /* Sol kanat: uzak ucundan dikişe (soldan sağa). */
+    sol: [nokta(ust, -solYer, solYer), ust, alt, nokta(alt, -solYer, solYer)],
+    /* Sağ kanat: dikişten uzak uca. */
+    sag: [ust, nokta(ust, sagYer, sagYer), nokta(alt, sagYer, sagYer), alt],
+    /* Dikiş hizasındaki ölçek — kanatların piksel ölçüsü buradan. */
+    pxPerM: m,
+  }
+}
+
 export function cepheYanYuzu({
   tuvalW,
   tuvalH,
