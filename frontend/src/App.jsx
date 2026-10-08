@@ -713,6 +713,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [lKoseNokta, setLKoseNokta] = useState([])
   const [lKoseKipi, setLKoseKipi] = useState(false)
+  /*
+   * KÖŞENİN TUVALDEKİ KAYMASI.
+   *
+   * Köşenin yeri ya işaretlenen çizgiden ya da önerilen alandan geliyor; ikisi
+   * de bir başlangıç. Kullanıcı tasarımı fotoğrafta gözüyle oturtmak istiyor,
+   * bu yüzden kanatlardan tutup taşıyabiliyor. Kayma TUVAL pikseli: ölçeğe ve
+   * yazılan santimlere dokunmuyor, yalnızca dikişi yerinden oynatıyor.
+   */
+  const [lKoseKayma, setLKoseKayma] = useState({ x: 0, y: 0 })
   const [lKoseBoyCm, setLKoseBoyCm] = useState('')
   const [refMesaj, setRefMesaj] = useState(null)
   /*
@@ -4145,6 +4154,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setLKoseNokta([])
     setLKoseBoyCm('')
     setLKoseKipi(false)
+    setLKoseKayma({ x: 0, y: 0 })
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -4476,6 +4486,56 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
+   * KÖŞEYİ FAREYLE TAŞIMA.
+   *
+   * Kayma TOPLAM yer değiştirmeden hesaplanıyor, adım adım toplanarak değil:
+   * olaylar arasında bir kare atlanırsa toplam yine doğru kalıyor ve imleç
+   * tasarımdan kopmuyor (aynı gerekçe: kutu taşıma, köşe tutamakları).
+   */
+  const lKoseSurukle = (e) => {
+    if (e.button != null && e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    const basX = e.clientX
+    const basY = e.clientY
+    const baslangic = lKoseKayma
+    const hareket = (ev) => {
+      setLKoseKayma({ x: baslangic.x + (ev.clientX - basX), y: baslangic.y + (ev.clientY - basY) })
+    }
+    const birak = () => {
+      window.removeEventListener('pointermove', hareket)
+      window.removeEventListener('pointerup', birak)
+      window.removeEventListener('pointercancel', birak)
+    }
+    window.addEventListener('pointermove', hareket)
+    window.addEventListener('pointerup', birak)
+    window.addEventListener('pointercancel', birak)
+  }
+
+  /*
+   * Kayma uygulanmış dikiş. Fotoğrafın dışına çıkmıyor: dikişin orta noktası
+   * fotoğrafın dikdörtgeninde kalmak zorunda (bkz. fotoSinir).
+   */
+  const lKaymayiUygula = (ust, alt) => {
+    const k = lKoseKayma
+    if (!k.x && !k.y) return [ust, alt]
+    let dx = k.x
+    let dy = k.y
+    if (fotoSinir) {
+      const ox = (ust.x + alt.x) / 2 + dx
+      const oy = (ust.y + alt.y) / 2 + dy
+      const kx = Math.max(fotoSinir.sol, Math.min(fotoSinir.sag, ox))
+      const ky = Math.max(fotoSinir.ust, Math.min(fotoSinir.alt, oy))
+      dx += kx - ox
+      dy += ky - oy
+    }
+    return [
+      { x: ust.x + dx, y: ust.y + dy },
+      { x: alt.x + dx, y: alt.y + dy },
+    ]
+  }
+
+  /*
    * DİKİŞTEN İKİ KANAT — iç bükey köşe, iki yolun ortak kurucusu.
    *
    * Hem işaretlenen köşe çizgisi hem de ölçü öncesi varsayılan köşe aynı
@@ -4664,8 +4724,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const yariX = ((cAlt.x - cUst.x) / 2) * oran
     const yariY = ((cAlt.y - cUst.y) / 2) * oran
     return lKanatlariKur(
-      { x: ortaX - yariX, y: ortaY - yariY },
-      { x: ortaX + yariX, y: ortaY + yariY },
+      ...lKaymayiUygula(
+        { x: ortaX - yariX, y: ortaY - yariY },
+        { x: ortaX + yariX, y: ortaY + yariY },
+      ),
     )
   })()
 
@@ -4697,7 +4759,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Dikiş önerilen yerleşim alanının ortasında, dik. */
     const cx = fotoYer?.merkezXpx > 0 ? fotoYer.merkezXpx : tuvalBoyut.w / 2
     const cy = fotoYer?.merkezYpx > 0 ? fotoYer.merkezYpx : tuvalBoyut.h / 2
-    return lKanatlariKur({ x: cx, y: cy - hPx / 2 }, { x: cx, y: cy + hPx / 2 })
+    return lKanatlariKur(...lKaymayiUygula({ x: cx, y: cy - hPx / 2 }, { x: cx, y: cy + hPx / 2 }))
   })()
 
   /*
@@ -5488,6 +5550,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           {lKoseCizimi && (
             <LKoseEkran
+              /*
+                İşaretleme sürerken taşıma kapalı: o sırada tuvale yapılan
+                tıklama köşe noktalarına gitmeli, tasarıma değil.
+              */
+              onSurukle={!lKoseKipi && !refKipi ? lKoseSurukle : null}
               geo={lKoseCizimi}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
@@ -6537,6 +6604,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             lKoseKabinSagCm={lKabinGenislik.sag}
                             lKoseIsaretle={() => {
                               setLKoseNokta([])
+                              setLKoseKayma({ x: 0, y: 0 })
                               setLKoseKipi(true)
                             }}
                             lKoseOran={lKoseOran}

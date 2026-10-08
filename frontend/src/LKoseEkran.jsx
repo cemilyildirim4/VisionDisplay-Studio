@@ -35,6 +35,15 @@ export default function LKoseEkran({
   content,
   contentUrl,
   model,
+  /*
+   * TAŞIMA — verilirse kanatlar fareye cevap veriyor.
+   *
+   * Katman normalde fareyi hiç görmüyor (pointerEvents: none): altındaki
+   * fotoğrafa ve ölçü araçlarına engel olmasın. Taşıma açıkken yalnızca
+   * KANATLAR hedef oluyor; aralarındaki boşluk ve katmanın geri kalanı yine
+   * tıklanabilir kalıyor.
+   */
+  onSurukle = null,
 }) {
   if (!geo?.on || !geo?.yan) return null
 
@@ -54,6 +63,7 @@ export default function LKoseEkran({
     return (
       <div
         key={ad}
+        onPointerDown={onSurukle || undefined}
         style={{
           position: 'absolute',
           left: 0,
@@ -64,6 +74,9 @@ export default function LKoseEkran({
           transformOrigin: '0 0',
           overflow: 'hidden',
           backgroundColor: '#0a0a0a',
+          pointerEvents: onSurukle ? 'auto' : undefined,
+          cursor: onSurukle ? 'move' : undefined,
+          touchAction: onSurukle ? 'none' : undefined,
           /*
             Dilim: içerik tek bir şerit gibi çiziliyor, kanat kendi payını
             negatif konumla gösteriyor. Köşede görüntü kesilmiyor.
