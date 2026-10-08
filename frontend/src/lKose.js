@@ -357,52 +357,78 @@ export { icerikSirasi }
  * @param {number} boyM  ekranın gerçek yüksekliği (m)
  * @param {number} mesafeM  kameranın köşeden uzaklığı (m)
  */
-export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, tuvalW, tuvalH }) {
+export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
-  if (!(tuvalW > 0) || !(tuvalH > 0)) return null
-  const dikisPx = Math.hypot(alt.x - ust.x, alt.y - ust.y)
+  const dx = alt.x - ust.x
+  const dy = alt.y - ust.y
+  const dikisPx = Math.hypot(dx, dy)
   if (!(dikisPx > 2)) return null
   /*
    * DİKİŞ DİK OLMAK ZORUNDA.
    *
    * 90 derecelik bir köşe fotoğrafta dikey bir kenardır; kamera yan yatmadıkça
    * yataya yakın olamaz. Yatay bir dikiş verilirse kanatlar o çizginin iki
-   * yanına değil, ÜSTÜNE katlanıyor: ikisi de ince birer şeride dönüp üst üste
-   * biniyor ve ekran düz bir bant gibi görünüyor. Böyle bir girdi geldiğinde
-   * hiç çizmemek doğru — çağıran taraf varsayılan köşeye düşüyor.
-   *
-   * Sınır geniş tutuldu (dikeyden 60 dereceye kadar): eğik çekilmiş
-   * fotoğraflar da çalışsın, yalnızca anlamsız girdi elensin.
+   * yanına değil ÜSTÜNE katlanıyor: ikisi de ince birer şeride dönüp üst üste
+   * biniyor. Böyle bir girdide hiç çizmemek doğru — çağıran taraf varsayılan
+   * köşeye düşüyor. Sınır geniş (dikeyden 60 dereceye kadar): eğik çekilmiş
+   * fotoğraflar çalışsın, yalnızca anlamsız girdi elensin.
    */
-  if (Math.abs(alt.y - ust.y) < dikisPx * 0.5) return null
+  if (Math.abs(dy) < dikisPx * 0.5) return null
 
   /* Dikişin bulunduğu derinlikte 1 metre kaç piksel. */
   const m = dikisPx / boyM
   /* Kamera uzaklığı metre; çok küçük değer perspektifi patlatıyor. */
   const f = Math.max(0.6, Number(mesafeM) || 3)
-  const vx = tuvalW / 2
-  const vy = tuvalH / 2
 
   /*
-   * Dikiş üzerindeki bir noktadan yanal uM metre, dM metre izleyiciye doğru.
-   * Yaklaşan nokta kaçış noktasından uzaklaşarak büyüyor — Salon.jsx ve
-   * lKoseGeometri ile aynı formül, ayrışırsa köşeler birbirini tutmaz.
+   * KURULUM DİKİŞE GÖRE SİMETRİK.
+   *
+   * Önce kanatlar kadrajın kaçış noktasına göre ölçekleniyordu; o zaman aynı
+   * genişlikteki iki kanat ekranda farklı çıkıyordu — dikiş kadrajın
+   * ortasından ne kadar uzaksa fark o kadar büyüyordu. Oysa kullanıcının
+   * işaretlediği çizgi ekranın ORTA ÇİZGİSİ: iki yanı eşit olmalı.
+   *
+   * Bu yüzden her şey dikişin kendi eksenine göre kuruluyor: dikiş yönü (u)
+   * ve ona dik yön (n). Eşit genişlikteki iki kanat birbirinin tam aynası
+   * oluyor. Köşenin kadrajdaki yerine göre değişmesi gereken şey ayrı bir
+   * iş (bakış açısı) ve buraya karışmıyor.
    */
-  const nokta = (p, uM, dM) => {
-    const s = f / (f - Math.min(dM, f * 0.85))
-    const x0 = p.x + uM * m
-    return { x: vx + (x0 - vx) * s, y: vy + (p.y - vy) * s }
+  const ux = dx / dikisPx
+  const uy = dy / dikisPx
+  /* Dikiş yukarıdan aşağıya bakarken bu yön SOL tarafı gösteriyor. */
+  const nx = -uy
+  const ny = ux
+  const cx = (ust.x + alt.x) / 2
+  const cy = (ust.y + alt.y) / 2
+  const yari = dikisPx / 2
+  const KOK2 = Math.SQRT2
+
+  /*
+   * Bir kanadın uzak kenarı. 90 derecelik köşenin her yüzü 45 derece durduğu
+   * için w genişliğindeki kanat yanda w/√2 kadar yer kaplıyor ve ucu
+   * izleyiciye w/√2 kadar yaklaşıyor; yaklaşmanın büyütmesi f/(f−d).
+   */
+  const kanat = (wM, yon) => {
+    const d = Math.min(wM / KOK2, f * 0.85)
+    const s = f / (f - d)
+    const yanal = (wM / KOK2) * m * s
+    const px = cx + nx * yanal * yon
+    const py = cy + ny * yanal * yon
+    const h = yari * s
+    return [
+      { x: px - ux * h, y: py - uy * h },
+      { x: px + ux * h, y: py + uy * h },
+    ]
   }
 
-  const KOK2 = Math.SQRT2
-  const solYer = solM / KOK2
-  const sagYer = sagM / KOK2
+  const [solUst, solAlt] = kanat(solM, 1)
+  const [sagUst, sagAlt] = kanat(sagM, -1)
   return {
     /* Sol kanat: uzak ucundan dikişe (soldan sağa). */
-    sol: [nokta(ust, -solYer, solYer), ust, alt, nokta(alt, -solYer, solYer)],
+    sol: [solUst, ust, alt, solAlt],
     /* Sağ kanat: dikişten uzak uca. */
-    sag: [ust, nokta(ust, sagYer, sagYer), nokta(alt, sagYer, sagYer), alt],
+    sag: [ust, sagUst, sagAlt, alt],
     /* Dikiş hizasındaki ölçek — kanatların piksel ölçüsü buradan. */
     pxPerM: m,
   }

@@ -2274,17 +2274,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kalıyordu. Çoklu kurguda birden çok ekran varsa köşe çizilmiyor: o zaman
    * sahne tek bir köşeye değil, yan yana dizilmiş birden çok ekrana ait.
    */
+  /*
+   * KANAT SÜTUNLARI YAPILANDIRMADAN.
+   *
+   * L ekranın iki kanadının kaç kabin olduğu çoklu ekran kipinde zaten
+   * giriliyor (leftCols / rightCols). Daha önce burada sütun sayısı ikiye
+   * bölünüyordu; kullanıcı 4 + 2 dediyse ekranda yine 3 + 3 çiziliyordu.
+   */
   const lEkran = (() => {
+    const kanatlar = (toplam, sol, sag) => {
+      const s = Math.max(1, Math.min(toplam - 1, Number(sol) || Math.ceil(toplam / 2)))
+      const g = Math.max(1, Number(sag) || toplam - s)
+      return { solCols: s, sagCols: g }
+    }
     if (!cokluAktif) {
-      return (screenType || 'flat') === 'lshape'
-        ? { cols: Math.max(1, cols), rows: Math.max(1, rows) }
-        : null
+      if ((screenType || 'flat') !== 'lshape') return null
+      const c = Math.max(2, cols)
+      return { cols: c, rows: Math.max(1, rows), ...kanatlar(c) }
     }
     if (screens.length !== 1) return null
     const e = screens[0]
-    return (e?.type || 'flat') === 'lshape'
-      ? { cols: Math.max(1, e.cols), rows: Math.max(1, e.rows) }
-      : null
+    if ((e?.type || 'flat') !== 'lshape') return null
+    const c = Math.max(2, e.cols)
+    return { cols: c, rows: Math.max(1, e.rows), ...kanatlar(c, e.leftCols, e.rightCols) }
   })()
 
   /*
@@ -4477,24 +4489,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const lKanatlariKur = (ust, alt) => {
     if (!lEkran) return null
     /*
-     * Kanat genişlikleri sütun sayısından: sol kanat kaç kabinse o kadar
+     * Kanat genişlikleri yapılandırmadan: sol kanat kaç kabinse o kadar
      * geniş. Kullanıcıya sorulmuyor, zaten girilmiş bir bilgi.
      */
-    const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
-    const sagK = Math.max(1, lEkran.cols - solK)
-    const solM = solK * cwM
-    const sagM = sagK * cwM
+    const solM = lEkran.solCols * cwM
+    const sagM = lEkran.sagCols * cwM
     const boyM = lEkran.rows * chM
-    const k = icBukeyKose({
-      ust,
-      alt,
-      solM,
-      sagM,
-      boyM,
-      mesafeM: izlemeMesafesi,
-      tuvalW: tuvalBoyut.w,
-      tuvalH: tuvalBoyut.h,
-    })
+    const k = icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM: izlemeMesafesi })
     if (!k) return null
     const solPx = solM * k.pxPerM
     const sagPx = sagM * k.pxPerM
@@ -4530,10 +4531,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!lEkran) return null
     if (!duvarDunya || !(duvarDunyaOlcu?.wm > 0) || !refPxCm) return null
     if (!(cizimOlcek > 0) || !(tuvalBoyut.w > 0)) return null
-    const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
-    const sagK = Math.max(1, lEkran.cols - solK)
-    const solM = solK * cwM
-    const sagM = sagK * cwM
+    /* Kanatlar yapılandırmadan (bkz. lEkran): dikişin yeri de buna göre. */
+    const solM = lEkran.solCols * cwM
+    const sagM = lEkran.sagCols * cwM
     const tamM = solM + sagM
     const boyM = lEkran.rows * chM
     if (!(tamM > 0) || !(boyM > 0)) return null
@@ -4623,9 +4623,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Sihirbazda yazılan ölçünün yanında duran karşılaştırma. */
   const lKabinGenislik = (() => {
     if (!lEkran) return { sol: 0, sag: 0 }
-    const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
-    const sagK = Math.max(1, lEkran.cols - solK)
-    return { sol: solK * cwM * 100, sag: sagK * cwM * 100 }
+    return { sol: lEkran.solCols * cwM * 100, sag: lEkran.sagCols * cwM * 100 }
   })()
 
   /* Sihirbazdaki canlı kontrol: ekranın boyu köşenin yüzde kaçı. */
