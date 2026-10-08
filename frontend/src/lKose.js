@@ -406,7 +406,21 @@ export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, aci = 0, ufuk
    * kanat kenarından, −45 derecede tersi. Yer değiştirme diye bir şey yok,
    * tek bir sayı sürekli değişiyor.
    */
-  const a = Math.max(-CEYREK, Math.min(CEYREK, Number(aci) || 0))
+  /*
+   * AÇI TAM 45 DERECEYE ÇIKMIYOR.
+   *
+   * Açılar 45 ± aci olduğu için 45'te bir kanat tam 0 (duvara yapışık), öteki
+   * tam 90 derece oluyor — yani kenarından bakılıyor ve ekranda sıfır
+   * genişlikte kalıyor. Dörtgen yozlaşınca o kanat hiç çizilmiyor ve tasarım
+   * DÜZ bir dikdörtgen gibi görünüyor. Kullanıcı "L tipinde tasarım düz
+   * görünüyor" derken bunu görüyordu: köşe seçimi düğmesi açıyı tam 45'e
+   * götürüyordu.
+   *
+   * Sınır 35 derece: baskın kanat genişliğinin %82'sini koruyor, öteki kanat
+   * %57'sinde kalıyor — köşe net okunuyor ama hiçbir yüz kaybolmuyor.
+   */
+  const EN_COK = (35 * Math.PI) / 180
+  const a = Math.max(-EN_COK, Math.min(EN_COK, Number(aci) || 0))
   const aciSol = CEYREK - a
   const aciSag = CEYREK + a
 

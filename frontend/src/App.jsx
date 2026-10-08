@@ -4655,15 +4655,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     const dikisX = (ust.x + alt.x) / 2
     const yariKadraj = Math.max(1, (fotoYer?.genislik || tuvalBoyut.w) / 2)
+    /*
+     * Sınır 35 derece (bkz. icBukeyKose): 45'te bir kanat kenarından
+     * görünüp kayboluyor ve tasarım düz bir dikdörtgene dönüyor.
+     */
+    const EN_COK_KOSE_ACI = (35 * Math.PI) / 180
     const aci =
       lKose === 'orta'
         ? 0
         : lKoseSecim === 'sol'
-          ? -Math.PI / 4
+          ? -EN_COK_KOSE_ACI
           : lKoseSecim === 'sag'
-            ? Math.PI / 4
+            ? EN_COK_KOSE_ACI
             : kacis
-              ? Math.max(-1, Math.min(1, (dikisX - kacis.x) / yariKadraj)) * (Math.PI / 4)
+              ? Math.max(-1, Math.min(1, (dikisX - kacis.x) / yariKadraj)) * EN_COK_KOSE_ACI
               : 0
     const k = icBukeyKose({
       ust,
