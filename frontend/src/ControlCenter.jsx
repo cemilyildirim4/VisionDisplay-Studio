@@ -221,6 +221,28 @@ export default function ControlCenter() {
     }).catch(() => {})
   }
 
+  const teklifPdfIndir = async (q) => {
+    setTeklifHata(null)
+    try {
+      const res = await apiFetch(`${API_URL}/api/quotes/${q.id}/pdf`, { auth: true })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.message || t('exp.error'))
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Musteri_Rapor_${q.id}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setTeklifHata(err.message || t('exp.error'))
+    }
+  }
+
   const teklifleriYukle = useCallback(async () => {
     if (!session?.accessToken) {
       setTeklifler([])
@@ -489,6 +511,13 @@ export default function ControlCenter() {
                           className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 min-h-[44px] py-2.5 text-[12px] font-semibold text-neutral-600 dark:text-neutral-300 hover:border-brand hover:text-brand transition-colors whitespace-nowrap inline-flex items-center justify-center w-full sm:w-auto max-w-full"
                         >
                           {t('cc.quotes.csv')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => teklifPdfIndir(q)}
+                          className="rounded-full border border-neutral-300 dark:border-[#39414f] px-4 min-h-[44px] py-2.5 text-[12px] font-semibold text-neutral-600 dark:text-neutral-300 hover:border-brand hover:text-brand transition-colors whitespace-nowrap inline-flex items-center justify-center w-full sm:w-auto max-w-full"
+                        >
+                          {t('cc.quotes.pdf')}
                         </button>
                         {/* Tasarımı konfigüratörde geri açar — bkz. teklifiDuzenle */}
                         <button

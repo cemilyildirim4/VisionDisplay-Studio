@@ -92,6 +92,13 @@ public class QuoteRepository : IQuoteRepository
         return await connection.QueryAsync<Quote>(sql, new { UserId = userId });
     }
 
+    public async Task<Quote?> GetByIdAsync(int id)
+    {
+        using var connection = await _connectionFactory.CreateConnectionAsync();
+        var sql = $"SELECT {SelectColumns} {FromQuotes} WHERE q.id = @Id";
+        return await connection.QueryFirstOrDefaultAsync<Quote>(sql, new { Id = id });
+    }
+
     public async Task<Quote> CreateAsync(Quote quote)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();
@@ -130,6 +137,13 @@ public class QuoteRepository : IQuoteRepository
         using var connection = await _connectionFactory.CreateConnectionAsync();
         const string sql = "UPDATE quotes SET preview_image = @Image WHERE id = @Id";
         await connection.ExecuteAsync(sql, new { Id = id, Image = image });
+    }
+
+    public async Task<byte[]?> GetPreviewImageAsync(int id)
+    {
+        using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = "SELECT preview_image FROM quotes WHERE id = @Id";
+        return await connection.QueryFirstOrDefaultAsync<byte[]>(sql, new { Id = id });
     }
 
     public async Task<bool> DeleteAsync(int id)

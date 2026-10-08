@@ -161,11 +161,10 @@ public class ProfessionalReportDocument : IDocument
             if (_extras.PreviewImage is { Length: > 0 })
             {
                 col.Item().PaddingTop(12).Text("Müşteri görseli").FontSize(11).Bold().FontColor(BrandBlue);
-                col.Item().PaddingTop(6).Height(340).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
+                col.Item().PaddingTop(6).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
                     .Background(Color.FromHex("#f8fafc")).Padding(6)
-                    .AlignCenter().AlignMiddle()
                     .Image(_extras.PreviewImage)
-                    .FitArea();
+                    .FitWidth();
             }
         });
     }
@@ -361,9 +360,8 @@ public class ProfessionalReportDocument : IDocument
 
     private void ComposeHeader(IContainer container)
     {
-        var docNo = _config.CreatedAt == default
-            ? DateTime.UtcNow.ToString("yyyyMMdd-HHmm")
-            : _config.CreatedAt.ToString("yyyyMMdd-HHmm");
+        var belgeTarihi = Istanbul( _config.CreatedAt);
+        var docNo = belgeTarihi.ToString("yyyyMMdd-HHmm");
 
         container.Column(col =>
         {
@@ -385,7 +383,7 @@ public class ProfessionalReportDocument : IDocument
                     c.Item().Text(_isAdmin ? "İÇ RAPOR — ADMIN" : "MÜŞTERİ RAPORU")
                         .FontSize(9).Bold().FontColor(BrandOrange);
                     c.Item().Text($"Belge No: {docNo}").FontSize(8).FontColor(Colors.Grey.Darken1);
-                    c.Item().Text($"Tarih: {(_config.CreatedAt == default ? DateTime.Now : _config.CreatedAt):dd.MM.yyyy HH:mm}")
+                    c.Item().Text($"Tarih: {belgeTarihi:dd.MM.yyyy HH:mm}")
                         .FontSize(8).FontColor(Colors.Grey.Darken1);
                 });
             });
@@ -567,7 +565,8 @@ public class ProfessionalReportDocument : IDocument
                 column.Item().Element(ComposeClientTotalPrice);
             }
 
-            column.Item().PaddingTop(16).Element(ComposeScreenVisual);
+            if (_isAdmin)
+                column.Item().PaddingTop(16).Element(ComposeScreenVisual);
         });
     }
 
@@ -863,6 +862,26 @@ public class ProfessionalReportDocument : IDocument
         "lshape" => "L tipi",
         _ => string.IsNullOrWhiteSpace(type) ? "Belirtilmedi" : type,
     };
+
+    private static DateTime Istanbul(DateTime value)
+    {
+        TimeZoneInfo zone;
+        try
+        {
+            zone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            zone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+        }
+
+        var utc = value == default
+            ? DateTime.UtcNow
+            : value.Kind == DateTimeKind.Local
+                ? value.ToUniversalTime()
+                : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+        return TimeZoneInfo.ConvertTimeFromUtc(utc, zone);
+    }
 
     private static string Empty(string? v, string fallback) =>
         string.IsNullOrWhiteSpace(v) ? fallback : v;

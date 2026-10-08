@@ -1373,6 +1373,7 @@ const dict = {
   'exp.phone': { tr: 'Telefon', en: 'Phone', ar: 'الهاتف' },
   'exp.company': { tr: 'Firma', en: 'Company', ar: 'الشركة' },
   'cc.quotes.csv': { tr: 'CSV indir', en: 'Download CSV', ar: 'تنزيل CSV' },
+  'cc.quotes.pdf': { tr: 'PDF indir', en: 'Download PDF', ar: 'تنزيل PDF' },
   'cc.quotes.status': { tr: 'Durum', en: 'Status', ar: 'الحالة' },
   'cc.quotes.date': { tr: 'Tarih', en: 'Date', ar: 'التاريخ' },
   'exp.missingIntro': { tr: 'Rapor için eksik:', en: 'Still needed:', ar: 'ما زال مطلوبًا:' },

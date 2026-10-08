@@ -177,7 +177,8 @@ public class ConfigurationService : IConfigurationService
     public async Task<byte[]> GenerateSpecSheetPdfFromDtoAsync(
         CreateConfigurationDto dto,
         PdfReportExtras? extras = null,
-        PdfReportKind kind = PdfReportKind.Client)
+        PdfReportKind kind = PdfReportKind.Client,
+        DateTime? createdAt = null)
     {
         var cabin = await _cabinRepository.GetByIdAsync(dto.CabinId);
         if (cabin == null)
@@ -186,6 +187,8 @@ public class ConfigurationService : IConfigurationService
         var (hardware, unmet) = await ResolveHardwareAsync(dto, cabin, requireComplete: false);
         dto.LaborCostMultiplier ??= await _systemSettingsRepository.GetLaborCostMultiplierAsync();
         var configDto = CalculateConfigurationDto(dto, cabin, hardware, requireComplete: false, unmet);
+        if (createdAt is { } kayit && kayit != default)
+            configDto.CreatedAt = kayit;
         return _pdfReportService.Generate(configDto, extras, cabin, kind);
     }
 

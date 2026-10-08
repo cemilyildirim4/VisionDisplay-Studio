@@ -16,18 +16,25 @@ import {
 } from './contactFormValidation.js'
 
 async function captureScreenPreview() {
-  const el = document.querySelector('[data-tasarim-katman]') || document.getElementById('pdf-onizleme')
+  const el = document.getElementById('pdf-onizleme')
   if (!el) return null
   const modal = document.getElementById('export-modal-root')
   const prevVis = modal?.style.visibility
   if (modal) modal.style.visibility = 'hidden'
   try {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    const rect = el.getBoundingClientRect()
     const canvas = await html2canvas(el, {
       scale: 2,
-      backgroundColor: '#ffffff',
+      backgroundColor: '#f4f4f4',
       useCORS: true,
       logging: false,
+      x: 0,
+      y: 0,
+      scrollX: 0,
+      scrollY: -window.scrollY,
+      width: Math.max(1, Math.round(rect.width)),
+      height: Math.max(1, Math.round(rect.height)),
       ignoreElements: (n) => n.hasAttribute?.('data-pdf-gizle'),
     })
     let quality = 0.9
