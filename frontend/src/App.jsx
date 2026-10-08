@@ -714,6 +714,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [lKoseNokta, setLKoseNokta] = useState([])
   const [lKoseKipi, setLKoseKipi] = useState(false)
   const [lKoseBoyCm, setLKoseBoyCm] = useState('')
+  /*
+   * KANAT GENİŞLİKLERİ KULLANICIDAN.
+   *
+   * Kabin sayısı kanadın kaç kabin olduğunu söylüyor ama duvardaki yerini
+   * söylemiyor: iki kanat farklı duvarlarda ve kullanıcı birini daha geniş
+   * isteyebiliyor. Boş bırakılırsa kabin sayısından hesaplanıyor.
+   */
+  const [lKoseSolCm, setLKoseSolCm] = useState('')
+  const [lKoseSagCm, setLKoseSagCm] = useState('')
   const [refMesaj, setRefMesaj] = useState(null)
   /*
    * Referans değişti ama kutu eski ölçekle kurulmuş. Kullanıcının yerleşimini
@@ -1161,7 +1170,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * kullanıcıyı önce bir "başla" düğmesine bastırmak boş bir adımdı.
        * İşaretleme kipi de birlikte açılıyor ki tıklanacak yer hazır olsun.
        */
-      setRefKipi(true)
+      /* L'de ilk iş köşe çizgisi; referans adımı hiç çıkmıyor. */
+      setRefKipi(!lTipiVar)
+      setLKoseKipi(lTipiVar)
       setSihirbazAdim(1)
       let kayit = null
       try {
@@ -4130,46 +4141,54 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setKutuBoy('')
     setLKoseNokta([])
     setLKoseBoyCm('')
+    setLKoseSolCm('')
+    setLKoseSagCm('')
     setLKoseKipi(false)
-    /* 4) İlk adım */
-    setRefKipi(true)
+    /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
+    if (lYerlesimKipi) {
+      setRefKipi(false)
+      setLKoseKipi(true)
+    } else {
+      setRefKipi(true)
+    }
     setSihirbazAdim(1)
   }
   const sihirbazIleri = () => {
+    /*
+     * L'DE İKİ ADIM: çizgiyi işaretle, ölçüleri yaz.
+     *
+     * İşaretleme kipi 2. adımda da açık kalıyor — kullanıcı santimleri
+     * yazarken noktaları hâlâ düzeltebilsin (referans akışıyla aynı gerekçe).
+     */
+    if (lYerlesimKipi) {
+      setSihirbazAdim((a) => Math.min(2, a + 1))
+      return
+    }
     setSihirbazAdim((a) => {
       /* 2. adıma geçerken işaretleme kipi kapanmıyor: kullanıcı uzunluğu
          yazarken noktaları hâlâ düzeltebilsin. 3. adımda kapanıyor. */
-      if (a === 2) {
-        setRefKipi(false)
-        /* L'de 3. adım köşe çizgisi: işaretleme kipi hemen açılıyor. */
-        if (lYerlesimKipi) setLKoseKipi(true)
-      }
+      if (a === 2) setRefKipi(false)
       return Math.min(4, a + 1)
     })
   }
   const sihirbazGeri = () => {
+    if (lYerlesimKipi) {
+      setLKoseKipi(true)
+      setSihirbazAdim((a) => Math.max(1, a - 1))
+      return
+    }
     setSihirbazAdim((a) => {
-      if (a === 3) {
-        setRefKipi(true)
-        setLKoseKipi(false)
-      }
-      if (a === 4) {
-        if (lYerlesimKipi) setLKoseKipi(true)
-        else setKutuDuzen('hepsi')
-      }
+      if (a === 3) setRefKipi(true)
+      if (a === 4) setKutuDuzen('hepsi')
       return Math.max(1, a - 1)
     })
-  }
-  /* L'de kutu kurulmuyor: köşe çizgisi zaten yerleşimi belirliyor. */
-  const sihirbazKoseKur = () => {
-    setLKoseKipi(false)
-    setSihirbazAdim(4)
   }
   const sihirbazKutuKur = () => {
     olcuKutusunuKur()
     setSihirbazAdim(4)
   }
   const sihirbazBitir = () => {
+    setLKoseKipi(false)
     setKutuDuzen(null)
     setTasarimAcik(true)
     setSihirbazAdim(0)
@@ -4466,12 +4485,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * sağınki. Koyu çizilen kanat köşe seçimine göre değişiyor — sol köşede
    * yan kanat solda, sağ köşede sağda.
    */
-  const lKanatlariKur = (ust, alt) => {
+  const lKanatlariKur = (ust, alt, solYazi, sagYazi) => {
     if (!lEkran) return null
     const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
     const sagK = Math.max(1, lEkran.cols - solK)
-    const solM = solK * cwM
-    const sagM = sagK * cwM
+    /* Yazılan ölçü varsa o geçerli; yoksa kabin sayısı. */
+    const yaz = (metin) => {
+      const n = Number(String(metin ?? '').replace(',', '.'))
+      return Number.isFinite(n) && n > 0 ? n / 100 : 0
+    }
+    const solM = yaz(solYazi) || solK * cwM
+    const sagM = yaz(sagYazi) || sagK * cwM
     const boyM = lEkran.rows * chM
     const k = icBukeyKose({
       ust,
@@ -4572,6 +4596,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Köşeye karşıdan bakmak varsayılıyor (her kanat 45°).
    */
 
+  /* Sihirbazda yazılan ölçünün yanında duran karşılaştırma. */
+  const lKabinGenislik = (() => {
+    if (!lEkran) return { sol: 0, sag: 0 }
+    const solK = Math.max(1, Math.ceil(lEkran.cols / 2))
+    const sagK = Math.max(1, lEkran.cols - solK)
+    return { sol: solK * cwM * 100, sag: sagK * cwM * 100 }
+  })()
+
   /* Sihirbazdaki canlı kontrol: ekranın boyu köşenin yüzde kaçı. */
   const lKoseOran = (() => {
     if (!lEkran || lKoseNokta.length !== 2) return 0
@@ -4612,6 +4644,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return lKanatlariKur(
       { x: ortaX - yariX, y: ortaY - yariY },
       { x: ortaX + yariX, y: ortaY + yariY },
+      lKoseSolCm,
+      lKoseSagCm,
     )
   })()
 
@@ -6479,12 +6513,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             lKoseNoktaSayisi={lKoseNokta.length}
                             lKoseBoyCm={lKoseBoyCm}
                             setLKoseBoyCm={setLKoseBoyCm}
+                            lKoseSolCm={lKoseSolCm}
+                            setLKoseSolCm={setLKoseSolCm}
+                            lKoseSagCm={lKoseSagCm}
+                            setLKoseSagCm={setLKoseSagCm}
+                            lKoseKabinSolCm={lKabinGenislik.sol}
+                            lKoseKabinSagCm={lKabinGenislik.sag}
                             lKoseIsaretle={() => {
                               setLKoseNokta([])
                               setLKoseKipi(true)
                             }}
                             lKoseOran={lKoseOran}
-                            onKoseKur={sihirbazKoseKur}
                             onGeri={sihirbazGeri}
                             onIleri={sihirbazIleri}
                             onKutuKur={sihirbazKutuKur}
@@ -6531,7 +6570,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             {/* L'de kutu yerine köşe çizgisi duruyor. */}
                             {lKoseCizgiGeo && (
                               <p className="mt-0.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                                {t('refL.ozet')}: {Math.round(Number(String(lKoseBoyCm).replace(',', '.')))} cm
+                                {t('refL.ozet')}: {Math.round(Number(String(lKoseBoyCm).replace(',', '.')))} cm ·{' '}
+                                {Math.round(
+                                  Number(String(lKoseSolCm).replace(',', '.')) || lKabinGenislik.sol,
+                                )}{' '}
+                                +{' '}
+                                {Math.round(
+                                  Number(String(lKoseSagCm).replace(',', '.')) || lKabinGenislik.sag,
+                                )}{' '}
+                                cm
                               </p>
                             )}
                             {refEskidi && (

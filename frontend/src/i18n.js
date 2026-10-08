@@ -592,6 +592,30 @@ const dict = {
     en: 'The screen is taller than the marked corner: it will extend past the line.',
     ar: 'الشاشة أطول من الزاوية المحددة.',
   },
+  'sihL.2.baslik': {
+    tr: 'Köşenin ve kanatların ölçüsü (cm)',
+    en: 'Corner and wing sizes (cm)',
+    ar: 'مقاسات الزاوية والجناحين (سم)',
+  },
+  'sihL.2.aciklama': {
+    tr: 'İşaretlediğiniz köşe gerçekte kaç santim yüksekliğinde? Her kanadın duvardaki genişliği kaç santim?',
+    en: 'How tall is the marked corner in real life? How wide is each wing on its wall?',
+    ar: 'كم ارتفاع الزاوية المحددة فعليًا؟ وكم عرض كل جناح؟',
+  },
+  'sihL.kose': { tr: 'Köşenin yüksekliği', en: 'Corner height', ar: 'ارتفاع الزاوية' },
+  'sihL.sol': { tr: 'Sol kanat', en: 'Left wing', ar: 'الجناح الأيسر' },
+  'sihL.sag': { tr: 'Sağ kanat', en: 'Right wing', ar: 'الجناح الأيمن' },
+  'sihL.kanatEksik': {
+    tr: 'Kanat genişliklerini de yazın; boş bırakırsanız kabin sayısından hesaplanır.',
+    en: 'Type the wing widths too; left empty, they come from the cabinet count.',
+    ar: 'اكتب عرض الجناحين أيضًا.',
+  },
+  'sihL.kabinFark': {
+    tr: 'Kabin sayısına göre',
+    en: 'By cabinet count',
+    ar: 'حسب عدد الخزائن',
+  },
+  'sihL.bitir': { tr: 'Köşeyi kur ve bitir', en: 'Build the corner and finish', ar: 'أنشئ الزاوية وأنهِ' },
   'sihL.3.kur': { tr: 'Köşeyi kur', en: 'Build the corner', ar: 'أنشئ الزاوية' },
   'sihL.3.tekrar': { tr: 'Yeniden işaretle', en: 'Mark again', ar: 'حدد مرة أخرى' },
   'sihL.4.aciklama': {

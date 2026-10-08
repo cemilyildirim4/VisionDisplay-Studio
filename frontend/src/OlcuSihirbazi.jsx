@@ -22,7 +22,17 @@ import { useState } from 'react'
  * katmanı; ölçek ve kutu mantığı tek yerde kalıyor.
  */
 
+/*
+ * ADIM SAYISI EKRAN TÜRÜNE GÖRE.
+ *
+ * Düz ekranda dört adım: referansı işaretle, gerçek uzunluğu yaz, yerleşim
+ * alanını kur, konumlandır. L tipinde ikisi düşüyor — ölçek referanstan değil
+ * KÖŞE ÇİZGİSİNİN kendisinden geliyor (işaretlenen uzunluk / yazılan santim),
+ * yerleşim alanı da yok. Geriye iki adım kalıyor: çizgiyi işaretle, ölçüleri
+ * yaz.
+ */
 const ADIM_SAYISI = 4
+const L_ADIM_SAYISI = 2
 
 function Nokta({ dolu, etkin }) {
   return (
@@ -67,9 +77,15 @@ export default function OlcuSihirbazi({
   lKoseNoktaSayisi = 0,
   lKoseBoyCm,
   setLKoseBoyCm,
+  lKoseSolCm,
+  setLKoseSolCm,
+  lKoseSagCm,
+  setLKoseSagCm,
+  /* Kabin sayısından çıkan genişlikler — yazılan ölçüyle karşılaştırmak için. */
+  lKoseKabinSolCm = 0,
+  lKoseKabinSagCm = 0,
   lKoseIsaretle,
   lKoseOran = null,
-  onKoseKur,
   /* 3. adım */
   kutuEn,
   setKutuEn,
@@ -101,12 +117,15 @@ export default function OlcuSihirbazi({
   const aciklama = 'mt-2 mb-0 text-[13.5px] leading-snug text-neutral-700 dark:text-neutral-300'
   const kucuk = 'mt-1.5 mb-0 text-[13px] leading-snug'
 
-  const basliklar = {
-    1: t('sih.1.baslik'),
-    2: t('sih.2.baslik'),
-    3: lKose ? t('sihL.3.baslik') : t('sih.3.baslik'),
-    4: t('sih.4.baslik'),
-  }
+  const basliklar = lKose
+    ? { 1: t('sihL.3.baslik'), 2: t('sihL.2.baslik') }
+    : {
+        1: t('sih.1.baslik'),
+        2: t('sih.2.baslik'),
+        3: t('sih.3.baslik'),
+        4: t('sih.4.baslik'),
+      }
+  const adimSayisi = lKose ? L_ADIM_SAYISI : ADIM_SAYISI
 
   /*
    * MESAFE YAZILABİLİR.
@@ -142,12 +161,12 @@ export default function OlcuSihirbazi({
       {/* Başlık şeridi dolu renkte: panelde göz önce buraya gelsin. */}
       <div className="flex items-center gap-2 bg-brand px-2.5 py-2 text-white">
         <span className="flex items-center gap-1">
-          {[1, 2, 3, 4].map((i) => (
+          {Array.from({ length: adimSayisi }, (_, i) => i + 1).map((i) => (
             <Nokta key={i} dolu={i < adim} etkin={i === adim} />
           ))}
         </span>
         <span className="text-[11.5px] font-bold tabular-nums text-white/80">
-          {adim}/{ADIM_SAYISI}
+          {adim}/{adimSayisi}
         </span>
         {/* Panel dar: başlık kesilmek yerine ikinci satıra sarıyor. */}
         <span className="flex-1 text-[14.5px] font-bold leading-tight">{basliklar[adim]}</span>
@@ -164,8 +183,113 @@ export default function OlcuSihirbazi({
       <div className="bg-brand/[0.05] px-2.5 pb-2.5 pt-1 dark:bg-brand/[0.1]">
         {/* key={adim}: adım değişince geçiş yeniden oynasın. */}
         <div key={adim} className="sih-adim">
+          {/* L 1 — KÖŞE ÇİZGİSİ */}
+          {lKose && adim === 1 && (
+            <>
+              <p className={aciklama}>{t('sihL.3.aciklama')}</p>
+              <p className="mt-2 mb-0 rounded-md bg-brand/15 px-2 py-1.5 text-[13.5px] font-semibold text-brand dark:bg-brand/25">
+                {lKoseNoktaSayisi === 0
+                  ? t('sihL.3.durum0')
+                  : lKoseNoktaSayisi === 1
+                    ? t('sihL.3.durum1')
+                    : t('sihL.3.durum2')}
+              </p>
+              <div className="mt-2 flex items-center gap-1.5">
+                {lKoseNoktaSayisi > 0 && (
+                  <button type="button" onClick={lKoseIsaretle} className={yan}>
+                    {t('sihL.3.tekrar')}
+                  </button>
+                )}
+                <button type="button" onClick={onIleri} disabled={lKoseNoktaSayisi < 2} className={ana}>
+                  {t('sih.devam')}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* L 2 — ÖLÇÜLER */}
+          {lKose && adim === 2 && (
+            <>
+              <p className={aciklama}>{t('sihL.2.aciklama')}</p>
+              <label className="mt-2 block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+                {t('sihL.kose')}
+              </label>
+              <div className="mt-1 flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  autoFocus
+                  value={lKoseBoyCm}
+                  onChange={(e) => setLKoseBoyCm(e.target.value)}
+                  placeholder={t('sihL.3.boyPh')}
+                  className={girdi}
+                />
+                <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                <div>
+                  <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+                    {t('sihL.sol')}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={lKoseSolCm}
+                    onChange={(e) => setLKoseSolCm(e.target.value)}
+                    placeholder={String(Math.round(lKoseKabinSolCm) || '')}
+                    className={`${girdi} mt-1`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
+                    {t('sihL.sag')}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={lKoseSagCm}
+                    onChange={(e) => setLKoseSagCm(e.target.value)}
+                    placeholder={String(Math.round(lKoseKabinSagCm) || '')}
+                    className={`${girdi} mt-1`}
+                  />
+                </div>
+              </div>
+              {/*
+                KABİN SAYISINDAN ÇIKAN GENİŞLİK HEP GÖRÜNÜYOR.
+
+                Yazılan ölçü kabinlerle tutmuyorsa bu bir hata değil — duvarda
+                o kadar yer vardır — ama kullanıcının görmesi gerekir.
+              */}
+              <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                {t('sihL.kabinFark')}: {Math.round(lKoseKabinSolCm)} + {Math.round(lKoseKabinSagCm)} cm
+              </p>
+              {lKoseOran > 0 ? (
+                lKoseOran > 1 ? (
+                  <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sihL.3.tasiyor')}</p>
+                ) : (
+                  <p className={`${kucuk} text-emerald-700 dark:text-emerald-400`}>
+                    {t('sihL.3.hazir')} <strong>%{Math.round(lKoseOran * 100)}</strong>
+                  </p>
+                )
+              ) : (
+                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sihL.3.eksik')}</p>
+              )}
+              <div className="mt-2 flex items-center gap-1.5">
+                <button type="button" onClick={onGeri} className={yan}>
+                  {t('sih.geri')}
+                </button>
+                <button type="button" onClick={onBitir} disabled={!(lKoseOran > 0)} className={ana}>
+                  {t('sihL.bitir')}
+                </button>
+              </div>
+            </>
+          )}
+
           {/* 1 — İKİ NOKTA */}
-          {adim === 1 && (
+          {!lKose && adim === 1 && (
             <>
               {/*
                 REFERANS TÜRÜ.
@@ -228,7 +352,7 @@ export default function OlcuSihirbazi({
           )}
 
           {/* 2 — GERÇEK UZUNLUK */}
-          {adim === 2 && (
+          {!lKose && adim === 2 && (
             <>
               <p className={aciklama}>
                 {refTur === 'dortgen' ? t('sih.2.aciklamaDort') : t('sih.2.aciklama')}
@@ -300,65 +424,6 @@ export default function OlcuSihirbazi({
             </>
           )}
 
-          {/* 3 — L TİPİNDE KÖŞE ÇİZGİSİ */}
-          {adim === 3 && lKose && (
-            <>
-              <p className={aciklama}>{t('sihL.3.aciklama')}</p>
-              {/* Sıradaki iş fotoğrafa tıklamak; adımın durumu belirgin dursun. */}
-              <p className="mt-2 mb-0 rounded-md bg-brand/15 px-2 py-1.5 text-[13.5px] font-semibold text-brand dark:bg-brand/25">
-                {lKoseNoktaSayisi === 0
-                  ? t('sihL.3.durum0')
-                  : lKoseNoktaSayisi === 1
-                    ? t('sihL.3.durum1')
-                    : t('sihL.3.durum2')}
-              </p>
-              <p className={aciklama}>{t('sihL.3.boy')}</p>
-              <div className="mt-2 flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={lKoseBoyCm}
-                  onChange={(e) => setLKoseBoyCm(e.target.value)}
-                  placeholder={t('sihL.3.boyPh')}
-                  className={girdi}
-                />
-                <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
-              </div>
-              {/*
-                CANLI KONTROL.
-
-                Ekranın boyu köşe çizgisinin yüzde kaçını kaplıyor — sayı
-                saçmaysa (yüzde 400 gibi) kullanıcı yazdığı santimi anında
-                sorgular. Tahminle değil, girilen iki ölçünün oranıyla.
-              */}
-              {lKoseOran > 0 ? (
-                lKoseOran > 1 ? (
-                  <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sihL.3.tasiyor')}</p>
-                ) : (
-                  <p className={`${kucuk} text-emerald-700 dark:text-emerald-400`}>
-                    {t('sihL.3.hazir')} <strong>%{Math.round(lKoseOran * 100)}</strong>
-                  </p>
-                )
-              ) : (
-                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sihL.3.eksik')}</p>
-              )}
-              <div className="mt-2 flex items-center gap-1.5">
-                <button type="button" onClick={onGeri} className={yan}>
-                  {t('sih.geri')}
-                </button>
-                {lKoseNoktaSayisi > 0 && (
-                  <button type="button" onClick={lKoseIsaretle} className={yan}>
-                    {t('sihL.3.tekrar')}
-                  </button>
-                )}
-                <button type="button" onClick={onKoseKur} disabled={!(lKoseOran > 0)} className={ana}>
-                  {t('sihL.3.kur')}
-                </button>
-              </div>
-            </>
-          )}
-
           {/* 3 — KUTU ÖLÇÜSÜ */}
           {adim === 3 && !lKose && (
             <>
@@ -422,7 +487,7 @@ export default function OlcuSihirbazi({
           )}
 
           {/* 4 — KONUMLANDIR */}
-          {adim === 4 && (
+          {!lKose && adim === 4 && (
             <>
               <p className={aciklama}>
                 {lKose ? t('sihL.4.aciklama') : refDuzlem ? t('sih.4.aciklamaDuzlem') : t('sih.4.aciklama')}
