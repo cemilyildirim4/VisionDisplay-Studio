@@ -4728,15 +4728,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * gelir. Seçeneklerin anlamı değişmedi; yalnızca her yüzün kendi duvar
      * düzleminin perspektifine oturtulması eklendi (bkz. icBukeyKose).
      */
-    const dikisX = (ust.x + alt.x) / 2
-    const etkinKose =
-      lKose === 'orta'
-        ? 'orta'
-        : (lKoseSecim ?? (kacis && dikisX > kacis.x ? 'sag' : 'sol'))
     /*
-     * Her kanadın kaçış noktası KENDİ duvarından. Fotoğraftan çıkmıyorsa
-     * (derinlik yok, düzlem uymadı) null gidiyor ve icBukeyKose eski
-     * varsayıma düşüyor.
+     * KÖŞENİN AÇISI — dikişin kadrajdaki yerinden, sürekli (değişmedi).
+     * Kanatların ENİ bundan geliyor; perspektif düzeltmesi buna karışmıyor.
+     */
+    const dikisX = (ust.x + alt.x) / 2
+    const yariKadraj = Math.max(1, (fotoYer?.genislik || tuvalBoyut.w) / 2)
+    const EN_COK_KOSE_ACI = (35 * Math.PI) / 180
+    const aci =
+      lKose === 'orta'
+        ? 0
+        : lKoseSecim === 'sol'
+          ? -EN_COK_KOSE_ACI
+          : lKoseSecim === 'sag'
+            ? EN_COK_KOSE_ACI
+            : kacis
+              ? Math.max(-1, Math.min(1, (dikisX - kacis.x) / yariKadraj)) * EN_COK_KOSE_ACI
+              : 0
+    /*
+     * Her kanadın kaçış noktası KENDİ duvarından: yalnızca uzak kenarın
+     * uçlarının YÖNÜNÜ belirliyor, enini değil. Fotoğraftan çıkmıyorsa null
+     * gidiyor ve eski güvenli geometri kullanılıyor.
      */
     const ufukTuvalY = kacis?.y ?? null
     const vSol = duvarKacisX(ust, alt, 1, ufukTuvalY)
@@ -4748,11 +4760,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       sagM,
       boyM,
       mesafeM: izlemeMesafesi,
-      kose: etkinKose,
+      aci,
+      ufukY: ufukTuvalY,
       vSol,
       vSag,
-      ufukY: ufukTuvalY,
-      asalX: kacis?.x ?? null,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
