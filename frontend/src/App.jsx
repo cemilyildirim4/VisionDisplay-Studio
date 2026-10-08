@@ -4541,11 +4541,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kayma uygulanmış dikiş. Fotoğrafın dışına çıkmıyor: dikişin orta noktası
    * fotoğrafın dikdörtgeninde kalmak zorunda (bkz. fotoSinir).
    */
-  const lKaymayiUygula = (ust, alt) => {
+  const lKaymayiUygula = (ust, alt, cizgi = null) => {
     const k = lKoseKayma
     if (!k.x && !k.y) return [ust, alt]
     let dx = k.x
     let dy = k.y
+    if (cizgi) {
+      /*
+       * KÖŞE İŞARETLİYKEN TAŞIMA ÇİZGİ BOYUNCA.
+       *
+       * İşaretlenen çizgi gerçek köşenin yeri; ekranı ondan yana kaydırmak
+       * hizayı bozuyor. Üstelik dönen kanadın perspektifi kaçış noktasına
+       * olan uzaklıktan hesaplandığı için ekran yana kaydıkça açısı da
+       * değişiyor — yani yanlış bir yere yanlış açıyla oturuyor.
+       *
+       * Yukarı/aşağı ise anlamlı: işaretlenen çizgi köşenin TAMAMI (tavandan
+       * zemine), ekran onun bir parçası. Taşıma bu yüzden çizginin kendi
+       * yönüne izdüşürülüyor ve ekran çizginin dışına taşamıyor.
+       */
+      const vx = cizgi.alt.x - cizgi.ust.x
+      const vy = cizgi.alt.y - cizgi.ust.y
+      const boy = Math.hypot(vx, vy)
+      if (boy > 1) {
+        const ex = vx / boy
+        const ey = vy / boy
+        const yariEkran = Math.hypot(alt.x - ust.x, alt.y - ust.y) / 2
+        const sinir = Math.max(0, boy / 2 - yariEkran)
+        const t = Math.max(-sinir, Math.min(sinir, dx * ex + dy * ey))
+        dx = ex * t
+        dy = ey * t
+      }
+      return [
+        { x: ust.x + dx, y: ust.y + dy },
+        { x: alt.x + dx, y: alt.y + dy },
+      ]
+    }
     if (fotoSinir) {
       const ox = (ust.x + alt.x) / 2 + dx
       const oy = (ust.y + alt.y) / 2 + dy
@@ -4780,6 +4810,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       ...lKaymayiUygula(
         { x: ortaX - yariX, y: ortaY - yariY },
         { x: ortaX + yariX, y: ortaY + yariY },
+        { ust: cUst, alt: cAlt },
       ),
     )
   })()
@@ -5608,6 +5639,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 tıklama köşe noktalarına gitmeli, tasarıma değil.
               */
               onSurukle={!lKoseKipi && !refKipi ? lKoseSurukle : null}
+              /* Köşe işaretliyse taşıma çizgi boyunca: imleç de öyle desin. */
+              surukleImleci={lKoseCizgiGeo ? 'ns-resize' : 'move'}
               geo={lKoseCizimi}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}

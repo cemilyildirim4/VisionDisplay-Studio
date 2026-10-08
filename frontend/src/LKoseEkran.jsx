@@ -44,6 +44,8 @@ export default function LKoseEkran({
    * tıklanabilir kalıyor.
    */
   onSurukle = null,
+  /* Taşıma serbest mi, yoksa köşe çizgisi boyunca mı — imleç bunu söylüyor. */
+  surukleImleci = 'move',
 }) {
   if (!geo?.on || !geo?.yan) return null
 
@@ -75,7 +77,7 @@ export default function LKoseEkran({
           overflow: 'hidden',
           backgroundColor: '#0a0a0a',
           pointerEvents: onSurukle ? 'auto' : undefined,
-          cursor: onSurukle ? 'move' : undefined,
+          cursor: onSurukle ? surukleImleci : undefined,
           touchAction: onSurukle ? 'none' : undefined,
           /*
             Dilim: içerik tek bir şerit gibi çiziliyor, kanat kendi payını
