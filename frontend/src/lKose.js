@@ -365,8 +365,11 @@ export function icBukeyKose({
   boyM,
   mesafeM,
   kose = 'sol',
-  kacisX = null,
+  /* Her duvarın KENDİ yatay kaçış noktasının x'i (tuval pikseli). */
+  vSol = null,
+  vSag = null,
   ufukY = null,
+  asalX = null,
 }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
@@ -374,17 +377,10 @@ export function icBukeyKose({
   const dy = alt.y - ust.y
   const dikisPx = Math.hypot(dx, dy)
   if (!(dikisPx > 2)) return null
-  /*
-   * DİKİŞ DİK OLMAK ZORUNDA.
-   *
-   * 90 derecelik bir köşe fotoğrafta dikey bir kenardır; kamera yan yatmadıkça
-   * yataya yakın olamaz. Yatay bir dikiş verilirse kanatlar o çizginin iki
-   * yanına değil ÜSTÜNE katlanıyor. Sınır geniş (dikeyden 60 dereceye kadar).
-   */
+  /* Dikiş dik olmak zorunda (bkz. yatay çizgi uyarısı). */
   if (Math.abs(dy) < dikisPx * 0.5) return null
 
-  /* Dikişin bulunduğu derinlikte 1 metre kaç piksel. Ölçek buradan; cm/px
-     sistemi bu satırın dışında hiçbir yere karışmıyor. */
+  /* Dikiş hizasında 1 metre kaç piksel. cm/px sistemi bunun dışında değişmiyor. */
   const m = dikisPx / boyM
   const f = Math.max(0.6, Number(mesafeM) || 3)
 
@@ -397,67 +393,53 @@ export function icBukeyKose({
   const cy = (ust.y + alt.y) / 2
   const yari = dikisPx / 2
   const KOK2 = Math.SQRT2
+  const yatay = Number.isFinite(ufukY) ? ufukY : cy
+  const asal = Number.isFinite(asalX) ? asalX : cx
 
   /*
    * ───────────────────────────────────────────────────────────────────────
-   * HER YÜZ KENDİ DUVARININ PERSPEKTİFİNE OTURUYOR.
+   * YÜZ, BULUNDUĞU DUVARIN KENDİ KAÇIŞ NOKTASINA GÖRE KURULUYOR.
    *
-   * Köşe iki ayrı duvar düzlemi demek ve bu iki düzlemin fotoğraftaki kaçış
-   * davranışı aynı değil:
+   * Bir duvar üzerindeki BÜTÜN yatay doğrular — tavan birleşimi, zemin
+   * birleşimi, o duvara asılmış bir pencerenin üst ve alt kenarı — fotoğrafta
+   * tek bir noktada buluşur: o duvarın yatay kaçış noktası. Pencerenin duvara
+   * yapışık görünmesinin sebebi budur.
    *
-   *  • ÖN (karşı) duvar görüntü düzlemine paralel. Üstündeki yatay doğrular
-   *    fotoğrafta da paralel kalır — kaçış noktası sonsuzdadır. Bu yüzden o
-   *    yüzde kısalma yok: kenarları dikişe dik, uzak kenarı dikişle aynı
-   *    boyda.
+   * Ekranın bir kanadı da o duvara asılmış bir pencereden farksız. Üst ve alt
+   * kenarının duvarın tavan ve zemin hatlarıyla AYNI projektif doğrultuda
+   * olması için tek şart: ikisinin de o duvarın kaçış noktasından geçmesi.
+   * Dikişin iki ucunu o noktadan aynı oranda uzaklaştırmak bunu birebir
+   * sağlıyor — iki uç bağımsız ölçeklenmiyor, ikisi de aynı düzlemin
+   * geometrisinden geliyor.
    *
-   *  • YAN duvar izleyiciye doğru geliyor. Üstündeki yatay doğrular
-   *    fotoğrafın KAÇIŞ NOKTASINDA buluşur (tek nokta perspektifli bir odada
-   *    kameranın asal noktası, ufuk çizgisi üzerinde). O yüzün uzak kenarı,
-   *    dikişin iki ucunun kaçış noktasından f/(f−d) oranında uzaklaştırılmış
-   *    hâlidir; böylece üst ve alt kenarları kendiliğinden o noktaya nişanlar.
+   * Kaçış noktası fotoğraftan geliyor (bkz. App.jsx duvarKacisX): derinlik
+   * haritasında o duvarın düzlemi uydurulup kaçış çizgisi çıkarılıyor ve ufuk
+   * çizgisiyle kesiştiriliyor. Önceki hesapta bu nokta kadrajın ortası
+   * varsayılıyordu; ekran o yüzden kendi başına bir perspektif uyduruyor,
+   * duvarın akışını tutmuyordu.
    *
-   * Önce iki kanat tek bir açıdan türetiliyordu (45 ± açı) ve uzak kenarın
-   * yatay yeri kaçış noktasından bağımsız hesaplanıyordu; kenarlar duvarın
-   * kaçış doğrultusunu tutmadığı için ekran duvara yapışmış değil, bükülmüş
-   * bir yüzey gibi duruyordu.
-   *
-   * Dikiş iki yüzde de AYNI iki nokta (ust, alt) — ortak ve kesintisiz.
+   * Uzaklaşma oranı (k) kapalı biçimde çıkıyor: duvar yönü (Dx, Dz), kaçış
+   * noktasının asal noktaya uzaklığıyla odak uzunluğunun oranıdır, dolayısıyla
+   *   k = 1 / (1 − w·m / √(F² + Vx²))
+   * Karşıdan görünen duvarda V sonsuza gider, k → 1 olur ve yüz kısalmaz:
+   * "zorla paralel dikdörtgen" diye bir dal yok, aynı formül ikisini de
+   * veriyor.
    * ───────────────────────────────────────────────────────────────────────
    */
-  const vx = Number.isFinite(kacisX) ? kacisX : cx
-  const vy = Number.isFinite(ufukY) ? ufukY : cy
+  const F = Math.max(1, f * m)
 
-  /* Ön duvardaki yüz: kısalma yok, uzak kenar dikişin ötelenmiş kopyası. */
-  const duzYuz = (wM, yon) => {
-    const yanal = wM * m
-    return [
-      { x: ust.x + nx * yanal * yon, y: ust.y + ny * yanal * yon },
-      { x: alt.x + nx * yanal * yon, y: alt.y + ny * yanal * yon },
-    ]
-  }
+  const duvardanYuz = (wM, yon, vx) => {
+    /* Kaçış noktası yüzün açılacağı yönün TERSİNDE olmalı; değilse aynala. */
+    let d = vx - cx
+    const istenen = -nx * yon
+    if (!(Number.isFinite(d)) || Math.abs(d) < 1) d = istenen * 1e6
+    if (Math.sign(d) !== Math.sign(istenen)) d = -d
+    const V = { x: cx + d, y: yatay }
 
-  /*
-   * Yan duvardaki yüz: kaçış noktasına göre ölçekleme.
-   *
-   * Kaçış noktası dikişin HANGİ yanındaysa yüz öteki yana açılır. Kullanıcı
-   * köşeyi ters tarafa zorlamışsa (sol/sağ seçimi) kaçış noktası dikişe göre
-   * aynalanıyor: uzaklığı, yani perspektifin sertliği korunuyor, yalnızca
-   * yön seçime uyuyor.
-   *
-   * Dikiş kaçış noktasının tam üstündeyse yan duvar gerçekten kenarından
-   * görünür ve sıfır genişliğe iner; dörtgen yozlaşmasın diye küçük bir
-   * taban bırakılıyor.
-   */
-  const kacanYuz = (wM, yon) => {
-    const d = Math.min(wM, f * 0.85)
-    const s = f / (f - d)
-    const uzaklik = Math.max(Math.abs(cx - vx), (wM * m) / (s - 1) * 0.06)
-    /* Kaçış noktası, yüzün açılması gereken yönün TERSİNDE olmalı. */
-    const vEtkin = { x: cx - nx * uzaklik * yon, y: vy }
-    const olcekle = (p) => ({
-      x: vEtkin.x + (p.x - vEtkin.x) * s,
-      y: vEtkin.y + (p.y - vEtkin.y) * s,
-    })
+    const Vx = V.x - asal
+    const kisalma = Math.min(0.85, (wM * m) / Math.sqrt(F * F + Vx * Vx))
+    const k = 1 / (1 - kisalma)
+    const olcekle = (p) => ({ x: V.x + (p.x - V.x) * k, y: V.y + (p.y - V.y) * k })
     return [olcekle(ust), olcekle(alt)]
   }
 
@@ -474,25 +456,14 @@ export function icBukeyKose({
     const u = { x: px - ux * yari, y: py - uy * yari }
     const l = { x: px + ux * yari, y: py + uy * yari }
     return [
-      { x: u.x, y: vy + (u.y - vy) * s },
-      { x: l.x, y: vy + (l.y - vy) * s },
+      { x: u.x, y: yatay + (u.y - yatay) * s },
+      { x: l.x, y: yatay + (l.y - yatay) * s },
     ]
   }
 
   const ortaMi = kose === 'orta'
-  const kacanSol = !ortaMi && kose !== 'sag'
-  const kacanSag = !ortaMi && kose === 'sag'
-
-  const [solUst, solAlt] = ortaMi
-    ? serbestYuz(solM, 1)
-    : kacanSol
-      ? kacanYuz(solM, 1)
-      : duzYuz(solM, 1)
-  const [sagUst, sagAlt] = ortaMi
-    ? serbestYuz(sagM, -1)
-    : kacanSag
-      ? kacanYuz(sagM, -1)
-      : duzYuz(sagM, -1)
+  const [solUst, solAlt] = ortaMi ? serbestYuz(solM, 1) : duvardanYuz(solM, 1, vSol)
+  const [sagUst, sagAlt] = ortaMi ? serbestYuz(sagM, -1) : duvardanYuz(sagM, -1, vSag)
 
   return {
     /* Sol kanat: uzak ucundan dikişe (soldan sağa). */
@@ -502,7 +473,7 @@ export function icBukeyKose({
     /* Dikiş hizasındaki ölçek — kanatların piksel ölçüsü buradan. */
     pxPerM: m,
     /* Hangi kanat köşeyi dönüyor — gölge onu izliyor. */
-    donenSol: ortaMi ? true : kacanSol,
+    donenSol: ortaMi ? true : kose !== 'sag',
   }
 }
 

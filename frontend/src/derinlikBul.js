@@ -211,5 +211,12 @@ export function duzlemUyumu(harita, x0, y0, w, h) {
     onundeki: onde / Math.max(1, sayac),
     egimX: a,
     egimY: b,
+    /*
+     * Düzlemin SABİT terimi. Ters derinlik düzlem üstünde z = a·x + b·y + c
+     * olduğu için, z'nin sıfırlandığı yer (a·x + b·y + c = 0) o düzlemin
+     * SONSUZDAKİ çizgisidir — yani kaçış çizgisi. Eğim tek başına o çizgiyi
+     * vermiyor, sabit terim de gerekiyor (bkz. lKose.js duvarKacisX).
+     */
+    sabit: c,
   }
 }

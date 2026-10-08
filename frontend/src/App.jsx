@@ -37,6 +37,7 @@ import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
 import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
+import { duzlemUyumu } from './derinlikBul.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -4604,6 +4605,76 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
+   * BİR DUVARIN YATAY KAÇIŞ NOKTASI — FOTOĞRAFTAN.
+   *
+   * Derinlik haritası (ozelSahne.derinlik) ters derinlik veriyor: yakın yer
+   * büyük, uzak yer küçük. Bir DÜZLEM üzerinde ters derinlik, görüntü
+   * koordinatlarının birinci dereceden bir fonksiyonudur — iğnedelik kamerada
+   * bu kesindir, yaklaşım değil:
+   *
+   *     1/Z = a·x + b·y + c
+   *
+   * Dolayısıyla 1/Z'nin sıfırlandığı yer (a·x + b·y + c = 0) o düzlemin
+   * SONSUZDAKİ çizgisi, yani KAÇIŞ ÇİZGİSİdir. O duvarın bütün yatay
+   * doğruları — tavan birleşimi, zemin birleşimi, duvara asılmış bir
+   * pencerenin kenarları — bu çizgi üzerinde bir noktada buluşur. Aranan
+   * nokta, kaçış çizgisinin UFUK çizgisiyle kesiştiği yer.
+   *
+   * a ≈ 0 ise duvar görüntü düzlemine paralel demektir: kaçış noktası
+   * sonsuza gider ve o yüzde kısalma olmaz. Bu bir istisna dalı değil, aynı
+   * formülün doğal sonucu.
+   *
+   * Düzlem, ekranın gerçekten oturacağı bölgeden uyduruluyor (dikişin o
+   * yanındaki şerit). Uyum kötüyse — önünde eşya varsa ya da artık büyükse —
+   * null dönüyor ve çağıran taraf eski varsayıma düşüyor; kötü bir ölçüm,
+   * ölçüm olmamasından daha kötü.
+   */
+  const duvarKacisX = (dikisUst, dikisAlt, yon, ufukTuvalY) => {
+    const harita = ozelSahne?.derinlik
+    if (!harita?.w || !harita?.h || !harita?.veri) return null
+    if (!Number.isFinite(ufukTuvalY)) return null
+
+    /* Tuval pikseli → fotoğrafın 0..1'i → derinlik haritasının pikseli. */
+    const haritaya = (p) => {
+      const o = tuvalOrana(p)
+      return { x: o.x * harita.w, y: o.y * harita.h }
+    }
+    const a1 = haritaya(dikisUst)
+    const a2 = haritaya(dikisAlt)
+    const dikisX = (a1.x + a2.x) / 2
+    const ustY = Math.min(a1.y, a2.y)
+    const altY = Math.max(a1.y, a2.y)
+
+    /* Dikişin o yanındaki şerit: duvarın ekranın oturacağı parçası. */
+    const serit = Math.max(6, Math.round(harita.w * 0.2))
+    const x0 = Math.round(yon > 0 ? dikisX - serit : dikisX + 1)
+    const gx0 = Math.max(0, Math.min(harita.w - 2, x0))
+    const gw = Math.max(4, Math.min(harita.w - gx0, serit))
+    /* Dikey olarak ekranın bandı, biraz genişletilmiş. */
+    const pay = (altY - ustY) * 0.25
+    const gy0 = Math.max(0, Math.round(ustY - pay))
+    const gh = Math.max(4, Math.min(harita.h - gy0, Math.round(altY - ustY + 2 * pay)))
+    if (gw < 4 || gh < 4) return null
+
+    const uyum = duzlemUyumu(harita, gx0, gy0, gw, gh)
+    if (!uyum || !Number.isFinite(uyum.egimX) || !Number.isFinite(uyum.sabit)) return null
+    /* Düzlem değilse (eşya, köşe, bozuk derinlik) kullanma. */
+    if (uyum.artik > 0.06 || uyum.onundeki > 0.3) return null
+
+    const ufukHarita = tuvalOrana({ x: dikisUst.x, y: ufukTuvalY }).y * harita.h
+    const a = uyum.egimX
+    const b = uyum.egimY
+    const c = uyum.sabit
+    /* Kaçış çizgisi ufku kesmiyor (duvar karşıdan): sonsuz. */
+    if (!(Math.abs(a) > 1e-7)) return null
+    const vxHarita = -(b * ufukHarita + c) / a
+    if (!Number.isFinite(vxHarita)) return null
+    /* Geri çevir: harita pikseli → 0..1 → tuval pikseli. */
+    const vx = oranTuvale({ x: vxHarita / harita.w, y: ufukHarita / harita.h }).x
+    return Number.isFinite(vx) ? vx : null
+  }
+
+  /*
    * DİKİŞTEN İKİ KANAT — iç bükey köşe, iki yolun ortak kurucusu.
    *
    * Hem işaretlenen köşe çizgisi hem de ölçü öncesi varsayılan köşe aynı
@@ -4662,6 +4733,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       lKose === 'orta'
         ? 'orta'
         : (lKoseSecim ?? (kacis && dikisX > kacis.x ? 'sag' : 'sol'))
+    /*
+     * Her kanadın kaçış noktası KENDİ duvarından. Fotoğraftan çıkmıyorsa
+     * (derinlik yok, düzlem uymadı) null gidiyor ve icBukeyKose eski
+     * varsayıma düşüyor.
+     */
+    const ufukTuvalY = kacis?.y ?? null
+    const vSol = duvarKacisX(ust, alt, 1, ufukTuvalY)
+    const vSag = duvarKacisX(ust, alt, -1, ufukTuvalY)
     const k = icBukeyKose({
       ust,
       alt,
@@ -4670,8 +4749,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       boyM,
       mesafeM: izlemeMesafesi,
       kose: etkinKose,
-      kacisX: kacis?.x ?? null,
-      ufukY: kacis?.y ?? null,
+      vSol,
+      vSag,
+      ufukY: ufukTuvalY,
+      asalX: kacis?.x ?? null,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
