@@ -4584,6 +4584,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Köşeye karşıdan bakmak varsayılıyor (her kanat 45°).
    */
 
+  /*
+   * İŞARETLENEN ÇİZGİ DİK Mİ.
+   *
+   * Köşe fotoğrafta dikey bir kenardır. Kullanıcı yanlışlıkla duvar boyunca
+   * iki nokta koyarsa (yatay bir çizgi) ortaya anlamlı bir köşe çıkmıyor;
+   * sihirbaz bunu söylüyor ve devam ettirmiyor.
+   */
+  const lKoseDikMi = (() => {
+    if (lKoseNokta.length !== 2) return true
+    const a = oranTuvale(lKoseNokta[0])
+    const b = oranTuvale(lKoseNokta[1])
+    const u = Math.hypot(b.x - a.x, b.y - a.y)
+    if (!(u > 2)) return false
+    return Math.abs(b.y - a.y) >= u * 0.5
+  })()
+
   /* Sihirbazda yazılan ölçünün yanında duran karşılaştırma. */
   const lKabinGenislik = (() => {
     if (!lEkran) return { sol: 0, sag: 0 }
@@ -6506,6 +6522,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               setLKoseKipi(true)
                             }}
                             lKoseOran={lKoseOran}
+                            lKoseDikMi={lKoseDikMi}
                             onGeri={sihirbazGeri}
                             onIleri={sihirbazIleri}
                             onKutuKur={sihirbazKutuKur}

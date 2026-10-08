@@ -363,6 +363,19 @@ export function icBukeyKose({ ust, alt, solM, sagM, boyM, mesafeM, tuvalW, tuval
   if (!(tuvalW > 0) || !(tuvalH > 0)) return null
   const dikisPx = Math.hypot(alt.x - ust.x, alt.y - ust.y)
   if (!(dikisPx > 2)) return null
+  /*
+   * DİKİŞ DİK OLMAK ZORUNDA.
+   *
+   * 90 derecelik bir köşe fotoğrafta dikey bir kenardır; kamera yan yatmadıkça
+   * yataya yakın olamaz. Yatay bir dikiş verilirse kanatlar o çizginin iki
+   * yanına değil, ÜSTÜNE katlanıyor: ikisi de ince birer şeride dönüp üst üste
+   * biniyor ve ekran düz bir bant gibi görünüyor. Böyle bir girdi geldiğinde
+   * hiç çizmemek doğru — çağıran taraf varsayılan köşeye düşüyor.
+   *
+   * Sınır geniş tutuldu (dikeyden 60 dereceye kadar): eğik çekilmiş
+   * fotoğraflar da çalışsın, yalnızca anlamsız girdi elensin.
+   */
+  if (Math.abs(alt.y - ust.y) < dikisPx * 0.5) return null
 
   /* Dikişin bulunduğu derinlikte 1 metre kaç piksel. */
   const m = dikisPx / boyM

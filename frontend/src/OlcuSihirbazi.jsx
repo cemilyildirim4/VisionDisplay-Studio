@@ -82,6 +82,8 @@ export default function OlcuSihirbazi({
   lKoseKabinSagCm = 0,
   lKoseIsaretle,
   lKoseOran = null,
+  /* İşaretlenen çizgi dik mi — yatay bir çizgiden köşe çıkmaz. */
+  lKoseDikMi = true,
   /* 3. adım */
   kutuEn,
   setKutuEn,
@@ -190,13 +192,22 @@ export default function OlcuSihirbazi({
                     ? t('sihL.3.durum1')
                     : t('sihL.3.durum2')}
               </p>
+              {/* Yatay çizgi uyarısı: sebebiyle birlikte, devam da kapalı. */}
+              {lKoseNoktaSayisi >= 2 && !lKoseDikMi && (
+                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sihL.3.dikDegil')}</p>
+              )}
               <div className="mt-2 flex items-center gap-1.5">
                 {lKoseNoktaSayisi > 0 && (
                   <button type="button" onClick={lKoseIsaretle} className={yan}>
                     {t('sihL.3.tekrar')}
                   </button>
                 )}
-                <button type="button" onClick={onIleri} disabled={lKoseNoktaSayisi < 2} className={ana}>
+                <button
+                  type="button"
+                  onClick={onIleri}
+                  disabled={lKoseNoktaSayisi < 2 || !lKoseDikMi}
+                  className={ana}
+                >
                   {t('sih.devam')}
                 </button>
               </div>
@@ -237,6 +248,16 @@ export default function OlcuSihirbazi({
               {lKoseOran > 0 ? (
                 lKoseOran > 1 ? (
                   <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sihL.3.tasiyor')}</p>
+                ) : lKoseOran < 0.2 ? (
+                  /*
+                    Ekran köşenin beşte birinden küçükse yazılan santim büyük
+                    ihtimalle yanlış (metre yerine santim, ya da duvarın eni).
+                    Ekran o oranda minicik çiziliyor ve köşe hiç okunmuyor.
+                  */
+                  <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>
+                    {t('sihL.3.hazir')} <strong>%{Math.round(lKoseOran * 100)}</strong> —{' '}
+                    {t('sihL.3.cokKucuk')}
+                  </p>
                 ) : (
                   <p className={`${kucuk} text-emerald-700 dark:text-emerald-400`}>
                     {t('sihL.3.hazir')} <strong>%{Math.round(lKoseOran * 100)}</strong>
