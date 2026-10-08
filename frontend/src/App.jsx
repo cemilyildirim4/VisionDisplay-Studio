@@ -4513,12 +4513,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /*
    * GÖZ HİZASI — işaretlenen köşe çizgisinden.
    *
-   * Köşe zeminden tavana uzanıyor ve gerçek yüksekliği yazılı. Kamera tipik
+   * Köşe zeminden yukarı uzanıyor ve gerçek yüksekliği yazılı. Kamera tipik
    * olarak yerden 1,5 metrede tutulur; o hâlde göz hizası çizginin alt
-   * ucundan yukarı doğru 1,5/yükseklik oranında bir yerdedir. Yazılan ölçü
-   * küçükse (kullanıcı tavana kadar değil, bir panelin köşesini işaretlemiş
-   * olabilir) oran sınırlanıyor: çizginin dışına düşen bir göz hizası
-   * perspektifi tersine çeviriyor.
+   * ucundan yukarı doğru 1,5/yükseklik oranında bir yerdedir.
+   *
+   * ORAN BİRİ GEÇEBİLİR ve bu bir hata değil: işaretlenen köşe kameradan
+   * alçaksa (örneğin 120 cm'lik bir köşe) göz hizası o çizginin ÜSTÜNDE
+   * kalır. O zaman ekranın tamamı göz hizasının altındadır ve köşe aşağı
+   * doğru açılır — dikiş en üstte kalır, dış uçlar düşer. Gerçekte olan da
+   * budur; bir ara oran 0,9'da kıstırılıyordu ve ekran hep yukarı doğru
+   * açılıyordu.
+   *
+   * Sınır yalnızca saçma değerler için: çok küçük bir ölçü yazılırsa göz
+   * hizası kadrajdan kilometrelerce uzağa düşüyor ve perspektif patlıyor.
    */
   const KAMERA_YUKSEKLIGI_CM = 150
 
@@ -4530,7 +4537,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const b = oranTuvale(lKoseNokta[1])
     const cUst = a.y <= b.y ? a : b
     const cAlt = a.y <= b.y ? b : a
-    const oran = Math.max(0.1, Math.min(0.9, KAMERA_YUKSEKLIGI_CM / koseBoyCm))
+    const oran = Math.max(0.05, Math.min(3, KAMERA_YUKSEKLIGI_CM / koseBoyCm))
     return cAlt.y - oran * (cAlt.y - cUst.y)
   })()
 
