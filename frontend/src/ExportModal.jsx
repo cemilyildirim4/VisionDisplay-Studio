@@ -30,7 +30,7 @@ async function captureScreenPreview() {
       logging: false,
       ignoreElements: (n) => n.hasAttribute?.('data-pdf-gizle'),
     })
-    return canvas.toDataURL('image/jpeg', 0.85)
+    return canvas.toDataURL('image/jpeg', 0.92)
   } catch (err) {
     console.error('Ekran önizlemesi yakalanamadı:', err)
     return null
@@ -366,6 +366,7 @@ export default function ExportModal({ open, onClose, summary }) {
         configJson: summary.tasarim ? JSON.stringify(summary.tasarim) : null,
         hasMiniPc: miniPc.hasMiniPc,
         miniPcId: miniPc.miniPcId,
+        previewImageBase64,
       }
       const sendQuote = (body) =>
         apiFetch(`${API_URL}/api/quotes`, {
@@ -413,6 +414,7 @@ export default function ExportModal({ open, onClose, summary }) {
             modulesPerCard: 0,
             hasMiniPc: miniPc.hasMiniPc,
             miniPcId: miniPc.miniPcId,
+            previewImageBase64,
           }),
         }).catch((e) => console.error('Proje kaydı gönderilemedi (PDF yine de indirildi):', e))
       }

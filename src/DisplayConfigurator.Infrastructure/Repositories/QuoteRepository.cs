@@ -125,6 +125,13 @@ public class QuoteRepository : IQuoteRepository
         return quote;
     }
 
+    public async Task SetPreviewImageAsync(int id, byte[] image)
+    {
+        using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = "UPDATE quotes SET preview_image = @Image WHERE id = @Id";
+        await connection.ExecuteAsync(sql, new { Id = id, Image = image });
+    }
+
     public async Task<bool> DeleteAsync(int id)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();

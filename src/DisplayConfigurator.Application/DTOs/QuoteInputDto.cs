@@ -68,4 +68,7 @@ public class QuoteInputDto
     public bool HasMiniPc { get; set; }
 
     public int? MiniPcId { get; set; }
+
+    /// <summary>Tuval görüntüsü. Listeye yazılmaz; teklif kaydında saklanır.</summary>
+    public string? PreviewImageBase64 { get; set; }
 }

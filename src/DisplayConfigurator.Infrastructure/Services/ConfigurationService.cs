@@ -112,6 +112,9 @@ public class ConfigurationService : IConfigurationService
         };
 
         int createdId = await _configurationRepository.CreateAsync(entity);
+        var preview = PreviewImageCodec.Decode(dto.PreviewImageBase64);
+        if (preview != null)
+            await _configurationRepository.SetPreviewImageAsync(createdId, preview);
         responseDto.Id = createdId;
         responseDto.UserId = userId;
         responseDto.Status = entity.Status;
@@ -159,7 +162,16 @@ public class ConfigurationService : IConfigurationService
         configDto.Status = entity.Status;
         configDto.Revision = entity.Revision;
         configDto.CreatedAt = entity.CreatedAt;
-        return _pdfReportService.Generate(configDto, extras: null, cabin, kind);
+        var extras = new PdfReportExtras
+        {
+            Phone = entity.Phone,
+            Email = entity.Email,
+            WallWidthM = entity.WallWidthM,
+            WallHeightM = entity.WallHeightM,
+            ScreenMode = entity.ScreenMode,
+            PreviewImage = await _configurationRepository.GetPreviewImageAsync(id),
+        };
+        return _pdfReportService.Generate(configDto, extras, cabin, kind);
     }
 
     public async Task<byte[]> GenerateSpecSheetPdfFromDtoAsync(

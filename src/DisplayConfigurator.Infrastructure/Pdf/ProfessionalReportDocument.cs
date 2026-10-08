@@ -46,24 +46,12 @@ public class ProfessionalReportDocument : IDocument
         container.Page(page =>
         {
             page.Size(PageSizes.A4);
-            page.Margin(1.4f, Unit.Centimetre);
+            page.Margin(1.8f, Unit.Centimetre);
             page.PageColor(Colors.White);
             page.DefaultTextStyle(x => x.FontSize(9.5f).FontFamily("Arial").FontColor(Ink));
 
             page.Header().Element(ComposeHeader);
             page.Content().Element(ComposeContent);
-            page.Footer().Element(ComposeFooter);
-        });
-
-        container.Page(page =>
-        {
-            page.Size(PageSizes.A4);
-            page.Margin(1.4f, Unit.Centimetre);
-            page.PageColor(Colors.White);
-            page.DefaultTextStyle(x => x.FontSize(9.5f).FontFamily("Arial").FontColor(Ink));
-
-            page.Header().Element(ComposeVisualHeader);
-            page.Content().Element(ComposeScreenVisual);
             page.Footer().Element(ComposeFooter);
         });
 
@@ -87,7 +75,7 @@ public class ProfessionalReportDocument : IDocument
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
-                page.Margin(1.4f, Unit.Centimetre);
+                page.Margin(1.8f, Unit.Centimetre);
                 page.PageColor(Colors.White);
                 page.DefaultTextStyle(x => x.FontSize(9.5f).FontFamily("Arial").FontColor(Ink));
 
@@ -135,22 +123,58 @@ public class ProfessionalReportDocument : IDocument
 
     private void ComposeScreenVisual(IContainer container)
     {
-        if (_extras.PreviewImage is { Length: > 0 })
-        {
-            container.Column(col =>
-            {
-                col.Item().AlignCenter().AlignMiddle()
-                    .Image(_extras.PreviewImage)
-                    .FitArea();
-                col.Item().Element(DrawScreenTypeLegend);
-            });
-            return;
-        }
+        int cols = Math.Max(1, _config.Cols);
+        int rows = Math.Max(1, _config.Rows);
+        int total = cols * rows;
+        double wMm = _config.TotalWidthMm;
+        double hMm = _config.TotalHeightMm;
+        double wM = wMm / 1000.0;
+        double hM = hMm / 1000.0;
+        double areaM2 = _config.ScreenAreaM2 > 0
+            ? (double)_config.ScreenAreaM2
+            : Math.Round(wM * hM, 2);
 
-        container.Column(col =>
+        container.Border(1).BorderColor(Color.FromHex("#e2e8f0")).Background(Colors.White).Padding(10).Column(col =>
         {
-            col.Item().AlignCenter().AlignMiddle().Element(DrawSchematic);
+            col.Item().Text("Yapılandırma görseli").FontSize(12).Bold().FontColor(BrandBlue);
+            col.Item().PaddingTop(8).Row(row =>
+            {
+                row.RelativeItem(3).Height(268).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
+                    .Background(Color.FromHex("#f8fafc")).Padding(6)
+                    .Element(c =>
+                    {
+                        if (_extras.PreviewImage is { Length: > 0 })
+                        {
+                            c.AlignCenter().AlignMiddle().Image(_extras.PreviewImage).FitArea();
+                            return;
+                        }
+
+                        c.AlignCenter().AlignMiddle().Element(DrawSchematic);
+                    });
+                row.ConstantItem(10);
+                row.RelativeItem(2).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
+                    .Background(Color.FromHex("#f5f7fb")).Padding(10)
+                    .Column(card =>
+                    {
+                        card.Item().Text("EKRAN ÖZETİ").FontSize(7).Bold().FontColor(Colors.Grey.Darken1);
+                        InfoLine(card, "Panel sayısı", $"{total} adet");
+                        InfoLine(card, "Dizilim", $"{cols} × {rows}");
+                        InfoLine(card, "Dış ölçü", $"{wMm:N0} × {hMm:N0} mm");
+                        InfoLine(card, "Ölçü", $"{wM:F2} × {hM:F2} m");
+                        InfoLine(card, "Alan", $"{areaM2:F2} m²");
+                        InfoLine(card, "Model", Empty(_config.CabinModelName, "—"));
+                    });
+            });
             col.Item().Element(DrawScreenTypeLegend);
+        });
+    }
+
+    private static void InfoLine(ColumnDescriptor card, string label, string value)
+    {
+        card.Item().PaddingTop(8).Row(line =>
+        {
+            line.RelativeItem().Text(label).FontSize(8).FontColor(Colors.Grey.Darken1);
+            line.RelativeItem().AlignRight().Text(value).FontSize(9).Bold();
         });
     }
 
@@ -183,7 +207,7 @@ public class ProfessionalReportDocument : IDocument
     private const float HumanHeightM = 1.80f;
 
     /// <summary>Şematik kutusunun toplam yüksekliği (punto).</summary>
-    private const float SchematicH = 320f;
+    private const float SchematicH = 210f;
 
     /// <summary>Kutunun kenarlığı + iç payı: ızgara bu kadar içeride başlıyor.</summary>
     private const float SchematicPad = 6.5f;
@@ -244,19 +268,19 @@ public class ProfessionalReportDocument : IDocument
 
     private void DrawGrid(IContainer box, int cols, int rows)
     {
+        float cellH = Math.Max(8f, (SchematicH - 2 * SchematicPad - 4f) / Math.Max(1, rows));
         box.Column(col =>
         {
             for (var r = 0; r < rows; r++)
             {
                 var captured = r;
-                col.Item().Row(cellRow =>
+                col.Item().Height(cellH).Row(cellRow =>
                 {
                     for (var c = 0; c < cols; c++)
                     {
-                        cellRow.RelativeItem().Padding(0.5f)
+                        cellRow.RelativeItem().Padding(0.6f)
                             .Background(captured % 2 == 0 ? BrandBlue : Color.FromHex("#3d7bc2"))
-                            .Border(0.4f).BorderColor(Colors.White)
-                            .MinHeight(14);
+                            .Border(0.4f).BorderColor(Colors.White);
                     }
                 });
             }
@@ -457,7 +481,10 @@ public class ProfessionalReportDocument : IDocument
                 Summary(row, "İZLEME MESAFESİ", $"{viewDist:F1} m", "önerilen");
             });
 
-            // ---- 2. TEKNİK TABLO ----
+            // ---- 2. YAPILANDIRMA GÖRSELİ ----
+            column.Item().PaddingTop(12).ShowEntire().Element(ComposeScreenVisual);
+
+            // ---- 3. TEKNİK TABLO ----
             column.Item().PaddingTop(12).Text("Teknik özellikler").FontSize(12).Bold().FontColor(BrandBlue);
             column.Item().PaddingTop(5).Table(table =>
             {
@@ -470,7 +497,7 @@ public class ProfessionalReportDocument : IDocument
                 table.Header(h =>
                 {
                     h.Cell().Background(BrandBlue).Padding(6).Text("Parametre").FontColor(Colors.White).Bold().FontSize(9);
-                    h.Cell().Background(BrandBlue).Padding(6).Text("Değer").FontColor(Colors.White).Bold().FontSize(9);
+                    h.Cell().Background(BrandBlue).Padding(6).AlignRight().Text("Değer").FontColor(Colors.White).Bold().FontSize(9);
                 });
 
                 bool alt = true;
@@ -749,7 +776,7 @@ public class ProfessionalReportDocument : IDocument
                 table.Header(h =>
                 {
                     h.Cell().Background(BrandBlue).Padding(6).Text("Parametre").FontColor(Colors.White).Bold().FontSize(9);
-                    h.Cell().Background(BrandBlue).Padding(6).Text("Değer").FontColor(Colors.White).Bold().FontSize(9);
+                    h.Cell().Background(BrandBlue).Padding(6).AlignRight().Text("Değer").FontColor(Colors.White).Bold().FontSize(9);
                 });
 
                 bool alt = true;
@@ -861,7 +888,7 @@ public class ProfessionalReportDocument : IDocument
         var bg = isAlternate ? Color.FromHex("#f8fafc") : Colors.White;
         isAlternate = !isAlternate;
         table.Cell().Background(bg).BorderBottom(1).BorderColor(Color.FromHex("#e2e8f0")).PaddingVertical(2.6f).PaddingHorizontal(5).Text(label).FontSize(8.5f);
-        table.Cell().Background(bg).BorderBottom(1).BorderColor(Color.FromHex("#e2e8f0")).PaddingVertical(2.6f).PaddingHorizontal(5).Text(value).Bold().FontSize(8.5f);
+        table.Cell().Background(bg).BorderBottom(1).BorderColor(Color.FromHex("#e2e8f0")).PaddingVertical(2.6f).PaddingHorizontal(5).AlignRight().Text(value).Bold().FontSize(9);
     }
 
     private static long ParsePixels(string? resolution, out string mpxText)

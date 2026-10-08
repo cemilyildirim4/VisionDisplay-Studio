@@ -65,6 +65,7 @@ public class ConfigurationsController : ControllerBase
     [Authorize]
     [BetaGate]
     [EnableRateLimiting("write")]
+    [RequestSizeLimit(20_000_000)]
     [HttpPost]
     public async Task<ActionResult<ConfigurationResponseDto>> Create([FromBody] CreateConfigurationDto dto)
     {

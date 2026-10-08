@@ -51,4 +51,7 @@ public class CreateConfigurationDto
     public int? PatchCableId { get; set; }
     public int? ReceivingCardId { get; set; }
     public int? ProcessorId { get; set; }
+
+    /// <summary>Tuval görüntüsü. Hesaba girmez. Doğrudan PDF en çok 6 MB, kayıt en çok 4 MB kabul eder.</summary>
+    public string? PreviewImageBase64 { get; set; }
 }

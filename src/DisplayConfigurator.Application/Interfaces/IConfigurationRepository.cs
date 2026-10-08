@@ -9,6 +9,8 @@ public interface IConfigurationRepository
     Task<IEnumerable<Configuration>> GetByUserIdAsync(int userId);
     Task<Configuration?> GetByIdAsync(int id);
     Task<int> CreateAsync(Configuration configuration);
+    Task SetPreviewImageAsync(int id, byte[] image);
+    Task<byte[]?> GetPreviewImageAsync(int id);
     Task<bool> DeleteAsync(int id);
     Task<bool> UpdateStatusAsync(int id, string status);
 }

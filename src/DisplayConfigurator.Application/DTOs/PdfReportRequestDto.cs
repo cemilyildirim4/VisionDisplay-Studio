@@ -30,9 +30,6 @@ public class PdfReportRequestDto : CreateConfigurationDto
     [StringLength(4000)]
     public string? ScreensSummary { get; set; }
 
-    /// <summary>data:image/...;base64,... veya ham base64. En fazla ~6 MB çözülür.</summary>
-    public string? PreviewImageBase64 { get; set; }
-
     /// <summary>
     /// Kamerada ("Nasıl Görüneceğini Gör") çekilip KAYDEDİLEN kare. Varsa
     /// rapora "Mekânda Görünüm" sayfası olarak eklenir; yoksa o sayfa hiç
@@ -92,20 +89,6 @@ public class PdfReportRequestDto : CreateConfigurationDto
         return sonuc;
     }
 
-    private static byte[]? DecodePreview(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        var s = raw.Trim();
-        var comma = s.IndexOf(',');
-        if (comma >= 0) s = s[(comma + 1)..];
-        try
-        {
-            var bytes = Convert.FromBase64String(s);
-            return bytes.Length is > 0 and <= MaxPreviewBytes ? bytes : null;
-        }
-        catch (FormatException)
-        {
-            return null;
-        }
-    }
+    private static byte[]? DecodePreview(string? raw) =>
+        PreviewImageCodec.Decode(raw, MaxPreviewBytes);
 }

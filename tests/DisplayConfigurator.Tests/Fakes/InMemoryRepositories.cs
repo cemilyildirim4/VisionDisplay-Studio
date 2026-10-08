@@ -52,6 +52,7 @@ public class InMemoryCabinRepository : ICabinRepository
 public class InMemoryConfigurationRepository : IConfigurationRepository
 {
     private readonly List<Configuration> _configurations = new();
+    private readonly Dictionary<int, byte[]> _previews = new();
 
     public Task<PagedResultDto<Configuration>> GetPagedAsync(PagedQueryDto query) =>
         Task.FromResult(new PagedResultDto<Configuration>
@@ -74,6 +75,15 @@ public class InMemoryConfigurationRepository : IConfigurationRepository
         _configurations.Add(configuration);
         return Task.FromResult(configuration.Id);
     }
+
+    public Task SetPreviewImageAsync(int id, byte[] image)
+    {
+        _previews[id] = image;
+        return Task.CompletedTask;
+    }
+
+    public Task<byte[]?> GetPreviewImageAsync(int id) =>
+        Task.FromResult(_previews.TryGetValue(id, out var image) ? image : null);
 
     public Task<bool> DeleteAsync(int id)
     {

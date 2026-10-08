@@ -229,6 +229,20 @@ public class ConfigurationRepository : IConfigurationRepository
         return await connection.ExecuteScalarAsync<int>(sql, config);
     }
 
+    public async Task SetPreviewImageAsync(int id, byte[] image)
+    {
+        using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = "UPDATE configurations SET preview_image = @Image WHERE id = @Id";
+        await connection.ExecuteAsync(sql, new { Id = id, Image = image });
+    }
+
+    public async Task<byte[]?> GetPreviewImageAsync(int id)
+    {
+        using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = "SELECT preview_image FROM configurations WHERE id = @Id";
+        return await connection.QueryFirstOrDefaultAsync<byte[]>(sql, new { Id = id });
+    }
+
     public async Task<bool> DeleteAsync(int id)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync();

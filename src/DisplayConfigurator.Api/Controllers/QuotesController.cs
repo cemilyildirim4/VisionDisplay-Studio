@@ -52,6 +52,7 @@ public class QuotesController : ControllerBase
     [BetaGate]
     [EnableRateLimiting("write")]
     [HttpPost]
+    [RequestSizeLimit(20_000_000)]
     [ProducesResponseType(typeof(Quote), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateQuote([FromBody] QuoteInputDto input)
@@ -93,6 +94,9 @@ public class QuotesController : ControllerBase
         };
 
         var created = await _quoteRepository.CreateAsync(quote);
+        var preview = PreviewImageCodec.Decode(input.PreviewImageBase64);
+        if (preview != null)
+            await _quoteRepository.SetPreviewImageAsync(created.Id, preview);
 
         var adminEmail = _config["Notifications:AdminEmail"];
         if (!string.IsNullOrWhiteSpace(adminEmail))
