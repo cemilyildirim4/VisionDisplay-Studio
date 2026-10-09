@@ -9,6 +9,11 @@ namespace DisplayConfigurator.Application.Engine;
 public sealed class HardwareCatalogItems
 {
     public Processor? Processor { get; init; }
+
+    /// <summary>Önerilen cihazdan farklı, çoklu modüler kurulum.</summary>
+    public Processor? AlternativeProcessor { get; init; }
+
+    public int AlternativeProcessorQuantity { get; init; }
     public PowerSupply? PowerSupply { get; init; }
     public MiniPc? MiniPc { get; init; }
     public PatchCable? PatchCable { get; init; }

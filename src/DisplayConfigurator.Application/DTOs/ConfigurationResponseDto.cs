@@ -31,6 +31,11 @@ public class ConfigurationResponseDto
     public int RequiredRj45Ports { get; set; }
     public string RecommendedProcessor { get; set; } = string.Empty;
 
+    /// <summary>Çoklu giriş seviyesi kurulum. Önerilen tek cihazdan farklıysa dolu.</summary>
+    public string? AlternativeProcessor { get; set; }
+
+    public int AlternativeProcessorQuantity { get; set; }
+
     // Matris & Adet
     public int Cols { get; set; }
     public int Rows { get; set; }

@@ -74,7 +74,6 @@ public static class ConfigurationCalculator
             : maxWattsPerUnit * 0.35m;
         decimal moduleMaxWatts = totalModules * maxWattsPerUnit;
         decimal moduleAvgWatts = totalModules * avgWattsPerUnit;
-        decimal? moduleVoltage = cabin.SupplyVoltage is > 0 ? cabin.SupplyVoltage : null;
 
         if (requireCompleteMatch)
         {
@@ -90,19 +89,19 @@ public static class ConfigurationCalculator
         }
 
         int powerSupplyQty = hw.PowerSupply != null
-            ? CountPowerSupplies(moduleMaxWatts, hw.PowerSupply, moduleVoltage)
+            ? CountPowerSupplies(totalModules, hw.PowerSupply)
             : 0;
         if (requireCompleteMatch && powerSupplyQty <= 0)
             throw new HardwareMatchException(
                 "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
 
         int receivingCardQty = CountReceivingCards(totalResW, totalResH, totalPixels, hw.ReceivingCard);
-        int patchCableQty = CountPatchCables(receivingCardQty);
         int processorQty = hw.Processor != null
             ? CountProcessors(totalPixels, totalResW, totalResH, hw.Processor, out int requiredPorts)
             : CountProcessors(totalPixels, totalResW, totalResH, processor: null, out requiredPorts);
         if (hw.Processor == null)
             processorQty = 0;
+        int patchCableQty = CountPatchCables(receivingCardQty, requiredPorts);
         int miniPcQty = dto.HasMiniPc && hw.MiniPc != null ? 1 : 0;
 
         if (requireCompleteMatch)
@@ -116,6 +115,9 @@ public static class ConfigurationCalculator
         }
 
         string recommendedProcessor = CatalogItemName(hw.Processor);
+        string? alternativeProcessor = hw.AlternativeProcessorQuantity > 0 && hw.AlternativeProcessor != null
+            ? CatalogItemName(hw.AlternativeProcessor)
+            : null;
 
         var breakdown = new List<HardwareLineItemDto>
         {
@@ -179,6 +181,8 @@ public static class ConfigurationCalculator
             ReceivingCardCount = receivingCardQty,
             RequiredRj45Ports = requiredPorts,
             RecommendedProcessor = recommendedProcessor,
+            AlternativeProcessor = alternativeProcessor,
+            AlternativeProcessorQuantity = alternativeProcessor == null ? 0 : hw.AlternativeProcessorQuantity,
             Cols = horizontalModules,
             Rows = verticalModules,
             TotalWidthMm = screenWidthMm,
@@ -223,24 +227,28 @@ public static class ConfigurationCalculator
         Math.Max(1, (int)Math.Ceiling(screenHeightMm / (double)Math.Max(1, moduleHeightMm)));
 
     /// <summary>
-    /// Güç kaynağı adedi: toplam modül watt / PSU çıkış kapasitesi (Watt ve Amper).
+    /// Bir güç kaynağının beslediği modül sayısı. 40 A → 6, 60 A → 8.
+    /// 60 A üstü 8/60, 40 A altı 6/40 yoğunluğuyla ölçeklenir.
+    /// </summary>
+    public static int ModulesPerPowerSupply(decimal amperage)
+    {
+        if (amperage <= 0) return 0;
+        if (Math.Abs(amperage - 40m) <= 0.5m) return 6;
+        if (Math.Abs(amperage - 60m) <= 0.5m) return 8;
+        if (amperage > 60m)
+            return Math.Max(8, (int)Math.Floor((double)(amperage / 60m * 8m)));
+        return Math.Max(1, (int)Math.Floor((double)(amperage / 40m * 6m)));
+    }
+
+    /// <summary>
+    /// Güç kaynağı adedi = yukarı yuvarla(toplam modül / PSU modül kapasitesi).
     /// Kapasite yoksa 0 — çağıran hata üretir.
     /// </summary>
-    public static int CountPowerSupplies(decimal moduleMaxWatts, PowerSupply psu, decimal? moduleVoltage = null)
+    public static int CountPowerSupplies(int totalModules, PowerSupply psu)
     {
-        decimal capacity = HardwareMatcher.EffectiveWattCapacity(psu);
-        if (capacity <= 0) return 0;
-
-        int byWatt = (int)Math.Ceiling((double)Math.Max(0, moduleMaxWatts) / (double)capacity);
-        int byAmp = 1;
-        decimal voltage = moduleVoltage is > 0 ? moduleVoltage.Value : psu.OutputVoltage;
-        if (psu.Amperage > 0 && voltage > 0 && moduleMaxWatts > 0)
-        {
-            decimal totalAmps = moduleMaxWatts / voltage;
-            byAmp = (int)Math.Ceiling((double)totalAmps / (double)psu.Amperage);
-        }
-
-        return Math.Max(1, Math.Max(byWatt, byAmp));
+        int capacity = ModulesPerPowerSupply(psu.Amperage);
+        if (capacity <= 0 || totalModules <= 0) return 0;
+        return (int)Math.Ceiling(totalModules / (double)capacity);
     }
 
     /// <summary>
@@ -265,9 +273,17 @@ public static class ConfigurationCalculator
         return byPixels;
     }
 
-    /// <summary>Patch = max(0, alıcı kart − 1) (daisy-chain).</summary>
-    public static int CountPatchCables(int receivingCardCount) =>
-        Math.Max(0, receivingCardCount - 1);
+    /// <summary>
+    /// Tek port: alıcı kart − 1. Birden fazla port: alıcı kart − port sayısı. Alt sınır 0.
+    /// </summary>
+    public static int CountPatchCables(int receivingCardCount, int portCount)
+    {
+        if (receivingCardCount <= 0) return 0;
+        int raw = portCount <= 1
+            ? receivingCardCount - 1
+            : receivingCardCount - portCount;
+        return Math.Max(0, raw);
+    }
 
     /// <summary>
     /// İşlemci adedi: toplam piksel, port başı kapasite ve port genişlik/yükseklik tavanı.

@@ -1514,6 +1514,7 @@ const dict = {
   'sp.package': { tr: 'Toplam paket', en: 'Complete package', ar: 'الحزمة الكاملة' },
   'sp.pkg.module': { tr: 'Modül / Kabin', en: 'Module / Cabinet', ar: 'وحدة / خزانة' },
   'sp.pkg.processor': { tr: 'İşlemci', en: 'Processor', ar: 'المعالج' },
+  'sp.pkg.processorAlt': { tr: 'Alternatif kurulum', en: 'Alternative setup', ar: 'التركيب البديل' },
   'sp.pkg.psu': { tr: 'Güç Kaynağı', en: 'Power Supply', ar: 'مزود الطاقة' },
   'sp.pkg.miniPc': { tr: 'Mini PC', en: 'Mini PC', ar: 'Mini PC' },
   'sp.pkg.patch': { tr: 'Patch Kablosu', en: 'Patch Cable', ar: 'كابل التوصيل' },

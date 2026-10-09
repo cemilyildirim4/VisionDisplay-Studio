@@ -94,14 +94,19 @@ public static class HardwareMatcher
         if (receivingCard == null)
             Miss("Alıcı Kart", "Seçilen konfigürasyon için veritabanında uygun Alıcı Kart bulunamadı.");
 
-        var processor = requested?.Processor
-            ?? SelectProcessor(demand, Active(catalog.Processors));
+        var recommendation = RecommendProcessors(demand, Active(catalog.Processors));
+        var processor = requested?.Processor ?? recommendation.Primary?.Item;
         if (processor == null)
             Miss("İşlemci", "Seçilen konfigürasyon için veritabanında uygun İşlemci bulunamadı.");
 
         int receivingQty = ConfigurationCalculator.CountReceivingCards(
             demand.TotalResW, demand.TotalResH, demand.TotalPixels, receivingCard);
-        int patchQty = ConfigurationCalculator.CountPatchCables(receivingQty);
+        ConfigurationCalculator.CountProcessors(
+            demand.TotalPixels, demand.TotalResW, demand.TotalResH, processor, out int requiredPorts);
+        int patchQty = ConfigurationCalculator.CountPatchCables(receivingQty, requiredPorts);
+        var alternative = requested?.Processor == null ? recommendation.Alternative : null;
+        if (alternative?.Item.Id == processor?.Id)
+            alternative = null;
 
         PatchCable? patchCable = requested?.PatchCable;
         if (patchCable == null && patchQty > 0)
@@ -126,6 +131,8 @@ public static class HardwareMatcher
                 PowerSupply = powerSupply,
                 ReceivingCard = receivingCard,
                 Processor = processor,
+                AlternativeProcessor = alternative?.Item,
+                AlternativeProcessorQuantity = alternative?.Quantity ?? 0,
                 PatchCable = patchCable,
                 MiniPc = miniPc,
             },
@@ -142,7 +149,7 @@ public static class HardwareMatcher
             .Where(p => EffectiveWattCapacity(p) >= OneModuleWatts(demand))
             .Select(p =>
             {
-                int qty = ConfigurationCalculator.CountPowerSupplies(demand.ModuleMaxWatts, p, demand.ModuleVoltage);
+                int qty = ConfigurationCalculator.CountPowerSupplies(demand.TotalModules, p);
                 return (Item: p, Qty: qty, Cap: EffectiveWattCapacity(p));
             })
             .Where(x => x.Qty > 0)
@@ -179,29 +186,113 @@ public static class HardwareMatcher
             .FirstOrDefault();
     }
 
-    public static Processor? SelectProcessor(ScreenDemand demand, IEnumerable<Processor> items)
+    public readonly record struct ProcessorPick(Processor Item, int Quantity, int RequiredPorts);
+
+    public readonly record struct ProcessorRecommendation(ProcessorPick? Primary, ProcessorPick? Alternative);
+
+    /// <summary>
+    /// Küçük ekranda tek giriş cihazı yeterliyse o kalır.
+    /// Giriş cihazı çoğalıyorsa birincil, tek başına yeten üst segmenttir
+    /// (VX1000, MCTRL1000, MCTRL4K, H Series). Alternatif, çoklu giriş kurulumudur.
+    /// </summary>
+    public static ProcessorRecommendation RecommendProcessors(ScreenDemand demand, IEnumerable<Processor> items)
     {
-        var candidates = items
+        var ranked = items
             .Where(p => p.EthernetPortCount > 0 || p.MaxPixelCapacityPerPort > 0)
             .Select(p =>
             {
                 int qty = ConfigurationCalculator.CountProcessors(
                     demand.TotalPixels, demand.TotalResW, demand.TotalResH, p, out int ports);
                 long cap = (long)Math.Max(1, p.EthernetPortCount) * ConfigurationCalculator.PixelsPerPort(p);
-                return (Item: p, Qty: qty, Ports: ports, Cap: cap);
+                return new RankedProcessor(p, qty, ports, cap, IsUpperTier(p), IsEntryTier(p));
             })
             .Where(x => x.Qty > 0)
             .ToList();
 
-        return candidates
+        if (ranked.Count == 0)
+            return new ProcessorRecommendation(null, null);
+
+        var legacy = ranked
             .OrderBy(x => x.Qty)
             .ThenBy(x => x.Item.EthernetPortCount <= 0 ? int.MaxValue : x.Item.EthernetPortCount)
             .ThenBy(x => x.Cap)
             .ThenBy(x => x.Item.Price)
             .ThenBy(x => x.Item.Id)
-            .Select(x => x.Item)
+            .First();
+
+        var entry = ranked
+            .Where(x => x.Entry)
+            .OrderBy(x => x.Qty)
+            .ThenBy(x => x.Item.EthernetPortCount <= 0 ? int.MaxValue : x.Item.EthernetPortCount)
+            .ThenBy(x => x.Item.Price)
+            .ThenBy(x => x.Item.Id)
             .FirstOrDefault();
+
+        var upperSingle = ranked
+            .Where(x => x.Upper && x.Qty == 1)
+            .OrderBy(x => x.Item.EthernetPortCount <= 0 ? int.MaxValue : x.Item.EthernetPortCount)
+            .ThenBy(x => x.Cap)
+            .ThenBy(x => x.Item.Price)
+            .ThenBy(x => x.Item.Id)
+            .FirstOrDefault();
+
+        var upperFewest = ranked
+            .Where(x => x.Upper)
+            .OrderBy(x => x.Qty)
+            .ThenBy(x => x.Item.EthernetPortCount <= 0 ? int.MaxValue : x.Item.EthernetPortCount)
+            .ThenBy(x => x.Cap)
+            .ThenBy(x => x.Item.Price)
+            .ThenBy(x => x.Item.Id)
+            .FirstOrDefault();
+
+        bool stackEntry = entry?.Item != null && entry.Qty > 1;
+        RankedProcessor? chosen = stackEntry
+            ? upperSingle ?? upperFewest ?? legacy
+            : legacy;
+
+        ProcessorPick primary = ToPick(chosen ?? legacy);
+        ProcessorPick? alternative = null;
+        if (entry?.Item != null && entry.Item.Id != primary.Item.Id && entry.Qty > 1)
+            alternative = ToPick(entry);
+
+        return new ProcessorRecommendation(primary, alternative);
     }
+
+    public static Processor? SelectProcessor(ScreenDemand demand, IEnumerable<Processor> items) =>
+        RecommendProcessors(demand, items).Primary?.Item;
+
+    public static bool IsUpperTier(Processor processor)
+    {
+        var blob = $"{processor.Name} {processor.Model}".ToLowerInvariant();
+        return blob.Contains("vx1000")
+            || blob.Contains("mctrl1000")
+            || blob.Contains("mctrl 1000")
+            || blob.Contains("mctrl4k")
+            || blob.Contains("h series")
+            || blob.Contains("h-series")
+            || blob.Contains("hseries");
+    }
+
+    public static bool IsEntryTier(Processor processor)
+    {
+        var blob = $"{processor.Name} {processor.Model}".ToLowerInvariant();
+        return blob.Contains("tb40")
+            || blob.Contains("tb60")
+            || blob.Contains("tb30")
+            || blob.Contains("tb50")
+            || blob.Contains("taurus");
+    }
+
+    private static ProcessorPick ToPick(RankedProcessor row) =>
+        new(row.Item, row.Qty, row.Ports);
+
+    private sealed record RankedProcessor(
+        Processor Item,
+        int Qty,
+        int Ports,
+        long Cap,
+        bool Upper,
+        bool Entry);
 
     public static PatchCable? SelectPatchCable(IEnumerable<PatchCable> items)
     {

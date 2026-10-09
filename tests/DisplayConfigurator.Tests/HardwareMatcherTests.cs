@@ -163,6 +163,42 @@ public class HardwareMatcherTests
     }
 
     [Fact]
+    public void Recommend_BuyukMatris_BirincilVx1000_AlternatifSekizTb40()
+    {
+        var demand = new ScreenDemand(80, 4096, 1269, 5_200_000, 8000m, 5m);
+        var processors = new Processor[]
+        {
+            new()
+            {
+                Id = 1, Name = "NovaStar TB40", Model = "TB40", IsActive = true, Price = 350m,
+                EthernetPortCount = 1, MaxPixelCapacityPerPort = 650_000, MaxPortWidth = 4096, MaxPortHeight = 4096,
+            },
+            new()
+            {
+                Id = 2, Name = "NovaStar VX1000", Model = "VX1000", IsActive = true, Price = 1325m,
+                EthernetPortCount = 10, MaxPixelCapacityPerPort = 650_000, MaxPortWidth = 4096, MaxPortHeight = 4096,
+            },
+            new()
+            {
+                Id = 3, Name = "NovaStar MCTRL1000", Model = "MCTRL1000", IsActive = true, Price = 2000m,
+                EthernetPortCount = 4, MaxPixelCapacityPerPort = 650_000, MaxPortWidth = 4096, MaxPortHeight = 4096,
+            },
+            new()
+            {
+                Id = 4, Name = "NovaStar H Series", Model = "H Series", IsActive = true, Price = 5000m,
+                EthernetPortCount = 20, MaxPixelCapacityPerPort = 650_000, MaxPortWidth = 4096, MaxPortHeight = 4096,
+            },
+        };
+
+        var rec = HardwareMatcher.RecommendProcessors(demand, processors);
+
+        Assert.Equal("VX1000", rec.Primary!.Value.Item.Model);
+        Assert.Equal(1, rec.Primary.Value.Quantity);
+        Assert.Equal("TB40", rec.Alternative!.Value.Item.Model);
+        Assert.Equal(8, rec.Alternative.Value.Quantity);
+    }
+
+    [Fact]
     public void Match_BirdenFazlaAlicKart_PatchKablosuBaglar()
     {
         var tinyCatalog = new HardwareCatalogSnapshot

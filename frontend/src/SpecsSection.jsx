@@ -23,6 +23,7 @@ import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import { useSession } from './SessionContext.jsx'
 import { DASH, fmt, computeSpecs } from './specsData.js'
+import { patchCableCount } from './hardwareRules.js'
 
 /* ------------------------------------------------------------- yapı taşları */
 
@@ -248,12 +249,18 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           <Kart baslik={t('sp.package')} genis vurgulu>
             <Veri label={t('sp.pkg.module')} value={`${fmt(total)} ${t('sp.unit')}`} />
             <Veri label={t('sp.pkg.processor')} value={lineQty('processor', 1)} />
+            {Number(preview?.alternativeProcessorQuantity) > 0 && preview?.alternativeProcessor && (
+              <Veri
+                label={t('sp.pkg.processorAlt')}
+                value={`${fmt(preview.alternativeProcessorQuantity)} ${t('sp.unit')} · ${preview.alternativeProcessor}`}
+              />
+            )}
             <Veri label={t('sp.pkg.psu')} value={lineQty('powerSupply', total)} />
             <Veri
               label={t('sp.pkg.miniPc')}
               value={hasMiniPc ? lineQty('miniPc', 1) : t('sp.pkg.viaProcessor')}
             />
-            <Veri label={t('sp.pkg.patch')} value={lineQty('patchCable', Math.max(0, receivingCards - 1))} />
+            <Veri label={t('sp.pkg.patch')} value={lineQty('patchCable', patchCableCount(receivingCards, preview?.requiredRj45Ports ?? 1))} />
             <Veri label={t('sp.pkg.receiving')} value={lineQty('receivingCard', receivingCards)} />
           </Kart>
         )}

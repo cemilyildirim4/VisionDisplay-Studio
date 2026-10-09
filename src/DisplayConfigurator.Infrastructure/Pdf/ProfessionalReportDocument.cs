@@ -566,6 +566,8 @@ public class ProfessionalReportDocument : IDocument
                     AddRow(table, "Alıcı kart (adet)", $"{_config.ReceivingCardCount}", ref alt);
                     AddRow(table, "Gerekli RJ45 Ethernet portu", portText, ref alt);
                     AddRow(table, "Tavsiye işlemci", Empty(_config.RecommendedProcessor, "—"), ref alt);
+                    if (_config.AlternativeProcessorQuantity > 0 && !string.IsNullOrWhiteSpace(_config.AlternativeProcessor))
+                        AddRow(table, "Alternatif kurulum", $"{_config.AlternativeProcessorQuantity} x {_config.AlternativeProcessor}", ref alt);
                     AddRow(table, "Tavsiye medya oynatıcı", _config.HasMiniPc
                         ? Empty(_config.HardwareBreakdown.FirstOrDefault(x => x.Key == "miniPc" && x.Quantity > 0)?.Name, "Mini PC")
                         : "İşlemci üzerinden", ref alt);

@@ -94,11 +94,11 @@ public class ConfigurationCalculatorTests
         Assert.Equal("800x600", result.TotalResolution);
         Assert.Equal(0.48, result.TotalPixelsMpx, 2);
 
-        // 12 modül × 600 W = 7200 W; PSU 4000 W → ceil(7200/4000)=2.
+        // 12 modül, PSU 800 A → kapasite floor(800/60*8)=106 → 1 adet.
         // 800x600, kart 1920x1080 → 1 alıcı kart.
         Assert.Equal("CABINET", result.AssemblyType);
         Assert.Equal(1, result.ReceivingCardCount);
-        Assert.Equal(2, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
+        Assert.Equal(1, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
         Assert.Equal(0, result.HardwareBreakdown.Single(x => x.Key == "patchCable").Quantity);
 
         // 800x600 = 480.000 piksel, tek RJ45 portu (max 650.000) yeterli.
@@ -158,8 +158,9 @@ public class ConfigurationCalculatorTests
         var result = ConfigurationCalculator.Calculate(dto, cabin, hardware);
 
         Assert.Equal(10, result.ReceivingCardCount);
-        Assert.Equal(9, result.HardwareBreakdown.Single(x => x.Key == "patchCable").Quantity);
-        Assert.Equal(9, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity); // 36000 W / 4000 W
+        // 2.400.000 px / 650.000 → 4 port. Patch = 10 kart − 4 port.
+        Assert.Equal(6, result.HardwareBreakdown.Single(x => x.Key == "patchCable").Quantity);
+        Assert.Equal(1, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
         Assert.Equal(60, result.HardwareBreakdown.Single(x => x.Key == "module").Quantity);
     }
 
@@ -303,14 +304,14 @@ public class ConfigurationCalculatorTests
 
         var result = ConfigurationCalculator.Calculate(dto, cabin, hardware);
 
-        // 12 modül × 600 W = 7,2 kW; η=0,9 → 8 kW. PSU 4000 W → 2 × 80 $ = 160 $.
+        // 12 modül × 600 W = 7,2 kW; η=0,9 → 8 kW. 800 A kapasitesi 12 modülü tek kaynakta karşılar.
         Assert.Equal(8.00m, result.TotalMaxPowerKw);
         Assert.Equal(2400m / 0.9m / 1000m, result.TotalAvgPowerKw);
         Assert.Equal(2400m / 0.9m, result.TotalAvgPowerWatts);
         Assert.Equal(8000m, result.TotalMaxPowerWatts);
-        Assert.Equal(160m, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").LineTotal);
-        Assert.Equal(2, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
-        Assert.Equal(12160m, result.HardwareSubtotal);
+        Assert.Equal(80m, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").LineTotal);
+        Assert.Equal(1, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
+        Assert.Equal(12080m, result.HardwareSubtotal);
 
         Assert.Equal(7200m * 3.412m, result.ModuleHeatDissipationBtu);
         Assert.Equal(8000m * 3.412m, result.HeatDissipationBtu);
@@ -369,22 +370,35 @@ public class ConfigurationCalculatorTests
     }
 
     [Fact]
-    public void CountPowerSupplies_WattKapasitesineGoreAdetDoner()
+    public void CountPowerSupplies_40A_56Modul_OnAdet()
     {
-        var psu = new PowerSupply { MaxPowerOutputWatt = 3600m };
-        Assert.Equal(1, ConfigurationCalculator.CountPowerSupplies(600m, psu));
-        Assert.Equal(1, ConfigurationCalculator.CountPowerSupplies(3600m, psu));
-        Assert.Equal(2, ConfigurationCalculator.CountPowerSupplies(4200m, psu));
-        Assert.Equal(2, ConfigurationCalculator.CountPowerSupplies(7200m, psu));
-        Assert.Equal(10, ConfigurationCalculator.CountPowerSupplies(36000m, psu));
+        var psu = new PowerSupply { Amperage = 40m };
+        Assert.Equal(6, ConfigurationCalculator.ModulesPerPowerSupply(40m));
+        Assert.Equal(10, ConfigurationCalculator.CountPowerSupplies(56, psu));
     }
 
     [Fact]
-    public void CountPatchCables_DaisyChainAlicKartEksiBir()
+    public void CountPowerSupplies_60A_56Modul_YediAdet()
     {
-        Assert.Equal(0, ConfigurationCalculator.CountPatchCables(0));
-        Assert.Equal(0, ConfigurationCalculator.CountPatchCables(1));
-        Assert.Equal(5, ConfigurationCalculator.CountPatchCables(6));
+        var psu = new PowerSupply { Amperage = 60m };
+        Assert.Equal(8, ConfigurationCalculator.ModulesPerPowerSupply(60m));
+        Assert.Equal(7, ConfigurationCalculator.CountPowerSupplies(56, psu));
+    }
+
+    [Fact]
+    public void CountPatchCables_TekPort_AlicKartEksiBir()
+    {
+        Assert.Equal(0, ConfigurationCalculator.CountPatchCables(0, 1));
+        Assert.Equal(0, ConfigurationCalculator.CountPatchCables(1, 1));
+        Assert.Equal(5, ConfigurationCalculator.CountPatchCables(6, 1));
+    }
+
+    [Fact]
+    public void CountPatchCables_CokluPort_AlicKartEksiPort_AltSinirSifir()
+    {
+        Assert.Equal(6, ConfigurationCalculator.CountPatchCables(10, 4));
+        Assert.Equal(0, ConfigurationCalculator.CountPatchCables(3, 8));
+        Assert.Equal(0, ConfigurationCalculator.CountPatchCables(2, 2));
     }
 
     [Fact]
