@@ -5576,9 +5576,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * var. Köşede iki ayrı düzlem, yani iki ayrı dönüşüm gerekiyor;
                * tek şeride sığmıyor. Ekranı o kipte LKoseEkran çiziyor.
                */
-              ekranGizle={(uc3dHazir && !duvarDunya) || tasarimGizli || !!lKoseCizimi}
+              /*
+               * İŞARETLEME SÜRERKEN TASARIM ÇİZİLMİYOR.
+               *
+               * Referans noktaları ve köşe çizgisi tam tasarımın durduğu yere
+               * konuyor; tasarım ekranda dururken altındaki yeri ne görmek ne
+               * de tıklamak mümkün oluyordu. Köşe çizgisi adımında zaten
+               * böyleydi, referans adımı için de aynısı geçerli.
+               */
+              ekranGizle={
+                (uc3dHazir && !duvarDunya) || tasarimGizli || refKipi || lKoseKipi || !!lKoseCizimi
+              }
               uc3dKatman={
-                !tasarimGizli && !duvarDunya && YERINDE_3B && surukleAktif && !lKoseCizimi
+                !tasarimGizli &&
+                !duvarDunya &&
+                YERINDE_3B &&
+                surukleAktif &&
+                !lKoseCizimi &&
+                !refKipi &&
+                !lKoseKipi
                   ? ({ koseler, genislik, yukseklik }) => (
                       <Suspense fallback={null}>
                         <Mekan3D
@@ -5708,7 +5724,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             lKoseCizimi hâlâ dolu (bkz. ekranGizle). Ölçüler sihirbazda yazılı
             olarak görünmeye devam ediyor; tasarım "Köşeyi kur" ile geri geliyor.
           */}
-          {lKoseCizimi && !lKoseKipi && (
+          {lKoseCizimi && !lKoseKipi && !refKipi && (
             <LKoseEkran
               /*
                 İşaretleme sürerken taşıma kapalı: o sırada tuvale yapılan
@@ -5751,7 +5767,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             göre taranan bölge ekranla ilgisiz bir yere düşüyor ve ikinci bir
             tasarım gibi görünüyor.
           */}
-          {duvarTuval && koseMutlak && !lTipiVar && scene === 'ozel' && ozelSahne && (
+          {duvarTuval && koseMutlak && !lTipiVar && !refKipi && scene === 'ozel' && ozelSahne && (
             <TasmaKatmani
               tasarim={koseMutlak}
               duvar={duvarTuval}
@@ -5769,7 +5785,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             kullanıcı aynı tasarımı iki kere görüyor. Köşenin kendi gövdesi
             ayrı bir iş (bkz. LKoseEkran).
           */}
-          {duvarDunya && !tasarimGizli && kabinYuzleri && !lTipiVar && scene === 'ozel' && ozelSahne && (
+          {duvarDunya && !tasarimGizli && kabinYuzleri && !lTipiVar && !refKipi && scene === 'ozel' && ozelSahne && (
             <KalinlikKatmani
               yuzler={kabinYuzleri.yuzler}
               on={kabinYuzleri.on}
