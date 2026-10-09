@@ -4670,6 +4670,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             : kacis
               ? Math.max(-1, Math.min(1, (dikisX - kacis.x) / yariKadraj)) * EN_COK_KOSE_ACI
               : 0
+    /*
+     * Hangi kanat YAN duvarda: mevcut sol/orta/sağ mantığı, değişmedi.
+     * Elle seçim varsa o, yoksa dikişin kadrajdaki yeri karar veriyor.
+     */
+    const etkinKose =
+      lKose === 'orta'
+        ? 'orta'
+        : (lKoseSecim ?? (kacis && dikisX > kacis.x ? 'sag' : 'sol'))
     const k = icBukeyKose({
       ust,
       alt,
@@ -4679,6 +4687,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       mesafeM: izlemeMesafesi,
       aci,
       ufukY: kacis?.y ?? null,
+      kose: etkinKose,
+      asalX: kacis?.x ?? null,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
