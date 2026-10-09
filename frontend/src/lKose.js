@@ -442,24 +442,9 @@ export function icBukeyKose({
    * YAN YÜZ — HER DURUMDA KAÇIŞ NOKTASINA NİŞANLI.
    *
    * O duvarın bütün yatay doğruları (tavan birleşimi, zemin birleşimi, duvara
-   * asılmış bir pencerenin kenarları) tek bir noktada buluşur. Yüzün üst ve
-   * alt kenarı da oradan geçmeli — "duvara gömülü" görüntüsünü veren tek şey
-   * bu.
-   *
-   * O NOKTA NEREDE? Yatayda kadrajın ortası: karşı duvara düz bakıldığı kabul
-   * edildiği anda yan duvarın derinlik doğrultusu asal sütuna düşer.
-   *
-   * DİKEYDE İSE UFUK ÇİZGİSİ — kadrajın ortası DEĞİL. Yataydaki her
-   * doğrultunun kaçış noktası ufuk çizgisi üzerindedir; ufuk ancak kamera
-   * tam düz tutulduğunda kadrajın ortasından geçer. Fotoğraf aşağıdan ya da
-   * yukarıdan çekilmişse (kullanıcının odası böyle) ufuk ortadan kayar ve
-   * kadrajın ortası alınırsa yüzün alt kenarı duvarın zemin hattından çok
-   * daha dik iniyor: "eğimli kanat paralel durmuyor" denen durum. Ölçüldü:
-   * o karede zemin hattının eğimi 0,22 iken yüzün alt kenarı 1,6 idi.
-   *
-   * Ufuk zaten elimizde: işaretlenen köşe çizgisi zeminden tavana uzanıyor,
-   * gerçek yüksekliği yazılmış ve kamera tipik olarak yerden 1,5 metrede
-   * (bkz. App.jsx lUfukY). Ufuk yoksa kadrajın ortasına düşülüyor.
+   * asılmış bir pencerenin kenarları) kameranın asal noktasında buluşur.
+   * Yüzün üst ve alt kenarı da oradan geçmeli — "duvara gömülü" görüntüsünü
+   * veren tek şey bu.
    *
    * Dikişin iki ucunu O NOKTADAN aynı oranda uzaklaştırmak bunu birebir
    * sağlıyor; iki uç bağımsız oynatılmadığı sürece kenarlar oraya nişanlar.
@@ -480,25 +465,10 @@ export function icBukeyKose({
     /* Odak fotoğrafın kendi özelliği (bkz. odakPx). */
     const F = Math.max(1, Number.isFinite(odakPx) && odakPx > 1 ? odakPx : f * m)
     const kGercek = 1 / (1 - Math.min(0.6, (wM * m) / F))
-    /*
-     * Kaçış noktası yüzün açılacağı yönün TERSİNDE; uzaklığı asal noktadan.
-     *
-     * UZAKLIK İÇİN TABAN VAR. Dikiş tam asal sütunun üstündeyse yan duvar
-     * gerçekten TAM kenarından görünür: eni sıfırdır. Geometri bunu doğru
-     * söylüyor ama ekranda kullanılamaz — ölçüldü, köşe tam ortadayken yan
-     * kanat 480 px yerine 3 px kalıyordu, çünkü eni koruyan ölçek (k) aynı
-     * anda sonsuza gidiyor ve üst sınırına çarpıyor.
-     *
-     * Taban, "kameranın tam yan duvarın doğrultusunda durduğunu asla kabul
-     * etme" demek. Bedeli dürüst: köşe kadrajın ortasına yakınken kenarlar
-     * artık tam asal sütunda değil, taban kadar yanında buluşuyor. Karşılığı,
-     * kanadın orada yok olmaması.
-     */
+    /* Kaçış noktası yüzün açılacağı yönün TERSİNDE; uzaklığı asal noktadan. */
     const istenen = nx * yon
-    const yariKadr = Number.isFinite(yariKadrajPx) && yariKadrajPx > 1 ? yariKadrajPx : null
-    const enAzUzaklik = Math.max(1, (yariKadr ?? dikisPx * 2) * 0.25)
-    const uzaklik = Math.max(enAzUzaklik, Math.abs(cx - asal))
-    const V = { x: cx - istenen * uzaklik, y: Number.isFinite(ufukY) ? ufukY : asalDikey }
+    const uzaklik = Math.max(1, Math.abs(cx - asal))
+    const V = { x: cx - istenen * uzaklik, y: asalDikey }
     /*
      * YÜZÜN ENİ: KÖŞE KENARA GİTTİKÇE DARALIYOR.
      *
@@ -514,7 +484,7 @@ export function icBukeyKose({
      * yalnızca en değişiyor, yön yine duvarın kendi perspektifi.
      */
     const tamEn = wM * m
-    const yari = yariKadr ?? Math.max(1, uzaklik * 2)
+    const yari = Number.isFinite(yariKadrajPx) && yariKadrajPx > 1 ? yariKadrajPx : Math.max(1, uzaklik * 2)
     const kenaraDogru = Math.max(0, Math.min(yari, istenen * (cx - asal)))
     const oran = 1 - kenaraDogru / yari
     const genislik = Math.max(tamEn * EN_AZ_YAN_ORAN, tamEn * oran)
