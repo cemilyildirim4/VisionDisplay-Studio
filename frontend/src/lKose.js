@@ -373,6 +373,8 @@ export function icBukeyKose({
   asalY = null,
   /* Kameranın odak uzunluğu, piksel. Verilmezse mesafeden türetiliyor. */
   odakPx = null,
+  /* Kadrajın yarı genişliği (tuval pikseli) — yan yüzün eni buna göre. */
+  yariKadrajPx = null,
 }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
@@ -437,44 +439,59 @@ export function icBukeyKose({
   }
 
   /*
-   * Yan yüz: asal noktaya göre ölçeklenir, kenarları oraya nişanlar.
+   * YAN YÜZ — HER DURUMDA KAÇIŞ NOKTASINA NİŞANLI.
    *
-   * PERSPEKTİFİN PAYI DİKİŞİN YERİNE BAĞLI.
+   * O duvarın bütün yatay doğruları (tavan birleşimi, zemin birleşimi, duvara
+   * asılmış bir pencerenin kenarları) kameranın asal noktasında buluşur.
+   * Yüzün üst ve alt kenarı da oradan geçmeli — "duvara gömülü" görüntüsünü
+   * veren tek şey bu.
    *
-   * Görüntü düzlemine dik bir duvarın ekrandaki eni, dikişin asal noktaya
-   * uzaklığıyla orantılı: |d|·(k−1). Dikiş asal noktaya yaklaştıkça bu en
-   * sıfıra iner — o duvar gerçekten kenarından görünür. Ekranda sıfır
-   * genişlikte bir yüz işe yaramadığı için bir taban var (ön yüzün %35'i).
+   * Dikişin iki ucunu O NOKTADAN aynı oranda uzaklaştırmak bunu birebir
+   * sağlıyor; iki uç bağımsız oynatılmadığı sürece kenarlar oraya nişanlar.
    *
-   * Ama taban yalnızca ENİ ayakta tutmalı, EĞİM ÜRETMEMELİ. Önceki hâlde
-   * taban devreye girdiğinde kaçış noktası uydurma bir yere kaydırılıyor ve
-   * yüz oradan ölçekleniyordu; kullanıcı köşeyi tam ortaya koyduğunda bile
-   * ekran eğik çıkıyordu. Oysa oradaki tek gerçek eğim fotoğrafın kendi
-   * bakış açısıdır.
+   * ÖNCEKİ KUSUR. Yüzün eni dikişin asal noktaya uzaklığıyla orantılı ve
+   * dikiş oraya yaklaşınca sıfıra iniyor. Bunu bir tabanla engelliyordum ama
+   * tabanı YANAL KAYDIRMA olarak uyguluyor, dikey büyümeyi de bir oranla
+   * kısıyordum. O anda kenarlar artık kaçış noktasından geçmiyordu: yüz
+   * duvarın akışını bırakıp kendi başına bir yöne gidiyordu — kullanıcının
+   * "alttaki çizgiyle paralel değil" dediği durum.
    *
-   * Artık eğim, gerçek perspektif eninin çizilen ene oranı kadar
-   * uygulanıyor: köşe kenara gittikçe tam perspektif, ortaya geldikçe düz
-   * bir katlanma. Geçiş sürekli, sıçrama yok.
+   * Taban artık yanal kaydırmayla değil, ÖLÇEĞİ (k) büyüterek sağlanıyor.
+   * Böylece en yine tabanın altına inmiyor ama iki kenar hep aynı noktada
+   * buluşuyor. Bedeli dürüst: o kadar dar bir yüzde derinliği olduğundan
+   * fazla gösteriyoruz — ama yön doğru kalıyor.
    */
   const yanYuz = (wM, yon) => {
-    /*
-     * ODAK UZUNLUĞU FOTOĞRAFIN KENDİ ÖZELLİĞİ (bkz. odakPx).
-     */
+    /* Odak fotoğrafın kendi özelliği (bkz. odakPx). */
     const F = Math.max(1, Number.isFinite(odakPx) && odakPx > 1 ? odakPx : f * m)
-    const k = 1 / (1 - Math.min(0.6, (wM * m) / F))
-    /* Gerçek perspektif eni: dikişin asal noktaya uzaklığı × (k−1). */
-    const kayma = Math.abs(cx - asal) * (k - 1)
-    const enAz = wM * m * EN_AZ_YAN_ORAN
-    const genislik = Math.max(kayma, enAz)
-    const pay = genislik > 0 ? Math.min(1, kayma / genislik) : 0
-    const uzak = (p) => {
-      const yOlcekli = asalDikey + (p.y - asalDikey) * k
-      return {
-        x: p.x + nx * genislik * yon,
-        y: p.y + ny * genislik * yon + (yOlcekli - p.y) * pay,
-      }
-    }
-    return [uzak(ust), uzak(alt)]
+    const kGercek = 1 / (1 - Math.min(0.6, (wM * m) / F))
+    /* Kaçış noktası yüzün açılacağı yönün TERSİNDE; uzaklığı asal noktadan. */
+    const istenen = nx * yon
+    const uzaklik = Math.max(1, Math.abs(cx - asal))
+    const V = { x: cx - istenen * uzaklik, y: asalDikey }
+    /*
+     * YÜZÜN ENİ: KÖŞE KENARA GİTTİKÇE DARALIYOR.
+     *
+     * Geometrinin kendisi bunun TERSİNİ söyler: köşe kadrajın ortasından
+     * uzaklaştıkça yan duvarın daha çoğu görünür (bir koridorda kenardaki
+     * duvarlar geniş, kaçış noktasının üstünde sıfıra iner). Bu kural
+     * kullanıcının istediği davranış: köşe hangi yana gidiyorsa o yandaki
+     * kanat küçülsün. Arka plana göre değişebileceği biliniyor; ince ayar
+     * sonra yapılacak.
+     *
+     * Ölçüt, köşenin kadrajın O YANDAKİ kenarına uzaklığı: ortada tam en,
+     * kenarda tabana iner. Kaçış noktasına nişan alma bundan etkilenmiyor —
+     * yalnızca en değişiyor, yön yine duvarın kendi perspektifi.
+     */
+    const tamEn = wM * m
+    const yari = Number.isFinite(yariKadrajPx) && yariKadrajPx > 1 ? yariKadrajPx : Math.max(1, uzaklik * 2)
+    const kenaraDogru = Math.max(0, Math.min(yari, istenen * (cx - asal)))
+    const oran = 1 - kenaraDogru / yari
+    const genislik = Math.max(tamEn * EN_AZ_YAN_ORAN, tamEn * oran)
+    /* Taban devredeyse ölçeği büyüt; yanal kaydırma EKLEME. */
+    const k = Math.min(4, 1 + genislik / uzaklik)
+    const olcekle = (p) => ({ x: V.x + (p.x - V.x) * k, y: V.y + (p.y - V.y) * k })
+    return [olcekle(ust), olcekle(alt)]
   }
 
   /*

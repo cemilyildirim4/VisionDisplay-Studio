@@ -4732,6 +4732,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        */
       odakPx:
         fotoYer?.genislik > 0 ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785 : null,
+      /* Kadrajın yarı genişliği — yan yüzün eni köşenin kenara uzaklığından. */
+      yariKadrajPx:
+        fotoYer?.genislik > 0 ? (fotoYer.genislik * (sahneYakinlik || 1)) / 2 : null,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
