@@ -36,6 +36,8 @@ import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
+/* Hassas ayar tuşu AR akışıyla ortak (bkz. ArYerlestirme.jsx). */
+import { TusDugme } from './ArYerlestirme.jsx'
 import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
@@ -729,6 +731,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yazılan santimlere dokunmuyor, yalnızca dikişi yerinden oynatıyor.
    */
   const [lKoseKayma, setLKoseKayma] = useState({ x: 0, y: 0 })
+  /*
+   * KANATLARIN ELLE EĞİMİ — derece, her kanat için ayrı.
+   *
+   * Kanadın üst ve alt kenarının nerede buluşacağını fotoğraftan kestiriyoruz
+   * (asal nokta, ufuk, izleme mesafesi). Bu kestirim her karede tutmuyor:
+   * kamera eğik tutulmuşsa ya da fotoğraf kırpılmışsa kanat duvarın hattından
+   * sapıyor ve kullanıcı "alttaki çizgiyle paralel değil" diyor. Bu iki sayı
+   * o sapmayı gözle kapatıyor; hesabın yerine geçmiyor, üstüne biniyor.
+   * Sıfırda hiçbir etkisi yok, yani varsayılan davranış değişmiyor.
+   */
+  const [lSolEgim, setLSolEgim] = useState(0)
+  const [lSagEgim, setLSagEgim] = useState(0)
+  /*
+   * Bir dokunuş 2 derece, sınır ±45. Sınır boşuna geniş değil: kullanıcının
+   * gönderdiği karede yüzün alt kenarı 1,6 eğimle inerken odanın zemin hattı
+   * 0,22 ile iniyordu — aradaki fark 46 derece.
+   */
+  const EGIM_ADIM = 2
+  const EGIM_SINIR = 45
   const [lKoseBoyCm, setLKoseBoyCm] = useState('')
   const [refMesaj, setRefMesaj] = useState(null)
   /*
@@ -1201,6 +1222,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setLKoseBoyCm('')
       setLKoseKayma({ x: 0, y: 0 })
       setLKoseSecim(null)
+      setLSolEgim(0)
+      setLSagEgim(0)
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
@@ -4211,6 +4234,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setLKoseBoyCm('')
     setLKoseKipi(false)
     setLKoseKayma({ x: 0, y: 0 })
+    setLSolEgim(0)
+    setLSagEgim(0)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -4735,6 +4760,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       /* Kadrajın yarı genişliği — yan yüzün eni köşenin kenara uzaklığından. */
       yariKadrajPx:
         fotoYer?.genislik > 0 ? (fotoYer.genislik * (sahneYakinlik || 1)) / 2 : null,
+      /* Kullanıcının tuşlarla verdiği eğim (bkz. lSolEgim). */
+      solEgim: lSolEgim,
+      sagEgim: lSagEgim,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
@@ -5774,6 +5802,57 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               contentUrl={contentUrl}
               model={previewModel}
             />
+          )}
+
+          {/*
+            KANAT EĞİMİ TUŞLARI — her kanat için ayrı, AR akışındaki hassas
+            ayar tuşlarıyla aynı düğme (bkz. ArYerlestirme.jsx TusDugme).
+
+            Kanadın üst ve alt kenarının nerede buluşacağı fotoğraftan
+            kestiriliyor; her karede tutmuyor. Kullanıcı duvarın kendi hattına
+            bakarak gözüyle kapatabilsin diye iki kanat ayrı ayrı çevriliyor.
+            Tasarım çizilmiyorken (işaretleme sürerken) tuşlar da yok.
+
+            SOL ALTTA: sağ kenarda sihirbaz paneli, üstte mekân seçimi var;
+            tuvalin sol alt köşesi L köşesinde hep boş kalıyor.
+          */}
+          {lKoseCizimi && !lKoseKipi && !refKipi && (
+            <div className="absolute left-3 bottom-3 z-20 flex flex-col gap-2 items-start pointer-events-none">
+              {[
+                { ad: 'screen.lEgimSol', deger: lSolEgim, ayarla: setLSolEgim },
+                { ad: 'screen.lEgimSag', deger: lSagEgim, ayarla: setLSagEgim },
+              ].map(({ ad, deger, ayarla }) => (
+                <div key={ad} className="flex items-center gap-1.5 pointer-events-auto">
+                  <span className="rounded-md bg-black/55 px-2 py-1 text-[11px] font-medium text-white tabular-nums">
+                    {t(ad)} {deger > 0 ? '+' : ''}{deger}°
+                  </span>
+                  <TusDugme
+                    onClick={() => ayarla((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))}
+                    etiket={`${t(ad)} — ${t('screen.lEgimSola')}`}
+                  >
+                    <path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" />
+                  </TusDugme>
+                  <TusDugme
+                    onClick={() => ayarla((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))}
+                    etiket={`${t(ad)} — ${t('screen.lEgimSaga')}`}
+                  >
+                    <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
+                  </TusDugme>
+                </div>
+              ))}
+              {(lSolEgim !== 0 || lSagEgim !== 0) && (
+                <button
+                  type="button"
+                  className="pointer-events-auto rounded-md bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/75 transition-colors"
+                  onClick={() => {
+                    setLSolEgim(0)
+                    setLSagEgim(0)
+                  }}
+                >
+                  {t('screen.lEgimSifirla')}
+                </button>
+              )}
+            </div>
           )}
 
           {/*
@@ -6840,6 +6919,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             lKoseIsaretle={() => {
                               setLKoseNokta([])
                               setLKoseKayma({ x: 0, y: 0 })
+                              setLSolEgim(0)
+                              setLSagEgim(0)
                               setLKoseKipi(true)
                             }}
                             lKoseOran={lKoseOran}

@@ -375,6 +375,9 @@ export function icBukeyKose({
   odakPx = null,
   /* Kadrajın yarı genişliği (tuval pikseli) — yan yüzün eni buna göre. */
   yariKadrajPx = null,
+  /* Kullanıcının elle verdiği eğim, DERECE. Her kanat için ayrı. */
+  solEgim = 0,
+  sagEgim = 0,
 }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
@@ -513,18 +516,52 @@ export function icBukeyKose({
     ]
   }
 
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * ELLE EĞİM — kanadın ÜST ve ALT kenarını DİKİŞ etrafında çeviriyor.
+   *
+   * Niçin gerekiyor: kanadın üst ve alt kenarının nerede buluşacağını
+   * fotoğraftan kestiriyoruz (asal nokta, ufuk, izleme mesafesi). Bu kestirim
+   * her karede tutmuyor — kamera eğik tutulmuşsa ya da fotoğraf kırpılmışsa
+   * kanat duvarın hattından sapıyor ve kullanıcı "alttaki çizgiyle paralel
+   * değil" diyor. Tuş o sapmayı gözle kapatıyor; hesabın yerine geçmiyor,
+   * üstüne biniyor. Sıfırda hiçbir etkisi yok.
+   *
+   * DÖNME MERKEZİ DİKİŞİN KENDİ UCU. Uzak kenarı kendi ortası etrafında
+   * çevirmeyi de denedim: ön yüz gibi uzak kenarı DİK olan bir kanatta
+   * neredeyse hiçbir şey olmuyor, çünkü uçlar o zaman yanlamasına kayıyor
+   * (ölçüldü: 10 derecede alt kenarın eğimi 0'dan yalnızca −0,008'e gidiyor).
+   * Dikiş ucundan çevrilince üst ve alt kenar gerçekten o kadar derece
+   * dönüyor, kanadın eni ve dikişin yeri de yerinde kalıyor.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const egimUygula = (kenar, derece) => {
+    const a = (Number(derece) || 0) * (Math.PI / 180)
+    if (!kenar || !(Math.abs(a) > 1e-6)) return kenar
+    const c = Math.cos(a)
+    const sn = Math.sin(a)
+    /* Her uzak uç, dikişin KENDİ ucu etrafında dönüyor. */
+    const cevir = (q, merkez) => ({
+      x: merkez.x + (q.x - merkez.x) * c - (q.y - merkez.y) * sn,
+      y: merkez.y + (q.x - merkez.x) * sn + (q.y - merkez.y) * c,
+    })
+    return [cevir(kenar[0], ust), cevir(kenar[1], alt)]
+  }
+
   const ortaMi = kose === 'orta'
   const yanSolda = kose !== 'sag'
-  const [solUst, solAlt] = ortaMi
+  const solKenar = ortaMi
     ? serbestYuz(solM, CEYREK - a, 1)
     : yanSolda
       ? yanYuz(solM, 1)
       : duzYuz(solM, 1)
-  const [sagUst, sagAlt] = ortaMi
+  const sagKenar = ortaMi
     ? serbestYuz(sagM, CEYREK + a, -1)
     : yanSolda
       ? duzYuz(sagM, -1)
       : yanYuz(sagM, -1)
+  const [solUst, solAlt] = egimUygula(solKenar, solEgim)
+  const [sagUst, sagAlt] = egimUygula(sagKenar, sagEgim)
 
   return {
     /* Sol kanat: uzak ucundan dikişe (soldan sağa). */

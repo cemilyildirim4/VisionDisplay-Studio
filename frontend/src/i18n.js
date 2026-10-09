@@ -272,6 +272,12 @@ const dict = {
   'screen.lKoseOtoSag': { tr: 'sağında', en: 'right half', ar: 'النصف الأيمن' },
   'screen.lKoseOtoSol': { tr: 'solunda', en: 'left half', ar: 'النصف الأيسر' },
   'screen.lKoseOtoDon': { tr: 'Otomatiğe dön', en: 'Back to automatic', ar: 'العودة إلى التلقائي' },
+  'screen.lEgim': { tr: 'Kanat eğimi', en: 'Wing tilt', ar: 'ميل الجناح' },
+  'screen.lEgimSol': { tr: 'Sol kanat', en: 'Left wing', ar: 'الجناح الأيسر' },
+  'screen.lEgimSag': { tr: 'Sağ kanat', en: 'Right wing', ar: 'الجناح الأيمن' },
+  'screen.lEgimSola': { tr: 'Sola eğ', en: 'Tilt left', ar: 'إمالة لليسار' },
+  'screen.lEgimSaga': { tr: 'Sağa eğ', en: 'Tilt right', ar: 'إمالة لليمين' },
+  'screen.lEgimSifirla': { tr: 'Eğimleri sıfırla', en: 'Reset tilt', ar: 'إعادة ضبط الميل' },
   'screen.lKoseBaslik': { tr: 'L köşesi', en: 'L corner', ar: 'زاوية L' },
   'screen.lKoseIpucu': {
     tr: 'L ekran mekânın köşesini sarıyor: bir kanat ön duvarda, öteki yan duvarda. Kanatların kabin sayısını Sütunlar bölümünden ayarlıyorsunuz.',
