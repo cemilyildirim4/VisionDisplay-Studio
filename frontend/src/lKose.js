@@ -371,6 +371,8 @@ export function icBukeyKose({
   /* Kadrajın asal noktası — yan duvarın kaçış noktası buradadır. */
   asalX = null,
   asalY = null,
+  /* Kameranın odak uzunluğu, piksel. Verilmezse mesafeden türetiliyor. */
+  odakPx = null,
 }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
@@ -436,7 +438,21 @@ export function icBukeyKose({
 
   /* Yan yüz: asal noktaya göre ölçeklenir, kenarları oraya nişanlar. */
   const yanYuz = (wM, yon) => {
-    const F = Math.max(1, f * m)
+    /*
+     * ODAK UZUNLUĞU FOTOĞRAFIN KENDİ ÖZELLİĞİ.
+     *
+     * Yan yüzün eni doğrudan odağa bağlı: k = 1/(1 − w·m/F). Burada F
+     * "mesafe × px/m" ile hesaplanıyordu, yani kullanıcının yazdığı izleme
+     * mesafesine. O sayı ekranın ne kadar uzakta DURACAĞINI söylüyor;
+     * fotoğrafın hangi objektifle çekildiğini değil. Varsayılan 4 m, tipik
+     * bir kareye göre odağı küçük gösteriyor ve perspektif olduğundan sert
+     * çıkıyordu — yan yüz gereğinden geniş oluyordu.
+     *
+     * Odak artık kadrajın kendisinden: yatay görüş açısı ~65 derece kabulüyle
+     * F = (genişlik/2) / tan(32,5°) ≈ 0,785 · genişlik. Fotoğrafın ölçüsü
+     * bilinmiyorsa eski yol yedek olarak duruyor.
+     */
+    const F = Math.max(1, Number.isFinite(odakPx) && odakPx > 1 ? odakPx : f * m)
     const k = 1 / (1 - Math.min(0.6, (wM * m) / F))
     /* Dikişin asal noktaya göre yeri; sıfıra çok yakınsa taban uygula. */
     let d = cx - asal

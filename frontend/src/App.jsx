@@ -4695,6 +4695,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * ön yüzün hizasında kullanılıyor.
        */
       asalY: fotoYer?.yukseklik > 0 ? oranTuvale({ x: 0.5, y: 0.5 }).y : null,
+      /*
+       * Odak, fotoğrafın kadrajından: yatay görüş açısı ~65 derece kabulü.
+       * Tuvaldeki genişlik kullanılıyor çünkü köşe de tuval pikselinde.
+       */
+      odakPx:
+        fotoYer?.genislik > 0 ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785 : null,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
