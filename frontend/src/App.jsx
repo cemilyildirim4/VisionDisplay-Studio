@@ -1160,16 +1160,47 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setOzelInceleniyor(true)
       setOzelUyari(null)
       /*
-       * YENİ FOTOĞRAF = YENİ ÖLÇEK. Eski referans buraya ait değil; kutu da
-       * onunla kurulmuştu, ikisi birden siliniyor.
+       * YENİ FOTOĞRAF = YENİ ÖLÇEK.
+       *
+       * Eski referans buraya ait değil ve ondan türeyen hiçbir şey de öyle:
+       * ölçü kutusu, köşe çizgisi, kutunun duruşu, elle verilen köşeler,
+       * taşıma kayması, yazılan santimler. Önceden yalnızca referans
+       * noktaları ve kutu siliniyordu; köşe çizgisi önceki fotoğraftan
+       * kalıyor ve ölçü baştan seçilmemiş oluyordu.
+       *
+       * Silinen küme "Baştan başla"nınkiyle aynı (bkz. sihirbaziBaslat);
+       * tek fark burada fotoğrafın kendisinin de değişmesi.
        */
+      /* Referansın kendisi */
       setRefNokta([])
       setRefUzunlukCm('')
       setRefBoyCm('')
       setRefTur('cizgi')
       setRefMesaj(null)
       setRefEskidi(false)
+      setRefAciKullan(true)
+      /* Referanstan türeyen yerleşim */
       setOlcuKutu(null)
+      setTaslakKutu(null)
+      setHedefKose(null)
+      setHedefTur(null)
+      setElleKose(null)
+      setDuvarOlcu(null)
+      setKutuDurus({ roll: 0, yaw: 0, pitch: 0 })
+      setDuzlemeOtur(true)
+      setKutuDuzen(null)
+      setDuzenleAcik(false)
+      kutuYedek.current = null
+      setTasarimAcik(false)
+      setKutuMesaj(null)
+      /* Yazılan ölçüler */
+      setKutuEn('')
+      setKutuBoy('')
+      /* L köşesi: çizgi, yüksekliği, taşıma ve elle taraf seçimi */
+      setLKoseNokta([])
+      setLKoseBoyCm('')
+      setLKoseKayma({ x: 0, y: 0 })
+      setLKoseSecim(null)
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
