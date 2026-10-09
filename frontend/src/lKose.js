@@ -436,51 +436,45 @@ export function icBukeyKose({
     ]
   }
 
-  /* Yan yüz: asal noktaya göre ölçeklenir, kenarları oraya nişanlar. */
+  /*
+   * Yan yüz: asal noktaya göre ölçeklenir, kenarları oraya nişanlar.
+   *
+   * PERSPEKTİFİN PAYI DİKİŞİN YERİNE BAĞLI.
+   *
+   * Görüntü düzlemine dik bir duvarın ekrandaki eni, dikişin asal noktaya
+   * uzaklığıyla orantılı: |d|·(k−1). Dikiş asal noktaya yaklaştıkça bu en
+   * sıfıra iner — o duvar gerçekten kenarından görünür. Ekranda sıfır
+   * genişlikte bir yüz işe yaramadığı için bir taban var (ön yüzün %35'i).
+   *
+   * Ama taban yalnızca ENİ ayakta tutmalı, EĞİM ÜRETMEMELİ. Önceki hâlde
+   * taban devreye girdiğinde kaçış noktası uydurma bir yere kaydırılıyor ve
+   * yüz oradan ölçekleniyordu; kullanıcı köşeyi tam ortaya koyduğunda bile
+   * ekran eğik çıkıyordu. Oysa oradaki tek gerçek eğim fotoğrafın kendi
+   * bakış açısıdır.
+   *
+   * Artık eğim, gerçek perspektif eninin çizilen ene oranı kadar
+   * uygulanıyor: köşe kenara gittikçe tam perspektif, ortaya geldikçe düz
+   * bir katlanma. Geçiş sürekli, sıçrama yok.
+   */
   const yanYuz = (wM, yon) => {
     /*
-     * ODAK UZUNLUĞU FOTOĞRAFIN KENDİ ÖZELLİĞİ.
-     *
-     * Yan yüzün eni doğrudan odağa bağlı: k = 1/(1 − w·m/F). Burada F
-     * "mesafe × px/m" ile hesaplanıyordu, yani kullanıcının yazdığı izleme
-     * mesafesine. O sayı ekranın ne kadar uzakta DURACAĞINI söylüyor;
-     * fotoğrafın hangi objektifle çekildiğini değil. Varsayılan 4 m, tipik
-     * bir kareye göre odağı küçük gösteriyor ve perspektif olduğundan sert
-     * çıkıyordu — yan yüz gereğinden geniş oluyordu.
-     *
-     * Odak artık kadrajın kendisinden: yatay görüş açısı ~65 derece kabulüyle
-     * F = (genişlik/2) / tan(32,5°) ≈ 0,785 · genişlik. Fotoğrafın ölçüsü
-     * bilinmiyorsa eski yol yedek olarak duruyor.
+     * ODAK UZUNLUĞU FOTOĞRAFIN KENDİ ÖZELLİĞİ (bkz. odakPx).
      */
     const F = Math.max(1, Number.isFinite(odakPx) && odakPx > 1 ? odakPx : f * m)
     const k = 1 / (1 - Math.min(0.6, (wM * m) / F))
-    /* Dikişin asal noktaya göre yeri; sıfıra çok yakınsa taban uygula. */
-    let d = cx - asal
-    const istenen = nx * yon
+    /* Gerçek perspektif eni: dikişin asal noktaya uzaklığı × (k−1). */
+    const kayma = Math.abs(cx - asal) * (k - 1)
     const enAz = wM * m * EN_AZ_YAN_ORAN
-    /* Uzak kenarın yanal kayması |d|·(k−1); gerekirse d büyütülüyor. */
-    const gerek = enAz / Math.max(1e-6, k - 1)
-    if (!Number.isFinite(d) || Math.abs(d) < gerek) d = istenen * gerek
-    /* Kaçış noktası, yüzün açılacağı yönün TERSİNDE kalmalı. */
-    if (Math.sign(d) !== Math.sign(istenen)) d = -d
-    /*
-     * KAÇIŞ NOKTASI ASAL NOKTADIR — UFUK TAHMİNİ DEĞİL.
-     *
-     * Görüntü düzlemine DİK bir duvarda derinlik doğrultusundaki bütün
-     * doğrular kameranın asal noktasında buluşur: hem x'te hem Y'DE. Yani
-     * o duvarın tavan hattı da, zemin hattı da, duvara asılmış bir
-     * pencerenin kenarları da oradan geçer.
-     *
-     * Burada dikey olarak köşe çizgisinden türetilen ufuk kullanılıyordu.
-     * O ufuk, kullanıcının yazdığı köşe yüksekliğine ve 1,5 m kamera
-     * varsayımına dayanıyor ve kolayca kayıyor; kayınca yan kanadın üst ve
-     * alt kenarları duvarın hatlarını tutmuyor, yüz havada açılmış bir kapak
-     * gibi duruyordu. Asal nokta ise ölçüm değil, kadrajın kendi merkezi —
-     * tek nokta perspektifli bir odada aranan nokta tam olarak orasıdır.
-     */
-    const V = { x: cx - d, y: asalDikey }
-    const olcekle = (p) => ({ x: V.x + (p.x - V.x) * k, y: V.y + (p.y - V.y) * k })
-    return [olcekle(ust), olcekle(alt)]
+    const genislik = Math.max(kayma, enAz)
+    const pay = genislik > 0 ? Math.min(1, kayma / genislik) : 0
+    const uzak = (p) => {
+      const yOlcekli = asalDikey + (p.y - asalDikey) * k
+      return {
+        x: p.x + nx * genislik * yon,
+        y: p.y + ny * genislik * yon + (yOlcekli - p.y) * pay,
+      }
+    }
+    return [uzak(ust), uzak(alt)]
   }
 
   /*
