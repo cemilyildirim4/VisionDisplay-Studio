@@ -4689,6 +4689,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       ufukY: kacis?.y ?? null,
       kose: etkinKose,
       asalX: kacis?.x ?? null,
+      /*
+       * Yan duvarın kaçış noktası asal NOKTA: dikeyde de kadrajın ortası.
+       * kacis.y köşe çizgisinden türeyen ufuk; o yalnızca 'orta' kipinde ve
+       * ön yüzün hizasında kullanılıyor.
+       */
+      asalY: fotoYer?.yukseklik > 0 ? oranTuvale({ x: 0.5, y: 0.5 }).y : null,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM

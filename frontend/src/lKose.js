@@ -368,8 +368,9 @@ export function icBukeyKose({
   ufukY = null,
   /* Hangi kanat YAN duvarda: 'sol' | 'sag' | 'orta'. */
   kose = 'sol',
-  /* Kadrajın asal noktasının x'i — yan duvarın kaçış noktası buradadır. */
+  /* Kadrajın asal noktası — yan duvarın kaçış noktası buradadır. */
   asalX = null,
+  asalY = null,
 }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
@@ -394,6 +395,7 @@ export function icBukeyKose({
   const yari = dikisPx / 2
   const yatay = Number.isFinite(ufukY) ? ufukY : cy
   const asal = Number.isFinite(asalX) ? asalX : cx
+  const asalDikey = Number.isFinite(asalY) ? asalY : yatay
 
   /*
    * ───────────────────────────────────────────────────────────────────────
@@ -445,8 +447,22 @@ export function icBukeyKose({
     if (!Number.isFinite(d) || Math.abs(d) < gerek) d = istenen * gerek
     /* Kaçış noktası, yüzün açılacağı yönün TERSİNDE kalmalı. */
     if (Math.sign(d) !== Math.sign(istenen)) d = -d
-    /* Kaçış noktası: dikişin d kadar gerisi, ufuk hizasında. */
-    const V = { x: cx - d, y: yatay }
+    /*
+     * KAÇIŞ NOKTASI ASAL NOKTADIR — UFUK TAHMİNİ DEĞİL.
+     *
+     * Görüntü düzlemine DİK bir duvarda derinlik doğrultusundaki bütün
+     * doğrular kameranın asal noktasında buluşur: hem x'te hem Y'DE. Yani
+     * o duvarın tavan hattı da, zemin hattı da, duvara asılmış bir
+     * pencerenin kenarları da oradan geçer.
+     *
+     * Burada dikey olarak köşe çizgisinden türetilen ufuk kullanılıyordu.
+     * O ufuk, kullanıcının yazdığı köşe yüksekliğine ve 1,5 m kamera
+     * varsayımına dayanıyor ve kolayca kayıyor; kayınca yan kanadın üst ve
+     * alt kenarları duvarın hatlarını tutmuyor, yüz havada açılmış bir kapak
+     * gibi duruyordu. Asal nokta ise ölçüm değil, kadrajın kendi merkezi —
+     * tek nokta perspektifli bir odada aranan nokta tam olarak orasıdır.
+     */
+    const V = { x: cx - d, y: asalDikey }
     const olcekle = (p) => ({ x: V.x + (p.x - V.x) * k, y: V.y + (p.y - V.y) * k })
     return [olcekle(ust), olcekle(alt)]
   }
