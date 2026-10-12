@@ -7248,7 +7248,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               {[
                                 {
                                   ad: 'screen.lEgimSol',
-                                  yon: 1,
                                   ustAci: lSolUst,
                                   setUst: setLSolUst,
                                   altAci: lSolAlt,
@@ -7256,19 +7255,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 },
                                 {
                                   ad: 'screen.lEgimSag',
-                                  yon: -1,
                                   ustAci: lSagUst,
                                   setUst: setLSagUst,
                                   altAci: lSagAlt,
                                   setAlt: setLSagAlt,
                                 },
-                              ].map(({ ad, yon, ustAci, setUst, altAci, setAlt }) => {
+                              ].map(({ ad, ustAci, setUst, altAci, setAlt }) => {
+                                /*
+                                 * Artı = o kenarın uzak ucu AŞAĞI; iki kanatta
+                                 * da aynı (işaret çevirme geometride, bkz.
+                                 * lKose.js sekilVer). Burada kanada göre ayrıca
+                                 * çevirmek işaretleri iki kere ters çeviriyordu.
+                                 */
                                 const oynat = (ayarla, isaret) =>
                                   ayarla((v) =>
-                                    Math.max(
-                                      -EGIM_SINIR,
-                                      Math.min(EGIM_SINIR, v + isaret * yon * EGIM_ADIM),
-                                    ),
+                                    Math.max(-EGIM_SINIR, Math.min(EGIM_SINIR, v + isaret * EGIM_ADIM)),
                                   )
                                 const satir = (etiket, deger, ayarla, yukariYol, asagiYol) => (
                                   <div className="mt-1.5 flex items-center gap-1">

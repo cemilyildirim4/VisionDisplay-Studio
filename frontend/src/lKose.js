@@ -474,10 +474,28 @@ export function icBukeyKose({
    * hiçbir zaman çizilmiyor.
    * ───────────────────────────────────────────────────────────────────────
    */
-  const sekilVer = (kenar, ustAci, altAci) => {
+  const sekilVer = (kenar, yon, ustAci, altAci) => {
     if (!kenar) return kenar
-    const au = ((Number(ustAci) || 0) * Math.PI) / 180
-    const aa = ((Number(altAci) || 0) * Math.PI) / 180
+    /*
+     * ISARET KANADA GORE CEVRILIYOR.
+     *
+     * Uzak uc dikisin iki ayri yaninda duruyor, dolayisiyla AYNI isaretli
+     * donus sol kanadin ucunu yukari, sag kanadinkini asagi goturuyordu.
+     * Ayni sayi iki kanatta ters is yapiyor, kullanici da ayni degerleri
+     * yazdiginda bir kanat acilip oteki daraliyordu (olculdu: -26/+10 ile
+     * sol kanadin uzak kenari 191 px'e dusuyor, sagin 775 px'e cikiyordu --
+     * dikis 480).
+     *
+     * Artik isaret burada, GEOMETRIDE cevriliyor: yazilan deger iki kanatta
+     * da ayni gorsel isi yapiyor (arti = o kenarin uzak ucu ASAGI). Arayuzun
+     * ayrica cevirmesine gerek kalmadi.
+     *
+     * Not: bu yuzden iki kanada AYNI sayilari yazmak simetrik bir kose
+     * veriyor; ic bukey kosede ust eksi, alt arti olmali.
+     */
+    const cevrim = -(Number(yon) || 1)
+    const au = (cevrim * (Number(ustAci) || 0) * Math.PI) / 180
+    const aa = (cevrim * (Number(altAci) || 0) * Math.PI) / 180
     if (!(Math.abs(au) > 1e-6) && !(Math.abs(aa) > 1e-6)) return kenar
     const cevir = (q, merkez, aci2) => {
       const c2 = Math.cos(aci2)
@@ -523,8 +541,8 @@ export function icBukeyKose({
   const ortaMi = kose === 'orta'
   const solKenar = duzYuz(solM, 1)
   const sagKenar = duzYuz(sagM, -1)
-  const solSekilli = sekilVer(solKenar, solUstAci, solAltAci)
-  const sagSekilli = sekilVer(sagKenar, sagUstAci, sagAltAci)
+  const solSekilli = sekilVer(solKenar, 1, solUstAci, solAltAci)
+  const sagSekilli = sekilVer(sagKenar, -1, sagUstAci, sagAltAci)
 
   /*
    * TAŞIRKEN ŞEKİL AYNEN KALIYOR.
