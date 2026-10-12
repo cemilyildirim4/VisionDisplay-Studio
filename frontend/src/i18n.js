@@ -280,6 +280,10 @@ const dict = {
   'screen.lEgimAc': { tr: 'Kanadı aç', en: 'Open wing', ar: 'فتح الجناح' },
   'screen.lEgimDarat': { tr: 'Kanadı daralt', en: 'Narrow wing', ar: 'تضييق الجناح' },
   'screen.lEgimSifirla': { tr: 'Şekli sıfırla', en: 'Reset shape', ar: 'إعادة ضبط الشكل' },
+  'screen.lTasimaAc': { tr: 'Serbest taşımayı aç', en: 'Enable free move', ar: 'تفعيل التحريك الحر' },
+  'screen.lTasimaKapat': { tr: 'Köşeye geri bağla', en: 'Snap back to corner', ar: 'إعادة التثبيت على الزاوية' },
+  'screen.lTasimaKose': { tr: 'Köşe üzerinde', en: 'Along the corner', ar: 'على طول الزاوية' },
+  'screen.lTasimaSerbest': { tr: 'Serbest taşıma', en: 'Free move', ar: 'تحريك حر' },
   'screen.lKoseBaslik': { tr: 'L köşesi', en: 'L corner', ar: 'زاوية L' },
   'screen.lKoseIpucu': {
     tr: 'L ekran mekânın köşesini sarıyor: bir kanat ön duvarda, öteki yan duvarda. Kanatların kabin sayısını Sütunlar bölümünden ayarlıyorsunuz.',

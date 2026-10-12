@@ -746,6 +746,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [lSolDar, setLSolDar] = useState(0)
   const [lSagDar, setLSagDar] = useState(0)
   /*
+   * TAŞIMA VARSAYILAN OLARAK KÖŞEYE BAĞLI.
+   *
+   * Ekran işaretlenen köşeye oturuyor; fareyle her yöne serbest kayması
+   * oturduğu köşeden kolayca koparıyordu. Varsayılan artık köşe çizgisi
+   * BOYUNCA kaydırmak — yükseklik ayarı. Başka bir yere götürmek gerekiyorsa
+   * taşıma tuşu açılıyor.
+   */
+  const [lTasimaSerbest, setLTasimaSerbest] = useState(false)
+  /*
    * Bir dokunuş 2 derece, sınır ±45. Sınır boşuna geniş değil: kullanıcının
    * gönderdiği karede yüzün alt kenarı 1,6 eğimle inerken odanın zemin hattı
    * 0,22 ile iniyordu — aradaki fark 46 derece.
@@ -4617,8 +4626,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const basX = e.clientX
     const basY = e.clientY
     const baslangic = lKoseKayma
+    /*
+     * Serbest değilsek hareket KÖŞE ÇİZGİSİNİN doğrultusuna izdüşürülüyor:
+     * farenin yana giden bileşeni atılıyor, ekran çizgiden ayrılmıyor.
+     * İşaretlenmiş çizgi yoksa (hazır mekânlar) köşe dik kabul ediliyor.
+     */
+    let yon = null
+    if (!lTasimaSerbest) {
+      if (lKoseNokta.length === 2) {
+        const p1 = oranTuvale(lKoseNokta[0])
+        const p2 = oranTuvale(lKoseNokta[1])
+        const vx = p2.x - p1.x
+        const vy = p2.y - p1.y
+        const u = Math.hypot(vx, vy)
+        if (u > 1) yon = { x: vx / u, y: vy / u }
+      }
+      if (!yon) yon = { x: 0, y: 1 }
+    }
     const hareket = (ev) => {
-      setLKoseKayma({ x: baslangic.x + (ev.clientX - basX), y: baslangic.y + (ev.clientY - basY) })
+      let tx = ev.clientX - basX
+      let ty = ev.clientY - basY
+      if (yon) {
+        const boy = tx * yon.x + ty * yon.y
+        tx = yon.x * boy
+        ty = yon.y * boy
+      }
+      setLKoseKayma({ x: baslangic.x + tx, y: baslangic.y + ty })
     }
     const birak = () => {
       window.removeEventListener('pointermove', hareket)
@@ -5797,6 +5830,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 tıklama köşe noktalarına gitmeli, tasarıma değil.
               */
               onSurukle={!lKoseKipi && !refKipi ? lKoseSurukle : null}
+              /* Kısıtlıyken imleç de çizgi boyunca olduğunu söylüyor. */
+              surukleImleci={lTasimaSerbest ? 'move' : 'ns-resize'}
               geo={lKoseCizimi}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
@@ -5876,6 +5911,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </TusDugme>
                 </div>
               ))}
+              {/*
+                TAŞIMA KİLİDİ — açıkken ekran köşeden ayrılıp her yere
+                gidebiliyor, kapalıyken yalnızca köşe çizgisi boyunca
+                kayıyor (bkz. lTasimaSerbest).
+              */}
+              <div className="flex items-center gap-1.5 pointer-events-auto">
+                <TusDugme
+                  onClick={() => setLTasimaSerbest((a) => !a)}
+                  etiket={t(lTasimaSerbest ? 'screen.lTasimaKapat' : 'screen.lTasimaAc')}
+                  aktif={lTasimaSerbest}
+                >
+                  <path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" />
+                </TusDugme>
+                <span className="rounded-md bg-black/55 px-2 py-1 text-[11px] font-medium text-white">
+                  {t(lTasimaSerbest ? 'screen.lTasimaSerbest' : 'screen.lTasimaKose')}
+                </span>
+              </div>
               {(lSolEgim !== 0 || lSagEgim !== 0 || lSolDar !== 0 || lSagDar !== 0) && (
                 <button
                   type="button"

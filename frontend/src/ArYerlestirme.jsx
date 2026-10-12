@@ -32,15 +32,22 @@ export function YuvarlakDugme({ onClick, etiket, aktif = false, children }) {
   )
 }
 
-/** Hassas ayar tuşu — yön okları ve döndürme için kare, küçük düğme. */
-export function TusDugme({ onClick, etiket, children }) {
+/**
+ * Hassas ayar tuşu — yön okları ve döndürme için kare, küçük düğme.
+ * 'aktif' açık/kapalı tuşlar için: basılı kalan düğme beyaza dönüyor
+ * (YuvarlakDugme ile aynı dil).
+ */
+export function TusDugme({ onClick, etiket, aktif = false, children }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={etiket}
       title={etiket}
-      className="w-11 h-11 rounded-lg bg-black/55 text-white hover:bg-black/75 flex items-center justify-center transition-colors"
+      aria-pressed={aktif || undefined}
+      className={`w-11 h-11 rounded-lg flex items-center justify-center transition-colors ${
+        aktif ? 'bg-white text-neutral-900' : 'bg-black/55 text-white hover:bg-black/75'
+      }`}
     >
       <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
         {children}
