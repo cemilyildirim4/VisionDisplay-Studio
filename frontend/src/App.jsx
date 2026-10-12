@@ -741,10 +741,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * o sapmayı gözle kapatıyor; hesabın yerine geçmiyor, üstüne biniyor.
    * Sıfırda hiçbir etkisi yok, yani varsayılan davranış değişmiyor.
    */
-  const [lSolEgim, setLSolEgim] = useState(0)
-  const [lSagEgim, setLSagEgim] = useState(0)
-  const [lSolDar, setLSolDar] = useState(0)
-  const [lSagDar, setLSagDar] = useState(0)
+  const [lSolUst, setLSolUst] = useState(0)
+  const [lSolAlt, setLSolAlt] = useState(0)
+  const [lSagUst, setLSagUst] = useState(0)
+  const [lSagAlt, setLSagAlt] = useState(0)
   /*
    * TAŞIMA VARSAYILAN OLARAK KÖŞEYE BAĞLI.
    *
@@ -761,13 +761,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const EGIM_ADIM = 2
   const EGIM_SINIR = 45
-  /*
-   * Daralma: 0 düpedüz, büyüdükçe kanadın uzak kenarı kısalıp geriye
-   * çekiliyor. Asıl sınır geometride ve kanadın en/boy oranından geliyor
-   * (bkz. lKose.js sekilVer); buradaki sayı yalnızca tuşun kaç basışta
-   * oraya varacağını belirliyor.
-   */
-  const DAR_SINIR = 30
   const [lKoseBoyCm, setLKoseBoyCm] = useState('')
   const [refMesaj, setRefMesaj] = useState(null)
   /*
@@ -1240,10 +1233,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setLKoseBoyCm('')
       setLKoseKayma({ x: 0, y: 0 })
       setLKoseSecim(null)
-      setLSolEgim(0)
-      setLSagEgim(0)
-      setLSolDar(0)
-      setLSagDar(0)
+      setLSolUst(0)
+      setLSolAlt(0)
+      setLSagUst(0)
+      setLSagAlt(0)
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
@@ -4254,10 +4247,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setLKoseBoyCm('')
     setLKoseKipi(false)
     setLKoseKayma({ x: 0, y: 0 })
-    setLSolEgim(0)
-    setLSagEgim(0)
-    setLSolDar(0)
-    setLSagDar(0)
+    setLSolUst(0)
+    setLSolAlt(0)
+    setLSagUst(0)
+    setLSagAlt(0)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -4796,10 +4789,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * fotoğraf açı verir, uzunluk vermez ve o kestirim her karede
        * tutmuyordu.
        */
-      solEgim: lSolEgim,
-      sagEgim: lSagEgim,
-      solDaralma: lSolDar,
-      sagDaralma: lSagDar,
+      solUstAci: lSolUst,
+      solAltAci: lSolAlt,
+      sagUstAci: lSagUst,
+      sagAltAci: lSagAlt,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
@@ -5860,54 +5853,54 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               {[
                 {
                   ad: 'screen.lEgimSol',
-                  egim: lSolEgim,
-                  setEgim: setLSolEgim,
-                  dar: lSolDar,
-                  setDar: setLSolDar,
+                  ustAci: lSolUst,
+                  setUst: setLSolUst,
+                  altAci: lSolAlt,
+                  setAlt: setLSolAlt,
                 },
                 {
                   ad: 'screen.lEgimSag',
-                  egim: lSagEgim,
-                  setEgim: setLSagEgim,
-                  dar: lSagDar,
-                  setDar: setLSagDar,
+                  ustAci: lSagUst,
+                  setUst: setLSagUst,
+                  altAci: lSagAlt,
+                  setAlt: setLSagAlt,
                 },
-              ].map(({ ad, egim, setEgim, dar, setDar }) => (
+              ].map(({ ad, ustAci, setUst, altAci, setAlt }) => (
                 <div key={ad} className="flex items-center gap-1.5 pointer-events-auto">
                   <span className="w-[72px] rounded-md bg-black/55 px-2 py-1 text-[11px] font-medium text-white">
                     {t(ad)}
                   </span>
-                  {/* EĞİM — kanadı yatırır; alt kenarı duvarın zemin hattına getiren bu. */}
-                  <span className="w-10 text-right text-[11px] font-medium text-white tabular-nums drop-shadow">
-                    {egim > 0 ? '+' : ''}{egim}°
+                  {/* ÜST KENAR — tavan hattına hizalanan. */}
+                  <span className="w-[70px] text-right text-[11px] font-medium text-white tabular-nums drop-shadow">
+                    {t('screen.lKenarUst')} {ustAci > 0 ? '+' : ''}{ustAci}°
                   </span>
                   <TusDugme
-                    onClick={() => setEgim((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))}
-                    etiket={`${t(ad)} — ${t('screen.lEgimSola')}`}
+                    onClick={() => setUst((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))}
+                    etiket={`${t(ad)} ${t('screen.lKenarUst')} — ${t('screen.lEgimSola')}`}
                   >
                     <path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" />
                   </TusDugme>
                   <TusDugme
-                    onClick={() => setEgim((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))}
-                    etiket={`${t(ad)} — ${t('screen.lEgimSaga')}`}
+                    onClick={() => setUst((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))}
+                    etiket={`${t(ad)} ${t('screen.lKenarUst')} — ${t('screen.lEgimSaga')}`}
                   >
                     <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
                   </TusDugme>
-                  {/* DARALMA — uzak kenarı kısaltır; köşenin katlanma hissini veren bu. */}
-                  <span className="ml-1 w-10 text-right text-[11px] font-medium text-white tabular-nums drop-shadow">
-                    {dar > 0 ? '+' : ''}{dar}°
+                  {/* ALT KENAR — zemin hattına hizalanan. */}
+                  <span className="ml-1 w-[70px] text-right text-[11px] font-medium text-white tabular-nums drop-shadow">
+                    {t('screen.lKenarAlt')} {altAci > 0 ? '+' : ''}{altAci}°
                   </span>
                   <TusDugme
-                    onClick={() => setDar((v) => Math.max(-DAR_SINIR, v - EGIM_ADIM))}
-                    etiket={`${t(ad)} — ${t('screen.lEgimAc')}`}
+                    onClick={() => setAlt((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))}
+                    etiket={`${t(ad)} ${t('screen.lKenarAlt')} — ${t('screen.lEgimSola')}`}
                   >
-                    <path d="M10 6l-6 6 6 6M14 6l6 6-6 6" />
+                    <path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" />
                   </TusDugme>
                   <TusDugme
-                    onClick={() => setDar((v) => Math.min(DAR_SINIR, v + EGIM_ADIM))}
-                    etiket={`${t(ad)} — ${t('screen.lEgimDarat')}`}
+                    onClick={() => setAlt((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))}
+                    etiket={`${t(ad)} ${t('screen.lKenarAlt')} — ${t('screen.lEgimSaga')}`}
                   >
-                    <path d="M4 6l6 6-6 6M20 6l-6 6 6 6" />
+                    <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
                   </TusDugme>
                 </div>
               ))}
@@ -5928,15 +5921,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {t(lTasimaSerbest ? 'screen.lTasimaSerbest' : 'screen.lTasimaKose')}
                 </span>
               </div>
-              {(lSolEgim !== 0 || lSagEgim !== 0 || lSolDar !== 0 || lSagDar !== 0) && (
+              {(lSolUst !== 0 || lSolAlt !== 0 || lSagUst !== 0 || lSagAlt !== 0) && (
                 <button
                   type="button"
                   className="pointer-events-auto rounded-md bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/75 transition-colors"
                   onClick={() => {
-                    setLSolEgim(0)
-                    setLSagEgim(0)
-                    setLSolDar(0)
-                    setLSagDar(0)
+                    setLSolUst(0)
+                    setLSolAlt(0)
+                    setLSagUst(0)
+                    setLSagAlt(0)
                   }}
                 >
                   {t('screen.lEgimSifirla')}
@@ -7007,10 +7000,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             lKoseIsaretle={() => {
                               setLKoseNokta([])
                               setLKoseKayma({ x: 0, y: 0 })
-                              setLSolEgim(0)
-                              setLSagEgim(0)
-                              setLSolDar(0)
-                              setLSagDar(0)
+                              setLSolUst(0)
+                              setLSolAlt(0)
+                              setLSagUst(0)
+                              setLSagAlt(0)
                               setLKoseKipi(true)
                             }}
                             lKoseOran={lKoseOran}

@@ -368,11 +368,15 @@ export function icBukeyKose({
   ufukY = null,
   /* Hangi kanat YAN duvarda: 'sol' | 'sag' | 'orta'. */
   kose = 'sol',
-  /* Kullanıcının tuşlarla verdiği şekil, DERECE. Her kanat için ayrı. */
-  solEgim = 0,
-  sagEgim = 0,
-  solDaralma = 0,
-  sagDaralma = 0,
+  /*
+   * Kullanıcının tuşlarla verdiği şekil, DERECE. Her kanadın ÜST ve ALT
+   * kenarı ayrı ayrı: ekranda hizalanacak şey zaten tavan hattı ve zemin
+   * hattı, ikisi birbirinden bağımsız.
+   */
+  solUstAci = 0,
+  solAltAci = 0,
+  sagUstAci = 0,
+  sagAltAci = 0,
 }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
@@ -443,37 +447,38 @@ export function icBukeyKose({
    */
 
   /*
-   * ŞEKLİ UYGULA — her uzak uç, dikişin KENDİ ucu etrafında dönüyor.
+   * ───────────────────────────────────────────────────────────────────────
+   * ŞEKLİ UYGULA — HER KENAR AYRI AYRI.
+   *
+   * Önce iki tuş vardı: biri iki kenarı BİRLİKTE çeviriyordu (eğim), öteki
+   * TERS yönde (daralma). Matematik olarak yeterliydi ama kullanımı değildi:
+   * kullanıcı üst kenarı tavan hattına oturtmak için ikisini birden
+   * ayarlamak zorunda kalıyor, alt kenar da nereye düşerse düşüyordu —
+   * "üst duvar çizgisine hizaladım ama alt kısımlar aşırı sivri duruyor".
+   *
+   * Ekranda hizalanacak şey zaten iki ayrı çizgi: tavan hattı ve zemin
+   * hattı. Tuşlar da öyle: her kanadın üst kenarı ve alt kenarı bağımsız.
+   * İçerideki hesap aynı — her uzak uç dikişin KENDİ ucu etrafında dönüyor.
    *
    * Dönme merkezi neden dikişin ucu: uzak kenarı kendi ortası etrafında
    * çevirmeyi de denedim ve ölçtüm — uzak kenarı DİK olan bir kanatta
    * neredeyse hiçbir şey olmuyor, çünkü uçlar o zaman yanlamasına kayıyor
    * (10 derecede alt kenarın eğimi 0'dan yalnızca −0,008'e gidiyordu).
-   * Dikiş ucundan çevrilince kenarlar gerçekten o kadar derece dönüyor,
+   * Dikiş ucundan çevrilince kenar gerçekten o kadar derece dönüyor,
    * kanadın eni ve dikişin yeri de yerinde kalıyor.
    *
-   * Üst uca (eğim + daralma), alt uca (eğim − daralma) uygulanıyor: eşit
-   * kısım kanadı yatırıyor, ters kısım uzak kenarı kısaltıyor.
+   * ÇÖKME KORUMASI. İki kenar birbirine doğru çevrilirse uzak kenar önce bir
+   * noktaya iner, sonra TERS çevrilir ve kanat kendi içine katlanır. Sonuç
+   * dikişin dörtte birinden kısa çıkarsa iki açı da aynı oranda geri
+   * alınıyor; kullanıcı sınıra dayandığını görüyor ama bozuk bir şekil
+   * hiçbir zaman çizilmiyor.
+   * ───────────────────────────────────────────────────────────────────────
    */
-  const sekilVer = (kenar, wM, egim, daralma) => {
-    const e = ((Number(egim) || 0) * Math.PI) / 180
+  const sekilVer = (kenar, ustAci, altAci) => {
     if (!kenar) return kenar
-    /*
-     * DARALMANIN SINIRI VAR, YOKSA KANAT İÇİNE KATLANIYOR.
-     *
-     * Daralma uzak kenarı 2·w·sin(d) kadar kısaltıyor. Yeterince bastırınca
-     * kenar önce bir noktaya iniyor, sonra TERS çevriliyor — ölçüldü: eni ve
-     * boyu eşit bir kanatta uzak kenar 480 px'den 30 derecede sıfıra düşüyor,
-     * 60 derecede 351 px olarak geri geliyor ama kanat ters dönmüş oluyor.
-     * Bu yüzden kısalma, dikişin dörtte üçüyle sınırlı: uzak kenar her zaman
-     * dikişin en az dörtte biri kadar kalıyor. Sınır kanadın kendi en/boy
-     * oranından geliyor, sabit bir dereceden değil.
-     */
-    const genislikPx = Math.max(1, (Number(wM) || 0) * m)
-    const enCokD = Math.asin(Math.min(1, (0.75 * dikisPx) / (2 * genislikPx)))
-    const dHam = ((Number(daralma) || 0) * Math.PI) / 180
-    const d = Math.max(-enCokD, Math.min(enCokD, dHam))
-    if (!(Math.abs(e) > 1e-6) && !(Math.abs(d) > 1e-6)) return kenar
+    const au = ((Number(ustAci) || 0) * Math.PI) / 180
+    const aa = ((Number(altAci) || 0) * Math.PI) / 180
+    if (!(Math.abs(au) > 1e-6) && !(Math.abs(aa) > 1e-6)) return kenar
     const cevir = (q, merkez, aci2) => {
       const c2 = Math.cos(aci2)
       const s2 = Math.sin(aci2)
@@ -482,14 +487,44 @@ export function icBukeyKose({
         y: merkez.y + (q.x - merkez.x) * s2 + (q.y - merkez.y) * c2,
       }
     }
-    return [cevir(kenar[0], ust, e + d), cevir(kenar[1], alt, e - d)]
+    const dene = (oran) => [
+      cevir(kenar[0], ust, au * oran),
+      cevir(kenar[1], alt, aa * oran),
+    ]
+    const enAz = dikisPx * 0.25
+    /*
+     * UZUNLUK TEK BASINA YETMIYOR: kenar sifiri gecip TERS donunce boyu
+     * yeniden buyuyor ve olcut tekrar saglaniyor. Olculdu: ust +30 / alt -30
+     * derecede uzak kenar 120 px (taban), +40'ta 137, +45'te 199 -- ama
+     * kanat coktan icine katlanmis oluyor. O yuzden kenarin YONU de
+     * bakiliyor: dikisle ayni yone bakmayi birakirsa gecersiz. Iki kosul
+     * birlikte tek yonlu, dolayisiyla ikili arama dogru calisiyor.
+     */
+    const uygun = (d) => {
+      const vx = d[1].x - d[0].x
+      const vy = d[1].y - d[0].y
+      if (!(Math.hypot(vx, vy) >= enAz)) return false
+      return vx * dx + vy * dy > 0
+    }
+    let sonuc = dene(1)
+    if (!uygun(sonuc)) {
+      let dusuk = 0
+      let yuksek = 1
+      for (let i = 0; i < 24; i++) {
+        const orta = (dusuk + yuksek) / 2
+        if (uygun(dene(orta))) dusuk = orta
+        else yuksek = orta
+      }
+      sonuc = dene(dusuk)
+    }
+    return sonuc
   }
 
   const ortaMi = kose === 'orta'
   const solKenar = duzYuz(solM, 1)
   const sagKenar = duzYuz(sagM, -1)
-  const solSekilli = sekilVer(solKenar, solM, solEgim, solDaralma)
-  const sagSekilli = sekilVer(sagKenar, sagM, sagEgim, sagDaralma)
+  const solSekilli = sekilVer(solKenar, solUstAci, solAltAci)
+  const sagSekilli = sekilVer(sagKenar, sagUstAci, sagAltAci)
 
   /*
    * TAŞIRKEN ŞEKİL AYNEN KALIYOR.
@@ -515,8 +550,8 @@ export function icBukeyKose({
    * düpedüz duruyor; orada bir kanadı karartmak yanlış olurdu, o yüzden
    * karartma hiç uygulanmıyor (bkz. LKoseEkran).
    */
-  const solSekil = Math.abs(Number(solDaralma) || 0)
-  const sagSekil = Math.abs(Number(sagDaralma) || 0)
+  const solSekil = Math.abs((Number(solUstAci) || 0) - (Number(solAltAci) || 0))
+  const sagSekil = Math.abs((Number(sagUstAci) || 0) - (Number(sagAltAci) || 0))
   const sekilliMi = solSekil > 0 || sagSekil > 0
 
   return {
