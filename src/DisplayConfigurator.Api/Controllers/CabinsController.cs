@@ -243,6 +243,12 @@ public class CabinsController : ControllerBase
         if (input.PixelPitchMm <= 0)
             return "Piksel aralığı 0'dan büyük olmalı.";
 
+        if (input.PixelWidth <= 0 || input.PixelHeight <= 0)
+            return "Piksel genişliği ve yüksekliği 0'dan büyük olmalı.";
+
+        if (input.PowerMaxWatts <= 0)
+            return "Maksimum güç 0'dan büyük olmalı.";
+
         if (input.ProductType is not ("CABINET" or "MODULE"))
             return "Ürün tipi 'CABINET' (Kabin) veya 'MODULE' (Tekli Panel) olmalı.";
 

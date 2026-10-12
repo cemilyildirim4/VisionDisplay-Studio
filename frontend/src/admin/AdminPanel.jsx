@@ -32,8 +32,8 @@ const CATEGORIES = [
 ]
 
 const PRODUCT_TYPES = [
-  { v: 'CABINET', label: 'Kabin', hint: 'Hazır kabin ünitesi — duvar/istifleme montajı' },
   { v: 'MODULE', label: 'Tekli Panel (Modül)', hint: 'Outdoor / Indoor / Flexible panel — kart başına gruplanır' },
+  { v: 'CABINET', label: 'Kabin', hint: 'Hazır kabin ünitesi — duvar/istifleme montajı' },
 ]
 
 /** Sekmeler gruplu — 7 düz sekme yerine SaaS tarzı bölümler. */
@@ -240,7 +240,8 @@ const BLANK = {
   category: 'led',
   modelCode: '',
   name: '',
-  productType: 'CABINET',
+  productType: 'MODULE',
+  isLoopable: false,
   defaultModulesPerCard: 10,
   price: 0,
   pixelPitchMm: 1.25,
@@ -285,14 +286,36 @@ const money = (v) =>
     : `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
 const dt = (v) => turkiyeTarihSaat(v)
 
-function Field({ label, hint, children }) {
+function Field({ label, hint, required, children }) {
   return (
     <label className="block">
-      <span className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">{label}</span>
+      <span className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+        {label}
+        {required && <span className="text-red-600 ml-0.5" aria-hidden="true">*</span>}
+      </span>
       {children}
       {hint && <span className="block text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">{hint}</span>}
     </label>
   )
+}
+
+function modelFormHatalari(form, seriesList) {
+  const hatalar = []
+  const ekle = (section, text) => hatalar.push({ section, text })
+  if (!String(form.modelCode || '').trim()) ekle('basic', 'Model kodu zorunludur.')
+  if (form.category !== 'led' && form.category !== 'videowall') ekle('basic', 'Kategori seçilmelidir.')
+  if (!seriesList.some((s) => String(s.id) === String(form.seriesId))) ekle('basic', 'Seri seçilmelidir.')
+  if (!(Number(form.pixelPitchMm) > 0)) ekle('basic', 'Piksel aralığı 0’dan büyük olmalıdır.')
+  if (form.productType !== 'MODULE' && form.productType !== 'CABINET') ekle('basic', 'Ürün tipi seçilmelidir.')
+  if (form.price === '' || form.price === null || form.price === undefined || Number.isNaN(Number(form.price)) || Number(form.price) < 0)
+    ekle('basic', 'Fiyat 0 veya daha büyük bir sayı olmalıdır.')
+  if (!(Number(form.defaultModulesPerCard) > 0)) ekle('basic', 'Kart başına modül 0’dan büyük olmalıdır.')
+  if (!(Number(form.widthMm) > 0)) ekle('tech', 'Genişlik 0’dan büyük olmalıdır.')
+  if (!(Number(form.heightMm) > 0)) ekle('tech', 'Yükseklik 0’dan büyük olmalıdır.')
+  if (!(Number(form.pixelWidth) > 0)) ekle('tech', 'Piksel genişliği 0’dan büyük olmalıdır.')
+  if (!(Number(form.pixelHeight) > 0)) ekle('tech', 'Piksel yüksekliği 0’dan büyük olmalıdır.')
+  if (!(Number(form.powerMaxWatts) > 0)) ekle('tech', 'Maksimum güç 0’dan büyük olmalıdır.')
+  return hatalar
 }
 
 const inputCls =
@@ -539,6 +562,12 @@ export default function AdminPanel() {
   }
 
   const save = async () => {
+    const hatalar = modelFormHatalari(form, seriesList)
+    if (hatalar.length > 0) {
+      setFormSection(hatalar[0].section)
+      setMessage({ type: 'err', text: hatalar.map((h) => h.text).join(' ') })
+      return
+    }
     setSaving(true)
     setMessage(null)
     try {
@@ -1444,25 +1473,25 @@ export default function AdminPanel() {
                   <Field label="Ad" hint="Katalogda görünen ad; boşsa model kodu kullanılır">
                     <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputCls} placeholder="ör. Indoor P2.5 Modül" />
                   </Field>
-                  <Field label="Model Kodu" hint="Örn: Q30H15B13V3 Outdoor Panel, 550012949A Indoor Panel">
-                    <input value={form.modelCode} onChange={(e) => set('modelCode', e.target.value)} className={inputCls} placeholder="ör. LED-P1.25" />
+                  <Field label="Model Kodu" required hint="Örn: Q30H15B13V3 Outdoor Panel, 550012949A Indoor Panel">
+                    <input required value={form.modelCode} onChange={(e) => set('modelCode', e.target.value)} className={inputCls} placeholder="ör. LED-P1.25" />
                   </Field>
-                  <Field label="Kategori">
+                  <Field label="Kategori" required>
                     <select value={form.category} onChange={(e) => set('category', e.target.value)} className={inputCls}>
                       {CATEGORIES.map((c) => (
                         <option key={c.v} value={c.v}>{c.label}</option>
                       ))}
                     </select>
                   </Field>
-                  <Field label="Seri">
+                  <Field label="Seri" required>
                     <select value={form.seriesId} onChange={(e) => set('seriesId', e.target.value)} className={inputCls}>
                       {seriesList.map((s) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
                   </Field>
-                  <Field label="Piksel Aralığı (mm)">
-                    <input type="number" step="0.01" value={form.pixelPitchMm} onChange={(e) => set('pixelPitchMm', e.target.value)} className={inputCls} />
+                  <Field label="Piksel Aralığı (mm)" required>
+                    <input required type="number" min="0.01" step="0.01" value={form.pixelPitchMm} onChange={(e) => set('pixelPitchMm', e.target.value)} className={inputCls} />
                   </Field>
                   {form.productType === 'MODULE' && (
                     <Field label="Bağlantı" hint="Yalnızca modül. Looplamalı modül seri bağlanır ve kart yatay/dikey 512 piksel ile sınırlıdır. Loopsuz modülde her modül ayrı soket ister (16).">
@@ -1484,7 +1513,7 @@ export default function AdminPanel() {
                 {/* Ürün tipi — Kabin vs Tekli Panel */}
                 <div className="mb-4">
                   <div className="text-[12px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5">
-                    Ürün tipi <span className="font-normal text-neutral-400">(Kabin mi, Tekli Panel mi?)</span>
+                    Ürün tipi <span className="text-red-600">*</span> <span className="font-normal text-neutral-400">(Kabin mi, Tekli Panel mi?)</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {PRODUCT_TYPES.map((p) => {
@@ -1510,15 +1539,16 @@ export default function AdminPanel() {
 
                 {/* --- Fiyat ve panel kartı (Configurations hesap motoruna girdi) --- */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <Field label="Fiyat (USD)" hint="Birim fiyat ABD doları cinsinden. Kayıtlı proje toplamı bu değerle hesaplanır.">
+                  <Field label="Fiyat (USD)" required hint="Birim fiyat ABD doları cinsinden. 0 yazılabilir; boş bırakılamaz.">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 shrink-0">$</span>
-                      <input type="number" step="0.01" min="0" value={form.price} onChange={(e) => set('price', e.target.value)} className={inputCls} />
+                      <input required type="number" step="0.01" min="0" value={form.price} onChange={(e) => set('price', e.target.value)} className={inputCls} />
                       <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 shrink-0">USD</span>
                     </div>
                   </Field>
-                  <Field label="Kart Başına Modül" hint="Yalnızca Tekli Panel seçiliyken anlamlı">
+                  <Field label="Kart Başına Modül" required hint="Yalnızca Tekli Panel seçiliyken anlamlı">
                     <input
+                      required={form.productType === 'MODULE'}
                       type="number"
                       min="1"
                       value={form.defaultModulesPerCard}
@@ -1532,11 +1562,11 @@ export default function AdminPanel() {
 
                 <div className={formSection === 'tech' ? '' : 'hidden'}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <Field label="Genişlik (mm)">
-                    <input type="number" value={form.widthMm} onChange={(e) => set('widthMm', e.target.value)} className={inputCls} />
+                  <Field label="Genişlik (mm)" required>
+                    <input required type="number" min="1" value={form.widthMm} onChange={(e) => set('widthMm', e.target.value)} className={inputCls} />
                   </Field>
-                  <Field label="Yükseklik (mm)">
-                    <input type="number" value={form.heightMm} onChange={(e) => set('heightMm', e.target.value)} className={inputCls} />
+                  <Field label="Yükseklik (mm)" required>
+                    <input required type="number" min="1" value={form.heightMm} onChange={(e) => set('heightMm', e.target.value)} className={inputCls} />
                   </Field>
                   <Field label="Derinlik (mm)">
                     <input type="number" value={form.depthMm} onChange={(e) => set('depthMm', e.target.value)} className={inputCls} />
@@ -1548,11 +1578,11 @@ export default function AdminPanel() {
 
                 {/* Piksel — ölçü ÷ pitch tam bölünmeli */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
-                  <Field label="Piksel Genişlik">
-                    <input type="number" value={form.pixelWidth} onChange={(e) => set('pixelWidth', e.target.value)} className={inputCls} />
+                  <Field label="Piksel Genişlik" required>
+                    <input required type="number" min="1" value={form.pixelWidth} onChange={(e) => set('pixelWidth', e.target.value)} className={inputCls} />
                   </Field>
-                  <Field label="Piksel Yükseklik">
-                    <input type="number" value={form.pixelHeight} onChange={(e) => set('pixelHeight', e.target.value)} className={inputCls} />
+                  <Field label="Piksel Yükseklik" required>
+                    <input required type="number" min="1" value={form.pixelHeight} onChange={(e) => set('pixelHeight', e.target.value)} className={inputCls} />
                   </Field>
                   <div className="col-span-1 sm:col-span-2 lg:col-span-2 flex items-end">
                     <div className={`text-xs rounded-lg px-3 py-2 w-full ${pxWhole ? 'bg-neutral-100 dark:bg-[#222833] text-neutral-600 dark:text-neutral-400' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
@@ -1575,8 +1605,8 @@ export default function AdminPanel() {
                   <Field label="Tipik Güç (W)">
                     <input type="number" value={form.powerTypicalWatts} onChange={(e) => set('powerTypicalWatts', e.target.value)} className={inputCls} />
                   </Field>
-                  <Field label="Maksimum Güç (W)">
-                    <input type="number" value={form.powerMaxWatts} onChange={(e) => set('powerMaxWatts', e.target.value)} className={inputCls} />
+                  <Field label="Maksimum Güç (W)" required>
+                    <input required type="number" min="0.01" step="0.01" value={form.powerMaxWatts} onChange={(e) => set('powerMaxWatts', e.target.value)} className={inputCls} />
                   </Field>
                   <Field label="Besleme gerilimi (V)" hint="PSU eşleştirmesi için; boşsa gerilim süzülmez">
                     <input type="number" min="0" step="0.1" value={form.supplyVoltage} onChange={(e) => set('supplyVoltage', e.target.value)} className={inputCls} placeholder="ör. 5" />
