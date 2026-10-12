@@ -277,7 +277,9 @@ const dict = {
   'screen.lEgimSag': { tr: 'Sağ kanat', en: 'Right wing', ar: 'الجناح الأيمن' },
   'screen.lEgimSola': { tr: 'Sola eğ', en: 'Tilt left', ar: 'إمالة لليسار' },
   'screen.lEgimSaga': { tr: 'Sağa eğ', en: 'Tilt right', ar: 'إمالة لليمين' },
-  'screen.lEgimSifirla': { tr: 'Eğimleri sıfırla', en: 'Reset tilt', ar: 'إعادة ضبط الميل' },
+  'screen.lEgimAc': { tr: 'Kanadı aç', en: 'Open wing', ar: 'فتح الجناح' },
+  'screen.lEgimDarat': { tr: 'Kanadı daralt', en: 'Narrow wing', ar: 'تضييق الجناح' },
+  'screen.lEgimSifirla': { tr: 'Şekli sıfırla', en: 'Reset shape', ar: 'إعادة ضبط الشكل' },
   'screen.lKoseBaslik': { tr: 'L köşesi', en: 'L corner', ar: 'زاوية L' },
   'screen.lKoseIpucu': {
     tr: 'L ekran mekânın köşesini sarıyor: bir kanat ön duvarda, öteki yan duvarda. Kanatların kabin sayısını Sütunlar bölümünden ayarlıyorsunuz.',

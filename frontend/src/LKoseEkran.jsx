@@ -115,7 +115,8 @@ export default function LKoseEkran({
       className="absolute inset-0"
       style={{ width: tuvalW, height: tuvalH, pointerEvents: 'none' }}
     >
-      {kanatCiz(geo.yan, 'yan', true)}
+      {/* Düpedüz dururken hiçbir kanat karartılmıyor (bkz. icBukeyKose). */}
+      {kanatCiz(geo.yan, 'yan', geo.karartma !== false)}
       {kanatCiz(geo.on, 'on', false)}
     </div>
   )

@@ -743,6 +743,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [lSolEgim, setLSolEgim] = useState(0)
   const [lSagEgim, setLSagEgim] = useState(0)
+  const [lSolDar, setLSolDar] = useState(0)
+  const [lSagDar, setLSagDar] = useState(0)
   /*
    * Bir dokunuş 2 derece, sınır ±45. Sınır boşuna geniş değil: kullanıcının
    * gönderdiği karede yüzün alt kenarı 1,6 eğimle inerken odanın zemin hattı
@@ -750,6 +752,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const EGIM_ADIM = 2
   const EGIM_SINIR = 45
+  /*
+   * Daralma: 0 düpedüz, büyüdükçe kanadın uzak kenarı kısalıp geriye
+   * çekiliyor. Asıl sınır geometride ve kanadın en/boy oranından geliyor
+   * (bkz. lKose.js sekilVer); buradaki sayı yalnızca tuşun kaç basışta
+   * oraya varacağını belirliyor.
+   */
+  const DAR_SINIR = 30
   const [lKoseBoyCm, setLKoseBoyCm] = useState('')
   const [refMesaj, setRefMesaj] = useState(null)
   /*
@@ -1224,6 +1233,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setLKoseSecim(null)
       setLSolEgim(0)
       setLSagEgim(0)
+      setLSolDar(0)
+      setLSagDar(0)
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
@@ -4236,6 +4247,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setLKoseKayma({ x: 0, y: 0 })
     setLSolEgim(0)
     setLSagEgim(0)
+    setLSolDar(0)
+    setLSagDar(0)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -4744,25 +4757,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       aci,
       ufukY: kacis?.y ?? null,
       kose: etkinKose,
-      asalX: kacis?.x ?? null,
       /*
-       * Yan duvarın kaçış noktası asal NOKTA: dikeyde de kadrajın ortası.
-       * kacis.y köşe çizgisinden türeyen ufuk; o yalnızca 'orta' kipinde ve
-       * ön yüzün hizasında kullanılıyor.
+       * Kanatların duruşu artık KULLANICIDAN (bkz. lSolEgim). Fotoğraftan
+       * kestirilen asal nokta / ufuk / odak girdileri kaldırıldı: bir
+       * fotoğraf açı verir, uzunluk vermez ve o kestirim her karede
+       * tutmuyordu.
        */
-      asalY: fotoYer?.yukseklik > 0 ? oranTuvale({ x: 0.5, y: 0.5 }).y : null,
-      /*
-       * Odak, fotoğrafın kadrajından: yatay görüş açısı ~65 derece kabulü.
-       * Tuvaldeki genişlik kullanılıyor çünkü köşe de tuval pikselinde.
-       */
-      odakPx:
-        fotoYer?.genislik > 0 ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785 : null,
-      /* Kadrajın yarı genişliği — yan yüzün eni köşenin kenara uzaklığından. */
-      yariKadrajPx:
-        fotoYer?.genislik > 0 ? (fotoYer.genislik * (sahneYakinlik || 1)) / 2 : null,
-      /* Kullanıcının tuşlarla verdiği eğim (bkz. lSolEgim). */
       solEgim: lSolEgim,
       sagEgim: lSagEgim,
+      solDaralma: lSolDar,
+      sagDaralma: lSagDar,
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
@@ -5819,34 +5823,68 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {lKoseCizimi && !lKoseKipi && !refKipi && (
             <div className="absolute left-3 bottom-3 z-20 flex flex-col gap-2 items-start pointer-events-none">
               {[
-                { ad: 'screen.lEgimSol', deger: lSolEgim, ayarla: setLSolEgim },
-                { ad: 'screen.lEgimSag', deger: lSagEgim, ayarla: setLSagEgim },
-              ].map(({ ad, deger, ayarla }) => (
+                {
+                  ad: 'screen.lEgimSol',
+                  egim: lSolEgim,
+                  setEgim: setLSolEgim,
+                  dar: lSolDar,
+                  setDar: setLSolDar,
+                },
+                {
+                  ad: 'screen.lEgimSag',
+                  egim: lSagEgim,
+                  setEgim: setLSagEgim,
+                  dar: lSagDar,
+                  setDar: setLSagDar,
+                },
+              ].map(({ ad, egim, setEgim, dar, setDar }) => (
                 <div key={ad} className="flex items-center gap-1.5 pointer-events-auto">
-                  <span className="rounded-md bg-black/55 px-2 py-1 text-[11px] font-medium text-white tabular-nums">
-                    {t(ad)} {deger > 0 ? '+' : ''}{deger}°
+                  <span className="w-[72px] rounded-md bg-black/55 px-2 py-1 text-[11px] font-medium text-white">
+                    {t(ad)}
+                  </span>
+                  {/* EĞİM — kanadı yatırır; alt kenarı duvarın zemin hattına getiren bu. */}
+                  <span className="w-10 text-right text-[11px] font-medium text-white tabular-nums drop-shadow">
+                    {egim > 0 ? '+' : ''}{egim}°
                   </span>
                   <TusDugme
-                    onClick={() => ayarla((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))}
+                    onClick={() => setEgim((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))}
                     etiket={`${t(ad)} — ${t('screen.lEgimSola')}`}
                   >
                     <path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" />
                   </TusDugme>
                   <TusDugme
-                    onClick={() => ayarla((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))}
+                    onClick={() => setEgim((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))}
                     etiket={`${t(ad)} — ${t('screen.lEgimSaga')}`}
                   >
                     <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
                   </TusDugme>
+                  {/* DARALMA — uzak kenarı kısaltır; köşenin katlanma hissini veren bu. */}
+                  <span className="ml-1 w-10 text-right text-[11px] font-medium text-white tabular-nums drop-shadow">
+                    {dar > 0 ? '+' : ''}{dar}°
+                  </span>
+                  <TusDugme
+                    onClick={() => setDar((v) => Math.max(-DAR_SINIR, v - EGIM_ADIM))}
+                    etiket={`${t(ad)} — ${t('screen.lEgimAc')}`}
+                  >
+                    <path d="M10 6l-6 6 6 6M14 6l6 6-6 6" />
+                  </TusDugme>
+                  <TusDugme
+                    onClick={() => setDar((v) => Math.min(DAR_SINIR, v + EGIM_ADIM))}
+                    etiket={`${t(ad)} — ${t('screen.lEgimDarat')}`}
+                  >
+                    <path d="M4 6l6 6-6 6M20 6l-6 6 6 6" />
+                  </TusDugme>
                 </div>
               ))}
-              {(lSolEgim !== 0 || lSagEgim !== 0) && (
+              {(lSolEgim !== 0 || lSagEgim !== 0 || lSolDar !== 0 || lSagDar !== 0) && (
                 <button
                   type="button"
                   className="pointer-events-auto rounded-md bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/75 transition-colors"
                   onClick={() => {
                     setLSolEgim(0)
                     setLSagEgim(0)
+                    setLSolDar(0)
+                    setLSagDar(0)
                   }}
                 >
                   {t('screen.lEgimSifirla')}
@@ -6919,6 +6957,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               setLKoseKayma({ x: 0, y: 0 })
                               setLSolEgim(0)
                               setLSagEgim(0)
+                              setLSolDar(0)
+                              setLSagDar(0)
                               setLKoseKipi(true)
                             }}
                             lKoseOran={lKoseOran}

@@ -368,16 +368,11 @@ export function icBukeyKose({
   ufukY = null,
   /* Hangi kanat YAN duvarda: 'sol' | 'sag' | 'orta'. */
   kose = 'sol',
-  /* Kadrajın asal noktası — yan duvarın kaçış noktası buradadır. */
-  asalX = null,
-  asalY = null,
-  /* Kameranın odak uzunluğu, piksel. Verilmezse mesafeden türetiliyor. */
-  odakPx = null,
-  /* Kadrajın yarı genişliği (tuval pikseli) — yan yüzün eni buna göre. */
-  yariKadrajPx = null,
-  /* Kullanıcının elle verdiği eğim, DERECE. Her kanat için ayrı. */
+  /* Kullanıcının tuşlarla verdiği şekil, DERECE. Her kanat için ayrı. */
   solEgim = 0,
   sagEgim = 0,
+  solDaralma = 0,
+  sagDaralma = 0,
 }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
@@ -401,100 +396,41 @@ export function icBukeyKose({
   const cy = (ust.y + alt.y) / 2
   const yari = dikisPx / 2
   const yatay = Number.isFinite(ufukY) ? ufukY : cy
-  const asal = Number.isFinite(asalX) ? asalX : cx
-  const asalDikey = Number.isFinite(asalY) ? asalY : yatay
 
   /*
    * ───────────────────────────────────────────────────────────────────────
-   * İKİ YÜZ AYNI KURALA TABİ DEĞİL, ÇÜNKÜ İKİ AYRI DUVARDALAR.
+   * TASARIM KÖŞEYE KENDİ NORMAL GÖRÜNTÜSÜYLE GELİYOR; ŞEKLİ KULLANICI VERİYOR.
    *
-   * ÖN YÜZ — karşı duvarda. O duvara neredeyse tam karşıdan bakılıyor, yani
-   * görüntü düzlemine paralel. Paralel bir düzlemde kısalma yoktur: üst ve
-   * alt kenar yatay, yan kenarlar dikey, yüz DÜZ bir panel gibi görünür.
-   * Buraya perspektif uygulamak yanlış — önceki hesapta iki kanat da
-   * eğiliyordu ve ön yüz boşuna yamuk duruyordu.
+   * Burada bir zamanlar yan yüzün perspektifi FOTOĞRAFTAN kestiriliyordu:
+   * kadrajın asal noktası, köşe çizgisinden türetilen ufuk, izleme mesafesi
+   * ve odak uzunluğu. Matematiği doğruydu ama girdileri değildi — bir
+   * fotoğraf açı verir, uzunluk vermez. Kamera eğik tutulmuşsa, fotoğraf
+   * kırpılmışsa ya da arka plan tam karşıdan çekilmemişse kanat duvarın
+   * hattından sapıyordu. Birçok tur denendi (asal noktaya nişan, ufka nişan,
+   * derinlik haritasından düzlem); hiçbiri her karede tutmadı ve her
+   * denemede ekranda "havada açılmış bir kapak" görüntüsü kalıyordu.
    *
-   * YAN YÜZ — yan duvarda, görüntü düzlemine DİK. Böyle bir duvarın bütün
-   * yatay doğruları — tavan birleşimi, zemin birleşimi, o duvara asılmış bir
-   * pencerenin üst ve alt kenarı — kameranın ASAL NOKTASINDA buluşur. Yeni
-   * bir duvar algılamaya gerek yok: karşı duvara düz bakıldığı kabul
-   * edildiği anda yan duvarın kaçış noktası kadrajın ortasıdır.
+   * Artık kestirim YOK. İki kanat da işaretlenen köşeye kendi gerçek
+   * ölçüsüyle, kısalmasız oturuyor; köşenin duruşunu kullanıcı veriyor —
+   * fareyle taşıyarak ve iki tuş takımıyla. Kullanıcı duvarın kendi hattını
+   * gözüyle görüyor; bizim tahmin etmeye çalıştığımız şey onun zaten önünde.
    *
-   * Yan yüzün uzak kenarının YERİ de aynı geometriden: derinlik w metre
-   * azaldığında ölçek Z0/(Z0−w) kadar büyür, yani
-   *     k = 1 / (1 − w·m/F),  F = mesafe · m
-   * ve uzak kenar, dikişin asal noktadan k katı uzağındadır.
-   *
-   * EZİLME KORUMASI: dikiş asal noktaya yakınsa yan duvar gerçekten
-   * kenarından görünür ve yüz sıfıra iner. Ekranda bunun bir anlamı yok;
-   * yüzün eni ön yüzün belli bir oranının altına düşmüyor.
+   * KANAT BAŞINA İKİ SERBESTLİK, ki her duruş erişilebilir olsun:
+   *   EĞİM    — uzak kenarın iki ucu birlikte dönüyor: kanat yukarı/aşağı
+   *             yatıyor. Alt kenarı zemin hattına paralel getiren budur.
+   *   DARALMA — uçlar TERS yönde dönüyor: uzak kenar kısalıyor, kanat
+   *             geriye doğru çekiliyor. Katlanma hissini veren budur.
+   * İkisi de sıfırken tasarım düpedüz duruyor, yani "normal kendi görüntüsü".
    * ───────────────────────────────────────────────────────────────────────
    */
-  const EN_AZ_YAN_ORAN = 0.35
 
-  /* Ön yüz: kısalma yok, uzak kenar dikişin ötelenmiş kopyası. */
+  /* Kanadın uzak kenarı: dikişin w metre ötelenmiş kopyası, kısalma yok. */
   const duzYuz = (wM, yon) => {
     const yanal = wM * m
     return [
       { x: ust.x + nx * yanal * yon, y: ust.y + ny * yanal * yon },
       { x: alt.x + nx * yanal * yon, y: alt.y + ny * yanal * yon },
     ]
-  }
-
-  /*
-   * YAN YÜZ — HER DURUMDA KAÇIŞ NOKTASINA NİŞANLI.
-   *
-   * O duvarın bütün yatay doğruları (tavan birleşimi, zemin birleşimi, duvara
-   * asılmış bir pencerenin kenarları) kameranın asal noktasında buluşur.
-   * Yüzün üst ve alt kenarı da oradan geçmeli — "duvara gömülü" görüntüsünü
-   * veren tek şey bu.
-   *
-   * Dikişin iki ucunu O NOKTADAN aynı oranda uzaklaştırmak bunu birebir
-   * sağlıyor; iki uç bağımsız oynatılmadığı sürece kenarlar oraya nişanlar.
-   *
-   * ÖNCEKİ KUSUR. Yüzün eni dikişin asal noktaya uzaklığıyla orantılı ve
-   * dikiş oraya yaklaşınca sıfıra iniyor. Bunu bir tabanla engelliyordum ama
-   * tabanı YANAL KAYDIRMA olarak uyguluyor, dikey büyümeyi de bir oranla
-   * kısıyordum. O anda kenarlar artık kaçış noktasından geçmiyordu: yüz
-   * duvarın akışını bırakıp kendi başına bir yöne gidiyordu — kullanıcının
-   * "alttaki çizgiyle paralel değil" dediği durum.
-   *
-   * Taban artık yanal kaydırmayla değil, ÖLÇEĞİ (k) büyüterek sağlanıyor.
-   * Böylece en yine tabanın altına inmiyor ama iki kenar hep aynı noktada
-   * buluşuyor. Bedeli dürüst: o kadar dar bir yüzde derinliği olduğundan
-   * fazla gösteriyoruz — ama yön doğru kalıyor.
-   */
-  const yanYuz = (wM, yon) => {
-    /* Odak fotoğrafın kendi özelliği (bkz. odakPx). */
-    const F = Math.max(1, Number.isFinite(odakPx) && odakPx > 1 ? odakPx : f * m)
-    const kGercek = 1 / (1 - Math.min(0.6, (wM * m) / F))
-    /* Kaçış noktası yüzün açılacağı yönün TERSİNDE; uzaklığı asal noktadan. */
-    const istenen = nx * yon
-    const uzaklik = Math.max(1, Math.abs(cx - asal))
-    const V = { x: cx - istenen * uzaklik, y: asalDikey }
-    /*
-     * YÜZÜN ENİ: KÖŞE KENARA GİTTİKÇE DARALIYOR.
-     *
-     * Geometrinin kendisi bunun TERSİNİ söyler: köşe kadrajın ortasından
-     * uzaklaştıkça yan duvarın daha çoğu görünür (bir koridorda kenardaki
-     * duvarlar geniş, kaçış noktasının üstünde sıfıra iner). Bu kural
-     * kullanıcının istediği davranış: köşe hangi yana gidiyorsa o yandaki
-     * kanat küçülsün. Arka plana göre değişebileceği biliniyor; ince ayar
-     * sonra yapılacak.
-     *
-     * Ölçüt, köşenin kadrajın O YANDAKİ kenarına uzaklığı: ortada tam en,
-     * kenarda tabana iner. Kaçış noktasına nişan alma bundan etkilenmiyor —
-     * yalnızca en değişiyor, yön yine duvarın kendi perspektifi.
-     */
-    const tamEn = wM * m
-    const yari = Number.isFinite(yariKadrajPx) && yariKadrajPx > 1 ? yariKadrajPx : Math.max(1, uzaklik * 2)
-    const kenaraDogru = Math.max(0, Math.min(yari, istenen * (cx - asal)))
-    const oran = 1 - kenaraDogru / yari
-    const genislik = Math.max(tamEn * EN_AZ_YAN_ORAN, tamEn * oran)
-    /* Taban devredeyse ölçeği büyüt; yanal kaydırma EKLEME. */
-    const k = Math.min(4, 1 + genislik / uzaklik)
-    const olcekle = (p) => ({ x: V.x + (p.x - V.x) * k, y: V.y + (p.y - V.y) * k })
-    return [olcekle(ust), olcekle(alt)]
   }
 
   /*
@@ -517,51 +453,65 @@ export function icBukeyKose({
   }
 
   /*
-   * ───────────────────────────────────────────────────────────────────────
-   * ELLE EĞİM — kanadın ÜST ve ALT kenarını DİKİŞ etrafında çeviriyor.
+   * ŞEKLİ UYGULA — her uzak uç, dikişin KENDİ ucu etrafında dönüyor.
    *
-   * Niçin gerekiyor: kanadın üst ve alt kenarının nerede buluşacağını
-   * fotoğraftan kestiriyoruz (asal nokta, ufuk, izleme mesafesi). Bu kestirim
-   * her karede tutmuyor — kamera eğik tutulmuşsa ya da fotoğraf kırpılmışsa
-   * kanat duvarın hattından sapıyor ve kullanıcı "alttaki çizgiyle paralel
-   * değil" diyor. Tuş o sapmayı gözle kapatıyor; hesabın yerine geçmiyor,
-   * üstüne biniyor. Sıfırda hiçbir etkisi yok.
-   *
-   * DÖNME MERKEZİ DİKİŞİN KENDİ UCU. Uzak kenarı kendi ortası etrafında
-   * çevirmeyi de denedim: ön yüz gibi uzak kenarı DİK olan bir kanatta
+   * Dönme merkezi neden dikişin ucu: uzak kenarı kendi ortası etrafında
+   * çevirmeyi de denedim ve ölçtüm — uzak kenarı DİK olan bir kanatta
    * neredeyse hiçbir şey olmuyor, çünkü uçlar o zaman yanlamasına kayıyor
-   * (ölçüldü: 10 derecede alt kenarın eğimi 0'dan yalnızca −0,008'e gidiyor).
-   * Dikiş ucundan çevrilince üst ve alt kenar gerçekten o kadar derece
-   * dönüyor, kanadın eni ve dikişin yeri de yerinde kalıyor.
-   * ───────────────────────────────────────────────────────────────────────
+   * (10 derecede alt kenarın eğimi 0'dan yalnızca −0,008'e gidiyordu).
+   * Dikiş ucundan çevrilince kenarlar gerçekten o kadar derece dönüyor,
+   * kanadın eni ve dikişin yeri de yerinde kalıyor.
+   *
+   * Üst uca (eğim + daralma), alt uca (eğim − daralma) uygulanıyor: eşit
+   * kısım kanadı yatırıyor, ters kısım uzak kenarı kısaltıyor.
    */
-  const egimUygula = (kenar, derece) => {
-    const a = (Number(derece) || 0) * (Math.PI / 180)
-    if (!kenar || !(Math.abs(a) > 1e-6)) return kenar
-    const c = Math.cos(a)
-    const sn = Math.sin(a)
-    /* Her uzak uç, dikişin KENDİ ucu etrafında dönüyor. */
-    const cevir = (q, merkez) => ({
-      x: merkez.x + (q.x - merkez.x) * c - (q.y - merkez.y) * sn,
-      y: merkez.y + (q.x - merkez.x) * sn + (q.y - merkez.y) * c,
-    })
-    return [cevir(kenar[0], ust), cevir(kenar[1], alt)]
+  const sekilVer = (kenar, wM, egim, daralma) => {
+    const e = ((Number(egim) || 0) * Math.PI) / 180
+    if (!kenar) return kenar
+    /*
+     * DARALMANIN SINIRI VAR, YOKSA KANAT İÇİNE KATLANIYOR.
+     *
+     * Daralma uzak kenarı 2·w·sin(d) kadar kısaltıyor. Yeterince bastırınca
+     * kenar önce bir noktaya iniyor, sonra TERS çevriliyor — ölçüldü: eni ve
+     * boyu eşit bir kanatta uzak kenar 480 px'den 30 derecede sıfıra düşüyor,
+     * 60 derecede 351 px olarak geri geliyor ama kanat ters dönmüş oluyor.
+     * Bu yüzden kısalma, dikişin dörtte üçüyle sınırlı: uzak kenar her zaman
+     * dikişin en az dörtte biri kadar kalıyor. Sınır kanadın kendi en/boy
+     * oranından geliyor, sabit bir dereceden değil.
+     */
+    const genislikPx = Math.max(1, (Number(wM) || 0) * m)
+    const enCokD = Math.asin(Math.min(1, (0.75 * dikisPx) / (2 * genislikPx)))
+    const dHam = ((Number(daralma) || 0) * Math.PI) / 180
+    const d = Math.max(-enCokD, Math.min(enCokD, dHam))
+    if (!(Math.abs(e) > 1e-6) && !(Math.abs(d) > 1e-6)) return kenar
+    const cevir = (q, merkez, aci2) => {
+      const c2 = Math.cos(aci2)
+      const s2 = Math.sin(aci2)
+      return {
+        x: merkez.x + (q.x - merkez.x) * c2 - (q.y - merkez.y) * s2,
+        y: merkez.y + (q.x - merkez.x) * s2 + (q.y - merkez.y) * c2,
+      }
+    }
+    return [cevir(kenar[0], ust, e + d), cevir(kenar[1], alt, e - d)]
   }
 
   const ortaMi = kose === 'orta'
-  const yanSolda = kose !== 'sag'
-  const solKenar = ortaMi
-    ? serbestYuz(solM, CEYREK - a, 1)
-    : yanSolda
-      ? yanYuz(solM, 1)
-      : duzYuz(solM, 1)
-  const sagKenar = ortaMi
-    ? serbestYuz(sagM, CEYREK + a, -1)
-    : yanSolda
-      ? duzYuz(sagM, -1)
-      : yanYuz(sagM, -1)
-  const [solUst, solAlt] = egimUygula(solKenar, solEgim)
-  const [sagUst, sagAlt] = egimUygula(sagKenar, sagEgim)
+  const solKenar = ortaMi ? serbestYuz(solM, CEYREK - a, 1) : duzYuz(solM, 1)
+  const sagKenar = ortaMi ? serbestYuz(sagM, CEYREK + a, -1) : duzYuz(sagM, -1)
+  const [solUst, solAlt] = sekilVer(solKenar, solM, solEgim, solDaralma)
+  const [sagUst, sagAlt] = sekilVer(sagKenar, sagM, sagEgim, sagDaralma)
+
+  /*
+   * KOYU ÇİZİLEN KANAT, GERÇEKTEN DÖNEN KANAT.
+   *
+   * Gölge artık varsayımdan değil kullanıcının verdiği şekilden: hangi kanat
+   * daha çok daraltılmışsa köşeyi dönen odur. İkisi de şekilsizken tasarım
+   * düpedüz duruyor; orada bir kanadı karartmak yanlış olurdu, o yüzden
+   * karartma hiç uygulanmıyor (bkz. LKoseEkran).
+   */
+  const solSekil = Math.abs(Number(solDaralma) || 0)
+  const sagSekil = Math.abs(Number(sagDaralma) || 0)
+  const sekilliMi = ortaMi || solSekil > 0 || sagSekil > 0
 
   return {
     /* Sol kanat: uzak ucundan dikişe (soldan sağa). */
@@ -571,7 +521,9 @@ export function icBukeyKose({
     /* Dikiş hizasındaki ölçek — kanatların piksel ölçüsü buradan. */
     pxPerM: m,
     /* Hangi kanat köşeyi dönüyor — gölge onu izliyor. */
-    donenSol: ortaMi ? CEYREK - a >= CEYREK + a : yanSolda,
+    donenSol: ortaMi ? CEYREK - a >= CEYREK + a : solSekil >= sagSekil,
+    /* Düpedüz dururken hiçbir kanat karartılmıyor. */
+    karartma: sekilliMi,
   }
 }
 
