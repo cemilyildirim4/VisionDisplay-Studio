@@ -373,6 +373,11 @@ export function icBukeyKose({
   sagEgim = 0,
   solDaralma = 0,
   sagDaralma = 0,
+  /*
+   * Şekil hangi konumda verildiyse, oranın ŞİMDİKİ dikişe göre ötelenmesi.
+   * {0,0} ise şekil burada verilmiş demektir ve hiçbir şey değişmiyor.
+   */
+  demirOfset = null,
 }) {
   if (!ust || !alt) return null
   if (!(boyM > 0) || !(solM > 0) || !(sagM > 0)) return null
@@ -498,8 +503,74 @@ export function icBukeyKose({
   const ortaMi = kose === 'orta'
   const solKenar = ortaMi ? serbestYuz(solM, CEYREK - a, 1) : duzYuz(solM, 1)
   const sagKenar = ortaMi ? serbestYuz(sagM, CEYREK + a, -1) : duzYuz(sagM, -1)
-  const [solUst, solAlt] = sekilVer(solKenar, solM, solEgim, solDaralma)
-  const [sagUst, sagAlt] = sekilVer(sagKenar, sagM, sagEgim, sagDaralma)
+  const solSekilli = sekilVer(solKenar, solM, solEgim, solDaralma)
+  const sagSekilli = sekilVer(sagKenar, sagM, sagEgim, sagDaralma)
+
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * ŞEKİL TAŞINIRKEN KAÇIŞ NOKTASINA KİLİTLİ KALIYOR.
+   *
+   * Tuşlarla verilen değer bir EKRAN açısı, bir DUVAR açısı değil. Ekran
+   * köşe boyunca yukarı kaydığında duvarın kaçış noktası yerinde kalıyor,
+   * dolayısıyla alt kenarın OLMASI GEREKEN ekran açısı değişiyor; sabit bir
+   * derece yeni yükseklikte artık yanlış duruyor. Kullanıcının sorduğu şey
+   * buydu ve cevabı "hayır, böyle olmamalı".
+   *
+   * Çözüm, kullanıcının zaten verdiği bilgiyi kullanmak: iki kenarın
+   * buluştuğu nokta o duvarın kaçış noktasıdır. Şekil verildiği anda o nokta
+   * hesaplanıyor ve ekran taşındıkça kenarlar HEP ORAYA nişanlanıyor. Böylece
+   * oturum boyunca fotoğraftan ölçmeye çalıştığımız şeyi kullanıcı bir kez
+   * elle vermiş oluyor — tahmin yok.
+   *
+   * Yüzün ENİ korunuyor: uzak uçların yatay ötelemesi aynı kalıyor, yalnızca
+   * yükseklikleri ışının üstüne oturuyor. Ekran taşınırken büyüyüp küçülmüyor.
+   *
+   * Daralma sıfırken iki kenar PARALEL: kaçış noktası sonsuzda, o duvarda
+   * kısalma yok ve öteleme şekli zaten bozmuyor. O durumda hesap atlanıyor.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const kacisaKilitle = (kenar, dikUst, dikAlt) => {
+    if (!kenar || !demirOfset) return kenar
+    const ox = Number(demirOfset.x) || 0
+    const oy = Number(demirOfset.y) || 0
+    if (!(Math.abs(ox) > 0.5 || Math.abs(oy) > 0.5)) return kenar
+
+    /* Şeklin verildiği yerdeki hali: her şey öteleme, yön ve ölçek aynı. */
+    const kesisim = (p1, p2, p3, p4) => {
+      const a1 = p2.x - p1.x
+      const b1 = p2.y - p1.y
+      const a2 = p4.x - p3.x
+      const b2 = p4.y - p3.y
+      const det = a1 * b2 - b1 * a2
+      if (!(Math.abs(det) > 1e-9)) return null
+      const t = ((p3.x - p1.x) * b2 - (p3.y - p1.y) * a2) / det
+      if (!Number.isFinite(t)) return null
+      return { x: p1.x + a1 * t, y: p1.y + b1 * t }
+    }
+    const ote = (p) => ({ x: p.x + ox, y: p.y + oy })
+    const V = kesisim(ote(dikUst), ote(kenar[0]), ote(dikAlt), ote(kenar[1]))
+    if (!V) return kenar
+
+    /* Uzak uçların YATAY ötelemesi korunuyor; yükseklik ışından geliyor. */
+    const nisanla = (p, uzak) => {
+      const dx = uzak.x - p.x
+      const vdx = V.x - p.x
+      if (!(Math.abs(vdx) > 1e-6)) return null
+      /* Kaçış noktasının ötesine geçme: yüz kendi içine katlanır. */
+      if (dx / vdx >= 0.95) return null
+      return { x: p.x + dx, y: p.y + (V.y - p.y) * (dx / vdx) }
+    }
+    const u2 = nisanla(dikUst, kenar[0])
+    const l2 = nisanla(dikAlt, kenar[1])
+    if (!u2 || !l2) return kenar
+    /* Bozuk sonuç kullanılmıyor: uzak kenar dikişin dörtte biriyle dört katı arasında. */
+    const boy = Math.hypot(u2.x - l2.x, u2.y - l2.y)
+    if (!(boy > dikisPx * 0.25) || !(boy < dikisPx * 4)) return kenar
+    return [u2, l2]
+  }
+
+  const [solUst, solAlt] = kacisaKilitle(solSekilli, ust, alt)
+  const [sagUst, sagAlt] = kacisaKilitle(sagSekilli, ust, alt)
 
   /*
    * KOYU ÇİZİLEN KANAT, GERÇEKTEN DÖNEN KANAT.

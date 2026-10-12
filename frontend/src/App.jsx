@@ -755,6 +755,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [lTasimaSerbest, setLTasimaSerbest] = useState(false)
   /*
+   * ŞEKİL HANGİ KONUMDA VERİLDİ.
+   *
+   * Tuşa her basışta o anki taşıma değeri saklanıyor: kullanıcı neyi
+   * görüyorsa onu ayarlıyor. Sonra ekran taşındığında aradaki fark
+   * geometriye gidiyor ve kenarlar aynı kaçış noktasına nişanlı kalıyor
+   * (bkz. lKose.js kacisaKilitle).
+   */
+  const [lSekilKayma, setLSekilKayma] = useState({ x: 0, y: 0 })
+  const sekliDemirle = () => setLSekilKayma(lKoseKayma)
+  /*
    * Bir dokunuş 2 derece, sınır ±45. Sınır boşuna geniş değil: kullanıcının
    * gönderdiği karede yüzün alt kenarı 1,6 eğimle inerken odanın zemin hattı
    * 0,22 ile iniyordu — aradaki fark 46 derece.
@@ -1244,6 +1254,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setLSagEgim(0)
       setLSolDar(0)
       setLSagDar(0)
+      setLSekilKayma({ x: 0, y: 0 })
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
@@ -4258,6 +4269,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setLSagEgim(0)
     setLSolDar(0)
     setLSagDar(0)
+    setLSekilKayma({ x: 0, y: 0 })
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -4800,6 +4812,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       sagEgim: lSagEgim,
       solDaralma: lSolDar,
       sagDaralma: lSagDar,
+      /* Şeklin verildiği yer, şimdiki dikişe göre (bkz. lSekilKayma). */
+      demirOfset: { x: lSekilKayma.x - lKoseKayma.x, y: lSekilKayma.y - lKoseKayma.y },
     })
     if (!k) return null
     const solPx = solM * k.pxPerM
@@ -5882,13 +5896,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {egim > 0 ? '+' : ''}{egim}°
                   </span>
                   <TusDugme
-                    onClick={() => setEgim((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))}
+                    onClick={() => {
+                      sekliDemirle()
+                      setEgim((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))
+                    }}
                     etiket={`${t(ad)} — ${t('screen.lEgimSola')}`}
                   >
                     <path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" />
                   </TusDugme>
                   <TusDugme
-                    onClick={() => setEgim((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))}
+                    onClick={() => {
+                      sekliDemirle()
+                      setEgim((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))
+                    }}
                     etiket={`${t(ad)} — ${t('screen.lEgimSaga')}`}
                   >
                     <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
@@ -5898,13 +5918,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {dar > 0 ? '+' : ''}{dar}°
                   </span>
                   <TusDugme
-                    onClick={() => setDar((v) => Math.max(-DAR_SINIR, v - EGIM_ADIM))}
+                    onClick={() => {
+                      sekliDemirle()
+                      setDar((v) => Math.max(-DAR_SINIR, v - EGIM_ADIM))
+                    }}
                     etiket={`${t(ad)} — ${t('screen.lEgimAc')}`}
                   >
                     <path d="M10 6l-6 6 6 6M14 6l6 6-6 6" />
                   </TusDugme>
                   <TusDugme
-                    onClick={() => setDar((v) => Math.min(DAR_SINIR, v + EGIM_ADIM))}
+                    onClick={() => {
+                      sekliDemirle()
+                      setDar((v) => Math.min(DAR_SINIR, v + EGIM_ADIM))
+                    }}
                     etiket={`${t(ad)} — ${t('screen.lEgimDarat')}`}
                   >
                     <path d="M4 6l6 6-6 6M20 6l-6 6 6 6" />
@@ -5937,6 +5963,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     setLSagEgim(0)
                     setLSolDar(0)
                     setLSagDar(0)
+                    setLSekilKayma(lKoseKayma)
                   }}
                 >
                   {t('screen.lEgimSifirla')}
@@ -7011,6 +7038,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               setLSagEgim(0)
                               setLSolDar(0)
                               setLSagDar(0)
+                              setLSekilKayma({ x: 0, y: 0 })
                               setLKoseKipi(true)
                             }}
                             lKoseOran={lKoseOran}
