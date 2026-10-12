@@ -278,6 +278,7 @@ const dict = {
   'screen.lEgimSola': { tr: 'Sola eğ', en: 'Tilt left', ar: 'إمالة لليسار' },
   'screen.lEgimSaga': { tr: 'Sağa eğ', en: 'Tilt right', ar: 'إمالة لليمين' },
   'screen.lSekilBaslik': { tr: 'Kanat şekli', en: 'Wing shape', ar: 'شكل الجناح' },
+  'screen.lSekilAc': { tr: 'Kanat şeklini ayarla', en: 'Adjust wing shape', ar: 'ضبط شكل الجناح' },
   'screen.lSekilIpucu': {
     tr: 'Üst kenarı tavan hattına, alt kenarı zemin hattına getirin.',
     en: 'Align the top edge with the ceiling line and the bottom edge with the floor line.',
