@@ -5,7 +5,7 @@ import { API_URL, apiFetch } from './apiClient.js'
  * Seçilen modül + ızgara için API hesap motoru önizlemesi
  * (gerçek katalog donanımı).
  */
-export function useConfigurationPreview({ cabinId, cols, rows, hasMiniPc, enabled }) {
+export function useConfigurationPreview({ cabinId, cols, rows, hasMiniPc, connectionType = 'loop', enabled }) {
   const [preview, setPreview] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -26,6 +26,7 @@ export function useConfigurationPreview({ cabinId, cols, rows, hasMiniPc, enable
           cols: String(cols),
           rows: String(rows),
           hasMiniPc: hasMiniPc ? 'true' : 'false',
+          connectionType: connectionType === 'loopless' ? 'loopless' : 'loop',
         })
         const res = await apiFetch(`${API_URL}/api/configurations/preview?${qs}`, {
           signal: ac.signal,
@@ -52,7 +53,7 @@ export function useConfigurationPreview({ cabinId, cols, rows, hasMiniPc, enable
       ac.abort()
       clearTimeout(timer)
     }
-  }, [cabinId, cols, rows, hasMiniPc, enabled])
+  }, [cabinId, cols, rows, hasMiniPc, connectionType, enabled])
 
   return { preview, error, loading }
 }

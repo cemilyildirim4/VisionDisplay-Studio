@@ -27,6 +27,9 @@ public class ConfigurationResponseDto
     // --- DONANIM & MONTAJ BİLGİLERİ ---
     public string AssemblyType { get; set; } = string.Empty; // "MODULE" veya "CABINET"
     public int ModulesPerCard { get; set; }
+
+    /// <summary>loop veya loopless.</summary>
+    public string ConnectionType { get; set; } = "loop";
     public int ReceivingCardCount { get; set; }
     public int RequiredRj45Ports { get; set; }
     public string RecommendedProcessor { get; set; } = string.Empty;

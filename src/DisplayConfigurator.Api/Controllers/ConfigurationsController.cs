@@ -145,7 +145,8 @@ public class ConfigurationsController : ControllerBase
         [FromQuery] int cabinId,
         [FromQuery] int cols,
         [FromQuery] int rows,
-        [FromQuery] bool hasMiniPc = false)
+        [FromQuery] bool hasMiniPc = false,
+        [FromQuery] string? connectionType = null)
     {
         try
         {
@@ -156,6 +157,7 @@ public class ConfigurationsController : ControllerBase
                 Cols = cols,
                 Rows = rows,
                 HasMiniPc = hasMiniPc,
+                ConnectionType = connectionType,
             };
             var result = await _configurationService.PreviewAsync(dto);
             return Ok(result);

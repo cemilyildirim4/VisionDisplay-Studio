@@ -43,6 +43,10 @@ public class CreateConfigurationDto
     /// <summary>Yapılandırmaya mini PC dahil edilsin mi.</summary>
     public bool HasMiniPc { get; set; }
 
+    /// <summary>loop (seri) veya loopless (her modül ayrı soket). Boşsa looplu.</summary>
+    [StringLength(20)]
+    public string? ConnectionType { get; set; }
+
     /// <summary>İşçilik maliyeti çarpanı (para birimi / m²). Boşsa sistem varsayılanı kullanılır.</summary>
     public decimal? LaborCostMultiplier { get; set; }
 

@@ -102,6 +102,7 @@ public class ConfigurationService : IConfigurationService
             Is4K = responseDto.Is4K,
             TotalPrice = responseDto.TotalPrice,
             HasMiniPc = dto.HasMiniPc,
+            ConnectionType = string.IsNullOrWhiteSpace(responseDto.ConnectionType) ? "loop" : responseDto.ConnectionType,
             LaborCostMultiplier = dto.LaborCostMultiplier ?? 1m,
             PowerSupplyId = responseDto.PowerSupplyId,
             MiniPcId = responseDto.MiniPcId,
@@ -219,6 +220,7 @@ public class ConfigurationService : IConfigurationService
         AssemblyType = entity.AssemblyType,
         ModulesPerCard = entity.ModulesPerCard,
         HasMiniPc = entity.HasMiniPc,
+        ConnectionType = string.IsNullOrWhiteSpace(entity.ConnectionType) ? "loop" : entity.ConnectionType,
         LaborCostMultiplier = entity.LaborCostMultiplier,
         PowerSupplyId = entity.PowerSupplyId,
         MiniPcId = entity.MiniPcId,
@@ -278,7 +280,8 @@ public class ConfigurationService : IConfigurationService
             };
         }
 
-        var demand = HardwareMatcher.DemandFrom(cabin, dto.Cols, dto.Rows);
+        var demand = HardwareMatcher.DemandFrom(
+            cabin, dto.Cols, dto.Rows, ConfigurationCalculator.IsLooplessConnection(dto.ConnectionType));
         var matched = HardwareMatcher.TryMatch(demand, dto.HasMiniPc, snapshot, requested);
         if (requireComplete && !matched.IsComplete)
             throw new HardwareMatchException(matched.MissingMessages[0]);
@@ -339,6 +342,7 @@ public class ConfigurationService : IConfigurationService
             IsFullHd = c.IsFullHd,
             Is4K = c.Is4K,
             HasMiniPc = c.HasMiniPc,
+            ConnectionType = string.IsNullOrWhiteSpace(c.ConnectionType) ? "loop" : c.ConnectionType,
             LaborCostMultiplier = laborMultiplier,
             ScreenAreaM2 = screenAreaM2,
             LaborCost = laborCost,

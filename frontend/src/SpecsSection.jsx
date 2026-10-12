@@ -122,7 +122,7 @@ function Izgara({ children }) {
 /* ------------------------------------------------------------------ içerik */
 
 /** Pop-up içeriği (Teknik Özellikler + Bileşenler tek ızgarada). */
-function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null }) {
+function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, connectionType = 'loop', preview = null, matchError = null }) {
   const { t } = useLang()
   const { isAdmin } = useSession()
   const has = !!model
@@ -135,6 +135,8 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
   }
   const breakdown = Array.isArray(preview?.hardwareBreakdown) ? preview.hardwareBreakdown : []
   const modulesPerCard = Number(model?.defaultModulesPerCard) > 0 ? Number(model.defaultModulesPerCard) : 10
+  const baglanti = (preview?.connectionType || connectionType) === 'loopless' ? 'loopless' : 'loop'
+  const baglantiYazi = `${t('sp.link')}: ${t(baglanti === 'loopless' ? 'link.loopless' : 'link.loop')}`
   const receivingCards = preview?.receivingCardCount
     ? Number(preview.receivingCardCount)
     : String(model?.productType || '').toUpperCase() === 'MODULE'
@@ -234,11 +236,13 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
             <Veri label={t('screen.type')} value={t(`screen.${screenType}`)} />
             <Veri label={t('sbox.heading')} value={sboxRedundancy === 'yes' ? t('common.yes') : t('common.no')} />
             <Veri label={t('sp.miniPc')} value={hasMiniPc ? t('common.yes') : t('common.no')} />
+            <Veri label={t('sp.link')} value={t(baglanti === 'loopless' ? 'link.loopless' : 'link.loop')} />
           </Kart>
         )}
 
         {has && isAdmin && breakdown.length > 0 && (
           <Kart baslik={t('sp.matchedHardware')} genis>
+            <Veri label={t('sp.link')} value={baglantiYazi} />
             {breakdown.filter((x) => x.quantity > 0).map((x) => (
               <Veri key={x.key} label={x.name} value={`${fmt(x.quantity)} ${t('sp.unit')}`} />
             ))}
@@ -247,6 +251,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
 
         {has && isAdmin && (
           <Kart baslik={t('sp.package')} genis vurgulu>
+            <Veri label={t('sp.link')} value={baglantiYazi} />
             <Veri label={t('sp.pkg.module')} value={`${fmt(total)} ${t('sp.unit')}`} />
             <Veri label={t('sp.pkg.processor')} value={lineQty('processor', 1)} />
             {Number(preview?.alternativeProcessorQuantity) > 0 && preview?.alternativeProcessor && (

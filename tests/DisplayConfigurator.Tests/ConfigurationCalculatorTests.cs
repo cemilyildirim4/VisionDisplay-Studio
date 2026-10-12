@@ -451,6 +451,35 @@ public class ConfigurationCalculatorTests
     }
 
     [Fact]
+    public void CountReceivingCards_Looplu_PikselKapasitesindeKalir()
+    {
+        var card = new ReceivingCard
+        {
+            MaxPixelWidth = 10000,
+            MaxPixelHeight = 10000,
+            HubPortCount = 16,
+        };
+        int qty = ConfigurationCalculator.CountReceivingCards(100, 100, 10_000, card, totalModules: 20, loopless: false);
+        Assert.Equal(1, qty);
+    }
+
+    [Fact]
+    public void CountReceivingCards_Loopsuz_SoketYetersizligindeKartArtar()
+    {
+        var card = new ReceivingCard
+        {
+            MaxPixelWidth = 10000,
+            MaxPixelHeight = 10000,
+            HubPortCount = 16,
+        };
+        // 20 modül, 16 soket: piksel bir karta sığar, loopsuz bağlantı iki kart ister.
+        int qty = ConfigurationCalculator.CountReceivingCards(100, 100, 10_000, card, totalModules: 20, loopless: true);
+        Assert.Equal(2, qty);
+        Assert.Equal("Loopsuz", ConfigurationCalculator.ConnectionTypeLabel("loopless"));
+        Assert.Equal("Looplu", ConfigurationCalculator.ConnectionTypeLabel("loop"));
+    }
+
+    [Fact]
     public void ApplyPsuLosses_Verim1_ModulGucunuKorur()
     {
         Assert.Equal(7200m, ConfigurationCalculator.ApplyPsuLosses(7200m, 1m));

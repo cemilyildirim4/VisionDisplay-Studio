@@ -360,6 +360,19 @@ const dict = {
   // ---------- S-Kutu ----------
   'sbox.heading': { tr: 'S-Kutu Yedekliliği', en: 'S-Box Redundancy', ar: 'تكرار S-Box' },
   'minipc.heading': { tr: 'Mini PC Sistemi Dahil Edilsin', en: 'Include Mini PC System', ar: 'تضمين نظام Mini PC' },
+  'link.heading': { tr: 'Bağlantı Tipi', en: 'Connection Type', ar: 'نوع التوصيل' },
+  'link.loop': { tr: 'Looplu', en: 'Loop', ar: 'حلقي' },
+  'link.loopless': { tr: 'Loopsuz', en: 'Loopless', ar: 'بدون حلقة' },
+  'link.loopHint': {
+    tr: 'Modüller seri bağlanır. Alıcı kart sayısı piksel kapasitesine göre hesaplanır.',
+    en: 'Modules are daisy-chained. Receiver cards are counted by pixel capacity.',
+    ar: 'تتصل الوحدات على التوالي. يُحسب عدد بطاقات الاستقبال حسب سعة البكسل.',
+  },
+  'link.looplessHint': {
+    tr: 'Her modül ayrı sokete bağlanır. Soket yetmezse kart sayısı artar.',
+    en: 'Each module uses its own socket. The card count rises when sockets run short.',
+    ar: 'كل وحدة تتصل بمقبس مستقل. يزيد عدد البطاقات إذا لم تكفِ المقابس.',
+  },
   'minipc.hint': {
     tr: 'Görüntü kaynağı doğrudan Mini PC üzerinden yürütülsün',
     en: 'Run the video source directly from the Mini PC',
@@ -1525,6 +1538,7 @@ const dict = {
   'sp.pkg.miniPc': { tr: 'Mini PC', en: 'Mini PC', ar: 'Mini PC' },
   'sp.pkg.patch': { tr: 'Patch Kablosu', en: 'Patch Cable', ar: 'كابل التوصيل' },
   'sp.pkg.receiving': { tr: 'Alıcı Kart', en: 'Receiving Card', ar: 'بطاقة الاستقبال' },
+  'sp.link': { tr: 'Bağlantı Tipi', en: 'Connection type', ar: 'نوع التوصيل' },
   'sp.pkg.included': { tr: 'Dahil', en: 'Included', ar: 'مضمّن' },
   'sp.pkg.viaProcessor': { tr: 'Dahil değil — işlemci üzerinden', en: 'Not included — via processor', ar: 'غير مضمّن — عبر المعالج' },
   'sp.ledCabinets': { tr: 'LED Kabinler', en: 'LED Cabinets', ar: 'خزائن LED' },

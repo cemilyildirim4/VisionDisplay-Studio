@@ -9,7 +9,8 @@ public readonly record struct ScreenDemand(
     int TotalResH,
     int TotalPixels,
     decimal ModuleMaxWatts,
-    decimal? ModuleVoltage);
+    decimal? ModuleVoltage,
+    bool Loopless = false);
 
 /// <summary>Yönetim kataloğunun bellek görüntüsü (aktif kayıtlar süzülmüş olabilir).</summary>
 public sealed class HardwareCatalogSnapshot
@@ -38,7 +39,7 @@ public static class HardwareMatcher
 {
     public const decimal VoltageToleranceV = 0.5m;
 
-    public static ScreenDemand DemandFrom(Cabin cabin, int cols, int rows)
+    public static ScreenDemand DemandFrom(Cabin cabin, int cols, int rows, bool loopless = false)
     {
         int modules = Math.Max(1, cols) * Math.Max(1, rows);
         int resW = cols * cabin.PixelWidth;
@@ -54,7 +55,8 @@ public static class HardwareMatcher
             resH,
             (int)pixels,
             modules * cabin.PowerMaxWatts,
-            voltage);
+            voltage,
+            loopless);
     }
 
     public static HardwareCatalogItems Match(
@@ -100,7 +102,8 @@ public static class HardwareMatcher
             Miss("İşlemci", "Seçilen konfigürasyon için veritabanında uygun İşlemci bulunamadı.");
 
         int receivingQty = ConfigurationCalculator.CountReceivingCards(
-            demand.TotalResW, demand.TotalResH, demand.TotalPixels, receivingCard);
+            demand.TotalResW, demand.TotalResH, demand.TotalPixels, receivingCard,
+            demand.TotalModules, demand.Loopless);
         ConfigurationCalculator.CountProcessors(
             demand.TotalPixels, demand.TotalResW, demand.TotalResH, processor, out int requiredPorts);
         int patchQty = ConfigurationCalculator.CountPatchCables(receivingQty, requiredPorts);
@@ -171,7 +174,8 @@ public static class HardwareMatcher
             .Select(c =>
             {
                 int qty = ConfigurationCalculator.CountReceivingCards(
-                    demand.TotalResW, demand.TotalResH, demand.TotalPixels, c);
+                    demand.TotalResW, demand.TotalResH, demand.TotalPixels, c,
+                    demand.TotalModules, demand.Loopless);
                 return (Item: c, Qty: qty, Cap: PixelCapacity(c));
             })
             .Where(x => x.Qty > 0)

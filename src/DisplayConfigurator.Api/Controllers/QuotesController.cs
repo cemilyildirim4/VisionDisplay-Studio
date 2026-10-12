@@ -94,6 +94,7 @@ public class QuotesController : ControllerBase
             Cols = Math.Clamp(quote.Columns ?? draft.Cols ?? 1, 1, 50),
             Rows = Math.Clamp(quote.Rows ?? draft.Rows ?? 1, 1, 50),
             HasMiniPc = quote.HasMiniPc,
+            ConnectionType = draft.ConnectionType,
             MiniPcId = quote.MiniPcId,
             LaborCostMultiplier = quote.LaborCostMultiplier > 0 ? quote.LaborCostMultiplier : null,
         };
@@ -228,7 +229,7 @@ public class QuotesController : ControllerBase
         return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
     }
 
-    private readonly record struct DraftBits(int? ModelId, string? ModelCode, int? Cols, int? Rows);
+    private readonly record struct DraftBits(int? ModelId, string? ModelCode, int? Cols, int? Rows, string? ConnectionType);
 
     private static DraftBits ReadDraft(string? json)
     {
@@ -243,7 +244,10 @@ public class QuotesController : ControllerBase
                 : null;
             int? cols = root.TryGetProperty("cols", out var c) && c.TryGetInt32(out var cv) && cv > 0 ? cv : null;
             int? rows = root.TryGetProperty("rows", out var r) && r.TryGetInt32(out var rv) && rv > 0 ? rv : null;
-            return new DraftBits(modelId, modelCode, cols, rows);
+            string? connection = root.TryGetProperty("connectionType", out var link) && link.ValueKind == JsonValueKind.String
+                ? link.GetString()
+                : null;
+            return new DraftBits(modelId, modelCode, cols, rows, connection);
         }
         catch (JsonException)
         {

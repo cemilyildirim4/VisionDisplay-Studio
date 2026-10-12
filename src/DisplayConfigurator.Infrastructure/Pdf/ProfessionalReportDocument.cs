@@ -141,7 +141,7 @@ public class ProfessionalReportDocument : IDocument
             col.Item().Text("Yapılandırma görseli").FontSize(12).Bold().FontColor(BrandBlue);
             col.Item().PaddingTop(8).Row(row =>
             {
-                row.RelativeItem(3).Height(268).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
+                row.RelativeItem(3).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
                     .Background(Color.FromHex("#f8fafc")).Padding(6)
                     .AlignCenter().AlignMiddle().Element(DrawSchematic);
                 row.ConstantItem(10);
@@ -168,7 +168,7 @@ public class ProfessionalReportDocument : IDocument
                     img.Item().Text("Müşteri görseli").FontSize(11).Bold().FontColor(BrandBlue);
                     img.Item().PaddingTop(6).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
                         .Background(Color.FromHex("#f8fafc")).Padding(6)
-                        .MaxHeight(280)
+                        .Height(225)
                         .AlignCenter().AlignMiddle()
                         .Image(_extras.PreviewImage)
                         .FitArea();
@@ -563,6 +563,7 @@ public class ProfessionalReportDocument : IDocument
                 AddRow(table, "Ünite adedi & matris", $"{total} adet ({cols} × {rows})", ref alt);
                 if (_isAdmin)
                 {
+                    AddRow(table, "Bağlantı tipi", ConfigurationCalculator.ConnectionTypeLabel(_config.ConnectionType), ref alt);
                     AddRow(table, "Alıcı kart (adet)", $"{_config.ReceivingCardCount}", ref alt);
                     AddRow(table, "Gerekli RJ45 Ethernet portu", portText, ref alt);
                     AddRow(table, "Tavsiye işlemci", Empty(_config.RecommendedProcessor, "—"), ref alt);
@@ -756,6 +757,8 @@ public class ProfessionalReportDocument : IDocument
             column.Item().ShowEntire().Column(block =>
             {
             block.Item().Text("Donanım dökümü (iç)").FontSize(12).Bold().FontColor(BrandBlue);
+            block.Item().PaddingTop(2).Text($"Bağlantı tipi: {ConfigurationCalculator.ConnectionTypeLabel(_config.ConnectionType)}")
+                .FontSize(9).FontColor(Colors.Grey.Darken1);
             block.Item().PaddingTop(5).Table(table =>
             {
                 table.ColumnsDefinition(c =>

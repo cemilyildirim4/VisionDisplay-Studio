@@ -47,6 +47,9 @@ public class Configuration
     /// <summary>Yapılandırmaya mini PC dahil edilsin mi.</summary>
     public bool HasMiniPc { get; set; }
 
+    /// <summary>loop veya loopless. Eski kayıtlar looplu kabul edilir.</summary>
+    public string ConnectionType { get; set; } = "loop";
+
     /// <summary>İşçilik maliyeti çarpanı (1.00 = standart).</summary>
     public decimal LaborCostMultiplier { get; set; } = 1m;
 

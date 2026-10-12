@@ -301,6 +301,7 @@ export default function ExportModal({ open, onClose, summary }) {
           modulesPerCard: 0,
           hasMiniPc: miniPc.hasMiniPc,
           miniPcId: miniPc.miniPcId,
+          connectionType: summary.connectionType === 'loopless' ? 'loopless' : 'loop',
           phone: compactPhone(phone) || null,
           email: email.trim() || null,
           address: address.trim() || null,

@@ -95,7 +95,9 @@ public static class ConfigurationCalculator
             throw new HardwareMatchException(
                 "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
 
-        int receivingCardQty = CountReceivingCards(totalResW, totalResH, totalPixels, hw.ReceivingCard);
+        bool loopless = IsLooplessConnection(dto.ConnectionType);
+        int receivingCardQty = CountReceivingCards(
+            totalResW, totalResH, totalPixels, hw.ReceivingCard, totalModules, loopless);
         int processorQty = hw.Processor != null
             ? CountProcessors(totalPixels, totalResW, totalResH, hw.Processor, out int requiredPorts)
             : CountProcessors(totalPixels, totalResW, totalResH, processor: null, out requiredPorts);
@@ -178,6 +180,7 @@ public static class ConfigurationCalculator
             CabinModelName = ModuleDisplayName(cabin),
             AssemblyType = assemblyType,
             ModulesPerCard = modulesPerCard,
+            ConnectionType = loopless ? "loopless" : "loop",
             ReceivingCardCount = receivingCardQty,
             RequiredRj45Ports = requiredPorts,
             RecommendedProcessor = recommendedProcessor,
@@ -255,7 +258,24 @@ public static class ConfigurationCalculator
     /// Alıcı kart: toplam çözünürlük (px) / kart piksel kapasitesi (W×H).
     /// Kapasitesi 0 olan kart kullanılamaz (0 döner).
     /// </summary>
-    public static int CountReceivingCards(int totalResW, int totalResH, int totalPixels, ReceivingCard? card)
+    public static bool IsLooplessConnection(string? connectionType) =>
+        string.Equals(connectionType, "loopless", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(connectionType, "loopsuz", StringComparison.OrdinalIgnoreCase);
+
+    public static string ConnectionTypeLabel(string? connectionType) =>
+        IsLooplessConnection(connectionType) ? "Loopsuz" : "Looplu";
+
+    /// <summary>
+    /// Looplu: piksel ve en/boy tavanı. Loopsuz: her modül ayrı soket ister,
+    /// adet = max(piksel kartı, yukarı yuvarla(modül / soket)).
+    /// </summary>
+    public static int CountReceivingCards(
+        int totalResW,
+        int totalResH,
+        int totalPixels,
+        ReceivingCard? card,
+        int totalModules = 0,
+        bool loopless = false)
     {
         if (card == null) return 0;
         long capacity = HardwareMatcher.PixelCapacity(card);
@@ -263,14 +283,19 @@ public static class ConfigurationCalculator
 
         int byPixels = Math.Max(1, (int)Math.Ceiling(Math.Max(0, totalPixels) / (double)capacity));
 
+        int byGeometry = byPixels;
         if (card.MaxPixelWidth > 0 && card.MaxPixelHeight > 0 && totalResW > 0 && totalResH > 0)
         {
             int byWidth = (int)Math.Ceiling(totalResW / (double)card.MaxPixelWidth);
             int byHeight = (int)Math.Ceiling(totalResH / (double)card.MaxPixelHeight);
-            return Math.Max(byPixels, Math.Max(1, Math.Max(byWidth, byHeight)));
+            byGeometry = Math.Max(byPixels, Math.Max(1, Math.Max(byWidth, byHeight)));
         }
 
-        return byPixels;
+        if (!loopless) return byGeometry;
+        if (card.HubPortCount <= 0 || totalModules <= 0) return 0;
+
+        int bySockets = (int)Math.Ceiling(totalModules / (double)card.HubPortCount);
+        return Math.Max(byGeometry, bySockets);
     }
 
     /// <summary>
