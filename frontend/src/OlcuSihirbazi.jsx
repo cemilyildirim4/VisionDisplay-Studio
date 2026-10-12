@@ -32,7 +32,7 @@ import { useState } from 'react'
  * yaz.
  */
 const ADIM_SAYISI = 4
-const L_ADIM_SAYISI = 2
+const L_ADIM_SAYISI = 3
 
 function Nokta({ dolu, etkin }) {
   return (
@@ -81,6 +81,8 @@ export default function OlcuSihirbazi({
   lKoseKabinSolCm = 0,
   lKoseKabinSagCm = 0,
   lKoseIsaretle,
+  /* L'nin son adımında çizilen kanat şekli tuşları (bkz. App.jsx). */
+  kanatSekli,
   lKoseOran = null,
   /* İşaretlenen çizgi dik mi — yatay bir çizgiden köşe çıkmaz. */
   lKoseDikMi = true,
@@ -271,7 +273,28 @@ export default function OlcuSihirbazi({
                 <button type="button" onClick={onGeri} className={yan}>
                   {t('sih.geri')}
                 </button>
-                <button type="button" onClick={onBitir} disabled={!(lKoseOran > 0)} className={ana}>
+                {/*
+                  Ölçüden sonra akış BİTMİYOR: kanat şekli de kurulumun bir
+                  parçası. Ayrı bir düğmenin arkasına koymak, biten bir işin
+                  üstüne ikinci bir iş eklemek gibi duruyordu.
+                */}
+                <button type="button" onClick={onIleri} disabled={!(lKoseOran > 0)} className={ana}>
+                  {t('sih.devam')}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* L3 — KANAT ŞEKLİ */}
+          {lKose && adim === 3 && (
+            <>
+              <p className={aciklama}>{t('sihL.3.sekilAciklama')}</p>
+              {kanatSekli}
+              <div className="mt-2 flex items-center gap-1.5">
+                <button type="button" onClick={onGeri} className={yan}>
+                  {t('sih.geri')}
+                </button>
+                <button type="button" onClick={onBitir} className={ana}>
                   {t('sihL.bitir')}
                 </button>
               </div>

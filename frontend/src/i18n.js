@@ -278,7 +278,6 @@ const dict = {
   'screen.lEgimSola': { tr: 'Sola eğ', en: 'Tilt left', ar: 'إمالة لليسار' },
   'screen.lEgimSaga': { tr: 'Sağa eğ', en: 'Tilt right', ar: 'إمالة لليمين' },
   'screen.lSekilBaslik': { tr: 'Kanat şekli', en: 'Wing shape', ar: 'شكل الجناح' },
-  'screen.lSekilAc': { tr: 'Kanat şeklini ayarla', en: 'Adjust wing shape', ar: 'ضبط شكل الجناح' },
   'screen.lSekilIpucu': {
     tr: 'Üst kenarı tavan hattına, alt kenarı zemin hattına getirin.',
     en: 'Align the top edge with the ceiling line and the bottom edge with the floor line.',
@@ -665,6 +664,11 @@ const dict = {
     ar: 'لا توجد زاوية بعد. ابدأ بتحديد أعلى الزاوية وأسفلها.',
   },
   'refL.basla': { tr: 'Köşeyi işaretle', en: 'Mark the corner', ar: 'حدد الزاوية' },
+  'sihL.3.sekilAciklama': {
+    tr: 'Son adım: kanatları duvara oturtun. Tuşlara basarken tasarım anında değişiyor.',
+    en: 'Last step: seat the wings on the walls. The design updates as you press.',
+    ar: 'الخطوة الأخيرة: ثبّت الجناحين على الجدارين. يتغيّر التصميم فور الضغط.',
+  },
   'refL.yeniden': { tr: 'Köşeyi yeniden işaretle', en: 'Mark the corner again', ar: 'حدد الزاوية مرة أخرى' },
   'refL.ozet': { tr: 'Köşe çizgisi', en: 'Corner line', ar: 'خط الزاوية' },
   'sih.3.baslik': { tr: 'Yerleşim alanının ölçüsü (cm)', en: 'Placement area size (cm)', ar: 'مقاس منطقة التركيب (سم)' },

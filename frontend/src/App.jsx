@@ -38,8 +38,9 @@ import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
 
 /*
- * KANAT ŞEKLİ TUŞU — 44 px, kendi penceresinde.
- * Sağ panelde 28 px'e sıkışıp okunmuyordu; pencerede yer bol.
+ * KANAT ŞEKLİ TUŞU — 40 px.
+ * İlk halinde 28 px'ti ve okunmuyordu; satır düzeni sadeleşince
+ * (etiket, derece, iki tuş) panele 40 px rahat sığıyor.
  */
 const OK_YUKARI = 'M12 19V5M5 12l7-7 7 7'
 const OK_ASAGI = 'M12 5v14M19 12l-7 7-7-7'
@@ -53,9 +54,9 @@ function SekilTus({ onClick, etiket, yol }) {
       onClick={onClick}
       aria-label={etiket}
       title={etiket}
-      className="w-11 h-11 shrink-0 rounded-xl border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-300 hover:border-brand hover:text-brand hover:bg-brand/5 flex items-center justify-center transition-colors"
+      className="w-10 h-10 shrink-0 rounded-xl border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-300 hover:border-brand hover:text-brand hover:bg-brand/5 flex items-center justify-center transition-colors"
     >
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d={yol} />
       </svg>
     </button>
@@ -778,17 +779,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [lTasimaSerbest, setLTasimaSerbest] = useState(false)
   /*
-   * KANAT ŞEKLİ PENCERESİ AÇIK MI.
-   *
-   * Tuşlar önce tuvalin içinde sol altta duruyordu (tasarımın önüne
-   * geliyordu), sonra sağ panelde (390 px'e sıkışınca okunmuyordu), sonra
-   * tuvalin altında bir şeritte (orada da yeri yanlıştı). Artık ölçünün
-   * girildiği yerden açılan bir pencere: yazılar ve tuşlar büyük, pencere
-   * sağ panelin üstünde duruyor ve TUVALİ KAPATMIYOR — ayar yapılırken
-   * tasarımın ne olduğu görünmeye devam ediyor.
-   */
-  const [lSekilAcik, setLSekilAcik] = useState(false)
-  /*
    * Bir dokunuş 2 derece, sınır ±45. Sınır boşuna geniş değil: kullanıcının
    * gönderdiği karede yüzün alt kenarı 1,6 eğimle inerken odanın zemin hattı
    * 0,22 ile iniyordu — aradaki fark 46 derece.
@@ -1271,7 +1261,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setLSolAlt(0)
       setLSagUst(0)
       setLSagAlt(0)
-      setLSekilAcik(false)
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
@@ -4297,13 +4286,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
   const sihirbazIleri = () => {
     /*
-     * L'DE İKİ ADIM: çizgiyi işaretle, ölçüleri yaz.
+     * L'DE ÜÇ ADIM: çizgiyi işaretle, ölçüleri yaz, kanatları duvara otur.
      *
      * İşaretleme kipi 2. adımda da açık kalıyor — kullanıcı santimleri
      * yazarken noktaları hâlâ düzeltebilsin (referans akışıyla aynı gerekçe).
+     * 3. adımda KAPANIYOR: orada ayarlanan şey tasarımın kendisi, görünmesi
+     * gerekiyor (işaretleme sürerken tasarım çizilmiyor, bkz. ekranGizle).
      */
     if (lYerlesimKipi) {
-      setSihirbazAdim((a) => Math.min(2, a + 1))
+      setSihirbazAdim((a) => {
+        const sonraki = Math.min(3, a + 1)
+        if (sonraki === 3) setLKoseKipi(false)
+        return sonraki
+      })
       return
     }
     setSihirbazAdim((a) => {
@@ -4860,6 +4855,94 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Seçilen köşe kameraya sırtını dönmüşse yan kanat çizilmiyor — o açıdan o
    * köşe gerçekten görünmez, uydurmak yanlış olurdu.
    */
+  /*
+   * KANAT ŞEKLİ TUŞLARI — tek yerde kurulup iki yerde çiziliyor:
+   * sihirbazın son adımında ve akış bittikten sonra özet kartında.
+   *
+   * ARTI = O KENARIN UZAK UCU AŞAĞI, iki kanatta da aynı (işaret çevirme
+   * geometride, bkz. lKose.js sekilVer). İç bükey köşede üst eksi, alt artı
+   * olur: köşe en uzak nokta, duvar boyunca uzaklaşıldıkça kanat açılır.
+   */
+  const lSekilPaneli = (
+    <div className="mt-2">
+      <div className="text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
+        {t('screen.lSekilBaslik')}
+      </div>
+      <p className="mt-0.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+        {t('screen.lSekilIpucu')}
+      </p>
+      {[
+        { ad: 'screen.lEgimSol', ustAci: lSolUst, setUst: setLSolUst, altAci: lSolAlt, setAlt: setLSolAlt },
+        { ad: 'screen.lEgimSag', ustAci: lSagUst, setUst: setLSagUst, altAci: lSagAlt, setAlt: setLSagAlt },
+      ].map(({ ad, ustAci, setUst, altAci, setAlt }) => {
+        const oynat = (ayarla, isaret) =>
+          ayarla((v) => Math.max(-EGIM_SINIR, Math.min(EGIM_SINIR, v + isaret * EGIM_ADIM)))
+        const satir = (etiket, deger, yukari, asagi, yukariYol, asagiYol) => (
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className="w-11 text-[14px] text-neutral-500 dark:text-neutral-400">{etiket}</span>
+            <span className="w-12 text-right text-[15px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
+              {deger != null ? (deger > 0 ? '+' : '') + deger + '°' : ''}
+            </span>
+            <div className="ml-auto flex gap-1.5">
+              <SekilTus onClick={yukari} etiket={`${t(ad)} ${etiket} — ${t('screen.lSekilYukari')}`} yol={yukariYol} />
+              <SekilTus onClick={asagi} etiket={`${t(ad)} ${etiket} — ${t('screen.lSekilAsagi')}`} yol={asagiYol} />
+            </div>
+          </div>
+        )
+        return (
+          <div
+            key={ad}
+            className="mt-1.5 rounded-xl border border-neutral-200 dark:border-[#2c333f] px-2.5 pt-2 pb-2.5"
+          >
+            <div className="text-[14px] font-semibold text-neutral-800 dark:text-neutral-100">{t(ad)}</div>
+            {satir(t('screen.lKenarUst'), ustAci, () => oynat(setUst, -1), () => oynat(setUst, 1), OK_YUKARI, OK_ASAGI)}
+            {satir(t('screen.lKenarAlt'), altAci, () => oynat(setAlt, -1), () => oynat(setAlt, 1), OK_YUKARI, OK_ASAGI)}
+            {satir(
+              t('screen.lKenarIkisi'),
+              null,
+              () => {
+                oynat(setUst, -1)
+                oynat(setAlt, -1)
+              },
+              () => {
+                oynat(setUst, 1)
+                oynat(setAlt, 1)
+              },
+              ISARET_ARTI,
+              ISARET_EKSI,
+            )}
+          </div>
+        )
+      })}
+      <div className="mt-1.5 flex gap-1.5">
+        <button
+          type="button"
+          onClick={() => setLTasimaSerbest((a) => !a)}
+          className={`flex-1 py-2 rounded-lg text-[13.5px] font-medium border transition-colors ${
+            lTasimaSerbest
+              ? 'border-brand text-brand'
+              : 'border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
+          }`}
+        >
+          {t(lTasimaSerbest ? 'screen.lTasimaSerbest' : 'screen.lTasimaKose')}
+        </button>
+        <button
+          type="button"
+          disabled={!lSolUst && !lSolAlt && !lSagUst && !lSagAlt}
+          onClick={() => {
+            setLSolUst(0)
+            setLSolAlt(0)
+            setLSagUst(0)
+            setLSagAlt(0)
+          }}
+          className="flex-1 py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
+        >
+          {t('screen.lEgimSifirla')}
+        </button>
+      </div>
+    </div>
+  )
+
   /* Ekran türü ya da mekân değişince kamera otomatik açıya dönüyor. */
   useEffect(() => {
     setLKacis(null)
@@ -6106,112 +6189,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         </main>
 
         {/*
-          KANAT ŞEKLİ PENCERESİ.
-
-          Perdesi YOK ve sağ alta sabitli: tuval açıkta kalıyor, kullanıcı
-          tuşa her bastığında tasarımın ne olduğunu aynı anda görüyor. Arka
-          planı kapatan bir kalıp pencere burada işe yaramazdı — ayarlanan
-          şey tam da arkada duran şey.
-
-          ARTI = O KENARIN UZAK UCU AŞAĞI, iki kanatta da aynı (işaret
-          çevirme geometride, bkz. lKose.js sekilVer). İç bükey köşede üst
-          eksi, alt artı olur: köşe en uzak nokta, duvar boyunca
-          uzaklaşıldıkça kanat açılır.
-        */}
-        {lSekilAcik && lKoseCizimi && !lKoseKipi && !refKipi && (
-          <div className="fixed right-4 bottom-4 z-50 w-[420px] max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto rounded-2xl border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#1a1f27] shadow-2xl">
-            <div className="flex items-center justify-between px-4 pt-3 pb-2">
-              <h3 className="m-0 text-[17px] font-semibold text-neutral-800 dark:text-neutral-100">
-                {t('screen.lSekilBaslik')}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setLSekilAcik(false)}
-                aria-label={t('sih.kapat')}
-                className="w-9 h-9 rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-[#232a35] flex items-center justify-center transition-colors"
-              >
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              </button>
-            </div>
-            <p className="px-4 mt-0 mb-3 text-[13.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-              {t('screen.lSekilIpucu')}
-            </p>
-            <div className="px-4 pb-4 flex flex-col gap-3">
-              {[
-                { ad: 'screen.lEgimSol', ustAci: lSolUst, setUst: setLSolUst, altAci: lSolAlt, setAlt: setLSolAlt },
-                { ad: 'screen.lEgimSag', ustAci: lSagUst, setUst: setLSagUst, altAci: lSagAlt, setAlt: setLSagAlt },
-              ].map(({ ad, ustAci, setUst, altAci, setAlt }) => {
-                const oynat = (ayarla, isaret) =>
-                  ayarla((v) => Math.max(-EGIM_SINIR, Math.min(EGIM_SINIR, v + isaret * EGIM_ADIM)))
-                const satir = (etiket, deger, yukari, asagi, yukariYol, asagiYol) => (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="w-14 text-[15px] text-neutral-500 dark:text-neutral-400">{etiket}</span>
-                    <span className="w-14 text-right text-[16px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
-                      {deger != null ? (deger > 0 ? '+' : '') + deger + '°' : ''}
-                    </span>
-                    <div className="ml-auto flex gap-2">
-                      <SekilTus onClick={yukari} etiket={`${t(ad)} ${etiket} — ${t('screen.lSekilYukari')}`} yol={yukariYol} />
-                      <SekilTus onClick={asagi} etiket={`${t(ad)} ${etiket} — ${t('screen.lSekilAsagi')}`} yol={asagiYol} />
-                    </div>
-                  </div>
-                )
-                return (
-                  <div key={ad} className="rounded-xl border border-neutral-200 dark:border-[#2c333f] px-3 pt-2.5 pb-3">
-                    <div className="text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">
-                      {t(ad)}
-                    </div>
-                    {satir(t('screen.lKenarUst'), ustAci, () => oynat(setUst, -1), () => oynat(setUst, 1), OK_YUKARI, OK_ASAGI)}
-                    {satir(t('screen.lKenarAlt'), altAci, () => oynat(setAlt, -1), () => oynat(setAlt, 1), OK_YUKARI, OK_ASAGI)}
-                    {satir(
-                      t('screen.lKenarIkisi'),
-                      null,
-                      () => {
-                        oynat(setUst, -1)
-                        oynat(setAlt, -1)
-                      },
-                      () => {
-                        oynat(setUst, 1)
-                        oynat(setAlt, 1)
-                      },
-                      ISARET_ARTI,
-                      ISARET_EKSI,
-                    )}
-                  </div>
-                )
-              })}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLTasimaSerbest((a) => !a)}
-                  className={`flex-1 py-2.5 rounded-xl text-[14.5px] font-medium border transition-colors ${
-                    lTasimaSerbest
-                      ? 'border-brand text-brand'
-                      : 'border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
-                  }`}
-                >
-                  {t(lTasimaSerbest ? 'screen.lTasimaSerbest' : 'screen.lTasimaKose')}
-                </button>
-                <button
-                  type="button"
-                  disabled={!lSolUst && !lSolAlt && !lSagUst && !lSagAlt}
-                  onClick={() => {
-                    setLSolUst(0)
-                    setLSolAlt(0)
-                    setLSagUst(0)
-                    setLSagAlt(0)
-                  }}
-                  className="flex-1 py-2.5 rounded-xl text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
-                >
-                  {t('screen.lEgimSifirla')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/*
           BETA DAVET KAPISI — yalnızca sunucu kod istediğinde açılır.
           Kod doğrulanınca 24 saatlik misafir jetonu oturuma yazılıyor ve
           kullanıcı kaldığı yerden devam ediyor.
@@ -7069,6 +7046,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             mesafeKilitli={false}
                             onEgim={egimDugmesiVar ? kutuEgiminiCevir : null}
                             egimVar={egimVar}
+                            /* L'nin son adımı: kanat şekli (bkz. lSekilPaneli). */
+                            kanatSekli={lSekilPaneli}
                           />
                         ) : (
                           <>
@@ -7142,18 +7121,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                   : t('sih.basla')}
                             </button>
                             {/*
-                              KANAT ŞEKLİ — ölçünün yanından açılan pencere.
-                              Yalnızca köşe kurulmuşken anlamlı.
+                              KANAT ŞEKLİ — DÜĞME ARKASINDA DEĞİL, AÇIKTA.
+
+                              Sihirbazın son adımında zaten gösteriliyor;
+                              akış bitince burada durmaya devam ediyor ki
+                              sonradan düzeltmek için bir yere girmek
+                              gerekmesin.
                             */}
-                            {lKoseCizimi && !lKoseKipi && !refKipi && (
-                              <button
-                                type="button"
-                                onClick={() => setLSekilAcik(true)}
-                                className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                              >
-                                {t('screen.lSekilAc')}
-                              </button>
-                            )}
+                            {lKoseCizimi && !lKoseKipi && !refKipi && lSekilPaneli}
                             {/*
                               İKİ ANA EYLEM: BAŞTAN BAŞLA ve DÜZENLE.
 
