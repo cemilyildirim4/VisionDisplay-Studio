@@ -5870,6 +5870,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   <span className="w-[72px] rounded-md bg-black/55 px-2 py-1 text-[11px] font-medium text-white">
                     {t(ad)}
                   </span>
+                  {/*
+                    İKİSİ BİRDEN — kanadın tamamını yatırır.
+
+                    Üst ve alt ayrı ayrı varken bir kenarı oynatmak ötekini
+                    yerinde bırakıyor; kullanıcı çoğu zaman kanadın tamamını
+                    çevirmek istiyor ("üst tarafı sabit tutup alt tarafa eğim
+                    veriyor, iki tarafa da versin"). Burada geometri yok:
+                    aynı derece iki duruma da ekleniyor, ekranda üst ve alt
+                    sayıları birlikte oynuyor ve ayrı ayrı ince ayar yapmak
+                    hâlâ mümkün.
+                  */}
+                  <TusDugme
+                    onClick={() => {
+                      setUst((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))
+                      setAlt((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))
+                    }}
+                    etiket={`${t(ad)} ${t('screen.lKenarIkisi')} — ${t('screen.lEgimSola')}`}
+                  >
+                    <path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" />
+                    <path d="M9 9h6M9 15h6" opacity="0.55" />
+                  </TusDugme>
+                  <TusDugme
+                    onClick={() => {
+                      setUst((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))
+                      setAlt((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))
+                    }}
+                    etiket={`${t(ad)} ${t('screen.lKenarIkisi')} — ${t('screen.lEgimSaga')}`}
+                  >
+                    <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
+                    <path d="M9 9h6M9 15h6" opacity="0.55" />
+                  </TusDugme>
                   {/* ÜST KENAR — tavan hattına hizalanan. */}
                   <span className="w-[70px] text-right text-[11px] font-medium text-white tabular-nums drop-shadow">
                     {t('screen.lKenarUst')} {ustAci > 0 ? '+' : ''}{ustAci}°

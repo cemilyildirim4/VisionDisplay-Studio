@@ -277,6 +277,7 @@ const dict = {
   'screen.lEgimSag': { tr: 'Sağ kanat', en: 'Right wing', ar: 'الجناح الأيمن' },
   'screen.lEgimSola': { tr: 'Sola eğ', en: 'Tilt left', ar: 'إمالة لليسار' },
   'screen.lEgimSaga': { tr: 'Sağa eğ', en: 'Tilt right', ar: 'إمالة لليمين' },
+  'screen.lKenarIkisi': { tr: 'ikisi birden', en: 'both edges', ar: 'كلا الحافتين' },
   'screen.lKenarUst': { tr: 'üst', en: 'top', ar: 'أعلى' },
   'screen.lKenarAlt': { tr: 'alt', en: 'bottom', ar: 'أسفل' },
   'screen.lEgimSifirla': { tr: 'Şekli sıfırla', en: 'Reset shape', ar: 'إعادة ضبط الشكل' },
