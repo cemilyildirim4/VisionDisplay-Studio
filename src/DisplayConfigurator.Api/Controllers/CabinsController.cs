@@ -271,6 +271,9 @@ public class CabinsController : ControllerBase
         cabin.Name = string.IsNullOrWhiteSpace(input.Name) ? null : input.Name.Trim();
         cabin.ModelCode = input.ModelCode.Trim();
         cabin.ProductType = input.ProductType;
+        cabin.IsLoopable = string.Equals(input.ProductType, "MODULE", StringComparison.OrdinalIgnoreCase)
+            ? input.IsLoopable == true
+            : null;
         cabin.DefaultModulesPerCard = input.DefaultModulesPerCard;
         cabin.Price = input.Price;
         cabin.PixelPitchMm = input.PixelPitchMm;

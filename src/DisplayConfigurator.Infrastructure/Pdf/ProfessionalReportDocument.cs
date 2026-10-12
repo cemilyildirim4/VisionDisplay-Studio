@@ -563,7 +563,8 @@ public class ProfessionalReportDocument : IDocument
                 AddRow(table, "Ünite adedi & matris", $"{total} adet ({cols} × {rows})", ref alt);
                 if (_isAdmin)
                 {
-                    AddRow(table, "Bağlantı tipi", ConfigurationCalculator.ConnectionTypeLabel(_config.ConnectionType), ref alt);
+                    if (ConfigurationCalculator.ConnectionTypeLabel(_config.ConnectionType) is string baglanti)
+                        AddRow(table, "Bağlantı tipi", baglanti, ref alt);
                     AddRow(table, "Alıcı kart (adet)", $"{_config.ReceivingCardCount}", ref alt);
                     AddRow(table, "Gerekli RJ45 Ethernet portu", portText, ref alt);
                     AddRow(table, "Tavsiye işlemci", Empty(_config.RecommendedProcessor, "—"), ref alt);
@@ -757,8 +758,9 @@ public class ProfessionalReportDocument : IDocument
             column.Item().ShowEntire().Column(block =>
             {
             block.Item().Text("Donanım dökümü (iç)").FontSize(12).Bold().FontColor(BrandBlue);
-            block.Item().PaddingTop(2).Text($"Bağlantı tipi: {ConfigurationCalculator.ConnectionTypeLabel(_config.ConnectionType)}")
-                .FontSize(9).FontColor(Colors.Grey.Darken1);
+            if (ConfigurationCalculator.ConnectionTypeLabel(_config.ConnectionType) is string baglanti)
+                block.Item().PaddingTop(2).Text($"Bağlantı tipi: {baglanti}")
+                    .FontSize(9).FontColor(Colors.Grey.Darken1);
             block.Item().PaddingTop(5).Table(table =>
             {
                 table.ColumnsDefinition(c =>

@@ -491,6 +491,7 @@ export default function AdminPanel() {
       defaultModulesPerCard: c.defaultModulesPerCard ?? 10,
       price: c.price ?? 0,
       pixelPitchMm: c.pixelPitchMm,
+      isLoopable: (c.productType || 'CABINET') === 'MODULE' ? c.isLoopable === true : null,
       widthMm: c.widthMm,
       heightMm: c.heightMm,
       depthMm: c.depthMm,
@@ -550,6 +551,7 @@ export default function AdminPanel() {
         defaultModulesPerCard: Number(form.defaultModulesPerCard),
         price: Number(form.price),
         pixelPitchMm: Number(form.pixelPitchMm),
+        isLoopable: form.productType === 'MODULE' ? form.isLoopable === true : null,
         widthMm: Number(form.widthMm),
         heightMm: Number(form.heightMm),
         depthMm: Number(form.depthMm),
@@ -1462,6 +1464,21 @@ export default function AdminPanel() {
                   <Field label="Piksel Aralığı (mm)">
                     <input type="number" step="0.01" value={form.pixelPitchMm} onChange={(e) => set('pixelPitchMm', e.target.value)} className={inputCls} />
                   </Field>
+                  {form.productType === 'MODULE' && (
+                    <Field label="Bağlantı" hint="Yalnızca modül. Looplamalı modül seri bağlanır ve kart yatay/dikey 512 piksel ile sınırlıdır. Loopsuz modülde her modül ayrı soket ister (16).">
+                      <label className="flex items-center gap-3 min-h-[44px] rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={form.isLoopable === true}
+                          onChange={(e) => set('isLoopable', e.target.checked)}
+                          className="h-4 w-4 shrink-0 accent-[#2962ad]"
+                        />
+                        <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                          {form.isLoopable === true ? 'Looplamalı' : 'Loopsuz'}
+                        </span>
+                      </label>
+                    </Field>
+                  )}
                 </div>
 
                 {/* Ürün tipi — Kabin vs Tekli Panel */}
@@ -1721,7 +1738,14 @@ export default function AdminPanel() {
                       <tr key={c.id} className="border-t border-neutral-100 dark:border-[#242b36] hover:bg-neutral-50 dark:hover:bg-[#1b2029]">
                         <td className="px-4 py-2.5 text-neutral-400 dark:text-neutral-500">{c.id}</td>
                         <td className="px-4 py-2.5 font-medium">{c.modelCode}</td>
-                        <td className="px-4 py-2.5"><ProductTypeBadge productType={c.productType} /></td>
+                        <td className="px-4 py-2.5">
+                          <ProductTypeBadge productType={c.productType} />
+                          {normalizeProductType(c.productType) === 'MODULE' && (
+                            <div className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
+                              {c.isLoopable === true ? 'Looplamalı' : 'Loopsuz'}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-2.5">{c.category === 'videowall' ? 'Video Duvarı' : 'LED'}</td>
                         <td className="px-4 py-2.5 text-neutral-500 dark:text-neutral-400">{c.series?.name || '—'}</td>
                         <td className="px-4 py-2.5">{mmYazi(c.pixelPitchMm)} mm</td>

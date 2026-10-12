@@ -451,32 +451,38 @@ public class ConfigurationCalculatorTests
     }
 
     [Fact]
-    public void CountReceivingCards_Looplu_PikselKapasitesindeKalir()
+    public void CountReceivingCards_LooplamaliModul_512IcindeSoketiAsabilir()
     {
         var card = new ReceivingCard
         {
-            MaxPixelWidth = 10000,
-            MaxPixelHeight = 10000,
+            MaxPixelWidth = 512,
+            MaxPixelHeight = 512,
             HubPortCount = 16,
         };
-        int qty = ConfigurationCalculator.CountReceivingCards(100, 100, 10_000, card, totalModules: 20, loopless: false);
-        Assert.Equal(1, qty);
+        // 550012949A: 128×64 px, 4×5 = 20 modül → 512×320. 16 soketten fazla, 512 içinde.
+        int loop = ConfigurationCalculator.CountReceivingCards(512, 320, 512 * 320, card, 20, "MODULE", true);
+        int loopless = ConfigurationCalculator.CountReceivingCards(512, 320, 512 * 320, card, 20, "MODULE", false);
+        int cabinet = ConfigurationCalculator.CountReceivingCards(512, 320, 512 * 320, card, 20, "CABINET", null);
+        Assert.Equal(1, loop);
+        Assert.Equal(2, loopless);
+        Assert.Equal(1, cabinet);
+        Assert.Equal("Looplamalı", ConfigurationCalculator.ConnectionTypeLabel("loop"));
+        Assert.Equal("Loopsuz", ConfigurationCalculator.ConnectionTypeLabel("loopless"));
+        Assert.Null(ConfigurationCalculator.ConnectionTypeLabel(null));
     }
 
     [Fact]
-    public void CountReceivingCards_Loopsuz_SoketYetersizligindeKartArtar()
+    public void CountReceivingCards_LooplamaliModul_512AsilincaKartArtar()
     {
         var card = new ReceivingCard
         {
-            MaxPixelWidth = 10000,
-            MaxPixelHeight = 10000,
+            MaxPixelWidth = 1920,
+            MaxPixelHeight = 1080,
             HubPortCount = 16,
         };
-        // 20 modül, 16 soket: piksel bir karta sığar, loopsuz bağlantı iki kart ister.
-        int qty = ConfigurationCalculator.CountReceivingCards(100, 100, 10_000, card, totalModules: 20, loopless: true);
+        // 5 sütun × 128 px = 640 > 512 → iki kart. Soket 10 modülde yetiyor.
+        int qty = ConfigurationCalculator.CountReceivingCards(640, 256, 640 * 256, card, 10, "MODULE", true);
         Assert.Equal(2, qty);
-        Assert.Equal("Loopsuz", ConfigurationCalculator.ConnectionTypeLabel("loopless"));
-        Assert.Equal("Looplu", ConfigurationCalculator.ConnectionTypeLabel("loop"));
     }
 
     [Fact]

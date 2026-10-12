@@ -25,6 +25,12 @@ public class Cabin
     /// Konfigüratörde rozet ve filtre; montaj/alıcı kart hesabında da kullanılır.
     /// </summary>
     public string ProductType { get; set; } = "CABINET";
+
+    /// <summary>
+    /// Yalnızca MODULE. true = looplamalı (seri bağ), false = loopsuz (ayrı soket).
+    /// Kabinlerde boştur; bu özellik kabine uygulanmaz.
+    /// </summary>
+    public bool? IsLoopable { get; set; }
     public int DefaultModulesPerCard { get; set; } = 10;
     public decimal Price { get; set; }
 

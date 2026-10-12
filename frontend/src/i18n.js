@@ -360,19 +360,6 @@ const dict = {
   // ---------- S-Kutu ----------
   'sbox.heading': { tr: 'S-Kutu Yedekliliği', en: 'S-Box Redundancy', ar: 'تكرار S-Box' },
   'minipc.heading': { tr: 'Mini PC Sistemi Dahil Edilsin', en: 'Include Mini PC System', ar: 'تضمين نظام Mini PC' },
-  'link.heading': { tr: 'Bağlantı Tipi', en: 'Connection Type', ar: 'نوع التوصيل' },
-  'link.loop': { tr: 'Looplu', en: 'Loop', ar: 'حلقي' },
-  'link.loopless': { tr: 'Loopsuz', en: 'Loopless', ar: 'بدون حلقة' },
-  'link.loopHint': {
-    tr: 'Modüller seri bağlanır. Alıcı kart sayısı piksel kapasitesine göre hesaplanır.',
-    en: 'Modules are daisy-chained. Receiver cards are counted by pixel capacity.',
-    ar: 'تتصل الوحدات على التوالي. يُحسب عدد بطاقات الاستقبال حسب سعة البكسل.',
-  },
-  'link.looplessHint': {
-    tr: 'Her modül ayrı sokete bağlanır. Soket yetmezse kart sayısı artar.',
-    en: 'Each module uses its own socket. The card count rises when sockets run short.',
-    ar: 'كل وحدة تتصل بمقبس مستقل. يزيد عدد البطاقات إذا لم تكفِ المقابس.',
-  },
   'minipc.hint': {
     tr: 'Görüntü kaynağı doğrudan Mini PC üzerinden yürütülsün',
     en: 'Run the video source directly from the Mini PC',

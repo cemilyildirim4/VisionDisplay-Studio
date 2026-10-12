@@ -95,9 +95,9 @@ public static class ConfigurationCalculator
             throw new HardwareMatchException(
                 "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
 
-        bool loopless = IsLooplessConnection(dto.ConnectionType);
         int receivingCardQty = CountReceivingCards(
-            totalResW, totalResH, totalPixels, hw.ReceivingCard, totalModules, loopless);
+            totalResW, totalResH, totalPixels, hw.ReceivingCard, totalModules,
+            cabin.ProductType, cabin.IsLoopable);
         int processorQty = hw.Processor != null
             ? CountProcessors(totalPixels, totalResW, totalResH, hw.Processor, out int requiredPorts)
             : CountProcessors(totalPixels, totalResW, totalResH, processor: null, out requiredPorts);
@@ -180,7 +180,7 @@ public static class ConfigurationCalculator
             CabinModelName = ModuleDisplayName(cabin),
             AssemblyType = assemblyType,
             ModulesPerCard = modulesPerCard,
-            ConnectionType = loopless ? "loopless" : "loop",
+            ConnectionType = ModuleConnectionCode(cabin),
             ReceivingCardCount = receivingCardQty,
             RequiredRj45Ports = requiredPorts,
             RecommendedProcessor = recommendedProcessor,
@@ -258,16 +258,33 @@ public static class ConfigurationCalculator
     /// Alıcı kart: toplam çözünürlük (px) / kart piksel kapasitesi (W×H).
     /// Kapasitesi 0 olan kart kullanılamaz (0 döner).
     /// </summary>
+    public const int LoopableEdgePixels = 512;
+    public const int DefaultModuleSockets = 16;
+
+    public static bool IsModule(string? productType) =>
+        string.Equals(productType, "MODULE", StringComparison.OrdinalIgnoreCase);
+
     public static bool IsLooplessConnection(string? connectionType) =>
         string.Equals(connectionType, "loopless", StringComparison.OrdinalIgnoreCase)
         || string.Equals(connectionType, "loopsuz", StringComparison.OrdinalIgnoreCase);
 
-    public static string ConnectionTypeLabel(string? connectionType) =>
-        IsLooplessConnection(connectionType) ? "Loopsuz" : "Looplu";
+    /// <summary>Modül değilse boş. Looplamalı modül "loop", aksi "loopless".</summary>
+    public static string? ModuleConnectionCode(Cabin? cabin)
+    {
+        if (cabin == null || !IsModule(cabin.ProductType)) return null;
+        return cabin.IsLoopable == true ? "loop" : "loopless";
+    }
+
+    public static string? ConnectionTypeLabel(string? connectionType)
+    {
+        if (string.IsNullOrWhiteSpace(connectionType)) return null;
+        return IsLooplessConnection(connectionType) ? "Loopsuz" : "Looplamalı";
+    }
 
     /// <summary>
-    /// Looplu: piksel ve en/boy tavanı. Loopsuz: her modül ayrı soket ister,
-    /// adet = max(piksel kartı, yukarı yuvarla(modül / soket)).
+    /// Kabin: kartın kendi piksel ve en/boy tavanı. Soket kuralı yok.
+    /// Looplamalı modül: soket sayılmaz; yatay ve dikey tavan 512 piksel.
+    /// Loopsuz modül: max(piksel kartı, yukarı yuvarla(modül / soket)). Soket boşsa 16.
     /// </summary>
     public static int CountReceivingCards(
         int totalResW,
@@ -275,7 +292,8 @@ public static class ConfigurationCalculator
         int totalPixels,
         ReceivingCard? card,
         int totalModules = 0,
-        bool loopless = false)
+        string? productType = null,
+        bool? isLoopable = null)
     {
         if (card == null) return 0;
         long capacity = HardwareMatcher.PixelCapacity(card);
@@ -291,10 +309,20 @@ public static class ConfigurationCalculator
             byGeometry = Math.Max(byPixels, Math.Max(1, Math.Max(byWidth, byHeight)));
         }
 
-        if (!loopless) return byGeometry;
-        if (card.HubPortCount <= 0 || totalModules <= 0) return 0;
+        if (!IsModule(productType)) return byGeometry;
 
-        int bySockets = (int)Math.Ceiling(totalModules / (double)card.HubPortCount);
+        if (isLoopable == true)
+        {
+            int limitW = card.MaxPixelWidth > 0 ? Math.Min(LoopableEdgePixels, card.MaxPixelWidth) : LoopableEdgePixels;
+            int limitH = card.MaxPixelHeight > 0 ? Math.Min(LoopableEdgePixels, card.MaxPixelHeight) : LoopableEdgePixels;
+            int byWidth = totalResW > 0 ? (int)Math.Ceiling(totalResW / (double)limitW) : 1;
+            int byHeight = totalResH > 0 ? (int)Math.Ceiling(totalResH / (double)limitH) : 1;
+            return Math.Max(byPixels, Math.Max(byWidth, byHeight));
+        }
+
+        int sockets = card.HubPortCount > 0 ? card.HubPortCount : DefaultModuleSockets;
+        if (totalModules <= 0) return byGeometry;
+        int bySockets = (int)Math.Ceiling(totalModules / (double)sockets);
         return Math.Max(byGeometry, bySockets);
     }
 

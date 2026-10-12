@@ -414,7 +414,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [resolution, setResolution] = useState('FHD')
   const [sboxRedundancy, setSboxRedundancy] = useState('no') // no | yes
   const [hasMiniPc, setHasMiniPc] = useState(false)
-  const [connectionType, setConnectionType] = useState('loop')
   /*
    * Ekranın arkasındaki mekân: 'none' ya da PANO_ID.
    *
@@ -1070,7 +1069,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setResolution(t.resolution ?? 'FHD')
     setSboxRedundancy(t.sboxRedundancy ?? 'no')
     setHasMiniPc(Boolean(t.hasMiniPc))
-    setConnectionType(t.connectionType === 'loopless' ? 'loopless' : 'loop')
     setScene(t.scene ?? 'none')
     setScreens(Array.isArray(t.screens) ? t.screens : [])
     setContent(t.content ?? 'led')
@@ -1086,11 +1084,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     taslagiYaz(
       taslakOlustur({
         selectedModel, width, height, cols, rows, screenMode, screenType,
-        orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, connectionType, scene, screens, content,
+        orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene, screens, content,
       }),
     )
   }, [selectedModel, width, height, cols, rows, screenMode, screenType,
-      orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, connectionType, scene, screens, content])
+      orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene, screens, content])
 
   const handleChoose = (model) => {
     // Başka bir modele geçmek, tasarımı baştan kurmak demek: eldeki kareler
@@ -1502,7 +1500,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setResolution('FHD')
     setSboxRedundancy('no')
     setHasMiniPc(false)
-    setConnectionType('loop')
     setContent('led')
     if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
     setContentUrl(null)
@@ -1688,7 +1685,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     cols,
     rows,
     hasMiniPc,
-    connectionType,
     enabled: !!selectedModel?.id,
   })
 
@@ -6700,34 +6696,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 </div>
               )}
 
-              <div className="mb-3">
-                <p className="m-0 mb-1.5 text-[14px] font-medium text-neutral-800 dark:text-neutral-100">
-                  {t('link.heading')}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {['loop', 'loopless'].map((tip) => {
-                    const secili = connectionType === tip
-                    return (
-                      <button
-                        key={tip}
-                        type="button"
-                        onClick={() => setConnectionType(tip)}
-                        className={`rounded-lg border px-3 py-2 text-[14px] font-medium transition-colors ${
-                          secili
-                            ? 'border-[#2962ad] bg-[#2962ad] text-white'
-                            : 'border-neutral-200 text-neutral-700 hover:border-[#2962ad]/40 dark:border-[#2c333f] dark:text-neutral-100'
-                        }`}
-                      >
-                        {t(tip === 'loopless' ? 'link.loopless' : 'link.loop')}
-                      </button>
-                    )
-                  })}
-                </div>
-                <p className="m-0 mt-1.5 text-[12px] leading-snug text-neutral-400 dark:text-neutral-500">
-                  {connectionType === 'loopless' ? t('link.looplessHint') : t('link.loopHint')}
-                </p>
-              </div>
-
               {/*
                 MEKÂN — ekranın arkasına çizilen oda.
                 İçerik ekranın İÇİNE, mekân ekranın ARKASINA gider; ikisi
@@ -7739,7 +7707,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         rows={rows}
         sboxRedundancy={sboxRedundancy}
         hasMiniPc={hasMiniPc}
-        connectionType={connectionType}
         screenType={screenType}
         isVideoWall={isVideoWall}
         screenMode={screenMode}
@@ -7875,7 +7842,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           // ihtiyaç duyduğu iki alan yalnızca burada mevcut.
           sboxRedundancy,
           hasMiniPc,
-          connectionType,
           isVideoWall,
           /* Kamerada ve AR'de kaydedilen kareler — her biri PDF'e ek sayfa olur.
              Rapora yalnızca görüntü gider; kaynak (kamera/AR) arayüzde,
@@ -7889,7 +7855,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
            */
           tasarim: taslakOlustur({
             selectedModel, width, height, cols, rows, screenMode, screenType,
-            orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, connectionType, scene, screens, content,
+            orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene, screens, content,
           }),
         }}
       />

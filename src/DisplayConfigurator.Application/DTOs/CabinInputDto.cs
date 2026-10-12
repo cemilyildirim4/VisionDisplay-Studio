@@ -17,6 +17,9 @@ public class CabinInputDto
     /// Configurations montaj hesabında ve konfigüratör rozet/filtrede kullanılır.
     /// </summary>
     public string ProductType { get; set; } = "CABINET";
+
+    /// <summary>Yalnızca MODULE. true = looplamalı, false = loopsuz. Kabinde yok sayılır.</summary>
+    public bool? IsLoopable { get; set; }
     /// <summary>Yalnızca ProductType="MODULE" iken anlamlı: bir alıcı karta kaç panel/modül bağlanır.</summary>
     public int DefaultModulesPerCard { get; set; } = 10;
     /// <summary>Birim (kabin/panel) satış fiyatı — Configurations toplam fiyat hesabında kullanılır.</summary>

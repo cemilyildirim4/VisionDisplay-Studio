@@ -15,6 +15,7 @@ public class CabinRepository : ICabinRepository
         c.name AS Name,
         c.model_code AS ModelCode,
         c.product_type AS ProductType,
+        c.is_loopable AS IsLoopable,
         c.default_modules_per_card AS DefaultModulesPerCard,
         c.price AS Price,
         c.pixel_pitch_mm AS PixelPitchMm,
@@ -148,7 +149,7 @@ public class CabinRepository : ICabinRepository
         const string sql = @"
             INSERT INTO cabins
             (
-                series_id, category, name, model_code, product_type, default_modules_per_card, price,
+                series_id, category, name, model_code, product_type, is_loopable, default_modules_per_card, price,
                 pixel_pitch_mm, width_mm, height_mm, depth_mm, weight_kg,
                 pixel_width, pixel_height, brightness_nits, refresh_rate_hz,
                 power_typical_watts, power_max_watts, supply_voltage, viewing_distance_m, size_inch, bezel_mm,
@@ -160,7 +161,7 @@ public class CabinRepository : ICabinRepository
             )
             VALUES
             (
-                @SeriesId, @Category, @Name, @ModelCode, @ProductType, @DefaultModulesPerCard, @Price,
+                @SeriesId, @Category, @Name, @ModelCode, @ProductType, @IsLoopable, @DefaultModulesPerCard, @Price,
                 @PixelPitchMm, @WidthMm, @HeightMm, @DepthMm, @WeightKg,
                 @PixelWidth, @PixelHeight, @BrightnessNits, @RefreshRateHz,
                 @PowerTypicalWatts, @PowerMaxWatts, @SupplyVoltage, @ViewingDistanceM, @SizeInch, @BezelMm,
@@ -187,6 +188,7 @@ public class CabinRepository : ICabinRepository
                 name = @Name,
                 model_code = @ModelCode,
                 product_type = @ProductType,
+                is_loopable = @IsLoopable,
                 default_modules_per_card = @DefaultModulesPerCard,
                 price = @Price,
                 pixel_pitch_mm = @PixelPitchMm,
