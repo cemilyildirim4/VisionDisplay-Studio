@@ -36,8 +36,32 @@ import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
-/* Hassas ayar tuşu AR akışıyla ortak (bkz. ArYerlestirme.jsx). */
-import { TusDugme } from './ArYerlestirme.jsx'
+
+/*
+ * KANAT ŞEKLİ TUŞU — sağ panelin kendi dilinde, küçük ve çerçeveli.
+ * Tuvalin üstündeki koyu TusDugme burada yanlış duruyordu; panel açık
+ * zeminli ve düğmeleri çerçeveli.
+ */
+const OK_YUKARI = 'M12 19V5M5 12l7-7 7 7'
+const OK_ASAGI = 'M12 5v14M19 12l-7 7-7-7'
+const ISARET_ARTI = 'M12 5v14M5 12h14'
+const ISARET_EKSI = 'M5 12h14'
+
+function SekilTus({ onClick, etiket, yol }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={etiket}
+      title={etiket}
+      className="w-7 h-7 shrink-0 rounded-md border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-300 hover:border-brand hover:text-brand flex items-center justify-center transition-colors"
+    >
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d={yol} />
+      </svg>
+    </button>
+  )
+}
 import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
@@ -5836,142 +5860,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             />
           )}
 
-          {/*
-            KANAT EĞİMİ TUŞLARI — her kanat için ayrı, AR akışındaki hassas
-            ayar tuşlarıyla aynı düğme (bkz. ArYerlestirme.jsx TusDugme).
-
-            Kanadın üst ve alt kenarının nerede buluşacağı fotoğraftan
-            kestiriliyor; her karede tutmuyor. Kullanıcı duvarın kendi hattına
-            bakarak gözüyle kapatabilsin diye iki kanat ayrı ayrı çevriliyor.
-            Tasarım çizilmiyorken (işaretleme sürerken) tuşlar da yok.
-
-            SOL ALTTA: sağ kenarda sihirbaz paneli, üstte mekân seçimi var;
-            tuvalin sol alt köşesi L köşesinde hep boş kalıyor.
-          */}
-          {lKoseCizimi && !lKoseKipi && !refKipi && (
-            <div className="absolute left-3 bottom-3 z-20 flex flex-col gap-2 items-start pointer-events-none">
-              {[
-                {
-                  ad: 'screen.lEgimSol',
-                  ustAci: lSolUst,
-                  setUst: setLSolUst,
-                  altAci: lSolAlt,
-                  setAlt: setLSolAlt,
-                },
-                {
-                  ad: 'screen.lEgimSag',
-                  ustAci: lSagUst,
-                  setUst: setLSagUst,
-                  altAci: lSagAlt,
-                  setAlt: setLSagAlt,
-                },
-              ].map(({ ad, ustAci, setUst, altAci, setAlt }) => (
-                <div key={ad} className="flex items-center gap-1.5 pointer-events-auto">
-                  <span className="w-[72px] rounded-md bg-black/55 px-2 py-1 text-[11px] font-medium text-white">
-                    {t(ad)}
-                  </span>
-                  {/*
-                    İKİSİ BİRDEN — kanadın tamamını yatırır.
-
-                    Üst ve alt ayrı ayrı varken bir kenarı oynatmak ötekini
-                    yerinde bırakıyor; kullanıcı çoğu zaman kanadın tamamını
-                    çevirmek istiyor ("üst tarafı sabit tutup alt tarafa eğim
-                    veriyor, iki tarafa da versin"). Burada geometri yok:
-                    aynı derece iki duruma da ekleniyor, ekranda üst ve alt
-                    sayıları birlikte oynuyor ve ayrı ayrı ince ayar yapmak
-                    hâlâ mümkün.
-                  */}
-                  {/* Yazisiz birakinca hangi cift oldugu anlasilmiyordu. */}
-                  <span className="w-[70px] text-right text-[11px] font-medium text-white drop-shadow">
-                    {t('screen.lKenarIkisi')}
-                  </span>
-                  <TusDugme
-                    onClick={() => {
-                      setUst((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))
-                      setAlt((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))
-                    }}
-                    etiket={`${t(ad)} ${t('screen.lKenarIkisi')} — ${t('screen.lEgimSola')}`}
-                  >
-                    <path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" />
-                    <path d="M9 9h6M9 15h6" opacity="0.55" />
-                  </TusDugme>
-                  <TusDugme
-                    onClick={() => {
-                      setUst((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))
-                      setAlt((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))
-                    }}
-                    etiket={`${t(ad)} ${t('screen.lKenarIkisi')} — ${t('screen.lEgimSaga')}`}
-                  >
-                    <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
-                    <path d="M9 9h6M9 15h6" opacity="0.55" />
-                  </TusDugme>
-                  {/* ÜST KENAR — tavan hattına hizalanan. */}
-                  <span className="w-[70px] text-right text-[11px] font-medium text-white tabular-nums drop-shadow">
-                    {t('screen.lKenarUst')} {ustAci > 0 ? '+' : ''}{ustAci}°
-                  </span>
-                  <TusDugme
-                    onClick={() => setUst((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))}
-                    etiket={`${t(ad)} ${t('screen.lKenarUst')} — ${t('screen.lEgimSola')}`}
-                  >
-                    <path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" />
-                  </TusDugme>
-                  <TusDugme
-                    onClick={() => setUst((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))}
-                    etiket={`${t(ad)} ${t('screen.lKenarUst')} — ${t('screen.lEgimSaga')}`}
-                  >
-                    <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
-                  </TusDugme>
-                  {/* ALT KENAR — zemin hattına hizalanan. */}
-                  <span className="ml-1 w-[70px] text-right text-[11px] font-medium text-white tabular-nums drop-shadow">
-                    {t('screen.lKenarAlt')} {altAci > 0 ? '+' : ''}{altAci}°
-                  </span>
-                  <TusDugme
-                    onClick={() => setAlt((v) => Math.max(-EGIM_SINIR, v - EGIM_ADIM))}
-                    etiket={`${t(ad)} ${t('screen.lKenarAlt')} — ${t('screen.lEgimSola')}`}
-                  >
-                    <path d="M4 11a8 8 0 112.3 5.7M4 5v6h6" />
-                  </TusDugme>
-                  <TusDugme
-                    onClick={() => setAlt((v) => Math.min(EGIM_SINIR, v + EGIM_ADIM))}
-                    etiket={`${t(ad)} ${t('screen.lKenarAlt')} — ${t('screen.lEgimSaga')}`}
-                  >
-                    <path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" />
-                  </TusDugme>
-                </div>
-              ))}
-              {/*
-                TAŞIMA KİLİDİ — açıkken ekran köşeden ayrılıp her yere
-                gidebiliyor, kapalıyken yalnızca köşe çizgisi boyunca
-                kayıyor (bkz. lTasimaSerbest).
-              */}
-              <div className="flex items-center gap-1.5 pointer-events-auto">
-                <TusDugme
-                  onClick={() => setLTasimaSerbest((a) => !a)}
-                  etiket={t(lTasimaSerbest ? 'screen.lTasimaKapat' : 'screen.lTasimaAc')}
-                  aktif={lTasimaSerbest}
-                >
-                  <path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" />
-                </TusDugme>
-                <span className="rounded-md bg-black/55 px-2 py-1 text-[11px] font-medium text-white">
-                  {t(lTasimaSerbest ? 'screen.lTasimaSerbest' : 'screen.lTasimaKose')}
-                </span>
-              </div>
-              {(lSolUst !== 0 || lSolAlt !== 0 || lSagUst !== 0 || lSagAlt !== 0) && (
-                <button
-                  type="button"
-                  className="pointer-events-auto rounded-md bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/75 transition-colors"
-                  onClick={() => {
-                    setLSolUst(0)
-                    setLSolAlt(0)
-                    setLSagUst(0)
-                    setLSagAlt(0)
-                  }}
-                >
-                  {t('screen.lEgimSifirla')}
-                </button>
-              )}
-            </div>
-          )}
 
           {/*
             KABİN KALINLIĞI — tasarımın yan yüzü.
@@ -7330,6 +7218,144 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 )}
                               </>
                             )}
+                          </>
+                        )}
+
+                        {/*
+                          KANAT ŞEKLİ — SAĞ PANELDE, TUVALİN ÜSTÜNDE DEĞİL.
+
+                          Tuşlar bir süre tuvalin sol alt köşesinde duruyordu;
+                          tasarımın önüne geliyor ve tam da ayarlanan şeyi
+                          kapatıyorlardı. Panelde hem yer var hem de ölçülerin
+                          yanında duruyorlar.
+
+                          OK YÖNÜ KANADA GÖRE DEĞİŞİYOR. Aynı işaretli dönüş,
+                          sol kanadın uzak ucunu yukarı, sağ kanadınkini aşağı
+                          götürüyor (uzak uç dikişin iki yanında). Yukarı oku
+                          her iki kanatta da GERÇEKTEN yukarı kaldırsın diye
+                          işaret kanada göre çevriliyor; yoksa ok ters iş
+                          yapıyor.
+                        */}
+                        {lKoseCizimi && !lKoseKipi && !refKipi && (
+                          <>
+                            <div className="mt-3 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
+                              {t('screen.lSekilBaslik')}
+                            </div>
+                            <p className="mt-0.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                              {t('screen.lSekilIpucu')}
+                            </p>
+                            <div className="mt-1.5 grid grid-cols-2 gap-2">
+                              {[
+                                {
+                                  ad: 'screen.lEgimSol',
+                                  yon: 1,
+                                  ustAci: lSolUst,
+                                  setUst: setLSolUst,
+                                  altAci: lSolAlt,
+                                  setAlt: setLSolAlt,
+                                },
+                                {
+                                  ad: 'screen.lEgimSag',
+                                  yon: -1,
+                                  ustAci: lSagUst,
+                                  setUst: setLSagUst,
+                                  altAci: lSagAlt,
+                                  setAlt: setLSagAlt,
+                                },
+                              ].map(({ ad, yon, ustAci, setUst, altAci, setAlt }) => {
+                                const oynat = (ayarla, isaret) =>
+                                  ayarla((v) =>
+                                    Math.max(
+                                      -EGIM_SINIR,
+                                      Math.min(EGIM_SINIR, v + isaret * yon * EGIM_ADIM),
+                                    ),
+                                  )
+                                const satir = (etiket, deger, ayarla, yukariYol, asagiYol) => (
+                                  <div className="mt-1.5 flex items-center gap-1">
+                                    <span className="flex-1 text-[12px] text-neutral-500 dark:text-neutral-400">
+                                      {etiket}
+                                    </span>
+                                    {deger != null && (
+                                      <span className="text-[12px] tabular-nums text-neutral-600 dark:text-neutral-300">
+                                        {deger > 0 ? '+' : ''}{deger}°
+                                      </span>
+                                    )}
+                                    <SekilTus
+                                      onClick={() => oynat(ayarla, -1)}
+                                      etiket={`${t(ad)} ${etiket} — ${t('screen.lSekilYukari')}`}
+                                      yol={yukariYol}
+                                    />
+                                    <SekilTus
+                                      onClick={() => oynat(ayarla, 1)}
+                                      etiket={`${t(ad)} ${etiket} — ${t('screen.lSekilAsagi')}`}
+                                      yol={asagiYol}
+                                    />
+                                  </div>
+                                )
+                                const ikisiniOynat = (isaret) => {
+                                  oynat(setUst, isaret)
+                                  oynat(setAlt, isaret)
+                                }
+                                return (
+                                  <div
+                                    key={ad}
+                                    className="rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2 pt-1.5 pb-2"
+                                  >
+                                    <div className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">
+                                      {t(ad)}
+                                    </div>
+                                    {satir(t('screen.lKenarUst'), ustAci, setUst, OK_YUKARI, OK_ASAGI)}
+                                    {satir(t('screen.lKenarAlt'), altAci, setAlt, OK_YUKARI, OK_ASAGI)}
+                                    <div className="mt-1.5 flex items-center gap-1">
+                                      <span className="flex-1 text-[12px] text-neutral-500 dark:text-neutral-400">
+                                        {t('screen.lKenarIkisi')}
+                                      </span>
+                                      <SekilTus
+                                        onClick={() => ikisiniOynat(-1)}
+                                        etiket={`${t(ad)} ${t('screen.lKenarIkisi')} — ${t('screen.lSekilYukari')}`}
+                                        yol={ISARET_ARTI}
+                                      />
+                                      <SekilTus
+                                        onClick={() => ikisiniOynat(1)}
+                                        etiket={`${t(ad)} ${t('screen.lKenarIkisi')} — ${t('screen.lSekilAsagi')}`}
+                                        yol={ISARET_EKSI}
+                                      />
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                            {/*
+                              TAŞIMA KİLİDİ — açıkken ekran köşeden ayrılıp her
+                              yere gidebiliyor, kapalıyken yalnızca köşe çizgisi
+                              boyunca kayıyor (bkz. lTasimaSerbest).
+                            */}
+                            <div className="mt-2 flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setLTasimaSerbest((a) => !a)}
+                                className={`flex-1 py-2 rounded-lg text-[13px] font-medium border transition-colors ${
+                                  lTasimaSerbest
+                                    ? 'border-brand text-brand'
+                                    : 'border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
+                                }`}
+                              >
+                                {t(lTasimaSerbest ? 'screen.lTasimaSerbest' : 'screen.lTasimaKose')}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!lSolUst && !lSolAlt && !lSagUst && !lSagAlt}
+                                onClick={() => {
+                                  setLSolUst(0)
+                                  setLSolAlt(0)
+                                  setLSagUst(0)
+                                  setLSagAlt(0)
+                                }}
+                                className="flex-1 py-2 rounded-lg text-[13px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
+                              >
+                                {t('screen.lEgimSifirla')}
+                              </button>
+                            </div>
                           </>
                         )}
 
