@@ -52,9 +52,12 @@ export const PANEL = {
   /*
    * MANUEL DÜZENLE — referanstan sonraki ikinci yol.
    *
-   * Kapalı, çünkü onu tamamlayan düğmeler ("Ölçü kutusunu oluştur",
-   * "Ölçüyü uygula") kapatıldı; açık bırakmak hiçbir yere çıkmayan bir
-   * düğme bırakmak olurdu. Manuel yol yeniden tasarlanınca birlikte açılır.
+   * SEÇENEK GÖRÜNÜYOR ama İŞLEVİ YOK: akışta iki yol olduğu baştan belli
+   * olsun isteniyor, manuel yolun kendisi sonra tasarlanacak. Basılınca
+   * yalnızca "yakında" notu çıkıyor; eski cm'li kutu yolu açılmıyor, çünkü
+   * onu tamamlayan düğmeler kapalı (bkz. olcuKutusu).
    */
-  manuelDuzenle: false,
+  manuelDuzenle: true,
+  /* Manuel yolun kendisi çalışıyor mu — şimdilik hayır. */
+  manuelCalisir: false,
 }

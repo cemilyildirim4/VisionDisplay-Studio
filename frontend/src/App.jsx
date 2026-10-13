@@ -5170,6 +5170,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * geometride, bkz. lKose.js sekilVer). İç bükey köşede üst eksi, alt artı
    * olur: köşe en uzak nokta, duvar boyunca uzaklaşıldıkça kanat açılır.
    */
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * ÖLÇÜ SİHİRBAZI FOTOĞRAFLI MEKÂNDA POP-UP.
+   *
+   * Panelin içinde, öteki ayarların arasında duruyordu; arka plan yüklenince
+   * yapılacak İLK ve TEK iş ölçüyü kurmak olduğu halde göze çarpmıyordu.
+   * Artık öne çıkan bir pencere.
+   *
+   * PERDESİ YOK ve sağ tarafa yaslı: adımların çoğu TUVALE tıklamakla
+   * ilerliyor (referansın iki ucu, alanın dört köşesi). Arka planı kapatan
+   * bir kalıp pencere tam da yapılması gereken işi engellerdi.
+   *
+   * Öteki mekânlarda (hazır sahneler) eskisi gibi panelin içinde duruyor —
+   * orada akış zaten farklı ve yerinde çalışıyor.
+   */
+  const olcuPencereSinifi =
+    scene === 'ozel' && ozelSahne
+      ? 'fixed right-4 top-20 z-50 w-[360px] max-w-[calc(100vw-2rem)] max-h-[78vh] overflow-y-auto rounded-2xl border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#1a1f27] shadow-2xl p-3'
+      : ''
+
   const lSekilPaneli = (
     <div className="mt-2">
       <div className="text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
@@ -7374,6 +7394,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           geçerli olduğu belirsizdi.
                         */}
                         {sihirbazAdim > 0 ? (
+                          <div className={olcuPencereSinifi}>
                           <OlcuSihirbazi
                             adim={sihirbazAdim}
                             t={t}
@@ -7456,6 +7477,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             /* L'nin son adımı: kanat şekli (bkz. lSekilPaneli). */
                             kanatSekli={lSekilPaneli}
                           />
+                          </div>
                         ) : (
                           <>
                             {/*

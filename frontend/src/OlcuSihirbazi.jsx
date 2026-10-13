@@ -46,7 +46,13 @@ function Nokta({ dolu, etkin }) {
 
 import { PANEL } from './panelOzellikleri.js'
 
-export default function OlcuSihirbazi({
+export default function OlcuSihirbazi(props) {
+  /* "Manuel düzenle" basıldı mı — yalnızca notu göstermek için. */
+  const [manuelNot, setManuelNot] = useState(false)
+  return <SihirbazKart {...props} manuelNot={manuelNot} setManuelNot={setManuelNot} />
+}
+
+function SihirbazKart({
   adim,
   t,
   /* 1. adım */
@@ -92,6 +98,8 @@ export default function OlcuSihirbazi({
   onAlanSigdir = null,
   /* L'nin son adımında çizilen kanat şekli tuşları (bkz. App.jsx). */
   kanatSekli,
+  manuelNot,
+  setManuelNot,
   lKoseOran = null,
   /* İşaretlenen çizgi dik mi — yatay bir çizgiden köşe çıkmaz. */
   lKoseDikMi = true,
@@ -461,14 +469,26 @@ export default function OlcuSihirbazi({
                 )}
               </div>
               {PANEL.manuelDuzenle && (
-                <button
-                  type="button"
-                  onClick={onIleri}
-                  disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
-                  className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
-                >
-                  {t('sih.elleDuzenle')}
-                </button>
+                <>
+                  {/*
+                    Seçenek görünüyor, işlevi yok (bkz. panelOzellikleri
+                    manuelCalisir). Akışta iki yol olduğu baştan belli olsun
+                    diye duruyor; basınca yalnızca not çıkıyor.
+                  */}
+                  <button
+                    type="button"
+                    onClick={() => (PANEL.manuelCalisir ? onIleri?.() : setManuelNot(true))}
+                    disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                    className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
+                  >
+                    {t('sih.elleDuzenle')}
+                  </button>
+                  {manuelNot && !PANEL.manuelCalisir && (
+                    <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>
+                      {t('sih.manuelYakinda')}
+                    </p>
+                  )}
+                </>
               )}
             </>
           )}
