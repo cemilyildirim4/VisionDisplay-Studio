@@ -497,6 +497,24 @@ export default function OlcuSihirbazi({
             </>
           )}
 
+          {/*
+            ALAN KURULDUKTAN SONRA — sığdırma ve taşıma her an elin altında.
+            Sihirbazın hangi adımında olunursa olunsun görünüyor; alan bir kez
+            işaretlendikten sonra bunlar kurulumun değil, ayarın parçası.
+          */}
+          {!alanKipi && alanVar && onAlanSigdir && adim !== 4 && (
+            <div className="mt-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2">
+              <button
+                type="button"
+                onClick={onAlanSigdir}
+                className="w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
+              >
+                {t('sih.alanSigdir')}
+              </button>
+              <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.alanTasi')}</p>
+            </div>
+          )}
+
           {/* 3 — KUTU ÖLÇÜSÜ */}
           {adim === 3 && !lKose && (
             <>
@@ -579,13 +597,18 @@ export default function OlcuSihirbazi({
                 biri gerçek ölçü, öteki "şurayı kaplasın".
               */}
               {alanVar && onAlanSigdir && (
-                <button
-                  type="button"
-                  onClick={onAlanSigdir}
-                  className="mt-2 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                >
-                  {t('sih.alanSigdir')}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={onAlanSigdir}
+                    className="mt-2 w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
+                  >
+                    {t('sih.alanSigdir')}
+                  </button>
+                  <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                    {t('sih.alanTasi')}
+                  </p>
+                </>
               )}
 
               {/*

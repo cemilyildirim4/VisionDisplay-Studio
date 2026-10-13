@@ -108,7 +108,7 @@ function SekilTus({ onClick, etiket, yol }) {
 }
 import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
 /* Alan içine yerleştirme ve sığdırma — ikisi de hazır (bkz. homografi.js). */
-import { dortgenNoktasi, sigdirDortgen } from './homografi.js'
+import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -837,6 +837,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [alanKipi, setAlanKipi] = useState(false)
   const [alanNokta, setAlanNokta] = useState([])
+  /*
+   * TASARIMIN ALAN İÇİNDEKİ YERİ — alanın birim karesinde merkez (0..1).
+   *
+   * Ekranın yeri artık piksel kaymasıyla değil, ALANIN KENDİ koordinatıyla
+   * tutuluyor. Böylece sürükleme alanın dışına çıkamıyor: değer 0..1
+   * aralığına sıkıştırılıyor, gerisini alanın homografisi hallediyor
+   * (bkz. alanaYerlestir).
+   */
+  const [alanKonum, setAlanKonum] = useState({ u: 0.5, v: 0.5 })
+  /* "Alana sığdır" basıldıysa ekran alanı dolduruyor; sürükleyince çıkıyor. */
+  const [alanDoldur, setAlanDoldur] = useState(false)
 
   /*
    * L TİPİNDE YERLEŞİM: KÖŞE ÇİZGİSİ.
@@ -1371,6 +1382,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setAktifEkranId(null)
       setAlanKipi(false)
       setAlanNokta([])
+      setAlanKonum({ u: 0.5, v: 0.5 })
+      setAlanDoldur(false)
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
@@ -3350,6 +3363,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const alaniBitir = () => {
     const k = alanNokta.length === 4 ? alanNokta.map(oranTuvale) : null
     setAlanKipi(false)
+    setAlanKonum({ u: 0.5, v: 0.5 })
+    setAlanDoldur(false)
     const yeni = k ? alanaYerlestir(k) : null
     if (yeni) setElleKose(yeni)
     /* Alan kurulduktan sonra yapilacak is konumlandirma: dogrudan o adima. */
@@ -3360,7 +3375,56 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const tasarimiAlanaSigdir = () => {
     if (!alanTuval || !(tasarimHm > 0)) return
     const n = sigdirDortgen(alanTuval, tasarimWm / tasarimHm)
-    if (Array.isArray(n) && n.length === 4) setElleKose(n)
+    if (Array.isArray(n) && n.length === 4) {
+      setElleKose(n)
+      setAlanDoldur(true)
+    }
+  }
+
+  /*
+   * ALAN İÇİNDE TAŞIMA.
+   *
+   * Fare hareketi alanın birim karesine çevriliyor ve 0..1'e sıkıştırılıyor:
+   * ekran işaretlenen alanın dışına çıkamıyor. Çevirme oranı alanın ortalama
+   * piksel ölçüsü — perspektif yüzünden uzak kenarda bir piksel daha çok yol
+   * demek ama fark sürükleme hissinde kayboluyor; sınır yine de kesin.
+   *
+   * Sürüklemek "alanı doldur" halinden çıkarıyor: doldurulmuş bir ekranı
+   * taşımanın anlamı yok, alanın tamamı zaten o.
+   */
+  const alanIcindeSurukle = (e) => {
+    if (!alanTuval) return
+    if (e.button != null && e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    const enPx =
+      (Math.hypot(alanTuval[1].x - alanTuval[0].x, alanTuval[1].y - alanTuval[0].y) +
+        Math.hypot(alanTuval[2].x - alanTuval[3].x, alanTuval[2].y - alanTuval[3].y)) /
+      2
+    const boyPx =
+      (Math.hypot(alanTuval[3].x - alanTuval[0].x, alanTuval[3].y - alanTuval[0].y) +
+        Math.hypot(alanTuval[2].x - alanTuval[1].x, alanTuval[2].y - alanTuval[1].y)) /
+      2
+    if (!(enPx > 1) || !(boyPx > 1)) return
+    const basX = e.clientX
+    const basY = e.clientY
+    const bas = alanDoldur ? { u: 0.5, v: 0.5 } : alanKonum
+    const tasi = (ev) => {
+      const u = Math.max(0, Math.min(1, bas.u + (ev.clientX - basX) / enPx))
+      const v = Math.max(0, Math.min(1, bas.v + (ev.clientY - basY) / boyPx))
+      setAlanKonum({ u, v })
+      setAlanDoldur(false)
+      const yeni = alanaYerlestir(alanTuval, u, v)
+      if (yeni) setElleKose(yeni)
+    }
+    const birak = () => {
+      window.removeEventListener('pointermove', tasi)
+      window.removeEventListener('pointerup', birak)
+      window.removeEventListener('pointercancel', birak)
+    }
+    window.addEventListener('pointermove', tasi)
+    window.addEventListener('pointerup', birak)
+    window.addEventListener('pointercancel', birak)
   }
 
   /*
@@ -4514,6 +4578,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAktifEkranId(null)
     setAlanKipi(false)
     setAlanNokta([])
+    setAlanKonum({ u: 0.5, v: 0.5 })
+    setAlanDoldur(false)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -6307,6 +6373,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                */
             />
           )}
+
+          {/*
+            ALAN İÇİNDE TAŞIMA KATMANI.
+
+            Tasarımın kendi dörtgeninin üstünde duran saydam bir yüzey;
+            yalnızca işaretlenmiş bir alan varken ve hiçbir işaretleme kipi
+            açık değilken. Sürükleme alanın birim karesinde hesaplanıyor,
+            dolayısıyla ekran alanın dışına çıkamıyor.
+          */}
+          {alanTuval &&
+            !alanKipi &&
+            !refKipi &&
+            !lKoseKipi &&
+            !koseKipi &&
+            scene === 'ozel' &&
+            ozelSahne &&
+            Array.isArray(koseMutlak) &&
+            koseMutlak.length === 4 &&
+            (() => {
+              const enPx = Math.hypot(koseMutlak[1].x - koseMutlak[0].x, koseMutlak[1].y - koseMutlak[0].y)
+              const boyPx = Math.hypot(koseMutlak[3].x - koseMutlak[0].x, koseMutlak[3].y - koseMutlak[0].y)
+              if (!(enPx > 2) || !(boyPx > 2)) return null
+              const d = koseDonusumu(enPx, boyPx, koseMutlak)
+              if (!d) return null
+              return (
+                <div
+                  onPointerDown={alanIcindeSurukle}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: enPx,
+                    height: boyPx,
+                    transform: d,
+                    transformOrigin: '0 0',
+                    cursor: 'move',
+                    touchAction: 'none',
+                    zIndex: 11,
+                  }}
+                />
+              )
+            })()}
 
           {/*
             YERLEŞİM ALANI SEÇİCİ — dört nokta.

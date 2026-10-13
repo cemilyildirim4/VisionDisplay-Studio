@@ -532,7 +532,12 @@ const dict = {
     ar: 'انقر على زوايا المنطقة الأربع التي يجب أن تغطيها الشاشة. يبقى التصميم مخفيًا حتى وضع النقاط الأربع.',
   },
   'sih.alanBitir': { tr: 'Alanı onayla', en: 'Confirm the area', ar: 'تأكيد المنطقة' },
-  'sih.alanSigdir': { tr: 'Tasarımı sığdır', en: 'Fit the design', ar: 'ملاءمة التصميم' },
+  'sih.alanSigdir': { tr: 'Alana sığdır', en: 'Fit to the area', ar: 'ملاءمة المنطقة' },
+  'sih.alanTasi': {
+    tr: 'Tasarımı alanın içinde sürükleyerek taşıyabilirsiniz; dışına çıkmıyor.',
+    en: 'Drag the design to move it inside the area; it cannot leave it.',
+    ar: 'اسحب التصميم لتحريكه داخل المنطقة؛ لا يمكنه الخروج منها.',
+  },
   'sih.ozetYok': {
     tr: 'Henüz ölçek yok. Fotoğrafta bilinen bir uzunluk işaretleyerek başlayın.',
     en: 'No scale yet. Start by marking a known length on the photo.',
