@@ -72,6 +72,24 @@ if ('serviceWorker' in navigator) {
       })
       /* Sayfa her açıldığında sunucuda yeni sürüm var mı diye bak. */
       kayit.update().catch(() => {})
+
+      /*
+       * SEKME AÇIK KALDIĞI SÜRECE DE BAKMAYA DEVAM ET.
+       *
+       * Kontrol yalnızca açılışta bir kez yapılıyordu. Sekmesini açık tutan
+       * kullanıcı araya giren bütün yayınları kaçırıyor ve saatlerce eski
+       * ekranı görüyordu — "yaptığın şeyler kayboluyor, eskisi geri geliyor"
+       * denen durum buydu; aslında yeni sürüm hiç inmiyordu.
+       *
+       * İki tetikleyici: dakikada bir, ve sekmeye geri dönüldüğünde. İkisi de
+       * yalnızca bir HEAD isteği kadar; yeni sürüm yoksa hiçbir şey inmiyor.
+       */
+      const bak = () => kayit.update().catch(() => {})
+      setInterval(bak, 60000)
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') bak()
+      })
+      window.addEventListener('focus', bak)
     })
     .catch(() => {})
 }
