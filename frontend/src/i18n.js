@@ -277,6 +277,22 @@ const dict = {
   'screen.lEgimSag': { tr: 'Sağ kanat', en: 'Right wing', ar: 'الجناح الأيمن' },
   'screen.lEgimSola': { tr: 'Sola eğ', en: 'Tilt left', ar: 'إمالة لليسار' },
   'screen.lEgimSaga': { tr: 'Sağa eğ', en: 'Tilt right', ar: 'إمالة لليمين' },
+  'ekran.coklu': { tr: 'Ekranlar', en: 'Screens', ar: 'الشاشات' },
+  'ekran.tekil': { tr: 'ekran', en: 'screen', ar: 'شاشة' },
+  'ekran.oncelikOlcu': {
+    tr: 'Önce ölçeklendirmeyi tamamlayın: ekranın fotoğraftaki yeri ve ölçüsü oradan geliyor.',
+    en: 'Finish the scaling first: the screen gets its place and size from it.',
+    ar: 'أكمل المعايرة أولاً: تأخذ الشاشة موضعها ومقاسها منها.',
+  },
+  'ekran.ekle': { tr: 'Ekran ekle', en: 'Add screen', ar: 'إضافة شاشة' },
+  'ekran.duzenle': { tr: 'Düzenle', en: 'Edit', ar: 'تحرير' },
+  'ekran.sil': { tr: 'Kaldır', en: 'Remove', ar: 'إزالة' },
+  'ekran.duzenleniyor': { tr: 'düzenleniyor', en: 'editing', ar: 'قيد التحرير' },
+  'ekran.cokluIpucu': {
+    tr: 'Duran ekranı yerleştirin, sonra "Ekran ekle" deyin: olduğu yere sabitlenir ve elinizde aynı ölçüde yenisi kalır. Sabit bir ekrana tıklayarak ya da "Düzenle" ile ona geri dönebilirsiniz.',
+    en: 'Place the current screen, then press "Add screen": it is pinned where it stands and you get a new one of the same size. Click a pinned screen or press "Edit" to go back to it.',
+    ar: 'ضع الشاشة الحالية ثم اضغط «إضافة شاشة»: تُثبّت في مكانها وتحصل على واحدة جديدة بالمقاس نفسه.',
+  },
   'screen.lSekilBaslik': { tr: 'Kanat şekli', en: 'Wing shape', ar: 'شكل الجناح' },
   'screen.lSekilIpucu': {
     tr: 'Üst kenarı tavan hattına, alt kenarı zemin hattına getirin.',

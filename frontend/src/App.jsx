@@ -36,6 +36,7 @@ import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
+import EkEkranlar from './EkEkranlar.jsx'
 
 /*
  * KANAT ŞEKLİ TUŞU — 40 px.
@@ -46,6 +47,49 @@ const OK_YUKARI = 'M12 19V5M5 12l7-7 7 7'
 const OK_ASAGI = 'M12 5v14M19 12l-7 7-7-7'
 const ISARET_ARTI = 'M12 5v14M5 12h14'
 const ISARET_EKSI = 'M5 12h14'
+
+/*
+ * AÇILIR PANEL BÖLÜMÜ.
+ *
+ * Arka planla ilgili ayarlar tek tek düğmeler hâlinde: hangisine basılırsa o
+ * bölüm açılıyor, tekrar basılınca kapanıyor. Hepsi aynı anda açık dururken
+ * panel okunmuyordu ve hangi ayarın hangi işe yaradığı kayboluyordu.
+ */
+function PanelBolum({ baslik, acik, onAc, ozet = null, children }) {
+  return (
+    <div className="mt-2 rounded-xl border border-neutral-200 dark:border-[#2c333f] overflow-hidden">
+      <button
+        type="button"
+        onClick={onAc}
+        aria-expanded={acik}
+        className={`w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors ${
+          acik
+            ? 'bg-brand/5 text-brand'
+            : 'text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-[#222833]'
+        }`}
+      >
+        <span className="flex-1 text-[14.5px] font-semibold">{baslik}</span>
+        {ozet && (
+          <span className="text-[13px] font-medium text-neutral-500 dark:text-neutral-400">{ozet}</span>
+        )}
+        <svg
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ transform: acik ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {acik && <div className="px-3 pb-3">{children}</div>}
+    </div>
+  )
+}
 
 function SekilTus({ onClick, etiket, yol }) {
   return (
@@ -588,6 +632,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yalnızca fotoğraftaki perspektifi.
    */
   const [elleKose, setElleKose] = useState(null)
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * AYNI ARKA PLANA BİRDEN ÇOK EKRAN.
+   *
+   * Bir ekran yerleştirildikten sonra "Ekran ekle" deniyor: o ekran olduğu
+   * yere SABİTLENİYOR ve elde yeni bir ekran kalıyor, aynı süreç devam
+   * ediyor. Düzenlenmekte olan ekran eskisi gibi tek bir ekran — mevcut
+   * yerleştirme, ölçü ve açı mantığının hiçbirine dokunulmadı. Sabitlenenler
+   * ayrı bir katmanda çiziliyor (bkz. EkEkranlar.jsx).
+   *
+   * KÖŞELER ORAN OLARAK (fotoğrafın 0..1'i) saklanıyor, piksel olarak değil:
+   * pencere boyutu ya da sahne yakınlığı değişince ekranlar fotoğrafın
+   * üstünde durdukları yerde kalıyor.
+   *
+   * YAPILANDIRMA ŞİMDİLİK ORTAK: eklenen ekran 1. ekranla aynı model, satır,
+   * sütun ve içerikle çiziliyor. Ekran başına ayrı yapılandırma sonra
+   * gelecek; o yüzden her kayıt kendi kimliğiyle duruyor.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const [sabitEkranlar, setSabitEkranlar] = useState([])
+  /*
+   * DÜZENLENEN EKRANIN KİMLİĞİ.
+   *
+   * Önce yoktu ve "Düzenle" iki ekranın YERİNİ takas ediyordu: tıklanan
+   * kaydın içine duran ekranın dörtgeni yazılıyor, duran ekran da onun
+   * yerine geçiyordu. Bugün bütün ekranlar aynı göründüğü için fark
+   * edilmiyordu ama kayıtların kimliği karışıyordu — ekran başına ayrı
+   * yapılandırma gelince (model, satır, sütun, içerik) o kimlik ayarları da
+   * yanlış ekrana taşırdı.
+   *
+   * Artık her ekranın kimliği kendinde kalıyor: "Düzenle" duran ekranı KENDİ
+   * kimliğiyle listeye geri koyuyor, seçileni listeden alıyor. Hiçbir ekran
+   * kaybolmuyor ve her an tam olarak biri düzenleniyor.
+   */
+  const [aktifEkranId, setAktifEkranId] = useState(null)
+  const yeniEkranKimligi = () => Date.now() + Math.random()
+  /*
+   * AÇIK OLAN PANEL BÖLÜMÜ — aynı anda yalnızca biri.
+   * null ise hepsi kapalı; aynı başlığa tekrar basmak kapatıyor.
+   */
+  const [acikBolum, setAcikBolum] = useState(null)
+  const bolumAc = (ad) => setAcikBolum((o) => (o === ad ? null : ad))
   /*
    * SABİTLENEN KÖŞELER.
    *
@@ -1261,6 +1347,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setLSolAlt(0)
       setLSagUst(0)
       setLSagAlt(0)
+      setSabitEkranlar([])
+      setAktifEkranId(null)
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
@@ -3196,6 +3284,71 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })()
 
   /*
+   * EKRAN EKLE — duran ekranı sabitle, elde yenisi kalsın.
+   *
+   * Sabitlenen ekranın köşeleri o anda EKRANDA GÖRÜNEN dörtgen (koseMutlak),
+   * orana çevrilmiş hâli. Yeni ekran aynı ölçüyle, bir ekran boyu sağa
+   * kaydırılmış olarak duruyor ki ikisi üst üste binmesin ve kullanıcı yeni
+   * olanı görsün.
+   */
+  /*
+   * EKRANIN O ANKİ YAPILANDIRMASI — kayda birlikte giriyor.
+   *
+   * Bugün hepsi aynı çiziliyor (eklenen ekran 1. ekranla aynı model, satır,
+   * sütun ve içerikle geliyor; istenen de bu). Ama ekran başına ayrı
+   * yapılandırma sonra gelecek ve o zaman geçmişe dönük veri üretilemez —
+   * bu yüzden anlık görüntü ŞİMDİDEN saklanıyor. Çizimde henüz
+   * kullanılmıyor, yani bugünkü davranış değişmiyor.
+   */
+  const ekranAyariAnlik = () => ({
+    cols,
+    rows,
+    model: previewModel?.code ?? null,
+    content,
+    contentUrl: contentUrl || null,
+  })
+
+  const ekranEkle = () => {
+    if (!Array.isArray(koseMutlak) || koseMutlak.length !== 4) return
+    const oran = koseMutlak.map(tuvalOrana)
+    if (oran.some((p) => !Number.isFinite(p?.x) || !Number.isFinite(p?.y))) return
+    const kimlik = aktifEkranId ?? yeniEkranKimligi()
+    setSabitEkranlar((l) => [...l, { id: kimlik, oran, ayar: ekranAyariAnlik() }])
+    setAktifEkranId(yeniEkranKimligi())
+    /* Yeni ekran: aynı dörtgen, bir boy sağa. */
+    const en = Math.max(
+      Math.hypot(koseMutlak[1].x - koseMutlak[0].x, koseMutlak[1].y - koseMutlak[0].y),
+      Math.hypot(koseMutlak[2].x - koseMutlak[3].x, koseMutlak[2].y - koseMutlak[3].y),
+    )
+    const pay = en * 1.1
+    setElleKose(koseMutlak.map((k) => ({ x: k.x + pay, y: k.y })))
+  }
+
+  /*
+   * SABİT EKRANI DÜZENLEMEYE AL.
+   *
+   * Duran ekran KENDİ kimliğiyle listeye dönüyor, seçilen listeden çıkıp ele
+   * geliyor. Hiçbir ekran kaybolmuyor, her an tam olarak biri düzenleniyor ve
+   * kimlikler yer değiştirmiyor (bkz. aktifEkranId).
+   */
+  const ekraniDuzenle = (id) => {
+    const secilen = sabitEkranlar.find((e) => e.id === id)
+    if (!secilen) return
+    const duran =
+      Array.isArray(koseMutlak) && koseMutlak.length === 4 ? koseMutlak.map(tuvalOrana) : null
+    const kimlik = aktifEkranId ?? yeniEkranKimligi()
+    setSabitEkranlar((l) => {
+      const kalan = l.filter((e) => e.id !== id)
+      /* Duran ekranın dörtgeni yoksa (ölçü kurulmamış) sabitlenecek bir şey de yok. */
+      return duran ? [...kalan, { id: kimlik, oran: duran, ayar: ekranAyariAnlik() }] : kalan
+    })
+    setElleKose(secilen.oran.map(oranTuvale))
+    setAktifEkranId(secilen.id)
+  }
+
+  const ekranSil = (id) => setSabitEkranlar((l) => l.filter((e) => e.id !== id))
+
+  /*
    * ELLE AÇIYI DÖRTGENE UYGULAR.
    *
    * Yaw: yüzeyi dikey ekseninde çevirmek — yaklaşan kenar uzar, uzaklaşan
@@ -4275,6 +4428,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setLSolAlt(0)
     setLSagUst(0)
     setLSagAlt(0)
+    setSabitEkranlar([])
+    setAktifEkranId(null)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -5934,6 +6089,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             lKoseCizimi hâlâ dolu (bkz. ekranGizle). Ölçüler sihirbazda yazılı
             olarak görünmeye devam ediyor; tasarım "Köşeyi kur" ile geri geliyor.
           */}
+          {/*
+            SABİTLENMİŞ EKRANLAR — aynı arka plana konmuş öteki ekranlar.
+
+            Düzenlenmekte olan ekran eskisi gibi WallPreview'de; burada
+            yalnızca sabitlenenler var. Üzerine tıklayınca o ekran düzenlemeye
+            alınıyor, elde duran da onun yerine sabitleniyor (takas).
+
+            İşaretleme sürerken çizilmiyor: o sırada tuvale yapılan tıklama
+            ölçü noktalarına gitmeli.
+          */}
+          {scene === 'ozel' && !refKipi && !lKoseKipi && (
+            <EkEkranlar
+              ekranlar={sabitEkranlar}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+              cols={cols}
+              rows={rows}
+              content={content}
+              contentUrl={contentUrl}
+              oranTuvale={oranTuvale}
+              onSec={ekraniDuzenle}
+            />
+          )}
+
           {lKoseCizimi && !lKoseKipi && !refKipi && (
             <LKoseEkran
               /*
@@ -7324,6 +7503,79 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               </>
                             )}
                           </>
+                        )}
+
+                        {/*
+                          EKRANLAR — aynı arka plana birden çok ekran.
+
+                          Listede sabitlenenler sırasıyla, en sonda da
+                          düzenlenmekte olan ekran duruyor. "Ekran ekle" duran
+                          ekranı yerine sabitliyor ve elde aynı ölçüde yenisi
+                          kalıyor; süreç baştan işliyor.
+                        */}
+                        {scene === 'ozel' && ozelSahne && (
+                          <PanelBolum
+                            baslik={t('ekran.coklu')}
+                            ozet={`${sabitEkranlar.length + 1}`}
+                            acik={acikBolum === 'ekranlar'}
+                            onAc={() => bolumAc('ekranlar')}
+                          >
+                            <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                              {t('ekran.cokluIpucu')}
+                            </p>
+                            <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1.5">
+                              {sabitEkranlar.map((e, i) => (
+                                <li
+                                  key={e.id}
+                                  className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2"
+                                >
+                                  <span className="flex-1 text-[14px] text-neutral-700 dark:text-neutral-200">
+                                    {i + 1}. {t('ekran.tekil')}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => ekraniDuzenle(e.id)}
+                                    className="px-2.5 py-1.5 rounded-lg text-[13px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                                  >
+                                    {t('ekran.duzenle')}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => ekranSil(e.id)}
+                                    aria-label={t('ekran.sil')}
+                                    title={t('ekran.sil')}
+                                    className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center transition-colors"
+                                  >
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                      <path d="M6 6l12 12M18 6L6 18" />
+                                    </svg>
+                                  </button>
+                                </li>
+                              ))}
+                              <li className="flex items-center gap-2 rounded-lg border border-brand/40 bg-brand/5 px-2.5 py-2">
+                                <span className="flex-1 text-[14px] font-medium text-brand">
+                                  {sabitEkranlar.length + 1}. {t('ekran.tekil')}
+                                </span>
+                                <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                                  {t('ekran.duzenleniyor')}
+                                </span>
+                              </li>
+                            </ul>
+                            {/* Dugme neden kapali, sessiz kalmasin. */}
+                            {!koseMutlak && (
+                              <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                                {t('ekran.oncelikOlcu')}
+                              </p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={ekranEkle}
+                              disabled={!koseMutlak}
+                              className="mt-2 w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
+                            >
+                              {t('ekran.ekle')}
+                            </button>
+                          </PanelBolum>
                         )}
 
                         {/* YERLEŞİM — tasarımın kabin hesabı, olduğu gibi. */}
