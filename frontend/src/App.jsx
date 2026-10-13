@@ -3361,14 +3361,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return n.every((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y)) ? n : null
   }
 
+  /*
+   * elleKose'ye MUTLAK dörtgen yazılmaz.
+   *
+   * Çizim yolu elleKose'nin üstüne sürükleme kaymasını EKLİYOR
+   * (bkz. koseTuval). Hesapladığımız dörtgen ekranda görünmesini istediğimiz
+   * yer, yani kayma zaten içinde; olduğu gibi yazınca kayma ikinci kez
+   * ekleniyor ve tasarım yerinden oynuyor.
+   */
+  const elleKoseyeYaz = (mutlak) => {
+    if (!Array.isArray(mutlak) || mutlak.length !== 4) return
+    setElleKose(
+      mutlak.map((k) => ({ x: k.x - (elleKayma?.x || 0), y: k.y - (elleKayma?.y || 0) })),
+    )
+  }
+
   /* Dört nokta tamamlandı: işaretleme kapanıyor, tasarım alana giriyor. */
   const alaniBitir = () => {
-    const k = alanNokta.length === 4 ? alanNokta.map(oranTuvale) : null
+    const k = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
     setAlanKipi(false)
     setAlanKonum({ u: 0.5, v: 0.5 })
     setAlanDoldur(false)
     const yeni = k ? alanaYerlestir(k) : null
-    if (yeni) setElleKose(yeni)
+    if (yeni) elleKoseyeYaz(yeni)
     /* Alan kurulduktan sonra yapilacak is konumlandirma: dogrudan o adima. */
     setSihirbazAdim(4)
   }
@@ -3378,7 +3393,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!alanTuval || !(tasarimHm > 0)) return
     const n = sigdirDortgen(alanTuval, tasarimWm / tasarimHm)
     if (Array.isArray(n) && n.length === 4) {
-      setElleKose(n)
+      elleKoseyeYaz(n)
       setAlanDoldur(true)
     }
   }
@@ -3417,7 +3432,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setAlanKonum({ u, v })
       setAlanDoldur(false)
       const yeni = alanaYerlestir(alanTuval, u, v)
-      if (yeni) setElleKose(yeni)
+      if (yeni) elleKoseyeYaz(yeni)
     }
     const birak = () => {
       window.removeEventListener('pointermove', tasi)
@@ -4091,7 +4106,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * oranTuvale henüz tanımlı olmadığı için uygulama "Ölçüm ile ayarla"ya
    * basılır basılmaz hata ekranına düşüyordu (TDZ).
    */
-  const alanTuval = alanNokta.length === 4 ? alanNokta.map(oranTuvale) : null
+  /*
+   * DÖRT KÖŞE HER ZAMAN AYNI SIRADA: sol üst, sağ üst, sağ alt, sol alt.
+   *
+   * Sıra tıklama sırasına bırakılmıştı. Kullanıcı köşeleri çapraz sırayla
+   * tıklayınca (örneğin sol üst, sağ üst, SOL alt, sağ alt) dörtgen kendi
+   * üstünden geçiyor; homografi böyle bir dörtgende tasarımı ters çeviriyor
+   * ve bir şeride eziyor — "tasarım ters dönüyor, bozuluyor" denen durum.
+   * Taşıma da aynı bozuk dörtgen üstünden hesaplandığı için şaşırıyordu.
+   *
+   * Köşeler artık ağırlık merkezine göre açıya sıralanıyor. Ekran
+   * koordinatında (y aşağı) açıyı küçükten büyüğe dizmek doğrudan
+   * sol üst → sağ üst → sağ alt → sol alt sırasını veriyor. Kullanıcı
+   * hangi sırayla tıklarsa tıklasın sonuç aynı.
+   */
+  const koseleriSirala = (n) => {
+    if (!Array.isArray(n) || n.length !== 4) return n
+    const mx = (n[0].x + n[1].x + n[2].x + n[3].x) / 4
+    const my = (n[0].y + n[1].y + n[2].y + n[3].y) / 4
+    return [...n].sort((a, b) => Math.atan2(a.y - my, a.x - mx) - Math.atan2(b.y - my, b.x - mx))
+  }
+
+  const alanTuval = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
 
   const tuvalOrana = (k) => {
     const yer = fotoYer
