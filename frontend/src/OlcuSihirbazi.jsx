@@ -44,6 +44,8 @@ function Nokta({ dolu, etkin }) {
   )
 }
 
+import { PANEL } from './panelOzellikleri.js'
+
 export default function OlcuSihirbazi({
   adim,
   t,
@@ -458,14 +460,16 @@ export default function OlcuSihirbazi({
                   </button>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={onIleri}
-                disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
-                className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
-              >
-                {t('sih.elleDuzenle')}
-              </button>
+              {PANEL.manuelDuzenle && (
+                <button
+                  type="button"
+                  onClick={onIleri}
+                  disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                  className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
+                >
+                  {t('sih.elleDuzenle')}
+                </button>
+              )}
             </>
           )}
 
@@ -570,9 +574,11 @@ export default function OlcuSihirbazi({
                 <button type="button" onClick={onGeri} className={yan}>
                   {t('sih.geri')}
                 </button>
-                <button type="button" onClick={onKutuKur} className={ana}>
-                  {t('ref2.kutuKur')}
-                </button>
+                {PANEL.olcuKutusu && (
+                  <button type="button" onClick={onKutuKur} className={ana}>
+                    {t('ref2.kutuKur')}
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -619,7 +625,7 @@ export default function OlcuSihirbazi({
                 açıda çevrilen bir dikdörtgen yakından çok, uzaktan az yamuk
                 görünür (bkz. durusKutusu.js). Bu yüzden artık kilitli değil.
               */}
-              {mesafeM != null && (
+              {PANEL.mesafe && mesafeM != null && (
                 <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1.5 dark:border-[#2c333f] dark:bg-[#1b2029]">
                   <span className="text-[13.5px] text-neutral-600 dark:text-neutral-400">
                     {t('scene.viewDist')}
@@ -668,7 +674,7 @@ export default function OlcuSihirbazi({
                 Düzlem kipinde hiç yok: orada perspektif ölçülmüş oluyor.
               */}
               {/* Eğim kutuyu düzeltiyor; L'de kutu yok, köşe çizgisi var. */}
-              {onEgim && !lKose && (
+              {PANEL.egim && onEgim && !lKose && (
                 <button
                   type="button"
                   onClick={onEgim}

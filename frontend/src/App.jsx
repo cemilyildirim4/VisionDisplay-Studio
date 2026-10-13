@@ -37,6 +37,8 @@ import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
 import EkEkranlar from './EkEkranlar.jsx'
+/* Sağ panelde ne görünüyor — tek yerden açma/kapama (hiçbiri silinmedi). */
+import { PANEL } from './panelOzellikleri.js'
 
 /*
  * KANAT ŞEKLİ TUŞU — 40 px.
@@ -7240,7 +7242,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   hiçbir ekran türünde panel değişmiyor.
                 */}
                 {/* Mekân seçilmeden köşe kararı anlamsız: hangi mekânın köşesi? */}
-                {lTipiAktif && scene !== 'none' && (
+                {PANEL.lKoseTarafi && lTipiAktif && scene !== 'none' && (
                   <div className="mt-2">
                     <div className="mb-1 text-[15px] font-semibold text-neutral-600 dark:text-neutral-400">
                       {t('screen.lKoseBaslik')}
@@ -7634,6 +7636,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                           yanına geri dönmüyor, merkezi ve duruşu
                                           korunuyor (bkz. olcuyuGuncelle).
                                         */}
+                                        {PANEL.olcuKutusu && (
                                         <button
                                           type="button"
                                           onClick={olcuKutu ? olcuyuGuncelle : olcuKutusunuKur}
@@ -7641,6 +7644,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                         >
                                           {olcuKutu ? t('ref2.olcuUygula') : t('ref2.kutuKur')}
                                         </button>
+                                        )}
                                         {/* Reddedilen ölçünün sebebi burada da görünsün. */}
                                         {kutuMesaj && (
                                           <p className="mt-1.5 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
@@ -7686,7 +7690,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                       </div>
                                     )}
 
-                                    {olcuKutu && egimDugmesiVar && (
+                                    {PANEL.egim && olcuKutu && egimDugmesiVar && (
                                       <button
                                         type="button"
                                         onClick={kutuEgiminiCevir}
@@ -7814,7 +7818,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           imkânsızdı; bu düğme sürükleme kaymasını sıfırlayıp
                           tasarımı kutunun ortasına koyuyor.
                         */}
-                        {duvarOlcu && (
+                        {PANEL.kutuyaYerlestir && duvarOlcu && (
                           <button
                             type="button"
                             onClick={tasarimiKutuyaYerlestir}
@@ -7823,7 +7827,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             {t('scene.kutuyaYerlestir')}
                           </button>
                         )}
-                        {duvarOlcu && (
+                        {PANEL.duvaraSigdir && duvarOlcu && (
                           <button
                             type="button"
                             onClick={tasarimiDuvaraSigdir}
@@ -7872,7 +7876,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             {ozelUyari}
                           </p>
                         )}
-                        {duvarDunya && (
+                        {PANEL.izgara && duvarDunya && (
                           <button
                             type="button"
                             onClick={() => setIzgaraAcik((v) => !v)}
@@ -7883,7 +7887,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         )}
                       </>
                     )}
-                    {!TASLAK_KIPI && (
+                    {PANEL.enUygunYer && !TASLAK_KIPI && (
                       <button
                         type="button"
                         onClick={() => oneriyiTazele()}
@@ -7893,7 +7897,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       </button>
                     )}
                     <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                      {!TASLAK_KIPI && adaylar.length > 0 && (
+                      {PANEL.digerYerler && !TASLAK_KIPI && adaylar.length > 0 && (
                         <button
                           type="button"
                           onClick={() => setAdayKipi((v) => !v)}
@@ -7924,7 +7928,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       duruyor ki kullanıcı sonradan fikrini değiştirebilsin.
                       Etkin seçenek işaretli.
                     */}
-                    {(elleKose || elleAci.yaw !== 0 || elleAci.tilt !== 0 || hedefKose) && (
+                    {PANEL.koseAyariniSifirla &&
+                      (elleKose || elleAci.yaw !== 0 || elleAci.tilt !== 0 || hedefKose) && (
                       <button
                         type="button"
                         onClick={() => {
@@ -7979,7 +7984,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       kullanıcı hangisinin geçerli olduğunu bilmiyordu. Kutu
                       yokken (hazır mekânlar) burası hâlâ tek adres.
                     */}
-                    <div className={(taslakKutu ? 'hidden' : 'flex') + ' items-center justify-between gap-3'}>
+                    <div
+                      className={
+                        (taslakKutu || !PANEL.mesafe ? 'hidden' : 'flex') +
+                        ' items-center justify-between gap-3'
+                      }
+                    >
                       <span className="text-[15px] text-neutral-600 dark:text-neutral-400">
                         {izlemeBilgiSahnesi ? t('scene.viewDistFixed') : t('scene.viewDist')}
                       </span>
@@ -8195,7 +8205,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   onu açılıştaki yerine geri koyar. Hiç taşınmamışken göstermek,
                   yapılmamış bir şeyi geri alma seçeneği sunmak olurdu.
                 */}
-                {surukleAktif && mekanTasindi && (
+                {PANEL.ortala && surukleAktif && mekanTasindi && (
                   <button
                     type="button"
                     onClick={mekaniOrtala}
