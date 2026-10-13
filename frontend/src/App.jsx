@@ -3321,12 +3321,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })()
 
   /*
-   * EKRAN EKLE — duran ekranı sabitle, elde yenisi kalsın.
+   * EKRAN EKLE — duran ekranı sabitle, AYNI SÜREÇ baştan işlesin.
    *
-   * Sabitlenen ekranın köşeleri o anda EKRANDA GÖRÜNEN dörtgen (koseMutlak),
-   * orana çevrilmiş hâli. Yeni ekran aynı ölçüyle, bir ekran boyu sağa
-   * kaydırılmış olarak duruyor ki ikisi üst üste binmesin ve kullanıcı yeni
-   * olanı görsün.
+   * Önce yeni ekran, duranın bir boy sağına kopyalanıyordu. Yanlıştı:
+   * 2. ekranın nereye gireceği de 1. ekranınki gibi İŞARETLENEREK
+   * belirlenmeli. Artık duran ekran olduğu yere sabitleniyor ve hemen
+   * ardından alan işaretleme açılıyor — dört köşe, tasarım işaretleme
+   * bitene kadar gizli, sonra alanın ortasına kendi santim ölçüsüyle.
+   *
+   * Sabitlenen kayıt yalnızca dörtgeni değil KENDİ ALANINI ve alan
+   * içindeki yerini de taşıyor; Düzenle ile dönüldüğünde alanı da geliyor.
    */
   /*
    * TASARIMI ALANIN İÇİNE, GERÇEK SANTİM ÖLÇÜSÜYLE KOY.
@@ -3336,9 +3340,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yapılandırmada ne kadarsa o kadar yer kaplıyor ve alanın perspektifine
    * oturuyor. Doldurmak isteyen "Tasarımı sığdır" diyor.
    */
-  const alanaYerlestir = (koseler, uMerkez = 0.5, vMerkez = 0.5) => {
+  const alanaYerlestir = (koseler, uMerkez = 0.5, vMerkez = 0.5, wM = null, hM = null) => {
     if (!Array.isArray(koseler) || koseler.length !== 4) return null
-    if (!(cizimOlcek > 0) || !(tasarimWm > 0) || !(tasarimHm > 0)) return null
+    /*
+     * Ölçü dışarıdan da verilebiliyor: "ölçüye sığdır" kabin sayısını
+     * değiştiriyor ama yeni sayı daha state'e yazılmamış oluyor; o anda
+     * tasarimWm hâlâ ESKİ ölçüyü söylüyor ve çizim bir adım geriden gelirdi.
+     */
+    const dW = wM != null ? wM : tasarimWm
+    const dH = hM != null ? hM : tasarimHm
+    if (!(cizimOlcek > 0) || !(dW > 0) || !(dH > 0)) return null
     const enPx =
       (Math.hypot(koseler[1].x - koseler[0].x, koseler[1].y - koseler[0].y) +
         Math.hypot(koseler[2].x - koseler[3].x, koseler[2].y - koseler[3].y)) /
@@ -3348,8 +3359,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         Math.hypot(koseler[2].x - koseler[1].x, koseler[2].y - koseler[1].y)) /
       2
     if (!(enPx > 1) || !(boyPx > 1)) return null
-    const u = Math.max(0.03, Math.min(1, (tasarimWm * cizimOlcek) / enPx))
-    const v = Math.max(0.03, Math.min(1, (tasarimHm * cizimOlcek) / boyPx))
+    const u = Math.max(0.03, Math.min(1, (dW * cizimOlcek) / enPx))
+    const v = Math.max(0.03, Math.min(1, (dH * cizimOlcek) / boyPx))
     const u0 = Math.max(0, Math.min(1 - u, uMerkez - u / 2))
     const v0 = Math.max(0, Math.min(1 - v, vMerkez - v / 2))
     const n = [
@@ -3389,13 +3400,84 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /* Alanı tamamen doldur — montaj payıyla (bkz. sigdirDortgen). */
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * ÖLÇÜYE SIĞDIR — YALNIZCA ÇİZİMİ DEĞİL, EKRANIN KENDİSİNİ BÜYÜTÜYOR.
+   *
+   * Önce yalnızca ekrandaki dörtgen büyütülüyordu: tasarım alanı dolduruyor
+   * gibi görünüyor ama sol paneldeki sütun/satır, çözünürlük ve duvar ölçüsü
+   * olduğu gibi kalıyordu. Yani üründe hiçbir şey değişmiyor, sadece resim
+   * esniyordu — kullanıcının fark ettiği buydu.
+   *
+   * Artık işaretlenen alanın GERÇEK ölçüsü hesaplanıp (piksel / px-per-metre)
+   * oraya kaç kabin sığdığı çıkarılıyor ve yapılandırma ona göre
+   * kuruluyor. Hesap duvara sığdırmayla aynı işlevi kullanıyor
+   * (yerlesimSecenekleri): iki yön de deneniyor ve LED sayısı fazla olan
+   * seçiliyor, eşitlikte yatay kalıyor.
+   *
+   * Çizim de yeni GERÇEK ölçüyle yapılıyor, yani ekrandaki dikdörtgen sol
+   * panelde yazan santimin birebir karşılığı. Kabinler tam sayı olduğu için
+   * alan genelde tam dolmuyor; dolan kısım gerçekten kurulabilecek olan.
+   * ───────────────────────────────────────────────────────────────────────
+   */
   const tasarimiAlanaSigdir = () => {
-    if (!alanTuval || !(tasarimHm > 0)) return
-    const n = sigdirDortgen(alanTuval, tasarimWm / tasarimHm)
-    if (Array.isArray(n) && n.length === 4) {
-      elleKoseyeYaz(n)
-      setAlanDoldur(true)
-    }
+    if (!alanTuval || !(cizimOlcek > 0)) return
+    const m = previewModel || selectedModel
+    if (!m) return
+    const enPx =
+      (Math.hypot(alanTuval[1].x - alanTuval[0].x, alanTuval[1].y - alanTuval[0].y) +
+        Math.hypot(alanTuval[2].x - alanTuval[3].x, alanTuval[2].y - alanTuval[3].y)) /
+      2
+    const boyPx =
+      (Math.hypot(alanTuval[3].x - alanTuval[0].x, alanTuval[3].y - alanTuval[0].y) +
+        Math.hypot(alanTuval[2].x - alanTuval[1].x, alanTuval[2].y - alanTuval[1].y)) /
+      2
+    const alanWm = enPx / cizimOlcek
+    const alanHm = boyPx / cizimOlcek
+    if (!(alanWm > 0) || !(alanHm > 0)) return
+    const secenek = yerlesimSecenekleri(m, alanWm, alanHm)
+    if (!secenek) return
+    const { yatay, dikey } = secenek
+    const dikeySec = dikey.piksel > yatay.piksel
+    const kazanan = dikeySec ? dikey : yatay
+    const cwM2 = ((dikeySec ? m.heightMm : m.widthMm) || 500) / 1000
+    const chM2 = ((dikeySec ? m.widthMm : m.heightMm) || 500) / 1000
+    const c = kazanan.cols
+    const r = kazanan.rows
+    const yeniWm = c * cwM2
+    const yeniHm = r * chM2
+    setOrientation(dikeySec ? 'portrait' : 'landscape')
+    setCols(c)
+    setRows(r)
+    /* Duvar alanı da en az bu kadar olmalı, yoksa üst sınır kabinleri kırpar. */
+    setWidth((e) => Math.max(e, +yeniWm.toFixed(2)))
+    setHeight((e) => Math.max(e, +yeniHm.toFixed(2)))
+    /* Çizim YENİ ölçüyle, alanın ortasına. */
+    const n = alanaYerlestir(alanTuval, 0.5, 0.5, yeniWm, yeniHm)
+    if (n) elleKoseyeYaz(n)
+    setAlanKonum({ u: 0.5, v: 0.5 })
+    setAlanDoldur(true)
+    /* Sonuç yazılsın: değişsin değişmesin ne kurulduğu görünsün. */
+    setOzelUyari(
+      t('scene.alanSigdiDone') +
+        ' ' +
+        c +
+        ' × ' +
+        r +
+        ' ' +
+        t('scene.cabinets') +
+        ' (' +
+        yeniWm.toFixed(2).replace('.', ',') +
+        ' × ' +
+        yeniHm.toFixed(2).replace('.', ',') +
+        ' m) · ' +
+        t('scene.alanOlcusu') +
+        ' ' +
+        alanWm.toFixed(2).replace('.', ',') +
+        ' × ' +
+        alanHm.toFixed(2).replace('.', ',') +
+        ' m',
+    )
   }
 
   /*
@@ -3461,20 +3543,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     contentUrl: contentUrl || null,
   })
 
-  const ekranEkle = () => {
-    if (!Array.isArray(koseMutlak) || koseMutlak.length !== 4) return
+  const ekranKaydi = () => {
+    if (!Array.isArray(koseMutlak) || koseMutlak.length !== 4) return null
     const oran = koseMutlak.map(tuvalOrana)
-    if (oran.some((p) => !Number.isFinite(p?.x) || !Number.isFinite(p?.y))) return
-    const kimlik = aktifEkranId ?? yeniEkranKimligi()
-    setSabitEkranlar((l) => [...l, { id: kimlik, oran, ayar: ekranAyariAnlik() }])
+    if (oran.some((q) => !Number.isFinite(q?.x) || !Number.isFinite(q?.y))) return null
+    return {
+      id: aktifEkranId ?? yeniEkranKimligi(),
+      oran,
+      /* Kendi yerleşim alanı (0..1 fotoğraf oranı) ve içindeki yeri. */
+      alan: alanNokta.length === 4 ? alanNokta.map((q) => ({ ...q })) : null,
+      konum: { ...alanKonum },
+      doldur: alanDoldur,
+      ayar: ekranAyariAnlik(),
+    }
+  }
+
+  /* Yeni ekran için her şey sıfırdan: alanı da, yeri de. */
+  const yeniEkranaBasla = () => {
     setAktifEkranId(yeniEkranKimligi())
-    /* Yeni ekran: aynı dörtgen, bir boy sağa. */
-    const en = Math.max(
-      Math.hypot(koseMutlak[1].x - koseMutlak[0].x, koseMutlak[1].y - koseMutlak[0].y),
-      Math.hypot(koseMutlak[2].x - koseMutlak[3].x, koseMutlak[2].y - koseMutlak[3].y),
-    )
-    const pay = en * 1.1
-    setElleKose(koseMutlak.map((k) => ({ x: k.x + pay, y: k.y })))
+    setAlanNokta([])
+    setAlanKonum({ u: 0.5, v: 0.5 })
+    setAlanDoldur(false)
+    setElleKose(null)
+    setRefKipi(false)
+    setLKoseKipi(false)
+    setAlanKipi(true)
+  }
+
+  const ekranEkle = () => {
+    const kayit = ekranKaydi()
+    if (!kayit) return
+    setSabitEkranlar((l) => [...l, kayit])
+    yeniEkranaBasla()
   }
 
   /*
@@ -3487,14 +3587,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const ekraniDuzenle = (id) => {
     const secilen = sabitEkranlar.find((e) => e.id === id)
     if (!secilen) return
-    const duran =
-      Array.isArray(koseMutlak) && koseMutlak.length === 4 ? koseMutlak.map(tuvalOrana) : null
-    const kimlik = aktifEkranId ?? yeniEkranKimligi()
+    const duran = ekranKaydi()
     setSabitEkranlar((l) => {
       const kalan = l.filter((e) => e.id !== id)
       /* Duran ekranın dörtgeni yoksa (ölçü kurulmamış) sabitlenecek bir şey de yok. */
-      return duran ? [...kalan, { id: kimlik, oran: duran, ayar: ekranAyariAnlik() }] : kalan
+      return duran ? [...kalan, duran] : kalan
     })
+    /* Seçilen ekranın kendi alanı ve alan içindeki yeri de geri geliyor. */
+    setAlanKipi(false)
+    setAlanNokta(Array.isArray(secilen.alan) && secilen.alan.length === 4 ? secilen.alan : [])
+    setAlanKonum(secilen.konum || { u: 0.5, v: 0.5 })
+    setAlanDoldur(!!secilen.doldur)
     setElleKose(secilen.oran.map(oranTuvale))
     setAktifEkranId(secilen.id)
   }
@@ -5221,6 +5324,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Öteki mekânlarda (hazır sahneler) eskisi gibi panelin içinde duruyor —
    * orada akış zaten farklı ve yerinde çalışıyor.
    */
+  /*
+   * ÖLÇÜ PENCERESİ AÇIK MI.
+   *
+   * Yalnızca sihirbaz adımına bakmak yetmiyordu: "Ekran ekle" akış BİTTİKTEN
+   * sonra yeni bir alan işaretlemesi başlatıyor (adım 0). Pencere çizilmeyince
+   * kullanıcıya ne yapacağını söyleyen kart da, "Alanı onayla" düğmesi de
+   * yoktu — dört köşeyi işaretliyor ama ilerleyemiyordu.
+   */
+  const olcuPenceresiAcik = sihirbazAdim > 0 || alanKipi
+  /* Pencere açıkken panelin geri kalanı susuyor (bkz. aside). */
+  const olcuSurerken = scene === 'ozel' && !!ozelSahne && olcuPenceresiAcik
+
   const olcuPencereSinifi =
     scene === 'ozel' && ozelSahne
       ? 'fixed right-4 top-20 z-50 w-[360px] max-w-[calc(100vw-2rem)] max-h-[78vh] overflow-y-auto rounded-2xl border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#1a1f27] shadow-2xl p-3'
@@ -7186,7 +7301,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
 
         {/* SAĞ: Panel */}
-        <aside className="yatay-panel yatay-panel-ayar w-full min-w-0 lg:w-[340px] shrink-0 order-3 lg:order-3 border-t lg:border-t-0 lg:border-l border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
+        <aside
+          className={
+            'yatay-panel yatay-panel-ayar w-full min-w-0 lg:w-[340px] shrink-0 order-3 lg:order-3 border-t lg:border-t-0 lg:border-l border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden' +
+            (olcuSurerken ? ' invisible' : '')
+          }
+        >
           <Sigdir className="flex flex-col gap-2">
 
           {/* ---- ADIM 4: İçerik ---- */}
@@ -7429,8 +7549,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           bir ara hem panelde hem kartta aynı alanlar vardı ve hangisinin
                           geçerli olduğu belirsizdi.
                         */}
-                        {sihirbazAdim > 0 ? (
-                          <div className={olcuPencereSinifi}>
+                        {olcuPenceresiAcik ? (
+                          /*
+                           * GORUNURLUK INLINE: panel gizlendiginde pencere de
+                           * ondan miras aliyordu. Tailwind'in "visible"
+                           * sinifina guvenmek yerine dogrudan stil veriliyor;
+                           * boylece sinif uretilmis mi diye dusunmek gerekmiyor.
+                           */
+                          <div className={olcuPencereSinifi} style={{ visibility: 'visible' }}>
                           <OlcuSihirbazi
                             adim={sihirbazAdim}
                             t={t}
@@ -7866,10 +7992,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           </PanelBolum>
                         )}
 
-                        {/* YERLEŞİM — tasarımın kabin hesabı, olduğu gibi. */}
-                        <div className="mt-3 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
-                          {t('scene.placeHeading')}
-                        </div>
+                        {/* YERLEŞİM — altındaki düğmelerin hepsi kapalı, başlık da kapalı. */}
+                        {PANEL.yerlesimBasligi && (
+                          <div className="mt-3 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
+                            {t('scene.placeHeading')}
+                          </div>
+                        )}
                         {/*
                           KUTUYA YERLEŞTİR — fareyle uğraşmadan.
                           Kutu küçükken tasarımı elle içine oturtmak neredeyse
@@ -8094,7 +8222,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       )}
                     </div>
                     <p
-                      className={(taslakKutu ? 'hidden ' : '') + 'mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400'}
+                      className={
+                        (taslakKutu || !PANEL.mesafe ? 'hidden ' : '') +
+                        'mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400'
+                      }
                     >
                       {izlemeBilgiSahnesi
                         ? t('scene.viewDistFixedHint')
@@ -8194,7 +8325,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   duvara monte: ekranların çoğu öyle kuruluyor ve gövde
                   çizmemek en az varsayım içeren seçenek.
                 */}
-                {surukleAktif && (
+                {PANEL.kiosk && surukleAktif && (
                   <div className="mt-2">
                     <div className="flex items-center justify-between gap-3 mb-1.5">
                       <span className="text-[14px] text-neutral-600 dark:text-neutral-400">

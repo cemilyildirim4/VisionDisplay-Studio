@@ -123,7 +123,16 @@ function SihirbazKart({
   onBitir,
   onKapat,
 }) {
-  if (!adim) return null
+  /*
+   * ADIM 0'DA DA CIZILEBILIYOR -- ALAN ISARETLENIYORSA.
+   *
+   * "Ekran ekle" akis BITTIKTEN sonra (adim 0) yeni bir alan isaretlemesi
+   * basliyor. Burada kosulsuz null donunce pencere bos cikiyordu: kullanici
+   * dort koseyi isaretliyor ama ne yonerge ne de "Alani onayla" dugmesi
+   * goruyordu.
+   */
+  const alanTekBasina = !adim && alanKipi
+  if (!adim && !alanKipi) return null
 
   const girdi =
     'w-full min-w-0 rounded-md border border-neutral-300 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-100'
@@ -177,16 +186,23 @@ function SihirbazKart({
     <div className="overflow-hidden rounded-xl border-2 border-brand shadow-[0_4px_16px_rgba(41,98,173,0.18)]">
       {/* Başlık şeridi dolu renkte: panelde göz önce buraya gelsin. */}
       <div className="flex items-center gap-2 bg-brand px-2.5 py-2 text-white">
-        <span className="flex items-center gap-1">
-          {Array.from({ length: adimSayisi }, (_, i) => i + 1).map((i) => (
-            <Nokta key={i} dolu={i < adim} etkin={i === adim} />
-          ))}
-        </span>
-        <span className="text-[11.5px] font-bold tabular-nums text-white/80">
-          {adim}/{adimSayisi}
-        </span>
+        {/* Adım sayacı yalnızca gerçekten adım varken; alan tek başınaysa yok. */}
+        {!alanTekBasina && (
+          <>
+            <span className="flex items-center gap-1">
+              {Array.from({ length: adimSayisi }, (_, i) => i + 1).map((i) => (
+                <Nokta key={i} dolu={i < adim} etkin={i === adim} />
+              ))}
+            </span>
+            <span className="text-[11.5px] font-bold tabular-nums text-white/80">
+              {adim}/{adimSayisi}
+            </span>
+          </>
+        )}
         {/* Panel dar: başlık kesilmek yerine ikinci satıra sarıyor. */}
-        <span className="flex-1 text-[14.5px] font-bold leading-tight">{basliklar[adim]}</span>
+        <span className="flex-1 text-[14.5px] font-bold leading-tight">
+          {alanTekBasina ? t('sih.alanBaslik') : basliklar[adim]}
+        </span>
         <button
           type="button"
           onClick={onKapat}
@@ -506,9 +522,11 @@ function SihirbazKart({
                 {alanNoktaSayisi} / 4
               </p>
               <div className="mt-2 flex items-center gap-1.5">
-                <button type="button" onClick={onGeri} className={yan}>
-                  {t('sih.geri')}
-                </button>
+                {!alanTekBasina && (
+                  <button type="button" onClick={onGeri} className={yan}>
+                    {t('sih.geri')}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onAlanBitir}
