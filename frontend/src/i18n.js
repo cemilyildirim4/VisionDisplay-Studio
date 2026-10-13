@@ -524,6 +524,15 @@ const dict = {
   'ref.boy': { tr: 'boy', en: 'height', ar: 'الارتفاع' },
   'sih.basla': { tr: 'Referans ölçü al', en: 'Take a reference measurement', ar: 'خذ قياسًا مرجعيًا' },
   'sih.yeniden': { tr: 'Baştan başla', en: 'Start over', ar: 'ابدأ من جديد' },
+  'sih.alanIleAyarla': { tr: 'Ölçüm ile ayarla', en: 'Set by measuring', ar: 'الضبط بالقياس' },
+  'sih.elleDuzenle': { tr: 'Manuel düzenle', en: 'Edit manually', ar: 'تحرير يدوي' },
+  'sih.alanAciklama': {
+    tr: 'Ekranın kaplamasını istediğiniz alanın dört köşesine tıklayın: sol üst, sağ üst, sağ alt, sol alt. İşaretler sonradan sürüklenebilir. Dört nokta tamamlanana kadar tasarım gizli.',
+    en: 'Click the four corners of the area the screen should cover: top-left, top-right, bottom-right, bottom-left. The marks can be dragged afterwards. The design stays hidden until all four are placed.',
+    ar: 'انقر على زوايا المنطقة الأربع التي يجب أن تغطيها الشاشة. يبقى التصميم مخفيًا حتى وضع النقاط الأربع.',
+  },
+  'sih.alanBitir': { tr: 'Alanı onayla', en: 'Confirm the area', ar: 'تأكيد المنطقة' },
+  'sih.alanSigdir': { tr: 'Tasarımı sığdır', en: 'Fit the design', ar: 'ملاءمة التصميم' },
   'sih.ozetYok': {
     tr: 'Henüz ölçek yok. Fotoğrafta bilinen bir uzunluk işaretleyerek başlayın.',
     en: 'No scale yet. Start by marking a known length on the photo.',

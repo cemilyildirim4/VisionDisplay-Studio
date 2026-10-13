@@ -81,6 +81,13 @@ export default function OlcuSihirbazi({
   lKoseKabinSolCm = 0,
   lKoseKabinSagCm = 0,
   lKoseIsaretle,
+  /* ÖLÇÜM İLE AYARLA — dört noktayla yerleşim alanı (bkz. App.jsx alanKipi). */
+  alanKipi = false,
+  alanNoktaSayisi = 0,
+  alanVar = false,
+  onAlanIsaretle = null,
+  onAlanBitir = null,
+  onAlanSigdir = null,
   /* L'nin son adımında çizilen kanat şekli tuşları (bkz. App.jsx). */
   kanatSekli,
   lKoseOran = null,
@@ -421,17 +428,70 @@ export default function OlcuSihirbazi({
                   {refOlcek?.sebep === 'cokKisa' ? t('ref2.cokKisa') : t('ref2.uzunlukGir')}
                 </p>
               )}
+              {/*
+                REFERANSTAN SONRA İKİ YOL.
+
+                Santim ölçeği kurulduktan sonra geriye ekranın NEREYE gireceği
+                kalıyor ve bunun iki yolu var:
+
+                  ÖLÇÜM İLE AYARLA — kaplanacak alanın dört köşesine tıklanıyor.
+                  Alan hem yeri hem de o yüzeyin perspektifini veriyor.
+
+                  MANUEL DÜZENLE — eski yol, olduğu gibi duruyor: alanın
+                  santim ölçüsü yazılıyor, kutu kuruluyor, köşelerinden
+                  ayarlanıyor.
+
+                İkisi de aynı ölçeği kullanıyor; biri ötekini geçersiz kılmıyor.
+              */}
+              <div className="mt-2 flex items-center gap-1.5">
+                <button type="button" onClick={onGeri} className={yan}>
+                  {t('sih.geri')}
+                </button>
+                {onAlanIsaretle && (
+                  <button
+                    type="button"
+                    onClick={onAlanIsaretle}
+                    disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                    className={ana}
+                  >
+                    {t('sih.alanIleAyarla')}
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onIleri}
+                disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
+              >
+                {t('sih.elleDuzenle')}
+              </button>
+            </>
+          )}
+
+          {/*
+            ALAN İŞARETLEME — dört nokta konurken sağ panelde duran kart.
+
+            Tuvalin üstüne yönerge şeridi konmuyor; aynı gerekçe referans
+            adımındaki gibi: fotoğrafın üstü temiz kalsın, yönerge burada.
+          */}
+          {alanKipi && (
+            <>
+              <p className={aciklama}>{t('sih.alanAciklama')}</p>
+              <p className={`${kucuk} ${alanNoktaSayisi >= 4 ? 'text-emerald-700 dark:text-emerald-400' : 'text-neutral-500 dark:text-neutral-400'}`}>
+                {alanNoktaSayisi} / 4
+              </p>
               <div className="mt-2 flex items-center gap-1.5">
                 <button type="button" onClick={onGeri} className={yan}>
                   {t('sih.geri')}
                 </button>
                 <button
                   type="button"
-                  onClick={onIleri}
-                  disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                  onClick={onAlanBitir}
+                  disabled={alanNoktaSayisi < 4}
                   className={ana}
                 >
-                  {t('sih.devam')}
+                  {t('sih.alanBitir')}
                 </button>
               </div>
             </>
@@ -508,6 +568,24 @@ export default function OlcuSihirbazi({
               {/* Kutu ipucu L'de yanlış: orada taşınacak bir kutu yok. */}
               {!lKose && (
                 <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.4.ipucu')}</p>
+              )}
+
+              {/*
+                TASARIMI SIĞDIR — yalnızca işaretlenmiş bir alan varken.
+
+                Alan işaretlendiğinde tasarım kendi SANTİM ölçüsüyle alanın
+                içine giriyor; bu düğme onu alanı dolduracak şekilde büyütüyor
+                (montaj payı bırakarak, bkz. sigdirDortgen). İkisi ayrı şey:
+                biri gerçek ölçü, öteki "şurayı kaplasın".
+              */}
+              {alanVar && onAlanSigdir && (
+                <button
+                  type="button"
+                  onClick={onAlanSigdir}
+                  className="mt-2 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                >
+                  {t('sih.alanSigdir')}
+                </button>
               )}
 
               {/*

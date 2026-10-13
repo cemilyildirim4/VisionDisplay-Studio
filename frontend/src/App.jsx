@@ -107,6 +107,8 @@ function SekilTus({ onClick, etiket, yol }) {
   )
 }
 import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
+/* Alan içine yerleştirme ve sığdırma — ikisi de hazır (bkz. homografi.js). */
+import { dortgenNoktasi, sigdirDortgen } from './homografi.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -817,6 +819,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [refTur, setRefTur] = useState('cizgi')
   const [refBoyCm, setRefBoyCm] = useState('')
   const [refKipi, setRefKipi] = useState(false)
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * ÖLÇÜM İLE AYARLA — YERLEŞİM ALANI DÖRT NOKTAYLA.
+   *
+   * Referans ölçü fotoğrafın santim ölçeğini veriyor; bu adım ise ekranın
+   * NEREYE gireceğini veriyor. Kullanıcı kaplanmasını istediği alanın dört
+   * köşesine tıklıyor — iki pencere arası, bir duvar paneli, bir bölüm.
+   * İşaretlediği şey kendi gördüğü bir yer, hayal etmesi gereken bir şey yok.
+   *
+   * Dört nokta aynı zamanda o yüzeyin PERSPEKTİFİNİ de veriyor: ekran alanın
+   * düzlemine oturuyor, ayrıca açı aramaya gerek kalmıyor.
+   *
+   * İŞARETLERKEN TASARIM GİZLİ (bkz. ekranGizle): alanın köşeleri tasarımın
+   * altında kalıyor ve ne görünüyor ne tıklanabiliyordu.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const [alanKipi, setAlanKipi] = useState(false)
+  const [alanNokta, setAlanNokta] = useState([])
 
   /*
    * L TİPİNDE YERLEŞİM: KÖŞE ÇİZGİSİ.
@@ -1349,6 +1369,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setLSagAlt(0)
       setSabitEkranlar([])
       setAktifEkranId(null)
+      setAlanKipi(false)
+      setAlanNokta([])
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
@@ -3292,6 +3314,56 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * olanı görsün.
    */
   /*
+   * TASARIMI ALANIN İÇİNE, GERÇEK SANTİM ÖLÇÜSÜYLE KOY.
+   *
+   * Alanın birim karesinde tasarımın kapladığı pay, tasarımın piksel
+   * ölçüsünün alanın piksel ölçüsüne oranı. Yani ekran alanı doldurmuyor;
+   * yapılandırmada ne kadarsa o kadar yer kaplıyor ve alanın perspektifine
+   * oturuyor. Doldurmak isteyen "Tasarımı sığdır" diyor.
+   */
+  const alanaYerlestir = (koseler, uMerkez = 0.5, vMerkez = 0.5) => {
+    if (!Array.isArray(koseler) || koseler.length !== 4) return null
+    if (!(cizimOlcek > 0) || !(tasarimWm > 0) || !(tasarimHm > 0)) return null
+    const enPx =
+      (Math.hypot(koseler[1].x - koseler[0].x, koseler[1].y - koseler[0].y) +
+        Math.hypot(koseler[2].x - koseler[3].x, koseler[2].y - koseler[3].y)) /
+      2
+    const boyPx =
+      (Math.hypot(koseler[3].x - koseler[0].x, koseler[3].y - koseler[0].y) +
+        Math.hypot(koseler[2].x - koseler[1].x, koseler[2].y - koseler[1].y)) /
+      2
+    if (!(enPx > 1) || !(boyPx > 1)) return null
+    const u = Math.max(0.03, Math.min(1, (tasarimWm * cizimOlcek) / enPx))
+    const v = Math.max(0.03, Math.min(1, (tasarimHm * cizimOlcek) / boyPx))
+    const u0 = Math.max(0, Math.min(1 - u, uMerkez - u / 2))
+    const v0 = Math.max(0, Math.min(1 - v, vMerkez - v / 2))
+    const n = [
+      dortgenNoktasi(koseler, u0, v0),
+      dortgenNoktasi(koseler, u0 + u, v0),
+      dortgenNoktasi(koseler, u0 + u, v0 + v),
+      dortgenNoktasi(koseler, u0, v0 + v),
+    ]
+    return n.every((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y)) ? n : null
+  }
+
+  /* Dört nokta tamamlandı: işaretleme kapanıyor, tasarım alana giriyor. */
+  const alaniBitir = () => {
+    const k = alanNokta.length === 4 ? alanNokta.map(oranTuvale) : null
+    setAlanKipi(false)
+    const yeni = k ? alanaYerlestir(k) : null
+    if (yeni) setElleKose(yeni)
+    /* Alan kurulduktan sonra yapilacak is konumlandirma: dogrudan o adima. */
+    setSihirbazAdim(4)
+  }
+
+  /* Alanı tamamen doldur — montaj payıyla (bkz. sigdirDortgen). */
+  const tasarimiAlanaSigdir = () => {
+    if (!alanTuval || !(tasarimHm > 0)) return
+    const n = sigdirDortgen(alanTuval, tasarimWm / tasarimHm)
+    if (Array.isArray(n) && n.length === 4) setElleKose(n)
+  }
+
+  /*
    * EKRANIN O ANKİ YAPILANDIRMASI — kayda birlikte giriyor.
    *
    * Bugün hepsi aynı çiziliyor (eklenen ekran 1. ekranla aynı model, satır,
@@ -3945,6 +4017,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return { sol: Math.min(a.x, b.x), ust: Math.min(a.y, b.y), sag: Math.max(a.x, b.x), alt: Math.max(a.y, b.y) }
   })()
 
+  /*
+   * Alanın tuvaldeki dörtgeni — dört nokta tamamsa.
+   *
+   * BURADA DURUYOR, YUKARIDA DEĞİL: render sırasında hesaplanıyor ve
+   * oranTuvale'yi okuyor. Önce yukarıda, eylemlerin yanındaydı; orada
+   * oranTuvale henüz tanımlı olmadığı için uygulama "Ölçüm ile ayarla"ya
+   * basılır basılmaz hata ekranına düşüyordu (TDZ).
+   */
+  const alanTuval = alanNokta.length === 4 ? alanNokta.map(oranTuvale) : null
+
   const tuvalOrana = (k) => {
     const yer = fotoYer
     if (!(yer?.genislik > 0) || !(yer?.yukseklik > 0)) return k
@@ -4430,6 +4512,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setLSagAlt(0)
     setSabitEkranlar([])
     setAktifEkranId(null)
+    setAlanKipi(false)
+    setAlanNokta([])
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -5950,7 +6034,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * böyleydi, referans adımı için de aynısı geçerli.
                */
               ekranGizle={
-                (uc3dHazir && !duvarDunya) || tasarimGizli || refKipi || lKoseKipi || !!lKoseCizimi
+                (uc3dHazir && !duvarDunya) ||
+                tasarimGizli ||
+                refKipi ||
+                lKoseKipi ||
+                alanKipi ||
+                !!lKoseCizimi
               }
               uc3dKatman={
                 !tasarimGizli &&
@@ -6216,6 +6305,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * bilgi zaten sağ paneldeki adım kartında yazıyor. Tuvalin içi
                * temiz kalıyor.
                */
+            />
+          )}
+
+          {/*
+            YERLEŞİM ALANI SEÇİCİ — dört nokta.
+
+            Referans seçiciyle aynı bileşen; ayrı bir araç yazmak aynı
+            davranışı (sürüklenebilir işaretler, fotoğrafın dışına çıkmama)
+            ikinci kez yazmak olurdu.
+          */}
+          {alanKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+            <ReferansSecici
+              noktalar={alanNokta.map(oranTuvale)}
+              onDegis={(tuvalNoktalari) => setAlanNokta(tuvalNoktalari.map(tuvalOrana))}
+              enCokNokta={4}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+              sinir={fotoSinir}
             />
           )}
 
@@ -7225,6 +7332,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             mesafeKilitli={false}
                             onEgim={egimDugmesiVar ? kutuEgiminiCevir : null}
                             egimVar={egimVar}
+                            /* ÖLÇÜM İLE AYARLA — dört noktayla yerleşim alanı. */
+                            alanKipi={alanKipi}
+                            alanNoktaSayisi={alanNokta.length}
+                            alanVar={!!alanTuval}
+                            onAlanIsaretle={() => {
+                              setAlanNokta([])
+                              setRefKipi(false)
+                              setAlanKipi(true)
+                            }}
+                            onAlanBitir={alaniBitir}
+                            onAlanSigdir={tasarimiAlanaSigdir}
                             /* L'nin son adımı: kanat şekli (bkz. lSekilPaneli). */
                             kanatSekli={lSekilPaneli}
                           />
