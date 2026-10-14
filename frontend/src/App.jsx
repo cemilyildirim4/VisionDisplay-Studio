@@ -3652,8 +3652,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * Çok uzağa kaçıp kaybolmasın diye geniş bir sınır var: alanın iki
        * katı kadar dışarı.
        */
-      const u = Math.max(-1, Math.min(2, bas.u + (ev.clientX - basX) / enPx))
-      const v = Math.max(-1, Math.min(2, bas.v + (ev.clientY - basY) / boyPx))
+      /*
+       * SINIR YOK: tasarim tuvalde istenen her yere goturulebiliyor.
+       *
+       * Once 0..1 arasina sikistiriliyordu (alanin disina cikamiyordu),
+       * sonra alanin iki kati kadar disari izin verilmisti. Ikisi de
+       * yetmedi; istenen tam serbestlik. Deger yine alanin kendi
+       * koordinatinda oldugu icin tasarim nereye giderse gitsin o duzlemin
+       * perspektifine oturmaya devam ediyor.
+       */
+      const u = bas.u + (ev.clientX - basX) / enPx
+      const v = bas.v + (ev.clientY - basY) / boyPx
+      if (!Number.isFinite(u) || !Number.isFinite(v)) return
       setAlanKonum({ u, v })
       /* Ölçü KORUNUYOR: sürükleme yalnızca yeri değiştiriyor. */
       const yeni = alanaYerlestir(alanTuval, u, v, alanOlcek)
