@@ -532,6 +532,11 @@ const dict = {
     ar: 'انقر على زوايا المنطقة الأربع التي يجب أن تغطيها الشاشة. يبقى التصميم مخفيًا حتى وضع النقاط الأربع.',
   },
   'sih.alanBitir': { tr: 'Alanı onayla', en: 'Confirm the area', ar: 'تأكيد المنطقة' },
+  'sih.alanBaslik': {
+    tr: 'Yeni ekranın alanını işaretleyin',
+    en: 'Mark the area for the new screen',
+    ar: 'حدّد منطقة الشاشة الجديدة',
+  },
   'sih.alanSigdir': {
     tr: 'Tasarımı ölçüye sığdır',
     en: 'Fit the design to the measured area',

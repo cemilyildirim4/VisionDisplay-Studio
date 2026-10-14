@@ -3119,7 +3119,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * alıyor; köşeler kendi aralarındaki şekli koruyarak birlikte gidiyor.
      */
     /* Kalibre duvarda ölçünün kaynağı dünya katmanı; elle dörtgen onu ezmiyor. */
-    if (elleKose && !duvarDunya) {
+    /*
+     * İŞARETLENEN ALAN DUVAR KATMANINI GEÇİYOR.
+     *
+     * Bu dal "elle kurulmuş dörtgen" demek ve duvar düzlemi ölçülmüşken
+     * atlanıyordu: orada ekranın yeri duvarın kendi koordinat sisteminden
+     * geliyor. Ama "Ölçüm ile ayarla" ile işaretlenen alan da elle kurulmuş
+     * bir dörtgen ve kullanıcının açıkça "şuraya otursun" dediği yer.
+     * Atlanınca ekran duvar katmanının söylediği yere gidiyor ve
+     * işaretlenen alanla örtüşmüyordu.
+     *
+     * Alan işaretlenmişse (dört nokta tam) bu dal kazanıyor.
+     */
+    if (elleKose && (!duvarDunya || alanNokta.length === 4)) {
       const dw0 = tasarimWm * cizimOlcek
       const dh0 = tasarimHm * cizimOlcek
       const bas0 = ekranKutuBasi(dw0, dh0)
@@ -3500,7 +3512,46 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     contentUrl: contentUrl || null,
   })
 
-  const ekranEkle = () => {
+  /*
+   * EKRAN KAYDI — sabitlenen ekranin tasidigi her sey.
+   * Yalnizca dortgeni degil KENDI ALANINI ve alan icindeki yerini de
+   * tasiyor; "Duzenle" ile donuldugunde alani da geri gelsin diye.
+   */
+  const ekranKaydi = () => {
+    if (!Array.isArray(koseMutlak) || koseMutlak.length !== 4) return null
+    const oran = koseMutlak.map(tuvalOrana)
+    if (oran.some((q) => !Number.isFinite(q?.x) || !Number.isFinite(q?.y))) return null
+    return {
+      id: aktifEkranId ?? yeniEkranKimligi(),
+      oran,
+      alan: alanNokta.length === 4 ? alanNokta.map((q) => ({ ...q })) : null,
+      konum: { ...alanKonum },
+      doldur: alanDoldur,
+      olcek: alanOlcek ? { ...alanOlcek } : null,
+      ayar: ekranAyariAnlik(),
+    }
+  }
+
+  /*
+   * YENİ EKRAN İÇİN AYNI SÜREÇ BAŞTAN.
+   *
+   * Yeni ekran duranın bir boy sağına kopyalanıyordu; 2. ekranın nereye
+   * gireceği de 1. ekranınki gibi İŞARETLENEREK belirlenmeli. Alan
+   * işaretleme hemen açılıyor, tasarım işaretleme bitene kadar gizli.
+   */
+  const yeniEkranaBasla = () => {
+    setAktifEkranId(yeniEkranKimligi())
+    setAlanNokta([])
+    setAlanKonum({ u: 0.5, v: 0.5 })
+    setAlanDoldur(false)
+    setAlanOlcek(null)
+    setElleKose(null)
+    setRefKipi(false)
+    setLKoseKipi(false)
+    setAlanKipi(true)
+  }
+
+  const ekranEkleEski = () => {
     if (!Array.isArray(koseMutlak) || koseMutlak.length !== 4) return
     const oran = koseMutlak.map(tuvalOrana)
     if (oran.some((p) => !Number.isFinite(p?.x) || !Number.isFinite(p?.y))) return
@@ -3514,6 +3565,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     )
     const pay = en * 1.1
     setElleKose(koseMutlak.map((k) => ({ x: k.x + pay, y: k.y })))
+  }
+  void ekranEkleEski
+
+  const ekranEkle = () => {
+    const kayit = ekranKaydi()
+    if (!kayit) return
+    setSabitEkranlar((l) => [...l, kayit])
+    yeniEkranaBasla()
   }
 
   /*
@@ -3534,6 +3593,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       /* Duran ekranın dörtgeni yoksa (ölçü kurulmamış) sabitlenecek bir şey de yok. */
       return duran ? [...kalan, { id: kimlik, oran: duran, ayar: ekranAyariAnlik() }] : kalan
     })
+    /* Seçilen ekranın kendi alanı ve alan içindeki yeri de geri geliyor. */
+    setAlanKipi(false)
+    setAlanNokta(Array.isArray(secilen.alan) && secilen.alan.length === 4 ? secilen.alan : [])
+    setAlanKonum(secilen.konum || { u: 0.5, v: 0.5 })
+    setAlanDoldur(!!secilen.doldur)
+    setAlanOlcek(secilen.olcek || null)
     setElleKose(secilen.oran.map(oranTuvale))
     setAktifEkranId(secilen.id)
   }
@@ -6503,6 +6568,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/*
+            İŞARETLENEN ALANIN SINIRI — işaretleme bittikten sonra da duruyor.
+
+            Alan onaylanınca çizgiler kayboluyordu; tasarımın oraya oturup
+            oturmadığını görmenin bir yolu kalmıyordu. İnce kesik bir çizgi
+            olarak kalıyor: hem kullanıcı hizayı gözüyle denetleyebiliyor hem
+            de bir sapma varsa nerede olduğu görünüyor. Fareyi hiç görmüyor.
+          */}
+          {alanTuval && !alanKipi && !refKipi && !lKoseKipi && scene === 'ozel' && ozelSahne && (
+            <svg
+              className="absolute inset-0"
+              width={tuvalBoyut.w}
+              height={tuvalBoyut.h}
+              style={{ pointerEvents: 'none', zIndex: 12 }}
+            >
+              <polygon
+                points={alanTuval.map((k) => `${k.x},${k.y}`).join(' ')}
+                fill="none"
+                stroke="#ff8a3d"
+                strokeWidth="1.5"
+                strokeDasharray="7 5"
+                opacity="0.9"
+              />
+            </svg>
+          )}
+
+          {/*
             ALAN İÇİNDE TAŞIMA KATMANI.
 
             Tasarımın kendi dörtgeninin üstünde duran saydam bir yüzey;
@@ -7499,7 +7590,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           bir ara hem panelde hem kartta aynı alanlar vardı ve hangisinin
                           geçerli olduğu belirsizdi.
                         */}
-                        {sihirbazAdim > 0 ? (
+                        {sihirbazAdim > 0 || alanKipi ? (
                           <div className={olcuPencereSinifi}>
                           <OlcuSihirbazi
                             adim={sihirbazAdim}
