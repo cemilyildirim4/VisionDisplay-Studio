@@ -3489,10 +3489,44 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Alanın gerçek ölçüsü: tuval pikseli / metre başına piksel. */
     const alanWm = enPx / olcekPxM
     const alanHm = boyPx / olcekPxM
-    const secenek = yerlesimSecenekleri(m, alanWm, alanHm)
-    if (!secenek) return
-    const { yatay, dikey } = secenek
-    const dikeySec = dikey.piksel > yatay.piksel
+    /*
+     * ───────────────────────────────────────────────────────────────────
+     * KABİN SAYISI EN YAKINA YUVARLANIYOR, AŞAĞI DEĞİL.
+     *
+     * Duvara sığdırmada aşağı yuvarlamak (floor) doğru: duvarı aşmak
+     * yasak. Ama işaretlenen alanda amaç BOŞLUK BIRAKMAMAK ve işaretleme
+     * kıl payı şaşabiliyor. 192 cm'lik bir alan 191,9 ölçülünce
+     * 191,9/32 = 5,997 oluyor ve floor bir kabini komple yutuyordu:
+     * kullanıcı 6 sütun beklerken 5 görüyordu.
+     *
+     * En yakına yuvarlayınca 5,997 -> 6 oluyor. Bedeli dürüst: alan tam
+     * katı değilse sonuç birkaç santim taşabilir de, eksik de kalabilir --
+     * hangisi alana daha yakınsa o. Kabin bölünmediği için üçüncü bir
+     * seçenek yok.
+     *
+     * YÖN SEÇİMİ DE DEĞİŞTİ: en çok LED yerine ALANA EN YAKIN duruş
+     * seçiliyor, çünkü istenen şey boşluğun kapanması. Eşitlikte yatay
+     * kalıyor (aynı kural yüzey önerisinde de var).
+     * ───────────────────────────────────────────────────────────────────
+     */
+    const enYakin = (alanM, kabinM) => Math.max(1, Math.round(alanM / kabinM))
+    const kurul = (kabinWmm, kabinHmm) => {
+      const kw = kabinWmm / 1000
+      const kh = kabinHmm / 1000
+      const c = enYakin(alanWm, kw)
+      const r = enYakin(alanHm, kh)
+      return {
+        cols: c,
+        rows: r,
+        /* Alana ne kadar yakın: küçük olan kazanıyor. */
+        sapma: Math.abs(c * kw - alanWm) + Math.abs(r * kh - alanHm),
+      }
+    }
+    const gWmm = m.widthMm || 500
+    const gHmm = m.heightMm || 500
+    const yatay = kurul(gWmm, gHmm)
+    const dikey = kurul(gHmm, gWmm)
+    const dikeySec = dikey.sapma < yatay.sapma
     const kazanan = dikeySec ? dikey : yatay
     /* Kazanan yönün kabin ölçüsü: dikeyde kabin yan yatıyor. */
     const cwM2 = ((dikeySec ? m.heightMm : m.widthMm) || 500) / 1000
