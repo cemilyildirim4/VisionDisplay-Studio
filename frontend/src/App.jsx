@@ -7330,6 +7330,92 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </div>
           )}
 
+          {/*
+            EKRANLAR — aynı arka plana birden çok ekran.
+
+            Listede sabitlenenler sırasıyla, en sonda da
+            düzenlenmekte olan ekran duruyor. "Ekran ekle" duran
+            ekranı yerine sabitliyor ve elde aynı ölçüde yenisi
+            kalıyor; süreç baştan işliyor.
+          */}
+          {scene === 'ozel' && ozelSahne && (
+            <PanelBolum
+              /* Başlık ne işe yaradığını söylüyor: bölüm aranırken "Ekranlar" değil "Ekran ekle" diye aranıyor. */
+              baslik={t('ekran.ekle')}
+              ozet={`${sabitEkranlar.length + 1}`}
+              acik={acikBolum === 'ekranlar'}
+              onAc={() => bolumAc('ekranlar')}
+            >
+              <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                {t('ekran.cokluIpucu')}
+              </p>
+              <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1.5">
+                {[
+                  /* Sira kaydedilmemis eski kayitlar bos gorunmesin. */
+                  ...sabitEkranlar.map((e, i) => ({ ...e, sira: e.sira || i + 1, duzenlenen: false })),
+                  { id: '__aktif__', sira: aktifSira, duzenlenen: true },
+                ]
+                  .sort((a, b) => (a.sira || 0) - (b.sira || 0))
+                  .map((e) =>
+                    e.duzenlenen ? (
+                      <li
+                        key="aktif"
+                        className="flex items-center gap-2 rounded-lg border border-brand/40 bg-brand/5 px-2.5 py-2"
+                      >
+                        <span className="flex-1 text-[14px] font-medium text-brand">
+                          {e.sira}. {t('ekran.tekil')}
+                        </span>
+                        <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                          {t('ekran.duzenleniyor')}
+                        </span>
+                      </li>
+                    ) : (
+                      <li
+                        key={e.id}
+                        className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2"
+                      >
+                        <span className="flex-1 text-[14px] text-neutral-700 dark:text-neutral-200">
+                          {e.sira}. {t('ekran.tekil')}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => ekraniDuzenle(e.id)}
+                          className="px-2.5 py-1.5 rounded-lg text-[13px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                        >
+                          {t('ekran.duzenle')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => ekranSil(e.id)}
+                          aria-label={t('ekran.sil')}
+                          title={t('ekran.sil')}
+                          className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center transition-colors"
+                        >
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M6 6l12 12M18 6L6 18" />
+                          </svg>
+                        </button>
+                      </li>
+                    ),
+                  )}
+              </ul>
+              {/* Dugme neden kapali, sessiz kalmasin. */}
+              {!koseMutlak && (
+                <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                  {t('ekran.oncelikOlcu')}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={ekranEkle}
+                disabled={!koseMutlak}
+                className="mt-2 w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
+              >
+                {t('ekran.ekle')}
+              </button>
+            </PanelBolum>
+          )}
+
           {/* Model */}
           <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('model.heading')}</h2>
 
@@ -8362,89 +8448,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         )}
 
                         {/*
-                          EKRANLAR — aynı arka plana birden çok ekran.
-
-                          Listede sabitlenenler sırasıyla, en sonda da
-                          düzenlenmekte olan ekran duruyor. "Ekran ekle" duran
-                          ekranı yerine sabitliyor ve elde aynı ölçüde yenisi
-                          kalıyor; süreç baştan işliyor.
+                          EKRANLAR bölümü SOL PANELE taşındı: ekran eklemek
+                          modelin ve dizilimin yanında, yani ekranın kendisiyle
+                          ilgili işlerin olduğu yerde duruyor. Sağ panel
+                          ölçü/yerleşim işlerine kaldı.
                         */}
-                        {scene === 'ozel' && ozelSahne && (
-                          <PanelBolum
-                            baslik={t('ekran.coklu')}
-                            ozet={`${sabitEkranlar.length + 1}`}
-                            acik={acikBolum === 'ekranlar'}
-                            onAc={() => bolumAc('ekranlar')}
-                          >
-                            <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                              {t('ekran.cokluIpucu')}
-                            </p>
-                            <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1.5">
-                              {[
-                                /* Sira kaydedilmemis eski kayitlar bos gorunmesin. */
-                                ...sabitEkranlar.map((e, i) => ({ ...e, sira: e.sira || i + 1, duzenlenen: false })),
-                                { id: '__aktif__', sira: aktifSira, duzenlenen: true },
-                              ]
-                                .sort((a, b) => (a.sira || 0) - (b.sira || 0))
-                                .map((e) =>
-                                  e.duzenlenen ? (
-                                    <li
-                                      key="aktif"
-                                      className="flex items-center gap-2 rounded-lg border border-brand/40 bg-brand/5 px-2.5 py-2"
-                                    >
-                                      <span className="flex-1 text-[14px] font-medium text-brand">
-                                        {e.sira}. {t('ekran.tekil')}
-                                      </span>
-                                      <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
-                                        {t('ekran.duzenleniyor')}
-                                      </span>
-                                    </li>
-                                  ) : (
-                                    <li
-                                      key={e.id}
-                                      className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2"
-                                    >
-                                      <span className="flex-1 text-[14px] text-neutral-700 dark:text-neutral-200">
-                                        {e.sira}. {t('ekran.tekil')}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => ekraniDuzenle(e.id)}
-                                        className="px-2.5 py-1.5 rounded-lg text-[13px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                                      >
-                                        {t('ekran.duzenle')}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => ekranSil(e.id)}
-                                        aria-label={t('ekran.sil')}
-                                        title={t('ekran.sil')}
-                                        className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center transition-colors"
-                                      >
-                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                          <path d="M6 6l12 12M18 6L6 18" />
-                                        </svg>
-                                      </button>
-                                    </li>
-                                  ),
-                                )}
-                            </ul>
-                            {/* Dugme neden kapali, sessiz kalmasin. */}
-                            {!koseMutlak && (
-                              <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
-                                {t('ekran.oncelikOlcu')}
-                              </p>
-                            )}
-                            <button
-                              type="button"
-                              onClick={ekranEkle}
-                              disabled={!koseMutlak}
-                              className="mt-2 w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
-                            >
-                              {t('ekran.ekle')}
-                            </button>
-                          </PanelBolum>
-                        )}
 
                         {/*
                           YERLEŞİM başlığı — altındaki düğmeler kapalı olduğu
