@@ -554,7 +554,7 @@ const dict = {
     ar: 'التحرير اليدوي غير جاهز بعد؛ استخدم «الضبط بالقياس» في الوقت الحالي.',
   },
   'sih.alanTasi': {
-    tr: 'Tasarımı alanın içinde sürükleyerek taşıyabilirsiniz; dışına çıkmıyor.',
+    tr: 'Tasarımı sürükleyerek taşıyabilirsiniz; alanın dışına da çıkabilir.',
     en: 'Drag the design to move it inside the area; it cannot leave it.',
     ar: 'اسحب التصميم لتحريكه داخل المنطقة؛ لا يمكنه الخروج منها.',
   },

@@ -46,7 +46,15 @@ export default function EkEkranlar({
   return (
     <div
       className="absolute inset-0"
-      style={{ width: tuvalW, height: tuvalH, pointerEvents: 'none' }}
+      /*
+       * KATMAN SIRASI: sabit ekranlar tiklanabilir olmali.
+       *
+       * Katman varsayilan sirasinda duruyordu ve ustteki araclar (alan
+       * siniri, tasima yuzeyi) tiklamayi yutuyordu; sabit bir ekrana
+       * tiklayinca hicbir sey olmuyordu. Simdi onlarin ustunde: katmanin
+       * kendisi fareyi gormuyor, yalnizca ekranlar goruyor.
+       */
+      style={{ width: tuvalW, height: tuvalH, pointerEvents: 'none', zIndex: 13 }}
     >
       {ekranlar.map((ekran, i) => {
         const k = ekran?.oran

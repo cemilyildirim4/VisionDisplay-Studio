@@ -675,6 +675,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [aktifEkranId, setAktifEkranId] = useState(null)
   const yeniEkranKimligi = () => Date.now() + Math.random()
   /*
+   * EKRANIN SIRA NUMARASI — bir kez veriliyor, bir daha değişmiyor.
+   *
+   * Liste "sabitlenenler, sonra düzenlenen" diye diziliyordu. Bir ekrana
+   * tıklayınca o düzenlemeye alınıyor ve duran ekran sabitleniyor, yani
+   * ikisi YER DEĞİŞTİRİYOR: kullanıcı "1. ekran"a tıklıyor, o "2. ekran"
+   * oluyor ve ekranda hiçbir şey olmamış gibi görünüyordu. Oysa seçim
+   * çalışıyordu, yalnızca numaralar kayıyordu.
+   *
+   * Artık numara ekranın kendisine ait. Liste numaraya göre diziliyor,
+   * düzenlenen ekran kendi sırasında duruyor ve "düzenleniyor" diye
+   * işaretleniyor.
+   */
+  const [aktifSira, setAktifSira] = useState(1)
+  const sonrakiSira = () =>
+    Math.max(0, aktifSira, ...sabitEkranlar.map((e) => e.sira || 0)) + 1
+  /*
    * AÇIK OLAN PANEL BÖLÜMÜ — aynı anda yalnızca biri.
    * null ise hepsi kapalı; aynı başlığa tekrar basmak kapatıyor.
    */
@@ -1386,6 +1402,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setLSagAlt(0)
       setSabitEkranlar([])
       setAktifEkranId(null)
+      setAktifSira(1)
       setAlanKipi(false)
       setAlanNokta([])
       setAlanKonum({ u: 0.5, v: 0.5 })
@@ -3620,10 +3637,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!(enPx > 1) || !(boyPx > 1)) return
     const basX = e.clientX
     const basY = e.clientY
-    const bas = alanDoldur ? { u: 0.5, v: 0.5 } : alanKonum
+    const bas = alanKonum
     const tasi = (ev) => {
-      const u = Math.max(0, Math.min(1, bas.u + (ev.clientX - basX) / enPx))
-      const v = Math.max(0, Math.min(1, bas.v + (ev.clientY - basY) / boyPx))
+      /*
+       * SERBEST TAŞIMA — alanın dışına da çıkabiliyor.
+       *
+       * Önce 0..1 arasına sıkıştırılıyordu: ekran işaretlenen alanı hiç
+       * terk edemiyor, alanı tam dolduruyorsa da hiç kıpırdamıyordu.
+       * İstenen serbestlik; alan artık bir hapishane değil, yalnızca
+       * ölçünün ve ilk yerleşimin kaynağı. Değer yine alanın kendi
+       * koordinatında olduğu için ekran taşınırken o düzlemin
+       * perspektifine oturmaya devam ediyor.
+       *
+       * Çok uzağa kaçıp kaybolmasın diye geniş bir sınır var: alanın iki
+       * katı kadar dışarı.
+       */
+      const u = Math.max(-1, Math.min(2, bas.u + (ev.clientX - basX) / enPx))
+      const v = Math.max(-1, Math.min(2, bas.v + (ev.clientY - basY) / boyPx))
       setAlanKonum({ u, v })
       /* Ölçü KORUNUYOR: sürükleme yalnızca yeri değiştiriyor. */
       const yeni = alanaYerlestir(alanTuval, u, v, alanOlcek)
@@ -3667,6 +3697,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (oran.some((q) => !Number.isFinite(q?.x) || !Number.isFinite(q?.y))) return null
     return {
       id: aktifEkranId ?? yeniEkranKimligi(),
+      sira: aktifSira,
       oran,
       alan: alanNokta.length === 4 ? alanNokta.map((q) => ({ ...q })) : null,
       konum: { ...alanKonum },
@@ -3685,6 +3716,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const yeniEkranaBasla = () => {
     setAktifEkranId(yeniEkranKimligi())
+    setAktifSira(sonrakiSira())
     setAlanNokta([])
     setAlanKonum({ u: 0.5, v: 0.5 })
     setAlanDoldur(false)
@@ -3745,6 +3777,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAlanOlcek(secilen.olcek || null)
     setElleKose(secilen.oran.map(oranTuvale))
     setAktifEkranId(secilen.id)
+    setAktifSira(secilen.sira || 1)
   }
 
   const ekranSil = (id) => setSabitEkranlar((l) => l.filter((e) => e.id !== id))
@@ -4949,6 +4982,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setLSagAlt(0)
     setSabitEkranlar([])
     setAktifEkranId(null)
+    setAktifSira(1)
     setAlanKipi(false)
     setAlanNokta([])
     setAlanKonum({ u: 0.5, v: 0.5 })
@@ -8204,42 +8238,54 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               {t('ekran.cokluIpucu')}
                             </p>
                             <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1.5">
-                              {sabitEkranlar.map((e, i) => (
-                                <li
-                                  key={e.id}
-                                  className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2"
-                                >
-                                  <span className="flex-1 text-[14px] text-neutral-700 dark:text-neutral-200">
-                                    {i + 1}. {t('ekran.tekil')}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => ekraniDuzenle(e.id)}
-                                    className="px-2.5 py-1.5 rounded-lg text-[13px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                                  >
-                                    {t('ekran.duzenle')}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => ekranSil(e.id)}
-                                    aria-label={t('ekran.sil')}
-                                    title={t('ekran.sil')}
-                                    className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center transition-colors"
-                                  >
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                      <path d="M6 6l12 12M18 6L6 18" />
-                                    </svg>
-                                  </button>
-                                </li>
-                              ))}
-                              <li className="flex items-center gap-2 rounded-lg border border-brand/40 bg-brand/5 px-2.5 py-2">
-                                <span className="flex-1 text-[14px] font-medium text-brand">
-                                  {sabitEkranlar.length + 1}. {t('ekran.tekil')}
-                                </span>
-                                <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
-                                  {t('ekran.duzenleniyor')}
-                                </span>
-                              </li>
+                              {[
+                                /* Sira kaydedilmemis eski kayitlar bos gorunmesin. */
+                                ...sabitEkranlar.map((e, i) => ({ ...e, sira: e.sira || i + 1, duzenlenen: false })),
+                                { id: '__aktif__', sira: aktifSira, duzenlenen: true },
+                              ]
+                                .sort((a, b) => (a.sira || 0) - (b.sira || 0))
+                                .map((e) =>
+                                  e.duzenlenen ? (
+                                    <li
+                                      key="aktif"
+                                      className="flex items-center gap-2 rounded-lg border border-brand/40 bg-brand/5 px-2.5 py-2"
+                                    >
+                                      <span className="flex-1 text-[14px] font-medium text-brand">
+                                        {e.sira}. {t('ekran.tekil')}
+                                      </span>
+                                      <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                                        {t('ekran.duzenleniyor')}
+                                      </span>
+                                    </li>
+                                  ) : (
+                                    <li
+                                      key={e.id}
+                                      className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2"
+                                    >
+                                      <span className="flex-1 text-[14px] text-neutral-700 dark:text-neutral-200">
+                                        {e.sira}. {t('ekran.tekil')}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => ekraniDuzenle(e.id)}
+                                        className="px-2.5 py-1.5 rounded-lg text-[13px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                                      >
+                                        {t('ekran.duzenle')}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => ekranSil(e.id)}
+                                        aria-label={t('ekran.sil')}
+                                        title={t('ekran.sil')}
+                                        className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center transition-colors"
+                                      >
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                          <path d="M6 6l12 12M18 6L6 18" />
+                                        </svg>
+                                      </button>
+                                    </li>
+                                  ),
+                                )}
                             </ul>
                             {/* Dugme neden kapali, sessiz kalmasin. */}
                             {!koseMutlak && (
