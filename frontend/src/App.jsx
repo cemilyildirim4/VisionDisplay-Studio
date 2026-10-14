@@ -3440,13 +3440,94 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * alandan taşıyordu. Oranı da birlikte düzeltmek ayrı bir adım.
    * ───────────────────────────────────────────────────────────────────────
    */
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * ÖLÇÜYE SIĞDIR — EKRANIN KENDİSİ BÜYÜYOR, GÖRÜNTÜ ESNEMİYOR.
+   *
+   * İki yanlış deneme oldu, ikisi de burada yazılı dursun:
+   *   1) Yalnızca çizilen dörtgen alana oturtuluyordu. Tasarım alanı
+   *      dolduruyor gibi görünüyor ama sol paneldeki sütun/satır 1x1
+   *      kalıyordu — üründe hiçbir şey değişmiyor, sadece resim esniyordu.
+   *   2) Kabin sayısı hesaplanıp çizim yine alanı DOLDURACAK şekilde
+   *      yapılıyordu; o zaman da tasarım alandan taşıyordu.
+   *
+   * Doğrusu: alana kaç kabin sığdığı hesaplanıyor, yapılandırma ona göre
+   * kuruluyor ve tasarım KENDİ GERÇEK ÖLÇÜSÜYLE alanın ORTASINA konuyor.
+   * Kabinler tam sayı olduğu için kenarlarda boşluk kalıyor — kalsın;
+   * gerçekte kurulabilecek olan bu.
+   *
+   * Hesap duvara sığdırmayla aynı işlevi kullanıyor (yerlesimSecenekleri):
+   * iki yön de deneniyor, LED sayısı fazla olan seçiliyor, eşitlikte yatay.
+   * ───────────────────────────────────────────────────────────────────────
+   */
   const tasarimiAlanaSigdir = () => {
-    if (!alanTuval) return
-    elleKoseyeYaz(alanTuval.map((k) => ({ x: k.x, y: k.y })))
-    /* Ölçü artık alanın TAMAMI; sürükleme bunu bozmasın diye saklanıyor. */
-    setAlanOlcek({ u: 1, v: 1 })
+    if (!alanTuval || !(cizimOlcek > 0)) return
+    const m = previewModel || selectedModel
+    if (!m) return
+    const enPx =
+      (Math.hypot(alanTuval[1].x - alanTuval[0].x, alanTuval[1].y - alanTuval[0].y) +
+        Math.hypot(alanTuval[2].x - alanTuval[3].x, alanTuval[2].y - alanTuval[3].y)) /
+      2
+    const boyPx =
+      (Math.hypot(alanTuval[3].x - alanTuval[0].x, alanTuval[3].y - alanTuval[0].y) +
+        Math.hypot(alanTuval[2].x - alanTuval[1].x, alanTuval[2].y - alanTuval[1].y)) /
+      2
+    if (!(enPx > 1) || !(boyPx > 1)) return
+    /* Alanın gerçek ölçüsü: tuval pikseli / metre başına piksel. */
+    const alanWm = enPx / cizimOlcek
+    const alanHm = boyPx / cizimOlcek
+    const secenek = yerlesimSecenekleri(m, alanWm, alanHm)
+    if (!secenek) return
+    const { yatay, dikey } = secenek
+    const dikeySec = dikey.piksel > yatay.piksel
+    const kazanan = dikeySec ? dikey : yatay
+    /* Kazanan yönün kabin ölçüsü: dikeyde kabin yan yatıyor. */
+    const cwM2 = ((dikeySec ? m.heightMm : m.widthMm) || 500) / 1000
+    const chM2 = ((dikeySec ? m.widthMm : m.heightMm) || 500) / 1000
+    const c = kazanan.cols
+    const r = kazanan.rows
+    const yeniWm = c * cwM2
+    const yeniHm = r * chM2
+    if (!(yeniWm > 0) || !(yeniHm > 0)) return
+    setOrientation(dikeySec ? 'portrait' : 'landscape')
+    setCols(c)
+    setRows(r)
+    /* Duvar alanı da en az bu kadar olmalı, yoksa üst sınır kabinleri kırpar. */
+    setWidth((e) => Math.max(e, +yeniWm.toFixed(2)))
+    setHeight((e) => Math.max(e, +yeniHm.toFixed(2)))
+    /*
+     * Çizim YENİ gerçek ölçüyle, alanın ortasına. Ölçü dışarıdan veriliyor
+     * çünkü cols/rows daha state'e yazılmadı ve tasarimWm hâlâ eskisini
+     * söylüyor.
+     */
+    const u = Math.max(0.03, Math.min(1, (yeniWm * cizimOlcek) / enPx))
+    const v = Math.max(0.03, Math.min(1, (yeniHm * cizimOlcek) / boyPx))
+    const n = alanaYerlestir(alanTuval, 0.5, 0.5, { u, v })
+    if (n) elleKoseyeYaz(n)
+    setAlanOlcek({ u, v })
     setAlanKonum({ u: 0.5, v: 0.5 })
-    setAlanDoldur(true)
+    /* Kenarlarda boşluk var: alanı doldurmuyor, dolayısıyla sürüklenebilir. */
+    setAlanDoldur(false)
+    setOzelUyari(
+      t('scene.alanSigdiDone') +
+        ' ' +
+        c +
+        ' × ' +
+        r +
+        ' ' +
+        t('scene.cabinets') +
+        ' (' +
+        yeniWm.toFixed(2).replace('.', ',') +
+        ' × ' +
+        yeniHm.toFixed(2).replace('.', ',') +
+        ' m) · ' +
+        t('scene.alanOlcusu') +
+        ' ' +
+        alanWm.toFixed(2).replace('.', ',') +
+        ' × ' +
+        alanHm.toFixed(2).replace('.', ',') +
+        ' m',
+    )
   }
 
   /*

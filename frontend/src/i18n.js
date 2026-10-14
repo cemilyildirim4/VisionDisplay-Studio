@@ -531,6 +531,12 @@ const dict = {
     en: 'Click the four corners of the area the screen should cover: top-left, top-right, bottom-right, bottom-left. The marks can be dragged afterwards. The design stays hidden until all four are placed.',
     ar: 'انقر على زوايا المنطقة الأربع التي يجب أن تغطيها الشاشة. يبقى التصميم مخفيًا حتى وضع النقاط الأربع.',
   },
+  'scene.alanSigdiDone': {
+    tr: 'İşaretlenen alana sığan en büyük ekran kuruldu:',
+    en: 'Built the largest screen that fits the marked area:',
+    ar: 'تم إنشاء أكبر شاشة تناسب المنطقة المحددة:',
+  },
+  'scene.alanOlcusu': { tr: 'alan', en: 'area', ar: 'المنطقة' },
   'sih.alanBitir': { tr: 'Alanı onayla', en: 'Confirm the area', ar: 'تأكيد المنطقة' },
   'sih.alanBaslik': {
     tr: 'Yeni ekranın alanını işaretleyin',
