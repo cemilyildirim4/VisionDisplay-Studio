@@ -3389,13 +3389,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /* Alanı tamamen doldur — montaj payıyla (bkz. sigdirDortgen). */
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * ÖLÇÜYE SIĞDIR — TASARIM İŞARETLENEN DÖRT KÖŞEYE BİREBİR OTURUYOR.
+   *
+   * Önce sigdirDortgen kullanılıyordu: tasarımın EN-BOY ORANINI koruyarak
+   * alana sığdırıyor, üstüne de montaj payı bırakıyordu. Sonuç, kullanıcının
+   * işaretlediği alanla örtüşmüyordu — oran tutmayınca tasarım alanın
+   * içinde küçük kalıyor, bazen de alanın dışına taşan yamuk bir şekil
+   * çıkıyordu.
+   *
+   * İstenen açık: işaretlenen alan NEREYSE tasarım tam oraya otursun. Artık
+   * çizilen dörtgen işaretlenen dörtgenin kendisi; alan, tasarım ve 3B
+   * görünüm aynı dört noktayı paylaşıyor.
+   *
+   * Bedeli dürüst: alanın oranı tasarımın oranından farklıysa görüntü o
+   * oranda esniyor. Ürünün kendi ölçüsünü değiştirmek (kaç kabin sığdığını
+   * hesaplayıp sütun/satır kurmak) denendi ve geri alındı; orada tasarım
+   * alandan taşıyordu. Oranı da birlikte düzeltmek ayrı bir adım.
+   * ───────────────────────────────────────────────────────────────────────
+   */
   const tasarimiAlanaSigdir = () => {
-    if (!alanTuval || !(tasarimHm > 0)) return
-    const n = sigdirDortgen(alanTuval, tasarimWm / tasarimHm)
-    if (Array.isArray(n) && n.length === 4) {
-      elleKoseyeYaz(n)
-      setAlanDoldur(true)
-    }
+    if (!alanTuval) return
+    elleKoseyeYaz(alanTuval.map((k) => ({ x: k.x, y: k.y })))
+    setAlanDoldur(true)
   }
 
   /*
