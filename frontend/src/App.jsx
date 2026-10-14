@@ -3836,6 +3836,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       /* Duran ekranın dörtgeni yoksa (ölçü kurulmamış) sabitlenecek bir şey de yok. */
       return birakan ? [...kalan, birakan] : kalan
     })
+    /*
+     * ───────────────────────────────────────────────────────────────────
+     * EKRANIN KENDİ DİZİLİMİ DE GERİ GELİYOR.
+     *
+     * Dörtgen geri yükleniyordu ama sütun/satır yüklenmiyordu. Çizim her
+     * değişiklikte tasarımın O ANKİ gerçek ölçüsünden yeniden kuruluyor
+     * (bkz. aşağıdaki useEffect), dolayısıyla 2. ekrana geçildiğinde o
+     * ekran 1. ekranın diziliminden türeyen ölçüyle çiziliyordu: kullanıcı
+     * tıkladığı ekranın boyunun değiştiğini görüyordu.
+     *
+     * Modelin kendisi değiştirilmiyor: previewModel seçili modelden
+     * türüyor ve ekranlar arasında model değiştirmek ayrı bir iş.
+     * ───────────────────────────────────────────────────────────────────
+     */
+    const ayar = secilen.ayar
+    if (ayar) {
+      if (ayar.cols > 0) setCols(ayar.cols)
+      if (ayar.rows > 0) setRows(ayar.rows)
+      if (ayar.content) setContent(ayar.content)
+      setContentUrl(ayar.contentUrl || null)
+    }
     /* Seçilen ekranın kendi alanı ve alan içindeki yeri de geri geliyor. */
     setAlanKipi(false)
     setAlanNokta(Array.isArray(secilen.alan) && secilen.alan.length === 4 ? secilen.alan : [])
@@ -5728,10 +5749,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Öteki mekânlarda (hazır sahneler) eskisi gibi panelin içinde duruyor —
    * orada akış zaten farklı ve yerinde çalışıyor.
    */
-  const olcuPencereSinifi =
-    scene === 'ozel' && ozelSahne
-      ? 'fixed right-4 top-20 z-50 w-[360px] max-w-[calc(100vw-2rem)] max-h-[78vh] overflow-y-auto rounded-2xl border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#1a1f27] shadow-2xl p-3'
-      : ''
+  /*
+   * SİHİRBAZ PANELİN KENDİSİNDE — ayrı bir pencere değil.
+   *
+   * Kendi fotoğrafında kart tuvalin üstünde yüzen bir pencereydi; fotoğrafın
+   * bir kısmını kapatıyor ve panelde ayrıca boşluk bırakıyordu. Artık sağ
+   * panelin içinde, öteki mekânlarda olduğu gibi. Açıkken panelin ölçüyle
+   * ilgisi olmayan bölümleri gizleniyor (bkz. olcuAcik), yani kart yerini
+   * onlardan alıyor ve ekranda iki iş birbirine karışmıyor.
+   */
+  const olcuPencereSinifi = ''
+
+  /* Ölçü akışı açık mı: panelde yalnızca onun işi görünsün. */
+  const olcuAcik = sihirbazAdim > 0 || alanKipi
 
   const lSekilPaneli = (
     <div className="mt-2">
@@ -7871,7 +7901,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               */}
 
               {/* Mini PC — opsiyonel görüntü kaynağı; kapalıysa yalnızca işlemci */}
-              {!isVideoWall && (
+              {/* Ölçü akışı sürerken gizli: ekranın donanımıyla ilgisi yok. */}
+              {!isVideoWall && !olcuAcik && (
                 <div className="mb-3">
                   {/*
                     MİNİ PC — TEK SATIR.
@@ -7903,40 +7934,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 birbirinden bağımsız seçilir, o yüzden ayrı bir başlık altında.
               */}
               <div className="mb-2">
-                <h2 className="text-[25px] font-bold tracking-tight m-0 mb-1">{t('scene.heading')}</h2>
-                <p className="text-[14px] text-neutral-400 dark:text-neutral-500 m-0 mb-3">{t('scene.hint')}</p>
                 {/*
-                  İki mekân: iç mekân (Salon.jsx) ve dış mekân (Cephe.jsx).
-                  İkisi de aynı mantıkta çizim — "Duvar" alanları mekânın
-                  yüzeyini, "Ekran" alanları ekranı belirler, ikisi de gerçek
-                  metre.
-
-                  LİSTEDEN ÇIKARILANLAR (kod duruyor, ileride lazım olabilir):
-                  fotoğraflı mekânlar (sahneler.js: cadde panosu, ofis duvarı)
-                  ve yol kenarı panosu (Pano.jsx). Hepsinin çizim/ölçek kodu
-                  yerinde; geri getirmek için buraya bir satır eklemek yeterli.
+                  Mekân seçimi ölçü akışı sürerken gizli: akışın ortasında
+                  mekânı değiştirmek yapılan işi çöpe atardı.
                 */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[{ id: SALON_ID, ad: 'scene.salon' },
-                    { id: CEPHE_ID, ad: 'scene.cephe' },
-                    { id: 'avm', ad: 'avm.title' },
-                    { id: 'meydan-gece', ad: 'dis.title' },
-                    ...(ozelSahne ? [{ id: 'ozel', ad: 'scene.custom' }] : []),
-                    { id: 'none', ad: 'scene.customOff' }].map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setScene(s.id)}
-                      className={`py-2.5 rounded-lg text-[16px] transition-colors hover:border-neutral-300 dark:hover:border-[#39414f] ${
-                        scene === s.id
-                          ? 'btn-selected border-2'
-                          : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
-                      }`}
-                    >
-                      {t(s.ad)}
-                    </button>
-                  ))}
-                </div>
+                {!olcuAcik && (
+                  <>
+                  <h2 className="text-[25px] font-bold tracking-tight m-0 mb-1">{t('scene.heading')}</h2>
+                  <p className="text-[14px] text-neutral-400 dark:text-neutral-500 m-0 mb-3">{t('scene.hint')}</p>
+                  {/*
+                    İki mekân: iç mekân (Salon.jsx) ve dış mekân (Cephe.jsx).
+                    İkisi de aynı mantıkta çizim — "Duvar" alanları mekânın
+                    yüzeyini, "Ekran" alanları ekranı belirler, ikisi de gerçek
+                    metre.
+
+                    LİSTEDEN ÇIKARILANLAR (kod duruyor, ileride lazım olabilir):
+                    fotoğraflı mekânlar (sahneler.js: cadde panosu, ofis duvarı)
+                    ve yol kenarı panosu (Pano.jsx). Hepsinin çizim/ölçek kodu
+                    yerinde; geri getirmek için buraya bir satır eklemek yeterli.
+                  */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[{ id: SALON_ID, ad: 'scene.salon' },
+                      { id: CEPHE_ID, ad: 'scene.cephe' },
+                      { id: 'avm', ad: 'avm.title' },
+                      { id: 'meydan-gece', ad: 'dis.title' },
+                      ...(ozelSahne ? [{ id: 'ozel', ad: 'scene.custom' }] : []),
+                      { id: 'none', ad: 'scene.customOff' }].map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setScene(s.id)}
+                        className={`py-2.5 rounded-lg text-[16px] transition-colors hover:border-neutral-300 dark:hover:border-[#39414f] ${
+                          scene === s.id
+                            ? 'btn-selected border-2'
+                            : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
+                        }`}
+                      >
+                        {t(s.ad)}
+                      </button>
+                    ))}
+                  </div>
+                  </>
+                )}
 
                 {/*
                   L KÖŞESİ — MEKÂN SEÇİMİNİN YANINDA.
@@ -8009,6 +8048,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   onChange={mekanFotoSecildi}
                   className="hidden"
                 />
+                {/* Fotoğrafı değiştirmek de akışın ortasında yapılacak iş değil. */}
+                {!olcuAcik && (
                 <button
                   type="button"
                   onClick={() => ozelDosyaRef.current?.click()}
@@ -8020,6 +8061,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </svg>
                   {ozelSahne ? t('scene.customChange') : t('scene.customAdd')}
                 </button>
+                )}
 
                 {/*
                   ÇEKİM MESAFESİ ARTIK AYRI BİR ALAN DEĞİL.

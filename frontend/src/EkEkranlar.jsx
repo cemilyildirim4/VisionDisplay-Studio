@@ -40,8 +40,24 @@ export default function EkEkranlar({
   if (!Array.isArray(ekranlar) || ekranlar.length === 0) return null
   if (!(tuvalW > 0) || !(tuvalH > 0)) return null
 
-  const bgImage = content !== 'none' ? contentImage(content, contentUrl) : null
-  const yayinda = content !== 'none' && content !== 'led'
+  /*
+   * HER EKRAN KENDİ AYARIYLA ÇİZİLİYOR.
+   *
+   * Diyot sıklığı ve içerik paneldeki O ANKİ değerden geliyordu: 2. ekran
+   * eklenince 1. ekranın görüntüsü de onunkine dönüyordu. Kaydı olanda
+   * kendi ayarı, olmayanda (eski kayıtlar) paneldeki değer kullanılıyor.
+   */
+  const ayarli = (ekran) => {
+    const a = ekran?.ayar || {}
+    const e = a.content || content
+    const u = a.content ? a.contentUrl || null : contentUrl
+    return {
+      cols: a.cols > 0 ? a.cols : cols,
+      rows: a.rows > 0 ? a.rows : rows,
+      bgImage: e !== 'none' ? contentImage(e, u) : null,
+      yayinda: e !== 'none' && e !== 'led',
+    }
+  }
 
   return (
     <div
@@ -74,7 +90,8 @@ export default function EkEkranlar({
         const d = koseDonusumu(wPx, hPx, koseler)
         if (!d) return null
 
-        const diyot = !yayinda ? ledDotSize(wPx / Math.max(1, cols), hPx / Math.max(1, rows)) : null
+        const { cols: eCols, rows: eRows, bgImage, yayinda } = ayarli(ekran)
+        const diyot = !yayinda ? ledDotSize(wPx / Math.max(1, eCols), hPx / Math.max(1, eRows)) : null
 
         return (
           <div
