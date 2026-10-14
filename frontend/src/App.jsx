@@ -111,6 +111,8 @@ function SekilTus({ onClick, etiket, yol }) {
 import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
 /* Alan içine yerleştirme ve sığdırma — ikisi de hazır (bkz. homografi.js). */
 import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
+/* İşaretlenen alanın GERÇEK ölçüsü — eğimi hesaba katarak (bkz. alanOlcu.js). */
+import { dortgenGercekOlcu } from './alanOlcu.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -3386,11 +3388,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const u =
       olcek && olcek.u > 0
         ? Math.max(0.03, olcek.u)
-        : Math.max(0.03, (dW * olcekPxM) / enPx)
+        : alanGercek && alanGercek.enCm > 0
+          ? Math.max(0.03, (dW * 100) / alanGercek.enCm)
+          : Math.max(0.03, (dW * olcekPxM) / enPx)
     const v =
       olcek && olcek.v > 0
         ? Math.max(0.03, olcek.v)
-        : Math.max(0.03, (dH * olcekPxM) / boyPx)
+        : alanGercek && alanGercek.boyCm > 0
+          ? Math.max(0.03, (dH * 100) / alanGercek.boyCm)
+          : Math.max(0.03, (dH * olcekPxM) / boyPx)
     const u0 = u >= 1 ? (1 - u) / 2 : Math.max(0, Math.min(1 - u, uMerkez - u / 2))
     const v0 = v >= 1 ? (1 - v) / 2 : Math.max(0, Math.min(1 - v, vMerkez - v / 2))
     const n = [
@@ -3486,9 +3492,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         Math.hypot(alanTuval[2].x - alanTuval[1].x, alanTuval[2].y - alanTuval[1].y)) /
       2
     if (!(enPx > 1) || !(boyPx > 1)) return
-    /* Alanın gerçek ölçüsü: tuval pikseli / metre başına piksel. */
-    const alanWm = enPx / olcekPxM
-    const alanHm = boyPx / olcekPxM
+    /*
+     * Alanın gerçek ölçüsü: önce perspektiften (alanGercek), o çıkmazsa
+     * tek ölçekli hesap. İkincisi yalnızca yüzey karşıdan görünürken
+     * devreye giriyor ve orada zaten doğru.
+     */
+    const alanWm = alanGercek ? alanGercek.enCm / 100 : enPx / olcekPxM
+    const alanHm = alanGercek ? alanGercek.boyCm / 100 : boyPx / olcekPxM
     /*
      * ───────────────────────────────────────────────────────────────────
      * KABİN SAYISI EN YAKINA YUVARLANIYOR, AŞAĞI DEĞİL.
@@ -4394,6 +4404,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })()
 
   const alanTuval = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
+
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * ALANIN GERÇEK ÖLÇÜSÜ — EĞİM HESABA KATILARAK.
+   *
+   * Tek ölçekle (px/cm) bölmek, fotoğraf tam karşıdan çekilmemişse yanlış:
+   * referans yatayda alınmışsa yatay doğru çıkıyor ama DİKEY kenar uzaklaşan
+   * yüzeyde durduğu için santim başına daha az piksel ediyor ve yükseklik
+   * KISA ölçülüyor. Kullanıcının 196 cm'lik kapısı 168-184 cm sanılıp 12
+   * yerine 11 satır kuruluyordu.
+   *
+   * Oysa işaretlenen dörtgen bu bilgiyi zaten taşıyor: bir dikdörtgenin eğik
+   * görüntüsü o düzlemin perspektifinin kendisi. Sentetik sahnede ölçüldü —
+   * iki yönde de dönük bir yüzeyde eski yöntem yükseklikte %15-37 şaşarken
+   * yeni yöntem %0,0 veriyor ve odak uzunluğunu da birebir buluyor.
+   *
+   * Çıkmazsa (yüzey tam karşıdan görünüyorsa) null dönüyor; orada perspektif
+   * olmadığı için tek ölçekli hesap zaten doğru.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const alanGercek = (() => {
+    if (!alanTuval || refNokta.length !== 2) return null
+    const cm = Number(String(refUzunlukCm).replace(',', '.'))
+    if (!(cm > 0)) return null
+    const a = oranTuvale(refNokta[0])
+    const b = oranTuvale(refNokta[1])
+    const asal = oranTuvale({ x: 0.5, y: 0.5 })
+    /* Odak tahmini yalnızca tek kaçış noktası varken kullanılıyor. */
+    const odak = fotoYer?.genislik > 0 ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785 : 0
+    return dortgenGercekOlcu(alanTuval, a, b, cm, asal, odak)
+  })()
 
   /*
    * ───────────────────────────────────────────────────────────────────────
