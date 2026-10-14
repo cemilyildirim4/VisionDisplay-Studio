@@ -3363,7 +3363,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!Array.isArray(koseler) || koseler.length !== 4) return null
     const dW = wM != null ? wM : tasarimWm
     const dH = hM != null ? hM : tasarimHm
-    if (!(cizimOlcek > 0) || !(dW > 0) || !(dH > 0)) return null
+    /* Ölçek referanstan; cizimOlcek yalnızca yedek (bkz. alanOlcegiPxM). */
+    const olcekPxM = alanOlcegiPxM || cizimOlcek
+    if (!(olcekPxM > 0) || !(dW > 0) || !(dH > 0)) return null
     const enPx =
       (Math.hypot(koseler[1].x - koseler[0].x, koseler[1].y - koseler[0].y) +
         Math.hypot(koseler[2].x - koseler[3].x, koseler[2].y - koseler[3].y)) /
@@ -3384,11 +3386,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const u =
       olcek && olcek.u > 0
         ? Math.max(0.03, olcek.u)
-        : Math.max(0.03, (dW * cizimOlcek) / enPx)
+        : Math.max(0.03, (dW * olcekPxM) / enPx)
     const v =
       olcek && olcek.v > 0
         ? Math.max(0.03, olcek.v)
-        : Math.max(0.03, (dH * cizimOlcek) / boyPx)
+        : Math.max(0.03, (dH * olcekPxM) / boyPx)
     const u0 = u >= 1 ? (1 - u) / 2 : Math.max(0, Math.min(1 - u, uMerkez - u / 2))
     const v0 = v >= 1 ? (1 - v) / 2 : Math.max(0, Math.min(1 - v, vMerkez - v / 2))
     const n = [
@@ -3415,29 +3417,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     )
   }
 
-  /*
-   * ───────────────────────────────────────────────────────────────────────
-   * TASARIMIN ÖLÇÜSÜ DEĞİŞİNCE ÇİZİM DE DEĞİŞİYOR.
-   *
-   * Alan işaretlendikten sonra ekrandaki dörtgen bir kez yazılıp öylece
-   * kalıyordu. Sol panelden sütun/satır değiştirmek tasarımın gerçek
-   * ölçüsünü değiştiriyor ama ekranda hiçbir şey olmuyordu.
-   *
-   * Artık alan duruyorken dörtgen, tasarımın o anki gerçek ölçüsünden ve
-   * alan içindeki yerinden yeniden kuruluyor. Sürükleme de aynı yerden
-   * besleniyor, dolayısıyla ikisi çakışmıyor.
-   * ───────────────────────────────────────────────────────────────────────
-   */
-  useEffect(() => {
-    if (alanNokta.length !== 4 || alanKipi) return
-    if (!(cizimOlcek > 0) || !(tasarimWm > 0) || !(tasarimHm > 0)) return
-    const k = alanNokta.map(oranTuvale)
-    const sirali = koseleriSirala(k)
-    const n = alanaYerlestir(sirali, alanKonum.u, alanKonum.v, alanOlcek)
-    if (n) elleKoseyeYaz(n)
-    /* elleKose'yi bu etki yazıyor; bağımlılığa koymak döngü olurdu. */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasarimWm, tasarimHm, cizimOlcek, alanNokta, alanKipi, alanKonum.u, alanKonum.v])
 
   /* Dört nokta tamamlandı: işaretleme kapanıyor, tasarım alana giriyor. */
   const alaniBitir = () => {
@@ -3494,7 +3473,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ───────────────────────────────────────────────────────────────────────
    */
   const tasarimiAlanaSigdir = () => {
-    if (!alanTuval || !(cizimOlcek > 0)) return
+    const olcekPxM = alanOlcegiPxM || cizimOlcek
+    if (!alanTuval || !(olcekPxM > 0)) return
     const m = previewModel || selectedModel
     if (!m) return
     const enPx =
@@ -3507,8 +3487,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       2
     if (!(enPx > 1) || !(boyPx > 1)) return
     /* Alanın gerçek ölçüsü: tuval pikseli / metre başına piksel. */
-    const alanWm = enPx / cizimOlcek
-    const alanHm = boyPx / cizimOlcek
+    const alanWm = enPx / olcekPxM
+    const alanHm = boyPx / olcekPxM
     const secenek = yerlesimSecenekleri(m, alanWm, alanHm)
     if (!secenek) return
     const { yatay, dikey } = secenek
@@ -4351,7 +4331,63 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return [...n].sort((a, b) => Math.atan2(a.y - my, a.x - mx) - Math.atan2(b.y - my, b.x - mx))
   }
 
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * ALAN HESAPLARININ ÖLÇEĞİ DOĞRUDAN REFERANSTAN.
+   *
+   * Önce cizimOlcek kullanılıyordu (WallPreview'in bildirdiği metre başına
+   * piksel). Ölçüldü: referans 300 tuval pikseli = 100 cm iken cizimOlcek
+   * 229,7 px/m diyordu — yani %23 küçük. Alanın gerçek ölçüsü o oranda
+   * BÜYÜK çıkıyor ve kabin sayısı şişiyordu: kullanıcının 96 x 196 cm
+   * olarak işaretlediği kapı 1,92 x 4,00 m sanılıp 6 x 25 kabin kuruluyordu.
+   *
+   * Burada hesaplanan ölçek, işaretlerin KENDİ uzayında: referansın iki ucu
+   * da alanın köşeleri de aynı oranTuvale'den geçiyor, dolayısıyla aradaki
+   * her çarpan (sahne yakınlığı, fotoğrafın tuvale oturma oranı) ikisinde de
+   * aynı ve sadeleşiyor. Ölçek referanstan geldiği için kullanıcının
+   * işaretlediği uzunluk neyse o.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const alanOlcegiPxM = (() => {
+    if (refNokta.length !== 2) return null
+    const cm = Number(String(refUzunlukCm).replace(',', '.'))
+    if (!(cm > 0)) return null
+    const a = oranTuvale(refNokta[0])
+    const b = oranTuvale(refNokta[1])
+    const px = Math.hypot(b.x - a.x, b.y - a.y)
+    if (!(px > 1)) return null
+    return (px / cm) * 100
+  })()
+
   const alanTuval = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
+
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * TASARIMIN ÖLÇÜSÜ DEĞİŞİNCE ÇİZİM DE DEĞİŞİYOR.
+   *
+   * Alan işaretlendikten sonra ekrandaki dörtgen bir kez yazılıp öylece
+   * kalıyordu. Sol panelden sütun/satır değiştirmek tasarımın gerçek
+   * ölçüsünü değiştiriyor ama ekranda hiçbir şey olmuyordu.
+   *
+   * Artık alan duruyorken dörtgen, tasarımın o anki gerçek ölçüsünden ve
+   * alan içindeki yerinden yeniden kuruluyor. Sürükleme de aynı yerden
+   * besleniyor, dolayısıyla ikisi çakışmıyor.
+   *
+   * BURADA DURUYOR, YUKARIDA DEĞİL. Bağımlılık dizisi RENDER sırasında
+   * okunuyor; etki yukarıdayken dizideki alanOlcegiPxM henüz tanımlı
+   * olmuyor ve uygulama açılır açılmaz hata ekranına düşüyordu (TDZ).
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  useEffect(() => {
+    if (alanNokta.length !== 4 || alanKipi) return
+    if (!(alanOlcegiPxM || cizimOlcek) || !(tasarimWm > 0) || !(tasarimHm > 0)) return
+    const k = alanNokta.map(oranTuvale)
+    const sirali = koseleriSirala(k)
+    const n = alanaYerlestir(sirali, alanKonum.u, alanKonum.v, alanOlcek)
+    if (n) elleKoseyeYaz(n)
+    /* elleKose'yi bu etki yazıyor; bağımlılığa koymak döngü olurdu. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasarimWm, tasarimHm, cizimOlcek, alanOlcegiPxM, alanNokta, alanKipi, alanKonum.u, alanKonum.v])
 
   const tuvalOrana = (k) => {
     const yer = fotoYer
