@@ -858,6 +858,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [alanKipi, setAlanKipi] = useState(false)
   const [alanNokta, setAlanNokta] = useState([])
   /*
+   * ALANIN ÖLÇÜSÜ ELLE DÜZELTİLEBİLİYOR.
+   *
+   * Uygulama alanı perspektiften ölçüyor ama işaretleme birkaç santim
+   * şaşabiliyor ve sonuç kabin sayısına yansıyor. Kullanıcı gerçek ölçüyü
+   * biliyorsa doğrudan yazabilsin: dörtgen ŞEKLİ veriyor, bu sayı ÖLÇÜYÜ.
+   * Perspektifle uğraşmak gerekmiyor — işaretlenen dörtgen aynen kalıyor,
+   * yalnızca kaç santim olduğu değişiyor.
+   *
+   * Boş bırakılırsa ölçülen değer kullanılıyor.
+   */
+  const [alanElleEn, setAlanElleEn] = useState('')
+  const [alanElleBoy, setAlanElleBoy] = useState('')
+  /*
    * TASARIMIN ALAN İÇİNDEKİ YERİ — alanın birim karesinde merkez (0..1).
    *
    * Ekranın yeri artık piksel kaymasıyla değil, ALANIN KENDİ koordinatıyla
@@ -1405,6 +1418,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setAktifSira(1)
       setAlanKipi(false)
       setAlanNokta([])
+      setAlanElleEn('')
+      setAlanElleBoy('')
       setAlanKonum({ u: 0.5, v: 0.5 })
       setAlanDoldur(false)
       setAlanOlcek(null)
@@ -3405,14 +3420,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const u =
       olcek && olcek.u > 0
         ? Math.max(0.03, olcek.u)
-        : alanGercek && alanGercek.enCm > 0
-          ? Math.max(0.03, (dW * 100) / alanGercek.enCm)
+        : alanEtkinCm && alanEtkinCm.enCm > 0
+          ? Math.max(0.03, (dW * 100) / alanEtkinCm.enCm)
           : Math.max(0.03, (dW * olcekPxM) / enPx)
     const v =
       olcek && olcek.v > 0
         ? Math.max(0.03, olcek.v)
-        : alanGercek && alanGercek.boyCm > 0
-          ? Math.max(0.03, (dH * 100) / alanGercek.boyCm)
+        : alanEtkinCm && alanEtkinCm.boyCm > 0
+          ? Math.max(0.03, (dH * 100) / alanEtkinCm.boyCm)
           : Math.max(0.03, (dH * olcekPxM) / boyPx)
     const u0 = u >= 1 ? (1 - u) / 2 : Math.max(0, Math.min(1 - u, uMerkez - u / 2))
     const v0 = v >= 1 ? (1 - v) / 2 : Math.max(0, Math.min(1 - v, vMerkez - v / 2))
@@ -3514,8 +3529,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * tek ölçekli hesap. İkincisi yalnızca yüzey karşıdan görünürken
      * devreye giriyor ve orada zaten doğru.
      */
-    const alanWm = alanGercek ? alanGercek.enCm / 100 : enPx / olcekPxM
-    const alanHm = alanGercek ? alanGercek.boyCm / 100 : boyPx / olcekPxM
+    const alanWm = alanEtkinCm ? alanEtkinCm.enCm / 100 : enPx / olcekPxM
+    const alanHm = alanEtkinCm ? alanEtkinCm.boyCm / 100 : boyPx / olcekPxM
     /*
      * ───────────────────────────────────────────────────────────────────
      * KABİN SAYISI EN YAKINA YUVARLANIYOR, AŞAĞI DEĞİL.
@@ -4479,6 +4494,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return dortgenGercekOlcu(alanTuval, a, b, cm, asal, odak)
   })()
 
+  const sayiCm = (x) => {
+    const n = Number(String(x).replace(',', '.'))
+    return n > 0 ? n : null
+  }
+
+  /*
+   * ALANIN ETKİN ÖLÇÜSÜ — hesapların tamamı buna bakıyor.
+   * Elle yazılan değer ölçüleni eziyor; yalnız biri yazılmışsa öteki
+   * ölçülen kalıyor.
+   */
+  const alanEtkinCm = (() => {
+    const olculenEn = alanGercek?.enCm ?? null
+    const olculenBoy = alanGercek?.boyCm ?? null
+    const en = sayiCm(alanElleEn) ?? olculenEn
+    const boy = sayiCm(alanElleBoy) ?? olculenBoy
+    return en > 0 && boy > 0 ? { enCm: en, boyCm: boy } : null
+  })()
+
   /*
    * ───────────────────────────────────────────────────────────────────────
    * TASARIMIN ÖLÇÜSÜ DEĞİŞİNCE ÇİZİM DE DEĞİŞİYOR.
@@ -4995,6 +5028,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAktifSira(1)
     setAlanKipi(false)
     setAlanNokta([])
+    setAlanElleEn('')
+    setAlanElleBoy('')
     setAlanKonum({ u: 0.5, v: 0.5 })
     setAlanDoldur(false)
     setAlanOlcek(null)
@@ -7937,6 +7972,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             egimVar={egimVar}
                             /* ÖLÇÜM İLE AYARLA — dört noktayla yerleşim alanı. */
                             alanKipi={alanKipi}
+                            /* Ölçülen değer yazılı duruyor; elle düzeltilebiliyor. */
+                            alanOlculenEn={alanGercek ? Math.round(alanGercek.enCm) : null}
+                            alanOlculenBoy={alanGercek ? Math.round(alanGercek.boyCm) : null}
+                            alanElleEn={alanElleEn}
+                            alanElleBoy={alanElleBoy}
+                            setAlanElleEn={setAlanElleEn}
+                            setAlanElleBoy={setAlanElleBoy}
                             alanNoktaSayisi={alanNokta.length}
                             alanVar={!!alanTuval}
                             onAlanIsaretle={() => {

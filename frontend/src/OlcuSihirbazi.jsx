@@ -93,6 +93,12 @@ function SihirbazKart({
   alanKipi = false,
   alanNoktaSayisi = 0,
   alanVar = false,
+  alanOlculenEn = null,
+  alanOlculenBoy = null,
+  alanElleEn = '',
+  alanElleBoy = '',
+  setAlanElleEn = null,
+  setAlanElleBoy = null,
   onAlanIsaretle = null,
   onAlanBitir = null,
   onAlanSigdir = null,
@@ -649,6 +655,44 @@ function SihirbazKart({
                   >
                     {t('sih.alanSigdir')}
                   </button>
+                  {/*
+                    ALANIN ÖLÇÜSÜ — ölçülen yazılı, elle düzeltilebiliyor.
+                    Yazılan değer dörtgeni değiştirmiyor; yalnızca o
+                    dörtgenin kaç santim olduğunu söylüyor, kabin hesabı
+                    da ona göre yeniden kuruluyor.
+                  */}
+                  {alanOlculenEn > 0 && setAlanElleEn && (
+                    <div className="mt-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2">
+                      <div className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">
+                        {t('sih.alanOlculen')}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={alanElleEn}
+                          onChange={(e) => setAlanElleEn(e.target.value)}
+                          placeholder={String(alanOlculenEn)}
+                          className={girdi}
+                        />
+                        <span className="text-[14px] text-neutral-400">×</span>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={alanElleBoy}
+                          onChange={(e) => setAlanElleBoy && setAlanElleBoy(e.target.value)}
+                          placeholder={String(alanOlculenBoy)}
+                          className={girdi}
+                        />
+                        <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
+                      </div>
+                      <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                        {t('sih.alanOlcuIpucu')}
+                      </p>
+                    </div>
+                  )}
                   <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
                     {t('sih.alanTasi')}
                   </p>

@@ -553,6 +553,16 @@ const dict = {
     en: 'Manual editing is not ready yet; use "Set by measuring" for now.',
     ar: 'التحرير اليدوي غير جاهز بعد؛ استخدم «الضبط بالقياس» في الوقت الحالي.',
   },
+  'sih.alanOlculen': {
+    tr: 'İşaretlenen alanın ölçüsü',
+    en: 'Size of the marked area',
+    ar: 'مقاس المنطقة المحددة',
+  },
+  'sih.alanOlcuIpucu': {
+    tr: 'Uygulamanın ölçtüğü değer yazılı. Gerçeğini biliyorsanız yazın; işaret yerinde kalır, yalnızca ölçü değişir ve kabin sayısı buna göre kurulur.',
+    en: 'The value the app measured is shown. If you know the real one, type it; the marks stay put, only the size changes and the cabinet count follows.',
+    ar: 'القيمة المقاسة معروضة. إذا كنت تعرف القيمة الحقيقية فاكتبها؛ تبقى العلامات مكانها ويتغيّر المقاس فقط.',
+  },
   'sih.alanTasi': {
     tr: 'Tasarımı sürükleyerek taşıyabilirsiniz; alanın dışına da çıkabilir.',
     en: 'Drag the design to move it inside the area; it cannot leave it.',
