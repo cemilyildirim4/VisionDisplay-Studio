@@ -3755,6 +3755,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       konum: { ...alanKonum },
       doldur: alanDoldur,
       olcek: alanOlcek ? { ...alanOlcek } : null,
+      /*
+       * Elle yazilan olcu de ekranin kendi bilgisi: iki ekranin alani ayni
+       * olcude olmak zorunda degil. Tasinmazsa duzenlemeye donuldugunde
+       * kutuda baska ekranin yazdigi sayi duruyordu.
+       */
+      elleEn: alanElleEn,
+      elleBoy: alanElleBoy,
       ayar: ekranAyariAnlik(),
     }
   }
@@ -3770,6 +3777,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAktifEkranId(yeniEkranKimligi())
     setAktifSira(sonrakiSira())
     setAlanNokta([])
+    setAlanElleEn('')
+    setAlanElleBoy('')
     setAlanKonum({ u: 0.5, v: 0.5 })
     setAlanDoldur(false)
     setAlanOlcek(null)
@@ -3813,13 +3822,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const ekraniDuzenle = (id) => {
     const secilen = sabitEkranlar.find((e) => e.id === id)
     if (!secilen) return
-    const duran =
-      Array.isArray(koseMutlak) && koseMutlak.length === 4 ? koseMutlak.map(tuvalOrana) : null
-    const kimlik = aktifEkranId ?? yeniEkranKimligi()
+    /*
+     * Ele alinan ekranin yerini birakan ekran TAM kaydiyla sabitleniyor.
+     * Daha once yalnizca dortgeni ve ayari saklaniyordu; kendi ALANI ve alan
+     * icindeki yeri dusuyordu, yani bir kere yer degistirdikten sonra o
+     * ekrani duzenlemeye donmek artik olcuyu geri getirmiyordu.
+     * ekranKaydi() aktif kimligi ve sirayi kullandigi icin birakan ekran
+     * kendi kimligiyle kaliyor.
+     */
+    const birakan = ekranKaydi()
     setSabitEkranlar((l) => {
       const kalan = l.filter((e) => e.id !== id)
       /* Duran ekranın dörtgeni yoksa (ölçü kurulmamış) sabitlenecek bir şey de yok. */
-      return duran ? [...kalan, { id: kimlik, oran: duran, ayar: ekranAyariAnlik() }] : kalan
+      return birakan ? [...kalan, birakan] : kalan
     })
     /* Seçilen ekranın kendi alanı ve alan içindeki yeri de geri geliyor. */
     setAlanKipi(false)
@@ -3827,9 +3842,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAlanKonum(secilen.konum || { u: 0.5, v: 0.5 })
     setAlanDoldur(!!secilen.doldur)
     setAlanOlcek(secilen.olcek || null)
+    setAlanElleEn(secilen.elleEn || '')
+    setAlanElleBoy(secilen.elleBoy || '')
     setElleKose(secilen.oran.map(oranTuvale))
     setAktifEkranId(secilen.id)
     setAktifSira(secilen.sira || 1)
+    /*
+     * ÖLÇÜ POP-UP'I BAŞTAN GERİ GELİYOR.
+     *
+     * "Düzenle" ekranı ele veriyordu ama sağ panelde yalnızca özet
+     * kalıyordu: taşıma ipucu, ölçü kutusu ve "ölçüye sığdır" düğmesi
+     * görünmediği için kullanıcının düzenleyecek bir yeri yoktu.
+     *
+     * Akış 1. adımdan açılıyor — "Referansı yeniden seç" düğmesinin
+     * yaptığının aynısı. O düğme bu yüzden kaldırıldı: ekranı düzenlemek
+     * zaten referanstan başlayan aynı yol ve iki ayrı giriş kapısı
+     * olmasının bir anlamı yok.
+     */
+    setSihirbazAdim(1)
   }
 
   const ekranSil = (id) => setSabitEkranlar((l) => l.filter((e) => e.id !== id))
@@ -8150,32 +8180,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const acilacak = !duzenleAcik
-                                    setDuzenleAcik(acilacak)
                                     /*
-                                     * Açılınca düzenlemenin tamamı açılıyor: kutu hem
-                                     * taşınabiliyor hem çevrilebiliyor, santim alanları
-                                     * da o anki ölçüyle doluyor. Kapanınca kip kapanıyor
-                                     * ki görünmeyen bir kipte kutu kazara oynamasın.
+                                     * DÜZENLE = ÖLÇÜ AKIŞI BAŞTAN.
+                                     *
+                                     * Önce altında ayrı bir kutu açılıyordu; orada
+                                     * yalnızca santim alanları ve mesafe vardı, kutuyu
+                                     * yeniden ölçmenin yolu ise ayrı bir düğmeydi
+                                     * ("Referansı yeniden seç"). İki giriş kapısı
+                                     * olmasının anlamı yok: Düzenle artık o düğmenin
+                                     * yaptığını yapıyor ve akışı 1. adımdan açıyor —
+                                     * referans, dört köşe, ölçü ve yerleştirme aynı
+                                     * yerde. Kutu da aynı anda elle taşınabilir
+                                     * durumda kalıyor.
                                      */
-                                    setKutuDuzen(acilacak ? 'hepsi' : null)
-                                    if (acilacak) {
-                                      setTasarimAcik(true)
-                                      if (olcuKutu) {
-                                        setKutuEn(String(olcuKutu.enCm))
-                                        setKutuBoy(String(olcuKutu.boyCm))
-                                      }
+                                    setDuzenleAcik(true)
+                                    setKutuDuzen('hepsi')
+                                    setTasarimAcik(true)
+                                    if (olcuKutu) {
+                                      setKutuEn(String(olcuKutu.enCm))
+                                      setKutuBoy(String(olcuKutu.boyCm))
                                     }
+                                    setSihirbazAdim(1)
                                   }}
-                                  className={`mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium transition-colors ${
-                                    duzenleAcik
-                                      ? 'bg-brand text-white hover:opacity-90'
-                                      : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
-                                  }`}
+                                  className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                                 >
-                                  {duzenleAcik ? t('ref2.duzenleKapat') : t('ref2.duzenle')}
+                                  {t('ref2.duzenle')}
                                 </button>
-                                {duzenleAcik && (
+                                {PANEL.olcuDuzenlePaneli && duzenleAcik && (
                                   <div className="mt-1.5 rounded-lg border border-neutral-200 p-2 dark:border-[#2c333f]">
                                     {/*
                                       DÜZENLEMENİN TAMAMI TEK YERDE.
@@ -8314,14 +8345,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                       </button>
                                     )}
 
-                                    {/* Referansı yeniden işaretlemek de bir düzenleme. */}
-                                    <button
-                                      type="button"
-                                      onClick={() => setSihirbazAdim(1)}
-                                      className="mt-1.5 w-full py-2 rounded-lg text-[13.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                                    >
-                                      {t('ref2.yeniden')}
-                                    </button>
+                                    {/*
+                                      "Referansı yeniden seç" kaldırıldı: aynı işi
+                                      ekran listesindeki "Düzenle" yapıyor ve akışı
+                                      1. adımdan açıyor (bkz. ekraniDuzenle).
+                                    */}
 
                                     <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
                                       {t('ref2.duzenleIpucu')}
@@ -8418,10 +8446,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           </PanelBolum>
                         )}
 
-                        {/* YERLEŞİM — tasarımın kabin hesabı, olduğu gibi. */}
-                        <div className="mt-3 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
-                          {t('scene.placeHeading')}
-                        </div>
+                        {/*
+                          YERLEŞİM başlığı — altındaki düğmeler kapalı olduğu
+                          için boş bir satır olarak duruyordu (bkz. PANEL).
+                        */}
+                        {PANEL.yerlesimBasligi && (
+                          <div className="mt-3 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
+                            {t('scene.placeHeading')}
+                          </div>
+                        )}
                         {/*
                           KUTUYA YERLEŞTİR — fareyle uğraşmadan.
                           Kutu küçükken tasarımı elle içine oturtmak neredeyse

@@ -66,6 +66,21 @@ export const PANEL = {
   lKoseTarafi: false,
 
   /*
+   * "DÜZENLE"NİN ALTINDAKİ KUTU — ölçü alanları, mesafe, ipucu.
+   *
+   * Artık Düzenle doğrudan ölçü akışını (pop-up) 1. adımdan açıyor; aynı
+   * işler orada, sırasıyla ve açıklamasıyla yapılıyor. Panelde ikinci bir
+   * kopya durması yalnızca yer kaplıyordu.
+   */
+  olcuDuzenlePaneli: false,
+
+  /*
+   * "Yerleşim" başlığı — altındaki düğmelerin hepsi kapalı olduğu için
+   * boş bir satır olarak duruyordu.
+   */
+  yerlesimBasligi: false,
+
+  /*
    * MANUEL DÜZENLE — referanstan sonraki ikinci yol.
    *
    * SEÇENEK GÖRÜNÜYOR ama İŞLEVİ YOK: akışta iki yol olduğu baştan belli
