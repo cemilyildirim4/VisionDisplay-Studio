@@ -4561,7 +4561,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (n) elleKoseyeYaz(n)
     /* elleKose'yi bu etki yazıyor; bağımlılığa koymak döngü olurdu. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasarimWm, tasarimHm, cizimOlcek, alanOlcegiPxM, alanNokta, alanKipi, alanKonum.u, alanKonum.v])
+    /* Elle yazilan olcu de cizimi etkiliyor: yazar yazmaz yansisin. */
+  }, [
+    tasarimWm,
+    tasarimHm,
+    cizimOlcek,
+    alanOlcegiPxM,
+    alanElleEn,
+    alanElleBoy,
+    alanNokta,
+    alanKipi,
+    alanKonum.u,
+    alanKonum.v,
+  ])
 
   const tuvalOrana = (k) => {
     const yer = fotoYer
