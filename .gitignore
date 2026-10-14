@@ -29,3 +29,7 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Elle alinan yedek arsivleri depoya girmesin (246 MB zip push reddine yol acti).
+frontend.zip
+*.zip

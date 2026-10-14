@@ -532,22 +532,11 @@ const dict = {
     ar: 'انقر على زوايا المنطقة الأربع التي يجب أن تغطيها الشاشة. يبقى التصميم مخفيًا حتى وضع النقاط الأربع.',
   },
   'sih.alanBitir': { tr: 'Alanı onayla', en: 'Confirm the area', ar: 'تأكيد المنطقة' },
-  'sih.alanBaslik': {
-    tr: 'Yeni ekranın alanını işaretleyin',
-    en: 'Mark the area for the new screen',
-    ar: 'حدّد منطقة الشاشة الجديدة',
-  },
   'sih.alanSigdir': {
     tr: 'Tasarımı ölçüye sığdır',
     en: 'Fit the design to the measured area',
     ar: 'ملاءمة التصميم مع المنطقة المقاسة',
   },
-  'scene.alanSigdiDone': {
-    tr: 'İşaretlenen alana sığan en büyük ekran kuruldu:',
-    en: 'Built the largest screen that fits the marked area:',
-    ar: 'تم إنشاء أكبر شاشة تناسب المنطقة المحددة:',
-  },
-  'scene.alanOlcusu': { tr: 'alan', en: 'area', ar: 'المنطقة' },
   'sih.manuelYakinda': {
     tr: 'Manuel düzenleme henüz hazır değil; şimdilik "Ölçüm ile ayarla" ile ilerleyin.',
     en: 'Manual editing is not ready yet; use "Set by measuring" for now.',

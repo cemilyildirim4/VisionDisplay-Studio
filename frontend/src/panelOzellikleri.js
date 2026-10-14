@@ -13,17 +13,8 @@
  * oluşmuyor.
  */
 export const PANEL = {
-  /*
-   * İzleme mesafesi (− 4 +) ve altındaki açıklama satırı.
-   * Kapalıyken açıklama da çizilmiyor; başlıksız bir not kalmasın.
-   */
+  /* İzleme mesafesi (− 4 +) — perspektifin sertliğini belirliyordu. */
   mesafe: false,
-
-  /* "Yerleşim" başlığı — altındaki düğmelerin hepsi kapalı olduğu için o da. */
-  yerlesimBasligi: false,
-
-  /* Kiosk gövdesi: Olsun / Olmasın ve kiosk tipi. Sonra geri gelecek. */
-  kiosk: false,
 
   /* Fotoğrafın üstüne metre ızgarası çizen aç/kapa. */
   izgara: false,
