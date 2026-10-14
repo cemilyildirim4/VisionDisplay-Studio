@@ -4504,9 +4504,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Elle yazılan değer ölçüleni eziyor; yalnız biri yazılmışsa öteki
    * ölçülen kalıyor.
    */
+  /*
+   * ALANIN ÖLÇÜLEN BOYU — perspektif hesabı çıkmazsa tek ölçekli hesap.
+   *
+   * Panelde hiçbir şey yazmıyordu: alan tam dikdörtgen işaretlenince (kapı
+   * karşıdan çekilmişse olağan durum) kaçış noktaları sonsuza gidiyor,
+   * perspektif hesabı null dönüyor ve yazdıracak değer kalmıyordu. Oysa
+   * orada tek ölçekli hesap zaten doğru; gösterilecek bir sayı hep var.
+   */
+  const alanOlculenCm = (() => {
+    if (alanGercek) return { enCm: alanGercek.enCm, boyCm: alanGercek.boyCm }
+    if (!alanTuval || !(alanOlcegiPxM > 0)) return null
+    const enPx =
+      (Math.hypot(alanTuval[1].x - alanTuval[0].x, alanTuval[1].y - alanTuval[0].y) +
+        Math.hypot(alanTuval[2].x - alanTuval[3].x, alanTuval[2].y - alanTuval[3].y)) /
+      2
+    const boyPx =
+      (Math.hypot(alanTuval[3].x - alanTuval[0].x, alanTuval[3].y - alanTuval[0].y) +
+        Math.hypot(alanTuval[2].x - alanTuval[1].x, alanTuval[2].y - alanTuval[1].y)) /
+      2
+    if (!(enPx > 1) || !(boyPx > 1)) return null
+    return { enCm: (enPx / alanOlcegiPxM) * 100, boyCm: (boyPx / alanOlcegiPxM) * 100 }
+  })()
+
   const alanEtkinCm = (() => {
-    const olculenEn = alanGercek?.enCm ?? null
-    const olculenBoy = alanGercek?.boyCm ?? null
+    const olculenEn = alanOlculenCm?.enCm ?? null
+    const olculenBoy = alanOlculenCm?.boyCm ?? null
     const en = sayiCm(alanElleEn) ?? olculenEn
     const boy = sayiCm(alanElleBoy) ?? olculenBoy
     return en > 0 && boy > 0 ? { enCm: en, boyCm: boy } : null
@@ -7973,8 +7996,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             /* ÖLÇÜM İLE AYARLA — dört noktayla yerleşim alanı. */
                             alanKipi={alanKipi}
                             /* Ölçülen değer yazılı duruyor; elle düzeltilebiliyor. */
-                            alanOlculenEn={alanGercek ? Math.round(alanGercek.enCm) : null}
-                            alanOlculenBoy={alanGercek ? Math.round(alanGercek.boyCm) : null}
+                            alanOlculenEn={alanOlculenCm ? Math.round(alanOlculenCm.enCm) : null}
+                            alanOlculenBoy={alanOlculenCm ? Math.round(alanOlculenCm.boyCm) : null}
                             alanElleEn={alanElleEn}
                             alanElleBoy={alanElleBoy}
                             setAlanElleEn={setAlanElleEn}

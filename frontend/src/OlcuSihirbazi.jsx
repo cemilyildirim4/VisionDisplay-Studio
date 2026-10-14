@@ -160,6 +160,62 @@ function SihirbazKart({
   const adimSayisi = lKose ? L_ADIM_SAYISI : ADIM_SAYISI
 
   /*
+   * ALANIN ÖLÇÜSÜ — tek yerde kurulup iki yerde çiziliyor.
+   * Önce yalnızca 4. adımda vardı; akış bitince kaybolyordu ve kullanıcı
+   * ölçüyü hiç göremiyordu.
+   */
+  const alanOlcuAlani = (
+    <>
+                {/*
+                  ALANIN ÖLÇÜSÜ — ölçülen yazılı, elle düzeltilebiliyor.
+                  Yazılan değer dörtgeni değiştirmiyor; yalnızca o
+                  dörtgenin kaç santim olduğunu söylüyor, kabin hesabı
+                  da ona göre yeniden kuruluyor.
+                */}
+                {alanOlculenEn > 0 && setAlanElleEn && (
+                  <div className="mt-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2">
+                    <div className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">
+                      {t('sih.alanOlculen')}
+                    </div>
+                    {/*
+                      OLCULEN DEGER DUZ YAZI OLARAK DA DURUYOR: yalnizca
+                      kutularin yer tutucusunda gri gorununce "hicbir sey
+                      yazmiyor" izlenimi birakiyordu.
+                    */}
+                    <div className="mt-0.5 text-[13.5px] font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                      {alanOlculenEn} × {alanOlculenBoy} cm
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={alanElleEn}
+                        onChange={(e) => setAlanElleEn(e.target.value)}
+                        placeholder={String(alanOlculenEn)}
+                        className={girdi}
+                      />
+                      <span className="text-[14px] text-neutral-400">×</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={alanElleBoy}
+                        onChange={(e) => setAlanElleBoy && setAlanElleBoy(e.target.value)}
+                        placeholder={String(alanOlculenBoy)}
+                        className={girdi}
+                      />
+                      <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
+                    </div>
+                    <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                      {t('sih.alanOlcuIpucu')}
+                    </p>
+                  </div>
+                )}
+    </>
+  )
+
+  /*
    * MESAFE YAZILABİLİR.
    *
    * Yalnızca + / − vardı; 0,1'lik adımlarla 6,2 metreye ulaşmak altmış
@@ -559,6 +615,7 @@ function SihirbazKart({
               >
                 {t('sih.alanSigdir')}
               </button>
+              {alanOlcuAlani}
               <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.alanTasi')}</p>
             </div>
           )}
@@ -655,44 +712,7 @@ function SihirbazKart({
                   >
                     {t('sih.alanSigdir')}
                   </button>
-                  {/*
-                    ALANIN ÖLÇÜSÜ — ölçülen yazılı, elle düzeltilebiliyor.
-                    Yazılan değer dörtgeni değiştirmiyor; yalnızca o
-                    dörtgenin kaç santim olduğunu söylüyor, kabin hesabı
-                    da ona göre yeniden kuruluyor.
-                  */}
-                  {alanOlculenEn > 0 && setAlanElleEn && (
-                    <div className="mt-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2">
-                      <div className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">
-                        {t('sih.alanOlculen')}
-                      </div>
-                      <div className="mt-1 flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={alanElleEn}
-                          onChange={(e) => setAlanElleEn(e.target.value)}
-                          placeholder={String(alanOlculenEn)}
-                          className={girdi}
-                        />
-                        <span className="text-[14px] text-neutral-400">×</span>
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={alanElleBoy}
-                          onChange={(e) => setAlanElleBoy && setAlanElleBoy(e.target.value)}
-                          placeholder={String(alanOlculenBoy)}
-                          className={girdi}
-                        />
-                        <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
-                      </div>
-                      <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
-                        {t('sih.alanOlcuIpucu')}
-                      </p>
-                    </div>
-                  )}
+                  {alanOlcuAlani}
                   <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
                     {t('sih.alanTasi')}
                   </p>
