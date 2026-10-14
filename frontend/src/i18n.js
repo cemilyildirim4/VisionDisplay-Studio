@@ -563,6 +563,11 @@ const dict = {
     en: 'The value the app measured is shown. If you know the real one, type it; the marks stay put, only the size changes and the cabinet count follows.',
     ar: 'القيمة المقاسة معروضة. إذا كنت تعرف القيمة الحقيقية فاكتبها؛ تبقى العلامات مكانها ويتغيّر المقاس فقط.',
   },
+  'sih.alanaDon': {
+    tr: 'İşaretli alana dön',
+    en: 'Back to the marked area',
+    ar: 'العودة إلى المنطقة المحددة',
+  },
   'sih.alanTasi': {
     tr: 'Tasarımı sürükleyerek taşıyabilirsiniz; alanın dışına da çıkabilir.',
     en: 'Drag the design to move it inside the area; it cannot leave it.',

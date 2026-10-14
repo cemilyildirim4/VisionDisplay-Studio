@@ -93,6 +93,8 @@ function SihirbazKart({
   alanKipi = false,
   alanNoktaSayisi = 0,
   alanVar = false,
+  /* Alan zaten işaretliyse yeniden işaretlemeden yerleştirmeye dönülüyor. */
+  onYerlesim = null,
   alanOlculenEn = null,
   alanOlculenBoy = null,
   alanElleEn = '',
@@ -137,7 +139,16 @@ function SihirbazKart({
    * kullanıcı dört köşeyi işaretliyor ama ne yönerge ne "Alanı onayla"
    * düğmesi görüyordu.
    */
-  const alanTekBasina = !adim && alanKipi
+  /*
+   * İŞARETLEME SÜRERKEN KART YALNIZCA ONU GÖSTERİYOR.
+   *
+   * Önce yalnızca "adım yokken" böyleydi. Oysa alan 2. adımdan açılıyor ve
+   * adım 2'de kalıyordu: kullanıcı dört köşeyi işaretlerken kartta hâlâ
+   * "Referans ölçüyü yazın" başlığı, o adımın düğmeleri ve İKİNCİ bir
+   * "Geri" duruyordu. Kart kendini tekrar ediyormuş gibi görünmesinin
+   * sebebi buydu.
+   */
+  const alanTekBasina = !!alanKipi
   if (!adim && !alanKipi) return null
 
   const girdi =
@@ -279,7 +290,7 @@ function SihirbazKart({
         {/* key={adim}: adım değişince geçiş yeniden oynasın. */}
         <div key={adim} className="sih-adim">
           {/* L 1 — KÖŞE ÇİZGİSİ */}
-          {lKose && adim === 1 && (
+          {!alanKipi && lKose && adim === 1 && (
             <>
               <p className={aciklama}>{t('sihL.3.aciklama')}</p>
               <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sihL.3.gizli')}</p>
@@ -313,7 +324,7 @@ function SihirbazKart({
           )}
 
           {/* L 2 — ÖLÇÜLER */}
-          {lKose && adim === 2 && (
+          {!alanKipi && lKose && adim === 2 && (
             <>
               <p className={aciklama}>{t('sihL.2.aciklama')}</p>
               <label className="mt-2 block text-[13px] font-semibold text-neutral-600 dark:text-neutral-400">
@@ -381,7 +392,7 @@ function SihirbazKart({
           )}
 
           {/* L3 — KANAT ŞEKLİ */}
-          {lKose && adim === 3 && (
+          {!alanKipi && lKose && adim === 3 && (
             <>
               <p className={aciklama}>{t('sihL.3.sekilAciklama')}</p>
               {kanatSekli}
@@ -397,7 +408,7 @@ function SihirbazKart({
           )}
 
           {/* 1 — İKİ NOKTA */}
-          {!lKose && adim === 1 && (
+          {!alanKipi && !lKose && adim === 1 && (
             <>
               {/*
                 REFERANS TÜRÜ.
@@ -460,7 +471,7 @@ function SihirbazKart({
           )}
 
           {/* 2 — GERÇEK UZUNLUK */}
-          {!lKose && adim === 2 && (
+          {!alanKipi && !lKose && adim === 2 && (
             <>
               <p className={aciklama}>
                 {refTur === 'dortgen' ? t('sih.2.aciklamaDort') : t('sih.2.aciklama')}
@@ -546,6 +557,22 @@ function SihirbazKart({
                   </button>
                 )}
               </div>
+              {/*
+                ALAN ZATEN İŞARETLİYSE KISA YOL.
+
+                "Düzenle" akışı baştan açıyor; alanı yeniden işaretlemek
+                istemeyen kullanıcı buradan doğrudan yerleştirmeye dönüyor.
+                İşaret yerinde kalıyor, yalnızca o adıma gidiliyor.
+              */}
+              {alanVar && onYerlesim && (
+                <button
+                  type="button"
+                  onClick={onYerlesim}
+                  className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-brand text-brand hover:bg-brand/5 transition-colors"
+                >
+                  {t('sih.alanaDon')}
+                </button>
+              )}
               {PANEL.manuelDuzenle && (
                 <>
                   {/*
@@ -584,7 +611,8 @@ function SihirbazKart({
                 {alanNoktaSayisi} / 4
               </p>
               <div className="mt-2 flex items-center gap-1.5">
-                {!alanTekBasina && (
+                {/* Akışın içindeyken vazgeçip bir önceki adıma dönülebiliyor. */}
+                {adim > 0 && (
                   <button type="button" onClick={onGeri} className={yan}>
                     {t('sih.geri')}
                   </button>
@@ -607,28 +635,18 @@ function SihirbazKart({
             işaretlendikten sonra bunlar kurulumun değil, ayarın parçası.
           */}
           {/*
-            3. ADIMDA CIZILMIYOR: orada ESKI manuel yolun kendi "yerlesim
-            alaninin olcusu (cm)" kutulari var. Ikisi birden gorununce ayni
-            seye benzeyen iki ayri alan olcusu cikiyor ve hangisinin neyi
-            besledigi anlasilmiyordu. Sigdirma HER ZAMAN isaretlenen dort
-            koseyi ve ustteki olcuyu kullaniyor, oteki kutularla ilgisi yok.
+            SIĞDIRMA VE ALAN ÖLÇÜSÜ YALNIZCA 4. ADIMDA.
+
+            Önce ötekiler dışında her adımda çiziliyordu: referans
+            işaretlenirken ya da santim yazılırken kartın altında bir de
+            "Tasarımı ölçüye sığdır" ve alan ölçüsü kutuları duruyordu.
+            O adımlarda yapılacak iş bu değil; kart kalabalık görünüyor ve
+            aynı şeyleri yineliyordu. Yeri 4. adım: kutunun yerine konduğu,
+            ölçünün düzeltildiği adım.
           */}
-          {!alanKipi && alanVar && onAlanSigdir && adim !== 4 && adim !== 3 && (
-            <div className="mt-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2">
-              <button
-                type="button"
-                onClick={onAlanSigdir}
-                className="w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
-              >
-                {t('sih.alanSigdir')}
-              </button>
-              {alanOlcuAlani}
-              <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.alanTasi')}</p>
-            </div>
-          )}
 
           {/* 3 — KUTU ÖLÇÜSÜ */}
-          {adim === 3 && !lKose && (
+          {!alanKipi && adim === 3 && !lKose && (
             <>
               <p className={aciklama}>{t('sih.3.aciklama')}</p>
               <div className="mt-2 flex items-center gap-1.5">
@@ -692,7 +710,7 @@ function SihirbazKart({
           )}
 
           {/* 4 — KONUMLANDIR */}
-          {!lKose && adim === 4 && (
+          {!alanKipi && !lKose && adim === 4 && (
             <>
               <p className={aciklama}>
                 {lKose ? t('sihL.4.aciklama') : refDuzlem ? t('sih.4.aciklamaDuzlem') : t('sih.4.aciklama')}

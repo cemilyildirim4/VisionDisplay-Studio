@@ -694,8 +694,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * AÇIK OLAN PANEL BÖLÜMÜ — aynı anda yalnızca biri.
    * null ise hepsi kapalı; aynı başlığa tekrar basmak kapatıyor.
    */
+  /*
+   * ŞU AN KULLANILMIYOR: panelde açılır bölüm kalmadı. Son kullanan
+   * "Ekranlar" bölümüydü, o da doğrudan görünen bir listeye çevrildi.
+   * Durumu ve PanelBolum bileşeni duruyor — yeni bir bölüm katlanmak
+   * istenirse hazır.
+   */
   const [acikBolum, setAcikBolum] = useState(null)
   const bolumAc = (ad) => setAcikBolum((o) => (o === ad ? null : ad))
+  void acikBolum
+  void bolumAc
   /*
    * SABİTLENEN KÖŞELER.
    *
@@ -7363,23 +7371,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {/*
             EKRANLAR — aynı arka plana birden çok ekran.
 
-            Listede sabitlenenler sırasıyla, en sonda da
-            düzenlenmekte olan ekran duruyor. "Ekran ekle" duran
-            ekranı yerine sabitliyor ve elde aynı ölçüde yenisi
-            kalıyor; süreç baştan işliyor.
+            AÇILIR KUTU DEĞİL, DOĞRUDAN LİSTE. Bölüm katlanınca ekran
+            eklemek önce açmayı gerektiriyordu ve küçücük duruyordu; oysa
+            birden çok ekran kurarken en çok bakılan yer burası. Şimdi
+            panelin kendi ölçüsünde, açık duruyor.
+
+            Her ekran bir satır: solda sırası, sağında "Düzenle" (ölçüsünü
+            yeniden kurar) ve kaldırma. Düzenlenmekte olan ekran kendi
+            satırında işaretli. "Ekran ekle" duran ekranı yerine
+            sabitliyor ve elde yeni bir ekran kalıyor; süreç baştan işliyor.
           */}
           {scene === 'ozel' && ozelSahne && (
-            <PanelBolum
-              /* Başlık ne işe yaradığını söylüyor: bölüm aranırken "Ekranlar" değil "Ekran ekle" diye aranıyor. */
-              baslik={t('ekran.ekle')}
-              ozet={`${sabitEkranlar.length + 1}`}
-              acik={acikBolum === 'ekranlar'}
-              onAc={() => bolumAc('ekranlar')}
-            >
-              <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+            <div className="mb-3">
+              <h2 className="text-[25px] font-bold tracking-tight m-0 mb-1">{t('ekran.coklu')}</h2>
+              <p className="text-[14px] leading-snug text-neutral-400 dark:text-neutral-500 m-0 mb-2">
                 {t('ekran.cokluIpucu')}
               </p>
-              <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1.5">
+              <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-2">
                 {[
                   /* Sira kaydedilmemis eski kayitlar bos gorunmesin. */
                   ...sabitEkranlar.map((e, i) => ({ ...e, sira: e.sira || i + 1, duzenlenen: false })),
@@ -7390,27 +7398,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     e.duzenlenen ? (
                       <li
                         key="aktif"
-                        className="flex items-center gap-2 rounded-lg border border-brand/40 bg-brand/5 px-2.5 py-2"
+                        className="flex items-center gap-2 rounded-lg border-2 btn-selected px-3 py-2.5"
                       >
-                        <span className="flex-1 text-[14px] font-medium text-brand">
+                        <span className="flex-1 text-[17px] font-semibold">
                           {e.sira}. {t('ekran.tekil')}
                         </span>
-                        <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400">
-                          {t('ekran.duzenleniyor')}
-                        </span>
+                        <span className="text-[14px] opacity-70">{t('ekran.duzenleniyor')}</span>
                       </li>
                     ) : (
                       <li
                         key={e.id}
-                        className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2"
+                        className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2"
                       >
-                        <span className="flex-1 text-[14px] text-neutral-700 dark:text-neutral-200">
+                        <span className="flex-1 text-[17px] text-neutral-700 dark:text-neutral-200">
                           {e.sira}. {t('ekran.tekil')}
                         </span>
                         <button
                           type="button"
                           onClick={() => ekraniDuzenle(e.id)}
-                          className="px-2.5 py-1.5 rounded-lg text-[13px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                          className="px-3 py-1.5 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                         >
                           {t('ekran.duzenle')}
                         </button>
@@ -7419,9 +7425,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           onClick={() => ekranSil(e.id)}
                           aria-label={t('ekran.sil')}
                           title={t('ekran.sil')}
-                          className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center transition-colors"
+                          className="w-9 h-9 shrink-0 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center transition-colors"
                         >
-                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                             <path d="M6 6l12 12M18 6L6 18" />
                           </svg>
                         </button>
@@ -7431,7 +7437,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               </ul>
               {/* Dugme neden kapali, sessiz kalmasin. */}
               {!koseMutlak && (
-                <p className="mt-2 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                <p className="mt-2 mb-0 text-[14px] leading-snug text-amber-600 dark:text-amber-400">
                   {t('ekran.oncelikOlcu')}
                 </p>
               )}
@@ -7439,11 +7445,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 type="button"
                 onClick={ekranEkle}
                 disabled={!koseMutlak}
-                className="mt-2 w-full py-2 rounded-lg text-[14px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
+                className="mt-2 w-full py-2.5 rounded-lg text-[17px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
                 {t('ekran.ekle')}
               </button>
-            </PanelBolum>
+            </div>
           )}
 
           {/* Model */}
@@ -8192,6 +8198,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             egimVar={egimVar}
                             /* ÖLÇÜM İLE AYARLA — dört noktayla yerleşim alanı. */
                             alanKipi={alanKipi}
+                            /* Alan duruyorsa yeniden işaretlemeden yerleştirmeye. */
+                            onYerlesim={alanNokta.length === 4 ? () => setSihirbazAdim(4) : null}
                             /* Ölçülen değer yazılı duruyor; elle düzeltilebiliyor. */
                             alanOlculenEn={alanOlculenCm ? Math.round(alanOlculenCm.enCm) : null}
                             alanOlculenBoy={alanOlculenCm ? Math.round(alanOlculenCm.boyCm) : null}
