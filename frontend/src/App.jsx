@@ -3359,9 +3359,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ile alana oturtulmuş bir tasarım ilk dokunuşta kendi küçük ölçüsüne geri
    * dönüyordu — "sürükleyince küçülüyor" denen durum buydu.
    */
-  const alanaYerlestir = (koseler, uMerkez = 0.5, vMerkez = 0.5, olcek = null) => {
+  const alanaYerlestir = (koseler, uMerkez = 0.5, vMerkez = 0.5, olcek = null, wM = null, hM = null) => {
     if (!Array.isArray(koseler) || koseler.length !== 4) return null
-    if (!(cizimOlcek > 0) || !(tasarimWm > 0) || !(tasarimHm > 0)) return null
+    const dW = wM != null ? wM : tasarimWm
+    const dH = hM != null ? hM : tasarimHm
+    if (!(cizimOlcek > 0) || !(dW > 0) || !(dH > 0)) return null
     const enPx =
       (Math.hypot(koseler[1].x - koseler[0].x, koseler[1].y - koseler[0].y) +
         Math.hypot(koseler[2].x - koseler[3].x, koseler[2].y - koseler[3].y)) /
@@ -3371,17 +3373,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         Math.hypot(koseler[2].x - koseler[1].x, koseler[2].y - koseler[1].y)) /
       2
     if (!(enPx > 1) || !(boyPx > 1)) return null
-    /* Ölçü verilmişse o korunuyor; yoksa tasarımın gerçek santiminden. */
+    /*
+     * Ölçü verilmişse o, yoksa tasarımın GERÇEK santiminden.
+     *
+     * ÜST SINIR YOK: tasarım alandan büyük olabilir ve taşabilir. Önce 1'e
+     * kısılıyordu, yani sol panelden kabin eklenince tasarım alanı doldurup
+     * orada duruyor, büyümesi ekrana yansımıyordu. Taşması sorun değil;
+     * taşarken iki yana eşit taşsın diye ortalanıyor.
+     */
     const u =
       olcek && olcek.u > 0
-        ? Math.max(0.03, Math.min(1, olcek.u))
-        : Math.max(0.03, Math.min(1, (tasarimWm * cizimOlcek) / enPx))
+        ? Math.max(0.03, olcek.u)
+        : Math.max(0.03, (dW * cizimOlcek) / enPx)
     const v =
       olcek && olcek.v > 0
-        ? Math.max(0.03, Math.min(1, olcek.v))
-        : Math.max(0.03, Math.min(1, (tasarimHm * cizimOlcek) / boyPx))
-    const u0 = Math.max(0, Math.min(1 - u, uMerkez - u / 2))
-    const v0 = Math.max(0, Math.min(1 - v, vMerkez - v / 2))
+        ? Math.max(0.03, olcek.v)
+        : Math.max(0.03, (dH * cizimOlcek) / boyPx)
+    const u0 = u >= 1 ? (1 - u) / 2 : Math.max(0, Math.min(1 - u, uMerkez - u / 2))
+    const v0 = v >= 1 ? (1 - v) / 2 : Math.max(0, Math.min(1 - v, vMerkez - v / 2))
     const n = [
       dortgenNoktasi(koseler, u0, v0),
       dortgenNoktasi(koseler, u0 + u, v0),
@@ -3405,6 +3414,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       mutlak.map((k) => ({ x: k.x - (elleKayma?.x || 0), y: k.y - (elleKayma?.y || 0) })),
     )
   }
+
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * TASARIMIN ÖLÇÜSÜ DEĞİŞİNCE ÇİZİM DE DEĞİŞİYOR.
+   *
+   * Alan işaretlendikten sonra ekrandaki dörtgen bir kez yazılıp öylece
+   * kalıyordu. Sol panelden sütun/satır değiştirmek tasarımın gerçek
+   * ölçüsünü değiştiriyor ama ekranda hiçbir şey olmuyordu.
+   *
+   * Artık alan duruyorken dörtgen, tasarımın o anki gerçek ölçüsünden ve
+   * alan içindeki yerinden yeniden kuruluyor. Sürükleme de aynı yerden
+   * besleniyor, dolayısıyla ikisi çakışmıyor.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  useEffect(() => {
+    if (alanNokta.length !== 4 || alanKipi) return
+    if (!(cizimOlcek > 0) || !(tasarimWm > 0) || !(tasarimHm > 0)) return
+    const k = alanNokta.map(oranTuvale)
+    const sirali = koseleriSirala(k)
+    const n = alanaYerlestir(sirali, alanKonum.u, alanKonum.v, alanOlcek)
+    if (n) elleKoseyeYaz(n)
+    /* elleKose'yi bu etki yazıyor; bağımlılığa koymak döngü olurdu. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasarimWm, tasarimHm, cizimOlcek, alanNokta, alanKipi, alanKonum.u, alanKonum.v])
 
   /* Dört nokta tamamlandı: işaretleme kapanıyor, tasarım alana giriyor. */
   const alaniBitir = () => {
@@ -3500,11 +3533,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * çünkü cols/rows daha state'e yazılmadı ve tasarimWm hâlâ eskisini
      * söylüyor.
      */
-    const u = Math.max(0.03, Math.min(1, (yeniWm * cizimOlcek) / enPx))
-    const v = Math.max(0.03, Math.min(1, (yeniHm * cizimOlcek) / boyPx))
-    const n = alanaYerlestir(alanTuval, 0.5, 0.5, { u, v })
+    /*
+     * ÖLÇÜ DONDURULMUYOR.
+     *
+     * Sabit bir u/v saklanınca tasarım o boyda kilitleniyor ve sol panelden
+     * kabin eklemek ekrana yansımıyordu. null bırakılınca ölçü her çizimde
+     * tasarımın O ANKİ gerçek santiminden geliyor; kullanıcı sütun/satır
+     * değiştirdikçe ekran da büyüyüp küçülüyor.
+     */
+    const n = alanaYerlestir(alanTuval, 0.5, 0.5, null, yeniWm, yeniHm)
     if (n) elleKoseyeYaz(n)
-    setAlanOlcek({ u, v })
+    setAlanOlcek(null)
     setAlanKonum({ u: 0.5, v: 0.5 })
     /* Kenarlarda boşluk var: alanı doldurmuyor, dolayısıyla sürüklenebilir. */
     setAlanDoldur(false)
