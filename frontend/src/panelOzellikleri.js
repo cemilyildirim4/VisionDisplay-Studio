@@ -46,6 +46,15 @@ export const PANEL = {
   /* Elle çekilen köşeleri sıfırlayan düğme. */
   koseAyariniSifirla: false,
 
+  /*
+   * KABİN GÖVDESİ — tasarımın 3B kalınlığı (yan ve üst yüzler).
+   *
+   * Şimdilik kapalı: yerleşimin kendisinde bir sorun aranıyor ve gövde
+   * görüntüyü karıştırıyor. Hesabı ve çizimi yerinde duruyor, burayı true
+   * yapmak yetiyor.
+   */
+  kabinGovdesi: false,
+
   /* L köşesinin tarafı: Sol köşe / Orta / Sağ köşe ve "Otomatiğe dön". */
   lKoseTarafi: false,
 

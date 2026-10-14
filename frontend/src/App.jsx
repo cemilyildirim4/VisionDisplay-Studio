@@ -850,6 +850,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [alanKonum, setAlanKonum] = useState({ u: 0.5, v: 0.5 })
   /* "Alana sığdır" basıldıysa ekran alanı dolduruyor; sürükleyince çıkıyor. */
   const [alanDoldur, setAlanDoldur] = useState(false)
+  /* Tasarımın alan içindeki ölçüsü; sürükleme bunu koruyor (bkz. alanaYerlestir). */
+  const [alanOlcek, setAlanOlcek] = useState(null)
 
   /*
    * L TİPİNDE YERLEŞİM: KÖŞE ÇİZGİSİ.
@@ -1386,6 +1388,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setAlanNokta([])
       setAlanKonum({ u: 0.5, v: 0.5 })
       setAlanDoldur(false)
+      setAlanOlcek(null)
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
@@ -3336,7 +3339,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yapılandırmada ne kadarsa o kadar yer kaplıyor ve alanın perspektifine
    * oturuyor. Doldurmak isteyen "Tasarımı sığdır" diyor.
    */
-  const alanaYerlestir = (koseler, uMerkez = 0.5, vMerkez = 0.5) => {
+  /*
+   * TASARIMIN ALAN İÇİNDEKİ ENİ VE BOYU — alanın birim karesinde (0..1).
+   *
+   * Sürükleme bunu DEĞİŞTİRMİYOR, yalnızca merkezi oynatıyor. Önce her
+   * sürüklemede ölçü gerçek santimden yeniden hesaplanıyordu; "Alana sığdır"
+   * ile alana oturtulmuş bir tasarım ilk dokunuşta kendi küçük ölçüsüne geri
+   * dönüyordu — "sürükleyince küçülüyor" denen durum buydu.
+   */
+  const alanaYerlestir = (koseler, uMerkez = 0.5, vMerkez = 0.5, olcek = null) => {
     if (!Array.isArray(koseler) || koseler.length !== 4) return null
     if (!(cizimOlcek > 0) || !(tasarimWm > 0) || !(tasarimHm > 0)) return null
     const enPx =
@@ -3348,8 +3359,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         Math.hypot(koseler[2].x - koseler[1].x, koseler[2].y - koseler[1].y)) /
       2
     if (!(enPx > 1) || !(boyPx > 1)) return null
-    const u = Math.max(0.03, Math.min(1, (tasarimWm * cizimOlcek) / enPx))
-    const v = Math.max(0.03, Math.min(1, (tasarimHm * cizimOlcek) / boyPx))
+    /* Ölçü verilmişse o korunuyor; yoksa tasarımın gerçek santiminden. */
+    const u =
+      olcek && olcek.u > 0
+        ? Math.max(0.03, Math.min(1, olcek.u))
+        : Math.max(0.03, Math.min(1, (tasarimWm * cizimOlcek) / enPx))
+    const v =
+      olcek && olcek.v > 0
+        ? Math.max(0.03, Math.min(1, olcek.v))
+        : Math.max(0.03, Math.min(1, (tasarimHm * cizimOlcek) / boyPx))
     const u0 = Math.max(0, Math.min(1 - u, uMerkez - u / 2))
     const v0 = Math.max(0, Math.min(1 - v, vMerkez - v / 2))
     const n = [
@@ -3382,6 +3400,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAlanKipi(false)
     setAlanKonum({ u: 0.5, v: 0.5 })
     setAlanDoldur(false)
+    setAlanOlcek(null)
     const yeni = k ? alanaYerlestir(k) : null
     if (yeni) elleKoseyeYaz(yeni)
     /* Alan kurulduktan sonra yapilacak is konumlandirma: dogrudan o adima. */
@@ -3412,6 +3431,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const tasarimiAlanaSigdir = () => {
     if (!alanTuval) return
     elleKoseyeYaz(alanTuval.map((k) => ({ x: k.x, y: k.y })))
+    /* Ölçü artık alanın TAMAMI; sürükleme bunu bozmasın diye saklanıyor. */
+    setAlanOlcek({ u: 1, v: 1 })
+    setAlanKonum({ u: 0.5, v: 0.5 })
     setAlanDoldur(true)
   }
 
@@ -3447,8 +3469,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const u = Math.max(0, Math.min(1, bas.u + (ev.clientX - basX) / enPx))
       const v = Math.max(0, Math.min(1, bas.v + (ev.clientY - basY) / boyPx))
       setAlanKonum({ u, v })
-      setAlanDoldur(false)
-      const yeni = alanaYerlestir(alanTuval, u, v)
+      /* Ölçü KORUNUYOR: sürükleme yalnızca yeri değiştiriyor. */
+      const yeni = alanaYerlestir(alanTuval, u, v, alanOlcek)
       if (yeni) elleKoseyeYaz(yeni)
     }
     const birak = () => {
@@ -4635,6 +4657,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAlanNokta([])
     setAlanKonum({ u: 0.5, v: 0.5 })
     setAlanDoldur(false)
+    setAlanOlcek(null)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -6436,7 +6459,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             kullanıcı aynı tasarımı iki kere görüyor. Köşenin kendi gövdesi
             ayrı bir iş (bkz. LKoseEkran).
           */}
-          {duvarDunya && !tasarimGizli && kabinYuzleri && !lTipiVar && !refKipi && scene === 'ozel' && ozelSahne && (
+          {PANEL.kabinGovdesi && duvarDunya && !tasarimGizli && kabinYuzleri && !lTipiVar && !refKipi && scene === 'ozel' && ozelSahne && (
             <KalinlikKatmani
               yuzler={kabinYuzleri.yuzler}
               on={kabinYuzleri.on}
