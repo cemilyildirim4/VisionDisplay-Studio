@@ -3182,7 +3182,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         x: k.x + (elleKayma?.x || 0),
         y: k.y + (elleKayma?.y || 0),
       }))
-      return fotografaCek(elle, fotoYer).map((k) => ({ x: k.x - sol0, y: k.y - ust0 }))
+      /*
+       * ALAN İŞARETLİYSE SINIR YUMUŞUYOR.
+       *
+       * Sürükleme sınırı kodda kalkmıştı ama tasarım yine işaretlenen kutuyu
+       * terk edemiyordu: buradaki fotografaCek dörtgeni her çizimde fotoğrafın
+       * içine geri çekiyor, yani sürüklemeyi geri alıyordu. Kullanıcı
+       * dört noktayı kendisi işaretlediyse nereye koyacağını da kendisi
+       * biliyor; tasarımı alanın ve fotoğrafın dışına taşıyabilmeli.
+       *
+       * Sınırın tamamını kaldırmıyoruz: dörtgenin dörtte biri kadrajda
+       * kalıyor, yoksa tasarım ekrandan kaybolup geri getirilemez olurdu.
+       */
+      const sinirli =
+        alanNokta.length === 4 ? kadrajaCek(elle, tuvalBoyut) : fotografaCek(elle, fotoYer)
+      return sinirli.map((k) => ({ x: k.x - sol0, y: k.y - ust0 }))
     }
     if (!hedefKose) {
       beklenenKoseRef.current = null
@@ -3429,8 +3443,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         : alanEtkinCm && alanEtkinCm.boyCm > 0
           ? Math.max(0.03, (dH * 100) / alanEtkinCm.boyCm)
           : Math.max(0.03, (dH * olcekPxM) / boyPx)
-    const u0 = u >= 1 ? (1 - u) / 2 : Math.max(0, Math.min(1 - u, uMerkez - u / 2))
-    const v0 = v >= 1 ? (1 - v) / 2 : Math.max(0, Math.min(1 - v, vMerkez - v / 2))
+    /*
+     * KONUM KISITLANMIYOR — tasarım alanın dışına da çıkabiliyor.
+     *
+     * Sol üst köşe 0..1-u arasına sıkıştırılıyordu: tasarım alanı neredeyse
+     * dolduruyorsa (sığdır dedikten sonra olağan durum) oynayacak yer
+     * kalmıyor, sürükleme sonuçsuz görünüyordu. Ölçülen örnekte 300 px'lik
+     * alanda 288 px'lik tasarım yalnızca 6 px kayabiliyordu.
+     *
+     * İşaretlenen alan artık bir hapishane değil: ölçünün ve ilk yerleşimin
+     * kaynağı. Nereye konacağını kullanıcı biliyor. Merkez 0,5 geldiğinde
+     * sonuç eskisiyle aynı (ortalı), yani "ölçüye sığdır" davranışı bozulmuyor.
+     * Ekrandan tamamen kaçmasını kadrajaCek engelliyor (bkz. koseTuval).
+     */
+    const u0 = uMerkez - u / 2
+    const v0 = vMerkez - v / 2
     const n = [
       dortgenNoktasi(koseler, u0, v0),
       dortgenNoktasi(koseler, u0 + u, v0),
