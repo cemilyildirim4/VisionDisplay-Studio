@@ -5571,10 +5571,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       mesafeCm,
     )
     if (!poz) return null
+    /*
+     * ───────────────────────────────────────────────────────────────────
+     * KALINLIK ESNEMEYLE BÜYÜMÜYOR.
+     *
+     * Gövde tasarımın GERÇEK ölçüsünden kuruluyor (32 x 16 cm gibi), sonra
+     * ön yüzü ekrandaki dörtgene oturtuluyor. Dörtgen işaretlenen alana
+     * sığdırıldığında tasarım gerçek ölçüsünün katları kadar büyüyor ve
+     * derinlik de aynı katla büyüyordu: 10 cm'lik bir kabin yarım metre
+     * kalınlıkta görünüyordu.
+     *
+     * Çözüm, derinliği o katsayıya BÖLMEK: gövde oturtulurken aynı katla
+     * çarpılacağı için ekranda kalan şey kabinin gerçek derinliği oluyor.
+     * Katsayı, ekrandaki enin fotoğrafın santim ölçeğindeki karşılığının
+     * tasarımın gerçek enine oranı.
+     * ───────────────────────────────────────────────────────────────────
+     */
+    const derinlikCm = (() => {
+      const ham = previewModel.depthMm / 10
+      if (!(cizimOlcek > 0) || !(tasarimWm > 0)) return ham
+      const enPx =
+        (Math.hypot(koseMutlak[1].x - koseMutlak[0].x, koseMutlak[1].y - koseMutlak[0].y) +
+          Math.hypot(koseMutlak[2].x - koseMutlak[3].x, koseMutlak[2].y - koseMutlak[3].y)) /
+        2
+      const cizilenM = enPx / cizimOlcek
+      const carpan = cizilenM / tasarimWm
+      /* Katsayı anlamsızsa (ölçek yok, dörtgen bozuk) dokunma. */
+      if (!Number.isFinite(carpan) || carpan <= 0.01) return ham
+      return ham / carpan
+    })()
     const g = kutuGovdesi(
       tasarimWm * 100,
       tasarimHm * 100,
-      previewModel.depthMm / 10,
+      derinlikCm,
       refPxCm,
       kaynak.w,
       kaynak.h,
