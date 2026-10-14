@@ -606,7 +606,14 @@ function SihirbazKart({
             Sihirbazın hangi adımında olunursa olunsun görünüyor; alan bir kez
             işaretlendikten sonra bunlar kurulumun değil, ayarın parçası.
           */}
-          {!alanKipi && alanVar && onAlanSigdir && adim !== 4 && (
+          {/*
+            3. ADIMDA CIZILMIYOR: orada ESKI manuel yolun kendi "yerlesim
+            alaninin olcusu (cm)" kutulari var. Ikisi birden gorununce ayni
+            seye benzeyen iki ayri alan olcusu cikiyor ve hangisinin neyi
+            besledigi anlasilmiyordu. Sigdirma HER ZAMAN isaretlenen dort
+            koseyi ve ustteki olcuyu kullaniyor, oteki kutularla ilgisi yok.
+          */}
+          {!alanKipi && alanVar && onAlanSigdir && adim !== 4 && adim !== 3 && (
             <div className="mt-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2">
               <button
                 type="button"
