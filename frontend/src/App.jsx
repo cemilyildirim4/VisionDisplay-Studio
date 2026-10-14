@@ -6235,6 +6235,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 !!lKoseCizimi
               }
               uc3dKatman={
+                PANEL.kabinGovdesi &&
                 !tasarimGizli &&
                 !duvarDunya &&
                 YERINDE_3B &&

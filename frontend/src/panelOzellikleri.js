@@ -47,11 +47,18 @@ export const PANEL = {
   koseAyariniSifirla: false,
 
   /*
-   * KABİN GÖVDESİ — tasarımın 3B kalınlığı (yan ve üst yüzler).
+   * EKRANIN 3B HÂLİ — KALINLIĞI ÇİZEN HER ŞEY.
    *
-   * Şimdilik kapalı: yerleşimin kendisinde bir sorun aranıyor ve gövde
-   * görüntüyü karıştırıyor. Hesabı ve çizimi yerinde duruyor, burayı true
-   * yapmak yetiyor.
+   * İki ayrı katman var ve ikisi de buraya bağlı:
+   *   KalinlikKatmani — dörtgenden türetilen yan/üst yüzler, duvar düzlemi
+   *                     ölçülmüşken çiziliyor.
+   *   Mekan3D         — fotoğrafın üstüne oturtulan gerçek 3B model; kabinin
+   *                     derinliği onda da var. Ekranda görünen kalınlık
+   *                     çoğunlukla BUYDU; ilk denememde yalnızca ötekini
+   *                     kapatmıştım ve kalınlık yerinde kalmıştı.
+   *
+   * Şimdilik kapalı: yerleşimdeki sorun 3B olmadan aranacak. Hesapları ve
+   * çizimleri yerinde duruyor, burayı true yapmak ikisini de geri getiriyor.
    */
   kabinGovdesi: false,
 
