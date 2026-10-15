@@ -3877,18 +3877,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAktifEkranId(secilen.id)
     setAktifSira(secilen.sira || 1)
     /*
-     * ÖLÇÜ POP-UP'I BAŞTAN GERİ GELİYOR.
+     * ÖLÇÜ KARTI SON ADIMDAN AÇILIYOR.
      *
-     * "Düzenle" ekranı ele veriyordu ama sağ panelde yalnızca özet
-     * kalıyordu: taşıma ipucu, ölçü kutusu ve "ölçüye sığdır" düğmesi
-     * görünmediği için kullanıcının düzenleyecek bir yeri yoktu.
+     * Akış baştan açılıyordu: düzenlemek istenen tek şey kutunun yeri ya da
+     * santimi olsa bile referans yeniden işaretleniyor, dört köşe yeniden
+     * konuyor, her şey başa sarıyordu. Oysa bu ekranın ölçüsü zaten kurulu.
+     * Kart, yapılacak işin bulunduğu adımda açılıyor: taşıma, "ölçüye
+     * sığdır" ve santim kutuları 4. adımda. Baştan kurmak isteyen "Geri"
+     * ile adım adım geriye gidebiliyor.
      *
-     * Akış 1. adımdan açılıyor — "Referansı yeniden seç" düğmesinin
-     * yaptığının aynısı. O düğme bu yüzden kaldırıldı: ekranı düzenlemek
-     * zaten referanstan başlayan aynı yol ve iki ayrı giriş kapısı
-     * olmasının bir anlamı yok.
+     * Ölçüsü hiç kurulmamış bir ekran (alanı yok) için başa dönmek doğru:
+     * orada 4. adımda gösterilecek bir şey yok.
      */
-    setSihirbazAdim(1)
+    setSihirbazAdim(Array.isArray(secilen.alan) && secilen.alan.length === 4 ? 4 : 1)
   }
 
   const ekranSil = (id) => setSabitEkranlar((l) => l.filter((e) => e.id !== id))
@@ -5194,6 +5195,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return
     }
     setSihirbazAdim((a) => {
+      /*
+       * 3. ADIM ATLANIYOR (manuel yol kapalıyken).
+       *
+       * Orası eski manuel yolun santim kutuları; kuracak düğmesi
+       * kapalı olduğu için (bkz. PANEL.olcuKutusu) elde yalnızca iki
+       * dolu kutu ve bir "Geri" kalıyor — geri giderken boş bir ekrana
+       * düşmek oluyordu. Kapalıyken 4'ten doğrudan 2'ye dönülüyor;
+       * orada referans yeniden işaretlenebiliyor.
+       */
+      if (a === 4 && !PANEL.olcuKutusu) {
+        setKutuDuzen('hepsi')
+        setRefKipi(true)
+        return 2
+      }
       if (a === 3) setRefKipi(true)
       if (a === 4) setKutuDuzen('hepsi')
       return Math.max(1, a - 1)
@@ -8336,7 +8351,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                       setKutuEn(String(olcuKutu.enCm))
                                       setKutuBoy(String(olcuKutu.boyCm))
                                     }
-                                    setSihirbazAdim(1)
+                                    /*
+                                     * Ölçü kuruluysa son adım: yapılacak iş
+                                     * orada. Kurulu değilse akış baştan.
+                                     */
+                                    setSihirbazAdim(alanNokta.length === 4 ? 4 : 1)
                                   }}
                                   className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                                 >
