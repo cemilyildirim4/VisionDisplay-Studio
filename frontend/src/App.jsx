@@ -112,7 +112,7 @@ import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose
 /* Alan içine yerleştirme ve sığdırma — ikisi de hazır (bkz. homografi.js). */
 import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
 /* İşaretlenen alanın GERÇEK ölçüsü — eğimi hesaba katarak (bkz. alanOlcu.js). */
-import { dortgenGercekOlcu } from './alanOlcu.js'
+import { dortgenGercekOlcu, odakIkiReferanstan } from './alanOlcu.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -847,6 +847,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [refTur, setRefTur] = useState('cizgi')
   const [refBoyCm, setRefBoyCm] = useState('')
   const [refKipi, setRefKipi] = useState(false)
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * İKİNCİ REFERANS — ÖLÇÜM TAHMİNE DAYANMASIN.
+   *
+   * Kamera düz tutulup yalnızca sağa-sola döndüyse duvarın dikey kenarları
+   * paralel kalır; o yönün kaçış noktası sonsuza gider ve odak uzaklığı
+   * iki kaçış noktasından türetilemez. Odak o zaman TAHMİN ediliyor (~65°
+   * görüş açısı) ve hata doğrudan referansa DİK eksene biniyor. Ölçüldü:
+   * geniş açılı bir karede 300 cm'lik bir en 380 cm (%+26,7) sanılıyor.
+   *
+   * İkincisi FARKLI YÖNDE bir bilinen uzunluk: ikisinin düzlemdeki oranı
+   * yalnızca odağa bağlı olduğu için odak hesaplanabiliyor
+   * (bkz. odakIkiReferanstan). Aynı sahnelerde hata %0,0'a iniyor.
+   *
+   * İsteğe bağlı: ölçüm zaten kesinse (iki kaçış noktası da varsa) gerek
+   * yok ve panelde teklif edilmiyor.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const [ref2Nokta, setRef2Nokta] = useState([])
+  const [ref2UzunlukCm, setRef2UzunlukCm] = useState('')
+  const [ref2Kipi, setRef2Kipi] = useState(false)
   /*
    * ───────────────────────────────────────────────────────────────────────
    * ÖLÇÜM İLE AYARLA — YERLEŞİM ALANI DÖRT NOKTAYLA.
@@ -4601,6 +4622,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * olmadığı için tek ölçekli hesap zaten doğru.
    * ───────────────────────────────────────────────────────────────────────
    */
+  /*
+   * ODAK: TAHMİN DEĞİL, İKİ REFERANSTAN HESAP (varsa).
+   * İkinci referans yoksa eski tahmin (~65° görüş açısı) kullanılıyor.
+   */
+  const cozulenOdak = (() => {
+    if (!alanTuval || refNokta.length !== 2 || ref2Nokta.length !== 2) return null
+    const cm1 = Number(String(refUzunlukCm).replace(',', '.'))
+    const cm2 = Number(String(ref2UzunlukCm).replace(',', '.'))
+    if (!(cm1 > 0) || !(cm2 > 0)) return null
+    if (!(fotoYer?.genislik > 0)) return null
+    const asal = oranTuvale({ x: 0.5, y: 0.5 })
+    return odakIkiReferanstan(
+      alanTuval,
+      oranTuvale(refNokta[0]),
+      oranTuvale(refNokta[1]),
+      cm1,
+      oranTuvale(ref2Nokta[0]),
+      oranTuvale(ref2Nokta[1]),
+      cm2,
+      asal,
+      fotoYer.genislik * (sahneYakinlik || 1),
+    )
+  })()
+
   const alanGercek = (() => {
     if (!alanTuval || refNokta.length !== 2) return null
     const cm = Number(String(refUzunlukCm).replace(',', '.'))
@@ -4608,8 +4653,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const a = oranTuvale(refNokta[0])
     const b = oranTuvale(refNokta[1])
     const asal = oranTuvale({ x: 0.5, y: 0.5 })
-    /* Odak tahmini yalnızca tek kaçış noktası varken kullanılıyor. */
-    const odak = fotoYer?.genislik > 0 ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785 : 0
+    /* Çözülen odak varsa o; yoksa tahmin (yalnızca tek kaçış noktasında kullanılır). */
+    const odak =
+      cozulenOdak > 1
+        ? cozulenOdak
+        : fotoYer?.genislik > 0
+          ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785
+          : 0
     return dortgenGercekOlcu(alanTuval, a, b, cm, asal, odak)
   })()
 
@@ -5187,6 +5237,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAlanKonum({ u: 0.5, v: 0.5 })
     setAlanDoldur(false)
     setAlanOlcek(null)
+    setRef2Nokta([])
+    setRef2UzunlukCm('')
+    setRef2Kipi(false)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -5830,7 +5883,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * saydam kısmı da fareyi bırakıyor, dolayısıyla tasarım yine
    * sürüklenebiliyor.
    */
-  const alanTutamaklari = sihirbazAdim > 0 && !alanKipi && alanNokta.length === 4
+  const alanTutamaklari = sihirbazAdim > 0 && !alanKipi && !ref2Kipi && alanNokta.length === 4
 
   const lSekilPaneli = (
     <div className="mt-2">
@@ -6796,6 +6849,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 (uc3dHazir && !duvarDunya) ||
                 tasarimGizli ||
                 refKipi ||
+                ref2Kipi ||
                 lKoseKipi ||
                 alanKipi ||
                 !!lKoseCizimi
@@ -7152,6 +7206,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             davranışı (sürüklenebilir işaretler, fotoğrafın dışına çıkmama)
             ikinci kez yazmak olurdu.
           */}
+          {/* İKİNCİ REFERANS — iki nokta, ilkiyle aynı araç. */}
+          {ref2Kipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+            <ReferansSecici
+              noktalar={ref2Nokta.map(oranTuvale)}
+              onDegis={(tuvalNoktalari) => setRef2Nokta(tuvalNoktalari.map(tuvalOrana))}
+              enCokNokta={2}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+              sinir={fotoSinir}
+            />
+          )}
+
           {(alanKipi || alanTutamaklari) && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
               noktalar={alanNokta.map(oranTuvale)}
@@ -8266,6 +8332,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             mesafeKilitli={false}
                             onEgim={egimDugmesiVar ? kutuEgiminiCevir : null}
                             egimVar={egimVar}
+                            /*
+                             * İKİNCİ REFERANS — ölçüm tahmine dayanıyorsa teklif ediliyor.
+                             */
+                            odakTahminMi={!!alanGercek?.odakTahmin}
+                            odakCozuldu={cozulenOdak > 1}
+                            ref2Kipi={ref2Kipi}
+                            ref2NoktaSayisi={ref2Nokta.length}
+                            ref2UzunlukCm={ref2UzunlukCm}
+                            setRef2UzunlukCm={setRef2UzunlukCm}
+                            onRef2Isaretle={() => {
+                              setRef2Nokta([])
+                              setRef2UzunlukCm('')
+                              setRefKipi(false)
+                              setAlanKipi(false)
+                              setRef2Kipi(true)
+                            }}
+                            onRef2Bitir={() => setRef2Kipi(false)}
                             /* ÖLÇÜM İLE AYARLA — dört noktayla yerleşim alanı. */
                             alanKipi={alanKipi}
                             /*

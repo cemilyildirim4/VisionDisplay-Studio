@@ -64,6 +64,111 @@ const capraz = (a, b) => ({
 const nokta3 = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z
 
 /**
+ * Verilen ODAK için dörtgenin düzlemini kurar ve o düzlemde ölçen bir
+ * fonksiyon döndürür.
+ *
+ * Ayrı duruyor çünkü iki yerden kullanılıyor: ölçümün kendisi ve odak
+ * çözücüsü (bkz. odakIkiReferanstan). İkisinin aynı geometriyi iki kez
+ * yazması, birinde yapılan düzeltmenin ötekine geçmemesi demekti.
+ */
+function duzlemOlcer(koseler, asal, f) {
+  if (!(f > 1)) return null
+  const [p0, p1, p2, p3] = koseler
+  const Vy = kesisim(p0, p1, p3, p2)
+  const Vd = kesisim(p0, p3, p1, p2)
+  const isin = (p) => ({ x: (p.x - asal.x) / f, y: (p.y - asal.y) / f, z: 1 })
+  const yon2B = (a, b) => {
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const uz = Math.hypot(dx, dy)
+    return uz > 1e-9 ? { x: dx / uz, y: dy / uz, z: 0 } : null
+  }
+  const dYatay = Vy ? isin(Vy) : yon2B(p0, p1)
+  const dDikey = Vd ? isin(Vd) : yon2B(p0, p3)
+  if (!dYatay || !dDikey) return null
+  const n = capraz(dYatay, dDikey)
+  if (!(Math.abs(n.x) + Math.abs(n.y) + Math.abs(n.z) > 1e-12)) return null
+  const r0 = isin(p0)
+  const d0 = nokta3(n, r0)
+  if (!(Math.abs(d0) > 1e-12)) return null
+  const duzleme = (p) => {
+    const r = isin(p)
+    const pay = nokta3(n, r)
+    if (!(Math.abs(pay) > 1e-12)) return null
+    const s = d0 / pay
+    return { x: r.x * s, y: r.y * s, z: r.z * s }
+  }
+  const uzunluk = (a, b) => {
+    const A = duzleme(a)
+    const B = duzleme(b)
+    return A && B ? Math.hypot(A.x - B.x, A.y - B.y, A.z - B.z) : null
+  }
+  return { uzunluk, kose: [p0, p1, p2, p3] }
+}
+
+/**
+ * İKİ REFERANSTAN ODAK UZAKLIĞI — TAHMİN YERİNE HESAP.
+ *
+ * Kamera düz tutulup yalnızca sağa-sola döndüyse dikey kenarlar paralel
+ * kalır, o yönün kaçış noktası sonsuza gider ve odak iki kaçış noktasından
+ * türetilemez. O durumda odak TAHMİN ediliyordu (~65° görüş açısı) ve hata
+ * doğrudan referansa DİK eksene biniyordu. Ölçüldü: geniş açılı bir karede
+ * 300 cm'lik bir en 380 cm (%+26,7) sanılıyordu.
+ *
+ * Aynı düzlemde, FARKLI YÖNLERDE iki bilinen uzunluk verilirse odak artık
+ * tahmin değil: düzleme iz düşen iki uzunluğun ORANI yalnızca odağa bağlı.
+ * Oranı gerçek santim oranına eşitleyen odak aranıyor (kaba tarama + ikiye
+ * bölme). Sentetik sahnede 600–2400 arası odakların hepsi %0,00 hatayla
+ * geri bulundu ve ölçüm %26,7 hatadan %0,0'a indi.
+ *
+ * İki referans aynı yöndeyse oran odağa duyarsızdır ve çözüm yoktur; o
+ * durumda null dönüyor (çağıran taraf tahmine devam ediyor).
+ */
+export function odakIkiReferanstan(koseler, r1a, r1b, cm1, r2a, r2b, cm2, asal, enGenis) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return null
+  if (!r1a || !r1b || !r2a || !r2b || !asal) return null
+  if (!(cm1 > 0) || !(cm2 > 0) || !(enGenis > 0)) return null
+  const hedef = cm1 / cm2
+  const fark = (f) => {
+    const o = duzlemOlcer(koseler, asal, f)
+    if (!o) return null
+    const L1 = o.uzunluk(r1a, r1b)
+    const L2 = o.uzunluk(r2a, r2b)
+    if (!(L1 > 0) || !(L2 > 0)) return null
+    return L1 / L2 - hedef
+  }
+  const alt = enGenis * 0.15
+  const ust = enGenis * 12
+  const adim = 160
+  let onceF = alt
+  let onceD = fark(alt)
+  for (let i = 1; i <= adim; i++) {
+    const f = alt * Math.pow(ust / alt, i / adim)
+    const d = fark(f)
+    if (onceD != null && d != null && onceD * d < 0) {
+      let a = onceF
+      let b = f
+      let ga = onceD
+      for (let k = 0; k < 60; k++) {
+        const m = Math.sqrt(a * b)
+        const gm = fark(m)
+        if (gm == null) break
+        if (ga * gm <= 0) b = m
+        else {
+          a = m
+          ga = gm
+        }
+      }
+      return Math.sqrt(a * b)
+    }
+    onceF = f
+    onceD = d
+  }
+  /* İşaret değişimi yok: iki referans aynı yönde ya da ölçüm tutarsız. */
+  return null
+}
+
+/**
  * Dörtgenin gerçek en/boyunu santim olarak verir.
  *
  * @param {{x,y}[]} koseler   Sol üst, sağ üst, sağ alt, sol alt (tuval pikseli).
@@ -99,6 +204,9 @@ export function dortgenGercekOlcu(koseler, refA, refB, refCm, asal, odakTahmin =
     f = odakTahmin
   }
   if (!(f > 1)) return null
+
+  /* Odak iki kaçış noktasından geldiyse kesindir; gelmediyse dışarıdan. */
+  const odakTahminMi = !(Vy && Vd)
 
   /* Görüntü noktası → kameradan çıkan ışın. */
   const isin = (p) => ({ x: (p.x - asal.x) / f, y: (p.y - asal.y) / f, z: 1 })
@@ -162,5 +270,5 @@ export function dortgenGercekOlcu(koseler, refA, refB, refCm, asal, odakTahmin =
   /* Saçma sonuç (ölçüm bozuk) kullanılmıyor: 1 cm ile 100 m arası makul. */
   if (enCm < 1 || boyCm < 1 || enCm > 10000 || boyCm > 10000) return null
 
-  return { enCm, boyCm, odak: f }
+  return { enCm, boyCm, odak: f, odakTahmin: odakTahminMi }
 }

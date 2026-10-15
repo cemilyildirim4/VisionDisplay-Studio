@@ -95,6 +95,15 @@ function SihirbazKart({
   alanVar = false,
   /* Alan zaten işaretliyse yeniden işaretlemeden yerleştirmeye dönülüyor. */
   onYerlesim = null,
+  /* İKİNCİ REFERANS — odak tahmin ediliyorsa ölçümü kesinleştiriyor. */
+  odakTahminMi = false,
+  odakCozuldu = false,
+  ref2Kipi = false,
+  ref2NoktaSayisi = 0,
+  ref2UzunlukCm = '',
+  setRef2UzunlukCm = null,
+  onRef2Isaretle = null,
+  onRef2Bitir = null,
   alanOlculenEn = null,
   alanOlculenBoy = null,
   alanElleEn = '',
@@ -753,6 +762,70 @@ function SihirbazKart({
                     {t('sih.alanSigdir')}
                   </button>
                   {alanOlcuAlani}
+
+                  {/*
+                    İKİNCİ REFERANS.
+
+                    Ölçüm tahmini bir odak uzaklığına dayanıyorsa (kamera düz
+                    tutulmuş, dikey kenarlar paralel) burada haber veriliyor ve
+                    ikinci bir bilinen uzunluk isteniyor. Hesaplandıktan sonra
+                    teklif kalkıyor; yeniden sorulmuyor.
+                  */}
+                  {ref2Kipi ? (
+                    <div className="mt-2 rounded-lg border border-brand/50 px-2.5 py-2">
+                      <p className={aciklama}>{t('sih.ref2Aciklama')}</p>
+                      <p
+                        className={`${kucuk} ${
+                          ref2NoktaSayisi >= 2
+                            ? 'text-emerald-700 dark:text-emerald-400'
+                            : 'text-neutral-500 dark:text-neutral-400'
+                        }`}
+                      >
+                        {ref2NoktaSayisi} / 2
+                      </p>
+                      {ref2NoktaSayisi >= 2 && setRef2UzunlukCm && (
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            autoFocus
+                            value={ref2UzunlukCm}
+                            onChange={(e) => setRef2UzunlukCm(e.target.value)}
+                            placeholder={t('ref2.uzunlukPh')}
+                            className={girdi}
+                          />
+                          <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">
+                            cm
+                          </span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={onRef2Bitir}
+                        disabled={ref2NoktaSayisi < 2 || !(Number(String(ref2UzunlukCm).replace(',', '.')) > 0)}
+                        className={`mt-2 w-full ${ana}`}
+                      >
+                        {t('sih.ref2Bitir')}
+                      </button>
+                    </div>
+                  ) : odakCozuldu ? (
+                    <p className={`${kucuk} text-emerald-700 dark:text-emerald-400`}>
+                      {t('sih.ref2Hazir')}
+                    </p>
+                  ) : odakTahminMi && onRef2Isaretle ? (
+                    <div className="mt-2 rounded-lg border border-amber-300 px-2.5 py-2 dark:border-amber-500/40">
+                      <p className={`${kucuk} text-amber-700 dark:text-amber-400`}>{t('sih.ref2Uyari')}</p>
+                      <button
+                        type="button"
+                        onClick={onRef2Isaretle}
+                        className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-amber-400 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-500/10 transition-colors"
+                      >
+                        {t('sih.ref2Ekle')}
+                      </button>
+                    </div>
+                  ) : null}
+
                   <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
                     {t('sih.alanTasi')}
                   </p>

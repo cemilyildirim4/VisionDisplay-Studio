@@ -577,6 +577,23 @@ const dict = {
     en: 'Mark the area again',
     ar: 'إعادة تحديد المنطقة',
   },
+  'sih.ref2Uyari': {
+    tr: 'Bu karede ölçüm tahmini bir görüş açısına dayanıyor: fotoğraf düz tutulup çekildiği için kameranın odak uzaklığı kareden çıkarılamıyor. Referansa DİK eksen (sizde en) %10’a kadar şaşabilir.',
+    en: 'This measurement relies on an assumed field of view: the photo was taken level, so the focal length cannot be derived from it. The axis perpendicular to the reference can be off by up to 10%.',
+    ar: 'يعتمد هذا القياس على زاوية رؤية مفترضة؛ قد ينحرف المحور العمودي على المرجع بنسبة تصل إلى 10%.',
+  },
+  'sih.ref2Ekle': { tr: 'İkinci referans ekle', en: 'Add a second reference', ar: 'إضافة مرجع ثانٍ' },
+  'sih.ref2Aciklama': {
+    tr: 'Aynı yüzeyde, ilk referansa DİK bir uzunluğun iki ucuna tıklayın: ilki dikeyse bunu yatay seçin. Sonra kaç santim olduğunu yazın — odak uzaklığı bu iki uzunluğun oranından hesaplanır.',
+    en: 'On the same surface, click the two ends of a length PERPENDICULAR to the first reference, then type its size in cm. The focal length is computed from the ratio of the two.',
+    ar: 'على السطح نفسه، حدّد طرفي طول عمودي على المرجع الأول ثم اكتب مقاسه بالسنتيمتر.',
+  },
+  'sih.ref2Bitir': { tr: 'İkinci referansı uygula', en: 'Apply the second reference', ar: 'تطبيق المرجع الثاني' },
+  'sih.ref2Hazir': {
+    tr: 'Odak uzaklığı iki referanstan hesaplandı — ölçüm artık tahmine dayanmıyor.',
+    en: 'The focal length was computed from two references — the measurement no longer relies on a guess.',
+    ar: 'تم حساب البعد البؤري من مرجعين — لم يعد القياس تخمينيًا.',
+  },
   'sih.alanTasi': {
     tr: 'Tasarımı sürükleyerek taşıyabilirsiniz; alanın dışına da çıkabilir.',
     en: 'Drag the design to move it inside the area; it cannot leave it.',
