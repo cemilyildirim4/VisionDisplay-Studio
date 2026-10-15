@@ -203,7 +203,7 @@ function SihirbazKart({
                         step="1"
                         value={alanElleEn}
                         onChange={(e) => setAlanElleEn(e.target.value)}
-                        placeholder={String(alanOlculenEn)}
+                        placeholder={t('ref.en')}
                         className={girdi}
                       />
                       <span className="text-[14px] text-neutral-400">×</span>
@@ -213,7 +213,7 @@ function SihirbazKart({
                         step="1"
                         value={alanElleBoy}
                         onChange={(e) => setAlanElleBoy && setAlanElleBoy(e.target.value)}
-                        placeholder={String(alanOlculenBoy)}
+                        placeholder={t('ref.boy')}
                         className={girdi}
                       />
                       <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
