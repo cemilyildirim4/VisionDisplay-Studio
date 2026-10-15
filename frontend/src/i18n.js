@@ -808,6 +808,8 @@ const dict = {
     ar: 'تغيّر المرجع. أعد إنشاء مربع القياس لاستخدام المقياس الجديد.',
   },
   'ref2.duzenle': { tr: 'Düzenle', en: 'Edit', ar: 'تحرير' },
+  'ref2.cizgiGizle': { tr: 'Çizgileri gizle', en: 'Hide the guides', ar: 'إخفاء الخطوط' },
+  'ref2.cizgiGoster': { tr: 'Çizgileri göster', en: 'Show the guides', ar: 'إظهار الخطوط' },
   'ref2.olcuUygula': { tr: 'Ölçüyü uygula', en: 'Apply the size', ar: 'تطبيق المقاس' },
   'ref2.duzenleIpucu': {
     tr: 'Kutuyu gövdesinden tutup taşıyın, turuncu tutamakla çevirin, köşelerinden çekip duvara oturtun. Tasarım kutuyla birlikte hareket eder; ölçü değişmez.',

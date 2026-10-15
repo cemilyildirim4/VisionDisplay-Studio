@@ -866,6 +866,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [alanKipi, setAlanKipi] = useState(false)
   const [alanNokta, setAlanNokta] = useState([])
   /*
+   * İŞARETLENEN ALANIN ÇİZGİSİ GİZLENEBİLİYOR.
+   *
+   * Çizgi hizayı denetlemek için duruyor ama müşteriye gösterilecek kareyi
+   * de kirletiyor. Gizlendiğinde yalnızca GÖRÜNÜMÜ kapanıyor; alan, ölçü ve
+   * yerleşim olduğu gibi kalıyor. Düzenleme sırasında (sihirbaz açık ya da
+   * bir işaretleme kipi) çizgi her hâlükârda görünüyor: orada işin kendisi o.
+   */
+  const [cizgiGizli, setCizgiGizli] = useState(false)
+  /*
    * ALANIN ÖLÇÜSÜ ELLE DÜZELTİLEBİLİYOR.
    *
    * Uygulama alanı perspektiften ölçüyor ama işaretleme birkaç santim
@@ -7052,7 +7061,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             olarak kalıyor: hem kullanıcı hizayı gözüyle denetleyebiliyor hem
             de bir sapma varsa nerede olduğu görünüyor. Fareyi hiç görmüyor.
           */}
-          {alanTuval && !alanKipi && !refKipi && !lKoseKipi && scene === 'ozel' && ozelSahne && (
+          {alanTuval &&
+            !alanKipi &&
+            !refKipi &&
+            !lKoseKipi &&
+            /* Gizlenmişse yalnızca düzenleme sırasında görünüyor. */
+            (!cizgiGizli || olcuAcik) &&
+            scene === 'ozel' &&
+            ozelSahne && (
             <svg
               className="absolute inset-0"
               width={tuvalBoyut.w}
@@ -8407,6 +8423,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                   className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                                 >
                                   {t('ref2.duzenle')}
+                                </button>
+                                {/*
+                                  ÇİZGİYİ GİZLE — müşteriye gösterilecek kare temiz kalsın.
+                                  Düzenlemeye girilince çizgi kendiliğinden geri geliyor.
+                                */}
+                                <button
+                                  type="button"
+                                  onClick={() => setCizgiGizli((o) => !o)}
+                                  className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                                >
+                                  {cizgiGizli ? t('ref2.cizgiGoster') : t('ref2.cizgiGizle')}
                                 </button>
                                 {PANEL.olcuDuzenlePaneli && duzenleAcik && (
                                   <div className="mt-1.5 rounded-lg border border-neutral-200 p-2 dark:border-[#2c333f]">
