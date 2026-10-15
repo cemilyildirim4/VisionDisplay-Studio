@@ -559,7 +559,7 @@ const dict = {
     ar: 'مقاس المنطقة المحددة',
   },
   'sih.alanOlcuIpucu': {
-    tr: 'Uygulamanın ölçtüğü değer yukarıda. Gerçeğini biliyorsanız buraya yazın: işaretler yerinde kalır, kabin sayısı yeni ölçüye göre kendiliğinden yeniden kurulur.',
+    tr: 'Uygulamanın ölçtüğü değer yukarıda. Gerçeğini biliyorsanız buraya yazın, sonra “Tasarımı ölçüye sığdır”ı TEKRAR basın. İşaretler yerinde kalır; yalnızca ölçü değişir ve kabin sayısı buna göre yeniden kurulur.',
     en: 'The value the app measured is shown. If you know the real one, type it; the marks stay put, only the size changes and the cabinet count follows.',
     ar: 'القيمة المقاسة معروضة. إذا كنت تعرف القيمة الحقيقية فاكتبها؛ تبقى العلامات مكانها ويتغيّر المقاس فقط.',
   },
