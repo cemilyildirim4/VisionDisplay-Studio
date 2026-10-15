@@ -156,6 +156,19 @@ export default function ReferansSecici({
    * şeklin dikdörtgen olup olmadığını ancak böyle görüyor.
    */
   const dortgen = !cizgiKipi && noktalar.length === 4 ? noktalar.map((p) => `${p.x},${p.y}`).join(' ') : null
+  /*
+   * ARADAKİ ÇİZGİ İŞARETLERKEN DE VAR.
+   *
+   * Dörtgen yalnızca dört nokta tamamlanınca çiziliyordu; o ana kadar
+   * ekranda birbirinden kopuk noktalar duruyor, kullanıcı kenarın nereye
+   * gittiğini göremiyordu. İkinci noktadan itibaren konulan noktalar
+   * birleştiriliyor: çizgi kenarın hizasını gösteriyor, dolayısıyla üçüncü
+   * ve dördüncü nokta göz kararı değil, kenara bakarak konuyor.
+   */
+  const yol =
+    !cizgiKipi && noktalar.length >= 2 && noktalar.length < 4
+      ? noktalar.map((p) => `${p.x},${p.y}`).join(' ')
+      : null
 
   /*
    * ROZETİN YERİ. Varsayılan yer çizginin ortasının üstü. Fotoğrafın
@@ -196,6 +209,18 @@ export default function ReferansSecici({
 
       {dortgen && (
         <polygon points={dortgen} fill="rgba(22,163,74,0.10)" stroke={renk} strokeWidth="2.5" strokeDasharray="8 5" />
+      )}
+
+      {/* Tamamlanmamış dörtgen: konulan noktalar arasındaki kenarlar. */}
+      {yol && (
+        <polyline
+          points={yol}
+          fill="none"
+          stroke={renk}
+          strokeWidth="2.5"
+          strokeDasharray="8 5"
+          strokeLinejoin="round"
+        />
       )}
 
       {cizgiKipi && a && b && (
