@@ -3889,7 +3889,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * Ölçüsü hiç kurulmamış bir ekran (alanı yok) için başa dönmek doğru:
      * orada 4. adımda gösterilecek bir şey yok.
      */
-    setSihirbazAdim(Array.isArray(secilen.alan) && secilen.alan.length === 4 ? 4 : 1)
+    /*
+     * ───────────────────────────────────────────────────────────────────
+     * REFERANS BİR KEZ SORULUYOR.
+     *
+     * Ölçüsü kurulmamış bir ekrana geçerken akış 1. adımdan açılıyordu,
+     * yani fotoğrafın ölçeği ÇOKTAN kurulmuşken referans yeniden
+     * isteniyordu. Referans fotoğrafa aittir, ekrana değil: bir kere
+     * verilir, bütün ekranlar onu kullanır.
+     *
+     * Sıralama: alanı varsa yerleştirmeye (4), yoksa ama ölçek kuruluysa
+     * doğrudan alan işaretlemeye, ölçek de yoksa en baştan.
+     * Referansı yine de değiştirmek isteyen "Geri" ile oraya gidiyor.
+     * ───────────────────────────────────────────────────────────────────
+     */
+    if (Array.isArray(secilen.alan) && secilen.alan.length === 4) {
+      setRefKipi(false)
+      setSihirbazAdim(4)
+    } else if (refPxCm || refDuzlem) {
+      setRefKipi(false)
+      setAlanKipi(true)
+      setSihirbazAdim(0)
+    } else {
+      setSihirbazAdim(1)
+    }
   }
 
   const ekranSil = (id) => setSabitEkranlar((l) => l.filter((e) => e.id !== id))
@@ -5205,7 +5228,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * orada referans yeniden işaretlenebiliyor.
        */
       if (a === 4 && !PANEL.olcuKutusu) {
-        setKutuDuzen('hepsi')
         setRefKipi(true)
         return 2
       }
@@ -8213,8 +8235,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             egimVar={egimVar}
                             /* ÖLÇÜM İLE AYARLA — dört noktayla yerleşim alanı. */
                             alanKipi={alanKipi}
-                            /* Alan duruyorsa yeniden işaretlemeden yerleştirmeye. */
-                            onYerlesim={alanNokta.length === 4 ? () => setSihirbazAdim(4) : null}
+                            /*
+                             * Alan duruyorsa yeniden işaretlemeden yerleştirmeye.
+                             * Referans işaretleme KAPANIYOR: açık kalırsa alan
+                             * çizgisi ve tasarım gizleniyor, fotoğrafa yapılan
+                             * tıklamalar da referans noktalarına gidiyor.
+                             */
+                            onYerlesim={
+                              alanNokta.length === 4
+                                ? () => {
+                                    setRefKipi(false)
+                                    setSihirbazAdim(4)
+                                  }
+                                : null
+                            }
                             /* Ölçülen değer yazılı duruyor; elle düzeltilebiliyor. */
                             alanOlculenEn={alanOlculenCm ? Math.round(alanOlculenCm.enCm) : null}
                             alanOlculenBoy={alanOlculenCm ? Math.round(alanOlculenCm.boyCm) : null}
@@ -8345,7 +8379,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                      * durumda kalıyor.
                                      */
                                     setDuzenleAcik(true)
-                                    setKutuDuzen('hepsi')
+                                    /* Manuel kutu yolu kapalıyken kip açılmıyor: taşımayı kilitliyordu. */
+                                    setKutuDuzen(PANEL.olcuKutusu ? 'hepsi' : null)
                                     setTasarimAcik(true)
                                     if (olcuKutu) {
                                       setKutuEn(String(olcuKutu.enCm))
@@ -8353,9 +8388,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                     }
                                     /*
                                      * Ölçü kuruluysa son adım: yapılacak iş
-                                     * orada. Kurulu değilse akış baştan.
+                                     * orada. Alan yoksa ama fotoğrafın ölçeği
+                                     * kuruluysa referans yeniden sorulmuyor,
+                                     * doğrudan alan işaretlemeye gidiliyor
+                                     * (bkz. ekraniDuzenle).
                                      */
-                                    setSihirbazAdim(alanNokta.length === 4 ? 4 : 1)
+                                    if (alanNokta.length === 4) {
+                                      setRefKipi(false)
+                                      setSihirbazAdim(4)
+                                    } else if (refPxCm || refDuzlem) {
+                                      setRefKipi(false)
+                                      setAlanKipi(true)
+                                      setSihirbazAdim(0)
+                                    } else {
+                                      setSihirbazAdim(1)
+                                    }
                                   }}
                                   className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                                 >
