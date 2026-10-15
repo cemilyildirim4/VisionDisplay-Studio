@@ -3548,7 +3548,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const tasarimiAlanaSigdir = () => {
     const olcekPxM = alanOlcegiPxM || cizimOlcek
     if (!alanTuval || !(olcekPxM > 0)) return
-    const m = previewModel || selectedModel
+    /*
+     * ───────────────────────────────────────────────────────────────────
+     * HESAP DÖNDÜRÜLMEMİŞ MODELLE YAPILIYOR.
+     *
+     * previewModel, tasarım dikeyken kabinin en/boyunu ZATEN takas etmiş
+     * hâlidir. Hesap ondan beslenince "yatay" dalı aslında o anki yönü,
+     * "dikey" dalı ötekini deniyordu; sonuç yine de setOrientation ile
+     * mutlak olarak yazılıyordu. Yani tasarım bir kez dikeye geçtiyse
+     * sonraki sığdırmada yön bayrağı ile kabin ölçüsü birbirini tutmuyor,
+     * çizim takas edilmiş kabinle kuruluyordu: ölçüldü, 107 × 160 cm'lik
+     * alana 7 × 5 kurulup 224 × 80 cm çiziliyordu (olması gereken
+     * 112 × 160).
+     *
+     * Döndürülmemiş model kullanılınca iki dal da mutlak anlamını koruyor.
+     * ───────────────────────────────────────────────────────────────────
+     */
+    const m = selectedModel || previewModel
     if (!m) return
     const enPx =
       (Math.hypot(alanTuval[1].x - alanTuval[0].x, alanTuval[1].y - alanTuval[0].y) +
@@ -4684,6 +4700,40 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     alanKonum.u,
     alanKonum.v,
   ])
+
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * YAZILAN ÖLÇÜ TASARIMA DA UYGULANIYOR.
+   *
+   * Kutuya santim yazmak işaretlenen dörtgenin KAÇ SANTİM olduğunu söyler;
+   * dörtgenin pikselleri sabit kaldığı için santim başına düşen piksel
+   * değişir. Tasarımın kendi santimi (kabin sayısı) ise yazmakla
+   * değişmiyordu — sonuç ters görünüyordu: alanı BÜYÜK bildirince aynı
+   * tasarım daha KÜÇÜK çiziliyor, küçük bildirince büyüyordu. Ölçüldü:
+   * 80 cm yazınca çizim 240 px, 40 yazınca 480 px, 160 yazınca 120 px.
+   *
+   * Matematiği doğruydu ama beklenen bu değil: kullanıcı "burası 220 cm"
+   * derken alanı tarif ediyor, tasarımın küçülmesini değil. Yazılan ölçü
+   * artık kabin sayısını da yeniden kuruyor, yani tasarım alana uyuyor.
+   * Düğme ("Tasarımı ölçüye sığdır") duruyor: ölçüye dokunmadan yeniden
+   * oturtmak isteyen onu kullanıyor.
+   *
+   * Yazarken her tuşta kurmamak için kısa bir bekleme var — "220" yazılırken
+   * 2 ve 22 de birer ölçüdür ve aradaki hesaplar boşa gider.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const olcuYazmaRef = useRef(null)
+  useEffect(() => {
+    if (alanNokta.length !== 4 || alanKipi) return undefined
+    /* Kutu boşaltıldığında ölçülen değere dönülüyor; o zaman kurmaya gerek yok. */
+    if (!sayiCm(alanElleEn) && !sayiCm(alanElleBoy)) return undefined
+    clearTimeout(olcuYazmaRef.current)
+    olcuYazmaRef.current = setTimeout(() => tasarimiAlanaSigdir(), 450)
+    return () => clearTimeout(olcuYazmaRef.current)
+    /* Yalnızca YAZILAN değer değişince: kabin sayısını kendimiz değiştirdiğimiz
+       için ötekileri bağımlılığa koymak döngü olurdu. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alanElleEn, alanElleBoy, alanNokta.length, alanKipi])
 
   const tuvalOrana = (k) => {
     const yer = fotoYer
