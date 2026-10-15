@@ -180,7 +180,12 @@ export default function ReferansSecici({
       width={tuvalW}
       height={tuvalH}
       className="absolute inset-0 z-30"
-      style={{ touchAction: 'none', cursor: noktalar.length < enCokNokta ? 'crosshair' : 'default' }}
+      style={{
+        touchAction: 'none',
+        cursor: noktalar.length < enCokNokta ? 'crosshair' : 'default',
+        /* Kontenjan doluyken yalnızca tutamaklar fareyi görüyor. */
+        pointerEvents: noktalar.length >= enCokNokta ? 'none' : 'auto',
+      }}
       onPointerDown={katmanaBas}
       onPointerMove={hareket}
       onPointerUp={birak}
@@ -229,7 +234,8 @@ export default function ReferansSecici({
             r={VURUS}
             fill="rgba(0,0,0,0.001)"
             onPointerDown={noktayaBas(i)}
-            style={{ cursor: 'grab' }}
+            /* Katman fareyi bırakmış olsa da tutamak her zaman tutuluyor. */
+            style={{ cursor: 'grab', pointerEvents: 'auto' }}
           />
           {/*
             Beyaz dış hat: işaret hem açık hem koyu zeminde görünür kalıyor.

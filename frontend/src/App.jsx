@@ -5817,6 +5817,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Ölçü akışı açık mı: panelde yalnızca onun işi görünsün. */
   const olcuAcik = sihirbazAdim > 0 || alanKipi
 
+  /*
+   * ALANIN KÖŞELERİ DÜZENLEME SIRASINDA TUTAMAKLI.
+   *
+   * İşaretleme bitince dört nokta kayboluyor, geriye yalnızca kesik çizgi
+   * kalıyordu: köşeyi birkaç piksel düzeltmek isteyen kullanıcı alanı
+   * BAŞTAN işaretlemek zorundaydı. Düzenleme açıkken noktalar yerinde
+   * duruyor ve sürüklenebiliyor; ölçü de kendiliğinden yeniden hesaplanıyor
+   * çünkü bütün hesap bu dört noktadan türüyor.
+   *
+   * Yeni nokta EKLENMİYOR: kontenjan dolu (bkz. ReferansSecici), katmanın
+   * saydam kısmı da fareyi bırakıyor, dolayısıyla tasarım yine
+   * sürüklenebiliyor.
+   */
+  const alanTutamaklari = sihirbazAdim > 0 && !alanKipi && alanNokta.length === 4
+
   const lSekilPaneli = (
     <div className="mt-2">
       <div className="text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
@@ -7063,6 +7078,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {alanTuval &&
             !alanKipi &&
+            /* Tutamaklar varken seçicinin kendi dörtgeni çiziliyor; ikisi üst üste gelmesin. */
+            !alanTutamaklari &&
             !refKipi &&
             !lKoseKipi &&
             /* Gizlenmişse yalnızca düzenleme sırasında görünüyor. */
@@ -7135,7 +7152,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             davranışı (sürüklenebilir işaretler, fotoğrafın dışına çıkmama)
             ikinci kez yazmak olurdu.
           */}
-          {alanKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+          {(alanKipi || alanTutamaklari) && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
               noktalar={alanNokta.map(oranTuvale)}
               onDegis={(tuvalNoktalari) => setAlanNokta(tuvalNoktalari.map(tuvalOrana))}
