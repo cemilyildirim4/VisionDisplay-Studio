@@ -542,35 +542,50 @@ function SihirbazKart({
 
                 İkisi de aynı ölçeği kullanıyor; biri ötekini geçersiz kılmıyor.
               */}
+              {/*
+                ───────────────────────────────────────────────────────────
+                ÖLÇÜ ZATEN KURULUYSA SIRA DEĞİŞİYOR.
+
+                Dolu (birincil) düğme "Ölçüm ile ayarla" idi; o düğme alanı
+                BAŞTAN işaretletiyor. Ölçüsü hazır bir ekranı düzenlemeye
+                gelen kullanıcı için en görünür düğmenin yaptığı işin
+                "her şeyi baştan kur" olması yanlış: yanlışlıkla basılması
+                kurulu ölçüyü attırıyor.
+
+                Alan varsa birincil düğme ölçüye DOKUNMADAN devam ediyor;
+                yeniden işaretleme ikincil kalıyor ve adıyla anılıyor
+                ("Alanı yeniden işaretle"), ne yapacağı yazısından belli.
+                ───────────────────────────────────────────────────────────
+              */}
               <div className="mt-2 flex items-center gap-1.5">
                 <button type="button" onClick={onGeri} className={yan}>
                   {t('sih.geri')}
                 </button>
-                {onAlanIsaretle && (
-                  <button
-                    type="button"
-                    onClick={onAlanIsaretle}
-                    disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
-                    className={ana}
-                  >
-                    {t('sih.alanIleAyarla')}
+                {alanVar && onYerlesim ? (
+                  <button type="button" onClick={onYerlesim} className={ana}>
+                    {t('sih.olcuyuKoru')}
                   </button>
+                ) : (
+                  onAlanIsaretle && (
+                    <button
+                      type="button"
+                      onClick={onAlanIsaretle}
+                      disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                      className={ana}
+                    >
+                      {t('sih.alanIleAyarla')}
+                    </button>
+                  )
                 )}
               </div>
-              {/*
-                ALAN ZATEN İŞARETLİYSE KISA YOL.
-
-                "Düzenle" akışı baştan açıyor; alanı yeniden işaretlemek
-                istemeyen kullanıcı buradan doğrudan yerleştirmeye dönüyor.
-                İşaret yerinde kalıyor, yalnızca o adıma gidiliyor.
-              */}
-              {alanVar && onYerlesim && (
+              {alanVar && onYerlesim && onAlanIsaretle && (
                 <button
                   type="button"
-                  onClick={onYerlesim}
-                  className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-brand text-brand hover:bg-brand/5 transition-colors"
+                  onClick={onAlanIsaretle}
+                  disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                  className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
                 >
-                  {t('sih.alanaDon')}
+                  {t('sih.alaniYeniden')}
                 </button>
               )}
               {PANEL.manuelDuzenle && (
