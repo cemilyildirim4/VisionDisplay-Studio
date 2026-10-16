@@ -142,9 +142,22 @@ export function odakIkiReferanstan(koseler, r1a, r1b, cm1, r2a, r2b, cm2, asal, 
   const adim = 160
   let onceF = alt
   let onceD = fark(alt)
+  /*
+   * TAM ÇÖZÜM YOKSA EN YAKINI.
+   *
+   * İşaretlenen dörtgen gerçek bir dikdörtgenin görüntüsüyse oran hedefi
+   * birebir yakalar. Gerçekte köşeler birkaç piksel şaşıyor ya da yüzey tam
+   * dikdörtgen değil; o zaman hiçbir odak hedefi tam tutturmuyor ve eskiden
+   * null dönülüyordu — yani kullanıcının yazdığı gerçek ölçü hiç işe
+   * yaramıyordu. Artık hedefe en yakın odak kullanılıyor; yalnızca sapma
+   * çok büyükse (oranın dörtte birinden fazla) vazgeçiliyor, çünkü orada
+   * veri gerçekten tutarsızdır.
+   */
+  let enIyi = null
   for (let i = 1; i <= adim; i++) {
     const f = alt * Math.pow(ust / alt, i / adim)
     const d = fark(f)
+    if (d != null && (!enIyi || Math.abs(d) < enIyi.d)) enIyi = { f, d: Math.abs(d) }
     if (onceD != null && d != null && onceD * d < 0) {
       let a = onceF
       let b = f
@@ -164,7 +177,8 @@ export function odakIkiReferanstan(koseler, r1a, r1b, cm1, r2a, r2b, cm2, asal, 
     onceF = f
     onceD = d
   }
-  /* İşaret değişimi yok: iki referans aynı yönde ya da ölçüm tutarsız. */
+  /* İşaret değişimi yok: hedefe en yakın odak, makul sapma içindeyse. */
+  if (enIyi && enIyi.d <= hedef * 0.25) return enIyi.f
   return null
 }
 
@@ -195,18 +209,32 @@ export function dortgenGercekOlcu(koseler, refA, refB, refCm, asal, odakTahmin =
   if (Vy && Vd) {
     const u = cikar(Vy, asal)
     const v = cikar(Vd, asal)
-    /* f² = −(Vy−P)·(Vd−P); negatifse köşeler bir dikdörtgenin görüntüsü değil. */
+    /*
+     * f² = −(Vy−P)·(Vd−P). Negatif çıkması, işaretlenen dörtgenin bir
+     * dikdörtgenin görüntüsü OLAMAYACAĞI anlamına gelir: köşeler birkaç
+     * piksel şaşmıştır ya da seçilen yüzey gerçekten dikdörtgen değildir.
+     *
+     * Eskiden burada null dönülüyordu ve çağıran taraf tek ölçekli hesaba
+     * düşüyordu — hiçbir uyarı olmadan, üstelik eğimli bir yüzeyde o hesap
+     * çok şaşıyor. Dışarıdan bir odak biliniyorsa (öğrenilmiş ya da tahmin)
+     * onunla devam etmek daha dürüst: sonuç hiç olmazsa perspektifi sayıyor
+     * ve "kesin değil" diye işaretleniyor.
+     */
     const fKare = -nokta(u, v)
-    if (!(fKare > 1)) return null
-    f = Math.sqrt(fKare)
+    if (fKare > 1) f = Math.sqrt(fKare)
+    else if (odakTahmin > 1) f = odakTahmin
+    else return null
   } else if (odakTahmin > 1) {
     /* Tek kaçış noktası: odak türetilemiyor, tahmin kullanılıyor. */
     f = odakTahmin
   }
   if (!(f > 1)) return null
 
-  /* Odak iki kaçış noktasından geldiyse kesindir; gelmediyse dışarıdan. */
-  const odakTahminMi = !(Vy && Vd)
+  /*
+   * Odak iki kaçış noktasından HESAPLANDIYSA kesindir. Dışarıdan geldiyse
+   * (tek kaçış noktası ya da f² negatif) kesin değildir.
+   */
+  const odakTahminMi = !(Vy && Vd) || f === odakTahmin
 
   /* Görüntü noktası → kameradan çıkan ışın. */
   const isin = (p) => ({ x: (p.x - asal.x) / f, y: (p.y - asal.y) / f, z: 1 })

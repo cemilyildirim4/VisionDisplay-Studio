@@ -578,7 +578,7 @@ const dict = {
     ar: 'إعادة تحديد المنطقة',
   },
   'sih.ref2Uyari': {
-    tr: 'Bu karede ölçüm tahmini bir görüş açısına dayanıyor: fotoğraf düz tutulup çekildiği için kameranın odak uzaklığı kareden çıkarılamıyor. Referansa DİK eksen (sizde en) %10’a kadar şaşabilir.',
+    tr: 'Bu ölçüm henüz kesin değil: kameranın görüş açısı bu kareden çıkarılamadığı için tahmin kullanılıyor ve ölçü %25’e kadar şaşabilir. Kesinleştirmek için ya yukarıdaki kutulara alanın GERÇEK en/boyunu yazın, ya da ikinci bir referans işaretleyin.',
     en: 'This measurement relies on an assumed field of view: the photo was taken level, so the focal length cannot be derived from it. The axis perpendicular to the reference can be off by up to 10%.',
     ar: 'يعتمد هذا القياس على زاوية رؤية مفترضة؛ قد ينحرف المحور العمودي على المرجع بنسبة تصل إلى 10%.',
   },

@@ -8451,7 +8451,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             /*
                              * İKİNCİ REFERANS — ölçüm tahmine dayanıyorsa teklif ediliyor.
                              */
-                            odakTahminMi={!!alanGercek?.odakTahmin && !(fotoOdak > 1)}
+                            /*
+                             * ÖLÇÜM KALİBRE Mİ.
+                             *
+                             * Uyarı yalnızca "tek kaçış noktası" durumuna
+                             * bağlıydı; oysa perspektif hesabı hiç çıkmadığında
+                             * (dörtgen bir dikdörtgenin görüntüsü değilse ya da
+                             * yüzey karşıdan görünüyorsa) tek ölçekli hesaba
+                             * düşülüyor ve o da eğimli yüzeyde çok şaşıyor —
+                             * ama hiçbir şey söylenmiyordu. Kullanıcı "ikinci
+                             * referans diye bir şey yok, ölçüler hâlâ çok
+                             * farklı" derken bunu görüyordu.
+                             *
+                             * Artık ölçü KESİN bir odakla kurulmadıysa uyarı
+                             * ve ikinci referans teklifi çıkıyor.
+                             */
+                            odakTahminMi={
+                              alanNokta.length === 4 &&
+                              !(cozulenOdak > 1) &&
+                              !(odakYazilandan > 1) &&
+                              !(fotoOdak > 1) &&
+                              (alanGercek ? !!alanGercek.odakTahmin : true)
+                            }
                             odakCozuldu={cozulenOdak > 1 || odakYazilandan > 1 || fotoOdak > 1}
                             ref2Kipi={ref2Kipi}
                             ref2NoktaSayisi={ref2Nokta.length}
