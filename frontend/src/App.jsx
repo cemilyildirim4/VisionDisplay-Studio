@@ -112,7 +112,7 @@ import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose
 /* Alan içine yerleştirme ve sığdırma — ikisi de hazır (bkz. homografi.js). */
 import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
 /* İşaretlenen alanın GERÇEK ölçüsü — eğimi hesaba katarak (bkz. alanOlcu.js). */
-import { dortgenGercekOlcu, odakIkiReferanstan } from './alanOlcu.js'
+import { dortgenGercekOlcu, odakIkiReferanstan, kesisim } from './alanOlcu.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -910,6 +910,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * bir işaretleme kipi) çizgi her hâlükârda görünüyor: orada işin kendisi o.
    */
   const [cizgiGizli, setCizgiGizli] = useState(false)
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * GÖRÜNMEYEN KÖŞEYİ KENARLARINDAN BULMA.
+   *
+   * Köşe bir sütunun arkasında kalabiliyor ya da kadrajın dışında olabiliyor;
+   * o zaman tıklanacak bir piksel yok. Ama köşe iki kenarın KESİŞİMİDİR:
+   * kenarların görünen kısımlarından ikişer nokta yetiyor.
+   *
+   * Üstelik daha doğru: uzun bir kenardan çıkarılan çizgi, köşeye yapılan
+   * tek tıklamadan daha az şaşıyor (açı hatası baz uzunluğuyla ters orantılı).
+   *
+   * Dört nokta: ilk ikisi bir kenar, son ikisi öteki kenar.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const [kenarKipi, setKenarKipi] = useState(false)
+  const [kenarNokta, setKenarNokta] = useState([])
   /*
    * ALANIN ÖLÇÜSÜ ELLE DÜZELTİLEBİLİYOR.
    *
@@ -3536,6 +3552,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
 
+  /* Görünmeyen köşeyi kenarlarından bulmaya başla. */
+  const kenardanKoseBasla = () => {
+    setKenarNokta([])
+    setKenarKipi(true)
+  }
+
+  /* Bulunan kesişimi alanın köşesi olarak ekle. */
+  const kenardanKoseEkle = () => {
+    if (!kenarKesisim) return
+    setAlanNokta((l) => (l.length >= 4 ? l : [...l, tuvalOrana(kenarKesisim)]))
+    setKenarNokta([])
+    setKenarKipi(false)
+  }
+
+  const kenardanVazgec = () => {
+    setKenarNokta([])
+    setKenarKipi(false)
+  }
+
   /* Dört nokta tamamlandı: işaretleme kapanıyor, tasarım alana giriyor. */
   const alaniBitir = () => {
     const k = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
@@ -4644,6 +4679,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })()
 
   const alanTuval = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
+
+  /* Kenar noktalarının tuvaldeki yeri ve iki çizginin kesişimi. */
+  const kenarTuval = kenarNokta.map(oranTuvale)
+  const kenarKesisim =
+    kenarTuval.length === 4
+      ? kesisim(kenarTuval[0], kenarTuval[1], kenarTuval[2], kenarTuval[3])
+      : null
 
   /*
    * ───────────────────────────────────────────────────────────────────────
@@ -7332,7 +7374,68 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             />
           )}
 
-          {(alanKipi || alanTutamaklari) && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+          {/*
+            KENARDAN KÖŞE — iki kenar, dört nokta, kesişim.
+            Kendi seçicisiyle çiziliyor; alan seçicisi bu sırada kapalı ki
+            tıklamalar karışmasın.
+          */}
+          {kenarKipi && alanKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+            <>
+              <svg
+                className="absolute inset-0"
+                width={tuvalBoyut.w}
+                height={tuvalBoyut.h}
+                style={{ pointerEvents: 'none', zIndex: 29 }}
+              >
+                {/* Konulmuş alan köşeleri sönük duruyor: nerede kalındığı görünsün. */}
+                {alanNokta.map(oranTuvale).map((k, i) => (
+                  <circle key={i} cx={k.x} cy={k.y} r="4" fill="#16a34a" opacity="0.55" />
+                ))}
+                {/* Kenar çizgileri UZATILARAK çiziliyor: kesişim görünür olsun. */}
+                {[0, 2].map((i) =>
+                  kenarTuval[i] && kenarTuval[i + 1] ? (
+                    (() => {
+                      const a = kenarTuval[i]
+                      const b = kenarTuval[i + 1]
+                      const dx = b.x - a.x
+                      const dy = b.y - a.y
+                      const u = Math.hypot(dx, dy) || 1
+                      const k = 4000 / u
+                      return (
+                        <line
+                          key={i}
+                          x1={a.x - dx * k}
+                          y1={a.y - dy * k}
+                          x2={b.x + dx * k}
+                          y2={b.y + dy * k}
+                          stroke="#2962ad"
+                          strokeWidth="1.5"
+                          strokeDasharray="7 6"
+                          opacity="0.8"
+                        />
+                      )
+                    })()
+                  ) : null,
+                )}
+                {kenarKesisim && (
+                  <>
+                    <circle cx={kenarKesisim.x} cy={kenarKesisim.y} r="11" fill="none" stroke="#f59e0b" strokeWidth="2.5" />
+                    <circle cx={kenarKesisim.x} cy={kenarKesisim.y} r="2.5" fill="#f59e0b" />
+                  </>
+                )}
+              </svg>
+              <ReferansSecici
+                noktalar={kenarTuval}
+                onDegis={(t) => setKenarNokta(t.map(tuvalOrana))}
+                enCokNokta={4}
+                tuvalW={tuvalBoyut.w}
+                tuvalH={tuvalBoyut.h}
+                yapiskanNoktalar={yapiskanNoktalar}
+              />
+            </>
+          )}
+
+          {(alanKipi || alanTutamaklari) && !kenarKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
               noktalar={alanNokta.map(oranTuvale)}
               onDegis={(tuvalNoktalari) => setAlanNokta(tuvalNoktalari.map(tuvalOrana))}
@@ -7341,7 +7444,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               enCokNokta={4}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
-              sinir={fotoSinir}
+              /*
+               * SINIR FOTOĞRAF DEĞİL TUVAL.
+               *
+               * Köşe kadrajın dışında kalabiliyor (kenarlardan bulunan kesişim
+               * çoğu zaman öyle). Fotoğrafa kilitlenirse köşe yanlış yere
+               * oturuyordu. Hesap görüntü düzleminde çalıştığı için pikselin
+               * fotoğrafın içinde olması gerekmiyor.
+               */
             />
           )}
 
@@ -8516,6 +8626,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               setRefKipi(false)
                               setAlanKipi(true)
                             }}
+                            /* Görünmeyen köşeyi kenarlarından bulma. */
+                            kenarKipi={kenarKipi}
+                            kenarNoktaSayisi={kenarNokta.length}
+                            kenarHazir={!!kenarKesisim}
+                            onKenarBasla={kenardanKoseBasla}
+                            onKenarEkle={kenardanKoseEkle}
+                            onKenarVazgec={kenardanVazgec}
                             onAlanBitir={alaniBitir}
                             onAlanSigdir={tasarimiAlanaSigdir}
                             /* L'nin son adımı: kanat şekli (bkz. lSekilPaneli). */

@@ -93,6 +93,13 @@ function SihirbazKart({
   alanKipi = false,
   alanNoktaSayisi = 0,
   alanVar = false,
+  /* GÖRÜNMEYEN KÖŞE — iki kenardan bulunuyor. */
+  kenarKipi = false,
+  kenarNoktaSayisi = 0,
+  kenarHazir = false,
+  onKenarBasla = null,
+  onKenarEkle = null,
+  onKenarVazgec = null,
   /* Alan zaten işaretliyse yeniden işaretlemeden yerleştirmeye dönülüyor. */
   onYerlesim = null,
   /* İKİNCİ REFERANS — odak tahmin ediliyorsa ölçümü kesinleştiriyor. */
@@ -628,7 +635,28 @@ function SihirbazKart({
             Tuvalin üstüne yönerge şeridi konmuyor; aynı gerekçe referans
             adımındaki gibi: fotoğrafın üstü temiz kalsın, yönerge burada.
           */}
-          {alanKipi && (
+          {alanKipi && kenarKipi && (
+            <>
+              <p className={aciklama}>{t('sih.kenarAciklama')}</p>
+              <p
+                className={`${kucuk} ${
+                  kenarHazir ? 'text-emerald-700 dark:text-emerald-400' : 'text-neutral-500 dark:text-neutral-400'
+                }`}
+              >
+                {kenarNoktaSayisi} / 4 {kenarHazir ? '· ' + t('sih.kenarBulundu') : ''}
+              </p>
+              <div className="mt-2 flex items-center gap-1.5">
+                <button type="button" onClick={onKenarVazgec} className={yan}>
+                  {t('sih.vazgec')}
+                </button>
+                <button type="button" onClick={onKenarEkle} disabled={!kenarHazir} className={ana}>
+                  {t('sih.kenarEkle')}
+                </button>
+              </div>
+            </>
+          )}
+
+          {alanKipi && !kenarKipi && (
             <>
               <p className={aciklama}>{t('sih.alanAciklama')}</p>
               <p className={`${kucuk} ${alanNoktaSayisi >= 4 ? 'text-emerald-700 dark:text-emerald-400' : 'text-neutral-500 dark:text-neutral-400'}`}>
@@ -650,6 +678,19 @@ function SihirbazKart({
                   {t('sih.alanBitir')}
                 </button>
               </div>
+              {/*
+                Köşe görünmüyorsa: iki kenardan bulunuyor. Dört köşe
+                tamamlanmışsa teklif edilmiyor, yapacak bir şey yok.
+              */}
+              {onKenarBasla && alanNoktaSayisi < 4 && (
+                <button
+                  type="button"
+                  onClick={onKenarBasla}
+                  className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                >
+                  {t('sih.kenarBasla')}
+                </button>
+              )}
             </>
           )}
 

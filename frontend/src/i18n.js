@@ -594,6 +594,15 @@ const dict = {
     en: 'The focal length was computed from two references — the measurement no longer relies on a guess.',
     ar: 'تم حساب البعد البؤري من مرجعين — لم يعد القياس تخمينيًا.',
   },
+  'sih.kenarBasla': { tr: 'Köşe görünmüyor — kenarlardan bul', en: 'Corner not visible — find it from the edges', ar: 'الزاوية غير ظاهرة — حدّدها من الحواف' },
+  'sih.kenarAciklama': {
+    tr: 'Köşede birleşen İKİ KENARIN görünen kısımlarına ikişer nokta koyun: önce bir kenara iki nokta, sonra öteki kenara iki nokta. Uygulama çizgileri uzatıp kesişimi köşe olarak alır — köşe kadrajın dışında kalsa bile. Noktaları birbirinden uzak koymak sonucu daha da doğru yapar.',
+    en: 'Put two points on each of the TWO EDGES that meet at the corner. The app extends the lines and takes their intersection as the corner — even if it falls outside the frame.',
+    ar: 'ضع نقطتين على كل من الحافتين الملتقيتين عند الزاوية؛ يمدّ التطبيق الخطين ويأخذ تقاطعهما كزاوية.',
+  },
+  'sih.kenarBulundu': { tr: 'köşe bulundu', en: 'corner found', ar: 'تم إيجاد الزاوية' },
+  'sih.kenarEkle': { tr: 'Köşeyi ekle', en: 'Add the corner', ar: 'إضافة الزاوية' },
+  'sih.vazgec': { tr: 'Vazgeç', en: 'Cancel', ar: 'إلغاء' },
   'sih.alanTasi': {
     tr: 'Tasarımı sürükleyerek taşıyabilirsiniz; alanın dışına da çıkabilir.',
     en: 'Drag the design to move it inside the area; it cannot leave it.',

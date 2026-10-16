@@ -39,8 +39,13 @@
  * null: kötü bir ölçüm, ölçüm olmamasından kötüdür.
  */
 
-/* İki doğrunun kesişimi; paralelse null. */
-function kesisim(p1, p2, p3, p4) {
+/*
+ * İki doğrunun kesişimi; paralelse null.
+ *
+ * Dışarı açık: görünmeyen bir köşeyi KENARLARINDAN bulmak da aynı hesap
+ * (bkz. App.jsx kenarKesisim). İki kez yazılmasın.
+ */
+export function kesisim(p1, p2, p3, p4) {
   const a1 = p2.x - p1.x
   const b1 = p2.y - p1.y
   const a2 = p4.x - p3.x
