@@ -66,6 +66,18 @@ export default function ReferansSecici({
   const katmanRef = useRef(null)
   const surukleRef = useRef(null)
   const [secili, setSecili] = useState(0)
+  /*
+   * İMLECİN YERİ — ÇİZGİ TIKLAMADAN ÖNCE DE GÖRÜNSÜN.
+   *
+   * Konulan noktalar arasına çizgi çizmek yetmiyordu: kullanıcı bir sonraki
+   * noktayı koyarken kenarın nereye gideceğini GÖREMİYOR, göz kararıyla
+   * tıklıyordu. Fare nerede duruyorsa oraya giden çizgi bu yüzden var:
+   * tıklamadan önce kenarın hizası belli oluyor. Dört köşede son noktada
+   * dörtgenin kapanışı da gösteriliyor.
+   *
+   * Yalnızca görüntü: hiçbir şey kaydedilmiyor, nokta eklenmiyor.
+   */
+  const [imlec, setImlec] = useState(null)
 
   /*
    * Klavyeyle ince ayar: fareyle bir noktayı tam köşeye oturtmak zor ve
@@ -123,7 +135,14 @@ export default function ReferansSecici({
 
   const hareket = (e) => {
     const s = surukleRef.current
-    if (!s || !s.bas) return
+    if (!s || !s.bas) {
+      /* Sürükleme yokken imleç çizgisi için yeri saklıyoruz. */
+      if (noktalar.length > 0 && noktalar.length < enCokNokta) {
+        const p = yerel(e)
+        if (p) setImlec(p)
+      }
+      return
+    }
     const p = kis({ x: s.bas.x + (e.clientX - s.fareX), y: s.bas.y + (e.clientY - s.fareY) })
     onDegis(noktalar.map((q, j) => (j === s.i ? p : q)))
   }
@@ -131,6 +150,8 @@ export default function ReferansSecici({
   const birak = () => {
     surukleRef.current = null
   }
+
+  const imleciBirak = () => setImlec(null)
 
   const [a, b] = noktalar
   const cizgiKipi = enCokNokta === 2
@@ -203,12 +224,47 @@ export default function ReferansSecici({
       onPointerMove={hareket}
       onPointerUp={birak}
       onPointerCancel={birak}
+      onPointerLeave={imleciBirak}
     >
       {/* Noktasız alan da tıklanabilir olmalı: saydam dolgu hedef oluyor. */}
       <rect x="0" y="0" width={tuvalW} height={tuvalH} fill="rgba(0,0,0,0.001)" />
 
       {dortgen && (
         <polygon points={dortgen} fill="rgba(22,163,74,0.10)" stroke={renk} strokeWidth="2.5" strokeDasharray="8 5" />
+      )}
+
+      {/*
+        İMLEÇ ÇİZGİSİ — henüz konmamış kenar.
+        Soluk ve ince: konulmuş kenarlarla karışmıyor.
+      */}
+      {imlec && noktalar.length > 0 && noktalar.length < enCokNokta && (
+        <>
+          <line
+            x1={noktalar[noktalar.length - 1].x}
+            y1={noktalar[noktalar.length - 1].y}
+            x2={imlec.x}
+            y2={imlec.y}
+            stroke={renk}
+            strokeWidth="1.6"
+            strokeDasharray="5 6"
+            opacity="0.6"
+            pointerEvents="none"
+          />
+          {/* Dördüncü köşe konurken dörtgenin kapanışı da görünüyor. */}
+          {!cizgiKipi && noktalar.length === 3 && (
+            <line
+              x1={imlec.x}
+              y1={imlec.y}
+              x2={noktalar[0].x}
+              y2={noktalar[0].y}
+              stroke={renk}
+              strokeWidth="1.6"
+              strokeDasharray="5 6"
+              opacity="0.4"
+              pointerEvents="none"
+            />
+          )}
+        </>
       )}
 
       {/* Tamamlanmamış dörtgen: konulan noktalar arasındaki kenarlar. */}
