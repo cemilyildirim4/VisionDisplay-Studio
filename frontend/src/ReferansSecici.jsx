@@ -30,6 +30,17 @@ import { useEffect, useRef, useState } from 'react'
 const R = 4.5
 const R_SECILI = 6
 const VURUS = 18
+/*
+ * YAPIŞMA YARIÇAPI.
+ *
+ * İki ekranı köşede uç uca getirmek demek, aslında AYNI iki noktayı iki
+ * alanda da kullanmak demek. Göz kararıyla tıklamak birkaç piksel şaşıyor
+ * ve çizimde açık bir dikiş ya da bindirme olarak görünüyor. İmleç var olan
+ * bir köşeye bu kadar yaklaşınca tam ona oturuyor.
+ *
+ * 12 px: tutamağın vuruş alanından (18) küçük, göz farkından büyük.
+ */
+const YAPIS = 12
 
 export default function ReferansSecici({
   noktalar = [],
@@ -40,6 +51,8 @@ export default function ReferansSecici({
   enCokNokta = 2,
   gorselCarpani = 1,
   sinir = null,
+  /* Yapışılacak noktalar (tuval pikseli): başka ekranların köşeleri. */
+  yapiskanNoktalar = [],
 }) {
   /*
    * HER ŞEY FOTOĞRAFIN İÇİNDE KALIYOR.
@@ -78,6 +91,8 @@ export default function ReferansSecici({
    * Yalnızca görüntü: hiçbir şey kaydedilmiyor, nokta eklenmiyor.
    */
   const [imlec, setImlec] = useState(null)
+  /* O an yapışılan nokta — vurgulanıyor ki kullanıcı kilidi görsün. */
+  const [yapisan, setYapisan] = useState(null)
 
   /*
    * Klavyeyle ince ayar: fareyle bir noktayı tam köşeye oturtmak zor ve
@@ -107,13 +122,30 @@ export default function ReferansSecici({
     return kis({ x: e.clientX - r.left, y: e.clientY - r.top })
   }
 
+  /*
+   * En yakın yapışma noktası — Alt basılıysa yapışma kapalı.
+   * Kullanıcı bilerek köşenin yanına koymak isteyebilir.
+   */
+  const yakin = (p, kapali) => {
+    if (kapali || !Array.isArray(yapiskanNoktalar) || !yapiskanNoktalar.length || !p) return null
+    let en = null
+    for (const q of yapiskanNoktalar) {
+      if (!q || !Number.isFinite(q.x) || !Number.isFinite(q.y)) continue
+      const u = Math.hypot(q.x - p.x, q.y - p.y)
+      if (u <= YAPIS && (!en || u < en.u)) en = { q, u }
+    }
+    return en ? en.q : null
+  }
+
   /* Boş alana basmak yeni nokta koyuyor; kontenjan dolunca eklemiyor. */
   const katmanaBas = (e) => {
     if (noktalar.length >= enCokNokta) return
-    const p = yerel(e)
-    if (!p) return
+    const ham = yerel(e)
+    if (!ham) return
+    const y = yakin(ham, e.altKey)
     setSecili(noktalar.length)
-    onDegis([...noktalar, p])
+    onDegis([...noktalar, y || ham])
+    setYapisan(null)
   }
 
   /*
@@ -136,22 +168,31 @@ export default function ReferansSecici({
   const hareket = (e) => {
     const s = surukleRef.current
     if (!s || !s.bas) {
-      /* Sürükleme yokken imleç çizgisi için yeri saklıyoruz. */
-      if (noktalar.length > 0 && noktalar.length < enCokNokta) {
-        const p = yerel(e)
-        if (p) setImlec(p)
+      /* Sürükleme yokken imleç çizgisi ve yapışma vurgusu için yeri saklıyoruz. */
+      if (noktalar.length < enCokNokta) {
+        const ham = yerel(e)
+        const y = yakin(ham, e.altKey)
+        setYapisan(y)
+        if (noktalar.length > 0 && ham) setImlec(y || ham)
       }
       return
     }
-    const p = kis({ x: s.bas.x + (e.clientX - s.fareX), y: s.bas.y + (e.clientY - s.fareY) })
-    onDegis(noktalar.map((q, j) => (j === s.i ? p : q)))
+    const ham = kis({ x: s.bas.x + (e.clientX - s.fareX), y: s.bas.y + (e.clientY - s.fareY) })
+    /* Var olan bir noktayı sürüklerken de yapışıyor: köşe düzeltirken de lazım. */
+    const y = yakin(ham, e.altKey)
+    setYapisan(y)
+    onDegis(noktalar.map((q, j) => (j === s.i ? y || ham : q)))
   }
 
   const birak = () => {
     surukleRef.current = null
+    setYapisan(null)
   }
 
-  const imleciBirak = () => setImlec(null)
+  const imleciBirak = () => {
+    setImlec(null)
+    setYapisan(null)
+  }
 
   const [a, b] = noktalar
   const cizgiKipi = enCokNokta === 2
@@ -231,6 +272,22 @@ export default function ReferansSecici({
 
       {dortgen && (
         <polygon points={dortgen} fill="rgba(22,163,74,0.10)" stroke={renk} strokeWidth="2.5" strokeDasharray="8 5" />
+      )}
+
+      {/* YAPIŞMA VURGUSU — tıklayınca tam buraya oturacak. */}
+      {yapisan && (
+        <>
+          <circle
+            cx={yapisan.x}
+            cy={yapisan.y}
+            r="10"
+            fill="none"
+            stroke="#f59e0b"
+            strokeWidth="2.5"
+            pointerEvents="none"
+          />
+          <circle cx={yapisan.x} cy={yapisan.y} r="2" fill="#f59e0b" pointerEvents="none" />
+        </>
       )}
 
       {/*
