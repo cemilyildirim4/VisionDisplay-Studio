@@ -3768,9 +3768,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * bu yüzden anlık görüntü ŞİMDİDEN saklanıyor. Çizimde henüz
    * kullanılmıyor, yani bugünkü davranış değişmiyor.
    */
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * EKRANIN AYARI — YÖN DE BURADA.
+   *
+   * Sütun/satır saklanıyordu ama KABİNİN YÖNÜ (yatay/dikey) saklanmıyordu.
+   * Yön tek bir genel durumdur ve "ölçüye sığdır" onu değiştirebiliyor:
+   * dar ve uzun bir alana sığdırınca kabin yan yatıyor. Başka bir ekrana
+   * geçilince o yön olduğu yerde kalıyor ve geri dönülen ekranın sütun/satır
+   * sayısı YANLIŞ kabin ölçüsüyle çiziliyordu.
+   *
+   * Ölçüldü: 9 × 160 mm ile kurulan ekran (çizim 432 × 96) geri dönüldüğünde
+   * 9 × 320 mm oluyor ve çizim 864 × 48'e dönüyordu — kullanıcının gördüğü
+   * "tıklayınca tasarımın boyutları bozuluyor" buydu.
+   *
+   * Ekran türü (düz/kavisli) ve kavis miktarı da aynı sebeple burada.
+   * ───────────────────────────────────────────────────────────────────────
+   */
   const ekranAyariAnlik = () => ({
     cols,
     rows,
+    orientation,
+    screenType,
+    curveAmount,
     model: previewModel?.code ?? null,
     content,
     contentUrl: contentUrl || null,
@@ -3890,6 +3910,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     const ayar = secilen.ayar
     if (ayar) {
+      /*
+       * YÖN SÜTUN/SATIRDAN ÖNCE: kabin ölçüsü ondan türüyor. Eski
+       * kayıtlarda yön yok; oradaki davranış değişmesin diye dokunulmuyor.
+       */
+      if (ayar.orientation) setOrientation(ayar.orientation)
+      if (ayar.screenType) setScreenType(ayar.screenType)
+      if (ayar.curveAmount != null) setCurveAmount(ayar.curveAmount)
       if (ayar.cols > 0) setCols(ayar.cols)
       if (ayar.rows > 0) setRows(ayar.rows)
       if (ayar.content) setContent(ayar.content)
