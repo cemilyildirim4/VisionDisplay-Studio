@@ -865,6 +865,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yok ve panelde teklif edilmiyor.
    * ───────────────────────────────────────────────────────────────────────
    */
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * FOTOĞRAFIN ODAK UZAKLIĞI — BİR KEZ ÖĞRENİLİYOR.
+   *
+   * Odak kameraya aittir, alana değil: bir fotoğrafta hangi alanı ölçersen
+   * ölç aynıdır. Bir kez hesaplandığında saklanıyor ve o fotoğraftaki BÜTÜN
+   * alanlar onunla ölçülüyor — ikinci, üçüncü ekranı işaretlerken ölçüm
+   * yeniden tahmine düşmüyor.
+   *
+   * Nereden geliyor: (1) işaretlenen alanın GERÇEK en/boyu yazıldıysa
+   * oradan, (2) ikinci referans verildiyse ondan. İkisi de yoksa tahmin.
+   * Fotoğraf değişince ya da baştan başlanınca siliniyor.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const [fotoOdak, setFotoOdak] = useState(null)
   const [ref2Nokta, setRef2Nokta] = useState([])
   const [ref2UzunlukCm, setRef2UzunlukCm] = useState('')
   const [ref2Kipi, setRef2Kipi] = useState(false)
@@ -4696,6 +4711,47 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     )
   })()
 
+  /*
+   * YAZILAN GERÇEK ÖLÇÜDEN ODAK.
+   *
+   * Kullanıcı işaretlediği alanın gerçek EN ve BOYUNU yazdıysa, dörtgenin
+   * iki kenarı birbirine dik iki bilinen uzunluk demektir — ikinci referansın
+   * yaptığı işin aynısı, fazladan işaretleme olmadan. Odak buradan
+   * hesaplanıyor ve artık tahmin edilmiyor.
+   */
+  const odakYazilandan = (() => {
+    if (!alanTuval) return null
+    /* sayiCm aşağıda tanımlı: burada kendi çevrimimizi yapıyoruz (TDZ). */
+    const oku = (x) => {
+      const n = Number(String(x).replace(',', '.'))
+      return n > 0 ? n : null
+    }
+    const en = oku(alanElleEn)
+    const boy = oku(alanElleBoy)
+    if (!(en > 0) || !(boy > 0)) return null
+    if (!(fotoYer?.genislik > 0)) return null
+    const asal = oranTuvale({ x: 0.5, y: 0.5 })
+    /* Üst kenar = en, sol kenar = boy. */
+    return odakIkiReferanstan(
+      alanTuval,
+      alanTuval[0],
+      alanTuval[1],
+      en,
+      alanTuval[0],
+      alanTuval[3],
+      boy,
+      asal,
+      fotoYer.genislik * (sahneYakinlik || 1),
+    )
+  })()
+
+  /* Çözülen odak fotoğrafa yazılıyor: öteki alanlar da ondan yararlanıyor. */
+  useEffect(() => {
+    const y = cozulenOdak > 1 ? cozulenOdak : odakYazilandan > 1 ? odakYazilandan : null
+    if (!(y > 1)) return
+    setFotoOdak((o) => (o && Math.abs(o - y) / y < 0.001 ? o : y))
+  }, [cozulenOdak, odakYazilandan])
+
   const alanGercek = (() => {
     if (!alanTuval || refNokta.length !== 2) return null
     const cm = Number(String(refUzunlukCm).replace(',', '.'))
@@ -4703,13 +4759,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const a = oranTuvale(refNokta[0])
     const b = oranTuvale(refNokta[1])
     const asal = oranTuvale({ x: 0.5, y: 0.5 })
-    /* Çözülen odak varsa o; yoksa tahmin (yalnızca tek kaçış noktasında kullanılır). */
+    /*
+     * Odak sırası: ikinci referanstan > yazılan ölçüden > fotoğrafın daha
+     * önce öğrenilmiş odağı > tahmin.
+     */
     const odak =
       cozulenOdak > 1
         ? cozulenOdak
-        : fotoYer?.genislik > 0
-          ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785
-          : 0
+        : odakYazilandan > 1
+          ? odakYazilandan
+          : fotoOdak > 1
+            ? fotoOdak
+            : fotoYer?.genislik > 0
+              ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785
+              : 0
     return dortgenGercekOlcu(alanTuval, a, b, cm, asal, odak)
   })()
 
@@ -5290,6 +5353,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setRef2Nokta([])
     setRef2UzunlukCm('')
     setRef2Kipi(false)
+    setFotoOdak(null)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -8387,8 +8451,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             /*
                              * İKİNCİ REFERANS — ölçüm tahmine dayanıyorsa teklif ediliyor.
                              */
-                            odakTahminMi={!!alanGercek?.odakTahmin}
-                            odakCozuldu={cozulenOdak > 1}
+                            odakTahminMi={!!alanGercek?.odakTahmin && !(fotoOdak > 1)}
+                            odakCozuldu={cozulenOdak > 1 || odakYazilandan > 1 || fotoOdak > 1}
                             ref2Kipi={ref2Kipi}
                             ref2NoktaSayisi={ref2Nokta.length}
                             ref2UzunlukCm={ref2UzunlukCm}
