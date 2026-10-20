@@ -110,9 +110,22 @@ async function jetonTazele() {
         body: JSON.stringify({ refreshToken: oturum.refreshToken }),
       })
       if (!res.ok) {
-        // Refresh de reddedildi: oturum gerçekten bitmiş. Kayıtlı jetonları
-        // temizliyoruz ki arayüz "giriş yapın" durumuna düşsün.
-        if (res.status === 401) oturumKopru.yaz(null)
+        /*
+         * REDDEDİLEN TAZELEME OTURUMU BİTİRİR — YALNIZCA 401'DE DEĞİL.
+         *
+         * Eskiden kayıtlı jetonlar sadece 401'de siliniyordu. Sunucu başka
+         * bir 4xx döndürdüğünde (jeton biçimi bozuksa model doğrulaması
+         * 400 verir, vekil sunucu da araya girebilir) oturum olduğu gibi
+         * duruyordu. Sonuç bir döngü: sıradaki istek yine 401 alıyor, yine
+         * tazeleme deneniyor, yine aynı hata geliyor — konsolda hiç
+         * bitmeyen bir 400 (Bad Request).
+         *
+         * Hangi 4xx olursa olsun anlamı aynı: elimizdeki jetonla oturum
+         * açılamıyor. Temizlenince arayüz "giriş yapın" durumuna düşüyor
+         * ve döngü kapanıyor. 5xx bunun dışında: orada sorun sunucuda ve
+         * jeton hâlâ geçerli olabilir.
+         */
+        if (res.status >= 400 && res.status < 500) oturumKopru.yaz(null)
         return null
       }
       const data = await res.json()
