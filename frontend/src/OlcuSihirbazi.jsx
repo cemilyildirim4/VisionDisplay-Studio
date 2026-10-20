@@ -99,6 +99,8 @@ function SihirbazKart({
   /* GÖRÜNMEYEN KÖŞE — iki kenardan bulunuyor. */
   /* Kaç kenar çizgisi tamamlandı (0–4). */
   kenarCizgiSayisi = 0,
+  /* Kenar çizgilerini yeniden açar: uçları sürüklenebilir olur. */
+  onAlanDuzenle = null,
   /* Alan zaten işaretliyse yeniden işaretlemeden yerleştirmeye dönülüyor. */
   onYerlesim = null,
   /* İKİNCİ REFERANS — odak tahmin ediliyorsa ölçümü kesinleştiriyor. */
@@ -787,6 +789,22 @@ function SihirbazKart({
                 (montaj payı bırakarak, bkz. sigdirDortgen). İkisi ayrı şey:
                 biri gerçek ölçü, öteki "şurayı kaplasın".
               */}
+              {/*
+                ALANI DÜZENLE.
+
+                Tutamaklar tuvalde kendiliğinden durmuyor (tasarımın üstünü
+                kapatıyorlardı); kullanıcı isteyince açılıyor. Açıkken
+                tasarım gizleniyor, kapanınca geri geliyor.
+              */}
+              {onAlanDuzenle && (
+                <button
+                  type="button"
+                  onClick={onAlanDuzenle}
+                  className="mt-2 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                >
+                  {t('sih.alaniDuzenle')}
+                </button>
+              )}
               {/*
                 ALAN YOKKEN (manuel yol) ÖLÇÜ KABİN SAYISIYLA DEĞİŞİYOR.
                 Kutuyu köşelerinden çekmek yalnızca duruşunu veriyor; santim

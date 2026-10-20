@@ -790,6 +790,7 @@ const dict = {
     en: 'One line for the top, bottom, left and right edge; the order does not matter. An edge can be the wall’s edge or an imaginary line where the screen ends. Corners come from where the lines cross, so a corner may fall outside the frame. The ends can be dragged later; hold Alt to disable snapping.',
     ar: 'خط لكل حافة: علوية وسفلية ويسرى ويمنى، والترتيب غير مهم. تنتج الزوايا من تقاطع الخطوط، لذا قد تقع زاوية خارج الإطار. يمكن سحب الأطراف لاحقًا، و Alt يوقف الالتصاق.',
   },
+  'sih.alaniDuzenle': { tr: 'Alanı düzenle', en: 'Edit the area', ar: 'تعديل المنطقة' },
   'sih.kenarSayac': { tr: 'kenar', en: 'edges', ar: 'حواف' },
   'sih.kenarKesismedi': {
     tr: 'Çizgiler bir alan oluşturmuyor; karşılıklı iki kenarı aynı yöne çizmiş olabilirsiniz.',

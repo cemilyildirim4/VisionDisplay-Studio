@@ -119,6 +119,25 @@ async function olcuYaz(s, en, boy) {
 }
 
 /**
+ * TASARIMIN GERÇEK ÖLÇÜSÜ — sol panelin kendi yazdığı sayılardan.
+ *
+ * Panel "SÜTUNLAR 9 × 320 mm = 2880 mm" diyor; kabin ölçüsü de kaç kabin
+ * konduğu da orada. Ekrandaki piksel ölçüsü bu soruyu cevaplayamıyor:
+ * perspektif yüzünden alanla tasarımın pikselleri karşılaştırılamaz.
+ */
+const panelOlcusu = (s) =>
+  s.evaluate(() => {
+    const g = [...document.querySelectorAll('aside')]
+      .map((x) => (x.innerText || '').replace(/\s+/g, ' '))
+      .join(' ')
+    const al = (etiket) => {
+      const m = g.match(new RegExp(etiket + '\\s+(\\d+)\\s*×\\s*(\\d+) mm = (\\d+) mm'))
+      return m ? { adet: Number(m[1]), kabinMm: Number(m[2]), toplamMm: Number(m[3]) } : null
+    }
+    return { sutun: al('SÜTUNLAR'), satir: al('SATIRLAR') }
+  })
+
+/**
  * DÖRT KENAR ÇİZGİSİ ÇİZER.
  *
  * Her kenar iki tıklama: kenarın göründüğü yerin iki ucu. Sıra kasten
@@ -317,23 +336,63 @@ const a = await akis('A — ALANI İŞARETLE', async ({ s, bas, denetle, icerir,
   await bas('Alanı onayla', 2500)
   if (!(await denetle('alan onaylandı'))) return false
 
+  /*
+   * ÜRÜN KARARI: ölçü sürerken tasarım görünmüyor; onay da göstermiyor.
+   * Tasarım "Tasarımı ölçüye sığdır" deyince çıkıyor.
+   */
   const g1 = await tasarimGorunur(s)
-  console.log('  · tasarım onaydan sonra    :', JSON.stringify(g1))
-  if (!g1.var || !(g1.saydamlik > 0.05) || !(g1.en > 10)) {
-    return dus('tasarım görünmüyor (alan onaylandığı hâlde)')
-  }
+  console.log('  · onaydan sonra (gizli olmalı):', JSON.stringify(g1))
+  if (g1.var && g1.saydamlik > 0.05) return dus('onaydan sonra tasarım görünüyor (gizli olmalıydı)')
 
   if ((await olcuYaz(s, 300, 150)) < 2) return dus('en/boy kutuları bulunamadı')
   if (!(await denetle('gerçek en/boy yazıldı'))) return false
 
-  if (!(await bas('Tasarımı ölçüye sığdır', 2500))) {
+  if (!(await bas('Tasarımı ölçüye sığdır', 2800))) {
     return dus('"Tasarımı ölçüye sığdır" çıkmadı (en/boy yazıldığı hâlde)')
   }
   if (!(await denetle('ölçüye sığdırıldı'))) return false
 
   const g2 = await tasarimGorunur(s)
-  console.log('  · tasarım sığdırmadan sonra:', JSON.stringify(g2))
-  if (!(g2.saydamlik > 0.05) || !(g2.en > 10)) return dus('sığdırmadan sonra tasarım görünmüyor')
+  console.log('  · sığdırdıktan sonra          :', JSON.stringify(g2))
+  if (!g2.var || !(g2.saydamlik > 0.05) || !(g2.en > 10)) {
+    return dus('sığdırmadan sonra tasarım görünmüyor')
+  }
+
+  /*
+   * TEK SEFERDE TAM OTURMA.
+   *
+   * Kural: taşma yok ve alana sığan EN FAZLA kabin. Yani her eksende
+   *   0 ≤ alan − tasarım < bir kabin
+   * olmalı. Bir kabinden büyük boşluk kalıyorsa bir sıra daha sığardı.
+   */
+  /*
+   * TEK SEFERDE TAM OTURMA.
+   *
+   * Kural: taşma yok ve alana sığan EN FAZLA kabin. Yani her eksende
+   *   0 ≤ alan − tasarım < bir kabin
+   * olmalı; artan bir kabinden büyükse bir sıra daha sığardı.
+   * Alan 300 × 150 cm = 3000 × 1500 mm (yukarıda yazıldı).
+   */
+  const ilk = await panelOlcusu(s)
+  console.log('  · panel ölçüsü                :', JSON.stringify(ilk))
+  if (!ilk.sutun || !ilk.satir) return dus('panelde sütun/satır ölçüsü okunamadı')
+  const denetleEksen = (ad, o, alanMm) => {
+    const artan = alanMm - o.toplamMm
+    console.log('  · ' + ad + ': ' + o.adet + ' × ' + o.kabinMm + ' = ' + o.toplamMm + ' mm, artan ' + artan + ' mm')
+    if (artan < 0) return ad + ' taşıyor'
+    if (artan >= o.kabinMm) return ad + ' tam oturmuyor, bir tane daha sığardı'
+    return null
+  }
+  const h1 = denetleEksen('en', ilk.sutun, 3000) || denetleEksen('boy', ilk.satir, 1500)
+  if (h1) return dus(h1)
+
+  /* İkinci basış hiçbir şeyi değiştirmemeli: tek seferde oturmuş olmalı. */
+  await bas('Tasarımı ölçüye sığdır', 2500)
+  const ikinci = await panelOlcusu(s)
+  if (ikinci.sutun?.adet !== ilk.sutun.adet || ikinci.satir?.adet !== ilk.satir.adet) {
+    return dus('ikinci sığdırma sonucu değiştirdi: ' + JSON.stringify(ikinci))
+  }
+  if (!(await denetle('tek seferde tam oturdu'))) return false
 
   await bas('Bitir ve tasarımı göster', 2500)
   if (!(await denetle('bitirildi'))) return false
@@ -350,11 +409,15 @@ const b = await akis('B — SERBEST YERLEŞTİR', async ({ s, bas, denetle, icer
   if (!(await icerir('Kutuyu gövdesinden tutup'))) return dus('yerleştirme adımı açılmadı')
   if (await icerir('Yerleşim alanının ölçüsü')) return dus('eski santim kutusu adımına düştü')
 
+  /*
+   * Kutu konurken tasarım GİZLİ: taşınan şey kesikli kutu, altındaki
+   * duvarın görünmesi gerekiyor. Ölçüsü yine de okunuyor — büyüyüp
+   * büyümediği saydamlıktan bağımsız.
+   */
   const once = await tasarimGorunur(s)
-  console.log('  · başlangıç kutusu         :', JSON.stringify(once))
-  if (!once.var || !(once.saydamlik > 0.05) || !(once.en > 10)) {
-    return dus('serbest yerleştirmede tasarım görünmüyor')
-  }
+  console.log('  · başlangıç kutusu (gizli)    :', JSON.stringify(once))
+  if (!once.var || !(once.en > 10)) return dus('serbest yerleştirmede kutu kurulmadı')
+  if (once.saydamlik > 0.05) return dus('kutu konurken tasarım görünüyor (gizli olmalıydı)')
 
   const artti = (await kabinArtir(s, 'Sütunlar')) || (await kabinArtir(s, 'Sütun'))
   if (!artti) return dus('sütun adımlayıcısı bulunamadı')
@@ -366,6 +429,10 @@ const b = await akis('B — SERBEST YERLEŞTİR', async ({ s, bas, denetle, icer
 
   await bas('Bitir ve tasarımı göster', 2500)
   if (!(await denetle('bitirildi'))) return false
+  /* "Bitir ve tasarımı göster" adını hak etmeli. */
+  const son = await tasarimGorunur(s)
+  console.log('  · bitirince                   :', JSON.stringify(son))
+  if (!(son.saydamlik > 0.05)) return dus('bitirildiği hâlde tasarım görünmüyor')
   return true
 })
 

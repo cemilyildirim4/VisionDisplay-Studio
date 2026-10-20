@@ -3384,7 +3384,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * düğmeler onu hâlâ yazıyor ve ileride bir "yalnızca kutuyu göster"
    * ihtiyacı doğarsa bağlanacak yer orası.
    */
-  const tasarimGizli = false
+  /*
+   * TASARIM NE ZAMAN GÖRÜNÜR.
+   *
+   * Ölçü sürerken hiç çizilmiyor; alan onaylanınca da çıkmıyor. Kullanıcı
+   * "Tasarımı ölçüye sığdır" deyince çıkıyor — serbest yerleştirmede
+   * karşılığı "Bitir ve tasarımı göster".
+   *
+   * Sihirbaz kapalıyken bu bayrağa bakılmıyor: orada tasarım zaten ürünün
+   * kendisi ve her zaman görünür.
+   */
+  const tasarimGizli = sihirbazAdim > 0 && !tasarimAcik
 
   /*
    * ÖLÇÜ ETİKETLERİ KUTU KURULANA KADAR GİZLİ.
@@ -3792,6 +3802,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
 
+  /*
+   * ALANI DÜZENLE — çizgiler duruyor, uçları yeniden sürüklenebiliyor.
+   *
+   * Sıfırdan işaretleme değil: var olan dört çizgi olduğu gibi açılıyor,
+   * kullanıcı yalnızca uçları düzeltiyor. Araç açıldığı için tasarım bu
+   * sırada gizleniyor.
+   */
+  const alaniDuzenle = () => {
+    setTasarimAcik(false)
+    setAlanKipi(true)
+    setRefKipi(false)
+    setRef2Kipi(false)
+  }
+
   /* Alanı sıfırdan işaretlemek: çizgiler ve köşeler siliniyor. */
   const alaniTemizle = () => {
     setAlanNokta([])
@@ -3854,16 +3878,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     setRef2Kipi(false)
     setSihirbazAdim(4)
+    /* Onay tasarımı göstermiyor: kullanıcı sığdır deyince çıkıyor. */
+    setTasarimAcik(false)
     /*
-     * TASARIM ALANIN İÇİNE KENDİLİĞİNDEN KURULUYOR.
+     * ONAYDA OTOMATİK SIĞDIRMA YOK.
      *
-     * Onaydan sonra tasarım tek kabinlik kalıyordu: 300 × 150 cm'lik alanın
-     * ortasında 32 × 16 cm'lik bir pul. Alanı işaretlemenin amacı ekranın
-     * oraya girmesi; sığdırma elle basılacak bir düğme olmadan da bir kez
-     * uygulanıyor. Kullanıcı gerçek en/boyu düzeltirse düğmeyle yeniden
-     * sığdırabiliyor.
+     * Onay anında sığdırma bir kez kendiliğinden çalışıyor ve ÖLÇÜLEN
+     * santimi kullanıyordu; kullanıcı hemen ardından alanın gerçek
+     * en/boyunu yazıp sığdır deyince bambaşka bir sonuç çıkıyor, ekran iki
+     * kez değişiyordu. Artık tek bir sığdırma var: kullanıcının bastığı.
+     * Tasarımın göründüğü an da orası.
      */
-    if (k) tasarimiAlanaSigdir(k)
   }
 
   /* Alanı tamamen doldur — montaj payıyla (bkz. sigdirDortgen). */
@@ -4002,6 +4027,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (n) elleKoseyeYaz(n)
     setAlanOlcek(null)
     setAlanKonum({ u: 0.5, v: 0.5 })
+    /* Sığdırma aynı zamanda tasarımın göründüğü an. */
+    setTasarimAcik(true)
     /* Kenarlarda boşluk var: alanı doldurmuyor, dolayısıyla sürüklenebilir. */
     setAlanDoldur(false)
     setOzelUyari(
@@ -6100,7 +6127,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * önce onu görmesi gerekiyor. (Kutu kurma yolunda gizli başlıyor çünkü
      * orada bir sonraki iş kutunun ölçüsünü onaylamak.)
      */
-    setTasarimAcik(true)
+    /*
+     * Kutu konurken tasarım gizli: taşınan şey kutunun kendisi ve
+     * altındaki duvarın görünmesi gerekiyor. Tasarımı "Bitir ve tasarımı
+     * göster" ortaya çıkarıyor.
+     */
+    setTasarimAcik(false)
     setKutuDurus({ roll: aci, yaw: 0, pitch: 0 })
     setKutuDuzen('hepsi')
     setRefEskidi(false)
@@ -6973,7 +7005,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * saydam kısmı da fareyi bırakıyor, dolayısıyla tasarım yine
    * sürüklenebiliyor.
    */
-  const alanTutamaklari = sihirbazAdim > 0 && !alanKipi && !ref2Kipi && alanNokta.length === 4
+  /*
+   * ALANIN TUTAMAKLARI KENDİLİĞİNDEN AÇILMIYOR.
+   *
+   * Alan onaylandıktan sonra kenar çizgileri ve tutamakları tuvalde
+   * duruyordu: tasarım da çizildiği için ekranda aynı anda hem ölçü
+   * araçları hem ürün vardı ve hangisinin ne olduğu karışıyordu.
+   *
+   * Artık araçlar yalnızca DÜZENLE denince açılıyor (bkz. alaniDuzenle);
+   * açıkken tasarım gizleniyor, kapanınca geri geliyor.
+   */
+  const alanTutamaklari = false
+
 
   const lSekilPaneli = (
     <div className="mt-2">
@@ -7242,6 +7285,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * daha yukarıda tanımlanırsa henüz başlatılmamış değişkeni okur.
    */
   const lKoseCizimi = lKoseCizgiGeo || lKoseGeo || lKoseFotoGeo || lKoseHamGeo
+
+  /*
+   * TASLAK KUTU TUVALDE Mİ.
+   *
+   * Hem çizim koşulu hem de "ölçü aracı açık mı" sorusunun bir parçası;
+   * ikisi ayrı yazılınca kutu görünmeden tasarım gizlenebiliyordu.
+   */
+  const taslakKutuAcik =
+    kutuKipi &&
+    alanNokta.length !== 4 &&
+    !!olcuKutu &&
+    !!taslakKutu &&
+    fotoYer?.genislik > 0 &&
+    scene === 'ozel' &&
+    !!ozelSahne
+
+  /*
+   * TUVALDE ÖLÇÜ ARACI VAR MI.
+   *
+   * Referans noktaları, kenar çizgileri, L köşesi ve taslak kutu — hepsi
+   * tam tasarımın duracağı yere konuyor. Tasarım da çizilirse altındaki
+   * yeri ne görmek ne tıklamak mümkün oluyor; üstelik ikisi ayrı yerde
+   * duruyorsa (kutu solda, tasarım ortada) ekran büsbütün anlaşılmaz
+   * hâle geliyor. Araç açıkken tasarım gizli, kapanınca görünür.
+   */
+  const olcuAraciAcik =
+    refKipi || ref2Kipi || lKoseKipi || alanKipi || !!lKoseCizimi || taslakKutuAcik
 
   /** Dörtgenin merkezi, durusaOturt'un beklediği {cx, cy} adlarıyla. */
   const koseMerkeziCx = (k) => ({
@@ -7961,15 +8031,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * de tıklamak mümkün oluyordu. Köşe çizgisi adımında zaten
                * böyleydi, referans adımı için de aynısı geçerli.
                */
-              ekranGizle={
-                (uc3dHazir && !duvarDunya) ||
-                tasarimGizli ||
-                refKipi ||
-                ref2Kipi ||
-                lKoseKipi ||
-                alanKipi ||
-                !!lKoseCizimi
-              }
+              /* Ölçü aracı açıkken tasarım çizilmiyor (bkz. olcuAraciAcik). */
+              ekranGizle={(uc3dHazir && !duvarDunya) || tasarimGizli || olcuAraciAcik}
               uc3dKatman={
                 PANEL.kabinGovdesi &&
                 !tasarimGizli &&
@@ -8457,7 +8520,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             gerek yok. Serbest yerleştirmede alan yok, dolayısıyla orada
             kutunun tutamakları tek takım olarak duruyor.
           */}
-          {kutuKipi && alanNokta.length !== 4 && olcuKutu && taslakKutu && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+          {taslakKutuAcik && (
             <TaslakKutu
               koseler={taslakKutu.map(oranTuvale)}
               tuvalW={tuvalBoyut.w}
@@ -9753,6 +9816,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             /* Görünmeyen köşeyi kenarlarından bulma. */
                             duzenlemede={duzenlemede}
                             onAlanTemizle={alaniTemizle}
+                            /* Alan varken: çizgileri yeniden açar (tutamaklar geri gelir). */
+                            onAlanDuzenle={alanNokta.length === 4 ? alaniDuzenle : null}
                             alanGecerli={alanGecerli}
                             /* Kaç kenar çizgisi tamamlandı (0–4). */
                             kenarCizgiSayisi={Math.floor(alanCizgi.length / 2)}
