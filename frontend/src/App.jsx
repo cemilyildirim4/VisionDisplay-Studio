@@ -3674,42 +3674,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const alanHm = alanEtkinCm ? alanEtkinCm.boyCm / 100 : boyPx / olcekPxM
     /*
      * ───────────────────────────────────────────────────────────────────
-     * KABİN SAYISI EN YAKINA YUVARLANIYOR, AŞAĞI DEĞİL.
+     * TAŞMA YOK: ALANA SIĞAN EN FAZLA KABİN.
      *
-     * Duvara sığdırmada aşağı yuvarlamak (floor) doğru: duvarı aşmak
-     * yasak. Ama işaretlenen alanda amaç BOŞLUK BIRAKMAMAK ve işaretleme
-     * kıl payı şaşabiliyor. 192 cm'lik bir alan 191,9 ölçülünce
-     * 191,9/32 = 5,997 oluyor ve floor bir kabini komple yutuyordu:
-     * kullanıcı 6 sütun beklerken 5 görüyordu.
+     * Bir ara en yakına yuvarlanıyordu ("boşluk kalmasın" diye): 192 cm'lik
+     * bir alan 191,9 ölçülünce 5,997 çıkıyor ve aşağı yuvarlamak bir kabini
+     * komple yutuyordu. Ama bedeli ağırdı — 345 x 127 cm'lik bir alana
+     * 352 x 128 cm, 391 x 184 cm'lik bir alana 384 x 192 cm kuruluyor,
+     * yani tasarım işaretlenen çizginin dışına taşıyordu. Ürün kararı:
+     * TAŞMA YOK. Bir satır/sütun daha eklemek alanı aşıyorsa eklenmiyor;
+     * kalan küçük boşluğu kullanıcı isterse elle kapatıyor.
      *
-     * En yakına yuvarlayınca 5,997 -> 6 oluyor. Bedeli dürüst: alan tam
-     * katı değilse sonuç birkaç santim taşabilir de, eksik de kalabilir --
-     * hangisi alana daha yakınsa o. Kabin bölünmediği için üçüncü bir
-     * seçenek yok.
+     * Bu, "Duvara sığdır"ın kuralıyla da aynı (bkz. yerlesimSecenekleri):
+     * iki düğme artık aynı şeyi yapıyor, biri alana biri duvara.
      *
-     * YÖN SEÇİMİ DE DEĞİŞTİ: en çok LED yerine ALANA EN YAKIN duruş
-     * seçiliyor, çünkü istenen şey boşluğun kapanması. Eşitlikte yatay
-     * kalıyor (aynı kural yüzey önerisinde de var).
+     * YÖN: en çok kabin sığan duruş seçiliyor (bugünkü "Duvara sığdır"
+     * mantığı); eşitlikte yatay kalıyor. Kullanıcıya yön sorulmuyor.
      * ───────────────────────────────────────────────────────────────────
      */
-    const enYakin = (alanM, kabinM) => Math.max(1, Math.round(alanM / kabinM))
+    const sigan = (alanM, kabinM) => Math.max(1, Math.floor(alanM / kabinM + 1e-9))
     const kurul = (kabinWmm, kabinHmm) => {
       const kw = kabinWmm / 1000
       const kh = kabinHmm / 1000
-      const c = enYakin(alanWm, kw)
-      const r = enYakin(alanHm, kh)
-      return {
-        cols: c,
-        rows: r,
-        /* Alana ne kadar yakın: küçük olan kazanıyor. */
-        sapma: Math.abs(c * kw - alanWm) + Math.abs(r * kh - alanHm),
-      }
+      const c = sigan(alanWm, kw)
+      const r = sigan(alanHm, kh)
+      /* Küçük olan kazanıyor: artık taşma yok, sapma = kalan boşluk. */
+      return { cols: c, rows: r, sapma: (alanWm - c * kw) + (alanHm - r * kh), adet: c * r }
     }
     const gWmm = m.widthMm || 500
     const gHmm = m.heightMm || 500
     const yatay = kurul(gWmm, gHmm)
     const dikey = kurul(gHmm, gWmm)
-    const dikeySec = dikey.sapma < yatay.sapma
+    /* En çok kabin sığan duruş; eşitlikte yatay (sebepsiz çevirme yok). */
+    const dikeySec = dikey.adet > yatay.adet
     const kazanan = dikeySec ? dikey : yatay
     /* Kazanan yönün kabin ölçüsü: dikeyde kabin yan yatıyor. */
     const cwM2 = ((dikeySec ? m.heightMm : m.widthMm) || 500) / 1000
@@ -4006,7 +4002,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAlanOlcek(secilen.olcek || null)
     setAlanElleEn(secilen.elleEn || '')
     setAlanElleBoy(secilen.elleBoy || '')
-    setElleKose(secilen.oran.map(oranTuvale))
+    elleKoseyeYaz(secilen.oran.map(oranTuvale))
     setAktifEkranId(secilen.id)
     setAktifSira(secilen.sira || 1)
     /*
