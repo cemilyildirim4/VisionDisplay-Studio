@@ -7041,7 +7041,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           sm ve üzerinde eski tek satır düzeni sürüyor.
         */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 w-full sm:w-auto justify-start sm:flex-nowrap sm:justify-end">
-<IconButton active={hasModel} label={t('tool.reset')} onClick={() => hasModel && setResetConfirmOpen(true)}>
+<IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('tool.reset')} onClick={() => hasModel && setResetConfirmOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />
               <path d="M4 4v4h4" />
@@ -7049,6 +7049,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           </IconButton>
           <IconButton
             active={hasModel}
+            pasifNot={t('tool.modelGerek')}
             label={showMeasurements ? t('tool.hideMeasures') : t('tool.showMeasures')}
             onClick={() => hasModel && setShowMeasurements((m) => !m)}
           >
@@ -7062,6 +7063,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {/* Kamerada oturt — taslak çerçeve, sonra çekim (bkz. Oturtma.jsx) */}
           <IconButton
             active={hasModel}
+            pasifNot={t('tool.modelGerek')}
             label={t('fit.open')}
             sadeceIkon
             onClick={() => hasModel && setOturtmaAcik(true)}
@@ -7073,7 +7075,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           </IconButton>
 
           {/* AR / kamera simülasyonu — bkz. Mekân bölümündeki eşi */}
-          <IconButton active={hasModel} label={t('ar.open')} onClick={() => hasModel && setArAcik(true)}>
+          <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('ar.open')} onClick={() => hasModel && setArAcik(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 8a2 2 0 0 1 2-2h2.2l1.2-2h7.2l1.2 2H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <circle cx="12" cy="12.5" r="3.4" />
@@ -7081,7 +7083,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           </IconButton>
 
           {/* Gerçek 3D sahne (HDRI ışıklandırma + WebXR/model-viewer AR dışa aktarma) */}
-          <IconButton active={hasModel} label={t('scene3d.open')} onClick={() => hasModel && setScene3dOpen(true)}>
+          <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('scene3d.open')} onClick={() => hasModel && setScene3dOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" />
               <path d="M12 3v18M4 7.5l8 4.5 8-4.5" />
@@ -7091,7 +7093,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 hidden sm:block" />
 
           {/* Teknik Özellikler (Bileşenler de içinde) */}
-          <IconButton active={hasModel} label={t('sp.title')} onClick={() => hasModel && setSpecsOpen(true)}>
+          <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('sp.title')} onClick={() => hasModel && setSpecsOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 6h14M5 12h14M5 18h9" />
             </svg>
@@ -10748,12 +10750,22 @@ function FieldLabel({ children, muted = false }) {
  * taşımak yer israfı. Ad, ipucu (title) ve ekran okuyucu etiketi olarak
  * duruyor — erişilebilirlik kaybı yok.
  */
-function IconButton({ children, label, active, onClick, sadeceIkon = false }) {
+/*
+ * ÜST ÇUBUK DÜĞMESİ.
+ *
+ * "active" burada bir açık/kapalı durumu değil, düğmenin KULLANILABİLİR
+ * olup olmadığı: hepsi model seçilmişken çalışıyor. Düğme kapalı görünümde
+ * çiziliyordu ama gerçekten kapalı DEĞİLDİ; basınca hiçbir şey olmuyor ve
+ * hiçbir şey de söylenmiyordu (kullanıcı "tepkisiz kalıyor" diye bildirdi).
+ * Artık gerçekten kapalı ve sebebini yazıyor.
+ */
+function IconButton({ children, label, active, onClick, sadeceIkon = false, pasifNot = null }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      title={label}
+      disabled={active === false}
+      title={active === false && pasifNot ? pasifNot : label}
       aria-label={label}
       className={`h-9 rounded-full px-2.5 lg:pl-2.5 lg:pr-3 inline-flex items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap transition-colors shrink-0 ${
         active
