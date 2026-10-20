@@ -113,6 +113,8 @@ import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose
 import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
 /* İşaretlenen alanın GERÇEK ölçüsü — eğimi hesaba katarak (bkz. alanOlcu.js). */
 import { dortgenGercekOlcu, odakIkiReferanstan, kesisim, dikdortgeneOtur } from './alanOlcu.js'
+/* Fotoğrafın kendi odak uzaklığı — varsa tahmine hiç gerek kalmıyor. */
+import { exif35mmOdak } from './exifOdak.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -890,6 +892,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Fotoğraf değişince ya da baştan başlanınca siliniyor.
    * ───────────────────────────────────────────────────────────────────────
    */
+  /* EXIF'ten okunan 35 mm eşdeğeri odak (mm). Yoksa null. */
+  const [exif35, setExif35] = useState(null)
   const [fotoOdak, setFotoOdak] = useState(null)
   const [ref2Nokta, setRef2Nokta] = useState([])
   const [ref2UzunlukCm, setRef2UzunlukCm] = useState('')
@@ -1539,6 +1543,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        */
       setDuzenlemede(false)
       setFotoOdak(null)
+      /*
+       * EXIF ODAĞI — ölçümün kesinliği buna bağlı.
+       *
+       * Telefonlar çektikleri kareye 35 mm eşdeğeri odağı yazıyor; okunursa
+       * kameranın görüş açısı tahmin edilmiyor, biliniyor. WhatsApp ve ekran
+       * görüntüleri EXIF'i siliyor, o yüzden okunamaması olağan: orada ikinci
+       * referans ya da alanın gerçek ölçüsü devreye giriyor.
+       *
+       * SIFIRLAMADAN SONRA okunuyor: önce okunup sonra sıfırlanırsa (okuma
+       * görüntü yüklenmesinden hızlı bitiyor) değer anında siliniyordu.
+       */
+      setExif35(null)
+      dosya
+        .arrayBuffer()
+        .then((ab) => setExif35(exif35mmOdak(ab)))
+        .catch(() => setExif35(null))
       setRef2Nokta([])
       setRef2UzunlukCm('')
       setRef2Kipi(false)
@@ -3676,7 +3696,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAlanOlcek(null)
     const yeni = k ? alanaYerlestir(k) : null
     if (yeni) elleKoseyeYaz(yeni)
-    /* Alan kurulduktan sonra yapilacak is konumlandirma: dogrudan o adima. */
+    /*
+     * ÖLÇÜ KESİN DEĞİLSE İKİNCİ REFERANS BİR ADIM.
+     *
+     * Teklif olarak duruyordu ve kullanıcı görmüyordu; ölçü de yanlış
+     * kalıyordu. EXIF yoksa, alanın gerçek ölçüsü yazılmadıysa ve ikinci
+     * referans verilmediyse kameranın görüş açısı bilinmiyor demektir —
+     * o hâlde ölçüye dayanan işler (sığdırma, bitirme) açılmıyor.
+     * Çıkış yolu iki tane: ya ikinci referans, ya alanın gerçek en/boyu.
+     */
+    if (!odakKesin) setRef2Kipi(true)
     setSihirbazAdim(4)
   }
 
@@ -4887,6 +4916,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setFotoOdak((o) => (o && Math.abs(o - y) / y < 0.001 ? o : y))
   }, [cozulenOdak, odakYazilandan])
 
+  /*
+   * EXIF ODAĞININ TUVALDEKİ KARŞILIĞI.
+   *
+   * f_piksel = (f35 / 36) × görüntünün piksel genişliği. Burada "görüntünün
+   * genişliği" fotoğrafın TUVALDEKİ genişliği; özgün piksel genişliği
+   * sadeleşiyor, çünkü ölçüm de tuval pikselinde yapılıyor.
+   */
+  const exifOdak =
+    exif35 > 0 && fotoYer?.genislik > 0
+      ? (exif35 / 36) * fotoYer.genislik * (sahneYakinlik || 1)
+      : null
+
+  /* Ölçü kesin bir odakla mı kuruluyor. */
+  const odakKesin = cozulenOdak > 1 || odakYazilandan > 1 || exifOdak > 1 || fotoOdak > 1
+
   const alanGercek = (() => {
     if (!alanTuval || refNokta.length !== 2) return null
     const cm = Number(String(refUzunlukCm).replace(',', '.'))
@@ -4903,11 +4947,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         ? cozulenOdak
         : odakYazilandan > 1
           ? odakYazilandan
-          : fotoOdak > 1
-            ? fotoOdak
-            : fotoYer?.genislik > 0
-              ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785
-              : 0
+          : exifOdak > 1
+            ? exifOdak
+            : fotoOdak > 1
+              ? fotoOdak
+              : fotoYer?.genislik > 0
+                ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785
+                : 0
     return dortgenGercekOlcu(alanTuval, a, b, cm, asal, odak)
   })()
 
@@ -5542,6 +5588,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        */
       if (a === 4 && alanNokta.length === 4) {
         setRefKipi(false)
+        setRef2Kipi(false)
         setAlanKipi(true)
         return 4
       }
@@ -8724,14 +8771,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                              * Artık ölçü KESİN bir odakla kurulmadıysa uyarı
                              * ve ikinci referans teklifi çıkıyor.
                              */
-                            odakTahminMi={
-                              alanNokta.length === 4 &&
-                              !(cozulenOdak > 1) &&
-                              !(odakYazilandan > 1) &&
-                              !(fotoOdak > 1) &&
-                              (alanGercek ? !!alanGercek.odakTahmin : true)
-                            }
-                            odakCozuldu={cozulenOdak > 1 || odakYazilandan > 1 || fotoOdak > 1}
+                            odakTahminMi={alanNokta.length === 4 && !odakKesin}
+                            odakCozuldu={odakKesin}
+                            odakExiften={exifOdak > 1 && !(cozulenOdak > 1) && !(odakYazilandan > 1)}
                             ref2Kipi={ref2Kipi}
                             ref2NoktaSayisi={ref2Nokta.length}
                             ref2UzunlukCm={ref2UzunlukCm}

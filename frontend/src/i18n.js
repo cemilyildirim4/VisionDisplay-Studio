@@ -582,7 +582,22 @@ const dict = {
     en: 'This measurement relies on an assumed field of view: the photo was taken level, so the focal length cannot be derived from it. The axis perpendicular to the reference can be off by up to 10%.',
     ar: 'يعتمد هذا القياس على زاوية رؤية مفترضة؛ قد ينحرف المحور العمودي على المرجع بنسبة تصل إلى 10%.',
   },
-  'sih.ref2Ekle': { tr: 'İkinci referans ekle', en: 'Add a second reference', ar: 'إضافة مرجع ثانٍ' },
+  'sih.ref2Ekle': { tr: 'İkinci referansı işaretle', en: 'Mark the second reference', ar: 'حدّد المرجع الثاني' },
+  'sih.olcuKesinDegil': {
+    tr: 'Ölçüyü kesinleştirmek için bir bilgi daha gerekiyor: bu fotoğrafta kameranın görüş açısı yazmıyor.',
+    en: 'One more input is needed: this photo does not carry the camera field of view.',
+    ar: 'نحتاج معلومة إضافية: لا تحمل هذه الصورة زاوية رؤية الكاميرا.',
+  },
+  'sih.olcuKesinNot': {
+    tr: 'İlk referansa DİK bir uzunluk işaretleyin. Alanın gerçek en/boyunu yukarıdaki kutulara yazmak da aynı işi görür.',
+    en: 'Mark a length PERPENDICULAR to the first reference. Typing the real size of the area above does the same.',
+    ar: 'حدّد طولًا عموديًا على المرجع الأول، أو اكتب المقاس الحقيقي للمنطقة أعلاه.',
+  },
+  'sih.odakExif': {
+    tr: 'Kameranın görüş açısı fotoğraftan okundu — ölçüm kesin.',
+    en: 'The camera field of view was read from the photo — the measurement is exact.',
+    ar: 'تمت قراءة زاوية رؤية الكاميرا من الصورة — القياس دقيق.',
+  },
   'sih.ref2Aciklama': {
     tr: 'Aynı yüzeyde, ilk referansa DİK bir uzunluğun iki ucuna tıklayın: ilki dikeyse bunu yatay seçin. Sonra kaç santim olduğunu yazın — odak uzaklığı bu iki uzunluğun oranından hesaplanır.',
     en: 'On the same surface, click the two ends of a length PERPENDICULAR to the first reference, then type its size in cm. The focal length is computed from the ratio of the two.',

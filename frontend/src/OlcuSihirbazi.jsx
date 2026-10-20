@@ -112,6 +112,7 @@ function SihirbazKart({
   /* İKİNCİ REFERANS — odak tahmin ediliyorsa ölçümü kesinleştiriyor. */
   odakTahminMi = false,
   odakCozuldu = false,
+  odakExiften = false,
   ref2Kipi = false,
   ref2NoktaSayisi = 0,
   ref2UzunlukCm = '',
@@ -813,6 +814,11 @@ function SihirbazKart({
               */}
               {alanVar && onAlanSigdir && (
                 <>
+                  {/*
+                    Ölçü kesin değilken sığdırma açılmıyor: yanlış bir ölçüye
+                    sığdırmak yanlış kabin sayısı demek (bkz. sih.olcuKesinDegil).
+                  */}
+                  {odakCozuldu && (
                   <button
                     type="button"
                     onClick={onAlanSigdir}
@@ -820,6 +826,7 @@ function SihirbazKart({
                   >
                     {t('sih.alanSigdir')}
                   </button>
+                  )}
                   {alanOlcuAlani}
 
                   {/*
@@ -870,18 +877,19 @@ function SihirbazKart({
                     </div>
                   ) : odakCozuldu ? (
                     <p className={`${kucuk} text-emerald-700 dark:text-emerald-400`}>
-                      {t('sih.ref2Hazir')}
+                      {odakExiften ? t('sih.odakExif') : t('sih.ref2Hazir')}
                     </p>
                   ) : odakTahminMi && onRef2Isaretle ? (
-                    <div className="mt-2 rounded-lg border border-amber-300 px-2.5 py-2 dark:border-amber-500/40">
-                      <p className={`${kucuk} text-amber-700 dark:text-amber-400`}>{t('sih.ref2Uyari')}</p>
+                    <div className="mt-2 rounded-lg border border-brand/50 px-2.5 py-2">
+                      <p className={aciklama}>{t('sih.olcuKesinDegil')}</p>
                       <button
                         type="button"
                         onClick={onRef2Isaretle}
-                        className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-amber-400 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-500/10 transition-colors"
+                        className={`mt-2 w-full ${ana}`}
                       >
                         {t('sih.ref2Ekle')}
                       </button>
+                      <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.olcuKesinNot')}</p>
                     </div>
                   ) : null}
 
