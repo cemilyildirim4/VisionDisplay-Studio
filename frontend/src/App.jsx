@@ -5415,6 +5415,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })()
 
   /*
+   * ÖLÇÜ ELLE YAZILDIYSA ZATEN KESİN — ODAĞA GEREK YOK.
+   *
+   * "Tasarımı ölçüye sığdır" odak çözülmeden açılmıyordu. Odak, fotoğraftan
+   * SANTİM çıkarmak için gerekiyor; kullanıcı alanın gerçek en/boyunu
+   * kendisi yazdıysa o santim zaten elimizde ve sığdırma hesabı da onu
+   * kullanıyor (bkz. tasarimiAlanaSigdir → alanEtkinCm).
+   *
+   * Belirtisi: "Belirli bir alanım var" yolunda — ki orada ölçü HER ZAMAN
+   * elle yazılıyor ve referans hiç sorulmuyor — sığdır düğmesi karşıdan
+   * çekilmiş fotoğraflarda hiç çıkmıyordu. Karşıdan çekilen bir duvarda
+   * kaçış noktaları sonsuzda olduğu için odak o kareden matematiksel
+   * olarak çıkmaz; oysa ölçü biliniyor.
+   */
+  const alanOlcusuYazildi = sayiCm(alanElleEn) > 0 && sayiCm(alanElleBoy) > 0
+
+  /*
    * ───────────────────────────────────────────────────────────────────────
    * TASARIMIN ÖLÇÜSÜ DEĞİŞİNCE ÇİZİM DE DEĞİŞİYOR.
    *
@@ -5889,6 +5905,68 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setKutuDuzen('hepsi')
     setRefEskidi(false)
     setKutuMesaj(k.tasiyor ? t('ref2.kadrajaSigmaz') : null)
+  }
+
+  /*
+   * MANUEL DÜZENLE — köşe işaretlemeden doğrudan yerleştirmeye.
+   *
+   * Şartnamedeki ikinci yol: köşe işaretleme yok, tasarım referanstan gelen
+   * ölçekle KENDİ GERÇEK BOYUTUNDA fotoğrafa konuyor ve kullanıcı onu
+   * sürükleyip köşelerinden duvara oturtuyor. Büyütüp küçültmek yalnızca
+   * kabin sayısıyla — bu yüzden kutunun ölçüsü burada SORULMUYOR, tasarımın
+   * kendi santiminden alınıyor.
+   *
+   * Düğme eskiden sihirbazı bir adım ilerletiyordu; o adım elle santim yazma
+   * adımıydı ve oradaki "Kutuyu kur" düğmesi kapalı olduğu için (PANEL
+   * .olcuKutusu) yol çıkmaz sokağa giriyordu — kullanıcının gördüğü "henüz
+   * hazır değil" notu da bu yüzden duruyordu.
+   *
+   * Kutuyu kuran hesap olcuKutusunuKur ile aynı; ayrılan tek şey ölçünün
+   * nereden geldiği.
+   */
+  const elleDuzenlemeyeGec = () => {
+    const kaynak = ozelSahne?.kaynak
+    if ((!refPxCm && !refDuzlem) || !(kaynak?.w > 0)) {
+      setKutuMesaj(t('ref2.onceReferans'))
+      return
+    }
+    const enCm = tasarimWm * 100
+    const boyCm = tasarimHm * 100
+    if (!(enCm > 0) || !(boyCm > 0)) return
+    const aci = refAciKullan ? refAci?.kutuAci || 0 : 0
+    const k = refDuzlem
+      ? duzlemdeKutu(refDuzlem, enCm, boyCm, duzlemMerkezi(refDuzlem))
+      : kutuDortgeni(
+          enCm,
+          boyCm,
+          refPxCm,
+          kaynak.w,
+          kaynak.h,
+          kutuYerlesimMerkezi(refNokta[0], refNokta[1], enCm, boyCm, refPxCm, kaynak.w, kaynak.h, aci),
+          aci,
+        )
+    if (!k) {
+      setKutuMesaj(t('ref2.onceReferans'))
+      return
+    }
+    setOlcuKutu({ enCm, boyCm })
+    setHedefKose(k.koseler)
+    setTaslakKutu(k.koseler)
+    setHedefTur('taslak')
+    /*
+     * Tasarım AÇIK başlıyor: manuel yolda kullanıcı tasarımı taşıyacak,
+     * önce onu görmesi gerekiyor. (Kutu kurma yolunda gizli başlıyor çünkü
+     * orada bir sonraki iş kutunun ölçüsünü onaylamak.)
+     */
+    setTasarimAcik(true)
+    setKutuDurus({ roll: aci, yaw: 0, pitch: 0 })
+    setKutuDuzen('hepsi')
+    setRefEskidi(false)
+    setKutuMesaj(k.tasiyor ? t('ref2.kadrajaSigmaz') : null)
+    /* İşaretleme kapanıyor: artık taşınan şey tasarımın kendisi. */
+    setRefKipi(false)
+    setAlanKipi(false)
+    setSihirbazAdim(4)
   }
 
   /*
@@ -9535,6 +9613,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             onGeri={sihirbazGeri}
                             onIleri={sihirbazIleri}
                             onKutuKur={sihirbazKutuKur}
+                            onElleDuzenle={elleDuzenlemeyeGec}
                             onBitir={sihirbazBitir}
                             onKapat={sihirbaziKapat}
                             /*
@@ -9571,8 +9650,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                              * Artık ölçü KESİN bir odakla kurulmadıysa uyarı
                              * ve ikinci referans teklifi çıkıyor.
                              */
-                            odakTahminMi={alanNokta.length === 4 && !odakKesin}
-                            odakCozuldu={odakKesin}
+                            odakTahminMi={alanNokta.length === 4 && !odakKesin && !alanOlcusuYazildi}
+                            odakCozuldu={odakKesin || alanOlcusuYazildi}
                             odakExiften={exifOdak > 1 && !(cozulenOdak > 1) && !(odakYazilandan > 1)}
                             ref2Kipi={ref2Kipi}
                             ref2NoktaSayisi={ref2Nokta.length}

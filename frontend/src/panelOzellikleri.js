@@ -83,12 +83,12 @@ export const PANEL = {
   /*
    * MANUEL DÜZENLE — referanstan sonraki ikinci yol.
    *
-   * SEÇENEK GÖRÜNÜYOR ama İŞLEVİ YOK: akışta iki yol olduğu baştan belli
-   * olsun isteniyor, manuel yolun kendisi sonra tasarlanacak. Basılınca
-   * yalnızca "yakında" notu çıkıyor; eski cm'li kutu yolu açılmıyor, çünkü
-   * onu tamamlayan düğmeler kapalı (bkz. olcuKutusu).
+   * Köşe işaretlemek yok. Tasarım, referanstan gelen ölçekle KENDİ GERÇEK
+   * BOYUTUNDA fotoğrafa konuyor; kullanıcı gövdesinden tutup taşıyor,
+   * köşelerinden çekip duvara oturtuyor. Büyütüp küçültmek yalnızca kabin
+   * sayısıyla — serbest gerdirme yok — böylece santim ölçüsü hep doğru
+   * kalıyor. Bu, 4. adımın (Kutuyu yerine koy) işaretlenmiş alan olmadan
+   * çalışan hâli; ayrı bir ekran değil.
    */
   manuelDuzenle: true,
-  /* Manuel yolun kendisi çalışıyor mu — şimdilik hayır. */
-  manuelCalisir: false,
 }

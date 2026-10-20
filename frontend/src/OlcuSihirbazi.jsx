@@ -47,9 +47,7 @@ function Nokta({ dolu, etkin }) {
 import { PANEL } from './panelOzellikleri.js'
 
 export default function OlcuSihirbazi(props) {
-  /* "Manuel düzenle" basıldı mı — yalnızca notu göstermek için. */
-  const [manuelNot, setManuelNot] = useState(false)
-  return <SihirbazKart {...props} manuelNot={manuelNot} setManuelNot={setManuelNot} />
+  return <SihirbazKart {...props} />
 }
 
 function SihirbazKart({
@@ -132,7 +130,6 @@ function SihirbazKart({
   onAlanSigdir = null,
   /* L'nin son adımında çizilen kanat şekli tuşları (bkz. App.jsx). */
   kanatSekli,
-  manuelNot,
   setManuelNot,
   lKoseOran = null,
   /* İşaretlenen çizgi dik mi — yatay bir çizgiden köşe çıkmaz. */
@@ -154,9 +151,45 @@ function SihirbazKart({
   onGeri,
   onIleri,
   onKutuKur,
+  /* Manuel yol: köşe işaretlemeden doğrudan yerleştirme adımına. */
+  onElleDuzenle,
   onBitir,
   onKapat,
 }) {
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * DURUMLAR EN ÜSTTE — HEPSİ, İSTİSNASIZ.
+   *
+   * Bu dosyada aynı tuzağa dört kez düşüldü: bir durum (useState) ihtiyaç
+   * duyulan yerin yanına yazıldı, ama onu okuyan JSX bir const'un içinde
+   * DAHA YUKARIDA kuruluyordu. Const'lar yukarıdan aşağı çalıştığı için
+   * henüz tanımlanmamış bir değeri okumak çalışma anında hata veriyor
+   * (TDZ) ve kart çizilirken uygulama hata ekranına düşüyor.
+   *
+   * Belirtisi her seferinde aynıydı: bir adımda her şey yolunda, sonraki
+   * adımda "Bir şeyler ters gitti".
+   *
+   * Kural: useState / useRef / useMemo yalnızca buraya yazılır. Nerede
+   * kullanıldığının bir önemi yok; tanım her zaman en üstte.
+   * eslint "no-use-before-define" bunu artık derlemeden önce yakalıyor.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+
+  /*
+   * AYRINTILAR "?" ARKASINDA.
+   *
+   * Kartta adım başına dört paragrafa kadar yazı birikmişti; kullanıcı
+   * yapılacak işi aramak zorunda kalıyordu. Her adımda bir cümle duruyor,
+   * gerisi başlıktaki "?" ile açılıyor. Tercih kart boyunca hatırlanıyor:
+   * ayrıntıyı isteyen her adımda yeniden açmak zorunda kalmasın.
+   */
+  const [detayAcik, setDetayAcik] = useState(false)
+
+  /*
+   * MESAFE YAZARKEN ALAN KENDİ METNİNİ GÖSTERİYOR: aradaki yarım
+   * yazımlar — "6," gibi — sayıya çevrilip geri yazılsaydı imleç kayardı.
+   */
+  const [mesafeYazi, setMesafeYazi] = useState(null)
   /*
    * ADIM 0'DA DA ÇİZİLİYOR — ALAN İŞARETLENİYORSA.
    *
@@ -268,16 +301,6 @@ function SihirbazKart({
    * Düğmeye basınca ya da alandan çıkınca yerel metin bırakılıyor ve
    * gösterilen değer yine dışarıdan geliyor.
    */
-  /*
-   * AYRINTILAR "?" ARKASINDA.
-   *
-   * Kartta adım başına dört paragrafa kadar yazı birikmişti; kullanıcı
-   * yapılacak işi aramak zorunda kalıyordu. Her adımda bir cümle duruyor,
-   * gerisi başlıktaki "?" ile açılıyor. Tercih kart boyunca hatırlanıyor:
-   * ayrıntıyı isteyen her adımda yeniden açmak zorunda kalmasın.
-   */
-  const [detayAcik, setDetayAcik] = useState(false)
-  const [mesafeYazi, setMesafeYazi] = useState(null)
   const mesafeGoster =
     mesafeYazi ?? (mesafeM == null ? '' : Number(mesafeM).toFixed(1).replace('.', ','))
   const mesafeYaz = (metin) => {
@@ -662,21 +685,22 @@ function SihirbazKart({
               {PANEL.manuelDuzenle && (
                 <>
                   {/*
-                    Seçenek görünüyor, işlevi yok (bkz. panelOzellikleri
-                    manuelCalisir). Akışta iki yol olduğu baştan belli olsun
-                    diye duruyor; basınca yalnızca not çıkıyor.
+                    İKİNCİ YOL: köşe işaretlemeden doğrudan yerleştirmeye.
+                    Tasarım referanstan gelen ölçekle kendi gerçek boyutunda
+                    çiziliyor; 4. adım işaretlenmiş alan olmadan da çalışıyor
+                    (sığdırma düğmesi orada zaten alana bağlı).
                   */}
                   <button
                     type="button"
-                    onClick={() => (PANEL.manuelCalisir ? onIleri?.() : setManuelNot(true))}
+                    onClick={() => onElleDuzenle?.()}
                     disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
                     className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
                   >
                     {t('sih.elleDuzenle')}
                   </button>
-                  {manuelNot && !PANEL.manuelCalisir && (
-                    <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>
-                      {t('sih.manuelYakinda')}
+                  {detayAcik && (
+                    <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                      {t('sih.elleDuzenleNot')}
                     </p>
                   )}
                 </>
@@ -861,6 +885,17 @@ function SihirbazKart({
                 (montaj payı bırakarak, bkz. sigdirDortgen). İkisi ayrı şey:
                 biri gerçek ölçü, öteki "şurayı kaplasın".
               */}
+              {/*
+                ALAN YOKKEN (manuel yol) ÖLÇÜ KABİN SAYISIYLA DEĞİŞİYOR.
+                Kutuyu köşelerinden çekmek yalnızca duruşunu veriyor; santim
+                ölçüsü soldaki sütun/satır sayısından geliyor. Sığdırma
+                düğmesi burada yok, çünkü sığdırılacak bir alan yok.
+              */}
+              {!alanVar && (
+                <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                  {t('sih.elleOlcuNot')}
+                </p>
+              )}
               {alanVar && onAlanSigdir && (
                 <>
                   {/*

@@ -571,10 +571,15 @@ const dict = {
     en: 'Fit the design to the measured area',
     ar: 'ملاءمة التصميم مع المنطقة المقاسة',
   },
-  'sih.manuelYakinda': {
-    tr: 'Manuel düzenleme henüz hazır değil; şimdilik "Ölçüm ile ayarla" ile ilerleyin.',
-    en: 'Manual editing is not ready yet; use "Set by measuring" for now.',
-    ar: 'التحرير اليدوي غير جاهز بعد؛ استخدم «الضبط بالقياس» في الوقت الحالي.',
+  'sih.elleDuzenleNot': {
+    tr: 'Köşe işaretlemeden ilerler: tasarım gerçek ölçüsüyle fotoğrafa konur, siz taşıyıp duvara oturtursunuz.',
+    en: 'Skips corner marking: the design is placed at its real size and you move it onto the wall yourself.',
+    ar: 'يتخطى تحديد الزوايا: يوضع التصميم بمقاسه الحقيقي وتحركه أنت إلى الجدار.',
+  },
+  'sih.elleOlcuNot': {
+    tr: 'Ölçü soldaki kabin sayısından geliyor; köşeleri çekmek yalnızca kutunun duruşunu değiştirir.',
+    en: 'The size comes from the cabinet count on the left; dragging corners only changes how the box sits.',
+    ar: 'يأتي المقاس من عدد الخزائن على اليسار؛ سحب الزوايا يغيّر وضع المربع فقط.',
   },
   'sih.alanOlculen': {
     tr: 'İşaretlenen alanın ölçüsü',
