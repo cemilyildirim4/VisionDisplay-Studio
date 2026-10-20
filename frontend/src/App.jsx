@@ -3964,13 +3964,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Ekran türü (düz/kavisli) ve kavis miktarı da aynı sebeple burada.
    * ───────────────────────────────────────────────────────────────────────
    */
+  /*
+   * MODEL EKRAN BAŞINA SAKLANMIYOR: bütün ekranlar aynı modeli kullanıyor
+   * (ürün kararı). Kayıtta durması, geri yüklenmediği hâlde "her ekranın
+   * kendi modeli var" izlenimi bırakıyordu.
+   */
   const ekranAyariAnlik = () => ({
     cols,
     rows,
     orientation,
     screenType,
     curveAmount,
-    model: previewModel?.code ?? null,
     content,
     contentUrl: contentUrl || null,
   })
@@ -4013,6 +4017,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const yeniEkranaBasla = () => {
     setAktifEkranId(yeniEkranKimligi())
     setAktifSira(sonrakiSira())
+    /*
+     * YENİ EKRAN BOŞ BAŞLIYOR.
+     *
+     * İçerik bir önceki ekrandan devralınıyordu; oysa yeni ekran ayrı bir
+     * ürün ve içeriği ayrıca seçiliyor. Varsayılan LED (boş ekran).
+     */
+    setContent('led')
+    if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
+    setContentUrl(null)
     setAlanNokta([])
     setAlanElleEn('')
     setAlanElleBoy('')
@@ -4152,7 +4165,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
   }
 
-  const ekranSil = (id) => setSabitEkranlar((l) => l.filter((e) => e.id !== id))
+  /*
+   * KALDIRMAK ONAY İSTİYOR.
+   *
+   * Ekranın alanı, ölçüsü, dizilimi ve içeriği onunla birlikte gidiyor ve
+   * geri alma yok; yanlışlıkla basılan bir düğme bütün bir ekranın kurulum
+   * emeğini siliyordu.
+   */
+  const ekranSil = (id) => {
+    if (!window.confirm(t('ekran.silOnay'))) return
+    setSabitEkranlar((l) => l.filter((e) => e.id !== id))
+  }
 
   /*
    * ELLE AÇIYI DÖRTGENE UYGULAR.
@@ -7955,7 +7978,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {scene === 'ozel' && ozelSahne && (
             <div className="mb-3">
               <h2 className="text-[25px] font-bold tracking-tight m-0 mb-1">{t('ekran.coklu')}</h2>
-              <p className="text-[14px] leading-snug text-neutral-400 dark:text-neutral-500 m-0 mb-2">
+              <p className="text-[15px] leading-snug text-neutral-400 dark:text-neutral-500 m-0 mb-2">
                 {t('ekran.cokluIpucu')}
               </p>
               <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-2">
@@ -7971,23 +7994,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         key="aktif"
                         className="flex items-center gap-2 rounded-lg border-2 btn-selected px-3 py-2.5"
                       >
-                        <span className="flex-1 text-[17px] font-semibold">
+                        <span className="flex-1 text-[18px] font-semibold">
                           {e.sira}. {t('ekran.tekil')}
                         </span>
-                        <span className="text-[14px] opacity-70">{t('ekran.duzenleniyor')}</span>
+                        <span className="text-[15px] opacity-70">{t('ekran.duzenleniyor')}</span>
                       </li>
                     ) : (
                       <li
                         key={e.id}
                         className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2"
                       >
-                        <span className="flex-1 text-[17px] text-neutral-700 dark:text-neutral-200">
+                        <span className="flex-1 text-[18px] text-neutral-700 dark:text-neutral-200">
                           {e.sira}. {t('ekran.tekil')}
                         </span>
                         <button
                           type="button"
                           onClick={() => ekraniDuzenle(e.id)}
-                          className="px-3 py-1.5 rounded-lg text-[15px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                          className="px-3 py-2 rounded-lg text-[16px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
                         >
                           {t('ekran.duzenle')}
                         </button>
@@ -8016,7 +8039,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 type="button"
                 onClick={ekranEkle}
                 disabled={!koseMutlak}
-                className="mt-2 w-full py-2.5 rounded-lg text-[17px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
+                className="mt-2 w-full py-3 rounded-lg text-[19px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
                 {t('ekran.ekle')}
               </button>

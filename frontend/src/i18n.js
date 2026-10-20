@@ -287,9 +287,14 @@ const dict = {
   'ekran.ekle': { tr: 'Ekran ekle', en: 'Add screen', ar: 'إضافة شاشة' },
   'ekran.duzenle': { tr: 'Düzenle', en: 'Edit', ar: 'تحرير' },
   'ekran.sil': { tr: 'Kaldır', en: 'Remove', ar: 'إزالة' },
+  'ekran.silOnay': {
+    tr: 'Bu ekran kaldırılsın mı? Alanı, ölçüsü ve içeriği de silinir; geri alınamaz.',
+    en: 'Remove this screen? Its area, size and content go with it, and this cannot be undone.',
+    ar: 'هل تريد إزالة هذه الشاشة؟ ستُحذف منطقتها ومقاسها ومحتواها دون إمكانية التراجع.',
+  },
   'ekran.duzenleniyor': { tr: 'düzenleniyor', en: 'editing', ar: 'قيد التحرير' },
   'ekran.cokluIpucu': {
-    tr: 'Duran ekranı yerleştirin, sonra "Ekran ekle" deyin: olduğu yere sabitlenir ve elinizde aynı ölçüde yenisi kalır. Sabit bir ekrana tıklayarak ya da "Düzenle" ile ona geri dönebilirsiniz.',
+    tr: 'Aynı fotoğrafa birden çok ekran koyabilirsiniz. "Ekran ekle" duran ekranı olduğu yere sabitler ve yeni ekran için alan işaretlemenizi ister. Bir ekrana fotoğraftan tıklayarak ya da "Düzenle" ile ona geri dönersiniz.',
     en: 'Place the current screen, then press "Add screen": it is pinned where it stands and you get a new one of the same size. Click a pinned screen or press "Edit" to go back to it.',
     ar: 'ضع الشاشة الحالية ثم اضغط «إضافة شاشة»: تُثبّت في مكانها وتحصل على واحدة جديدة بالمقاس نفسه.',
   },
