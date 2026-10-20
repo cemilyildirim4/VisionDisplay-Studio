@@ -474,27 +474,14 @@ export default function ReferansSecici({
         <>
           <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="rgba(0,0,0,0.45)" strokeWidth="5.5" strokeDasharray="8 5" />
           <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={renk} strokeWidth="3" strokeDasharray="8 5" />
-          <g>
-            <rect
-              x={rozet.x - 46}
-              y={rozet.y}
-              width="92"
-              height="22"
-              rx="6"
-              fill={renk}
-              opacity="0.92"
-            />
-            <text
-              x={rozet.x}
-              y={rozet.y + 16}
-              textAnchor="middle"
-              fontSize="12.5"
-              fontWeight="700"
-              fill="#fff"
-            >
-              {Math.round(gorselUzunlukPx)} px
-            </text>
-          </g>
+          {/*
+            PİKSEL ROZETİ KALDIRILDI.
+
+            Çizginin ortasında "236 px" yazıyordu. Müşteriye hiçbir şey
+            anlatmayan teknik bir sayı; üstelik fotoğrafın tam işaretlenen
+            yerini kapatıyordu. Çizginin kısa olup olmadığı zaten çizginin
+            RENGİNDEN (turuncu) ve kartın yazısından anlaşılıyor.
+          */}
         </>
       )}
 

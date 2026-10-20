@@ -1079,6 +1079,8 @@ export default function WallPreview({
             >
               {/* Ekranlar şeridi (ortalanmış, alta hizalı) */}
               <div
+                /* Testin görünürlüğü ölçebilmesi için sabit işaret. */
+                data-tasarim-yuz
                 style={{
                   position: 'absolute',
                   left: marginXpx,
@@ -1487,6 +1489,8 @@ export default function WallPreview({
             */}
             <div
               ref={ekranKutuRef}
+              /* Testin görünürlüğü ölçebilmesi için sabit işaret. */
+              data-tasarim-yuz
               style={{
                 width: screenW,
                 height: screenH,

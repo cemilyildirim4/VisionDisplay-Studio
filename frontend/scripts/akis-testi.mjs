@@ -5,16 +5,17 @@
  * Hata ancak o kartın çizildiği anda ortaya çıkıyor, yani akışın GERÇEKTEN
  * yürütülmesi gerekiyor.
  *
- * Denenen akış (şartname 1.1'deki iki yol):
- *   model seç → fotoğraf yükle
- *   A) "Belirli bir alanım var"  → 4 köşe → alanı onayla → sığdır → bitir
- *   B) "Belirli bir alanım yok"  → referans (2 nokta + cm) → "Ölçüm ile
- *      ayarla" → 4 köşe → alanı onayla → sığdır → bitir
- *   C) "Manuel düzenle" → köşe işaretlemeden doğrudan yerleştirme adımı
+ * Denenen akış (yeni sıra):
+ *   model seç → fotoğraf yükle → REFERANS (2 nokta + santim) → tek seçim
+ *   A) "Alanı işaretle"    → 4 köşe → onayla → en/boy → sığdır → bitir
+ *   B) "Serbest yerleştir" → kutu kabin sayısıyla büyüyor mu → bitir
  *
- * Her adımdan sonra iki şey denetleniyor: hata ekranı ("Bir şeyler ters
- * gitti") ve sayfa hatası (konsoldaki ReferenceError vb.). Biri çıkarsa
- * test o anda düşüyor ve hangi adımda olduğu yazılıyor.
+ * Çökme denetiminin yanında iki ÜRÜN denetimi daha var, ikisi de canlıda
+ * çıkan hatalardan geliyor:
+ *   • Tasarım alan onaylanınca GERÇEKTEN görünüyor mu (saydamlık > 0,
+ *     ölçüsü var mı). Bir ara sığdırma kabin sayısını hesaplıyor ama
+ *     tasarım çizilmiyordu.
+ *   • Serbest yerleştirmede kutu, sütun artırılınca büyüyor mu.
  *
  * ÇALIŞTIRMA: önce `npm run build`, sonra API'nin CORS listesindeki bir
  * portta önizleme (`npx vite preview --port 5174`), sonra bu betik.
@@ -39,6 +40,124 @@ const tarayici = await chromium.launch({
 
 let hataSayisi = 0
 
+/** Tuvalin dikdörtgeni — köşeler buna göre tıklanıyor. */
+const tuval = (s) =>
+  s.evaluate(() => {
+    const m = document.querySelector('#pdf-onizleme')
+    const r = m.getBoundingClientRect()
+    return { x: r.x, y: r.y, w: r.width, h: r.height }
+  })
+
+/** Sihirbaz kartının düğmeleri ve sayı kutusu var mı. */
+const kartBilgisi = (s) =>
+  s.evaluate(() => {
+    const k = [...document.querySelectorAll('div')].find(
+      (d) => /border-brand/.test(d.className || '') && /rounded-xl/.test(d.className || ''),
+    )
+    if (!k) return { yok: true, sayiKutusu: false }
+    return {
+      dugmeler: [...k.querySelectorAll('button')].map((b) => (b.textContent || '').trim()),
+      sayiKutusu: !!k.querySelector('input[type="number"]'),
+    }
+  })
+
+/**
+ * TASARIM GERÇEKTEN GÖRÜNÜYOR MU.
+ *
+ * Yalnızca "çökmedi" yetmiyor: tasarım opacity 0 ile çizilip hiç
+ * görünmeyebiliyor (canlıda tam olarak bu oldu). Yüzün kendi saydamlığı
+ * ve bütün atalarınınki çarpılıyor, ölçüsü de denetleniyor.
+ */
+const tasarimGorunur = (s) =>
+  s.evaluate(() => {
+    const e = document.querySelector('[data-tasarim-yuz]')
+    if (!e) return { var: false }
+    let saydamlik = 1
+    for (let d = e; d && d !== document.documentElement; d = d.parentElement) {
+      saydamlik *= Number(getComputedStyle(d).opacity || 1)
+    }
+    const r = e.getBoundingClientRect()
+    return { var: true, saydamlik: Number(saydamlik.toFixed(2)), en: Math.round(r.width), boy: Math.round(r.height) }
+  })
+
+/** Sihirbaz kartının içindeki ilk sayı kutusuna yazar (referans santimi). */
+const kartaSayiYaz = (s, deger) =>
+  s.evaluate((v) => {
+    const kart = [...document.querySelectorAll('div')].find(
+      (d) => /border-brand/.test(d.className || '') && /rounded-xl/.test(d.className || ''),
+    )
+    const k = kart?.querySelector('input[type="number"]')
+    if (!k) return false
+    const yaz = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+    yaz.call(k, String(v))
+    k.dispatchEvent(new Event('input', { bubbles: true }))
+    return true
+  }, deger)
+
+/** Kartın "en" / "boy" kutularını doldurur (alan onaylandıktan sonra çıkıyorlar). */
+async function olcuYaz(s, en, boy) {
+  const sayi = await s.evaluate(
+    ([e, b]) => {
+      const kart = [...document.querySelectorAll('div')].find(
+        (d) => /border-brand/.test(d.className || '') && /rounded-xl/.test(d.className || ''),
+      )
+      if (!kart) return 0
+      const yaz = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+      let n = 0
+      for (const i of kart.querySelectorAll('input[type="number"]')) {
+        if (i.placeholder !== 'en' && i.placeholder !== 'boy') continue
+        yaz.call(i, String(i.placeholder === 'en' ? e : b))
+        i.dispatchEvent(new Event('input', { bubbles: true }))
+        n++
+      }
+      return n
+    },
+    [en, boy],
+  )
+  await s.waitForTimeout(1200)
+  return sayi
+}
+
+/** Dört köşeyi işaretler (saat yönünde, makul bir dikdörtgen). */
+async function dortKose(s) {
+  const t = await tuval(s)
+  const x = t.x + t.w * 0.33
+  const y = t.y + t.h * 0.26
+  const en = t.w * 0.26
+  const boy = t.h * 0.28
+  for (const [px, py] of [
+    [x, y],
+    [x + en, y + boy * 0.06],
+    [x + en, y + boy],
+    [x, y + boy * 0.94],
+  ]) {
+    await s.mouse.move(px, py)
+    await s.mouse.down()
+    await s.mouse.up()
+    await s.waitForTimeout(420)
+  }
+}
+
+/** Sol paneldeki bir adımlayıcıyı bir artırır (etiketine göre bulunuyor). */
+const kabinArtir = (s, etiketMetni) =>
+  s.evaluate((q) => {
+    const etiket = [...document.querySelectorAll('aside *')].find(
+      (e) => e.children.length === 0 && (e.textContent || '').trim() === q,
+    )
+    if (!etiket) return false
+    /* Adımlayıcı etiketin yakınındaki kutuda; "+" son düğme. */
+    let kutu = etiket.parentElement
+    for (let i = 0; i < 4 && kutu; i++) {
+      const d = [...kutu.querySelectorAll('button')]
+      if (d.length >= 2) {
+        d[d.length - 1].click()
+        return true
+      }
+      kutu = kutu.parentElement
+    }
+    return false
+  }, etiketMetni)
+
 /** Bir akışı yürütür; her adımda çökme denetimi yapar. */
 async function akis(baslik, yol) {
   console.log('\n═══ ' + baslik + ' ═══')
@@ -61,7 +180,6 @@ async function akis(baslik, yol) {
   })
 
   let dusuk = false
-  /** Adımdan sonra çökme var mı. */
   const denetle = async (adim) => {
     if (dusuk) return false
     const govde = await s.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' '))
@@ -77,8 +195,12 @@ async function akis(baslik, yol) {
     console.log('  ✓ ' + adim)
     return true
   }
+  const dus = (neden) => {
+    console.log('  ✗ ' + neden)
+    hataSayisi++
+    return false
+  }
 
-  /** Metni tam eşleşen etkin düğmeye basar. */
   const bas = async (metin, bekle = 1500) => {
     const oldu = await s.evaluate((q) => {
       const d = [...document.querySelectorAll('button')].find(
@@ -124,7 +246,34 @@ async function akis(baslik, yol) {
     await s.waitForTimeout(INCELEME_SURESI)
     if (!(await denetle('fotoğraf yüklendi ve incelendi'))) return false
 
-    const sonuc = await yol({ s, bas, denetle, icerir })
+    /* YENİ SIRA: eski giriş sorusu kalkmış, ilk adım referans olmalı. */
+    if (await icerir('Belirli bir alanım')) return dus('eski giriş sorusu hâlâ çıkıyor')
+    if (!(await icerir('Referans ölçü'))) return dus('fotoğraftan sonra referans adımı açılmadı')
+    if (!(await denetle('ilk adım referans'))) return false
+
+    const t = await tuval(s)
+    for (const [px, py] of [
+      [t.x + t.w * 0.3, t.y + t.h * 0.7],
+      [t.x + t.w * 0.3, t.y + t.h * 0.3],
+    ]) {
+      await s.mouse.move(px, py)
+      await s.mouse.down()
+      await s.mouse.up()
+      await s.waitForTimeout(500)
+    }
+    if (!(await bas('Devam', 1600))) return dus('iki noktadan sonra "Devam" bulunamadı')
+    if (!(await kartaSayiYaz(s, 210))) return dus('referans santim kutusu bulunamadı')
+    await s.waitForTimeout(900)
+    if (!(await icerir('Ölçek alındı'))) return dus('ölçek alınmadı (santim yazıldığı hâlde)')
+    if (!(await bas('Devam', 1800))) return dus('ölçekten sonra "Devam" bulunamadı')
+    if (!(await denetle('referans tamamlandı, seçim adımı açıldı'))) return false
+
+    /* Her kart tek iş yapmalı: seçim kartında santim kutusu olmamalı. */
+    if ((await kartBilgisi(s)).sayiKutusu) {
+      return dus('seçim kartında santim kutusu da var (kart iki iş yapıyor)')
+    }
+
+    const sonuc = await yol({ s, bas, denetle, icerir, dus })
     if (dusuk) return false
     return sonuc !== false
   } catch (e) {
@@ -136,219 +285,63 @@ async function akis(baslik, yol) {
   }
 }
 
-/** Tuvalin dikdörtgeni — köşeler buna göre tıklanıyor. */
-const tuval = (s) =>
-  s.evaluate(() => {
-    const m = document.querySelector('#pdf-onizleme')
-    const r = m.getBoundingClientRect()
-    return { x: r.x, y: r.y, w: r.width, h: r.height }
-  })
-
-/** Dört köşeyi işaretler (saat yönünde, makul bir dikdörtgen). */
-async function dortKose(s) {
-  const t = await tuval(s)
-  const x = t.x + t.w * 0.33
-  const y = t.y + t.h * 0.26
-  const en = t.w * 0.26
-  const boy = t.h * 0.28
-  for (const [px, py] of [
-    [x, y],
-    [x + en, y + boy * 0.06],
-    [x + en, y + boy],
-    [x, y + boy * 0.94],
-  ]) {
-    await s.mouse.move(px, py)
-    await s.mouse.down()
-    await s.mouse.up()
-    await s.waitForTimeout(420)
-  }
-}
-
-/** Sihirbaz kartının içindeki ilk sayı kutusuna yazar (referans cm'si). */
-async function kartaSayiYaz(s, deger) {
-  return s.evaluate((v) => {
-    const kart = [...document.querySelectorAll('div')].find(
-      (d) => /border-brand/.test(d.className || '') && /rounded-xl/.test(d.className || ''),
-    )
-    const k = kart?.querySelector('input[type="number"]')
-    if (!k) return false
-    const yaz = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
-    yaz.call(k, String(v))
-    k.dispatchEvent(new Event('input', { bubbles: true }))
-    return true
-  }, deger)
-}
-
-/**
- * Kartın "en" / "boy" kutularını doldurur.
- *
- * Kutular ALAN ONAYLANDIKTAN SONRA, yerleştirme adımında çıkıyor; köşeleri
- * işaretlerken kartta hiç sayı kutusu yok. Testin ilk sürümü bu yüzden
- * ölçüyü hiçbir yere yazamıyor ve sessizce geçiyordu.
- */
-async function olcuYaz(s, en, boy) {
-  const sayi = await s.evaluate(
-    ([e, b]) => {
-      const kart = [...document.querySelectorAll('div')].find(
-        (d) => /border-brand/.test(d.className || '') && /rounded-xl/.test(d.className || ''),
-      )
-      if (!kart) return 0
-      const yaz = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
-      let n = 0
-      for (const i of kart.querySelectorAll('input[type="number"]')) {
-        if (i.placeholder !== 'en' && i.placeholder !== 'boy') continue
-        yaz.call(i, String(i.placeholder === 'en' ? e : b))
-        i.dispatchEvent(new Event('input', { bubbles: true }))
-        n++
-      }
-      return n
-    },
-    [en, boy],
-  )
-  await s.waitForTimeout(1200)
-  return sayi
-}
-
-/* ── A) "Belirli bir alanım var" ─────────────────────────────────────── */
-const a = await akis('A — BELİRLİ BİR ALANIM VAR', async ({ s, bas, denetle, icerir }) => {
-  if (!(await bas('Belirli bir alanım var', 1800))) {
-    console.log('  ✗ "Belirli bir alanım var" düğmesi bulunamadı')
-    hataSayisi++
-    return false
-  }
-  if (!(await denetle('alan yolu seçildi'))) return false
+/* ── A) ALANI İŞARETLE ───────────────────────────────────────────────── */
+const a = await akis('A — ALANI İŞARETLE', async ({ s, bas, denetle, icerir, dus }) => {
+  if (!(await bas('Alanı işaretle', 1800))) return dus('"Alanı işaretle" düğmesi bulunamadı')
+  if (!(await denetle('alan işaretlemeye geçildi'))) return false
 
   await dortKose(s)
   if (!(await denetle('4 köşe işaretlendi'))) return false
 
-  await bas('Alanı onayla', 2200)
+  await bas('Alanı onayla', 2500)
   if (!(await denetle('alan onaylandı'))) return false
 
-  if ((await olcuYaz(s, 300, 150)) < 2) {
-    console.log('  ✗ en/boy kutuları bulunamadı')
-    hataSayisi++
-    return false
+  const g1 = await tasarimGorunur(s)
+  console.log('  · tasarım onaydan sonra    :', JSON.stringify(g1))
+  if (!g1.var || !(g1.saydamlik > 0.05) || !(g1.en > 10)) {
+    return dus('tasarım görünmüyor (alan onaylandığı hâlde)')
   }
+
+  if ((await olcuYaz(s, 300, 150)) < 2) return dus('en/boy kutuları bulunamadı')
   if (!(await denetle('gerçek en/boy yazıldı'))) return false
 
-  /*
-   * Şartname: bu yolda "Tasarımı ölçüye sığdır" ÇALIŞIR. Ölçü yazılınca
-   * odak çözülüyor ve düğme açılıyor; çıkmıyorsa kusur vardır.
-   */
   if (!(await bas('Tasarımı ölçüye sığdır', 2500))) {
-    console.log('  ✗ "Tasarımı ölçüye sığdır" çıkmadı (en/boy yazıldığı hâlde)')
-    hataSayisi++
-    return false
+    return dus('"Tasarımı ölçüye sığdır" çıkmadı (en/boy yazıldığı hâlde)')
   }
   if (!(await denetle('ölçüye sığdırıldı'))) return false
 
+  const g2 = await tasarimGorunur(s)
+  console.log('  · tasarım sığdırmadan sonra:', JSON.stringify(g2))
+  if (!(g2.saydamlik > 0.05) || !(g2.en > 10)) return dus('sığdırmadan sonra tasarım görünmüyor')
+
   await bas('Bitir ve tasarımı göster', 2500)
   if (!(await denetle('bitirildi'))) return false
-
-  const sihirbazKapandi = !(await icerir('Alanı onayla'))
-  console.log('  · sihirbaz kapandı :', sihirbazKapandi ? 'evet' : 'HAYIR')
+  console.log('  · sihirbaz kapandı         :', (await icerir('Alanı onayla')) ? 'HAYIR' : 'evet')
   return true
 })
 
-/* ── B) "Alanım yok" → referans → ölçüm ile ayarla ───────────────────── */
-const b = await akis('B — ALANIM YOK → ÖLÇÜM İLE AYARLA', async ({ s, bas, denetle, icerir }) => {
-  if (!(await bas('Belirli bir alanım yok', 1800))) {
-    console.log('  ✗ "Belirli bir alanım yok" düğmesi bulunamadı')
-    hataSayisi++
-    return false
+/* ── B) SERBEST YERLEŞTİR ────────────────────────────────────────────── */
+const b = await akis('B — SERBEST YERLEŞTİR', async ({ s, bas, denetle, icerir, dus }) => {
+  if (!(await bas('Serbest yerleştir', 2500))) return dus('"Serbest yerleştir" düğmesi bulunamadı')
+  if (!(await denetle('serbest yerleştirmeye geçildi'))) return false
+
+  if (await icerir('henüz hazır değil')) return dus('"henüz hazır değil" notu hâlâ çıkıyor')
+  if (!(await icerir('Kutuyu gövdesinden tutup'))) return dus('yerleştirme adımı açılmadı')
+  if (await icerir('Yerleşim alanının ölçüsü')) return dus('eski santim kutusu adımına düştü')
+
+  const once = await tasarimGorunur(s)
+  console.log('  · başlangıç kutusu         :', JSON.stringify(once))
+  if (!once.var || !(once.saydamlik > 0.05) || !(once.en > 10)) {
+    return dus('serbest yerleştirmede tasarım görünmüyor')
   }
-  if (!(await denetle('referans yolu seçildi'))) return false
 
-  /* Referans: iki nokta. */
-  const t = await tuval(s)
-  for (const [px, py] of [
-    [t.x + t.w * 0.3, t.y + t.h * 0.7],
-    [t.x + t.w * 0.3, t.y + t.h * 0.3],
-  ]) {
-    await s.mouse.move(px, py)
-    await s.mouse.down()
-    await s.mouse.up()
-    await s.waitForTimeout(500)
-  }
-  if (!(await denetle('referansın iki ucu işaretlendi'))) return false
-
-  if (!(await bas('Devam', 1600))) {
-    console.log('  ✗ referanstan sonra "Devam" bulunamadı')
-    hataSayisi++
-    return false
-  }
-  if (!(await kartaSayiYaz(s, 210))) {
-    console.log('  ✗ referans cm kutusu bulunamadı')
-    hataSayisi++
-    return false
-  }
-  await s.waitForTimeout(800)
-  if (!(await denetle('referans ölçüsü yazıldı'))) return false
-
-  if (!(await icerir('Ölçek alındı'))) {
-    console.log('  ✗ ölçek alınmadı (cm yazıldığı hâlde)')
-    hataSayisi++
-    return false
-  }
-  if (!(await denetle('ölçek alındı'))) return false
-
-  if (!(await bas('Ölçüm ile ayarla', 2200))) {
-    console.log('  ✗ "Ölçüm ile ayarla" bulunamadı ya da kapalı')
-    hataSayisi++
-    return false
-  }
-  if (!(await denetle('ölçüm ile ayarla seçildi'))) return false
-
-  await dortKose(s)
-  if (!(await denetle('4 köşe işaretlendi'))) return false
-
-  await bas('Alanı onayla', 2200)
-  if (!(await denetle('alan onaylandı'))) return false
-
-  await bas('Tasarımı ölçüye sığdır', 2000)
-  await bas('Bitir ve tasarımı göster', 2500)
-  if (!(await denetle('bitirildi'))) return false
-  return true
-})
-
-/* ── C) "Manuel düzenle" ─────────────────────────────────────────────── */
-const c = await akis('C — MANUEL DÜZENLE', async ({ s, bas, denetle, icerir }) => {
-  await bas('Belirli bir alanım yok', 1800)
-  const t = await tuval(s)
-  for (const [px, py] of [
-    [t.x + t.w * 0.3, t.y + t.h * 0.7],
-    [t.x + t.w * 0.3, t.y + t.h * 0.3],
-  ]) {
-    await s.mouse.move(px, py)
-    await s.mouse.down()
-    await s.mouse.up()
-    await s.waitForTimeout(500)
-  }
-  await bas('Devam', 1600)
-  await kartaSayiYaz(s, 210)
-  await s.waitForTimeout(900)
-  if (!(await denetle('referans tamamlandı'))) return false
-
-  if (!(await bas('Manuel düzenle', 2200))) {
-    console.log('  ✗ "Manuel düzenle" düğmesi bulunamadı ya da kapalı')
-    hataSayisi++
-    return false
-  }
-  if (!(await denetle('manuel düzenle açıldı'))) return false
-
-  const yakinda = await icerir('henüz hazır değil')
-  console.log('  · "henüz hazır değil" notu :', yakinda ? 'HALA VAR ✗' : 'yok ✓')
-  if (yakinda) hataSayisi++
-
-  /* 4. adımın kendi metni ve bitir düğmesi: ikisi de oradaysa adım gerçekten açık. */
-  const yerlestirmede =
-    (await icerir('Kutuyu gövdesinden tutup')) && (await icerir('Bitir ve tasarımı göster'))
-  console.log('  · yerleştirme adımı açıldı :', yerlestirmede ? 'evet ✓' : 'HAYIR ✗')
-  if (!yerlestirmede) hataSayisi++
-  /* Çıkmaz sokak denetimi: eski cm kutusu adımına düşmüş olmamalı. */
-  const cikmazSokak = await icerir('Yerleşim alanının ölçüsü')
-  console.log('  · eski cm kutusu adımı     :', cikmazSokak ? 'ORAYA DÜŞTÜ ✗' : 'yok ✓')
-  if (cikmazSokak) hataSayisi++
+  const artti = (await kabinArtir(s, 'Sütunlar')) || (await kabinArtir(s, 'Sütun'))
+  if (!artti) return dus('sütun adımlayıcısı bulunamadı')
+  await s.waitForTimeout(2200)
+  const sonra = await tasarimGorunur(s)
+  console.log('  · sütun artınca            :', JSON.stringify(sonra))
+  if (!(sonra.en > once.en + 2)) return dus('kutu kabin sayısıyla büyümedi')
+  if (!(await denetle('kutu kabin sayısıyla büyüdü'))) return false
 
   await bas('Bitir ve tasarımı göster', 2500)
   if (!(await denetle('bitirildi'))) return false
@@ -358,9 +351,8 @@ const c = await akis('C — MANUEL DÜZENLE', async ({ s, bas, denetle, icerir }
 await tarayici.close()
 
 console.log('\n─────────────────────────────')
-console.log('A (alanım var)      :', a ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
-console.log('B (ölçüm ile ayarla):', b ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
-console.log('C (manuel düzenle)  :', c ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
+console.log('A (alanı işaretle)   :', a ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
+console.log('B (serbest yerleştir):', b ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
 if (hataSayisi > 0) {
   console.log('\nAKIS TESTI DUSTU — yayina alinmamali.')
   process.exitCode = 1

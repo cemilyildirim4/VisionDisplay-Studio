@@ -91,10 +91,6 @@ function SihirbazKart({
   alanKipi = false,
   alanNoktaSayisi = 0,
   alanVar = false,
-  /* GİRİŞ YOLU — "alanım var" / "alanım yok" (bkz. App.jsx girisYolu). */
-  girisYolu = null,
-  onGirisAlanVar = null,
-  onGirisAlanYok = null,
   /* Düzenlemede referans adımlarına dönülmüyor. */
   duzenlemede = false,
   onAlanTemizle = null,
@@ -209,8 +205,7 @@ function SihirbazKart({
    */
   const alanTekBasina = !!alanKipi
   /* Yol seçimi: adım da işaretleme de yokken kart yine de duruyor. */
-  const girisSecimi = !adim && !alanKipi && !girisYolu && !!onGirisAlanVar
-  if (!adim && !alanKipi && !girisSecimi) return null
+  if (!adim && !alanKipi) return null
 
   const girdi =
     'w-full min-w-0 rounded-md border border-neutral-300 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-100'
@@ -226,7 +221,7 @@ function SihirbazKart({
     : {
         1: t('sih.1.baslik'),
         2: t('sih.2.baslik'),
-        3: t('sih.3.baslik'),
+        3: t('sih.3.yeniBaslik'),
         4: t('sih.4.baslik'),
       }
   const adimSayisi = lKose ? L_ADIM_SAYISI : ADIM_SAYISI
@@ -320,7 +315,7 @@ function SihirbazKart({
   return (
     <div className="overflow-hidden rounded-xl border-2 border-brand shadow-[0_4px_16px_rgba(41,98,173,0.18)]">
       {/* Başlık şeridi dolu renkte: panelde göz önce buraya gelsin. */}
-      <div className="flex items-center gap-2 bg-brand px-2.5 py-2 text-white">
+      <div className="bg-brand px-2.5 py-2 text-white">
         {/*
           İLERLEME — akışın tamamı tek bakışta.
 
@@ -329,12 +324,10 @@ function SihirbazKart({
           Üstelik "4 adım" sayısı yola göre değişiyor: "alanım var" yolunda
           referans adımı hiç yok.
         */}
-        {!girisSecimi && !lKose && (
-          <span className="flex items-center gap-1">
-            {(girisYolu === 'alanVar'
-              ? ['alan', 'yerlesim']
-              : ['referans', 'alan', 'yerlesim']
-            ).map((ad, i, hepsi) => {
+        {!lKose && (
+          <span className="mb-1 flex items-center gap-1">
+            {['referans', 'alan', 'yerlesim'].map((ad, i, hepsi) => {
+              /* 3. adım artık "nasıl yerleştirelim" seçimi: o da alan aşaması. */
               const suAn = alanKipi ? 'alan' : adim >= 4 ? 'yerlesim' : adim === 3 ? 'alan' : 'referans'
               const sira = hepsi.indexOf(suAn)
               const etkin = i === sira
@@ -354,22 +347,31 @@ function SihirbazKart({
             })}
           </span>
         )}
-        {/* Panel dar: başlık kesilmek yerine ikinci satıra sarıyor. */}
-        <span className="flex-1 text-[14.5px] font-bold leading-tight">
-          {girisSecimi ? t('sih.giris.baslik') : alanTekBasina ? t('sih.alanBaslik') : basliklar[adim]}
-        </span>
-        {/* Ayrıntılar bunun arkasında: kart kalabalıklaşmasın. */}
-        <button
-          type="button"
-          onClick={() => setDetayAcik((o) => !o)}
-          aria-label={t('sih.detay')}
-          title={t('sih.detay')}
-          className={`shrink-0 h-6 w-6 rounded-full text-[13px] font-bold leading-none transition-colors ${
-            detayAcik ? 'bg-white text-brand' : 'bg-white/20 text-white hover:bg-white/30'
-          }`}
-        >
-          ?
-        </button>
+        {/*
+          BAŞLIK KENDİ SATIRINDA.
+
+          Önce ilerleme çubuğuyla YAN YANA duruyordu; panel dar olduğu için
+          başlığa kalan sütun bir iki kelime genişliğindeydi ve başlık üç
+          dört satıra bölünüyordu. Şimdi ilerleme üstte, başlık altında ve
+          şeridin tamamını kullanıyor.
+        */}
+        <div className="flex items-start gap-2">
+          <span className="flex-1 text-[14.5px] font-bold leading-tight">
+            {alanTekBasina ? t('sih.alanBaslik') : basliklar[adim]}
+          </span>
+          {/* Ayrıntılar bunun arkasında: kart kalabalıklaşmasın. */}
+          <button
+            type="button"
+            onClick={() => setDetayAcik((o) => !o)}
+            aria-label={t('sih.detay')}
+            title={t('sih.detay')}
+            className={`mt-0.5 shrink-0 h-6 w-6 rounded-full text-[13px] font-bold leading-none transition-colors ${
+              detayAcik ? 'bg-white text-brand' : 'bg-white/20 text-white hover:bg-white/30'
+            }`}
+          >
+            ?
+          </button>
+        </div>
         {/*
           KAPATMA DÜĞMESİ YOK.
 
@@ -382,35 +384,7 @@ function SihirbazKart({
 
       <div className="bg-brand/[0.05] px-2.5 pb-2.5 pt-1 dark:bg-brand/[0.1]">
         {/* key={adim}: adım değişince geçiş yeniden oynasın. */}
-        <div key={girisSecimi ? 'giris' : adim} className="sih-adim">
-          {/*
-            YOL SEÇİMİ.
-
-            Fotoğraf yüklenince sorulan tek soru. "Alanım var" yolunda
-            referans hiç istenmiyor: dört köşe ve gerçek en/boy hem ölçeği
-            hem perspektifi veriyor.
-          */}
-          {girisSecimi && (
-            <>
-              <p className={aciklama}>{t('sih.giris.aciklama')}</p>
-              <button
-                type="button"
-                onClick={onGirisAlanVar}
-                className={`mt-2 w-full ${ana}`}
-              >
-                {t('sih.giris.var')}
-              </button>
-              <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.giris.varNot')}</p>
-              <button
-                type="button"
-                onClick={onGirisAlanYok}
-                className="mt-2 w-full py-2.5 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-              >
-                {t('sih.giris.yok')}
-              </button>
-              <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.giris.yokNot')}</p>
-            </>
-          )}
+        <div key={adim} className="sih-adim">
           {/* L 1 — KÖŞE ÇİZGİSİ */}
           {!alanKipi && lKose && adim === 1 && (
             <>
@@ -532,6 +506,9 @@ function SihirbazKart({
           {/* 1 — İKİ NOKTA */}
           {!alanKipi && !lKose && adim === 1 && (
             <>
+              {detayAcik && (
+                <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.1.detay')}</p>
+              )}
               {/*
                 REFERANS TÜRÜ SEÇİMİ KALDIRILDI.
 
@@ -581,6 +558,9 @@ function SihirbazKart({
               <p className={aciklama}>
                 {refTur === 'dortgen' ? t('sih.2.aciklamaDort') : t('sih.2.aciklama')}
               </p>
+              {detayAcik && (
+                <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.2.detay')}</p>
+              )}
               <div className="mt-2 flex items-center gap-1.5">
                 <input
                   type="number"
@@ -633,78 +613,26 @@ function SihirbazKart({
                 </p>
               )}
               {/*
-                REFERANSTAN SONRA İKİ YOL.
+                BU KART YALNIZCA ÖLÇEĞİ KURUYOR.
 
-                Santim ölçeği kurulduktan sonra geriye ekranın NEREYE gireceği
-                kalıyor ve bunun iki yolu var:
-
-                  ÖLÇÜM İLE AYARLA — kaplanacak alanın dört köşesine tıklanıyor.
-                  Alan hem yeri hem de o yüzeyin perspektifini veriyor.
-
-                  MANUEL DÜZENLE — eski yol, olduğu gibi duruyor: alanın
-                  santim ölçüsü yazılıyor, kutu kuruluyor, köşelerinden
-                  ayarlanıyor.
-
-                İkisi de aynı ölçeği kullanıyor; biri ötekini geçersiz kılmıyor.
-              */}
-              {/*
-                ───────────────────────────────────────────────────────────
-                ÖLÇÜ ZATEN KURULUYSA SIRA DEĞİŞİYOR.
-
-                Dolu (birincil) düğme "Ölçüm ile ayarla" idi; o düğme alanı
-                BAŞTAN işaretletiyor. Ölçüsü hazır bir ekranı düzenlemeye
-                gelen kullanıcı için en görünür düğmenin yaptığı işin
-                "her şeyi baştan kur" olması yanlış: yanlışlıkla basılması
-                kurulu ölçüyü attırıyor.
-
-                Alan varsa birincil düğme ölçüye DOKUNMADAN devam ediyor;
-                yeniden işaretleme ikincil kalıyor ve adıyla anılıyor
-                ("Alanı yeniden işaretle"), ne yapacağı yazısından belli.
-                ───────────────────────────────────────────────────────────
+                Santim kutusu ile "ne yapalım" seçimi aynı kartta duruyordu;
+                kullanıcı ölçüyü yazmadan seçeneklere bakıyor, iki ayrı işi
+                aynı anda okumak zorunda kalıyordu. Seçim kendi adımına
+                (3) taşındı.
               */}
               <div className="mt-2 flex items-center gap-1.5">
                 <button type="button" onClick={onGeri} className={yan}>
                   {t('sih.geri')}
                 </button>
-                {/*
-                  "Ölçüyü değiştirmeden devam et" / "Alanı yeniden işaretle"
-                  kaldırıldı: düzenlemede bu adıma hiç girilmiyor, işlerini
-                  4. adımdaki "Geri" görüyor (bkz. App.jsx sihirbazGeri).
-                */}
-                {onAlanIsaretle && (
-                  <button
-                    type="button"
-                    onClick={onAlanIsaretle}
-                    disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
-                    className={ana}
-                  >
-                    {t('sih.alanIleAyarla')}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={onIleri}
+                  disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                  className={ana}
+                >
+                  {t('sih.devam')}
+                </button>
               </div>
-              {PANEL.manuelDuzenle && (
-                <>
-                  {/*
-                    İKİNCİ YOL: köşe işaretlemeden doğrudan yerleştirmeye.
-                    Tasarım referanstan gelen ölçekle kendi gerçek boyutunda
-                    çiziliyor; 4. adım işaretlenmiş alan olmadan da çalışıyor
-                    (sığdırma düğmesi orada zaten alana bağlı).
-                  */}
-                  <button
-                    type="button"
-                    onClick={() => onElleDuzenle?.()}
-                    disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
-                    className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
-                  >
-                    {t('sih.elleDuzenle')}
-                  </button>
-                  {detayAcik && (
-                    <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
-                      {t('sih.elleDuzenleNot')}
-                    </p>
-                  )}
-                </>
-              )}
             </>
           )}
 
@@ -738,6 +666,9 @@ function SihirbazKart({
           {alanKipi && !kenarKipi && (
             <>
               <p className={aciklama}>{t('sih.alanAciklama')}</p>
+              {detayAcik && (
+                <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.alanDetay')}</p>
+              )}
               <p className={`${kucuk} ${alanNoktaSayisi >= 4 ? 'text-emerald-700 dark:text-emerald-400' : 'text-neutral-500 dark:text-neutral-400'}`}>
                 {alanNoktaSayisi} / 4
               </p>
@@ -803,65 +734,56 @@ function SihirbazKart({
           */}
 
           {/* 3 — KUTU ÖLÇÜSÜ */}
+          {/*
+            3 — NASIL YERLEŞTİRELİM.
+
+            Ölçek kurulduktan sonra geriye tek soru kalıyor: ekranın yeri
+            işaretlenerek mi belirlenecek, yoksa kullanıcı tasarımı kendisi
+            mi taşıyacak. Kartın başka işi yok.
+
+            Burada eskiden "yerleşim alanının santimi" yazılıyor ve kutu
+            kuruluyordu; o kutu kurma düğmesi kapalı olduğu için (PANEL
+            .olcuKutusu) adım çıkmaz sokaktı.
+          */}
           {!alanKipi && adim === 3 && !lKose && (
             <>
-              <p className={aciklama}>{t('sih.3.aciklama')}</p>
-              <div className="mt-2 flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  autoFocus
-                  value={kutuEn}
-                  onChange={(e) => setKutuEn(e.target.value)}
-                  placeholder={t('ref.en')}
-                  className={girdi}
-                />
-                <span className="text-[14px] text-neutral-400">×</span>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={kutuBoy}
-                  onChange={(e) => setKutuBoy(e.target.value)}
-                  placeholder={t('ref.boy')}
-                  className={girdi}
-                />
-                <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
-              </div>
-              {/*
-                REFERANS EĞİMİNE HİZALAMA.
-
-                İki noktadan çıkarılabilen tek açı düzlem içi dönme; perspektif
-                buradan ÇIKMAZ, onu kullanıcı köşelerden veriyor. Kapatılabilir
-                olması şart: köşegen bir referansın eğimi kutuyla ilgisizdir.
-              */}
-              {!refDuzlem && refAci && Math.abs(refAci.kutuAci) > 0.0005 && (
-                <label className="mt-2 flex items-start gap-2 text-[13.5px] leading-snug text-neutral-700 dark:text-neutral-300">
-                  <input
-                    type="checkbox"
-                    checked={refAciKullan}
-                    onChange={(e) => setRefAciKullan(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0"
-                  />
-                  <span>
-                    {t('sih.aciHizala')}{' '}
-                    <strong>{((refAci.kutuAci * 180) / Math.PI).toFixed(1).replace('.', ',')}°</strong>
-                  </span>
-                </label>
+              <p className={aciklama}>{t('sih.sec.aciklama')}</p>
+              {onAlanIsaretle && (
+                <>
+                  <button type="button" onClick={onAlanIsaretle} className={`mt-2 w-full ${ana}`}>
+                    {t('sih.sec.alan')}
+                  </button>
+                  {detayAcik && (
+                    <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                      {t('sih.sec.alanNot')}
+                    </p>
+                  )}
+                </>
+              )}
+              {PANEL.manuelDuzenle && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onElleDuzenle?.()}
+                    className="mt-2 w-full py-2.5 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                  >
+                    {t('sih.sec.serbest')}
+                  </button>
+                  {detayAcik && (
+                    <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                      {t('sih.sec.serbestNot')}
+                    </p>
+                  )}
+                </>
               )}
               {kutuMesaj && (
                 <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{kutuMesaj}</p>
               )}
+              {/* Geri: referansın santimini düzeltmek için. */}
               <div className="mt-2 flex items-center gap-1.5">
                 <button type="button" onClick={onGeri} className={yan}>
                   {t('sih.geri')}
                 </button>
-                {PANEL.olcuKutusu && (
-                  <button type="button" onClick={onKutuKur} className={ana}>
-                    {t('ref2.kutuKur')}
-                  </button>
-                )}
               </div>
             </>
           )}

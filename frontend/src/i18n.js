@@ -550,7 +550,7 @@ const dict = {
   'sih.alanIleAyarla': { tr: 'Ölçüm ile ayarla', en: 'Set by measuring', ar: 'الضبط بالقياس' },
   'sih.elleDuzenle': { tr: 'Manuel düzenle', en: 'Edit manually', ar: 'تحرير يدوي' },
   'sih.alanAciklama': {
-    tr: 'Ekranın kaplamasını istediğiniz alanın dört köşesine tıklayın: sol üst, sağ üst, sağ alt, sol alt. İşaretler sonradan sürüklenebilir. Dört nokta tamamlanana kadar tasarım gizli.',
+    tr: 'Ekranın kaplayacağı alanın dört köşesine tıklayın.',
     en: 'Click the four corners of the area the screen should cover: top-left, top-right, bottom-right, bottom-left. The marks can be dragged afterwards. The design stays hidden until all four are placed.',
     ar: 'انقر على زوايا المنطقة الأربع التي يجب أن تغطيها الشاشة. يبقى التصميم مخفيًا حتى وضع النقاط الأربع.',
   },
@@ -570,6 +570,24 @@ const dict = {
     tr: 'Tasarımı ölçüye sığdır',
     en: 'Fit the design to the measured area',
     ar: 'ملاءمة التصميم مع المنطقة المقاسة',
+  },
+  'sih.devam': { tr: 'Devam', en: 'Continue', ar: 'متابعة' },
+  'sih.sec.aciklama': {
+    tr: 'Ölçek hazır. Ekranın yerini nasıl belirleyelim?',
+    en: 'The scale is ready. How should the screen be positioned?',
+    ar: 'المقياس جاهز. كيف نحدد موضع الشاشة؟',
+  },
+  'sih.sec.alan': { tr: 'Alanı işaretle', en: 'Mark the area', ar: 'حدّد المنطقة' },
+  'sih.sec.alanNot': {
+    tr: 'Ekranın kaplayacağı alanın dört köşesine tıklarsınız; ölçüyü uygulama hesaplar ve tasarımı alanın ortasına kurar.',
+    en: 'You click the four corners of the area; the app measures it and places the design centred inside.',
+    ar: 'تنقر على زوايا المنطقة الأربع؛ يقيسها التطبيق ويضع التصميم في وسطها.',
+  },
+  'sih.sec.serbest': { tr: 'Serbest yerleştir', en: 'Place freely', ar: 'ضع بحرية' },
+  'sih.sec.serbestNot': {
+    tr: 'Tasarım gerçek ölçüsüyle fotoğrafa konur; sürükleyip köşelerinden duvara oturtursunuz.',
+    en: 'The design is placed at its real size; you drag it and fit its corners to the wall.',
+    ar: 'يوضع التصميم بمقاسه الحقيقي؛ تسحبه وتثبّت زواياه على الجدار.',
   },
   'sih.elleDuzenleNot': {
     tr: 'Köşe işaretlemeden ilerler: tasarım gerçek ölçüsüyle fotoğrafa konur, siz taşıyıp duvara oturtursunuz.',
@@ -751,7 +769,7 @@ const dict = {
     ar: 'القياس المرجعي: حدّد طولًا معروفًا',
   },
   'sih.1.aciklama': {
-    tr: 'Fotoğraftaki HERHANGİ bir yerin gerçek ölçüsünü verebilirsiniz: bir kapı, pencere, masa, yer karosu ya da duvarın kendisi. İki ucuna tıklayın; noktaları sonra sürükleyerek düzeltebilirsiniz. Santim hesabı bu referanstan çıkıyor.',
+    tr: 'Ölçüsünü bildiğiniz bir uzunluğun iki ucuna tıklayın.',
     en: 'You can use ANY known length in the photo: a door, a window, a desk, a floor tile or the wall itself. Click its two ends; you can drag the points afterwards. The centimetre scale comes from this reference.',
     ar: 'يمكنك استخدام أي طول معروف في الصورة: باب أو نافذة أو طاولة أو بلاطة. انقر على طرفيه؛ يُشتق مقياس السنتيمتر من هذا المرجع.',
   },
@@ -765,8 +783,23 @@ const dict = {
     en: 'Type the reference measurement (cm)',
     ar: 'اكتب القياس المرجعي (سم)',
   },
+  'sih.1.detay': {
+    tr: 'Kapı, pencere, masa, yer karosu ya da duvarın kendisi olabilir; önemli olan gerçek ölçüsünü biliyor olmanız. Ekranın konacağı yerle aynı duvarda ve ona yakın bir yer seçin. Noktaları sonradan sürükleyerek düzeltebilirsiniz.',
+    en: 'It can be a door, a window, a desk, a floor tile or the wall itself; what matters is that you know its real size. Pick something on the same wall as the screen and close to it. You can drag the points afterwards.',
+    ar: 'يمكن أن يكون بابًا أو نافذة أو طاولة أو بلاطة أو الجدار نفسه، المهم أن تعرف مقاسه الحقيقي. اختر شيئًا على الجدار نفسه وقريبًا من الشاشة.',
+  },
+  'sih.2.detay': {
+    tr: 'Fotoğrafın santim ölçeği bu sayıdan çıkıyor; tasarımın gerçek boyutu da ona göre hesaplanıyor.',
+    en: 'The photo’s centimetre scale comes from this number, and the design’s real size follows it.',
+    ar: 'يُشتق مقياس الصورة بالسنتيمتر من هذا الرقم، ويُحسب حجم التصميم تبعًا له.',
+  },
+  'sih.alanDetay': {
+    tr: 'Sırayla sol üst, sağ üst, sağ alt, sol alt köşeye tıklayın. İşaretler sonradan sürüklenebilir; dört nokta tamamlanana kadar tasarım gizli kalır.',
+    en: 'Click top-left, top-right, bottom-right, bottom-left in order. The marks can be dragged afterwards; the design stays hidden until all four are placed.',
+    ar: 'انقر بالترتيب: أعلى اليسار، أعلى اليمين، أسفل اليمين، أسفل اليسار. يمكن سحب العلامات لاحقًا.',
+  },
   'sih.2.aciklama': {
-    tr: 'Referans ölçü: işaretlediğiniz iki nokta arasındaki mesafe gerçekte kaç santim? Fotoğrafın santim ölçeği bundan çıkıyor, tasarım da bu ölçeğe göre geliyor.',
+    tr: 'İşaretlediğiniz iki nokta arası gerçekte kaç santim?',
     en: 'How many centimetres is the distance between the two points in reality? The photo scale comes from this.',
     ar: 'كم سنتيمترًا بين النقطتين في الواقع؟',
   },
@@ -862,6 +895,11 @@ const dict = {
   },
   'refL.yeniden': { tr: 'Köşeyi yeniden işaretle', en: 'Mark the corner again', ar: 'حدد الزاوية مرة أخرى' },
   'refL.ozet': { tr: 'Köşe çizgisi', en: 'Corner line', ar: 'خط الزاوية' },
+  'sih.3.yeniBaslik': {
+    tr: 'Nasıl yerleştirelim?',
+    en: 'How should we place it?',
+    ar: 'كيف نضعها؟',
+  },
   'sih.3.baslik': { tr: 'Yerleşim alanının ölçüsü (cm)', en: 'Placement area size (cm)', ar: 'مقاس منطقة التركيب (سم)' },
   'sih.3.aciklama': {
     tr: 'LED ekranın yerleşeceği alan gerçekte kaç santim? Kutu bu ölçüde, referans çizgisinin yakınında kurulacak.',
@@ -870,7 +908,7 @@ const dict = {
   },
   'sih.4.baslik': { tr: 'Kutuyu yerine koy', en: 'Place the box', ar: 'ضع المربع' },
   'sih.4.aciklama': {
-    tr: 'Kutuyu gövdesinden tutup taşıyın, köşelerinden çekip duvarın köşelerine oturtun. Ölçü değişmez: kutu hep o santimetredeki dikdörtgenin görüntüsü kalır.',
+    tr: 'Kutuyu gövdesinden tutup taşıyın, köşelerinden çekip duvara oturtun.',
     en: 'Drag the body to move the box, drag the corners onto the wall’s corners. The size never changes: the box stays the image of that exact rectangle.',
     ar: 'اسحب الجسم للتحريك، واسحب الزوايا إلى زوايا الجدار. المقاس لا يتغيّر.',
   },
@@ -1449,9 +1487,9 @@ const dict = {
     ar: 'الشاشات التي تختار المحتوى نفسه بوضع "مقسّم" تتشاركه: يُفرد المحتوى عليها كقطعة واحدة، والجزء الواقع في الفراغ لا يظهر.',
   },
   'content.hint': {
-    tr: '* Yalnızca JPG veya PNG biçiminde, maksimum 60 MB',
-    en: '* JPG or PNG only, max 60 MB',
-    ar: '* JPG أو PNG فقط، بحد أقصى 60 ميغابايت',
+    tr: 'Görsel (JPG, PNG) ya da video (MP4, WebM, OGG) yükleyebilirsiniz. Dosyalar yalnızca bu tarayıcıda kalır, sunucuya gönderilmez.',
+    en: 'You can upload an image (JPG, PNG) or a video (MP4, WebM, OGG). Files stay in this browser and are never uploaded.',
+    ar: 'يمكنك رفع صورة (JPG, PNG) أو فيديو (MP4, WebM, OGG). تبقى الملفات في هذا المتصفح ولا تُرفع إلى الخادم.',
   },
   'content.errFormat': {
     tr: 'Yalnızca JPG veya PNG formatı desteklenir.',

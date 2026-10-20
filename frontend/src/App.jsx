@@ -1040,7 +1040,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [grupSecim, setGrupSecim] = useState([])
   const [grupTipi, setGrupTipi] = useState('duz')
   const [grupAcisi, setGrupAcisi] = useState(135)
-  const [girisYolu, setGirisYolu] = useState(null)
+
   const [duzenlemede, setDuzenlemede] = useState(false)
   const [kenarKipi, setKenarKipi] = useState(false)
   const [kenarNokta, setKenarNokta] = useState([])
@@ -1688,17 +1688,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * İşaretleme kipi de birlikte açılıyor ki tıklanacak yer hazır olsun.
        */
       /*
-       * ÖNCE YOL SEÇİMİ.
+       * İLK ADIM HER ZAMAN REFERANS.
        *
-       * Fotoğraf yüklenince doğrudan referans isteniyordu; oysa kullanıcı
-       * ekranın gideceği alanı ve gerçek ölçüsünü biliyorsa referansa hiç
-       * gerek yok (bkz. girisYolu). Seçim kartı sihirbazın içinde çıkıyor.
+       * Bir ara önce "Belirli bir alanım var / yok" diye soruluyordu ve
+       * "var" yolunda referans hiç istenmiyordu. Ölçek o yolda yalnızca
+       * elle yazılan en/boydan geliyordu; kullanıcı onu yazana kadar
+       * fotoğrafın santim ölçeği YOKTU, dolayısıyla tasarım hiç
+       * çizilemiyordu ("Henüz ölçek yok"). Soru kalktı: referans tek ve
+       * zorunlu başlangıç, ne yapılacağı ondan SONRA seçiliyor.
+       *
+       * Referans yalnızca yeni fotoğrafta isteniyor — düzenlemede ve yeni
+       * ekran eklerken bir daha sorulmuyor (bkz. duzenlemede,
+       * yeniEkranaBasla).
        */
-      setGirisYolu(null)
-      /* L'de ilk iş köşe çizgisi; orada seçim sorulmuyor. */
-      setRefKipi(false)
+      /* L'de ilk iş köşe çizgisi; referans orada da sorulmuyor. */
+      setRefKipi(!lTipiVar)
       setLKoseKipi(lTipiVar)
-      setSihirbazAdim(lTipiVar ? 1 : 0)
+      setSihirbazAdim(1)
       let kayit = null
       try {
         kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM, tasarimWm, TASLAK_KIPI)
@@ -3775,27 +3781,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
 
-  /* "Belirli bir alanım var": doğrudan dört köşe, referans yok. */
-  const girisAlanVar = () => {
-    setGirisYolu('alanVar')
-    setDuzenlemede(false)
-    setRefKipi(false)
-    setAlanNokta([])
-    setAlanElleEn('')
-    setAlanElleBoy('')
-    setAlanKipi(true)
-    setSihirbazAdim(0)
-  }
-
-  /* "Belirli bir alanım yok": önce iki noktalı referans. */
-  const girisAlanYok = () => {
-    setGirisYolu('alanYok')
-    setDuzenlemede(false)
-    setAlanKipi(false)
-    setRefKipi(true)
-    setSihirbazAdim(1)
-  }
-
   /* Alanı sıfırdan işaretlemek: köşeler siliniyor, kip açık kalıyor. */
   const alaniTemizle = () => {
     setAlanNokta([])
@@ -3842,16 +3827,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const yeni = k ? alanaYerlestir(k) : null
     if (yeni) elleKoseyeYaz(yeni)
     /*
-     * ÖLÇÜ KESİN DEĞİLSE İKİNCİ REFERANS BİR ADIM.
+     * ONAYDAN SONRA TASARIM GÖRÜNÜR.
      *
-     * Teklif olarak duruyordu ve kullanıcı görmüyordu; ölçü de yanlış
-     * kalıyordu. EXIF yoksa, alanın gerçek ölçüsü yazılmadıysa ve ikinci
-     * referans verilmediyse kameranın görüş açısı bilinmiyor demektir —
-     * o hâlde ölçüye dayanan işler (sığdırma, bitirme) açılmıyor.
-     * Çıkış yolu iki tane: ya ikinci referans, ya alanın gerçek en/boyu.
+     * Burada ölçü kesin değilse doğrudan ikinci referans İŞARETLEME kipine
+     * geçiliyordu. O kip tasarımı gizliyor (bkz. ekranGizle: işaretlerken
+     * altındaki yer görünsün diye) — sonuç, alanı onaylayan kullanıcının
+     * hiçbir şey görmemesiydi: sığdırma kabin sayısını hesaplıyor ama
+     * ekranda tasarım yok.
+     *
+     * İkinci referans KALKMADI, teklif olarak duruyor: kart ölçünün kesin
+     * olmadığını yazıyor ve işaretleme düğmesini gösteriyor. İşaretleme
+     * ancak kullanıcı ona bastığında başlıyor.
      */
-    if (!odakKesin) setRef2Kipi(true)
+    setRef2Kipi(false)
     setSihirbazAdim(4)
+    /*
+     * TASARIM ALANIN İÇİNE KENDİLİĞİNDEN KURULUYOR.
+     *
+     * Onaydan sonra tasarım tek kabinlik kalıyordu: 300 × 150 cm'lik alanın
+     * ortasında 32 × 16 cm'lik bir pul. Alanı işaretlemenin amacı ekranın
+     * oraya girmesi; sığdırma elle basılacak bir düğme olmadan da bir kez
+     * uygulanıyor. Kullanıcı gerçek en/boyu düzeltirse düğmeyle yeniden
+     * sığdırabiliyor.
+     */
+    if (k) tasarimiAlanaSigdir(k)
   }
 
   /* Alanı tamamen doldur — montaj payıyla (bkz. sigdirDortgen). */
@@ -3895,7 +3894,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * iki yön de deneniyor, LED sayısı fazla olan seçiliyor, eşitlikte yatay.
    * ───────────────────────────────────────────────────────────────────────
    */
-  const tasarimiAlanaSigdir = () => {
+  /*
+   * Köşeler dışarıdan da verilebiliyor: alan ONAYLANDIĞI anda çağrılırken
+   * setAlanNokta henüz state'e işlemiş olmuyor ve alanTuval eskisini
+   * söylüyor. Verilmezse eski davranış (durumdan okuma) sürüyor.
+   */
+  const tasarimiAlanaSigdir = (disaridanKose = null) => {
+    /* Yalnizca gercek bir dortgen kabul ediliyor (bkz. onAlanSigdir). */
+    const alanTuval =
+      Array.isArray(disaridanKose) && disaridanKose.length === 4 ? disaridanKose : alanTuvalDurum
     const olcekPxM = alanOlcegiPxM || cizimOlcek
     if (!alanTuval || !(olcekPxM > 0)) return
     const m = previewModel || selectedModel
@@ -4174,7 +4181,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setElleKose(null)
     setRefKipi(false)
     setLKoseKipi(false)
-    setAlanKipi(true)
+    /*
+     * YENİ EKRANDA DA AYNI SEÇİM, REFERANS YOK.
+     *
+     * Ölçek fotoğrafa ait; bir kez kurulduktan sonra bütün ekranlar onu
+     * kullanıyor. Yeni ekran doğrudan alan işaretlemeye giriyordu; artık
+     * o da "Alanı işaretle / Serbest yerleştir" seçimiyle başlıyor.
+     */
+    setAlanKipi(false)
+    setSihirbazAdim(3)
   }
 
   const ekranEkleEski = () => {
@@ -5191,18 +5206,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * işaretlediği uzunluk neyse o.
    * ───────────────────────────────────────────────────────────────────────
    */
-  const alanOlcegiPxM = (() => {
-    if (refNokta.length !== 2) return null
-    const cm = Number(String(refUzunlukCm).replace(',', '.'))
-    if (!(cm > 0)) return null
-    const a = oranTuvale(refNokta[0])
-    const b = oranTuvale(refNokta[1])
-    const px = Math.hypot(b.x - a.x, b.y - a.y)
-    if (!(px > 1)) return null
-    return (px / cm) * 100
-  })()
-
   const alanTuval = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
+  /* Sığdırma işlevinin kendi parametresiyle çakışmasın diye ikinci ad. */
+  const alanTuvalDurum = alanTuval
+
+  /*
+   * FOTOĞRAFIN SANTİM ÖLÇEĞİ (piksel / metre).
+   *
+   * Birincil kaynak referans: iki nokta ve aralarındaki gerçek santim.
+   *
+   * YEDEK KAYNAK işaretlenen alanın kendisi: kullanıcı dört köşeyi
+   * işaretleyip gerçek en/boyu yazdıysa ölçek oradan da çıkar. Yedek,
+   * referansın hiç verilmediği eski kayıtlar ve referansın henüz
+   * tamamlanmadığı anlar için duruyor; olmadığında ölçek yokluğu
+   * tasarımın HİÇ çizilmemesi demek oluyordu.
+   */
+  const alanOlcegiPxM = (() => {
+    const cm = Number(String(refUzunlukCm).replace(',', '.'))
+    if (refNokta.length === 2 && cm > 0) {
+      const a = oranTuvale(refNokta[0])
+      const b = oranTuvale(refNokta[1])
+      const px = Math.hypot(b.x - a.x, b.y - a.y)
+      if (px > 1) return (px / cm) * 100
+    }
+    if (alanTuval) {
+      const enCm = Number(String(alanElleEn).replace(',', '.'))
+      const boyCm = Number(String(alanElleBoy).replace(',', '.'))
+      const enPx =
+        (Math.hypot(alanTuval[1].x - alanTuval[0].x, alanTuval[1].y - alanTuval[0].y) +
+          Math.hypot(alanTuval[2].x - alanTuval[3].x, alanTuval[2].y - alanTuval[3].y)) /
+        2
+      const boyPx =
+        (Math.hypot(alanTuval[3].x - alanTuval[0].x, alanTuval[3].y - alanTuval[0].y) +
+          Math.hypot(alanTuval[2].x - alanTuval[1].x, alanTuval[2].y - alanTuval[1].y)) /
+        2
+      /* İki kenarın ortalaması: perspektifte ikisi aynı ölçeği vermiyor. */
+      const olcekler = []
+      if (enCm > 0 && enPx > 1) olcekler.push((enPx / enCm) * 100)
+      if (boyCm > 0 && boyPx > 1) olcekler.push((boyPx / boyCm) * 100)
+      if (olcekler.length) return olcekler.reduce((t, x) => t + x, 0) / olcekler.length
+    }
+    return null
+  })()
 
 
   /*
@@ -5924,14 +5969,96 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kutuyu kuran hesap olcuKutusunuKur ile aynı; ayrılan tek şey ölçünün
    * nereden geldiği.
    */
+  /*
+   * DÖRTGENİ KENDİ EKSENLERİNDE ÖLÇEKLER.
+   *
+   * Genişlik yönünde kx, yükseklik yönünde ky. Eksenler kutunun KENDİ
+   * kenarlarından çıkıyor; bu yüzden döndürülmüş ya da perspektifli bir
+   * kutu da doğru yönde büyüyor. Merkez sabit kalıyor: kabin eklemek
+   * kutuyu yerinden oynatmıyor, yalnızca büyütüyor.
+   */
+  const dortgeniOlcekle = (k, kx, ky) => {
+    if (!Array.isArray(k) || k.length !== 4) return k
+    const cx = (k[0].x + k[1].x + k[2].x + k[3].x) / 4
+    const cy = (k[0].y + k[1].y + k[2].y + k[3].y) / 4
+    /* u: üst ve alt kenarın ortalaması, v: sol ve sağ kenarınki. */
+    const ux = (k[1].x - k[0].x + (k[2].x - k[3].x)) / 2
+    const uy = (k[1].y - k[0].y + (k[2].y - k[3].y)) / 2
+    const vx = (k[3].x - k[0].x + (k[2].x - k[1].x)) / 2
+    const vy = (k[3].y - k[0].y + (k[2].y - k[1].y)) / 2
+    const det = ux * vy - uy * vx
+    if (!(Math.abs(det) > 1e-6)) return k
+    return k.map((p) => {
+      const dx = p.x - cx
+      const dy = p.y - cy
+      /* Köşeyi (u, v) tabanına çöz, ölçekle, geri topla. */
+      const a = ((dx * vy - dy * vx) / det) * kx
+      const b = ((ux * dy - uy * dx) / det) * ky
+      return { x: cx + a * ux + b * vx, y: cy + a * uy + b * vy }
+    })
+  }
+
+  /*
+   * SERBEST YERLEŞTİRMEDE KUTU KABİN SAYISIYLA BÜYÜYOR.
+   *
+   * Kutu, serbest yerleştirmeye geçilen ANDAKİ tasarım ölçüsüyle bir kez
+   * kuruluyordu ve orada kalıyordu: kullanıcı sütun/satır artırınca panel
+   * "kutu 0,32 × 0,16 m · tasarım 0,64 × 0,32 m" diyor ama fotoğraftaki
+   * kutu tek kabinlik kalıyordu. Kutu tasarımın yerini gösteriyor;
+   * tasarım büyüyorsa kutu da büyümeli.
+   *
+   * Yalnızca serbest yerleştirmede: alan işaretlenmişse kutunun ölçüsü
+   * alandan geliyor (bkz. alanaYerlestir) ve oraya karışılmıyor.
+   */
+  useEffect(() => {
+    if (hedefTur !== 'taslak' || alanNokta.length === 4) return
+    if (!olcuKutu || !(olcuKutu.enCm > 0) || !(olcuKutu.boyCm > 0)) return
+    if (!(tasarimWm > 0) || !(tasarimHm > 0)) return
+    const enCm = tasarimWm * 100
+    const boyCm = tasarimHm * 100
+    /* Yarım milimetrelik fark yok sayılıyor: yoksa döngü kapanmaz. */
+    if (Math.abs(olcuKutu.enCm - enCm) < 0.05 && Math.abs(olcuKutu.boyCm - boyCm) < 0.05) return
+    const kx = enCm / olcuKutu.enCm
+    const ky = boyCm / olcuKutu.boyCm
+    setHedefKose((k) => dortgeniOlcekle(k, kx, ky))
+    setTaslakKutu((k) => dortgeniOlcekle(k, kx, ky))
+    setOlcuKutu({ enCm, boyCm })
+    /* dortgeniOlcekle her çizimde yeni: bağımlılığa koymak döngü olurdu. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasarimWm, tasarimHm, hedefTur, alanNokta.length, olcuKutu])
+
   const elleDuzenlemeyeGec = () => {
     const kaynak = ozelSahne?.kaynak
     if ((!refPxCm && !refDuzlem) || !(kaynak?.w > 0)) {
       setKutuMesaj(t('ref2.onceReferans'))
       return
     }
-    const enCm = tasarimWm * 100
-    const boyCm = tasarimHm * 100
+    /*
+     * TEK KABİNLE BAŞLAMIYOR.
+     *
+     * Varsayılan 1 × 1 kabin, yani 32 × 16 cm: fotoğrafta pul kadar bir
+     * kutu çıkıyor ve kullanıcı onu büyütmeye çalışırken ne taşıdığını
+     * göremiyordu. Hiç dokunulmamışsa (1 × 1) yaklaşık 2 × 1 metrelik
+     * makul bir duvar ekranıyla başlıyor; kullanıcı zaten sütun/satırdan
+     * istediğini yapıyor.
+     */
+    let sutun = cols
+    let satir = rows
+    if (cols === 1 && rows === 1) {
+      const m = selectedModel || previewModel
+      const dikey = orientation === 'portrait'
+      const kwM = ((dikey ? m?.heightMm : m?.widthMm) || 500) / 1000
+      const khM = ((dikey ? m?.widthMm : m?.heightMm) || 500) / 1000
+      sutun = Math.max(1, Math.min(colsMax, Math.round(2 / kwM)))
+      satir = Math.max(1, Math.min(rowsMax, Math.round(1 / khM)))
+      setCols(sutun)
+      setRows(satir)
+    }
+    /* Kutu, az sonra uygulanacak kabin sayısının karşılığı kadar. */
+    const m2 = selectedModel || previewModel
+    const dikey2 = orientation === 'portrait'
+    const enCm = (sutun * ((dikey2 ? m2?.heightMm : m2?.widthMm) || 500)) / 10
+    const boyCm = (satir * ((dikey2 ? m2?.widthMm : m2?.heightMm) || 500)) / 10
     if (!(enCm > 0) || !(boyCm > 0)) return
     const aci = refAciKullan ? refAci?.kutuAci || 0 : 0
     const k = refDuzlem
@@ -6035,7 +6162,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setRef2Kipi(false)
     setFotoOdak(null)
     setDuzenlemede(false)
-    setGirisYolu(null)
     setGrup(null)
     setGrupSecim([])
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
@@ -6804,7 +6930,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })()
 
   /* Ölçü akışı açık mı: panelde yalnızca onun işi görünsün. */
-  const olcuAcik = sihirbazAdim > 0 || alanKipi || (!!ozelSahne && !girisYolu)
+  const olcuAcik = sihirbazAdim > 0 || alanKipi
 
   /*
    * Ölçüm akışı kapanınca yakınlaştırma da kalkıyor.
@@ -8403,7 +8529,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             ve kurma düğmesi gösteriyor), dolayısıyla kutu yalnızca sihirbaz
             ya da Düzenle açıkken çiziliyor.
           */}
-          {kutuKipi && olcuKutu && taslakKutu && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+          {/*
+            TEK TAKIM KÖŞE TUTAMAĞI.
+
+            Alan işaretlendiğinde fotoğrafta İKİ takım tutamak oluyordu:
+            alanın dört köşesi ve kutunun dört köşesi. İkisi birbirinin
+            üstüne biniyor, hangisinin ne yaptığı anlaşılmıyordu. Alan
+            varsa tasarım zaten onun içine kendiliğinden oturuyor
+            (bkz. alanaYerlestir); kutuyu ayrıca köşesinden ayarlamaya
+            gerek yok. Serbest yerleştirmede alan yok, dolayısıyla orada
+            kutunun tutamakları tek takım olarak duruyor.
+          */}
+          {kutuKipi && alanNokta.length !== 4 && olcuKutu && taslakKutu && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <TaslakKutu
               koseler={taslakKutu.map(oranTuvale)}
               tuvalW={tuvalBoyut.w}
@@ -8449,13 +8586,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               onDurusBasla={kutuDurusuBasladi}
               /* Kutu da tutamakları da fotoğrafın içinde kalıyor. */
               sinir={fotoSinir}
-              etiket={
-                tasarimGizli
-                  ? t('kutu.tiklaGoster')
-                  : kutuDuzen === 'tasi' || kutuDuzen === 'hepsi'
-                    ? t('ref2.konumIpucu')
-                    : null
-              }
+              /*
+               * YÖNERGE FOTOĞRAFIN ÜSTÜNDE DEĞİL, PANELDE.
+               *
+               * "Taşı · köşelerden açı ver…" şeridi kutunun üstünde
+               * duruyordu ve tam da bakılmak istenen yeri kapatıyordu.
+               * Aynı cümle 4. adım kartında yazıyor (sih.4.aciklama).
+               */
+              etiket={tasarimGizli ? t('kutu.tiklaGoster') : null}
             />
           )}
 
@@ -9561,7 +9699,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           bir ara hem panelde hem kartta aynı alanlar vardı ve hangisinin
                           geçerli olduğu belirsizdi.
                         */}
-                        {sihirbazAdim > 0 || alanKipi || (ozelSahne && !girisYolu) ? (
+                        {sihirbazAdim > 0 || alanKipi ? (
                           <div className={olcuPencereSinifi}>
                           <OlcuSihirbazi
                             adim={sihirbazAdim}
@@ -9696,9 +9834,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               setAlanKipi(true)
                             }}
                             /* Görünmeyen köşeyi kenarlarından bulma. */
-                            girisYolu={girisYolu}
-                            onGirisAlanVar={girisAlanVar}
-                            onGirisAlanYok={girisAlanYok}
                             duzenlemede={duzenlemede}
                             onAlanTemizle={alaniTemizle}
                             alanGecerli={alanGecerli}
@@ -9709,7 +9844,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             onKenarEkle={kenardanKoseEkle}
                             onKenarVazgec={kenardanVazgec}
                             onAlanBitir={alaniBitir}
-                            onAlanSigdir={tasarimiAlanaSigdir}
+                            /* Sarmalayici sart: dogrudan verilince React tiklama olayini
+                               ilk parametre olarak gecirir ve dortgen sanilir. */
+                            onAlanSigdir={() => tasarimiAlanaSigdir()}
                             /* L'nin son adımı: kanat şekli (bkz. lSekilPaneli). */
                             kanatSekli={lSekilPaneli}
                           />
