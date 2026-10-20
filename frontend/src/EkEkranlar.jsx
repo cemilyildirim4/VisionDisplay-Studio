@@ -17,7 +17,8 @@
 
 import { koseDonusumu } from './homografi.js'
 import { ledDotSize, ledDotsStyle, LED_LIT_FILTER } from './content.js'
-import { contentImage } from './WallPreview.jsx'
+import { contentImage, VideoLayer } from './WallPreview.jsx'
+import { videoSrcFor } from './videoContent.js'
 
 /* İki nokta arası uzaklık — kaynak dikdörtgenin ölçüsü buradan. */
 const uzaklik = (a, b) => Math.hypot(a.x - b.x, a.y - b.y)
@@ -55,6 +56,15 @@ export default function EkEkranlar({
       cols: a.cols > 0 ? a.cols : cols,
       rows: a.rows > 0 ? a.rows : rows,
       bgImage: e !== 'none' ? contentImage(e, u) : null,
+      /*
+       * VİDEO AYRI BİR ÖĞE.
+       *
+       * contentImage video içeriklerde null dönüyor (video CSS arka planı
+       * olamaz). Sabit ekranlar yalnızca arka plan çizdiği için içeriği
+       * video olan bir ekran sabitlenince SİMSİYAH kalıyordu; düzenlenen
+       * ekranda oynayan video, sabitlenince duruyordu.
+       */
+      video: e !== 'none' ? videoSrcFor(e, u) : null,
       yayinda: e !== 'none' && e !== 'led',
     }
   }
@@ -90,7 +100,7 @@ export default function EkEkranlar({
         const d = koseDonusumu(wPx, hPx, koseler)
         if (!d) return null
 
-        const { cols: eCols, rows: eRows, bgImage, yayinda } = ayarli(ekran)
+        const { cols: eCols, rows: eRows, bgImage, video, yayinda } = ayarli(ekran)
         const diyot = !yayinda ? ledDotSize(wPx / Math.max(1, eCols), hPx / Math.max(1, eRows)) : null
 
         return (
@@ -115,6 +125,8 @@ export default function EkEkranlar({
               filter: yayinda ? LED_LIT_FILTER : undefined,
             }}
           >
+            {/* Video: ekranın kendi ölçüsünde, kırpılarak. */}
+            {video && <VideoLayer src={video} gw={wPx} gh={hPx} left={0} top={0} lit={yayinda} />}
             {diyot && (
               <div
                 style={{
