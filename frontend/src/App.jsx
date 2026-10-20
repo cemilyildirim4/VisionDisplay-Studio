@@ -152,6 +152,7 @@ import { duzlestir } from './egimDenetimi.js'
 import { DAVET_OLAYI } from './apiClient.js'
 import { useSession } from './SessionContext.jsx'
 import { icDortgen, duvarDunyasi, dunyaDortgeni } from './homografi.js'
+import { bolmeDilimleri } from './icerikBolme.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
@@ -1319,8 +1320,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [cizimOlcek, setCizimOlcek] = useState(null)
   const [content, setContent] = useState('led') // led | photo | sample(video) | video | none | upload
   const [contentUrl, setContentUrl] = useState(null)
-  const fileInputRef = useRef(null)
-  const videoInputRef = useRef(null)
+  /*
+   * İÇERİK HAVUZU — bir kez yüklenir, her ekranda kullanılır.
+   *
+   * Önceden yüklenen dosya doğrudan o anki ekranın içeriği oluyordu ve
+   * başka bir ekranda kullanmak için yeniden yüklemek gerekiyordu; üstelik
+   * yeni yükleme eskisinin blob adresini serbest bırakıyordu, yani ilk
+   * ekranın görseli sessizce ölüyordu. Artık yüklenen havuza giriyor,
+   * ekranlar havuzdan seçiyor ve hiçbir adres kendiliğinden bırakılmıyor.
+   */
+  const [icerikHavuzu, setIcerikHavuzu] = useState([])
+  /*
+   * "Bölünmüş": bu ekran içeriği, aynı içeriği bölünmüş seçen ÖTEKİ
+   * ekranlarla paylaşıyor (bkz. icerikBolme.js). Tek başınaysa etkisi yok.
+   */
+  const [bolunmus, setBolunmus] = useState(false)
+  /* Havuza yükleme: görsel ve video tek düğmeden geçiyor. */
+  const havuzInputRef = useRef(null)
   // Adım adım akış: 1 Model · 2 Duvar · 3 Ekran · 4 İçerik
   const [chatOpen, setChatOpen] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
@@ -1448,8 +1464,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       alert(t('content.errVideoSize'))
       return
     }
-    if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
-    setContentUrl(URL.createObjectURL(file))
+    /* Havuza giriyor: eski adres başka bir ekranda kullanılıyor olabilir. */
+    const adres = URL.createObjectURL(file)
+    setIcerikHavuzu((l) => [
+      ...l,
+      { id: 'y' + Date.now() + '-' + l.length, ad: file.name, tip: 'video', url: adres },
+    ])
+    setContentUrl(adres)
     setContent('video')
   }
 
@@ -1475,8 +1496,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * bir işaretçi; dosya diskte kalır, tarayıcı gerektiği kadarını okur.
      * Video zaten böyle çalışıyordu, görsel de artık aynı yolu kullanıyor.
      */
-    if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
-    setContentUrl(URL.createObjectURL(file))
+    const adres = URL.createObjectURL(file)
+    setIcerikHavuzu((l) => [
+      ...l,
+      { id: 'y' + Date.now() + '-' + l.length, ad: file.name, tip: 'gorsel', url: adres },
+    ])
+    setContentUrl(adres)
     setContent('upload')
   }
 
@@ -1880,7 +1905,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setSboxRedundancy('no')
     setHasMiniPc(false)
     setContent('led')
-    if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
+    /* Sıfırlamada havuz da boşalıyor; adresler burada bırakılıyor. */
+    for (const h of icerikHavuzu) if (h.url?.startsWith('blob:')) URL.revokeObjectURL(h.url)
+    setIcerikHavuzu([])
+    setBolunmus(false)
     setContentUrl(null)
     setScreenMode('single')
     setScreens([])
@@ -4002,6 +4030,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     curveAmount,
     content,
     contentUrl: contentUrl || null,
+    bolunmus,
   })
 
   /*
@@ -4049,8 +4078,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * ürün ve içeriği ayrıca seçiliyor. Varsayılan LED (boş ekran).
      */
     setContent('led')
-    if (contentUrl?.startsWith('blob:')) URL.revokeObjectURL(contentUrl)
+    /* Havuzdaki adres bırakılmıyor: başka ekranlar onu kullanıyor olabilir. */
     setContentUrl(null)
+    setBolunmus(false)
     setAlanNokta([])
     setAlanElleEn('')
     setAlanElleBoy('')
@@ -4149,6 +4179,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       if (ayar.rows > 0) setRows(ayar.rows)
       if (ayar.content) setContent(ayar.content)
       setContentUrl(ayar.contentUrl || null)
+      setBolunmus(!!ayar.bolunmus)
     }
     /* Seçilen ekranın kendi alanı ve alan içindeki yeri de geri geliyor. */
     setAlanKipi(false)
@@ -4239,6 +4270,110 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const ekranSil = (id) => {
     if (!window.confirm(t('ekran.silOnay'))) return
     setSabitEkranlar((l) => l.filter((e) => e.id !== id))
+  }
+
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * İÇERİK HAVUZU
+   * ───────────────────────────────────────────────────────────────────────
+   *
+   * Havuz = dört sabit seçenek (LED, boş, örnek görsel, örnek video) +
+   * kullanıcının yükledikleri. Ekranlar içeriği havuzdan seçiyor; aynı
+   * öğeyi seçen iki ekran onu gerçekten PAYLAŞIYOR (aynı blob adresi), bu
+   * yüzden "Bölünmüş" seçildiğinde hangi içeriğin paylaşıldığı adresten
+   * anlaşılıyor — ayrıca bir kimlik saklamaya gerek yok.
+   */
+  const icerikHavuzuTam = [
+    { id: 'led', ad: t('content.led'), tip: 'desen', content: 'led', url: null },
+    { id: 'none', ad: t('content.none'), tip: 'bos', content: 'none', url: null },
+    { id: 'photo', ad: t('content.default'), tip: 'gorsel', content: 'photo', url: DEFAULT_CONTENT_SRC },
+    { id: 'sample', ad: t('content.sample'), tip: 'video', content: 'sample', url: SAMPLE_VIDEO_SRC },
+    ...icerikHavuzu.map((h) => ({ ...h, content: h.tip === 'video' ? 'video' : 'upload' })),
+  ]
+
+  /* (content, contentUrl) ikilisinin havuzdaki karşılığı. */
+  const icerikKimligi = (c, u) => {
+    if (c === 'upload' || c === 'video') {
+      const h = icerikHavuzu.find((x) => x.url === u)
+      return h ? h.id : 'led'
+    }
+    return c || 'led'
+  }
+
+  /* Hedef ekranın içeriğini havuzdan seçilenle değiştirir. */
+  const icerikAta = (hedefId, havuzId) => {
+    const h = icerikHavuzuTam.find((x) => x.id === havuzId)
+    if (!h) return
+    /* Sabit seçeneklerin adresi kodda duruyor; kayda yazılmıyor. */
+    const u = h.id.startsWith('y') ? h.url : null
+    if (!hedefId || hedefId === aktifEkranId) {
+      setContent(h.content)
+      setContentUrl(u)
+      return
+    }
+    setSabitEkranlar((l) =>
+      l.map((e) => (e.id === hedefId ? { ...e, ayar: { ...(e.ayar || {}), content: h.content, contentUrl: u } } : e)),
+    )
+  }
+
+  const bolunmusAta = (hedefId, deger) => {
+    if (!hedefId || hedefId === aktifEkranId) {
+      setBolunmus(deger)
+      return
+    }
+    setSabitEkranlar((l) =>
+      l.map((e) => (e.id === hedefId ? { ...e, ayar: { ...(e.ayar || {}), bolunmus: deger } } : e)),
+    )
+  }
+
+  /* Elde duran ekranın içerik seçimini bütün ekranlara kopyalar. */
+  const icerigiTumuneUygula = () => {
+    setSabitEkranlar((l) =>
+      l.map((e) => ({
+        ...e,
+        ayar: { ...(e.ayar || {}), content, contentUrl: contentUrl || null, bolunmus },
+      })),
+    )
+  }
+
+  /* Panelde ekran başına bir satır: sıra, seçili içerik, tamamı/bölünmüş. */
+  const ekranIcerikSatirlari = [
+    ...sabitEkranlar.map((e, i) => ({
+      id: e.id,
+      sira: e.sira || i + 1,
+      havuzId: e.ayar?.content
+        ? icerikKimligi(e.ayar.content, e.ayar.contentUrl)
+        : icerikKimligi(content, contentUrl),
+      bolunmus: !!e.ayar?.bolunmus,
+    })),
+    { id: aktifEkranId, sira: aktifSira, havuzId: icerikKimligi(content, contentUrl), bolunmus },
+  ]
+    .filter((r) => r.id)
+    .sort((a, b) => (a.sira || 0) - (b.sira || 0))
+
+  /* Havuza yükleme: tek düğme, türüne göre doğru denetime gidiyor. */
+  const havuzaYukle = (e) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    if (VIDEO_TYPES.includes(f.type)) handleVideoFile(e)
+    else handleFile(e)
+  }
+
+  /* Havuzdan çıkarma — adres burada bırakılıyor, kullanan ekranlar LED'e döner. */
+  const havuzdanCikar = (id) => {
+    const h = icerikHavuzu.find((x) => x.id === id)
+    if (!h) return
+    setSabitEkranlar((l) =>
+      l.map((e) =>
+        e.ayar?.contentUrl === h.url ? { ...e, ayar: { ...e.ayar, content: 'led', contentUrl: null } } : e,
+      ),
+    )
+    if (contentUrl === h.url) {
+      setContent('led')
+      setContentUrl(null)
+    }
+    setIcerikHavuzu((l) => l.filter((x) => x.id !== id))
+    if (h.url?.startsWith('blob:')) URL.revokeObjectURL(h.url)
   }
 
   /*
@@ -6353,6 +6488,64 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aktifGrupImza])
 
+  /*
+   * BÖLÜNMÜŞ İÇERİK — hangi ekrana içeriğin hangi dilimi düşüyor.
+   *
+   * Aynı içeriği "Bölünmüş" seçen ekranlar bir küme oluşturuyor; içerik o
+   * kümenin TAMAMINA tek parça seriliyor. Kim hangi dilimi gösterecek,
+   * ekranların fotoğraftaki dizilişinden ve gerçek cm ölçülerinden
+   * hesaplanıyor (bkz. icerikBolme.js).
+   *
+   * İçeriğin kimliği (content, contentUrl) ikilisi: aynı havuz öğesini
+   * seçen ekranlar aynı adresi taşıyor, dolayısıyla ayrıca bir kimlik
+   * saklamaya gerek kalmıyor.
+   *
+   * Tek başına kalan ekran bölünmez — bölecek kimse yok, içeriğin tamamını
+   * gösteriyor. Bu yüzden iki kişiden az küme atlanıyor.
+   */
+  const bolunmusDilimler = (() => {
+    const m = selectedModel || previewModel
+    if (!m) return null
+    const kabinOlcusu = (a) => {
+      const dikey = a.orientation === 'portrait'
+      const kw = ((dikey ? m.heightMm : m.widthMm) || 500) / 10
+      const kh = ((dikey ? m.widthMm : m.heightMm) || 500) / 10
+      return { enCm: Math.max(1, a.cols || 1) * kw, boyCm: Math.max(1, a.rows || 1) * kh }
+    }
+    const anahtar = (a) => (a.content || 'led') + '|' + (a.contentUrl || '')
+    const adaylar = []
+    for (const e of sabitEkranlar) {
+      const a = e.ayar
+      if (!a?.bolunmus) continue
+      /* Birleşmiş gruptaki ekran kendi kaydında değil, türetilmiş yerinde. */
+      const k = grupKoseleri?.get(e.id) || e.oran?.map(oranTuvale)
+      if (!Array.isArray(k) || k.length !== 4) continue
+      adaylar.push({ id: e.id, koseler: k, ...kabinOlcusu(a), anahtar: anahtar(a) })
+    }
+    if (bolunmus && aktifEkranId && Array.isArray(koseMutlak) && koseMutlak.length === 4) {
+      const a = ekranAyariAnlik()
+      adaylar.push({
+        id: aktifEkranId,
+        koseler: aktifGrupKose || koseMutlak,
+        ...kabinOlcusu(a),
+        anahtar: anahtar(a),
+      })
+    }
+    if (adaylar.length < 2) return null
+    const kumeler = new Map()
+    for (const a of adaylar) {
+      if (!kumeler.has(a.anahtar)) kumeler.set(a.anahtar, [])
+      kumeler.get(a.anahtar).push(a)
+    }
+    const harita = new Map()
+    for (const liste of kumeler.values()) {
+      if (liste.length < 2) continue
+      const d = bolmeDilimleri(liste)
+      if (d) for (const [id, v] of d) harita.set(id, v)
+    }
+    return harita.size ? harita : null
+  })()
+
   /* Ölçü akışı açık mı: panelde yalnızca onun işi görünsün. */
   const olcuAcik = sihirbazAdim > 0 || alanKipi || (!!ozelSahne && !girisYolu)
 
@@ -7261,6 +7454,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               rows={rows}
               content={content}
               contentUrl={contentUrl}
+              dilim={bolunmusDilimler?.get(aktifEkranId) || null}
               screenType={screenType}
               resolution={resolution}
               curveAmount={curveAmount}
@@ -7508,6 +7702,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               content={content}
               contentUrl={contentUrl}
               oranTuvale={oranTuvale}
+              dilimler={bolunmusDilimler}
               onSec={ekraniDuzenle}
             />
           )}
@@ -8610,112 +8805,134 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
               <div className="mb-2">
                 <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('content.heading')}</h2>
-                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" onChange={handleFile} className="hidden" />
-                <input ref={videoInputRef} type="file" accept="video/mp4,video/webm,video/ogg" onChange={handleVideoFile} className="hidden" />
 
                 {/*
-                  Üç sütun: her önizleme kutusunun ALTINDA kendi eylemi durur.
-                  LED → Resim Yok · Örnek Görüntü → Resim Ekle · Örnek Video → Video Ekle
+                  İÇERİK HAVUZU.
+
+                  Eskiden burada üç sabit kutu vardı ve yükleme doğrudan o anki
+                  ekranın içeriği oluyordu: aynı görseli ikinci ekranda
+                  kullanmak için yeniden yüklemek gerekiyordu. Artık yüklenen
+                  havuza giriyor, aşağıdaki listede her ekran kendi içeriğini
+                  havuzdan seçiyor.
                 */}
-                <div className="grid grid-cols-3 gap-2">
-                  {/* 1) LED ekran görünümü — varsayılan */}
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setContent('led')}
-                      className={`relative h-16 rounded-lg overflow-hidden flex items-center justify-center text-center px-1 ${
-                        content === 'led' ? 'ring-2 ring-brand' : ''
-                      }`}
-                    >
-                      <div style={{ position: 'absolute', inset: 0, backgroundImage: LED_GRADIENT }} />
-                      <div style={{ position: 'absolute', inset: 0, ...ledDotsStyle(3) }} />
-                      <span className="relative text-white text-[16.5px] font-semibold drop-shadow">
-                        {t('content.led')}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setContent('none')}
-                      className={`py-2.5 rounded-lg text-[16px] hover:border-neutral-300 dark:hover:border-[#39414f] ${
-                        content === 'none'
-                          ? 'btn-selected border-2'
-                          : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
-                      }`}
-                    >
-                      {t('content.none')}
-                    </button>
-                  </div>
-
-                  {/* 2) Örnek görüntü */}
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setContent('photo')}
-                      className={`relative h-16 rounded-lg overflow-hidden flex items-center justify-center text-center px-1 ${
-                        content === 'photo' ? 'ring-2 ring-brand' : ''
-                      }`}
-                    >
-                      <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("${DEFAULT_CONTENT_SRC}")`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                      <span className="relative text-white text-[16.5px] font-semibold drop-shadow">
-                        {t('content.default')}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`py-2.5 rounded-lg text-[16px] hover:border-neutral-300 dark:hover:border-[#39414f] flex items-center justify-center gap-1 ${
-                        content === 'upload'
-                          ? 'btn-selected border-2'
-                          : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
-                      }`}
-                    >
-                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                        <rect x="3" y="5" width="18" height="14" rx="2" />
-                        <circle cx="8.5" cy="10" r="1.5" />
-                        <path d="m21 16-5-5L7 19" />
-                      </svg>
-                      {t('content.upload')}
-                    </button>
-                  </div>
-
-                  {/* 3) Örnek video — küçük önizleme videonun kendisidir */}
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setContent('sample')}
-                      className={`relative h-16 rounded-lg overflow-hidden bg-neutral-900 flex items-center justify-center text-center px-1 ${
-                        content === 'sample' ? 'ring-2 ring-brand' : ''
-                      }`}
-                    >
-                      <video
-                        src={SAMPLE_VIDEO_SRC}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <span className="relative text-white text-[16.5px] font-semibold drop-shadow">
-                        {t('content.sample')}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => videoInputRef.current?.click()}
-                      className={`py-2.5 rounded-lg text-[16px] hover:border-neutral-300 dark:hover:border-[#39414f] flex items-center justify-center gap-1 ${
-                        content === 'video'
-                          ? 'btn-selected border-2'
-                          : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400'
-                      }`}
-                    >
-                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                        <rect x="2" y="6" width="14" height="12" rx="2" />
-                        <path d="M16 10.5 22 7v10l-6-3.5z" />
-                      </svg>
-                      {t('content.uploadVideo')}
-                    </button>
-                  </div>
+                <input
+                  ref={havuzInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,video/mp4,video/webm,video/ogg"
+                  onChange={havuzaYukle}
+                  className="hidden"
+                />
+                <div className="flex flex-wrap gap-2">
+                  {icerikHavuzuTam.map((h) => (
+                    <div key={h.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => icerikAta(aktifEkranId, h.id)}
+                        title={h.ad}
+                        className={`relative w-[78px] h-14 rounded-lg overflow-hidden flex items-end justify-center ${
+                          icerikKimligi(content, contentUrl) === h.id
+                            ? 'ring-2 ring-brand'
+                            : 'border border-neutral-200 dark:border-[#2c333f]'
+                        }`}
+                      >
+                        <IcerikOnizleme oge={h} />
+                        <span className="relative w-full px-1 py-0.5 text-[12px] font-semibold text-white bg-black/50 truncate">
+                          {h.ad}
+                        </span>
+                      </button>
+                      {/* Yüklenen öğe havuzdan çıkarılabiliyor; sabitler duruyor. */}
+                      {h.id.startsWith('y') && (
+                        <button
+                          type="button"
+                          onClick={() => havuzdanCikar(h.id)}
+                          aria-label={t('content.havuzCikar')}
+                          title={t('content.havuzCikar')}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-neutral-700 text-white text-[12px] leading-none flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => havuzInputRef.current?.click()}
+                    className="w-[78px] h-14 rounded-lg border border-dashed border-neutral-300 dark:border-[#39414f] text-[14px] font-medium text-neutral-500 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                  >
+                    + {t('content.havuzYukle')}
+                  </button>
                 </div>
+
+                {/*
+                  EKRAN BAŞINA İÇERİK.
+
+                  Her satır bir ekran: hangi içeriği gösteriyor ve o içeriğin
+                  TAMAMINI mı yoksa kendine düşen dilimi mi. "Bölünmüş" ancak
+                  aynı içeriği seçen başka bir ekran varsa iş yapıyor.
+                */}
+                {sabitEkranlar.length >= 1 && (
+                  <div className="mt-3">
+                    <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
+                      {t('content.ekranBasina')}
+                    </div>
+                    <ul className="mt-1.5 mb-0 list-none p-0 flex flex-col gap-1.5">
+                      {ekranIcerikSatirlari.map((r) => {
+                        const secili = icerikHavuzuTam.find((x) => x.id === r.havuzId)
+                        return (
+                          <li
+                            key={r.id}
+                            className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2 py-1.5"
+                          >
+                            <span className="shrink-0 text-[15px] font-medium text-neutral-700 dark:text-neutral-200">
+                              {r.sira}.
+                            </span>
+                            <div className="relative w-10 h-7 shrink-0 rounded overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                              <IcerikOnizleme oge={secili} />
+                            </div>
+                            <select
+                              value={r.havuzId}
+                              onChange={(ev) => icerikAta(r.id, ev.target.value)}
+                              className="flex-1 min-w-0 text-[15px] rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-transparent px-1.5 py-1"
+                            >
+                              {icerikHavuzuTam.map((h) => (
+                                <option key={h.id} value={h.id}>
+                                  {h.ad}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="shrink-0 flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                              {[false, true].map((v) => (
+                                <button
+                                  key={String(v)}
+                                  type="button"
+                                  onClick={() => bolunmusAta(r.id, v)}
+                                  className={`px-2 py-1 text-[14px] ${
+                                    r.bolunmus === v
+                                      ? 'bg-brand text-white'
+                                      : 'text-neutral-500 dark:text-neutral-400'
+                                  }`}
+                                >
+                                  {v ? t('content.bolunmus') : t('content.tamami')}
+                                </button>
+                              ))}
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={icerigiTumuneUygula}
+                      className="mt-2 w-full py-2 rounded-lg text-[15.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                    >
+                      {t('content.tumuneUygula')}
+                    </button>
+                    <p className="mt-1.5 mb-0 text-[14.5px] leading-snug text-neutral-400 dark:text-neutral-500">
+                      {t('content.bolunmusIpucu')}
+                    </p>
+                  </div>
+                )}
+
                 <p className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-2 m-0">
                   {t('content.hint')}
                 </p>
@@ -10759,6 +10976,50 @@ function FieldLabel({ children, muted = false }) {
  * hiçbir şey de söylenmiyordu (kullanıcı "tepkisiz kalıyor" diye bildirdi).
  * Artık gerçekten kapalı ve sebebini yazıyor.
  */
+/*
+ * HAVUZ ÖĞESİNİN KÜÇÜK ÖNİZLEMESİ.
+ *
+ * Hem havuz karelerinde hem ekran satırlarında aynı görünüm kullanılıyor;
+ * ikisi birbirinden ayrı düşmesin diye tek yerde.
+ *
+ * Kapsayıcı konumlandırmayı kendi yapıyor (relative + overflow-hidden);
+ * burası yalnızca içini dolduruyor.
+ */
+function IcerikOnizleme({ oge }) {
+  if (!oge) return null
+  if (oge.id === 'led')
+    return (
+      <>
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: LED_GRADIENT }} />
+        <div style={{ position: 'absolute', inset: 0, ...ledDotsStyle(3) }} />
+      </>
+    )
+  if (oge.tip === 'bos')
+    return <div style={{ position: 'absolute', inset: 0, background: '#ffffff' }} />
+  if (oge.tip === 'video')
+    return (
+      <video
+        src={oge.url}
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+    )
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage: `url("${oge.url}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    />
+  )
+}
+
 function IconButton({ children, label, active, onClick, sadeceIkon = false, pasifNot = null }) {
   return (
     <button

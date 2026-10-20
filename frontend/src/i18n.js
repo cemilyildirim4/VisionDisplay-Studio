@@ -1425,6 +1425,17 @@ const dict = {
     ar: 'الحد الأقصى لحجم الفيديو 250 ميغابايت.',
   },
   'content.none': { tr: 'Resim Yok', en: 'No Image', ar: 'بدون صورة' },
+  'content.havuzYukle': { tr: 'Yükle', en: 'Upload', ar: 'رفع' },
+  'content.havuzCikar': { tr: 'Havuzdan çıkar', en: 'Remove from library', ar: 'إزالة من المكتبة' },
+  'content.ekranBasina': { tr: 'Ekran başına içerik', en: 'Content per screen', ar: 'المحتوى لكل شاشة' },
+  'content.tamami': { tr: 'Tamamı', en: 'Whole', ar: 'كامل' },
+  'content.bolunmus': { tr: 'Bölünmüş', en: 'Split', ar: 'مقسّم' },
+  'content.tumuneUygula': { tr: 'Tümüne uygula', en: 'Apply to all', ar: 'تطبيق على الكل' },
+  'content.bolunmusIpucu': {
+    tr: 'Aynı içeriği "Bölünmüş" seçen ekranlar onu paylaşır: içerik hepsinin üstüne tek parça serilir, aradaki boşluğa denk gelen kısım görünmez.',
+    en: 'Screens that pick the same content as "Split" share it: the content is laid across them as one piece, and the part falling in the gap is not shown.',
+    ar: 'الشاشات التي تختار المحتوى نفسه بوضع "مقسّم" تتشاركه: يُفرد المحتوى عليها كقطعة واحدة، والجزء الواقع في الفراغ لا يظهر.',
+  },
   'content.hint': {
     tr: '* Yalnızca JPG veya PNG biçiminde, maksimum 60 MB',
     en: '* JPG or PNG only, max 60 MB',

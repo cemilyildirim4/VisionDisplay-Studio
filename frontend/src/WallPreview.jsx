@@ -3,7 +3,7 @@ import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, L_KIRILMA_PCT } from './content.js'
-import { videoSrcFor } from './videoContent.js'
+import { videoSrcFor, senkronaKatil } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { yonDonusumu } from './hooks/useYon.js'
 import { koseDonusumu } from './homografi.js'
@@ -84,8 +84,19 @@ export function seritMaskePolygon(yerlesim, maxHpx) {
   return `polygon(${[...ust, ...altSirali].map(([x, y]) => `${x.toFixed(2)}px ${y.toFixed(2)}px`).join(', ')})`
 }
 
-export function VideoLayer({ src, gw, gh, left, top, lit }) {
+export function VideoLayer({ src, gw, gh, left, top, lit, senkron = false }) {
   const videoRef = useRef(null)
+
+  /*
+   * Bölünmüş içerikte aynı video birkaç ekranda birden oynuyor; ayrı
+   * öğeler zamanla birbirinden kayıyor (bkz. senkronaKatil).
+   */
+  useEffect(() => {
+    if (!senkron || !src) return undefined
+    const v = videoRef.current
+    if (!v) return undefined
+    return senkronaKatil(src, v)
+  }, [senkron, src])
 
   /*
    * TELEFONDA OYNATMAYI GARANTİYE AL.
@@ -325,7 +336,10 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
               ...(frameOnly ? null : bgFor(offsetX)),
             }}
           >
-            {videoSrc && <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX} top={offsetY} lit={isLit} />}
+            {/* spanW verilmişse içerik paylaşılıyor demektir: senkron gerekiyor. */}
+      {videoSrc && (
+        <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX} top={offsetY} lit={isLit} senkron={!!spanW} />
+      )}
             {leftDots && <LedDotsCanvas wPx={leftW} hPx={hPx} dotW={leftDots.dotW} dotH={leftDots.dotH} />}
             {/*
               KATLANMA GÖLGESİ — SOL KANAT.
@@ -493,7 +507,10 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         <div style={{ position: 'absolute', inset: 0, filter: isLit ? LED_LIT_FILTER : undefined, ...bgFor(offsetX) }} />
       )}
 
-      {videoSrc && <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX} top={offsetY} lit={isLit} />}
+      {/* spanW verilmişse içerik paylaşılıyor demektir: senkron gerekiyor. */}
+      {videoSrc && (
+        <VideoLayer src={videoSrc} gw={gw} gh={gh} left={offsetX} top={offsetY} lit={isLit} senkron={!!spanW} />
+      )}
 
       {/* LED diyot dokusu — YALNIZCA panel kapalıyken (yayın yokken).
           Ekranda görüntü varken diyotlar görünmez; izleyici görüntüyü görür.
@@ -717,6 +734,15 @@ export default function WallPreview({
    * konumu tuvalin merkezine göre hesaplıyordu; duvar kutusu tuvalde ortalı
    * olmadığı için ekran yanlış yere düşüyordu.
    */
+  /*
+   * BÖLÜNMÜŞ İÇERİK DİLİMİ — {sx, sy, sw, sh} ya da null.
+   *
+   * Bu ekran içeriği başka ekranlarla paylaşıyorsa içerik hepsinin üstüne
+   * tek parça seriliyor ve buraya yalnızca kendi dilimi düşüyor. Ölçüler
+   * EKRANIN KENDİ boyu cinsinden geliyor (bkz. icerikBolme.js), böylece
+   * burada piksele çevirmek tek çarpma.
+   */
+  dilim = null,
   uc3dKatman = null,
   /*
    * Ekran kutusunun (kose koordinatlarının başnoktası) KAPSAYICIYA göre
@@ -1076,7 +1102,10 @@ export default function WallPreview({
                       backgroundColor: '#0a0a0a',
                       backgroundImage: spanImg || undefined,
                       // Yukarı yuvarlama: sağ kenarda siyah alt-piksel şeridi kalmasın (bkz. bgFor)
-                      backgroundSize: `${Math.ceil(totalWpx)}px ${Math.ceil(maxHpx)}px`,
+                      backgroundSize: `${Math.ceil(totalWpx * (dilim?.sw || 1))}px ${Math.ceil(maxHpx * (dilim?.sh || 1))}px`,
+                      backgroundPosition: dilim
+                        ? `${-totalWpx * dilim.sx}px ${-maxHpx * dilim.sy}px`
+                        : undefined,
                       backgroundRepeat: 'no-repeat',
                       /*
                        * Yayındaki panel filtresi — tek ekranda görsele zaten
@@ -1090,7 +1119,15 @@ export default function WallPreview({
                     }}
                   >
                     {spanVideo && (
-                      <VideoLayer src={spanVideo} gw={totalWpx} gh={maxHpx} left={0} top={0} lit={spanLit} />
+                      <VideoLayer
+                        src={spanVideo}
+                        gw={totalWpx * (dilim?.sw || 1)}
+                        gh={maxHpx * (dilim?.sh || 1)}
+                        left={dilim ? totalWpx * dilim.sx : 0}
+                        top={dilim ? maxHpx * dilim.sy : 0}
+                        lit={spanLit}
+                        senkron={!!dilim}
+                      />
                     )}
                   </div>
                 )}
@@ -1113,10 +1150,19 @@ export default function WallPreview({
                       curveAmount={curveAmount}
                       leftCols={s.leftCols}
                       rightCols={s.rightCols}
-                      spanW={totalWpx}
-                      spanH={maxHpx}
-                      offsetX={s.xStart}
-                      offsetY={maxHpx - s.hPx}
+                      {...(dilim
+                        ? {
+                            spanW: totalWpx * dilim.sw,
+                            spanH: maxHpx * dilim.sh,
+                            offsetX: s.xStart + totalWpx * dilim.sx,
+                            offsetY: maxHpx - s.hPx + maxHpx * dilim.sy,
+                          }
+                        : {
+                            spanW: totalWpx,
+                            spanH: maxHpx,
+                            offsetX: s.xStart,
+                            offsetY: maxHpx - s.hPx,
+                          })}
                     />
                   ))}
                 </div>
@@ -1462,6 +1508,14 @@ export default function WallPreview({
               contentUrl={contentUrl}
               hideRegions={hideRegions}
               curveAmount={curveAmount}
+              {...(dilim
+                ? {
+                    spanW: screenW * dilim.sw,
+                    spanH: screenH * dilim.sh,
+                    offsetX: screenW * dilim.sx,
+                    offsetY: screenH * dilim.sy,
+                  }
+                : null)}
             />
             </div>
             {/*

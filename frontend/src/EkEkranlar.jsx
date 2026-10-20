@@ -35,6 +35,12 @@ export default function EkEkranlar({
   oranTuvale,
   /* Verilirse ekrana tıklanınca o ekran düzenlemeye alınıyor. */
   onSec = null,
+  /*
+   * BÖLÜNMÜŞ İÇERİK DİLİMLERİ — Map(ekran kimliği → {sx, sy, sw, sh}).
+   * İçeriği paylaşan ekranlar için hesaplanıyor (bkz. icerikBolme.js);
+   * paylaşmayanlar haritada yok ve eskisi gibi içeriğin tamamını gösteriyor.
+   */
+  dilimler = null,
   /* Düzenlenmekte olan ekranın sırası — listede vurgulamak için değil,
      burada yalnızca o ekranın İKİ KEZ çizilmemesi için kullanılıyor. */
 }) {
@@ -101,6 +107,12 @@ export default function EkEkranlar({
         if (!d) return null
 
         const { cols: eCols, rows: eRows, bgImage, video, yayinda } = ayarli(ekran)
+        /* Dilim yoksa {0,0,1,1}: içerik ekranın tamamını kaplıyor. */
+        const dlm = dilimler?.get(ekran.id) || null
+        const icEn = wPx * (dlm?.sw || 1)
+        const icBoy = hPx * (dlm?.sh || 1)
+        const icSol = dlm ? wPx * dlm.sx : 0
+        const icUst = dlm ? hPx * dlm.sy : 0
         const diyot = !yayinda ? ledDotSize(wPx / Math.max(1, eCols), hPx / Math.max(1, eRows)) : null
 
         return (
@@ -120,13 +132,24 @@ export default function EkEkranlar({
               pointerEvents: onSec ? 'auto' : 'none',
               cursor: onSec ? 'pointer' : undefined,
               backgroundImage: bgImage || undefined,
-              backgroundSize: `${Math.ceil(wPx)}px ${Math.ceil(hPx)}px`,
+              backgroundSize: `${Math.ceil(icEn)}px ${Math.ceil(icBoy)}px`,
+              backgroundPosition: dlm ? `${-icSol}px ${-icUst}px` : undefined,
               backgroundRepeat: 'no-repeat',
               filter: yayinda ? LED_LIT_FILTER : undefined,
             }}
           >
             {/* Video: ekranın kendi ölçüsünde, kırpılarak. */}
-            {video && <VideoLayer src={video} gw={wPx} gh={hPx} left={0} top={0} lit={yayinda} />}
+            {video && (
+              <VideoLayer
+                src={video}
+                gw={icEn}
+                gh={icBoy}
+                left={icSol}
+                top={icUst}
+                lit={yayinda}
+                senkron={!!dlm}
+              />
+            )}
             {diyot && (
               <div
                 style={{

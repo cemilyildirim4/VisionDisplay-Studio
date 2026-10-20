@@ -55,6 +55,73 @@ export function isDrawable(el) {
   return el.complete && el.naturalWidth > 0
 }
 
+/*
+ * BÖLÜNMÜŞ VİDEOLARIN SENKRONU.
+ *
+ * Aynı videoyu paylaşan ekranların her biri kendi <video> öğesini çalıştırıyor
+ * (tek bir öğeyi birden çok yerde göstermenin yolu yok). Ayrı öğeler aynı anda
+ * başlasalar bile birbirinden kayıyor: her biri kendi çözme hızında ilerliyor,
+ * sekme arka plana düşünce duruyor, döngü başına da farklı anda sarıyor.
+ * Birkaç saniye içinde yan yana iki ekran videonun iki ayrı yerini gösteriyor.
+ *
+ * ÇÖZÜM: aynı kaynağı paylaşanlar bir deftere yazılıyor, saniyede bir
+ * BİRİNCİSİNE bakılıyor ve ondan belirgin biçimde ayrılan geri alınıyor.
+ * Eşik 0,25 saniye: gözle yakalanmayacak kadar küçük, sürekli ileri geri
+ * atlamaya yol açmayacak kadar büyük.
+ *
+ * Tek bir zamanlayıcı var; defter boşalınca o da duruyor.
+ */
+const senkronDefteri = new Map() // kaynak → Set<video öğesi>
+let senkronSayaci = null
+
+function senkronEsitle() {
+  for (const kume of senkronDefteri.values()) {
+    if (kume.size < 2) continue
+    /* readyState < 2 olan henüz tek kare bile çözmemiş; zamanı anlamsız. */
+    const liste = [...kume].filter((v) => v.readyState >= 2 && v.duration > 0)
+    if (liste.length < 2) continue
+    const lider = liste[0]
+    for (let i = 1; i < liste.length; i++) {
+      const v = liste[i]
+      const fark = Math.abs(v.currentTime - lider.currentTime)
+      /* Döngü sarması: 9,9 s ile 0,1 s arasındaki gerçek fark 0,2 s. */
+      const gercek = Math.min(fark, Math.abs(lider.duration - fark))
+      if (gercek > 0.25) {
+        try {
+          v.currentTime = lider.currentTime
+        } catch {
+          /* Henüz aranabilir değilse bir sonraki turda düzelir. */
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Öğeyi senkron defterine yazar; bırakma işlevini döndürür.
+ * Aynı kaynağı tek bir ekran kullanıyorsa hiçbir şey yapılmaz (eşitlenecek
+ * kimse yok), ama kayıt yine de tutulur: ikinci ekran eklendiğinde ikisi
+ * birden eşitlenmeye başlasın.
+ */
+export function senkronaKatil(kaynak, el) {
+  if (!kaynak || !el) return () => {}
+  let kume = senkronDefteri.get(kaynak)
+  if (!kume) {
+    kume = new Set()
+    senkronDefteri.set(kaynak, kume)
+  }
+  kume.add(el)
+  if (!senkronSayaci) senkronSayaci = setInterval(senkronEsitle, 1000)
+  return () => {
+    kume.delete(el)
+    if (kume.size === 0) senkronDefteri.delete(kaynak)
+    if (senkronDefteri.size === 0 && senkronSayaci) {
+      clearInterval(senkronSayaci)
+      senkronSayaci = null
+    }
+  }
+}
+
 /**
  * Verilen kaynak için oynatılmaya hazır bir <video> öğesi üretir.
  * DOM'a eklenmez — tuvale çizmek için kullanılır.
