@@ -39,6 +39,37 @@ import { fileURLToPath } from 'node:url'
 import { parse } from '@babel/parser'
 
 const KOK = fileURLToPath(new URL('../src', import.meta.url))
+
+/*
+ * HİÇBİR KAPSAMDA BULUNMAYAN AD = TANIMSIZ.
+ *
+ * Aşağıdakiler dışında kalan her çözümsüz ad hata sayılıyor. Bu denetim,
+ * bir şey silindikten SONRA ona yapılan atfın kalmasını yakalıyor:
+ * derleme bundan hiç şikâyet etmiyor, hata ancak o satır çizilince
+ * ReferenceError olarak çıkıyor. oxlint'te no-undef kuralı yok (denendi).
+ */
+const KURESEL = new Set([
+  'globalThis', 'window', 'document', 'navigator', 'location', 'history', 'screen',
+  'console', 'Math', 'JSON', 'Object', 'Array', 'String', 'Number', 'Boolean', 'Symbol',
+  'Date', 'RegExp', 'Error', 'TypeError', 'RangeError', 'Promise', 'Map', 'Set',
+  'WeakMap', 'WeakSet', 'Proxy', 'Reflect', 'BigInt', 'Infinity', 'NaN', 'undefined',
+  'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'encodeURIComponent', 'decodeURIComponent',
+  'encodeURI', 'decodeURI', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
+  'requestAnimationFrame', 'cancelAnimationFrame', 'queueMicrotask', 'structuredClone',
+  'fetch', 'Request', 'Response', 'Headers', 'FormData', 'URL', 'URLSearchParams', 'Blob',
+  'File', 'FileReader', 'AbortController', 'AbortSignal', 'Image', 'Audio', 'Event',
+  'CustomEvent', 'MouseEvent', 'KeyboardEvent', 'PointerEvent', 'ResizeObserver',
+  'IntersectionObserver', 'MutationObserver', 'indexedDB', 'localStorage', 'sessionStorage',
+  'crypto', 'performance', 'alert', 'confirm', 'prompt', 'matchMedia', 'getComputedStyle',
+  'DOMParser', 'XMLHttpRequest', 'WebSocket', 'Worker', 'OffscreenCanvas', 'ImageData',
+  'Path2D', 'HTMLElement', 'HTMLInputElement', 'HTMLCanvasElement', 'HTMLImageElement',
+  'HTMLVideoElement', 'SVGElement', 'Node', 'NodeList', 'Element',
+  'CanvasRenderingContext2D', 'WebGLRenderingContext', 'TextEncoder', 'TextDecoder',
+  'Uint8Array', 'Uint8ClampedArray', 'Int8Array', 'Uint16Array', 'Int16Array',
+  'Uint32Array', 'Int32Array', 'Float32Array', 'Float64Array', 'ArrayBuffer', 'DataView',
+  'Intl', 'process', 'WebAssembly', 'ReadableStream', 'btoa', 'atob', 'self',
+  'customElements', 'CSS', 'MediaRecorder', 'Notification', 'caches', 'CSSStyleDeclaration',
+])
 /** Hoist edilen bağlamalar için konum: her zaman tanımlı. */
 const HER_ZAMAN = -1
 
@@ -183,6 +214,14 @@ function dosyayiDenetle(yol, bulgular) {
         }
         return // en içteki tanım kazanır
       }
+      /* Hiçbir kapsamda yok: ya bilinen bir küresel, ya tanımsız bir atıf. */
+      /*
+       * Derleme anında değiştirilen sabitler (Vite define) __BOYLE__
+       * yazılıyor; kaynakta bir tanımları yok ama pakette değerleri var.
+       */
+      if (!KURESEL.has(dugum.name) && !/^__[A-Z0-9_]+__$/.test(dugum.name)) {
+        bulgular.push({ dosya, ad: dugum.name, okunan: satir(kaynak, dugum.start), tanim: null })
+      }
       return
     }
 
@@ -202,6 +241,15 @@ function dosyayiDenetle(yol, bulgular) {
       return
     }
     if (dugum.type === 'JSXIdentifier' || dugum.type === 'JSXText' || dugum.type === 'JSXEmptyExpression') return
+    /* import.meta: iki parçası da ad değil. */
+    if (dugum.type === 'MetaProperty') return
+    /* break/continue etiketi bir değişken okuması değil. */
+    if (dugum.type === 'BreakStatement' || dugum.type === 'ContinueStatement') return
+    /* Etiketli döngü: etiketin kendisi de bir ad değil. */
+    if (dugum.type === 'LabeledStatement') {
+      gez(dugum.body, zincir, derinlik)
+      return
+    }
     if (dugum.type === 'JSXMemberExpression') {
       gez(dugum.object, zincir, derinlik)
       return
@@ -295,15 +343,27 @@ for (const yol of dosyalar(KOK)) dosyayiDenetle(yol, bulgular)
 const benzersiz = [...new Map(bulgular.map((b) => [b.dosya + ':' + b.okunan + ':' + b.ad, b])).values()]
 
 if (benzersiz.length === 0) {
-  console.log('TDZ denetimi: temiz ✓')
+  console.log('Ad denetimi: temiz ✓')
 } else {
-  console.error('TDZ denetimi: ' + benzersiz.length + ' yerde tanımdan önce okuma var\n')
+  console.error('Ad denetimi: ' + benzersiz.length + ' sorunlu ad var\n')
   for (const b of benzersiz) {
-    console.error('  ' + b.dosya + ':' + b.okunan + '  "' + b.ad + '" okunuyor, tanımı ' + b.tanim + '. satırda')
+    console.error(
+      '  ' +
+        b.dosya +
+        ':' +
+        b.okunan +
+        '  "' +
+        b.ad +
+        (b.tanim === null
+          ? '" hiçbir yerde tanımlı değil'
+          : '" okunuyor, tanımı ' + b.tanim + '. satırda'),
+    )
   }
   console.error(
-    '\nTanımı okunduğu yerin ÜSTÜNE taşıyın. Çalışma anında ' +
-      '"Cannot access \'X\' before initialization" veren hata budur.',
+    '\nTanımdan önce okuma: tanımı yukarı taşıyın (çalışma anında ' +
+      '"Cannot access \'X\' before initialization").\n' +
+      'Hiçbir yerde tanımlı değil: silinen bir şeye atıf kalmış ' +
+      '("X is not defined"). Atfı kaldırın ya da küresel listesine ekleyin.',
   )
   process.exitCode = 1
 }

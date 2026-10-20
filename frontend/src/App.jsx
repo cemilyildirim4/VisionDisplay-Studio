@@ -115,7 +115,6 @@ import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
 import {
   dortgenGercekOlcu,
   odakIkiReferanstan,
-  kesisim,
   dikdortgeneOtur,
   dortgenGecerli,
   grupDortgenleri,
@@ -154,6 +153,7 @@ import { useSession } from './SessionContext.jsx'
 import { icDortgen, duvarDunyasi, dunyaDortgeni } from './homografi.js'
 import { bolmeDilimleri } from './icerikBolme.js'
 import { kenarHaritasiCikar, yapisacakNokta } from './kenarBulucu.js'
+import { kenarlardanKoseler } from './alanKenar.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
@@ -1042,8 +1042,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [grupAcisi, setGrupAcisi] = useState(135)
 
   const [duzenlemede, setDuzenlemede] = useState(false)
-  const [kenarKipi, setKenarKipi] = useState(false)
-  const [kenarNokta, setKenarNokta] = useState([])
+  /*
+   * ALANIN KENAR ÇİZGİLERİ — sekiz nokta, ikişerli dört çizgi.
+   *
+   * Köşelere sırayla tıklamak iki sebeple bırakıldı: sıra hatası dörtgeni
+   * bozuyordu ve çoğu fotoğrafta köşenin kendisi görünmüyor (kadrajın
+   * dışında, bir eşyanın arkasında ya da duvar orada bitmiyor). Kenar ise
+   * neredeyse her zaman görünüyor.
+   *
+   * Köşeler buradan TÜRETİLİYOR (bkz. alanKenar.js) ve alanNokta'ya
+   * yazılıyor; alanNokta hâlâ bütün ölçü ve çizim hesaplarının girdisi.
+   * Çizgiler ayrıca saklanıyor ki kullanıcı sonradan uçlarını
+   * sürükleyebilsin.
+   */
+  const [alanCizgi, setAlanCizgi] = useState([])
   /*
    * ALANIN ÖLÇÜSÜ ELLE DÜZELTİLEBİLİYOR.
    *
@@ -1678,8 +1690,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setRef2Nokta([])
       setRef2UzunlukCm('')
       setRef2Kipi(false)
-      setKenarKipi(false)
-      setKenarNokta([])
+      setAlanCizgi([])
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *
@@ -3781,30 +3792,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
 
-  /* Alanı sıfırdan işaretlemek: köşeler siliniyor, kip açık kalıyor. */
+  /* Alanı sıfırdan işaretlemek: çizgiler ve köşeler siliniyor. */
   const alaniTemizle = () => {
     setAlanNokta([])
-    setKenarNokta([])
-    setKenarKipi(false)
+    setAlanCizgi([])
   }
 
-  /* Görünmeyen köşeyi kenarlarından bulmaya başla. */
-  const kenardanKoseBasla = () => {
-    setKenarNokta([])
-    setKenarKipi(true)
-  }
-
-  /* Bulunan kesişimi alanın köşesi olarak ekle. */
-  const kenardanKoseEkle = () => {
-    if (!kenarKesisim) return
-    setAlanNokta((l) => (l.length >= 4 ? l : [...l, tuvalOrana(kenarKesisim)]))
-    setKenarNokta([])
-    setKenarKipi(false)
-  }
-
-  const kenardanVazgec = () => {
-    setKenarNokta([])
-    setKenarKipi(false)
+  /*
+   * KENAR ÇİZGİLERİ DEĞİŞTİ.
+   *
+   * Dört çizgi tamamlanmışsa köşeler hemen türetiliyor: kullanıcı
+   * "Bitti"ye basmadan da alan çerçevesini ve ölçüyü görüyor. Dörtten az
+   * çizgi varsa ya da kesişimler geçerli bir dörtgen vermiyorsa köşeler
+   * boşaltılıyor — yarım bir alanın ölçüsü yanlış bilgi olurdu.
+   */
+  const kenarCizgileriDegisti = (tuvalNoktalari) => {
+    setAlanCizgi(tuvalNoktalari.map(tuvalOrana))
+    if (tuvalNoktalari.length < 8) {
+      if (alanNokta.length) setAlanNokta([])
+      return
+    }
+    const cizgiler = []
+    for (let i = 0; i + 1 < tuvalNoktalari.length; i += 2) {
+      cizgiler.push([tuvalNoktalari[i], tuvalNoktalari[i + 1]])
+    }
+    const k = kenarlardanKoseler(cizgiler)
+    setAlanNokta(k ? k.map(tuvalOrana) : [])
   }
 
   /* Dört nokta tamamlandı: işaretleme kapanıyor, tasarım alana giriyor. */
@@ -4148,6 +4161,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        */
       elleEn: alanElleEn,
       elleBoy: alanElleBoy,
+      /* Kenar çizgileri de ekranın kendi bilgisi: düzenlemede geri geliyor. */
+      cizgi: alanCizgi.length === 8 ? alanCizgi.map((q) => ({ ...q })) : null,
       ayar: ekranAyariAnlik(),
     }
   }
@@ -4173,6 +4188,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setContentUrl(null)
     setBolunmus(false)
     setAlanNokta([])
+    setAlanCizgi([])
     setAlanElleEn('')
     setAlanElleBoy('')
     setAlanKonum({ u: 0.5, v: 0.5 })
@@ -4283,6 +4299,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Seçilen ekranın kendi alanı ve alan içindeki yeri de geri geliyor. */
     setAlanKipi(false)
     setAlanNokta(Array.isArray(secilen.alan) && secilen.alan.length === 4 ? secilen.alan : [])
+    setAlanCizgi(Array.isArray(secilen.cizgi) && secilen.cizgi.length === 8 ? secilen.cizgi : [])
     setAlanKonum(secilen.konum || { u: 0.5, v: 0.5 })
     setAlanDoldur(!!secilen.doldur)
     setAlanOlcek(secilen.olcek || null)
@@ -5121,8 +5138,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * çevirimi burada yapılıyor; işaretleyici fotoğrafın çözünürlüğünü
    * bilmek zorunda kalmıyor.
    *
-   * Arama yarıçapı tuvalde 14 piksel: göz farkından büyük, komşu kenara
-   * kaçacak kadar geniş değil.
+   * ARAMA YARIÇAPI DAR TUTULUYOR (7 piksel).
+   *
+   * 14 pikselde yapışma fazla güçlüydü: kullanıcı kenarın biraz yanına
+   * koymak istediğinde nokta en yakın güçlü geçişe kaçıyordu. Yarıçap
+   * yarıya indi; bilerek yanına koymak isteyen Alt ile tamamen
+   * kapatabiliyor (kart ayrıntısında yazıyor).
    */
   const kenaraYapis = (() => {
     if (!kenarHarita || !fotoSinirHam) return null
@@ -5136,7 +5157,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         kenarHarita,
         (p.x - fotoSinirHam.sol) * olcekX,
         (p.y - fotoSinirHam.ust) * olcekY,
-        14 * olcekX,
+        7 * olcekX,
       )
       if (!b) return null
       return {
@@ -5256,12 +5277,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const alanGecerli = alanNokta.length !== 4 || !alanTuval ? true : dortgenGecerli(alanTuval)
 
-  /* Kenar noktalarının tuvaldeki yeri ve iki çizginin kesişimi. */
-  const kenarTuval = kenarNokta.map(oranTuvale)
-  const kenarKesisim =
-    kenarTuval.length === 4
-      ? kesisim(kenarTuval[0], kenarTuval[1], kenarTuval[2], kenarTuval[3])
-      : null
 
   /*
    * ───────────────────────────────────────────────────────────────────────
@@ -8343,68 +8358,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Kendi seçicisiyle çiziliyor; alan seçicisi bu sırada kapalı ki
             tıklamalar karışmasın.
           */}
-          {kenarKipi && alanKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
-            <>
-              <svg
-                className="absolute inset-0"
-                width={tuvalBoyut.w}
-                height={tuvalBoyut.h}
-                style={{ pointerEvents: 'none', zIndex: 29 }}
-              >
-                {/* Konulmuş alan köşeleri sönük duruyor: nerede kalındığı görünsün. */}
-                {alanNokta.map(oranTuvale).map((k, i) => (
-                  <circle key={i} cx={k.x} cy={k.y} r="4" fill="#16a34a" opacity="0.55" />
-                ))}
-                {/* Kenar çizgileri UZATILARAK çiziliyor: kesişim görünür olsun. */}
-                {[0, 2].map((i) =>
-                  kenarTuval[i] && kenarTuval[i + 1] ? (
-                    (() => {
-                      const a = kenarTuval[i]
-                      const b = kenarTuval[i + 1]
-                      const dx = b.x - a.x
-                      const dy = b.y - a.y
-                      const u = Math.hypot(dx, dy) || 1
-                      const k = 4000 / u
-                      return (
-                        <line
-                          key={i}
-                          x1={a.x - dx * k}
-                          y1={a.y - dy * k}
-                          x2={b.x + dx * k}
-                          y2={b.y + dy * k}
-                          stroke="#2962ad"
-                          strokeWidth="1.5"
-                          strokeDasharray="7 6"
-                          opacity="0.8"
-                        />
-                      )
-                    })()
-                  ) : null,
-                )}
-                {kenarKesisim && (
-                  <>
-                    <circle cx={kenarKesisim.x} cy={kenarKesisim.y} r="11" fill="none" stroke="#f59e0b" strokeWidth="2.5" />
-                    <circle cx={kenarKesisim.x} cy={kenarKesisim.y} r="2.5" fill="#f59e0b" />
-                  </>
-                )}
-              </svg>
-              <ReferansSecici
-              /* 2.1 — büyüteç, kenara/köşeye yapışma, yakınlaştırma. */
-              foto={isaretFoto}
-              kenaraYapis={kenaraYapis}
-              olcek={isaretZoom}
-              onKaydir={isaretKaydir}
-                noktalar={kenarTuval}
-                onDegis={(t) => setKenarNokta(t.map(tuvalOrana))}
-                enCokNokta={4}
-                tuvalW={tuvalBoyut.w}
-                tuvalH={tuvalBoyut.h}
-                yapiskanNoktalar={yapiskanNoktalar}
-              />
-            </>
-          )}
+          {/*
+            ALANIN KENAR ÇİZGİLERİ.
 
-          {(alanKipi || alanTutamaklari) && !kenarKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+            Tek tip tutamak: çizgilerin uçları. Ayrı bir köşe tutamağı yok —
+            köşeler çizgilerin kesişimi, kendileri çekilmiyor. Düzenlemede de
+            aynı araç açılıyor, dolayısıyla kullanıcı iki ayrı tutamak takımı
+            arasında seçim yapmak zorunda kalmıyor.
+          */}
+          {(alanKipi || alanTutamaklari) && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
               /* 2.1 — büyüteç, kenara/köşeye yapışma, yakınlaştırma. */
               foto={isaretFoto}
@@ -8417,59 +8379,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   ? Math.round(alanOlculenCm.enCm) + ' × ' + Math.round(alanOlculenCm.boyCm) + ' cm'
                   : null
               }
-              noktalar={alanNokta.map(oranTuvale)}
-              onDegis={(tuvalNoktalari) => {
-                /*
-                 * DÜZENLEMEDE DÖRTGEN BÜKÜLEMİYOR.
-                 *
-                 * Tek köşe serbestçe oynatılınca dörtgen bir dikdörtgenin
-                 * görüntüsü olmaktan çıkıyor, perspektif hesabı çöküyor ve
-                 * ölçü anlamsız bir yere atlıyordu (314 × 152 cm'lik alan
-                 * 131 × 107'ye düşüyordu). Duvarın düzlemi ilk işaretlemede
-                 * belli; köşe çekilince o düzlemde yeni bir DİKDÖRTGEN
-                 * kuruluyor: çekilen köşenin karşısı çıpa olarak sabit
-                 * kalıyor, öteki iki köşe kendiliğinden kayıyor.
-                 *
-                 * İlk işaretleme (alanKipi) serbest: orada dikdörtgeni
-                 * tanımlayan zaten kullanıcı.
-                 */
-                if (alanTutamaklari && tuvalNoktalari.length === 4 && alanNokta.length === 4) {
-                  const eski = alanNokta.map(oranTuvale)
-                  let hangi = -1
-                  let sayi = 0
-                  for (let k = 0; k < 4; k++) {
-                    const q = tuvalNoktalari[k]
-                    if (!q || !eski[k]) continue
-                    if (Math.hypot(q.x - eski[k].x, q.y - eski[k].y) > 0.5) {
-                      hangi = k
-                      sayi++
-                    }
-                  }
-                  const odak =
-                    fotoOdak > 1
-                      ? fotoOdak
-                      : fotoYer?.genislik > 0
-                        ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785
-                        : 0
-                  if (sayi === 1 && odak > 1) {
-                    const yeniKose = dikdortgeneOtur(
-                      eski,
-                      oranTuvale({ x: 0.5, y: 0.5 }),
-                      odak,
-                      hangi,
-                      tuvalNoktalari[hangi],
-                    )
-                    if (yeniKose) {
-                      setAlanNokta(yeniKose.map(tuvalOrana))
-                      return
-                    }
-                  }
-                }
-                setAlanNokta(tuvalNoktalari.map(tuvalOrana))
-              }}
-              /* Duran ekranların köşelerine yapışıyor (bkz. yapiskanNoktalar). */
-              yapiskanNoktalar={yapiskanNoktalar}
-              enCokNokta={4}
+              /*
+                KENAR ÇİZİMİ: sekiz nokta, ikişerli dört çizgi.
+                Köşeler kesişimlerden türüyor (bkz. kenarCizgileriDegisti).
+              */
+              kenarCizim
+              enCokNokta={8}
+              noktalar={alanCizgi.map(oranTuvale)}
+              onDegis={kenarCizgileriDegisti}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
               /*
@@ -9837,12 +9754,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             duzenlemede={duzenlemede}
                             onAlanTemizle={alaniTemizle}
                             alanGecerli={alanGecerli}
-                            kenarKipi={kenarKipi}
-                            kenarNoktaSayisi={kenarNokta.length}
-                            kenarHazir={!!kenarKesisim}
-                            onKenarBasla={kenardanKoseBasla}
-                            onKenarEkle={kenardanKoseEkle}
-                            onKenarVazgec={kenardanVazgec}
+                            /* Kaç kenar çizgisi tamamlandı (0–4). */
+                            kenarCizgiSayisi={Math.floor(alanCizgi.length / 2)}
                             onAlanBitir={alaniBitir}
                             /* Sarmalayici sart: dogrudan verilince React tiklama olayini
                                ilk parametre olarak gecirir ve dortgen sanilir. */

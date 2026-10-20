@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { kenarlardanKoseler, cizgiyiUzat } from './alanKenar.js'
 
 /*
  * İŞARET KÜÇÜK, VURUŞ ALANI BÜYÜK.
@@ -86,6 +87,17 @@ export default function ReferansSecici({
    * nokta koyuyor; ikisini ayıran şey parmağın/farenin kaç piksel gittiği.
    */
   onKaydir = null,
+  /*
+   * KENAR ÇİZİM KİPİ.
+   *
+   * Noktalar ikişerli okunuyor: (0,1) bir kenar çizgisi, (2,3) ötekisi.
+   * Kullanıcı alanın dört kenarına birer çizgi çekiyor; köşeler bu
+   * çizgilerin kesişimlerinden çıkıyor (bkz. alanKenar.js). Köşeye
+   * tıklamak zorunda olmamasının sebebi basit: çoğu fotoğrafta köşe
+   * görünmüyor — kadrajın dışında ya da bir eşyanın arkasında — ama
+   * kenar görünüyor.
+   */
+  kenarCizim = false,
 }) {
   /*
    * HER ŞEY FOTOĞRAFIN İÇİNDE KALIYOR.
@@ -289,7 +301,23 @@ export default function ReferansSecici({
   }
 
   const [a, b] = noktalar
-  const cizgiKipi = enCokNokta === 2
+  const cizgiKipi = !kenarCizim && enCokNokta === 2
+
+  /*
+   * KENAR ÇİZGİLERİ VE ONLARDAN ÇIKAN DÖRTGEN.
+   *
+   * Tamamlanmış her çift bir çizgi; uzantıları kesikli çiziliyor ki
+   * kullanıcı kesişimin nereye düşeceğini daha çizerken görsün. Dört
+   * çizgi tamamlanınca alan çerçevesi de gösteriliyor — köşe kadrajın
+   * dışında kalsa bile dörtgen doğru kuruluyor.
+   */
+  const kenarCizgileri = []
+  if (kenarCizim) {
+    for (let i = 0; i + 1 < noktalar.length; i += 2) kenarCizgileri.push([noktalar[i], noktalar[i + 1]])
+  }
+  const kenarDortgen =
+    kenarCizim && kenarCizgileri.length === 4 ? kenarlardanKoseler(kenarCizgileri) : null
+  const kenarDortgenYolu = kenarDortgen ? kenarDortgen.map((p) => `${p.x},${p.y}`).join(' ') : null
   const uzunlukPx = cizgiKipi && a && b ? Math.hypot(b.x - a.x, b.y - a.y) : 0
   /*
    * ROZETTE YAZAN SAYI ORİJİNAL GÖRSEL PİKSELİ.
@@ -311,7 +339,10 @@ export default function ReferansSecici({
    * Dört köşe kipinde kapalı bir dörtgen çiziliyor: kullanıcı işaretlediği
    * şeklin dikdörtgen olup olmadığını ancak böyle görüyor.
    */
-  const dortgen = !cizgiKipi && noktalar.length === 4 ? noktalar.map((p) => `${p.x},${p.y}`).join(' ') : null
+  const dortgen =
+    !kenarCizim && !cizgiKipi && noktalar.length === 4
+      ? noktalar.map((p) => `${p.x},${p.y}`).join(' ')
+      : null
   /*
    * ARADAKİ ÇİZGİ İŞARETLERKEN DE VAR.
    *
@@ -322,7 +353,7 @@ export default function ReferansSecici({
    * ve dördüncü nokta göz kararı değil, kenara bakarak konuyor.
    */
   const yol =
-    !cizgiKipi && noktalar.length >= 2 && noktalar.length < 4
+    !kenarCizim && !cizgiKipi && noktalar.length >= 2 && noktalar.length < 4
       ? noktalar.map((p) => `${p.x},${p.y}`).join(' ')
       : null
 
@@ -409,7 +440,12 @@ export default function ReferansSecici({
         İMLEÇ ÇİZGİSİ — henüz konmamış kenar.
         Soluk ve ince: konulmuş kenarlarla karışmıyor.
       */}
-      {imlec && noktalar.length > 0 && noktalar.length < enCokNokta && (
+      {imlec &&
+        noktalar.length > 0 &&
+        noktalar.length < enCokNokta &&
+        /* Kenar kipinde çizgi yalnızca YARIM kalan çifte uzuyor; tamamlanmış
+           bir çizginin sonundan imlece hat çekmek yanıltıcı olurdu. */
+        (!kenarCizim || noktalar.length % 2 === 1) && (
         <>
           <line
             x1={noktalar[noktalar.length - 1].x}
@@ -431,8 +467,26 @@ export default function ReferansSecici({
             strokeDasharray="5 6"
             pointerEvents="none"
           />
+          {/* Yarım çizginin uzantısı: kesişimin yeri şimdiden belli olsun. */}
+          {kenarCizim &&
+            (() => {
+              const u = cizgiyiUzat(noktalar[noktalar.length - 1], imlec, tuvalW, tuvalH)
+              return u ? (
+                <line
+                  x1={u[0].x}
+                  y1={u[0].y}
+                  x2={u[1].x}
+                  y2={u[1].y}
+                  stroke={renk}
+                  strokeWidth="1.4"
+                  strokeDasharray="7 7"
+                  opacity="0.45"
+                  pointerEvents="none"
+                />
+              ) : null
+            })()}
           {/* Dördüncü köşe konurken dörtgenin kapanışı da görünüyor. */}
-          {!cizgiKipi && noktalar.length === 3 && (
+          {!kenarCizim && !cizgiKipi && noktalar.length === 3 && (
             <line
               x1={imlec.x}
               y1={imlec.y}
@@ -445,6 +499,58 @@ export default function ReferansSecici({
               pointerEvents="none"
             />
           )}
+        </>
+      )}
+
+      {/*
+        KENAR ÇİZGİLERİ.
+
+        Her çizgi iki yöne kesikli uzatılıyor: kesişimin — yani köşenin —
+        nereye düşeceği, çizgi tamamlanmadan da görülüyor. Tamamlanan
+        parça dolu çiziliyor ki kullanıcı nereye tıkladığını ayırt etsin.
+      */}
+      {kenarCizim &&
+        kenarCizgileri.map((c, i) => {
+          const u = cizgiyiUzat(c[0], c[1], tuvalW, tuvalH)
+          return (
+            <g key={'k' + i} pointerEvents="none">
+              {u && (
+                <line
+                  x1={u[0].x}
+                  y1={u[0].y}
+                  x2={u[1].x}
+                  y2={u[1].y}
+                  stroke={renk}
+                  strokeWidth="1.6"
+                  strokeDasharray="7 7"
+                  opacity="0.55"
+                />
+              )}
+              <line x1={c[0].x} y1={c[0].y} x2={c[1].x} y2={c[1].y} stroke="rgba(0,0,0,0.45)" strokeWidth="5.5" />
+              <line x1={c[0].x} y1={c[0].y} x2={c[1].x} y2={c[1].y} stroke={renk} strokeWidth="3" />
+            </g>
+          )
+        })}
+
+      {/* Dört çizgi tamamlandı: kesişimlerden çıkan alan çerçevesi. */}
+      {kenarDortgenYolu && (
+        <>
+          <polygon
+            points={kenarDortgenYolu}
+            fill="rgba(22,163,74,0.10)"
+            stroke="rgba(0,0,0,0.45)"
+            strokeWidth="5.5"
+            strokeDasharray="8 5"
+            pointerEvents="none"
+          />
+          <polygon
+            points={kenarDortgenYolu}
+            fill="none"
+            stroke={renk}
+            strokeWidth="3"
+            strokeDasharray="8 5"
+            pointerEvents="none"
+          />
         </>
       )}
 
@@ -630,7 +736,7 @@ export default function ReferansSecici({
             paintOrder="stroke"
             pointerEvents="none"
           >
-            {i + 1}
+            {kenarCizim ? Math.floor(i / 2) + 1 : i + 1}
           </text>
         </g>
       ))}

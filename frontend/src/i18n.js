@@ -550,7 +550,7 @@ const dict = {
   'sih.alanIleAyarla': { tr: 'Ölçüm ile ayarla', en: 'Set by measuring', ar: 'الضبط بالقياس' },
   'sih.elleDuzenle': { tr: 'Manuel düzenle', en: 'Edit manually', ar: 'تحرير يدوي' },
   'sih.alanAciklama': {
-    tr: 'Köşelere sırayla tıklayın.',
+    tr: 'Her kenar için, kenarın göründüğü yerin iki ucuna tıklayın.',
     en: 'Click the four corners of the area the screen should cover: top-left, top-right, bottom-right, bottom-left. The marks can be dragged afterwards. The design stays hidden until all four are placed.',
     ar: 'انقر على زوايا المنطقة الأربع التي يجب أن تغطيها الشاشة. يبقى التصميم مخفيًا حتى وضع النقاط الأربع.',
   },
@@ -562,7 +562,7 @@ const dict = {
   'scene.alanOlcusu': { tr: 'alan', en: 'area', ar: 'المنطقة' },
   'sih.alanBitir': { tr: 'Alanı onayla', en: 'Confirm the area', ar: 'تأكيد المنطقة' },
   'sih.alanBaslik': {
-    tr: 'Alanın 4 köşesini işaretleyin',
+    tr: 'Alanın 4 kenarını çizin',
     en: 'Mark the four corners of the area',
     ar: 'حدّد زوايا المنطقة الأربع',
   },
@@ -655,15 +655,7 @@ const dict = {
     en: 'The focal length was computed from two references — the measurement no longer relies on a guess.',
     ar: 'تم حساب البعد البؤري من مرجعين — لم يعد القياس تخمينيًا.',
   },
-  'sih.kenarBasla': { tr: 'Köşe görünmüyor — kenarlardan bul', en: 'Corner not visible — find it from the edges', ar: 'الزاوية غير ظاهرة — حدّدها من الحواف' },
-  'sih.kenarAciklama': {
-    tr: 'Köşede birleşen İKİ KENARIN görünen kısımlarına ikişer nokta koyun: önce bir kenara iki nokta, sonra öteki kenara iki nokta. Uygulama çizgileri uzatıp kesişimi köşe olarak alır — köşe kadrajın dışında kalsa bile. Noktaları birbirinden uzak koymak sonucu daha da doğru yapar.',
-    en: 'Put two points on each of the TWO EDGES that meet at the corner. The app extends the lines and takes their intersection as the corner — even if it falls outside the frame.',
-    ar: 'ضع نقطتين على كل من الحافتين الملتقيتين عند الزاوية؛ يمدّ التطبيق الخطين ويأخذ تقاطعهما كزاوية.',
-  },
-  'sih.kenarBulundu': { tr: 'köşe bulundu', en: 'corner found', ar: 'تم إيجاد الزاوية' },
-  'sih.kenarEkle': { tr: 'Köşeyi ekle', en: 'Add the corner', ar: 'إضافة الزاوية' },
-  'sih.vazgec': { tr: 'Vazgeç', en: 'Cancel', ar: 'إلغاء' },
+
   'sih.olcekAlindi': { tr: 'Ölçek alındı ✓', en: 'Scale captured ✓', ar: 'تم أخذ المقياس ✓' },
   'sih.refAyniDuvar': {
     tr: 'Referansı, ekranın konacağı yerle AYNI duvarda ve mümkün olduğunca ona yakın seçin: başka bir yüzeydeki uzunluk ölçeği kaydırır.',
@@ -794,9 +786,15 @@ const dict = {
     ar: 'يُشتق مقياس الصورة بالسنتيمتر من هذا الرقم، ويُحسب حجم التصميم تبعًا له.',
   },
   'sih.alanDetay': {
-    tr: 'Sırayla sol üst, sağ üst, sağ alt, sol alt köşeye tıklayın. İşaretler sonradan sürüklenebilir; dört nokta tamamlanana kadar tasarım gizli kalır.',
-    en: 'Click top-left, top-right, bottom-right, bottom-left in order. The marks can be dragged afterwards; the design stays hidden until all four are placed.',
-    ar: 'انقر بالترتيب: أعلى اليسار، أعلى اليمين، أسفل اليمين، أسفل اليسار. يمكن سحب العلامات لاحقًا.',
+    tr: 'Üst, alt, sol ve sağ kenar için birer çizgi; sıra önemli değil. Kenar duvarın kenarı olabilir, ekranın biteceği hayali bir çizgi de. Köşeler çizgilerin kesişiminden çıkıyor, dolayısıyla köşe kadrajın dışında kalsa bile olur. Uçlar sonradan sürüklenebilir; yapışmayı Alt ile kapatabilirsiniz.',
+    en: 'One line for the top, bottom, left and right edge; the order does not matter. An edge can be the wall’s edge or an imaginary line where the screen ends. Corners come from where the lines cross, so a corner may fall outside the frame. The ends can be dragged later; hold Alt to disable snapping.',
+    ar: 'خط لكل حافة: علوية وسفلية ويسرى ويمنى، والترتيب غير مهم. تنتج الزوايا من تقاطع الخطوط، لذا قد تقع زاوية خارج الإطار. يمكن سحب الأطراف لاحقًا، و Alt يوقف الالتصاق.',
+  },
+  'sih.kenarSayac': { tr: 'kenar', en: 'edges', ar: 'حواف' },
+  'sih.kenarKesismedi': {
+    tr: 'Çizgiler bir alan oluşturmuyor; karşılıklı iki kenarı aynı yöne çizmiş olabilirsiniz.',
+    en: 'The lines do not form an area; two opposite edges may have been drawn in the same direction.',
+    ar: 'لا تشكّل الخطوط منطقة؛ ربما رُسمت حافتان متقابلتان في الاتجاه نفسه.',
   },
   'sih.2.aciklama': {
     tr: 'İşaretlediğiniz iki nokta arası gerçekte kaç santim?',

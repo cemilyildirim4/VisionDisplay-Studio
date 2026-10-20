@@ -118,23 +118,34 @@ async function olcuYaz(s, en, boy) {
   return sayi
 }
 
-/** Dört köşeyi işaretler (saat yönünde, makul bir dikdörtgen). */
-async function dortKose(s) {
+/**
+ * DÖRT KENAR ÇİZGİSİ ÇİZER.
+ *
+ * Her kenar iki tıklama: kenarın göründüğü yerin iki ucu. Sıra kasten
+ * KARIŞIK veriliyor (alt, sağ, üst, sol) — uygulamanın hangi çizginin
+ * hangi kenar olduğunu kendisi bulması gerekiyor. Çizgiler kenarın
+ * tamamını değil ORTA parçasını kaplıyor; köşeler kesişimden çıkmalı.
+ */
+async function dortKenar(s) {
   const t = await tuval(s)
-  const x = t.x + t.w * 0.33
-  const y = t.y + t.h * 0.26
-  const en = t.w * 0.26
-  const boy = t.h * 0.28
-  for (const [px, py] of [
-    [x, y],
-    [x + en, y + boy * 0.06],
-    [x + en, y + boy],
-    [x, y + boy * 0.94],
-  ]) {
-    await s.mouse.move(px, py)
-    await s.mouse.down()
-    await s.mouse.up()
-    await s.waitForTimeout(420)
+  const sol = t.x + t.w * 0.33
+  const ust = t.y + t.h * 0.26
+  const sag = sol + t.w * 0.26
+  const alt = ust + t.h * 0.28
+  const ic = (a, b, p) => a + (b - a) * p
+  const cizgiler = [
+    /* alt */ [[ic(sol, sag, 0.2), alt], [ic(sol, sag, 0.8), alt]],
+    /* sağ */ [[sag, ic(ust, alt, 0.2)], [sag, ic(ust, alt, 0.8)]],
+    /* üst */ [[ic(sol, sag, 0.2), ust], [ic(sol, sag, 0.8), ust]],
+    /* sol */ [[sol, ic(ust, alt, 0.2)], [sol, ic(ust, alt, 0.8)]],
+  ]
+  for (const c of cizgiler) {
+    for (const [px, py] of c) {
+      await s.mouse.move(px, py)
+      await s.mouse.down()
+      await s.mouse.up()
+      await s.waitForTimeout(380)
+    }
   }
 }
 
@@ -290,8 +301,18 @@ const a = await akis('A — ALANI İŞARETLE', async ({ s, bas, denetle, icerir,
   if (!(await bas('Alanı işaretle', 1800))) return dus('"Alanı işaretle" düğmesi bulunamadı')
   if (!(await denetle('alan işaretlemeye geçildi'))) return false
 
-  await dortKose(s)
-  if (!(await denetle('4 köşe işaretlendi'))) return false
+  /* Eski köşe adımı ve ayrı "kenarlardan bul" kipi kalkmış olmalı. */
+  if (await icerir('Köşe görünmüyor')) return dus('eski "kenarlardan bul" kipi hâlâ var')
+  if (!(await icerir('kenarını çizin'))) return dus('kenar çizim adımı açılmadı')
+
+  await dortKenar(s)
+  if (!(await denetle('4 kenar çizildi'))) return false
+
+  /* Çizgilerin kesişiminden geçerli bir dörtgen çıkmalı: onay açılmış olmalı. */
+  const kart = await kartBilgisi(s)
+  const onayAcik = (kart.dugmeler || []).includes('Alanı onayla')
+  console.log('  · onay düğmesi açık        :', onayAcik ? 'evet' : 'HAYIR')
+  if (!onayAcik) return dus('kenarlardan geçerli bir alan çıkmadı')
 
   await bas('Alanı onayla', 2500)
   if (!(await denetle('alan onaylandı'))) return false

@@ -97,12 +97,8 @@ function SihirbazKart({
   /* İşaretleme geçerli mi (içe çökmüş dörtgen kabul edilmiyor). */
   alanGecerli = true,
   /* GÖRÜNMEYEN KÖŞE — iki kenardan bulunuyor. */
-  kenarKipi = false,
-  kenarNoktaSayisi = 0,
-  kenarHazir = false,
-  onKenarBasla = null,
-  onKenarEkle = null,
-  onKenarVazgec = null,
+  /* Kaç kenar çizgisi tamamlandı (0–4). */
+  kenarCizgiSayisi = 0,
   /* Alan zaten işaretliyse yeniden işaretlemeden yerleştirmeye dönülüyor. */
   onYerlesim = null,
   /* İKİNCİ REFERANS — odak tahmin ediliyorsa ölçümü kesinleştiriyor. */
@@ -640,35 +636,26 @@ function SihirbazKart({
             Tuvalin üstüne yönerge şeridi konmuyor; aynı gerekçe referans
             adımındaki gibi: fotoğrafın üstü temiz kalsın, yönerge burada.
           */}
-          {alanKipi && kenarKipi && (
-            <>
-              <p className={aciklama}>{t('sih.kenarAciklama')}</p>
-              <p
-                className={`${kucuk} ${
-                  kenarHazir ? 'text-emerald-700 dark:text-emerald-400' : 'text-neutral-500 dark:text-neutral-400'
-                }`}
-              >
-                {kenarNoktaSayisi} / 4 {kenarHazir ? '· ' + t('sih.kenarBulundu') : ''}
-              </p>
-              <div className="mt-2 flex items-center gap-1.5">
-                <button type="button" onClick={onKenarVazgec} className={yan}>
-                  {t('sih.vazgec')}
-                </button>
-                <button type="button" onClick={onKenarEkle} disabled={!kenarHazir} className={ana}>
-                  {t('sih.kenarEkle')}
-                </button>
-              </div>
-            </>
-          )}
-
-          {alanKipi && !kenarKipi && (
+          {alanKipi && (
             <>
               <p className={aciklama}>{t('sih.alanAciklama')}</p>
               {detayAcik && (
                 <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.alanDetay')}</p>
               )}
-              <p className={`${kucuk} ${alanNoktaSayisi >= 4 ? 'text-emerald-700 dark:text-emerald-400' : 'text-neutral-500 dark:text-neutral-400'}`}>
-                {alanNoktaSayisi} / 4
+              {/*
+                SAYAÇ KÖŞEYİ DEĞİL ÇİZGİYİ SAYIYOR.
+
+                Kullanıcı artık köşe koymuyor, kenar çiziyor: her kenar iki
+                tıklama. "3 / 4 kenar" nerede kalındığını doğrudan söylüyor.
+              */}
+              <p
+                className={`${kucuk} ${
+                  kenarCizgiSayisi >= 4
+                    ? 'text-emerald-700 dark:text-emerald-400'
+                    : 'text-neutral-500 dark:text-neutral-400'
+                }`}
+              >
+                {kenarCizgiSayisi} / 4 {t('sih.kenarSayac')}
               </p>
               <div className="mt-2 flex items-center gap-1.5">
                 {/*
@@ -689,28 +676,23 @@ function SihirbazKart({
                 <button
                   type="button"
                   onClick={onAlanBitir}
-                  disabled={alanNoktaSayisi < 4 || !alanGecerli}
+                  /* Dört çizgi tamam ve kesişimler geçerli bir dörtgen verdi. */
+                  disabled={kenarCizgiSayisi < 4 || alanNoktaSayisi < 4 || !alanGecerli}
                   className={ana}
                 >
                   {t('sih.alanBitir')}
                 </button>
               </div>
-              {/* İçe çökmüş dörtgen hiçbir dikdörtgenin görüntüsü değil. */}
-              {alanNoktaSayisi === 4 && !alanGecerli && (
-                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.alanGecersiz')}</p>
-              )}
               {/*
-                Köşe görünmüyorsa: iki kenardan bulunuyor. Dört köşe
-                tamamlanmışsa teklif edilmiyor, yapacak bir şey yok.
+                Dört çizgi var ama kesişimleri dörtgen vermiyor: çizgilerden
+                ikisi aynı kenarı gösteriyor ya da biri bambaşka bir yöne
+                çizilmiş olabilir.
               */}
-              {onKenarBasla && alanNoktaSayisi < 4 && (
-                <button
-                  type="button"
-                  onClick={onKenarBasla}
-                  className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                >
-                  {t('sih.kenarBasla')}
-                </button>
+              {kenarCizgiSayisi >= 4 && alanNoktaSayisi < 4 && (
+                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.kenarKesismedi')}</p>
+              )}
+              {kenarCizgiSayisi >= 4 && alanNoktaSayisi === 4 && !alanGecerli && (
+                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.alanGecersiz')}</p>
               )}
             </>
           )}
