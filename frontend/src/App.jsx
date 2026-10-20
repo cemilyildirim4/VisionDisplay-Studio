@@ -1256,16 +1256,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const beklenenKoseRef = useRef(null)
   /* Kaç kez düzeltme denendi — sonsuz döngüye karşı emniyet. */
   const duzeltmeSayaciRef = useRef(0)
-  /* Yerleşim değişince düzeltme baştan öğrenilir. */
-  useEffect(() => {
-    duzeltmeSayaciRef.current = 0
-    /*
-     * TUVAL ÖLÇÜSÜ DE SIFIRLIYOR: dar/geniş görünüm arasında geçerken
-     * yerleşim farkı değişiyor ve düzeltmenin yeniden yakınsaması gerekiyor.
-     * Sayaç tükenmiş olursa ekran yeni görünümde kaymış kalıyordu.
-     */
-  }, [hedefKose, scene, ozelSahne, tuvalBoyut.w, tuvalBoyut.h])
-
   const ekranKutuYeriniYaz = (y) => {
     if (!y) return
     const beklenen = beklenenKoseRef.current
@@ -1369,6 +1359,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+
+  /*
+   * ÇİZİM DÜZELTMESİ YERLEŞİM DEĞİŞİNCE BAŞTAN ÖĞRENİLİR.
+   *
+   * Tuval ölçüsü de sıfırlıyor: dar/geniş görünüm arasında geçerken
+   * yerleşim farkı değişiyor ve düzeltmenin yeniden yakınsaması gerekiyor;
+   * sayaç tükenmişse ekran yeni görünümde kaymış kalıyordu.
+   *
+   * BURADA DURUYOR, YUKARIDA DEĞİL: bağımlılık dizisi tuvalBoyut'u okuyor
+   * ve o birkaç satır AŞAĞIDA tanımlıydı. Bir const'u tanımlanmadan okumak
+   * çalışma anında hata verir (TDZ) — uygulama açılır açılmaz hata ekranına
+   * düşüyordu. Aynı tuzağa bu dosyada daha önce de düşüldü; bağımlılık
+   * dizisine bir state eklerken tanımının ÜSTTE olduğu doğrulanmalı.
+   */
+  useEffect(() => {
+    duzeltmeSayaciRef.current = 0
+  }, [hedefKose, scene, ozelSahne, tuvalBoyut.w, tuvalBoyut.h])
   const panoSahne = scene === PANO_ID
   const [cizimOlcek, setCizimOlcek] = useState(null)
   const [content, setContent] = useState('led') // led | photo | sample(video) | video | none | upload
