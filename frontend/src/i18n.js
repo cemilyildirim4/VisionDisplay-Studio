@@ -539,9 +539,9 @@ const dict = {
   'scene.alanOlcusu': { tr: 'alan', en: 'area', ar: 'المنطقة' },
   'sih.alanBitir': { tr: 'Alanı onayla', en: 'Confirm the area', ar: 'تأكيد المنطقة' },
   'sih.alanBaslik': {
-    tr: 'Yeni ekranın alanını işaretleyin',
-    en: 'Mark the area for the new screen',
-    ar: 'حدّد منطقة الشاشة الجديدة',
+    tr: 'Alanın 4 köşesini işaretleyin',
+    en: 'Mark the four corners of the area',
+    ar: 'حدّد زوايا المنطقة الأربع',
   },
   'sih.alanSigdir': {
     tr: 'Tasarımı ölçüye sığdır',
@@ -609,6 +609,25 @@ const dict = {
     en: 'Pick the reference on the SAME wall as the screen and as close to it as possible: a length on another surface shifts the scale.',
     ar: 'اختر المرجع على الجدار نفسه وأقرب ما يمكن إلى موضع الشاشة.',
   },
+  'sih.giris.baslik': { tr: 'Ekran nereye gidecek?', en: 'Where will the screen go?', ar: 'أين ستوضع الشاشة؟' },
+  'sih.giris.aciklama': {
+    tr: 'Fotoğrafta ekranın kaplayacağı alanı ve o alanın gerçek ölçüsünü biliyor musunuz?',
+    en: 'Do you know the area the screen will cover and its real size?',
+    ar: 'هل تعرف المنطقة التي ستغطيها الشاشة ومقاسها الحقيقي؟',
+  },
+  'sih.giris.var': { tr: 'Belirli bir alanım var', en: 'I have a specific area', ar: 'لديّ منطقة محددة' },
+  'sih.giris.varNot': {
+    tr: 'Alanın dört köşesini işaretler, gerçek en ve boyunu yazarsınız. Referans ölçü sorulmaz.',
+    en: 'You mark the four corners and type the real width and height. No reference is asked.',
+    ar: 'تحدّد الزوايا الأربع وتكتب العرض والارتفاع الحقيقيين؛ لا يُطلب مرجع.',
+  },
+  'sih.giris.yok': { tr: 'Belirli bir alanım yok', en: 'I do not have a specific area', ar: 'ليس لديّ منطقة محددة' },
+  'sih.giris.yokNot': {
+    tr: 'Önce fotoğrafta ölçüsünü bildiğiniz bir uzunluğu işaretlersiniz; ölçek oradan gelir.',
+    en: 'You first mark a length you know in the photo; the scale comes from it.',
+    ar: 'تحدّد أولًا طولًا تعرف مقاسه في الصورة؛ ومنه يأتي المقياس.',
+  },
+  'sih.alanGercekOlcu': { tr: 'Alanın gerçek ölçüsü', en: 'Real size of the area', ar: 'المقاس الحقيقي للمنطقة' },
   'sih.alanTemizle': { tr: 'Temizle', en: 'Clear', ar: 'مسح' },
   'sih.alanTasi': {
     tr: 'Tasarımı sürükleyerek taşıyabilirsiniz; alanın dışına da çıkabilir.',

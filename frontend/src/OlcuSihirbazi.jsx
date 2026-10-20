@@ -93,6 +93,10 @@ function SihirbazKart({
   alanKipi = false,
   alanNoktaSayisi = 0,
   alanVar = false,
+  /* GİRİŞ YOLU — "alanım var" / "alanım yok" (bkz. App.jsx girisYolu). */
+  girisYolu = null,
+  onGirisAlanVar = null,
+  onGirisAlanYok = null,
   /* Düzenlemede referans adımlarına dönülmüyor. */
   duzenlemede = false,
   onAlanTemizle = null,
@@ -168,7 +172,9 @@ function SihirbazKart({
    * sebebi buydu.
    */
   const alanTekBasina = !!alanKipi
-  if (!adim && !alanKipi) return null
+  /* Yol seçimi: adım da işaretleme de yokken kart yine de duruyor. */
+  const girisSecimi = !adim && !alanKipi && !girisYolu && !!onGirisAlanVar
+  if (!adim && !alanKipi && !girisSecimi) return null
 
   const girdi =
     'w-full min-w-0 rounded-md border border-neutral-300 px-2.5 py-2 text-[15px] text-neutral-800 dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-100'
@@ -202,10 +208,10 @@ function SihirbazKart({
                   dörtgenin kaç santim olduğunu söylüyor, kabin hesabı
                   da ona göre yeniden kuruluyor.
                 */}
-                {alanOlculenEn > 0 && setAlanElleEn && (
+                {(alanOlculenEn > 0 || alanVar) && setAlanElleEn && (
                   <div className="mt-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2">
                     <div className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">
-                      {t('sih.alanOlculen')}
+                      {alanOlculenEn > 0 ? t('sih.alanOlculen') : t('sih.alanGercekOlcu')}
                     </div>
                     {/*
                       OLCULEN DEGER DUZ YAZI OLARAK DA DURUYOR: yalnizca
@@ -279,7 +285,7 @@ function SihirbazKart({
       {/* Başlık şeridi dolu renkte: panelde göz önce buraya gelsin. */}
       <div className="flex items-center gap-2 bg-brand px-2.5 py-2 text-white">
         {/* Adım sayacı yalnızca gerçek adım varken; alan tek başınaysa yok. */}
-        {!alanTekBasina && (
+        {!alanTekBasina && !girisSecimi && (
           <>
             <span className="flex items-center gap-1">
               {Array.from({ length: adimSayisi }, (_, i) => i + 1).map((i) => (
@@ -293,7 +299,7 @@ function SihirbazKart({
         )}
         {/* Panel dar: başlık kesilmek yerine ikinci satıra sarıyor. */}
         <span className="flex-1 text-[14.5px] font-bold leading-tight">
-          {alanTekBasina ? t('sih.alanBaslik') : basliklar[adim]}
+          {girisSecimi ? t('sih.giris.baslik') : alanTekBasina ? t('sih.alanBaslik') : basliklar[adim]}
         </span>
         {/*
           KAPATMA DÜĞMESİ YOK.
@@ -307,7 +313,35 @@ function SihirbazKart({
 
       <div className="bg-brand/[0.05] px-2.5 pb-2.5 pt-1 dark:bg-brand/[0.1]">
         {/* key={adim}: adım değişince geçiş yeniden oynasın. */}
-        <div key={adim} className="sih-adim">
+        <div key={girisSecimi ? 'giris' : adim} className="sih-adim">
+          {/*
+            YOL SEÇİMİ.
+
+            Fotoğraf yüklenince sorulan tek soru. "Alanım var" yolunda
+            referans hiç istenmiyor: dört köşe ve gerçek en/boy hem ölçeği
+            hem perspektifi veriyor.
+          */}
+          {girisSecimi && (
+            <>
+              <p className={aciklama}>{t('sih.giris.aciklama')}</p>
+              <button
+                type="button"
+                onClick={onGirisAlanVar}
+                className={`mt-2 w-full ${ana}`}
+              >
+                {t('sih.giris.var')}
+              </button>
+              <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.giris.varNot')}</p>
+              <button
+                type="button"
+                onClick={onGirisAlanYok}
+                className="mt-2 w-full py-2.5 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+              >
+                {t('sih.giris.yok')}
+              </button>
+              <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.giris.yokNot')}</p>
+            </>
+          )}
           {/* L 1 — KÖŞE ÇİZGİSİ */}
           {!alanKipi && lKose && adim === 1 && (
             <>

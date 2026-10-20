@@ -942,6 +942,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kurulu ve onu değiştirmek "Baştan başla"nın işi. İlk kurulumda ise
    * alan adımından geri gitmek referansa dönmek demek.
    */
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * GİRİŞ YOLU — "Belirli bir alanım var / yok".
+   *
+   * İki ayrı iş var ve ikisi farklı bilgi istiyor:
+   *
+   *   ALANIM VAR  — kullanıcı ekranın gideceği yeri biliyor ve gerçek
+   *                 ölçüsünü de biliyor. Dört köşe + en/boy hem ölçeği hem
+   *                 perspektifi (odak) veriyor; REFERANS SORULMUYOR.
+   *   ALANIM YOK  — önce bilinen bir uzunluk referans olarak işaretleniyor,
+   *                 ölçek oradan geliyor; sonra alan işaretleniyor ya da
+   *                 tasarım elle yerleştiriliyor.
+   *
+   * null: fotoğraf yeni yüklendi, seçim bekleniyor.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const [girisYolu, setGirisYolu] = useState(null)
   const [duzenlemede, setDuzenlemede] = useState(false)
   const [kenarKipi, setKenarKipi] = useState(false)
   const [kenarNokta, setKenarNokta] = useState([])
@@ -1534,10 +1551,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * kullanıcıyı önce bir "başla" düğmesine bastırmak boş bir adımdı.
        * İşaretleme kipi de birlikte açılıyor ki tıklanacak yer hazır olsun.
        */
-      /* L'de ilk iş köşe çizgisi; referans adımı hiç çıkmıyor. */
-      setRefKipi(!lTipiVar)
+      /*
+       * ÖNCE YOL SEÇİMİ.
+       *
+       * Fotoğraf yüklenince doğrudan referans isteniyordu; oysa kullanıcı
+       * ekranın gideceği alanı ve gerçek ölçüsünü biliyorsa referansa hiç
+       * gerek yok (bkz. girisYolu). Seçim kartı sihirbazın içinde çıkıyor.
+       */
+      setGirisYolu(null)
+      /* L'de ilk iş köşe çizgisi; orada seçim sorulmuyor. */
+      setRefKipi(false)
       setLKoseKipi(lTipiVar)
-      setSihirbazAdim(1)
+      setSihirbazAdim(lTipiVar ? 1 : 0)
       let kayit = null
       try {
         kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM, tasarimWm, TASLAK_KIPI)
@@ -3587,6 +3612,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
 
+  /* "Belirli bir alanım var": doğrudan dört köşe, referans yok. */
+  const girisAlanVar = () => {
+    setGirisYolu('alanVar')
+    setDuzenlemede(false)
+    setRefKipi(false)
+    setAlanNokta([])
+    setAlanElleEn('')
+    setAlanElleBoy('')
+    setAlanKipi(true)
+    setSihirbazAdim(0)
+  }
+
+  /* "Belirli bir alanım yok": önce iki noktalı referans. */
+  const girisAlanYok = () => {
+    setGirisYolu('alanYok')
+    setDuzenlemede(false)
+    setAlanKipi(false)
+    setRefKipi(true)
+    setSihirbazAdim(1)
+  }
+
   /* Alanı sıfırdan işaretlemek: köşeler siliniyor, kip açık kalıyor. */
   const alaniTemizle = () => {
     setAlanNokta([])
@@ -5444,6 +5490,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setRef2Kipi(false)
     setFotoOdak(null)
     setDuzenlemede(false)
+    setGirisYolu(null)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -6077,7 +6124,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const olcuPencereSinifi = ''
 
   /* Ölçü akışı açık mı: panelde yalnızca onun işi görünsün. */
-  const olcuAcik = sihirbazAdim > 0 || alanKipi
+  const olcuAcik = sihirbazAdim > 0 || alanKipi || (!!ozelSahne && !girisYolu)
 
   /*
    * ALANIN KÖŞELERİ DÜZENLEME SIRASINDA TUTAMAKLI.
@@ -8589,7 +8636,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           bir ara hem panelde hem kartta aynı alanlar vardı ve hangisinin
                           geçerli olduğu belirsizdi.
                         */}
-                        {sihirbazAdim > 0 || alanKipi ? (
+                        {sihirbazAdim > 0 || alanKipi || (ozelSahne && !girisYolu) ? (
                           <div className={olcuPencereSinifi}>
                           <OlcuSihirbazi
                             adim={sihirbazAdim}
@@ -8728,6 +8775,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               setAlanKipi(true)
                             }}
                             /* Görünmeyen köşeyi kenarlarından bulma. */
+                            girisYolu={girisYolu}
+                            onGirisAlanVar={girisAlanVar}
+                            onGirisAlanYok={girisAlanYok}
                             duzenlemede={duzenlemede}
                             onAlanTemizle={alaniTemizle}
                             kenarKipi={kenarKipi}
