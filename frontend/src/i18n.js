@@ -603,6 +603,12 @@ const dict = {
   'sih.kenarBulundu': { tr: 'köşe bulundu', en: 'corner found', ar: 'تم إيجاد الزاوية' },
   'sih.kenarEkle': { tr: 'Köşeyi ekle', en: 'Add the corner', ar: 'إضافة الزاوية' },
   'sih.vazgec': { tr: 'Vazgeç', en: 'Cancel', ar: 'إلغاء' },
+  'sih.olcekAlindi': { tr: 'Ölçek alındı ✓', en: 'Scale captured ✓', ar: 'تم أخذ المقياس ✓' },
+  'sih.refAyniDuvar': {
+    tr: 'Referansı, ekranın konacağı yerle AYNI duvarda ve mümkün olduğunca ona yakın seçin: başka bir yüzeydeki uzunluk ölçeği kaydırır.',
+    en: 'Pick the reference on the SAME wall as the screen and as close to it as possible: a length on another surface shifts the scale.',
+    ar: 'اختر المرجع على الجدار نفسه وأقرب ما يمكن إلى موضع الشاشة.',
+  },
   'sih.alanTasi': {
     tr: 'Tasarımı sürükleyerek taşıyabilirsiniz; alanın dışına da çıkabilir.',
     en: 'Drag the design to move it inside the area; it cannot leave it.',

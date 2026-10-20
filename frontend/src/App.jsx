@@ -844,6 +844,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * İkisi birden duruyor: elinde uygun bir dikdörtgen yoksa çizgi kipi
    * hâlâ ölçek veriyor.
    */
+  /*
+   * REFERANS TEK TÜR: İKİ NOKTA.
+   *
+   * "Dört köşe (perspektif)" seçeneği kaldırıldı: perspektif artık alanın
+   * kendi dört köşesinden ve gerçek ölçüsünden çıkıyor, referansın işi
+   * yalnızca santim ölçeğini vermek. İki ayrı referans türü kullanıcıya
+   * gereksiz bir karar sorduruyordu.
+   *
+   * Durum duruyor ('cizgi' sabit): refDuzlem ve ona bağlı dallar kodda
+   * yerinde kalsın, ileride lazım olursa açılacak yer burası.
+   */
   const [refTur, setRefTur] = useState('cizgi')
   const [refBoyCm, setRefBoyCm] = useState('')
   const [refKipi, setRefKipi] = useState(false)
@@ -1492,6 +1503,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setAlanKonum({ u: 0.5, v: 0.5 })
       setAlanDoldur(false)
       setAlanOlcek(null)
+      /*
+       * KALİBRASYON DA YENİ FOTOĞRAFA AİT DEĞİL.
+       *
+       * Odak uzaklığı kameraya ait ve fotoğraftan fotoğrafa değişiyor. Eski
+       * fotoğrafta öğrenilen odak siliniyordu sanıyorduk; silinmiyordu.
+       * Sonuç: yeni fotoğrafta kart "iki referanstan hesaplandı" diyor,
+       * kullanıcı hiçbir şey vermemiş olmasına rağmen ölçü eski kameranın
+       * odağıyla kuruluyordu.
+       */
+      setFotoOdak(null)
+      setRef2Nokta([])
+      setRef2UzunlukCm('')
+      setRef2Kipi(false)
+      setKenarKipi(false)
+      setKenarNokta([])
       /*
        * SİHİRBAZ KENDİLİĞİNDEN AÇILIYOR.
        *

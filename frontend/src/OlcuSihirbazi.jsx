@@ -292,14 +292,14 @@ function SihirbazKart({
         <span className="flex-1 text-[14.5px] font-bold leading-tight">
           {alanTekBasina ? t('sih.alanBaslik') : basliklar[adim]}
         </span>
-        <button
-          type="button"
-          onClick={onKapat}
-          aria-label={t('sih.kapat')}
-          className="shrink-0 rounded px-1.5 py-0.5 text-[18px] leading-none text-white/75 hover:text-white"
-        >
-          ×
-        </button>
+        {/*
+          KAPATMA DÜĞMESİ YOK.
+
+          × ile kapatılınca referans verilmemiş oluyor, tasarım hiç
+          görünmüyor ve kullanıcının elinde hiçbir yol kalmıyordu. Ölçek
+          kurulmadan yapılacak bir iş yok; adım atlanamaz.
+          "Baştan başla" sağ panelde duruyor.
+        */}
       </div>
 
       <div className="bg-brand/[0.05] px-2.5 pb-2.5 pt-1 dark:bg-brand/[0.1]">
@@ -427,34 +427,17 @@ function SihirbazKart({
           {!alanKipi && !lKose && adim === 1 && (
             <>
               {/*
-                REFERANS TÜRÜ.
+                REFERANS TÜRÜ SEÇİMİ KALDIRILDI.
 
-                İki nokta ölçek ve eğim veriyor; perspektif ancak ölçüsü
-                bilinen bir dikdörtgenin dört köşesinden çıkıyor.
+                Tek tür var: iki nokta. Perspektif alanın kendi dört
+                köşesinden ve gerçek ölçüsünden çıkıyor; referansın işi
+                yalnızca santim ölçeğini vermek. İki seçenek kullanıcıya
+                gereksiz bir karar sorduruyordu (bkz. App.jsx refTur).
               */}
-              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                {[
-                  ['cizgi', t('sih.tur.cizgi')],
-                  ['dortgen', t('sih.tur.dortgen')],
-                ].map(([tur, ad]) => (
-                  <button
-                    key={tur}
-                    type="button"
-                    onClick={() => setRefTur(tur)}
-                    className={`rounded-md px-2 py-2 text-[13px] font-semibold leading-tight transition-colors ${
-                      refTur === tur
-                        ? 'bg-brand text-white'
-                        : 'border border-neutral-300 bg-white text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:bg-[#1b2029] dark:text-neutral-400'
-                    }`}
-                  >
-                    {ad}
-                  </button>
-                ))}
-              </div>
               <p className={aciklama}>
                 {refTur === 'dortgen' ? t('sih.1.aciklamaDort') : t('sih.1.aciklama')}
               </p>
-              <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('ref2.duzlemUyari')}</p>
+              <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.refAyniDuvar')}</p>
               {/* Sıradaki iş: fotoğrafa tıklamak. Belirgin dursun. */}
               <p className="mt-2 mb-0 rounded-md bg-brand/15 px-2 py-1.5 text-[13.5px] font-semibold text-brand dark:bg-brand/25">
                 {refTur === 'dortgen'
@@ -528,15 +511,15 @@ function SihirbazKart({
                   <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.duzlemYok')}</p>
                 )
               ) : refPxCm ? (
+                /*
+                  ÖLÇEK SATIRI SADE.
+
+                  "388 px / 210 cm = 1,849 px/cm · eğim 90,0°" müşteriye
+                  hiçbir şey anlatmıyor, teknik bir ayrıntı. Yerine olup
+                  bittiğini söyleyen tek bir satır.
+                */
                 <p className={`${kucuk} text-emerald-700 dark:text-emerald-400`}>
-                  {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
-                  <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
-                  {refAci && (
-                    <>
-                      {' · '}
-                      {t('sih.egim')} {refAci.derece.toFixed(1).replace('.', ',')}°
-                    </>
-                  )}
+                  {t('sih.olcekAlindi')}
                 </p>
               ) : (
                 <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>
