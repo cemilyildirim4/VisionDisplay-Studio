@@ -9394,15 +9394,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         />
                       )}
                     </div>
-                    <p
-                      className={(taslakKutu ? 'hidden ' : '') + 'mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400'}
-                    >
-                      {izlemeBilgiSahnesi
-                        ? t('scene.viewDistFixedHint')
-                        : scene === 'ozel' && ozelSahne
-                        ? t('scene.photoDistanceHint')
-                        : t('scene.viewDistHint')}
-                    </p>
+                    {/*
+                      MESAFE KAPALIYKEN AÇIKLAMASI DA YOK.
+
+                      Mesafe alanı gizlendi (bkz. PANEL.mesafe) ama onu
+                      anlatan yazı ortada kalmıştı: olmayan bir alanı
+                      tarif eden bir cümle.
+                    */}
+                    {PANEL.mesafe && (
+                      <p
+                        className={(taslakKutu ? 'hidden ' : '') + 'mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400'}
+                      >
+                        {izlemeBilgiSahnesi
+                          ? t('scene.viewDistFixedHint')
+                          : scene === 'ozel' && ozelSahne
+                          ? t('scene.photoDistanceHint')
+                          : t('scene.viewDistHint')}
+                      </p>
+                    )}
                     {/*
                       ÖLÇEK UYARISI.
 
@@ -9495,7 +9504,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   duvara monte: ekranların çoğu öyle kuruluyor ve gövde
                   çizmemek en az varsayım içeren seçenek.
                 */}
-                {surukleAktif && (
+                {/* Ölçüm akışı sürerken gizli: ekranın gövdesiyle ilgisi yok. */}
+                {surukleAktif && !olcuAcik && (
                   <div className="mt-2">
                     <div className="flex items-center justify-between gap-3 mb-1.5">
                       <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
@@ -9573,7 +9583,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {t('scene.recenter')}
                   </button>
                 )}
-                {hasModel && (
+                {/* Ölçüm bitene kadar gizli (bkz. olcuAcik). */}
+                {hasModel && !olcuAcik && (
                   <button
                     type="button"
                     onClick={() => setArAcik(true)}
@@ -9586,7 +9597,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {t('ar.open')}
                   </button>
                 )}
-                {hasModel && (
+                {hasModel && !olcuAcik && (
                   <button
                     type="button"
                     onClick={() => setOturtmaAcik(true)}
@@ -9603,7 +9614,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </>
           )}
 
-          {/* İletişim + PDF — yan yana */}
+          {/*
+            İletişim + PDF — yan yana.
+            Ölçüm akışı sürerken gizli: teklif ve rapor, ölçü oturduktan
+            sonraki işler (bkz. olcuAcik).
+          */}
+          {!olcuAcik && (
           <div className="mt-3 flex items-center gap-3">
             <button
               type="button"
@@ -9629,6 +9645,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             {t('pdf.professional')}
           </button>
           </div>
+          )}
 
           {/*
             Gizlilik ve Güvenlik Notu — sağ panelin en altında, iletişim/PDF
