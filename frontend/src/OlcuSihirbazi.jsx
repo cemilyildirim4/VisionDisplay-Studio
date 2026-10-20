@@ -520,7 +520,7 @@ function SihirbazKart({
               <p className={aciklama}>
                 {refTur === 'dortgen' ? t('sih.1.aciklamaDort') : t('sih.1.aciklama')}
               </p>
-              <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.refAyniDuvar')}</p>
+              {/* Aynı duvar uyarısı ayrıntıya taşındı (bkz. sih.1.detay). */}
               {/* Sıradaki iş: fotoğrafa tıklamak. Belirgin dursun. */}
               <p className="mt-2 mb-0 rounded-md bg-brand/15 px-2 py-1.5 text-[13.5px] font-semibold text-brand dark:bg-brand/25">
                 {refTur === 'dortgen'
@@ -607,11 +607,9 @@ function SihirbazKart({
                 <p className={`${kucuk} text-emerald-700 dark:text-emerald-400`}>
                   {t('sih.olcekAlindi')}
                 </p>
-              ) : (
-                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>
-                  {refOlcek?.sebep === 'cokKisa' ? t('ref2.cokKisa') : t('ref2.uzunlukGir')}
-                </p>
-              )}
+              ) : refOlcek?.sebep === 'cokKisa' ? (
+                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('ref2.cokKisa')}</p>
+              ) : null}
               {/*
                 BU KART YALNIZCA ÖLÇEĞİ KURUYOR.
 

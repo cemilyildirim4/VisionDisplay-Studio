@@ -550,7 +550,7 @@ const dict = {
   'sih.alanIleAyarla': { tr: 'Ölçüm ile ayarla', en: 'Set by measuring', ar: 'الضبط بالقياس' },
   'sih.elleDuzenle': { tr: 'Manuel düzenle', en: 'Edit manually', ar: 'تحرير يدوي' },
   'sih.alanAciklama': {
-    tr: 'Ekranın kaplayacağı alanın dört köşesine tıklayın.',
+    tr: 'Köşelere sırayla tıklayın.',
     en: 'Click the four corners of the area the screen should cover: top-left, top-right, bottom-right, bottom-left. The marks can be dragged afterwards. The design stays hidden until all four are placed.',
     ar: 'انقر على زوايا المنطقة الأربع التي يجب أن تغطيها الشاشة. يبقى التصميم مخفيًا حتى وضع النقاط الأربع.',
   },
@@ -573,7 +573,7 @@ const dict = {
   },
   'sih.devam': { tr: 'Devam', en: 'Continue', ar: 'متابعة' },
   'sih.sec.aciklama': {
-    tr: 'Ölçek hazır. Ekranın yerini nasıl belirleyelim?',
+    tr: 'Ölçek hazır.',
     en: 'The scale is ready. How should the screen be positioned?',
     ar: 'المقياس جاهز. كيف نحدد موضع الشاشة؟',
   },
@@ -630,12 +630,12 @@ const dict = {
   },
   'sih.ref2Ekle': { tr: 'İkinci referansı işaretle', en: 'Mark the second reference', ar: 'حدّد المرجع الثاني' },
   'sih.olcuKesinDegil': {
-    tr: 'Ölçüyü kesinleştirmek için bir bilgi daha gerekiyor: bu fotoğrafta kameranın görüş açısı yazmıyor.',
+    tr: 'Ölçü henüz kesin değil.',
     en: 'One more input is needed: this photo does not carry the camera field of view.',
     ar: 'نحتاج معلومة إضافية: لا تحمل هذه الصورة زاوية رؤية الكاميرا.',
   },
   'sih.olcuKesinNot': {
-    tr: 'İlk referansa DİK bir uzunluk işaretleyin. Alanın gerçek en/boyunu yukarıdaki kutulara yazmak da aynı işi görür.',
+    tr: 'Gerçek en/boyu yazmak da aynı işi görür.',
     en: 'Mark a length PERPENDICULAR to the first reference. Typing the real size of the area above does the same.',
     ar: 'حدّد طولًا عموديًا على المرجع الأول، أو اكتب المقاس الحقيقي للمنطقة أعلاه.',
   },
@@ -764,7 +764,7 @@ const dict = {
   'sih.geri': { tr: 'Geri', en: 'Back', ar: 'رجوع' },
   'sih.kapat': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
   'sih.1.baslik': {
-    tr: 'Referans ölçü: bilinen bir uzunluğu işaretleyin',
+    tr: 'Referans ölçü',
     en: 'Reference measurement: mark a known length',
     ar: 'القياس المرجعي: حدّد طولًا معروفًا',
   },
@@ -779,12 +779,12 @@ const dict = {
   'sih.1.durumDortHazir': { tr: 'Dört köşe hazır', en: 'All four corners are set', ar: 'الزوايا الأربع جاهزة' },
   'sih.1.tekrar': { tr: 'Temizle', en: 'Clear', ar: 'مسح' },
   'sih.2.baslik': {
-    tr: 'Referans ölçüyü yazın (cm)',
+    tr: 'Referans kaç santim?',
     en: 'Type the reference measurement (cm)',
     ar: 'اكتب القياس المرجعي (سم)',
   },
   'sih.1.detay': {
-    tr: 'Kapı, pencere, masa, yer karosu ya da duvarın kendisi olabilir; önemli olan gerçek ölçüsünü biliyor olmanız. Ekranın konacağı yerle aynı duvarda ve ona yakın bir yer seçin. Noktaları sonradan sürükleyerek düzeltebilirsiniz.',
+    tr: 'Kapı, pencere, masa ya da duvarın kendisi olabilir. Ekranın konacağı yerle aynı duvarda ve ona yakın seçin; başka bir yüzeydeki uzunluk ölçeği kaydırır. Noktalar sonradan sürüklenebilir.',
     en: 'It can be a door, a window, a desk, a floor tile or the wall itself; what matters is that you know its real size. Pick something on the same wall as the screen and close to it. You can drag the points afterwards.',
     ar: 'يمكن أن يكون بابًا أو نافذة أو طاولة أو بلاطة أو الجدار نفسه، المهم أن تعرف مقاسه الحقيقي. اختر شيئًا على الجدار نفسه وقريبًا من الشاشة.',
   },
