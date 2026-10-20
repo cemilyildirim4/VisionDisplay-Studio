@@ -53,6 +53,39 @@ export default function ReferansSecici({
   sinir = null,
   /* Yapışılacak noktalar (tuval pikseli): başka ekranların köşeleri. */
   yapiskanNoktalar = [],
+  /*
+   * BÜYÜTEÇ KAYNAĞI — fotoğrafın adresi ve tuvaldeki dikdörtgeni.
+   * {url, sol, ust, en, boy}. Yoksa büyüteç çizilmiyor.
+   */
+  foto = null,
+  /*
+   * FOTOĞRAFTAKİ GERÇEK KÖŞEYE/KENARA YAPIŞMA.
+   *
+   * Tuval pikselinde bir nokta alıp yine tuval pikselinde düzeltilmişini
+   * döndüren işlev (bkz. kenarBulucu.js). Hesabı App yapıyor çünkü
+   * fotoğrafın kendi çözünürlüğünü bu bileşen bilmiyor.
+   */
+  kenaraYapis = null,
+  /*
+   * CANLI ÖLÇÜ — nokta sürüklenirken büyütecin altında yazan metin.
+   * App hesaplıyor; burada yalnızca gösteriliyor.
+   */
+  olcuYazi = null,
+  /*
+   * TUVALİN YAKINLAŞTIRMA ÇARPANI.
+   *
+   * Yakınlaştırma bu katmanın ÜSTÜNDEKİ sarmalayıcıya CSS dönüşümü olarak
+   * uygulanıyor; dolayısıyla getBoundingClientRect ölçeklenmiş bir dikdörtgen
+   * veriyor ve fare farkları da o kadar büyük geliyor. Nokta koordinatları
+   * ölçeksiz tuval pikselinde tutulduğu için gelen her fare ölçüsü buraya
+   * bölünüyor. Bölünmezse nokta imlecin kat kat uzağına düşüyor.
+   */
+  olcek = 1,
+  /*
+   * Yakınlaştırılmışken tuvali kaydırma. Sürükleme kaydırıyor, tıklama
+   * nokta koyuyor; ikisini ayıran şey parmağın/farenin kaç piksel gittiği.
+   */
+  onKaydir = null,
 }) {
   /*
    * HER ŞEY FOTOĞRAFIN İÇİNDE KALIYOR.
@@ -93,6 +126,14 @@ export default function ReferansSecici({
   const [imlec, setImlec] = useState(null)
   /* O an yapışılan nokta — vurgulanıyor ki kullanıcı kilidi görsün. */
   const [yapisan, setYapisan] = useState(null)
+  /*
+   * BÜYÜTECİN ODAĞI.
+   *
+   * İmleçten ayrı tutuluyor: imleç yalnızca nokta KOYARKEN anlamlı (kenar
+   * çizgisini o çiziyor), büyüteç ise sürüklerken de gerekiyor. Telefonda
+   * zaten en çok sürüklerken lazım, çünkü orada hedefi kapatan şey parmak.
+   */
+  const [buyutecNokta, setBuyutecNokta] = useState(null)
 
   /*
    * Klavyeyle ince ayar: fareyle bir noktayı tam köşeye oturtmak zor ve
@@ -116,29 +157,63 @@ export default function ReferansSecici({
     return () => window.removeEventListener('keydown', tus)
   }, [noktalar, secili, onDegis, tuvalW, tuvalH])
 
+  const z = olcek > 0 ? olcek : 1
   const yerel = (e) => {
     const r = katmanRef.current?.getBoundingClientRect()
     if (!r) return null
-    return kis({ x: e.clientX - r.left, y: e.clientY - r.top })
+    return kis({ x: (e.clientX - r.left) / z, y: (e.clientY - r.top) / z })
   }
+  /* Basılı tutulan parmağın/farenin durumu — kaydırma mı, tıklama mı. */
+  const basRef = useRef(null)
 
   /*
    * En yakın yapışma noktası — Alt basılıysa yapışma kapalı.
    * Kullanıcı bilerek köşenin yanına koymak isteyebilir.
    */
   const yakin = (p, kapali) => {
-    if (kapali || !Array.isArray(yapiskanNoktalar) || !yapiskanNoktalar.length || !p) return null
+    if (kapali || !p) return null
+    /*
+     * SIRA ÖNEMLİ: önce BAŞKA EKRANIN köşesi, sonra fotoğraftaki kenar.
+     *
+     * İki ekranı uç uca getirmek kullanıcının açık isteği; fotoğraftaki
+     * kenar ise bir tahmin. Tahmin, açık isteğin önüne geçmemeli — yoksa
+     * dikiş noktası birkaç piksel yanındaki duvar çizgisine kaçar ve iki
+     * ekran arasında görünür bir boşluk kalır.
+     */
     let en = null
-    for (const q of yapiskanNoktalar) {
-      if (!q || !Number.isFinite(q.x) || !Number.isFinite(q.y)) continue
-      const u = Math.hypot(q.x - p.x, q.y - p.y)
-      if (u <= YAPIS && (!en || u < en.u)) en = { q, u }
+    if (Array.isArray(yapiskanNoktalar)) {
+      for (const q of yapiskanNoktalar) {
+        if (!q || !Number.isFinite(q.x) || !Number.isFinite(q.y)) continue
+        const u = Math.hypot(q.x - p.x, q.y - p.y)
+        if (u <= YAPIS && (!en || u < en.u)) en = { q, u }
+      }
     }
-    return en ? en.q : null
+    if (en) return en.q
+    if (kenaraYapis) {
+      const k = kenaraYapis(p)
+      if (k && Number.isFinite(k.x) && Number.isFinite(k.y)) return kis(k)
+    }
+    return null
   }
 
-  /* Boş alana basmak yeni nokta koyuyor; kontenjan dolunca eklemiyor. */
+  /*
+   * NOKTA BASINCA DEĞİL BIRAKINCA KONUYOR.
+   *
+   * Yakınlaştırma gelince aynı yüzey iki işi birden görmek zorunda kaldı:
+   * sürükleme tuvali kaydırıyor, tıklama nokta koyuyor. İkisini ayıran şey
+   * parmağın kaç piksel gittiği (4 px). Yakınlaştırma yokken de aynı kural
+   * işliyor; yan etkisi şu: boş alanda sürüklemek artık yanlışlıkla nokta
+   * koymuyor.
+   */
   const katmanaBas = (e) => {
+    basRef.current = { x: e.clientX, y: e.clientY, sonX: e.clientX, sonY: e.clientY, tasindi: false }
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }
+
+  const katmanaBirak = (e) => {
+    const b = basRef.current
+    basRef.current = null
+    if (!b || b.tasindi) return
     if (noktalar.length >= enCokNokta) return
     const ham = yerel(e)
     if (!ham) return
@@ -146,6 +221,7 @@ export default function ReferansSecici({
     setSecili(noktalar.length)
     onDegis([...noktalar, y || ham])
     setYapisan(null)
+    setBuyutecNokta(y || ham)
   }
 
   /*
@@ -166,6 +242,16 @@ export default function ReferansSecici({
   }
 
   const hareket = (e) => {
+    const b = basRef.current
+    if (b) {
+      if (!b.tasindi && Math.hypot(e.clientX - b.x, e.clientY - b.y) > 4) b.tasindi = true
+      if (b.tasindi) {
+        if (onKaydir && z > 1) onKaydir(e.clientX - b.sonX, e.clientY - b.sonY)
+        b.sonX = e.clientX
+        b.sonY = e.clientY
+        return
+      }
+    }
     const s = surukleRef.current
     if (!s || !s.bas) {
       /* Sürükleme yokken imleç çizgisi ve yapışma vurgusu için yeri saklıyoruz. */
@@ -173,25 +259,33 @@ export default function ReferansSecici({
         const ham = yerel(e)
         const y = yakin(ham, e.altKey)
         setYapisan(y)
+        if (ham) setBuyutecNokta(y || ham)
         if (noktalar.length > 0 && ham) setImlec(y || ham)
       }
       return
     }
-    const ham = kis({ x: s.bas.x + (e.clientX - s.fareX), y: s.bas.y + (e.clientY - s.fareY) })
+    const ham = kis({
+      x: s.bas.x + (e.clientX - s.fareX) / z,
+      y: s.bas.y + (e.clientY - s.fareY) / z,
+    })
     /* Var olan bir noktayı sürüklerken de yapışıyor: köşe düzeltirken de lazım. */
     const y = yakin(ham, e.altKey)
     setYapisan(y)
+    setBuyutecNokta(y || ham)
     onDegis(noktalar.map((q, j) => (j === s.i ? y || ham : q)))
   }
 
   const birak = () => {
     surukleRef.current = null
+    basRef.current = null
     setYapisan(null)
+    setBuyutecNokta(null)
   }
 
   const imleciBirak = () => {
     setImlec(null)
     setYapisan(null)
+    setBuyutecNokta(null)
   }
 
   const [a, b] = noktalar
@@ -258,12 +352,18 @@ export default function ReferansSecici({
       style={{
         touchAction: 'none',
         cursor: noktalar.length < enCokNokta ? 'crosshair' : 'default',
-        /* Kontenjan doluyken yalnızca tutamaklar fareyi görüyor. */
-        pointerEvents: noktalar.length >= enCokNokta ? 'none' : 'auto',
+        /*
+         * Kontenjan doluyken yalnızca tutamaklar fareyi görüyor —
+         * YAKINLAŞTIRILMIŞ hâli ayrı: orada katman kaydırmayı da taşıyor.
+         */
+        pointerEvents: noktalar.length >= enCokNokta && z <= 1 ? 'none' : 'auto',
       }}
       onPointerDown={katmanaBas}
       onPointerMove={hareket}
-      onPointerUp={birak}
+      onPointerUp={(e) => {
+        katmanaBirak(e)
+        birak()
+      }}
       onPointerCancel={birak}
       onPointerLeave={imleciBirak}
     >
@@ -396,6 +496,98 @@ export default function ReferansSecici({
             </text>
           </g>
         </>
+      )}
+
+      {/*
+        BÜYÜTEÇ.
+
+        İmlecin altındaki bölge bir köşede büyütülmüş olarak duruyor.
+        Telefonda şart: hedef pikseli parmağın kendisi kapatıyor. Masaüstünde
+        de işe yarıyor — duvarın köşesi birkaç piksellik bir geçiş ve o
+        geçişin tam ortasına tıklamak büyütmeden mümkün değil.
+
+        İç içe <svg>: kendi görüş alanına kırpıyor, ayrıca bir maskeye gerek
+        kalmıyor. Kutu imlecin karşı köşesinde duruyor ki baktığı yeri
+        kapatmasın.
+      */}
+      {foto?.url && buyutecNokta && foto.en > 0 && foto.boy > 0 && (
+        (() => {
+          /*
+           * KUTU EKRANDA HEP AYNI BÜYÜKLÜKTE.
+           *
+           * Ölçüler tuval pikselinde ama katmanın tamamı yakınlaştırma
+           * çarpanıyla ölçekleniyor; kenarı sabit bırakılsa 4 katta
+           * tuvalin yarısını kaplıyordu. Çarpana bölününce ekranda hep
+           * 148 piksel kalıyor. Büyütme katı (K) bundan bağımsız: ekrandaki
+           * etkisi her zaman 4 kat.
+           */
+          const BK = 148 / z
+          const K = 4 // büyütme katı
+          const sagda = buyutecNokta.x < tuvalW / 2
+          /*
+           * Yakınlaştırma yokken kutu tuvalin köşesinde duruyor. Yakınlaşınca
+           * tuvalin köşesi GÖRÜNEN alanın dışında kalabiliyor (kaydırma
+           * burada bilinmiyor), bu yüzden kutu imlecin yanına geçiyor.
+           */
+          const bx =
+            z > 1
+              ? Math.max(S.sol + 4, Math.min(S.sag - BK - 4, buyutecNokta.x + (sagda ? 16 : -16 - BK)))
+              : sagda
+                ? Math.max(8, tuvalW - BK - 12)
+                : 12
+          const by =
+            z > 1
+              ? Math.max(S.ust + 4, Math.min(S.alt - BK - 28, buyutecNokta.y - BK - 16))
+              : 12
+          return (
+            <g pointerEvents="none">
+              <svg x={bx} y={by} width={BK} height={BK}>
+                <rect width={BK} height={BK} fill="#0b0b0d" />
+                <image
+                  href={foto.url}
+                  x={BK / 2 - (buyutecNokta.x - foto.sol) * K}
+                  y={BK / 2 - (buyutecNokta.y - foto.ust) * K}
+                  width={foto.en * K}
+                  height={foto.boy * K}
+                  preserveAspectRatio="none"
+                />
+                {/* Artı: tam olarak hangi pikselin seçildiğini gösteriyor. Kol boyu kutuya oranlı. */}
+                <line x1={BK / 2 - BK * 0.095} y1={BK / 2} x2={BK / 2 - BK * 0.02} y2={BK / 2} stroke="#f59e0b" strokeWidth={1.4 / z} />
+                <line x1={BK / 2 + BK * 0.02} y1={BK / 2} x2={BK / 2 + BK * 0.095} y2={BK / 2} stroke="#f59e0b" strokeWidth={1.4 / z} />
+                <line x1={BK / 2} y1={BK / 2 - BK * 0.095} x2={BK / 2} y2={BK / 2 - BK * 0.02} stroke="#f59e0b" strokeWidth={1.4 / z} />
+                <line x1={BK / 2} y1={BK / 2 + BK * 0.02} x2={BK / 2} y2={BK / 2 + BK * 0.095} stroke="#f59e0b" strokeWidth={1.4 / z} />
+                <circle cx={BK / 2} cy={BK / 2} r={1.3 / z} fill="#f59e0b" />
+              </svg>
+              <rect
+                x={bx}
+                y={by}
+                width={BK}
+                height={BK}
+                fill="none"
+                stroke="#fff"
+                strokeWidth={2 / z}
+                rx={6 / z}
+                opacity="0.85"
+              />
+              {/* CANLI ÖLÇÜ — sürüklerken ölçü anında burada. */}
+              {olcuYazi && (
+                <g>
+                  <rect x={bx} y={by + BK + 4 / z} width={BK} height={22 / z} rx={6 / z} fill="rgba(17,17,20,0.88)" />
+                  <text
+                    x={bx + BK / 2}
+                    y={by + BK + 19 / z}
+                    textAnchor="middle"
+                    fontSize={12.5 / z}
+                    fontWeight="700"
+                    fill="#fff"
+                  >
+                    {olcuYazi}
+                  </text>
+                </g>
+              )}
+            </g>
+          )
+        })()
       )}
 
       {noktalar.map((p, i) => (

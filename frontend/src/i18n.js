@@ -1425,6 +1425,13 @@ const dict = {
     ar: 'الحد الأقصى لحجم الفيديو 250 ميغابايت.',
   },
   'content.none': { tr: 'Resim Yok', en: 'No Image', ar: 'بدون صورة' },
+  'isaret.yakinlas': { tr: 'Yakınlaştır', en: 'Zoom in', ar: 'تكبير' },
+  'isaret.uzaklas': { tr: 'Uzaklaştır', en: 'Zoom out', ar: 'تصغير' },
+  'isaret.kaydirNot': {
+    tr: 'sürükleyerek kaydırın',
+    en: 'drag to pan',
+    ar: 'اسحب للتحريك',
+  },
   'content.havuzYukle': { tr: 'Yükle', en: 'Upload', ar: 'رفع' },
   'content.havuzCikar': { tr: 'Havuzdan çıkar', en: 'Remove from library', ar: 'إزالة من المكتبة' },
   'content.ekranBasina': { tr: 'Ekran başına içerik', en: 'Content per screen', ar: 'المحتوى لكل شاشة' },

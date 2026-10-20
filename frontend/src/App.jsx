@@ -153,6 +153,7 @@ import { DAVET_OLAYI } from './apiClient.js'
 import { useSession } from './SessionContext.jsx'
 import { icDortgen, duvarDunyasi, dunyaDortgeni } from './homografi.js'
 import { bolmeDilimleri } from './icerikBolme.js'
+import { kenarHaritasiCikar, yapisacakNokta } from './kenarBulucu.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
@@ -516,6 +517,53 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * tarayıcıda kalıyor — içerik görselinde olduğu gibi.
    */
   const [ozelSahne, setOzelSahne] = useState(null)
+  /*
+   * FOTOĞRAFTAKİ KENAR VE KÖŞELER.
+   *
+   * Ölçüm hatasının önemli bir kaynağı tıklama hatası: duvarın köşesi
+   * birkaç piksel şaşınca o şaşma ölçeğe girip santimetreye dönüşüyor.
+   * Harita bir kez çıkarılıyor (bkz. kenarBulucu.js) ve işaretlerken nokta
+   * en yakın gerçek köşeye/kenara oturuyor.
+   *
+   * Fotoğraf değişince eskisi hemen siliniyor: yeni fotoğrafta eski
+   * fotoğrafın köşelerine yapışmak, bir önceki kalibrasyonu kullanmak kadar
+   * yanlış olurdu.
+   */
+  const [kenarHarita, setKenarHarita] = useState(null)
+  /*
+   * İŞARETLEME YAKINLAŞTIRMASI.
+   *
+   * Uzaktaki küçük bir alanı işaretlerken birkaç pikselin içine birkaç
+   * santim sığıyor; büyüteç o pikseli GÖSTERİYOR ama tıklamayı
+   * kolaylaştırmıyor. Yakınlaştırma tuvalin kendisini büyütüyor.
+   *
+   * Kaydırma tuval pikselinde ve dönüşümden ÖNCE uygulanıyor
+   * (translate(...) scale(z)), bu yüzden ekran pikseliyle birebir.
+   */
+  const [isaretZoom, setIsaretZoom] = useState(1)
+  const [isaretKay, setIsaretKay] = useState({ x: 0, y: 0 })
+  /*
+   * Fotoğraf değişince kenar haritası yeniden çıkarılıyor. İşlem bir
+   * saniyenin altında ama yine de eşzamansız: bitmeden fotoğraf bir daha
+   * değişirse geç gelen sonuç atılıyor.
+   */
+  useEffect(() => {
+    const url = ozelSahne?.dosya
+    setKenarHarita(null)
+    /* Yeni fotoğrafın kadrajı başka: eski yakınlaştırma anlamsız. */
+    setIsaretZoom(1)
+    setIsaretKay({ x: 0, y: 0 })
+    if (!url) return undefined
+    let gecerli = true
+    kenarHaritasiCikar(url)
+      .then((h) => {
+        if (gecerli) setKenarHarita(h)
+      })
+      .catch(() => {})
+    return () => {
+      gecerli = false
+    }
+  }, [ozelSahne?.dosya])
   /*
    * FOTOĞRAFIN ÇEKİM MESAFESİ — bütün yerleşimin ölçeği buradan geliyor.
    * Kadrajın kapsadığı genişlik mesafenin ~1,11 katı (bkz. ozelMekan.js).
@@ -4966,12 +5014,100 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * şerit kalıyor). İşaretleme ve kutu katmanları bu sınırı kullanıyor ki
    * hiçbir şey fotoğrafın dışına taşmasın.
    */
-  const fotoSinir = (() => {
+  /*
+   * FOTOĞRAFIN TUVALDEKİ DİKDÖRTGENİ.
+   *
+   * Aşağıdaki fotoSinir ile aynı hesap; ayrı durmasının sebebi sıra:
+   * büyüteç ve yapışma işlevi ondan önce tanımlanmak zorunda (ikisi de
+   * aşağıdaki işaretleyici kurulumunda kullanılıyor) ve bir const'u
+   * tanımlanmadan okumak çalışma anında hata verir.
+   */
+  /*
+   * Kaydırma tuvalin dışına çıkamıyor: yakınlaştırılmış görüntünün kenarı
+   * tuvalin kenarından içeri giremez, yoksa yanda boş gri şerit kalır.
+   */
+  const kaydirmayiKis = (k, z) => ({
+    x: Math.max(tuvalBoyut.w * (1 - z), Math.min(0, k.x)),
+    y: Math.max(tuvalBoyut.h * (1 - z), Math.min(0, k.y)),
+  })
+
+  /* Tuvalin ORTASI sabit kalacak şekilde yakınlaştırır. */
+  const isaretYakinlastir = (yeni) => {
+    const z = Math.max(1, Math.min(4, Math.round(yeni * 2) / 2))
+    if (z <= 1) {
+      setIsaretZoom(1)
+      setIsaretKay({ x: 0, y: 0 })
+      return
+    }
+    const mx = tuvalBoyut.w / 2
+    const my = tuvalBoyut.h / 2
+    /* Ortadaki noktanın ölçeksiz karşılığı — yeni ölçekte de orada kalmalı. */
+    const ox = (mx - isaretKay.x) / isaretZoom
+    const oy = (my - isaretKay.y) / isaretZoom
+    setIsaretZoom(z)
+    setIsaretKay(kaydirmayiKis({ x: mx - ox * z, y: my - oy * z }, z))
+  }
+
+  const isaretKaydir = (dx, dy) =>
+    setIsaretKay((k) => kaydirmayiKis({ x: k.x + dx, y: k.y + dy }, isaretZoom))
+
+  const fotoSinirHam = (() => {
     if (!(fotoYer?.genislik > 0) || !(fotoYer?.yukseklik > 0)) return null
     const a = oranTuvale({ x: 0, y: 0 })
     const b = oranTuvale({ x: 1, y: 1 })
-    return { sol: Math.min(a.x, b.x), ust: Math.min(a.y, b.y), sag: Math.max(a.x, b.x), alt: Math.max(a.y, b.y) }
+    return {
+      sol: Math.min(a.x, b.x),
+      ust: Math.min(a.y, b.y),
+      sag: Math.max(a.x, b.x),
+      alt: Math.max(a.y, b.y),
+    }
   })()
+
+  /*
+   * YAPIŞMA İŞLEVİ — tuval pikseli alır, düzeltilmiş tuval pikseli verir.
+   *
+   * Harita küçültülmüş bir kopyadan çıkarıldığı için iki yönlü ölçek
+   * çevirimi burada yapılıyor; işaretleyici fotoğrafın çözünürlüğünü
+   * bilmek zorunda kalmıyor.
+   *
+   * Arama yarıçapı tuvalde 14 piksel: göz farkından büyük, komşu kenara
+   * kaçacak kadar geniş değil.
+   */
+  const kenaraYapis = (() => {
+    if (!kenarHarita || !fotoSinirHam) return null
+    const en = fotoSinirHam.sag - fotoSinirHam.sol
+    const boy = fotoSinirHam.alt - fotoSinirHam.ust
+    if (!(en > 0) || !(boy > 0)) return null
+    const olcekX = kenarHarita.w / en
+    const olcekY = kenarHarita.h / boy
+    return (p) => {
+      const b = yapisacakNokta(
+        kenarHarita,
+        (p.x - fotoSinirHam.sol) * olcekX,
+        (p.y - fotoSinirHam.ust) * olcekY,
+        14 * olcekX,
+      )
+      if (!b) return null
+      return {
+        x: fotoSinirHam.sol + (b.x / kenarHarita.w) * en,
+        y: fotoSinirHam.ust + (b.y / kenarHarita.h) * boy,
+      }
+    }
+  })()
+
+  /* Büyüteç kaynağı: fotoğrafın adresi ve tuvaldeki dikdörtgeni. */
+  const isaretFoto =
+    fotoSinirHam && ozelSahne?.dosya
+      ? {
+          url: ozelSahne.dosya,
+          sol: fotoSinirHam.sol,
+          ust: fotoSinirHam.ust,
+          en: fotoSinirHam.sag - fotoSinirHam.sol,
+          boy: fotoSinirHam.alt - fotoSinirHam.ust,
+        }
+      : null
+
+  const fotoSinir = fotoSinirHam
 
   /*
    * Alanın tuvaldeki dörtgeni — dört nokta tamamsa.
@@ -5211,6 +5347,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * karşıdan çekilmişse olağan durum) kaçış noktaları sonsuza gidiyor,
    * perspektif hesabı null dönüyor ve yazdıracak değer kalmıyordu. Oysa
    * orada tek ölçekli hesap zaten doğru; gösterilecek bir sayı hep var.
+   */
+  /*
+   * CANLI ÖLÇÜ — köşe sürüklenirken büyütecin altında yazıyor.
+   *
+   * Ölçü kartta zaten güncelleniyordu ama kullanıcı sürüklerken gözü
+   * fotoğrafta; panele bakmak için sürüklemeyi bırakmak gerekiyordu.
+   * (alanOlculenCm hemen aşağıda; metin onu okuduğu için orada kuruluyor.)
    */
   const alanOlculenCm = (() => {
     if (alanGercek) return { enCm: alanGercek.enCm, boyCm: alanGercek.boyCm }
@@ -6550,6 +6693,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const olcuAcik = sihirbazAdim > 0 || alanKipi || (!!ozelSahne && !girisYolu)
 
   /*
+   * Ölçüm akışı kapanınca yakınlaştırma da kalkıyor.
+   *
+   * Yakınlaştırma yalnızca işaretlerken açılabiliyor ama açık kalırsa
+   * sonraki araçlar (köşelerden ayarla, taşıma) ölçeksiz koordinat
+   * beklediği için fareyi yanlış yere düşürüyordu.
+   */
+  useEffect(() => {
+    if (olcuAcik) return
+    setIsaretZoom(1)
+    setIsaretKay({ x: 0, y: 0 })
+  }, [olcuAcik])
+
+  /*
    * ALANIN KÖŞELERİ DÜZENLEME SIRASINDA TUTAMAKLI.
    *
    * İşaretleme bitince dört nokta kayboluyor, geriye yalnızca kesik çizgi
@@ -7363,6 +7519,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           gerekmeden sigiyor.
         */}
         <main ref={tuvalRef} id="pdf-onizleme" className={(adayKipi ? 'aday-secim ' : '') + "yatay-onizleme order-1 lg:order-2 grow-0 shrink-0 basis-auto h-[62vh] min-w-0 relative overflow-hidden bg-[#f4f4f4] dark:bg-[#232830] lg:flex-1 lg:h-auto lg:min-h-0"}>
+          {/*
+            YAKINLAŞTIRMA SARMALAYICISI.
+
+            Bütün katmanlar (fotoğraf, işaretler, tasarım, ölçü etiketleri)
+            BİRLİKTE büyüyor; yalnız fotoğrafı büyütmek işaretleri yerinden
+            oynatırdı. Tuvalin kendisi (main) ölçeklenmiyor: tuvalBoyut onun
+            dikdörtgeninden okunuyor ve ölçeklenseydi her yakınlaştırma
+            yerleşimi baştan hesaplatırdı.
+
+            Yakınlaştırma 1 iken dönüşüm hiç uygulanmıyor — kalıcı bir
+            dönüşüm, içindeki sabit konumlu her öğenin başnoktasını değiştirir.
+          */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              transform:
+                isaretZoom > 1
+                  ? `translate(${isaretKay.x}px, ${isaretKay.y}px) scale(${isaretZoom})`
+                  : undefined,
+              transformOrigin: '0 0',
+            }}
+          >
 
           {/*
             FOTOĞRAF İNCELENİRKEN YÜKLENİYOR KATMANI.
@@ -7782,6 +7961,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           {refKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
+              /* 2.1 — büyüteç, kenara/köşeye yapışma, yakınlaştırma. */
+              foto={isaretFoto}
+              kenaraYapis={kenaraYapis}
+              olcek={isaretZoom}
+              onKaydir={isaretKaydir}
               noktalar={refNokta.map(oranTuvale)}
               onDegis={refNoktaDegisti}
               enCokNokta={refTur === 'dortgen' ? 4 : 2}
@@ -7900,6 +8084,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {/* İKİNCİ REFERANS — iki nokta, ilkiyle aynı araç. */}
           {ref2Kipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
+              /* 2.1 — büyüteç, kenara/köşeye yapışma, yakınlaştırma. */
+              foto={isaretFoto}
+              kenaraYapis={kenaraYapis}
+              olcek={isaretZoom}
+              onKaydir={isaretKaydir}
               noktalar={ref2Nokta.map(oranTuvale)}
               onDegis={(tuvalNoktalari) => setRef2Nokta(tuvalNoktalari.map(tuvalOrana))}
               enCokNokta={2}
@@ -7960,6 +8149,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 )}
               </svg>
               <ReferansSecici
+              /* 2.1 — büyüteç, kenara/köşeye yapışma, yakınlaştırma. */
+              foto={isaretFoto}
+              kenaraYapis={kenaraYapis}
+              olcek={isaretZoom}
+              onKaydir={isaretKaydir}
                 noktalar={kenarTuval}
                 onDegis={(t) => setKenarNokta(t.map(tuvalOrana))}
                 enCokNokta={4}
@@ -7972,6 +8166,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           {(alanKipi || alanTutamaklari) && !kenarKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
+              /* 2.1 — büyüteç, kenara/köşeye yapışma, yakınlaştırma. */
+              foto={isaretFoto}
+              kenaraYapis={kenaraYapis}
+              olcek={isaretZoom}
+              onKaydir={isaretKaydir}
+              /* Alan köşelerinde ölçü de anlık: sürüklerken panele bakmaya gerek yok. */
+              olcuYazi={
+                alanOlculenCm
+                  ? Math.round(alanOlculenCm.enCm) + ' × ' + Math.round(alanOlculenCm.boyCm) + ' cm'
+                  : null
+              }
               noktalar={alanNokta.map(oranTuvale)}
               onDegis={(tuvalNoktalari) => {
                 /*
@@ -8047,6 +8252,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {lKoseKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
+              /* 2.1 — büyüteç, kenara/köşeye yapışma, yakınlaştırma. */
+              foto={isaretFoto}
+              kenaraYapis={kenaraYapis}
+              olcek={isaretZoom}
+              onKaydir={isaretKaydir}
               noktalar={lKoseNokta.map(oranTuvale)}
               onDegis={(tuvalNoktalari) => setLKoseNokta(tuvalNoktalari.map(tuvalOrana))}
               enCokNokta={2}
@@ -8183,6 +8393,43 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               /* Köşeler fotoğrafın dışına çıkamıyor. */
               sinir={fotoSinir}
             />
+          )}
+          </div>
+
+          {/*
+            YAKINLAŞTIRMA DÜĞMELERİ — sarmalayıcının DIŞINDA, yani kendileri
+            büyümüyor. Yalnızca ölçüm akışı açıkken görünüyorlar: başka
+            zamanlarda tuval zaten sürüklenerek kullanılıyor.
+          */}
+          {olcuAcik && scene === 'ozel' && ozelSahne && fotoYer?.genislik > 0 && (
+            <div className="absolute left-3 bottom-3 z-40 flex items-center gap-0.5 rounded-lg bg-black/55 p-1 backdrop-blur-sm">
+              <button
+                type="button"
+                onClick={() => isaretYakinlastir(isaretZoom - 0.5)}
+                disabled={isaretZoom <= 1}
+                aria-label={t('isaret.uzaklas')}
+                title={t('isaret.uzaklas')}
+                className="w-7 h-7 rounded-md text-white text-[17px] leading-none enabled:hover:bg-white/20 disabled:opacity-35"
+              >
+                −
+              </button>
+              <span className="px-1 text-[12.5px] font-semibold text-white tabular-nums">
+                {isaretZoom.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}×
+              </span>
+              <button
+                type="button"
+                onClick={() => isaretYakinlastir(isaretZoom + 0.5)}
+                disabled={isaretZoom >= 4}
+                aria-label={t('isaret.yakinlas')}
+                title={t('isaret.yakinlas')}
+                className="w-7 h-7 rounded-md text-white text-[17px] leading-none enabled:hover:bg-white/20 disabled:opacity-35"
+              >
+                +
+              </button>
+              {isaretZoom > 1 && (
+                <span className="pl-1 pr-1 text-[11.5px] text-white/70">{t('isaret.kaydirNot')}</span>
+              )}
+            </div>
           )}
         </main>
 
