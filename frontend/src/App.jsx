@@ -1259,7 +1259,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Yerleşim değişince düzeltme baştan öğrenilir. */
   useEffect(() => {
     duzeltmeSayaciRef.current = 0
-  }, [hedefKose, scene, ozelSahne])
+    /*
+     * TUVAL ÖLÇÜSÜ DE SIFIRLIYOR: dar/geniş görünüm arasında geçerken
+     * yerleşim farkı değişiyor ve düzeltmenin yeniden yakınsaması gerekiyor.
+     * Sayaç tükenmiş olursa ekran yeni görünümde kaymış kalıyordu.
+     */
+  }, [hedefKose, scene, ozelSahne, tuvalBoyut.w, tuvalBoyut.h])
 
   const ekranKutuYeriniYaz = (y) => {
     if (!y) return
@@ -3452,7 +3457,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        */
       const sinirli =
         alanNokta.length === 4 ? kadrajaCek(elle, tuvalBoyut) : fotografaCek(elle, fotoYer)
-      return sinirli.map((k) => ({ x: k.x - sol0, y: k.y - ust0 }))
+      /*
+       * ÇİZİM DÜZELTMESİ BU DALDA DA UYGULANIYOR.
+       *
+       * ekranKutuBasi, tasarım kutusunun tuvalin TAM ORTASINDA duracağını
+       * varsayıyor. Gerçekte kutu WallPreview'in kendi yerleşiminin içinde:
+       * duvar kutusu, insan silueti, ölçü payları ve alta hizalama onu
+       * ortadan kaydırıyor. Fark otomatik yerleşim dalında ölçülüp
+       * kapatılıyordu (beklenenKoseRef → ekranKutuYeriniYaz → cizimDuzeltme)
+       * ama İŞARETLENEN ALAN dalı bu zincirin dışında kalmıştı: beklenen
+       * köşe hiç yazılmadığı için ölçüm geldiğinde karşılaştıracak bir şey
+       * bulunmuyor ve düzeltme hiç çalışmıyordu.
+       *
+       * Belirtisi: geniş (masaüstü) görünümde tasarım alanın ortasına
+       * oturuyor — orada kutu zaten ortada — ama dar (telefon) görünümde
+       * her seferinde aynı miktarda (~53 px) yukarıda duruyordu. Kayma
+       * sabitti çünkü yerleşim farkı sabit.
+       */
+      beklenenKoseRef.current = {
+        x: Math.min(...sinirli.map((k) => k.x)),
+        y: Math.min(...sinirli.map((k) => k.y)),
+      }
+      return sinirli.map((k) => ({
+        x: k.x - sol0 + cizimDuzeltme.x,
+        y: k.y - ust0 + cizimDuzeltme.y,
+      }))
     }
     if (!hedefKose) {
       beklenenKoseRef.current = null
