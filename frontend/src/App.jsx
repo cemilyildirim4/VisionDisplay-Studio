@@ -112,7 +112,7 @@ import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose
 /* Alan içine yerleştirme ve sığdırma — ikisi de hazır (bkz. homografi.js). */
 import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
 /* İşaretlenen alanın GERÇEK ölçüsü — eğimi hesaba katarak (bkz. alanOlcu.js). */
-import { dortgenGercekOlcu, odakIkiReferanstan, kesisim } from './alanOlcu.js'
+import { dortgenGercekOlcu, odakIkiReferanstan, kesisim, dikdortgeneOtur } from './alanOlcu.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
 import { cepheOlcek } from './Cephe.jsx'
 // SAHNELER (fotoğraflı mekânlar) şu an listede yok; sahneBul yine de gerekli
@@ -3600,6 +3600,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Dört nokta tamamlandı: işaretleme kapanıyor, tasarım alana giriyor. */
   const alaniBitir = () => {
     const k = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
+    /*
+     * KÖŞELER BUNDAN SONRA SIRALI: SÜ, SağÜ, SağA, SolA.
+     *
+     * Tıklama sırası herhangi bir sıra olabiliyor; hesaplar zaten her
+     * seferinde sıralıyordu. Kaydın kendisi sıralı olunca düzenlemede
+     * "hangi köşe hangisi" sorusu da ortadan kalkıyor (bkz. köşe çekme).
+     */
+    if (k) setAlanNokta(k.map(tuvalOrana))
     setAlanKipi(false)
     setAlanKonum({ u: 0.5, v: 0.5 })
     setAlanDoldur(false)
@@ -7460,7 +7468,55 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {(alanKipi || alanTutamaklari) && !kenarKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
               noktalar={alanNokta.map(oranTuvale)}
-              onDegis={(tuvalNoktalari) => setAlanNokta(tuvalNoktalari.map(tuvalOrana))}
+              onDegis={(tuvalNoktalari) => {
+                /*
+                 * DÜZENLEMEDE DÖRTGEN BÜKÜLEMİYOR.
+                 *
+                 * Tek köşe serbestçe oynatılınca dörtgen bir dikdörtgenin
+                 * görüntüsü olmaktan çıkıyor, perspektif hesabı çöküyor ve
+                 * ölçü anlamsız bir yere atlıyordu (314 × 152 cm'lik alan
+                 * 131 × 107'ye düşüyordu). Duvarın düzlemi ilk işaretlemede
+                 * belli; köşe çekilince o düzlemde yeni bir DİKDÖRTGEN
+                 * kuruluyor: çekilen köşenin karşısı çıpa olarak sabit
+                 * kalıyor, öteki iki köşe kendiliğinden kayıyor.
+                 *
+                 * İlk işaretleme (alanKipi) serbest: orada dikdörtgeni
+                 * tanımlayan zaten kullanıcı.
+                 */
+                if (alanTutamaklari && tuvalNoktalari.length === 4 && alanNokta.length === 4) {
+                  const eski = alanNokta.map(oranTuvale)
+                  let hangi = -1
+                  let sayi = 0
+                  for (let k = 0; k < 4; k++) {
+                    const q = tuvalNoktalari[k]
+                    if (!q || !eski[k]) continue
+                    if (Math.hypot(q.x - eski[k].x, q.y - eski[k].y) > 0.5) {
+                      hangi = k
+                      sayi++
+                    }
+                  }
+                  const odak =
+                    fotoOdak > 1
+                      ? fotoOdak
+                      : fotoYer?.genislik > 0
+                        ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785
+                        : 0
+                  if (sayi === 1 && odak > 1) {
+                    const yeniKose = dikdortgeneOtur(
+                      eski,
+                      oranTuvale({ x: 0.5, y: 0.5 }),
+                      odak,
+                      hangi,
+                      tuvalNoktalari[hangi],
+                    )
+                    if (yeniKose) {
+                      setAlanNokta(yeniKose.map(tuvalOrana))
+                      return
+                    }
+                  }
+                }
+                setAlanNokta(tuvalNoktalari.map(tuvalOrana))
+              }}
               /* Duran ekranların köşelerine yapışıyor (bkz. yapiskanNoktalar). */
               yapiskanNoktalar={yapiskanNoktalar}
               enCokNokta={4}

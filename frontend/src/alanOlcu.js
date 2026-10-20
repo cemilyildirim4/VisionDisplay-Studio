@@ -112,6 +112,115 @@ function duzlemOlcer(koseler, asal, f) {
 }
 
 /**
+ * KÖŞE ÇEKİLİNCE DÖRTGEN GERÇEK BİR DİKDÖRTGEN KALIYOR.
+ *
+ * Düzenlemede tek bir köşe serbestçe oynatılabiliyordu. O anda dörtgen
+ * artık bir dikdörtgenin perspektif görüntüsü olmaktan çıkıyor: kaçış
+ * noktaları saçmalıyor, perspektif hesabı çöküyor ve ölçü anlamsız bir
+ * yere atlıyor (ölçüldü: 314 × 152 cm olan alan tek köşe 60 px çekilince
+ * 131 × 107 cm'e düşüyor, ekran duvarın dışına taşıyordu).
+ *
+ * Oysa duvarın DÜZLEMİ alan ilk işaretlendiğinde belli oluyor ve sonradan
+ * değişmiyor. Köşe çekilince yapılması gereken, o düzlem üzerinde yeni bir
+ * DİKDÖRTGEN kurmak:
+ *   1) Dört köşe düzleme geri iz düşürülüyor.
+ *   2) Çekilen köşenin KARŞISINDAKİ köşe çıpa olarak sabit kalıyor.
+ *   3) Çekilen köşenin yeni yeri de düzleme düşürülüp, çıpadan olan farkı
+ *      dikdörtgenin iki kenar yönüne ayrıştırılıyor (en ve boy).
+ *   4) Dört köşe bu en/boy ile yeniden kurulup görüntüye iz düşürülüyor.
+ *
+ * Sonuç: kullanıcı dikdörtgeni bükemiyor; alan her zaman gerçek bir
+ * dikdörtgenin o açıdan görünüşü oluyor ve ölçü mantıklı yönde değişiyor.
+ *
+ * Dikdörtgen ters çevrilemiyor: çıpayı geçen çekişlerde kenar en az
+ * başlangıcının %8'i kadar kalıyor.
+ *
+ * @param koseler  mevcut dört köşe (SÜ, SağÜ, SağA, SolA — tuval pikseli)
+ * @param asal     asal nokta (fotoğrafın ortası)
+ * @param f        odak uzaklığı (piksel)
+ * @param i        çekilen köşenin sırası (0..3)
+ * @param yeni     çekilen köşenin yeni yeri
+ * @returns {{x,y}[]|null} yeni dört köşe, aynı sırada
+ */
+export function dikdortgeneOtur(koseler, asal, f, i, yeni) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return null
+  if (!(f > 1) || !asal || !yeni) return null
+  if (!(i >= 0 && i < 4)) return null
+
+  const [p0, p1, p2, p3] = koseler
+  const isin = (p) => ({ x: (p.x - asal.x) / f, y: (p.y - asal.y) / f, z: 1 })
+  const yon2B = (a, b) => {
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const u = Math.hypot(dx, dy)
+    return u > 1e-9 ? { x: dx / u, y: dy / u, z: 0 } : null
+  }
+  const Vy = kesisim(p0, p1, p3, p2)
+  const Vd = kesisim(p0, p3, p1, p2)
+  const dYatay = Vy ? isin(Vy) : yon2B(p0, p1)
+  const dDikey = Vd ? isin(Vd) : yon2B(p0, p3)
+  if (!dYatay || !dDikey) return null
+  const n = capraz(dYatay, dDikey)
+  const r0 = isin(p0)
+  const d0 = nokta3(n, r0)
+  if (!(Math.abs(d0) > 1e-12)) return null
+  const duzleme = (p) => {
+    const r = isin(p)
+    const pay = nokta3(n, r)
+    if (!(Math.abs(pay) > 1e-12)) return null
+    const s = d0 / pay
+    return { x: r.x * s, y: r.y * s, z: r.z * s }
+  }
+  const cikarV = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z })
+  const birim = (v) => {
+    const u = Math.hypot(v.x, v.y, v.z)
+    return u > 1e-12 ? { x: v.x / u, y: v.y / u, z: v.z / u } : null
+  }
+
+  const X = koseler.map(duzleme)
+  if (X.some((x) => !x)) return null
+  const e1 = birim(cikarV(X[1], X[0]))
+  const e2 = birim(cikarV(X[3], X[0]))
+  if (!e1 || !e2) return null
+
+  const karsi = (i + 2) % 4
+  const A = X[karsi]
+  const P = duzleme(yeni)
+  if (!P) return null
+
+  /* Köşelerin çıpaya göre kenar yönlerindeki bileşenleri. */
+  const u = X.map((q) => nokta3(cikarV(q, A), e1))
+  const v = X.map((q) => nokta3(cikarV(q, A), e2))
+  const u0 = u[i]
+  const v0 = v[i]
+  if (!(Math.abs(u0) > 1e-9) || !(Math.abs(v0) > 1e-9)) return null
+
+  const fark = cikarV(P, A)
+  let a = nokta3(fark, e1)
+  let b = nokta3(fark, e2)
+  /* Dikdörtgen ters dönmesin: işaret korunuyor, kenar en az %8 kalıyor. */
+  const enAz = 0.08
+  if (a * u0 <= 0 || Math.abs(a) < Math.abs(u0) * enAz) a = u0 * enAz
+  if (b * v0 <= 0 || Math.abs(b) < Math.abs(v0) * enAz) b = v0 * enAz
+
+  /* Her köşe ya çıpa tarafında (0) ya da karşı uçta (a / b). */
+  const yeniKose = []
+  for (let k = 0; k < 4; k++) {
+    const uk = Math.abs(u[k]) < Math.abs(u0) * 0.5 ? 0 : a
+    const vk = Math.abs(v[k]) < Math.abs(v0) * 0.5 ? 0 : b
+    const P3 = {
+      x: A.x + e1.x * uk + e2.x * vk,
+      y: A.y + e1.y * uk + e2.y * vk,
+      z: A.z + e1.z * uk + e2.z * vk,
+    }
+    if (!(Math.abs(P3.z) > 1e-9)) return null
+    yeniKose.push({ x: asal.x + (f * P3.x) / P3.z, y: asal.y + (f * P3.y) / P3.z })
+  }
+  if (yeniKose.some((q) => !Number.isFinite(q.x) || !Number.isFinite(q.y))) return null
+  return yeniKose
+}
+
+/**
  * İKİ REFERANSTAN ODAK UZAKLIĞI — TAHMİN YERİNE HESAP.
  *
  * Kamera düz tutulup yalnızca sağa-sola döndüyse dikey kenarlar paralel
