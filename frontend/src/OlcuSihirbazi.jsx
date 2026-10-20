@@ -100,6 +100,8 @@ function SihirbazKart({
   /* Düzenlemede referans adımlarına dönülmüyor. */
   duzenlemede = false,
   onAlanTemizle = null,
+  /* İşaretleme geçerli mi (içe çökmüş dörtgen kabul edilmiyor). */
+  alanGecerli = true,
   /* GÖRÜNMEYEN KÖŞE — iki kenardan bulunuyor. */
   kenarKipi = false,
   kenarNoktaSayisi = 0,
@@ -285,18 +287,38 @@ function SihirbazKart({
     <div className="overflow-hidden rounded-xl border-2 border-brand shadow-[0_4px_16px_rgba(41,98,173,0.18)]">
       {/* Başlık şeridi dolu renkte: panelde göz önce buraya gelsin. */}
       <div className="flex items-center gap-2 bg-brand px-2.5 py-2 text-white">
-        {/* Adım sayacı yalnızca gerçek adım varken; alan tek başınaysa yok. */}
-        {!alanTekBasina && !girisSecimi && (
-          <>
-            <span className="flex items-center gap-1">
-              {Array.from({ length: adimSayisi }, (_, i) => i + 1).map((i) => (
-                <Nokta key={i} dolu={i < adim} etkin={i === adim} />
-              ))}
-            </span>
-            <span className="text-[11.5px] font-bold tabular-nums text-white/80">
-              {adim}/{adimSayisi}
-            </span>
-          </>
+        {/*
+          İLERLEME — akışın tamamı tek bakışta.
+
+          Önce adım noktaları ve "2/4" vardı; köşe işaretleme adımında ise
+          hiçbir gösterge yoktu ve kullanıcı nerede olduğunu kaybediyordu.
+          Üstelik "4 adım" sayısı yola göre değişiyor: "alanım var" yolunda
+          referans adımı hiç yok.
+        */}
+        {!girisSecimi && !lKose && (
+          <span className="flex items-center gap-1">
+            {(girisYolu === 'alanVar'
+              ? ['alan', 'yerlesim']
+              : ['referans', 'alan', 'yerlesim']
+            ).map((ad, i, hepsi) => {
+              const suAn = alanKipi ? 'alan' : adim >= 4 ? 'yerlesim' : adim === 3 ? 'alan' : 'referans'
+              const sira = hepsi.indexOf(suAn)
+              const etkin = i === sira
+              const bitti = i < sira
+              return (
+                <span key={ad} className="flex items-center gap-1">
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[11px] font-bold leading-none ${
+                      etkin ? 'bg-white text-brand' : bitti ? 'bg-white/35 text-white' : 'bg-white/15 text-white/70'
+                    }`}
+                  >
+                    {t('sih.ilerle.' + ad)}
+                  </span>
+                  {i < hepsi.length - 1 && <span className="text-white/40 text-[10px]">›</span>}
+                </span>
+              )
+            })}
+          </span>
         )}
         {/* Panel dar: başlık kesilmek yerine ikinci satıra sarıyor. */}
         <span className="flex-1 text-[14.5px] font-bold leading-tight">
@@ -691,12 +713,16 @@ function SihirbazKart({
                 <button
                   type="button"
                   onClick={onAlanBitir}
-                  disabled={alanNoktaSayisi < 4}
+                  disabled={alanNoktaSayisi < 4 || !alanGecerli}
                   className={ana}
                 >
                   {t('sih.alanBitir')}
                 </button>
               </div>
+              {/* İçe çökmüş dörtgen hiçbir dikdörtgenin görüntüsü değil. */}
+              {alanNoktaSayisi === 4 && !alanGecerli && (
+                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.alanGecersiz')}</p>
+              )}
               {/*
                 Köşe görünmüyorsa: iki kenardan bulunuyor. Dört köşe
                 tamamlanmışsa teklif edilmiyor, yapacak bir şey yok.

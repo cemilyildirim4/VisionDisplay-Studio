@@ -112,6 +112,46 @@ function duzlemOlcer(koseler, asal, f) {
 }
 
 /**
+ * İŞARETLENEN DÖRTGEN GERÇEKTE OLABİLİR Mİ.
+ *
+ * Dört köşe duvardaki gerçek çizgileri takip etmeli. İçe çökmüş (bir köşesi
+ * ötekilerin arasına düşmüş) ya da kendi kendini kesen bir dörtgen, hiçbir
+ * dikdörtgenin hiçbir açıdan görüntüsü değildir: perspektif hesabı orada
+ * anlamsız bir sonuç üretir. Böyle bir işaretleme kabul edilmiyor.
+ *
+ * Denetim: köşeler sıralandıktan sonra ardışık kenarların çapraz çarpımları
+ * AYNI işaretli olmalı (dışbükey). İşaret değişiyorsa köşelerden biri içeri
+ * düşmüş demektir. Ayrıca çok ince/çökmüş dörtgenler de eleniyor: en küçük
+ * kenar, en büyüğünün yüzde biri kadar bile değilse ölçüm güvenilmez.
+ *
+ * @returns {boolean} işaretleme kullanılabilir mi
+ */
+export function dortgenGecerli(koseler) {
+  if (!Array.isArray(koseler) || koseler.length !== 4) return false
+  if (koseler.some((k) => !k || !Number.isFinite(k.x) || !Number.isFinite(k.y))) return false
+  let artiVar = false
+  let eksiVar = false
+  let enKisa = Infinity
+  let enUzun = 0
+  for (let i = 0; i < 4; i++) {
+    const a = koseler[i]
+    const b = koseler[(i + 1) % 4]
+    const c = koseler[(i + 2) % 4]
+    const u = { x: b.x - a.x, y: b.y - a.y }
+    const v = { x: c.x - b.x, y: c.y - b.y }
+    const capraz2 = u.x * v.y - u.y * v.x
+    if (capraz2 > 0) artiVar = true
+    if (capraz2 < 0) eksiVar = true
+    const uz = Math.hypot(u.x, u.y)
+    enKisa = Math.min(enKisa, uz)
+    enUzun = Math.max(enUzun, uz)
+  }
+  if (artiVar && eksiVar) return false
+  if (!(enUzun > 0) || enKisa < enUzun * 0.01) return false
+  return true
+}
+
+/**
  * KÖŞE ÇEKİLİNCE DÖRTGEN GERÇEK BİR DİKDÖRTGEN KALIYOR.
  *
  * Düzenlemede tek bir köşe serbestçe oynatılabiliyordu. O anda dörtgen

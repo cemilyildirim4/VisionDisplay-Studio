@@ -643,6 +643,14 @@ const dict = {
     ar: 'تحدّد أولًا طولًا تعرف مقاسه في الصورة؛ ومنه يأتي المقياس.',
   },
   'sih.alanGercekOlcu': { tr: 'Alanın gerçek ölçüsü', en: 'Real size of the area', ar: 'المقاس الحقيقي للمنطقة' },
+  'sih.ilerle.referans': { tr: 'Referans', en: 'Reference', ar: 'المرجع' },
+  'sih.ilerle.alan': { tr: 'Alan', en: 'Area', ar: 'المنطقة' },
+  'sih.ilerle.yerlesim': { tr: 'Yerleştir', en: 'Place', ar: 'الوضع' },
+  'sih.alanGecersiz': {
+    tr: 'Köşeleri kontrol edin: bu dörtgen gerçekte olamaz (bir köşe içeri düşmüş ya da kenarlar kesişiyor).',
+    en: 'Check the corners: this quad cannot exist in reality (a corner falls inside, or the edges cross).',
+    ar: 'تحقق من الزوايا: هذا الشكل غير ممكن واقعيًا.',
+  },
   'sih.alanTemizle': { tr: 'Temizle', en: 'Clear', ar: 'مسح' },
   'sih.alanTasi': {
     tr: 'Tasarımı sürükleyerek taşıyabilirsiniz; alanın dışına da çıkabilir.',

@@ -112,7 +112,13 @@ import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose
 /* Alan içine yerleştirme ve sığdırma — ikisi de hazır (bkz. homografi.js). */
 import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
 /* İşaretlenen alanın GERÇEK ölçüsü — eğimi hesaba katarak (bkz. alanOlcu.js). */
-import { dortgenGercekOlcu, odakIkiReferanstan, kesisim, dikdortgeneOtur } from './alanOlcu.js'
+import {
+  dortgenGercekOlcu,
+  odakIkiReferanstan,
+  kesisim,
+  dikdortgeneOtur,
+  dortgenGecerli,
+} from './alanOlcu.js'
 /* Fotoğrafın kendi odak uzaklığı — varsa tahmine hiç gerek kalmıyor. */
 import { exif35mmOdak } from './exifOdak.js'
 import TasmaKatmani from './TasmaKatmani.jsx'
@@ -3681,6 +3687,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   /* Dört nokta tamamlandı: işaretleme kapanıyor, tasarım alana giriyor. */
   const alaniBitir = () => {
+    /* Geçersiz işaretleme ölçüye girmiyor: kullanıcı köşeleri düzeltiyor. */
+    if (!alanGecerli) return
     const k = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
     /*
      * KÖŞELER BUNDAN SONRA SIRALI: SÜ, SağÜ, SağA, SolA.
@@ -4801,6 +4809,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })()
 
   const alanTuval = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
+
+  /*
+   * İŞARETLEME GEÇERLİ Mİ — içe çökmüş ya da çökük dörtgen kabul edilmiyor
+   * (bkz. alanOlcu.js dortgenGecerli). Dört köşe tamamlanmadan sorulmuyor.
+   */
+  const alanGecerli = alanNokta.length !== 4 || !alanTuval ? true : dortgenGecerli(alanTuval)
 
   /* Kenar noktalarının tuvaldeki yeri ve iki çizginin kesişimi. */
   const kenarTuval = kenarNokta.map(oranTuvale)
@@ -8822,6 +8836,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             onGirisAlanYok={girisAlanYok}
                             duzenlemede={duzenlemede}
                             onAlanTemizle={alaniTemizle}
+                            alanGecerli={alanGecerli}
                             kenarKipi={kenarKipi}
                             kenarNoktaSayisi={kenarNokta.length}
                             kenarHazir={!!kenarKesisim}

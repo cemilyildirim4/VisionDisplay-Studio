@@ -270,8 +270,23 @@ export default function ReferansSecici({
       {/* Noktasız alan da tıklanabilir olmalı: saydam dolgu hedef oluyor. */}
       <rect x="0" y="0" width={tuvalW} height={tuvalH} fill="rgba(0,0,0,0.001)" />
 
+      {/*
+        ÇİZGİ KALIN VE KONTRASTLI.
+
+        İnce tek renkli çizgi açık renkli bir duvarda seçilmiyordu. Altına
+        koyu bir hat çiziliyor: hem açık hem koyu zeminde okunuyor.
+      */}
       {dortgen && (
-        <polygon points={dortgen} fill="rgba(22,163,74,0.10)" stroke={renk} strokeWidth="2.5" strokeDasharray="8 5" />
+        <>
+          <polygon
+            points={dortgen}
+            fill="rgba(22,163,74,0.10)"
+            stroke="rgba(0,0,0,0.45)"
+            strokeWidth="5.5"
+            strokeDasharray="8 5"
+          />
+          <polygon points={dortgen} fill="none" stroke={renk} strokeWidth="3" strokeDasharray="8 5" />
+        </>
       )}
 
       {/* YAPIŞMA VURGUSU — tıklayınca tam buraya oturacak. */}
@@ -301,10 +316,19 @@ export default function ReferansSecici({
             y1={noktalar[noktalar.length - 1].y}
             x2={imlec.x}
             y2={imlec.y}
-            stroke={renk}
-            strokeWidth="1.6"
+            stroke="rgba(0,0,0,0.4)"
+            strokeWidth="4.5"
             strokeDasharray="5 6"
-            opacity="0.6"
+            pointerEvents="none"
+          />
+          <line
+            x1={noktalar[noktalar.length - 1].x}
+            y1={noktalar[noktalar.length - 1].y}
+            x2={imlec.x}
+            y2={imlec.y}
+            stroke={renk}
+            strokeWidth="2.4"
+            strokeDasharray="5 6"
             pointerEvents="none"
           />
           {/* Dördüncü köşe konurken dörtgenin kapanışı da görünüyor. */}
@@ -326,19 +350,30 @@ export default function ReferansSecici({
 
       {/* Tamamlanmamış dörtgen: konulan noktalar arasındaki kenarlar. */}
       {yol && (
-        <polyline
-          points={yol}
-          fill="none"
-          stroke={renk}
-          strokeWidth="2.5"
-          strokeDasharray="8 5"
-          strokeLinejoin="round"
-        />
+        <>
+          <polyline
+            points={yol}
+            fill="none"
+            stroke="rgba(0,0,0,0.45)"
+            strokeWidth="5.5"
+            strokeDasharray="8 5"
+            strokeLinejoin="round"
+          />
+          <polyline
+            points={yol}
+            fill="none"
+            stroke={renk}
+            strokeWidth="3"
+            strokeDasharray="8 5"
+            strokeLinejoin="round"
+          />
+        </>
       )}
 
       {cizgiKipi && a && b && (
         <>
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={renk} strokeWidth="2.5" strokeDasharray="8 5" />
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="rgba(0,0,0,0.45)" strokeWidth="5.5" strokeDasharray="8 5" />
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={renk} strokeWidth="3" strokeDasharray="8 5" />
           <g>
             <rect
               x={rozet.x - 46}
