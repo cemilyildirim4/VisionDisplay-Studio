@@ -118,6 +118,7 @@ import {
   kesisim,
   dikdortgeneOtur,
   dortgenGecerli,
+  grupDortgenleri,
 } from './alanOlcu.js'
 /* Fotoğrafın kendi odak uzaklığı — varsa tahmine hiç gerek kalmıyor. */
 import { exif35mmOdak } from './exifOdak.js'
@@ -968,6 +969,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * null: fotoğraf yeni yüklendi, seçim bekleniyor.
    * ───────────────────────────────────────────────────────────────────────
    */
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * EKRAN YERLEŞİMİ — BİRLEŞTİRME.
+   *
+   * İki ekranı köşede uç uca getirmek, kenarlarını AYNI yapmak demek. Elle
+   * yapılınca birkaç piksel şaşıyor; ekranlardan biri taşınınca da dikiş
+   * hemen açılıyor.
+   *
+   * Grup SAKLANMIYOR, TÜRETİLİYOR: yalnızca duruş ("düz", "L", "U",
+   * "kutu", "acili"), açı ve üye sırası tutuluyor. Dörtgenler her çizimde
+   * LİDER ekrandan ve her ekranın gerçek santim ölçüsünden hesaplanıyor
+   * (bkz. alanOlcu.js grupDortgenleri). Lider nereye giderse grup onunla
+   * gidiyor, dikiş hiç açılmıyor.
+   *
+   * Lider = grubun İLK üyesi. Grup tek parça taşındığı için bir üyeye
+   * tıklamak lideri düzenlemeye alıyor; tek tek taşımak için "Ayır".
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const [grup, setGrup] = useState(null)
+  const [grupSecim, setGrupSecim] = useState([])
+  const [grupTipi, setGrupTipi] = useState('duz')
+  const [grupAcisi, setGrupAcisi] = useState(135)
   const [girisYolu, setGirisYolu] = useState(null)
   const [duzenlemede, setDuzenlemede] = useState(false)
   const [kenarKipi, setKenarKipi] = useState(false)
@@ -1548,6 +1571,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * odağıyla kuruluyordu.
        */
       setDuzenlemede(false)
+      setGrup(null)
+      setGrupSecim([])
       setFotoOdak(null)
       /*
        * EXIF ODAĞI — ölçümün kesinliği buna bağlı.
@@ -4069,7 +4094,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * geliyor. Hiçbir ekran kaybolmuyor, her an tam olarak biri düzenleniyor ve
    * kimlikler yer değiştirmiyor (bkz. aktifEkranId).
    */
-  const ekraniDuzenle = (id) => {
+  const ekraniDuzenle = (istenenId) => {
+    /*
+     * GRUP TEK PARÇA.
+     *
+     * Bir üyeye tıklamak lideri düzenlemeye alıyor: grup liderden
+     * türetildiği için başka bir üyeyi tek başına oynatmak dikişi açardı.
+     * Tek tek taşımak isteyen "Ayır" diyor.
+     */
+    const id =
+      grup && Array.isArray(grup.uyeler) && grup.uyeler.includes(istenenId)
+        ? grup.uyeler[0]
+        : istenenId
     const secilen = sabitEkranlar.find((e) => e.id === id)
     if (!secilen) return
     /*
@@ -4172,6 +4208,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * geri alma yok; yanlışlıkla basılan bir düğme bütün bir ekranın kurulum
    * emeğini siliyordu.
    */
+  /*
+   * BİRLEŞTİR — seçilen ekranlar kenarlarından birleşiyor.
+   * Sıra listedeki sıra; lider ilk üye.
+   */
+  const ekranlariBirlestir = () => {
+    const sirali = [...sabitEkranlar, { id: aktifEkranId, sira: aktifSira }]
+      .filter((e) => grupSecim.includes(e.id))
+      .sort((a, b) => (a.sira || 0) - (b.sira || 0))
+      .map((e) => e.id)
+    if (sirali.length < 2) return
+    setGrup({ tip: grupTipi, aci: grupAcisi, uyeler: sirali })
+  }
+
+  /*
+   * AYIR — grup bozuluyor, ekranlar BULUNDUKLARI yerde kalıyor.
+   * Türetilmiş dörtgenler kayıtlara yazılıyor ki hiçbiri yerinden oynamasın.
+   */
+  const grubuAyir = () => {
+    if (grupKoseleri) {
+      setSabitEkranlar((l) =>
+        l.map((e) =>
+          grupKoseleri.has(e.id) ? { ...e, oran: grupKoseleri.get(e.id).map(tuvalOrana) } : e,
+        ),
+      )
+    }
+    setGrup(null)
+  }
+
   const ekranSil = (id) => {
     if (!window.confirm(t('ekran.silOnay'))) return
     setSabitEkranlar((l) => l.filter((e) => e.id !== id))
@@ -4833,6 +4897,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   const alanTuval = alanNokta.length === 4 ? koseleriSirala(alanNokta.map(oranTuvale)) : null
 
+
   /*
    * İŞARETLEME GEÇERLİ Mİ — içe çökmüş ya da çökük dörtgen kabul edilmiyor
    * (bkz. alanOlcu.js dortgenGecerli). Dört köşe tamamlanmadan sorulmuyor.
@@ -5054,6 +5119,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   useEffect(() => {
     if (alanNokta.length !== 4 || alanKipi) return
+    /*
+     * Gruplu bir üyenin yeri GRUPTAN geliyor; alanından yeniden kurmak
+     * dikişi açardı (bkz. aktifGrupKose).
+     */
+    if (grup && aktifEkranId && grup.uyeler?.includes(aktifEkranId) && grup.uyeler[0] !== aktifEkranId) return
     if (!(alanOlcegiPxM || cizimOlcek) || !(tasarimWm > 0) || !(tasarimHm > 0)) return
     const k = alanNokta.map(oranTuvale)
     const sirali = koseleriSirala(k)
@@ -5574,6 +5644,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setFotoOdak(null)
     setDuzenlemede(false)
     setGirisYolu(null)
+    setGrup(null)
+    setGrupSecim([])
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -6206,6 +6278,80 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * onlardan alıyor ve ekranda iki iş birbirine karışmıyor.
    */
   const olcuPencereSinifi = ''
+
+  /*
+   * GRUBUN DÖRTGENLERİ — liderden türetiliyor.
+   *
+   * Lider düzenlenmekte olan ekransa onun o anki dörtgeni, değilse kaydı
+   * kullanılıyor. Üyelerin gerçek ölçüsü kendi dizilimlerinden geliyor.
+   */
+  const grupKoseleri = (() => {
+    if (!grup || !Array.isArray(grup.uyeler) || grup.uyeler.length < 2) return null
+    if (!(fotoYer?.genislik > 0)) return null
+    const odak =
+      fotoOdak > 1
+        ? fotoOdak
+        : exifOdak > 1
+          ? exifOdak
+          : fotoYer.genislik * (sahneYakinlik || 1) * 0.785
+    if (!(odak > 1)) return null
+    const kayitlar = new Map(sabitEkranlar.map((e) => [e.id, e]))
+    const liderId = grup.uyeler[0]
+    const liderKose =
+      liderId === aktifEkranId
+        ? koseMutlak
+        : kayitlar.get(liderId)?.oran?.map(oranTuvale)
+    if (!Array.isArray(liderKose) || liderKose.length !== 4) return null
+    const kabinOlcu = (id) => {
+      const a = id === aktifEkranId ? ekranAyariAnlik() : kayitlar.get(id)?.ayar
+      if (!a) return null
+      const m = selectedModel || previewModel
+      if (!m) return null
+      const dikey = a.orientation === 'portrait'
+      const kw = ((dikey ? m.heightMm : m.widthMm) || 500) / 10
+      const kh = ((dikey ? m.widthMm : m.heightMm) || 500) / 10
+      return { enCm: Math.max(1, a.cols || 1) * kw, boyCm: Math.max(1, a.rows || 1) * kh }
+    }
+    const olculer = grup.uyeler.map(kabinOlcu)
+    if (olculer.some((o) => !o)) return null
+    const aci = grup.tip === 'duz' ? 0 : grup.tip === 'acili' ? grup.aci || 135 : 90
+    const acilar = grup.uyeler.slice(1).map(() => aci)
+    const dortgenler = grupDortgenleri(
+      liderKose,
+      oranTuvale({ x: 0.5, y: 0.5 }),
+      odak,
+      olculer,
+      acilar,
+    )
+    if (!dortgenler) return null
+    const harita = new Map()
+    grup.uyeler.forEach((id, i) => harita.set(id, dortgenler[i]))
+    return harita
+  })()
+
+  /*
+   * DÜZENLENMEKTE OLAN ÜYE DE GRUPTAN GELİYOR.
+   *
+   * Sabit ekranlar grup dörtgeniyle çiziliyordu ama elde duran ekran kendi
+   * yerinde kalıyordu: grup yarım görünüyordu. Lider kendi yerinde duruyor
+   * (grup ondan türüyor); öteki üyeler hesaplanan dörtgene oturuyor.
+   *
+   * Bağımlılık dörtgenin İMZASI: grupKoseleri her çizimde yeni bir Map
+   * olduğu için onu doğrudan bağımlılığa koymak sonsuz döngü olurdu.
+   */
+  const aktifGrupKose =
+    grupKoseleri && aktifEkranId && grup?.uyeler?.[0] !== aktifEkranId
+      ? grupKoseleri.get(aktifEkranId) || null
+      : null
+  const aktifGrupImza = aktifGrupKose
+    ? aktifGrupKose.map((k) => Math.round(k.x) + ',' + Math.round(k.y)).join('|')
+    : ''
+  useEffect(() => {
+    if (!aktifGrupKose) return
+    elleKoseyeYaz(aktifGrupKose)
+    /* İmza değişince yazılıyor; dörtgenin kendisi bağımlılıkta olamaz. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aktifGrupImza])
 
   /* Ölçü akışı açık mı: panelde yalnızca onun işi görünsün. */
   const olcuAcik = sihirbazAdim > 0 || alanKipi || (!!ozelSahne && !girisYolu)
@@ -7344,7 +7490,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {scene === 'ozel' && !refKipi && !lKoseKipi && (
             <EkEkranlar
-              ekranlar={sabitEkranlar}
+              ekranlar={
+                grupKoseleri
+                  ? sabitEkranlar.map((e) =>
+                      grupKoseleri.has(e.id)
+                        ? { ...e, oran: grupKoseleri.get(e.id).map(tuvalOrana) }
+                        : e,
+                    )
+                  : sabitEkranlar
+              }
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
               cols={cols}
@@ -8043,6 +8197,113 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               >
                 {t('ekran.ekle')}
               </button>
+
+              {/*
+                EKRAN YERLEŞİMİ — birleştirme.
+
+                İki ya da daha çok ekran seçilip duruş biçimi veriliyor;
+                ekranlar kenarlarından birleşiyor ve aralarında boşluk
+                kalmıyor. Grup liderden TÜRETİLDİĞİ için tek parça taşınıyor
+                ve dikiş hiç açılmıyor (bkz. grupKoseleri). "Ayır" grubu
+                bozuyor, ekranlar bulundukları yerde kalıyor.
+
+                Birleştirme isteğe bağlı: seçilmeyen ekranlar bağımsız.
+              */}
+              {sabitEkranlar.length >= 1 && (
+                <div className="mt-3 rounded-lg border border-neutral-200 dark:border-[#2c333f] p-2.5">
+                  <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
+                    {t('yerlesim.baslik')}
+                  </div>
+                  {grup ? (
+                    <>
+                      <p className="mt-1 mb-0 text-[14px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('yerlesim.' + grup.tip)} · {grup.uyeler.length} {t('ekran.tekil')}
+                        {grup.tip === 'acili' ? ' · ' + grup.aci + '°' : ''}
+                      </p>
+                      <p className="mt-1 mb-0 text-[13.5px] leading-snug text-neutral-400 dark:text-neutral-500">
+                        {t('yerlesim.grupNot')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={grubuAyir}
+                        className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        {t('yerlesim.ayir')}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-1 mb-0 text-[14px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('yerlesim.ipucu')}
+                      </p>
+                      <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1">
+                        {[
+                          ...sabitEkranlar.map((e, i) => ({ ...e, sira: e.sira || i + 1 })),
+                          { id: aktifEkranId, sira: aktifSira },
+                        ]
+                          .filter((e) => e.id)
+                          .sort((a, b) => (a.sira || 0) - (b.sira || 0))
+                          .map((e) => (
+                            <li key={e.id}>
+                              <label className="flex items-center gap-2 text-[16px] text-neutral-700 dark:text-neutral-200">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4"
+                                  checked={grupSecim.includes(e.id)}
+                                  onChange={() =>
+                                    setGrupSecim((l) =>
+                                      l.includes(e.id) ? l.filter((x) => x !== e.id) : [...l, e.id],
+                                    )
+                                  }
+                                />
+                                {e.sira}. {t('ekran.tekil')}
+                              </label>
+                            </li>
+                          ))}
+                      </ul>
+                      <div className="mt-2 grid grid-cols-5 gap-1">
+                        {['duz', 'l', 'u', 'kutu', 'acili'].map((tip) => (
+                          <button
+                            key={tip}
+                            type="button"
+                            onClick={() => setGrupTipi(tip)}
+                            title={t('yerlesim.' + tip)}
+                            className={`rounded-md py-1.5 text-[11.5px] font-semibold leading-tight transition-colors ${
+                              grupTipi === tip
+                                ? 'bg-brand text-white'
+                                : 'border border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-400'
+                            }`}
+                          >
+                            {t('yerlesim.' + tip)}
+                          </button>
+                        ))}
+                      </div>
+                      {grupTipi === 'acili' && (
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="10"
+                            max="170"
+                            step="5"
+                            value={grupAcisi}
+                            onChange={(e) => setGrupAcisi(Number(e.target.value) || 135)}
+                            className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[15px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                          />
+                          <span className="text-[15px] text-neutral-500 dark:text-neutral-400">°</span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={ekranlariBirlestir}
+                        disabled={grupSecim.length < 2}
+                        className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
+                      >
+                        {t('yerlesim.birlestir')}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

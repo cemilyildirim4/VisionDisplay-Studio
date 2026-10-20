@@ -112,6 +112,201 @@ function duzlemOlcer(koseler, asal, f) {
 }
 
 /**
+ * BİRLEŞİK EKRANLARIN DÖRTGENLERİ — tek bir yüzeyden türetiliyor.
+ *
+ * İki ekranı köşede uç uca getirmek, kenarlarını AYNI yapmak demek. Elle
+ * yapılınca birkaç piksel şaşıyor ve çizimde açık bir dikiş ya da bindirme
+ * oluyor; ekranlardan biri taşınınca da dikiş hemen açılıyor.
+ *
+ * Bu yüzden grup SAKLANMIYOR, TÜRETİLİYOR: lider ekranın dörtgeni ve her
+ * ekranın gerçek santim ölçüsü verildiğinde ötekiler hesaplanıyor. Lider
+ * nereye giderse grup onunla gidiyor ve dikiş hiç açılmıyor.
+ *
+ * YÖNTEM. Lider dörtgen, odak uzaklığı bilindiği için kameranın gördüğü
+ * düzleme geri iz düşürülüyor; orada bir "yürüyüş" yapılıyor:
+ *   imleç = sol üst köşe, yön = yatay kenar yönü
+ *   her ekran: imleçten başlayıp yön boyunca kendi eni, aşağı doğru kendi
+ *              boyu kadar bir dikdörtgen
+ *   dikişte: yön, DİKEY eksen etrafında istenen açı kadar çevriliyor
+ * Üst kenarlar hizada kalıyor çünkü dönme hep dikey eksende.
+ *
+ * Dönme yönü sahnenin İÇİNE doğru: sonraki ekranın merkezi kameradan daha
+ * uzağa düşecek şekilde seçiliyor. Köşe ürünlerinde beklenen duruş bu.
+ *
+ * @param liderKose  lider ekranın dört köşesi (SÜ, SağÜ, SağA, SolA — tuval px)
+ * @param asal       asal nokta
+ * @param f          odak uzaklığı (px)
+ * @param olculer    her ekranın {enCm, boyCm} ölçüsü, lider ilk sırada
+ * @param aciliar    her dikişteki açı (derece) — uzunluğu olculer.length-1
+ * @returns {{x,y}[][]|null} her ekran için dört köşe, aynı sırada
+ */
+export function grupDortgenleri(liderKose, asal, f, olculer, acilar) {
+  if (!Array.isArray(liderKose) || liderKose.length !== 4) return null
+  if (!(f > 1) || !asal || !Array.isArray(olculer) || olculer.length < 1) return null
+  if (!(olculer[0]?.enCm > 0) || !(olculer[0]?.boyCm > 0)) return null
+
+  const isin = (q) => ({ x: (q.x - asal.x) / f, y: (q.y - asal.y) / f, z: 1 })
+  const yon2B = (a, b) => {
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const u = Math.hypot(dx, dy)
+    return u > 1e-9 ? { x: dx / u, y: dy / u, z: 0 } : null
+  }
+  const [p0, p1, p2, p3] = liderKose
+  const Vy = kesisim(p0, p1, p3, p2)
+  const Vd = kesisim(p0, p3, p1, p2)
+  const dYatay = Vy ? isin(Vy) : yon2B(p0, p1)
+  const dDikey = Vd ? isin(Vd) : yon2B(p0, p3)
+  if (!dYatay || !dDikey) return null
+  const n = capraz(dYatay, dDikey)
+  const r0 = isin(p0)
+  const d0 = nokta3(n, r0)
+  if (!(Math.abs(d0) > 1e-12)) return null
+  const duzleme = (q) => {
+    const r = isin(q)
+    const pay = nokta3(n, r)
+    if (!(Math.abs(pay) > 1e-12)) return null
+    const sc = d0 / pay
+    return { x: r.x * sc, y: r.y * sc, z: r.z * sc }
+  }
+  const cikarV = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z })
+  const birim = (v) => {
+    const u = Math.hypot(v.x, v.y, v.z)
+    return u > 1e-12 ? { x: v.x / u, y: v.y / u, z: v.z / u } : null
+  }
+  const ekle = (a, v, k) => ({ x: a.x + v.x * k, y: a.y + v.y * k, z: a.z + v.z * k })
+
+  const X = liderKose.map(duzleme)
+  if (X.some((q) => !q)) return null
+  const e1 = birim(cikarV(X[1], X[0]))
+  const e2 = birim(cikarV(X[3], X[0]))
+  if (!e1 || !e2) return null
+
+  /* Düzlemdeki birim: liderin eni kaç santim ise o kadar. */
+  const enBirim = Math.hypot(X[1].x - X[0].x, X[1].y - X[0].y, X[1].z - X[0].z)
+  const k = enBirim / olculer[0].enCm
+  if (!(k > 0)) return null
+
+  /* Dikey eksen (e2) etrafında döndürme — Rodrigues. */
+  const dondur = (v, eksen, derece) => {
+    const a = (derece * Math.PI) / 180
+    const c = Math.cos(a)
+    const si = Math.sin(a)
+    const cap = capraz(eksen, v)
+    const iz = nokta3(eksen, v)
+    return {
+      x: v.x * c + cap.x * si + eksen.x * iz * (1 - c),
+      y: v.y * c + cap.y * si + eksen.y * iz * (1 - c),
+      z: v.z * c + cap.z * si + eksen.z * iz * (1 - c),
+    }
+  }
+
+  const goruntuye = (P) =>
+    Math.abs(P.z) > 1e-9 ? { x: asal.x + (f * P.x) / P.z, y: asal.y + (f * P.y) / P.z } : null
+
+  /*
+   * YÜRÜYÜŞ — verilen başlangıç yönüyle panelleri 3B'de kuruyor.
+   * İki kez koşuyor: önce grubun hangi yöne baktığını ölçmek, sonra
+   * kameraya döndürülmüş hâlini çizmek için.
+   */
+  const yuru = (baslangic) => {
+    const panel = []
+    let imlec = X[0]
+    let yon = baslangic
+    for (let i = 0; i < olculer.length; i++) {
+      const en = olculer[i]?.enCm
+      const boy = olculer[i]?.boyCm
+      if (!(en > 0) || !(boy > 0)) return null
+      const su = imlec
+      const sagU = ekle(su, yon, en * k)
+      const sagA = ekle(sagU, e2, boy * k)
+      const solA = ekle(su, e2, boy * k)
+      panel.push({ kose: [su, sagU, sagA, solA], yon })
+      imlec = sagU
+      const aci = acilar?.[i] ?? 0
+      if (aci) {
+        const a = dondur(yon, e2, aci)
+        const b = dondur(yon, e2, -aci)
+        /* Dikişte sahnenin İÇİNE dönülüyor: köşe ürünü böyle durur. */
+        const merkez = (yn) =>
+          ekle(ekle(imlec, yn, (olculer[i + 1]?.enCm || en) * k * 0.5), e2, boy * k * 0.5)
+        yon = merkez(a).z >= merkez(b).z ? a : b
+      }
+    }
+    return panel
+  }
+
+  /*
+   * GRUP KAMERAYA BAKIYOR — ÖLÇÜLEBİLİR ÖLÇÜTLE.
+   *
+   * Yürüyüş liderin kendi düzleminde başlayınca L tipinde ikinci yüz
+   * sahnenin içine dönüp neredeyse kenarından görünüyordu. Açıyı ikiye
+   * bölmek de, normallerin ortalamasını kameraya çevirmek de yetmedi:
+   * duvarın kendi açısına göre bu kez başka bir yüz kenarından kalıyordu
+   * (ölçüldü: 307 piksellik yüz 6 piksele düştü).
+   *
+   * Ölçüt: EN KÖTÜ YÜZÜN kameraya dönüklüğü. Her panelin normali ile o
+   * panelden kameraya giden yön arasındaki kosinüs hesaplanıyor; bir
+   * duruşun değeri, panellerin EN KÜÇÜĞÜ. Bu değeri en büyük yapan duruş
+   * seçiliyor — yani hiçbir yüz kenarında kalmıyor.
+   *
+   * "Toplam görüntü alanı" ölçüt olarak denendi ve yanlış çıktı: kameraya
+   * yaklaşan panel büyük göründüğü için arama grubu izleyicinin üstüne
+   * sürüyordu (ölçüldü: paneller x = −1516'ya kadar taşıyordu).
+   *
+   * Önce 10 derecelik adımlarla kabaca, sonra çevresinde 2 derecelik
+   * adımlarla ince ayar.
+   *
+   * "Düz"de dikiş açısı yok; orada arama hiç yapılmıyor ve ekranlar
+   * işaretlenen duvarda kalıyor.
+   */
+  const enKotuYuz = (panel) => {
+    let enAz = Infinity
+    for (const pn of panel) {
+      const q = pn.kose.map(goruntuye)
+      if (q.some((v) => !v)) return -Infinity
+      const nv = birim(capraz(pn.yon, e2))
+      if (!nv) return -Infinity
+      /* Panelin merkezinden kameraya (orijine) doğru. */
+      let m = { x: 0, y: 0, z: 0 }
+      for (const v of pn.kose) m = { x: m.x + v.x / 4, y: m.y + v.y / 4, z: m.z + v.z / 4 }
+      const bakis = birim({ x: -m.x, y: -m.y, z: -m.z })
+      if (!bakis) return -Infinity
+      enAz = Math.min(enAz, Math.abs(nokta3(nv, bakis)))
+    }
+    return enAz
+  }
+
+  let yonBaslangic = e1
+  if ((acilar || []).some((a) => a)) {
+    const dene = (derece) => {
+      const y = dondur(e1, e2, derece)
+      const pn = yuru(y)
+      return pn ? { derece, alan: enKotuYuz(pn) } : null
+    }
+    let enIyi = { derece: 0, alan: -1 }
+    for (let g = -180; g < 180; g += 10) {
+      const s2 = dene(g)
+      if (s2 && s2.alan > enIyi.alan) enIyi = s2
+    }
+    for (let g = enIyi.derece - 10; g <= enIyi.derece + 10; g += 2) {
+      const s2 = dene(g)
+      if (s2 && s2.alan > enIyi.alan) enIyi = s2
+    }
+    if (enIyi.alan > 0) yonBaslangic = dondur(e1, e2, enIyi.derece)
+  }
+  const panel = yuru(yonBaslangic)
+  if (!panel) return null
+  const sonuc = []
+  for (const pn of panel) {
+    const dort = pn.kose.map(goruntuye)
+    if (dort.some((q) => !q)) return null
+    sonuc.push(dort)
+  }
+  return sonuc
+}
+
+/**
  * İŞARETLENEN DÖRTGEN GERÇEKTE OLABİLİR Mİ.
  *
  * Dört köşe duvardaki gerçek çizgileri takip etmeli. İçe çökmüş (bir köşesi
