@@ -674,6 +674,7 @@ const dict = {
     en: 'Check the corners: this quad cannot exist in reality (a corner falls inside, or the edges cross).',
     ar: 'تحقق من الزوايا: هذا الشكل غير ممكن واقعيًا.',
   },
+  'sih.detay': { tr: 'Ayrıntılar', en: 'Details', ar: 'التفاصيل' },
   'sih.alanTemizle': { tr: 'Temizle', en: 'Clear', ar: 'مسح' },
   'sih.alanTasi': {
     tr: 'Tasarımı sürükleyerek taşıyabilirsiniz; alanın dışına da çıkabilir.',

@@ -246,9 +246,11 @@ function SihirbazKart({
                       />
                       <span className="text-[14px] font-semibold text-neutral-500 dark:text-neutral-400">cm</span>
                     </div>
-                    <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
-                      {t('sih.alanOlcuIpucu')}
-                    </p>
+                    {detayAcik && (
+                      <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                        {t('sih.alanOlcuIpucu')}
+                      </p>
+                    )}
                   </div>
                 )}
     </>
@@ -266,6 +268,15 @@ function SihirbazKart({
    * Düğmeye basınca ya da alandan çıkınca yerel metin bırakılıyor ve
    * gösterilen değer yine dışarıdan geliyor.
    */
+  /*
+   * AYRINTILAR "?" ARKASINDA.
+   *
+   * Kartta adım başına dört paragrafa kadar yazı birikmişti; kullanıcı
+   * yapılacak işi aramak zorunda kalıyordu. Her adımda bir cümle duruyor,
+   * gerisi başlıktaki "?" ile açılıyor. Tercih kart boyunca hatırlanıyor:
+   * ayrıntıyı isteyen her adımda yeniden açmak zorunda kalmasın.
+   */
+  const [detayAcik, setDetayAcik] = useState(false)
   const [mesafeYazi, setMesafeYazi] = useState(null)
   const mesafeGoster =
     mesafeYazi ?? (mesafeM == null ? '' : Number(mesafeM).toFixed(1).replace('.', ','))
@@ -324,6 +335,18 @@ function SihirbazKart({
         <span className="flex-1 text-[14.5px] font-bold leading-tight">
           {girisSecimi ? t('sih.giris.baslik') : alanTekBasina ? t('sih.alanBaslik') : basliklar[adim]}
         </span>
+        {/* Ayrıntılar bunun arkasında: kart kalabalıklaşmasın. */}
+        <button
+          type="button"
+          onClick={() => setDetayAcik((o) => !o)}
+          aria-label={t('sih.detay')}
+          title={t('sih.detay')}
+          className={`shrink-0 h-6 w-6 rounded-full text-[13px] font-bold leading-none transition-colors ${
+            detayAcik ? 'bg-white text-brand' : 'bg-white/20 text-white hover:bg-white/30'
+          }`}
+        >
+          ?
+        </button>
         {/*
           KAPATMA DÜĞMESİ YOK.
 
@@ -826,7 +849,7 @@ function SihirbazKart({
                 {lKose ? t('sihL.4.aciklama') : refDuzlem ? t('sih.4.aciklamaDuzlem') : t('sih.4.aciklama')}
               </p>
               {/* Kutu ipucu L'de yanlış: orada taşınacak bir kutu yok. */}
-              {!lKose && (
+              {detayAcik && !lKose && (
                 <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.4.ipucu')}</p>
               )}
 
@@ -919,9 +942,11 @@ function SihirbazKart({
                     </div>
                   ) : null}
 
-                  <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
-                    {t('sih.alanTasi')}
-                  </p>
+                  {detayAcik && (
+                    <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                      {t('sih.alanTasi')}
+                    </p>
+                  )}
                 </>
               )}
 

@@ -8132,7 +8132,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {scene === 'ozel' && ozelSahne && (
             <div className="mb-3">
               <h2 className="text-[25px] font-bold tracking-tight m-0 mb-1">{t('ekran.coklu')}</h2>
-              <p className="text-[15px] leading-snug text-neutral-400 dark:text-neutral-500 m-0 mb-2">
+              <p className="text-[16.5px] leading-snug text-neutral-400 dark:text-neutral-500 m-0 mb-2">
                 {t('ekran.cokluIpucu')}
               </p>
               <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-2">
@@ -8151,7 +8151,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         <span className="flex-1 text-[18px] font-semibold">
                           {e.sira}. {t('ekran.tekil')}
                         </span>
-                        <span className="text-[15px] opacity-70">{t('ekran.duzenleniyor')}</span>
+                        <span className="text-[16.5px] opacity-70">{t('ekran.duzenleniyor')}</span>
                       </li>
                     ) : (
                       <li
@@ -8185,7 +8185,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               </ul>
               {/* Dugme neden kapali, sessiz kalmasin. */}
               {!koseMutlak && (
-                <p className="mt-2 mb-0 text-[14px] leading-snug text-amber-600 dark:text-amber-400">
+                <p className="mt-2 mb-0 text-[15.5px] leading-snug text-amber-600 dark:text-amber-400">
                   {t('ekran.oncelikOlcu')}
                 </p>
               )}
@@ -8216,11 +8216,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </div>
                   {grup ? (
                     <>
-                      <p className="mt-1 mb-0 text-[14px] leading-snug text-neutral-500 dark:text-neutral-400">
+                      <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
                         {t('yerlesim.' + grup.tip)} · {grup.uyeler.length} {t('ekran.tekil')}
                         {grup.tip === 'acili' ? ' · ' + grup.aci + '°' : ''}
                       </p>
-                      <p className="mt-1 mb-0 text-[13.5px] leading-snug text-neutral-400 dark:text-neutral-500">
+                      <p className="mt-1 mb-0 text-[16.5px] leading-snug text-neutral-400 dark:text-neutral-500">
                         {t('yerlesim.grupNot')}
                       </p>
                       <button
@@ -8233,7 +8233,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     </>
                   ) : (
                     <>
-                      <p className="mt-1 mb-0 text-[14px] leading-snug text-neutral-500 dark:text-neutral-400">
+                      <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
                         {t('yerlesim.ipucu')}
                       </p>
                       <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1">
@@ -8268,7 +8268,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             type="button"
                             onClick={() => setGrupTipi(tip)}
                             title={t('yerlesim.' + tip)}
-                            className={`rounded-md py-1.5 text-[11.5px] font-semibold leading-tight transition-colors ${
+                            className={`rounded-md py-1.5 text-[13px] font-semibold leading-tight transition-colors ${
                               grupTipi === tip
                                 ? 'bg-brand text-white'
                                 : 'border border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-400'
@@ -8287,9 +8287,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             step="5"
                             value={grupAcisi}
                             onChange={(e) => setGrupAcisi(Number(e.target.value) || 135)}
-                            className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[15px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                            className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
                           />
-                          <span className="text-[15px] text-neutral-500 dark:text-neutral-400">°</span>
+                          <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
                         </div>
                       )}
                       <button
@@ -8334,7 +8334,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   <path d="M12 17.4h.01" />
                 </svg>
               </span>
-              <span className="text-[15px] font-semibold leading-tight">{t('wiz.entry')}</span>
+              <span className="text-[16.5px] font-semibold leading-tight">{t('wiz.entry')}</span>
             </button>
           )}
           {hasModel ? (
@@ -8418,14 +8418,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
               <div className="flex items-center gap-1.5">
                 <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
-                <span className="w-4 text-[15px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
               <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
               <div className="flex items-center gap-1.5">
                 <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
-                <span className="w-4 text-[15px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
               </div>
             </div>
           </Card>
@@ -8460,10 +8460,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {screens.map((s, i) => (
                     <div key={i} className="flex items-center justify-between gap-3 py-2 border-b border-neutral-100 dark:border-[#242b36] last:border-b-0">
                       <div>
-                        <div className="text-[15px] font-medium text-neutral-800 dark:text-neutral-200">
+                        <div className="text-[16.5px] font-medium text-neutral-800 dark:text-neutral-200">
                           {t('screen.label')} {String(i + 1).padStart(2, '0')} ({t(`screen.${s.type}`)})
                         </div>
-                        <div className="text-[14px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        <div className="text-[15.5px] text-neutral-500 dark:text-neutral-400 mt-0.5">
                           {t('screen.columns')} {s.cols} × {t('screen.rows')} {s.rows}
                         </div>
                       </div>
@@ -8565,7 +8565,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       Ölçüler modelden geliyor (previewModel), sabit değil —
                       başka bir model seçilince kendiliğinden değişir.
                     */}
-                    <div className="text-[15px] text-neutral-500 dark:text-neutral-400 mt-1">
+                    <div className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-1">
                       {cols} × {mmYazi(kabinWmm)} mm = {mmYazi(cols * kabinWmm)} mm
                     </div>
                   </div>
@@ -8576,7 +8576,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.rows')}</span>
                       <Stepper value={rows} onChange={setRows} min={1} max={rowsMax} />
                     </div>
-                    <div className="text-[15px] text-neutral-500 dark:text-neutral-400 mt-1">
+                    <div className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-1">
                       {rows} × {mmYazi(kabinHmm)} mm = {mmYazi(rows * kabinHmm)} mm
                     </div>
                   </div>
@@ -8627,7 +8627,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     >
                       <div style={{ position: 'absolute', inset: 0, backgroundImage: LED_GRADIENT }} />
                       <div style={{ position: 'absolute', inset: 0, ...ledDotsStyle(3) }} />
-                      <span className="relative text-white text-[12px] font-semibold drop-shadow">
+                      <span className="relative text-white text-[16.5px] font-semibold drop-shadow">
                         {t('content.led')}
                       </span>
                     </button>
@@ -8654,7 +8654,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       }`}
                     >
                       <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("${DEFAULT_CONTENT_SRC}")`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                      <span className="relative text-white text-[12px] font-semibold drop-shadow">
+                      <span className="relative text-white text-[16.5px] font-semibold drop-shadow">
                         {t('content.default')}
                       </span>
                     </button>
@@ -8693,7 +8693,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         playsInline
                         className="absolute inset-0 w-full h-full object-cover"
                       />
-                      <span className="relative text-white text-[12px] font-semibold drop-shadow">
+                      <span className="relative text-white text-[16.5px] font-semibold drop-shadow">
                         {t('content.sample')}
                       </span>
                     </button>
@@ -8714,7 +8714,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     </button>
                   </div>
                 </div>
-                <p className="text-[15px] text-neutral-500 dark:text-neutral-400 mt-2 m-0">
+                <p className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-2 m-0">
                   {t('content.hint')}
                 </p>
               </div>
