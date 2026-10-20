@@ -93,6 +93,9 @@ function SihirbazKart({
   alanKipi = false,
   alanNoktaSayisi = 0,
   alanVar = false,
+  /* Düzenlemede referans adımlarına dönülmüyor. */
+  duzenlemede = false,
+  onAlanTemizle = null,
   /* GÖRÜNMEYEN KÖŞE — iki kenardan bulunuyor. */
   kenarKipi = false,
   kenarNoktaSayisi = 0,
@@ -560,33 +563,22 @@ function SihirbazKart({
                 <button type="button" onClick={onGeri} className={yan}>
                   {t('sih.geri')}
                 </button>
-                {alanVar && onYerlesim ? (
-                  <button type="button" onClick={onYerlesim} className={ana}>
-                    {t('sih.olcuyuKoru')}
+                {/*
+                  "Ölçüyü değiştirmeden devam et" / "Alanı yeniden işaretle"
+                  kaldırıldı: düzenlemede bu adıma hiç girilmiyor, işlerini
+                  4. adımdaki "Geri" görüyor (bkz. App.jsx sihirbazGeri).
+                */}
+                {onAlanIsaretle && (
+                  <button
+                    type="button"
+                    onClick={onAlanIsaretle}
+                    disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
+                    className={ana}
+                  >
+                    {t('sih.alanIleAyarla')}
                   </button>
-                ) : (
-                  onAlanIsaretle && (
-                    <button
-                      type="button"
-                      onClick={onAlanIsaretle}
-                      disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
-                      className={ana}
-                    >
-                      {t('sih.alanIleAyarla')}
-                    </button>
-                  )
                 )}
               </div>
-              {alanVar && onYerlesim && onAlanIsaretle && (
-                <button
-                  type="button"
-                  onClick={onAlanIsaretle}
-                  disabled={refTur === 'dortgen' ? !refDuzlem : !refPxCm}
-                  className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 transition-colors"
-                >
-                  {t('sih.alaniYeniden')}
-                </button>
-              )}
               {PANEL.manuelDuzenle && (
                 <>
                   {/*
@@ -646,10 +638,19 @@ function SihirbazKart({
                 {alanNoktaSayisi} / 4
               </p>
               <div className="mt-2 flex items-center gap-1.5">
-                {/* Akışın içindeyken vazgeçip bir önceki adıma dönülebiliyor. */}
-                {adim > 0 && (
+                {/*
+                  İLK KURULUMDA geri referansa döner. DÜZENLEMEDE referansa
+                  hiç girilmiyor; sıfırdan işaretlemek isteyen "Temizle"
+                  kullanıyor (bkz. App.jsx duzenlemede).
+                */}
+                {!duzenlemede && adim > 0 && (
                   <button type="button" onClick={onGeri} className={yan}>
                     {t('sih.geri')}
+                  </button>
+                )}
+                {onAlanTemizle && alanNoktaSayisi > 0 && (
+                  <button type="button" onClick={onAlanTemizle} className={yan}>
+                    {t('sih.alanTemizle')}
                   </button>
                 )}
                 <button

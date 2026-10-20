@@ -935,6 +935,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Dört nokta: ilk ikisi bir kenar, son ikisi öteki kenar.
    * ───────────────────────────────────────────────────────────────────────
    */
+  /*
+   * DÜZENLEME Mİ, İLK KURULUM MU.
+   *
+   * Düzenlemede referans adımlarına (1/4, 2/4) hiç girilmiyor: ölçek zaten
+   * kurulu ve onu değiştirmek "Baştan başla"nın işi. İlk kurulumda ise
+   * alan adımından geri gitmek referansa dönmek demek.
+   */
+  const [duzenlemede, setDuzenlemede] = useState(false)
   const [kenarKipi, setKenarKipi] = useState(false)
   const [kenarNokta, setKenarNokta] = useState([])
   /*
@@ -1512,6 +1520,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * kullanıcı hiçbir şey vermemiş olmasına rağmen ölçü eski kameranın
        * odağıyla kuruluyordu.
        */
+      setDuzenlemede(false)
       setFotoOdak(null)
       setRef2Nokta([])
       setRef2UzunlukCm('')
@@ -3578,6 +3587,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
 
+  /* Alanı sıfırdan işaretlemek: köşeler siliniyor, kip açık kalıyor. */
+  const alaniTemizle = () => {
+    setAlanNokta([])
+    setKenarNokta([])
+    setKenarKipi(false)
+  }
+
   /* Görünmeyen köşeyi kenarlarından bulmaya başla. */
   const kenardanKoseBasla = () => {
     setKenarNokta([])
@@ -4040,6 +4056,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * Referansı yine de değiştirmek isteyen "Geri" ile oraya gidiyor.
      * ───────────────────────────────────────────────────────────────────
      */
+    setDuzenlemede(true)
     if (Array.isArray(secilen.alan) && secilen.alan.length === 4) {
       setRefKipi(false)
       setSihirbazAdim(4)
@@ -5426,6 +5443,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setRef2UzunlukCm('')
     setRef2Kipi(false)
     setFotoOdak(null)
+    setDuzenlemede(false)
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -5467,14 +5485,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
     setSihirbazAdim((a) => {
       /*
-       * 3. ADIM ATLANIYOR (manuel yol kapalıyken).
+       * 4. ADIMDAN GERİ = ALAN İŞARETLEME.
        *
-       * Orası eski manuel yolun santim kutuları; kuracak düğmesi
-       * kapalı olduğu için (bkz. PANEL.olcuKutusu) elde yalnızca iki
-       * dolu kutu ve bir "Geri" kalıyor — geri giderken boş bir ekrana
-       * düşmek oluyordu. Kapalıyken 4'ten doğrudan 2'ye dönülüyor;
-       * orada referans yeniden işaretlenebiliyor.
+       * Eskiden 2. adıma (referans) dönülüyordu; oysa düzenlemede
+       * değiştirilmek istenen şey alanın kendisi, referans değil. Köşeler
+       * yerinde duruyor ve sürüklenebiliyor; sıfırdan işaretlemek isteyen
+       * "Temizle" kullanıyor. Referans yalnızca "Baştan başla" ile
+       * değişiyor (bkz. duzenlemede).
        */
+      if (a === 4 && alanNokta.length === 4) {
+        setRefKipi(false)
+        setAlanKipi(true)
+        return 4
+      }
       if (a === 4 && !PANEL.olcuKutusu) {
         setRefKipi(true)
         return 2
@@ -8705,6 +8728,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               setAlanKipi(true)
                             }}
                             /* Görünmeyen köşeyi kenarlarından bulma. */
+                            duzenlemede={duzenlemede}
+                            onAlanTemizle={alaniTemizle}
                             kenarKipi={kenarKipi}
                             kenarNoktaSayisi={kenarNokta.length}
                             kenarHazir={!!kenarKesisim}
@@ -8841,6 +8866,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                      * doğrudan alan işaretlemeye gidiliyor
                                      * (bkz. ekraniDuzenle).
                                      */
+                                    setDuzenlemede(true)
                                     if (alanNokta.length === 4) {
                                       setRefKipi(false)
                                       setSihirbazAdim(4)

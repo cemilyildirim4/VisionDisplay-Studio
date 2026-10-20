@@ -609,6 +609,7 @@ const dict = {
     en: 'Pick the reference on the SAME wall as the screen and as close to it as possible: a length on another surface shifts the scale.',
     ar: 'اختر المرجع على الجدار نفسه وأقرب ما يمكن إلى موضع الشاشة.',
   },
+  'sih.alanTemizle': { tr: 'Temizle', en: 'Clear', ar: 'مسح' },
   'sih.alanTasi': {
     tr: 'Tasarımı sürükleyerek taşıyabilirsiniz; alanın dışına da çıkabilir.',
     en: 'Drag the design to move it inside the area; it cannot leave it.',
