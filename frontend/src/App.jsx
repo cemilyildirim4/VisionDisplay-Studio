@@ -9779,6 +9779,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 )}
               </div>
 
+                  {/*
+                    MİNİ PC — tasarımın tamamına ait, kurulumda bir kez
+                    işaretlenen bir seçenek. Sağ panelde mekân ayarlarının
+                    arasında duruyordu; ekranla da mekânla da ilgisi yok.
+                  */}
+                  {!isVideoWall && (
+                    <label
+                      title={t('minipc.hint') + ' — ' + t('minipc.offHint')}
+                      className="mt-2 flex items-center gap-2.5 cursor-pointer rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2 hover:border-brand/40 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={hasMiniPc}
+                        onChange={(e) => setHasMiniPc(e.target.checked)}
+                        className="h-4 w-4 shrink-0 accent-[#2962ad]"
+                      />
+                      <span className="min-w-0 text-[14px] font-medium text-neutral-800 dark:text-neutral-100 leading-snug">
+                        {t('minipc.heading')}
+                      </span>
+                    </label>
+                  )}
                 </div>
               )}
             </div>
@@ -9822,34 +9843,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 duruyor ('no'): Teknik Özellikler'deki bileşen listesi, donanım
                 hesabı ve kayıtlı teklifler hâlâ onu okuyor.
               */}
-
-              {/* Mini PC — opsiyonel görüntü kaynağı; kapalıysa yalnızca işlemci */}
-              {/* Ölçü akışı sürerken gizli: ekranın donanımıyla ilgisi yok. */}
-              {!isVideoWall && !olcuAcik && (
-                <div className="mb-3">
-                  {/*
-                    MİNİ PC — TEK SATIR.
-
-                    Başlık + iki açıklama satırı sağ panelde gereğinden çok yer
-                    kaplıyordu. Seçenek tek satıra indi; açıklama üstüne
-                    gelince (title) okunuyor.
-                  */}
-                  <label
-                    title={t('minipc.hint') + ' — ' + t('minipc.offHint')}
-                    className="flex items-center gap-2.5 cursor-pointer rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2 hover:border-brand/40 transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={hasMiniPc}
-                      onChange={(e) => setHasMiniPc(e.target.checked)}
-                      className="h-4 w-4 shrink-0 accent-[#2962ad]"
-                    />
-                    <span className="min-w-0 text-[14px] font-medium text-neutral-800 dark:text-neutral-100 leading-snug">
-                      {t('minipc.heading')}
-                    </span>
-                  </label>
-                </div>
-              )}
 
               {/*
                 MEKÂN — ekranın arkasına çizilen oda.
