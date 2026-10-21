@@ -122,7 +122,7 @@ function Izgara({ children }) {
 /* ------------------------------------------------------------------ içerik */
 
 /** Pop-up içeriği (Teknik Özellikler + Bileşenler tek ızgarada). */
-function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null }) {
+function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null, ekranlar = [], toplam = null }) {
   const { t } = useLang()
   const { isAdmin } = useSession()
   const has = !!model
@@ -156,11 +156,80 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
   const circuitText = (c) =>
     has ? `${c.circuits} ${t('sp.circuit')}\n${t('sp.perCircuit')}: ${c.perCircuit} ${t('sp.cabinet')}` : DASH
 
+  /*
+   * EKRAN DÖKÜMÜ — yalnızca birden çok ekran varsa.
+   *
+   * Sayılar App'teki tek kaynaktan hazır geliyor (bkz. raporEkranlari);
+   * burada hiçbir ölçü yeniden hesaplanmıyor. Yeniden hesaplamak, her
+   * ekranın kendi yönünü kaybetmek demekti.
+   */
+  const cokEkran = Array.isArray(ekranlar) && ekranlar.length > 1
+  const ekranDokumu = cokEkran ? (
+    <Kart baslik={t('sp.perScreen')} genis vurgulu>
+      <div className="-mx-1 overflow-x-auto">
+        <table className="w-full border-collapse text-[13px] tabular-nums">
+          <thead>
+            <tr className="text-left text-[11.5px] uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">
+              <th className="py-1 pr-2 font-medium">#</th>
+              <th className="py-1 pr-2 font-medium">{t('content.heading')}</th>
+              <th className="py-1 pr-2 font-medium">{t('sp.lengthHeight')}</th>
+              <th className="py-1 pr-2 font-medium">{t('sp.totalScreens')}</th>
+              <th className="py-1 pr-2 font-medium">{t('res.heading')}</th>
+              <th className="py-1 pr-2 font-medium">{t('sp.weight')}</th>
+              {isAdmin && <th className="py-1 font-medium">{t('sp.max')}</th>}
+            </tr>
+          </thead>
+          <tbody className="text-neutral-800 dark:text-neutral-100">
+            {ekranlar.map((e) => (
+              <tr key={e.sira} className="border-t border-neutral-100 dark:border-[#242b36]">
+                <td className="py-1.5 pr-2 font-semibold">{e.sira}</td>
+                <td className="py-1.5 pr-2">
+                  <span className="block max-w-[150px] truncate">{e.icerik || DASH}</span>
+                  <span className="block text-[11.5px] text-neutral-400 dark:text-neutral-500">
+                    {t(`screen.${e.type || 'flat'}`)}
+                    {e.bolunmus ? ' · ' + t('content.bolunmus') : ''}
+                  </span>
+                </td>
+                <td className="py-1.5 pr-2">
+                  {fmt(e.wm, 2)} × {fmt(e.hm, 2)} m
+                  <span className="block text-[11.5px] text-neutral-400 dark:text-neutral-500">
+                    {e.cols} × {e.rows}
+                  </span>
+                </td>
+                <td className="py-1.5 pr-2">{fmt(e.adet)}</td>
+                <td className="py-1.5 pr-2">
+                  {fmt(e.resW)} × {fmt(e.resH)}
+                </td>
+                <td className="py-1.5 pr-2">{fmt(e.agirlik, 1)} kg</td>
+                {isAdmin && <td className="py-1.5">{fmt(e.gucMax, 0)} W</td>}
+              </tr>
+            ))}
+            {toplam && (
+              <tr className="border-t-2 border-neutral-300 font-bold dark:border-[#39414f]">
+                <td className="py-1.5 pr-2" colSpan={2}>
+                  {t('panel.toplam')}
+                </td>
+                <td className="py-1.5 pr-2">{fmt(toplam.alan, 2)} m²</td>
+                <td className="py-1.5 pr-2">{fmt(toplam.kabin)}</td>
+                <td className="py-1.5 pr-2">
+                  {fmt(toplam.resW)} × {fmt(toplam.resH)}
+                </td>
+                <td className="py-1.5 pr-2">{fmt(toplam.agirlik, 1)} kg</td>
+                {isAdmin && <td className="py-1.5">{fmt(toplam.gucMax, 0)} W</td>}
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Kart>
+  ) : null
+
   // ---- VİDEO DUVARI: sadeleştirilmiş özellikler, "Bileşenler" bölümü yok ----
   if (isVideoWall) {
     const depthM = has ? (model.depthMm || 0) / 1000 : 0
     return (
       <Izgara>
+        {ekranDokumu}
         <Kart baslik={t('sp.screenConfig')}>
           <Veri buyuk label={t('sp.lengthHeight')} value={has ? `${cols} ${t('sp.unit')} x ${rows} ${t('sp.unit')}` : DASH} />
           <Veri label={t('sp.totalScreens')} value={has ? `${fmt(total)} ${t('sp.unit')}` : DASH} />
@@ -198,6 +267,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
       )}
 
       <Izgara>
+        {ekranDokumu}
         <Kart baslik={t('sp.screenConfigLxh')}>
           <Veri buyuk label={t('sp.screenConfigLxh')} value={has ? `${cols} ${t('sp.unit')} x ${rows} ${t('sp.unit')}` : DASH} />
         </Kart>

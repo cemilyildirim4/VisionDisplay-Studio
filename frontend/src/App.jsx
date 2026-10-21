@@ -7184,21 +7184,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   ]
     .sort((a, b) => (a.sira || 0) - (b.sira || 0))
     .map((r) => {
+      /*
+       * Kabin ölçüsü ekranın KENDİ yönünden: previewModel yalnızca elde
+       * duran ekranın yönüne göre takla atıyor, öbür satırlarda yanlış
+       * ölçü veriyordu.
+       */
       const m = selectedModel
       const dikey = r.ayar.orientation === 'portrait'
-      const kwMm = (dikey ? m?.heightMm : m?.widthMm) || 0
-      const khMm = (dikey ? m?.widthMm : m?.heightMm) || 0
-      const pw = (dikey ? m?.pixelHeight : m?.pixelWidth) || 0
-      const ph = (dikey ? m?.pixelWidth : m?.pixelHeight) || 0
+      const ekranModeli =
+        m && dikey
+          ? { ...m, widthMm: m.heightMm, heightMm: m.widthMm, pixelWidth: m.pixelHeight, pixelHeight: m.pixelWidth }
+          : m
       const sut = Math.max(1, r.ayar.cols || 1)
       const sat = Math.max(1, r.ayar.rows || 1)
+      /* Ağırlık, güç, ısı ve çözünürlük panelde, pencerede ve PDF'te aynı
+         formülden gelsin diye computeSpecs kullanılıyor. */
+      const spec = ekranModeli ? computeSpecs(ekranModeli, sut, sat) : null
       return {
         ...r,
+        spec,
         kabin: sut * sat,
-        enM: (sut * kwMm) / 1000,
-        boyM: (sat * khMm) / 1000,
-        resW: sut * pw,
-        resH: sat * ph,
+        enM: spec?.W || 0,
+        boyM: spec?.H || 0,
+        resW: spec?.resW || 0,
+        resH: spec?.resH || 0,
         /* İçeriği olmayan eski kayıt elde duran ekranın içeriğini gösteriyor. */
         havuzId: r.ayar.content
           ? icerikKimligi(r.ayar.content, r.ayar.contentUrl)
@@ -7217,9 +7226,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       kabin: t.kabin + e.kabin,
       resW: t.resW + e.resW,
       resH: Math.max(t.resH, e.resH),
+      alan: t.alan + (e.spec?.area || 0),
+      agirlik: t.agirlik + (e.spec?.weight || 0),
+      gucMax: t.gucMax + (e.spec?.pMax || 0),
+      gucTip: t.gucTip + (e.spec?.pTyp || 0),
     }),
-    { kabin: 0, resW: 0, resH: 0 },
+    { kabin: 0, resW: 0, resH: 0, alan: 0, agirlik: 0, gucMax: 0, gucTip: 0 },
   )
+
+  /*
+   * RAPOR SATIRLARI — Teknik Özellikler, PDF ve tablo bunu okuyor.
+   * Ölçüler burada hesaplanmış hâlde gidiyor; alıcı taraf modelden yeniden
+   * türetmeye kalkarsa her ekranın kendi yönünü kaybeder.
+   */
+  const raporEkranlari = ekranOzetleri.map((e) => ({
+    sira: e.sira,
+    cols: e.ayar.cols || 1,
+    rows: e.ayar.rows || 1,
+    type: e.ayar.screenType || 'flat',
+    orientation: e.ayar.orientation || 'landscape',
+    adet: e.kabin,
+    wm: e.enM,
+    hm: e.boyM,
+    resW: e.resW,
+    resH: e.resH,
+    agirlik: e.spec?.weight || 0,
+    gucMax: e.spec?.pMax || 0,
+    icerik: icerikHavuzuTam.find((x) => x.id === e.havuzId)?.ad || '',
+    bolunmus: !!e.ayar.bolunmus,
+  }))
 
 
   /* Ölçü akışı açık mı: panelde yalnızca onun işi görünsün. */
@@ -8426,6 +8461,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             lKoseCizimi hâlâ dolu (bkz. ekranGizle). Ölçüler sihirbazda yazılı
             olarak görünmeye devam ediyor; tasarım "Köşeyi kur" ile geri geliyor.
           */}
+          {/*
+            EKRAN NUMARALARI — listedeki satırla fotoğraftaki ekranı eşlemek için.
+            Sabitlenenler kendi dörtgeninden, elde duran ekran koseMutlak'tan
+            (grup varsa gruptaki yerinden) okunuyor.
+          */}
+          {scene === 'ozel' && !refKipi && !lKoseKipi && !olcuAcik && (
+            <EkranNumaralari
+              aktifId={aktifEkranId}
+              ekranlar={[
+                ...sabitEkranlar.map((e, i) => ({
+                  id: e.id,
+                  sira: e.sira || i + 1,
+                  koseler:
+                    (grupKoseleri && grupKoseleri.get(e.id)) ||
+                    (Array.isArray(e.oran) && e.oran.length === 4 ? e.oran.map(oranTuvale) : null),
+                })),
+                {
+                  id: aktifEkranId,
+                  sira: aktifSira,
+                  koseler: aktifGrupKose || koseMutlak,
+                },
+              ]}
+            />
+          )}
+
           {/*
             SABİTLENMİŞ EKRANLAR — aynı arka plana konmuş öteki ekranlar.
 
@@ -10858,7 +10918,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         hasMiniPc={hasMiniPc}
         screenType={screenType}
         isVideoWall={isVideoWall}
-        screenMode={screenMode}
+        ekranlar={raporEkranlari}
+        toplam={tasarimToplami}
         preview={hwPreview}
         matchError={hwMatchError}
       />
@@ -10974,8 +11035,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           rows,
           screenType,
           resolution,
-          screenMode,
-          screens,
+          /* Ekranlar tek listeden; biri de olsa üçü de aynı yoldan geçsin. */
+          screenMode: raporEkranlari.length > 1 ? 'multi' : 'single',
+          screens: raporEkranlari,
           // Teknik özellik sayfası da aynı PDF'in içine giriyor; o sayfanın
           // ihtiyaç duyduğu iki alan yalnızca burada mevcut.
           sboxRedundancy,
@@ -11256,6 +11318,53 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 
           {t('screen.curveAllScreens')}
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * EKRAN NUMARASI ROZETLERİ.
+ *
+ * Her ekranın dörtgeninin ağırlık merkezine sırasını yazıyor. Tıklama
+ * geçiyor (pointerEvents: none): altta duran ekranın kendi seçimi
+ * engellenmesin.
+ */
+function EkranNumaralari({ ekranlar, aktifId }) {
+  if (!Array.isArray(ekranlar) || ekranlar.length < 1) return null
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 6 }}>
+      {ekranlar.map((e) => {
+        const k = e.koseler
+        if (!Array.isArray(k) || k.length !== 4) return null
+        if (k.some((pt) => !Number.isFinite(pt?.x) || !Number.isFinite(pt?.y))) return null
+        const x = k.reduce((a, pt) => a + pt.x, 0) / 4
+        const y = k.reduce((a, pt) => a + pt.y, 0) / 4
+        const acik = e.id === aktifId
+        return (
+          <span
+            key={e.id ?? e.sira}
+            style={{
+              position: 'absolute',
+              left: x,
+              top: y,
+              transform: 'translate(-50%, -50%)',
+              width: acik ? 30 : 24,
+              height: acik ? 30 : 24,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: acik ? 15 : 12.5,
+              fontWeight: 700,
+              color: '#ffffff',
+              background: acik ? '#2962ad' : 'rgba(0,19,52,0.55)',
+              boxShadow: acik ? '0 0 0 3px rgba(41,98,173,0.35)' : 'none',
+            }}
+          >
+            {e.sira}
+          </span>
+        )
+      })}
     </div>
   )
 }

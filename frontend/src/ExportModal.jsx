@@ -139,9 +139,19 @@ export default function ExportModal({ open, onClose, summary }) {
       type: s.type || 'flat',
       leftCols: s.leftCols,
       rightCols: s.rightCols,
+      /* Hazır gelen ölçüler (bkz. raporEkranlari); eski kayıtlarda yok. */
+      wm: Number(s.wm) > 0 ? Number(s.wm) : null,
+      hm: Number(s.hm) > 0 ? Number(s.hm) : null,
+      resW: Number(s.resW) > 0 ? Number(s.resW) : null,
+      resH: Number(s.resH) > 0 ? Number(s.resH) : null,
     }),
   )
-  const olculu = liste.map((s) => ({ ...s, wm: s.cols * kabinW, hm: s.rows * kabinH, adet: s.cols * s.rows }))
+  const olculu = liste.map((s) => ({
+    ...s,
+    wm: s.wm ?? s.cols * kabinW,
+    hm: s.hm ?? s.rows * kabinH,
+    adet: s.cols * s.rows,
+  }))
   const toplamWm = olculu.reduce((a, s) => a + s.wm, 0)
   const enYuksekHm = Math.max(...olculu.map((s) => s.hm))
   const toplamKabin = olculu.reduce((a, s) => a + s.adet, 0)
@@ -150,8 +160,8 @@ export default function ExportModal({ open, onClose, summary }) {
   const gucMax = toplamKabin * (model?.powerMaxWatts || 0)
   const gucTip = toplamKabin * (model?.powerTypicalWatts || 0)
   const isi = gucMax * 3.412
-  const pikselW = olculu.reduce((a, s) => a + s.cols * (model?.pixelWidth || 0), 0)
-  const pikselH = Math.max(...olculu.map((s) => s.rows * (model?.pixelHeight || 0)))
+  const pikselW = olculu.reduce((a, s) => a + (s.resW ?? s.cols * (model?.pixelWidth || 0)), 0)
+  const pikselH = Math.max(...olculu.map((s) => s.resH ?? s.rows * (model?.pixelHeight || 0)))
   const enBuyuk = olculu.reduce((a, s) => (s.wm * s.hm > a.wm * a.hm ? s : a), olculu[0])
   const izleme = model ? viewingDistanceFor(model, enBuyuk.cols, enBuyuk.rows) : null
 
@@ -164,7 +174,9 @@ export default function ExportModal({ open, onClose, summary }) {
       ? summary.screens.map((s, i) =>
           s.type === 'lshape'
             ? `${t('screen.label')} ${String(i + 1).padStart(2, '0')}: ${t('mse.leftWing')} ${s.leftCols || Math.ceil((s.cols || 2) / 2)} + ${t('mse.rightWing')} ${s.rightCols || Math.floor((s.cols || 2) / 2)} ${t('screen.columns')} × ${s.rows} ${t('screen.rows')} (${t('screen.lshape')})`
-            : `${t('screen.label')} ${String(i + 1).padStart(2, '0')}: ${s.cols} ${t('screen.columns')} × ${s.rows} ${t('screen.rows')} (${t(`screen.${s.type}`)})`,
+            : `${t('screen.label')} ${String(i + 1).padStart(2, '0')}: ${s.cols} ${t('screen.columns')} × ${s.rows} ${t('screen.rows')} (${t(`screen.${s.type}`)})${
+                Number(s.wm) > 0 ? ` — ${fmt(s.wm, 2)} × ${fmt(s.hm, 2)} m, ${fmt(s.adet ?? s.cols * s.rows)} ${t('panel.kabin')}` : ''
+              }`,
         )
       : [`${summary.cols} ${t('screen.columns')} × ${summary.rows} ${t('screen.rows')} (${t(`screen.${summary.screenType}`)})`]
 

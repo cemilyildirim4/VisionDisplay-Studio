@@ -224,6 +224,7 @@ const dict = {
 
   // ---------- Ekran modu sekmeleri ----------
   'diger.baslik': { tr: 'Diğer ayarlar', en: 'Other settings', ar: 'إعدادات أخرى' },
+  'sp.perScreen': { tr: 'Ekran dökümü', en: 'Per-screen breakdown', ar: 'تفصيل لكل شاشة' },
   'panel.toplam': { tr: 'Toplam', en: 'Total', ar: 'الإجمالي' },
   'panel.kabin': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
   'ekran.kaldir': { tr: 'Kaldır', en: 'Remove', ar: 'إزالة' },
