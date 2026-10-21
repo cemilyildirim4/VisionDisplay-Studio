@@ -223,6 +223,13 @@ const dict = {
   'tool.showMeasures': { tr: 'Ölçüleri göster', en: 'Show measurements', ar: 'إظهار القياسات' },
 
   // ---------- Ekran modu sekmeleri ----------
+  'diger.baslik': { tr: 'Diğer ayarlar', en: 'Other settings', ar: 'إعدادات أخرى' },
+  'panel.toplam': { tr: 'Toplam', en: 'Total', ar: 'الإجمالي' },
+  'panel.kabin': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
+  'ekran.kaldir': { tr: 'Kaldır', en: 'Remove', ar: 'إزالة' },
+  'ekran.alanaSigdir': { tr: 'Alana sığdır', en: 'Fit to area', ar: 'ملاءمة المنطقة' },
+  'ekran.alaniDuzenle': { tr: 'Alanı düzenle', en: 'Edit area', ar: 'تحرير المنطقة' },
+  'screen.olcu': { tr: 'Ölçü', en: 'Size', ar: 'المقاس' },
   'mode.single': { tr: 'Tek Ekran', en: 'Single Screen', ar: 'شاشة واحدة' },
   'mode.multi': { tr: 'Çoklu Ekran', en: 'Multi Screen', ar: 'شاشات متعددة' },
 
@@ -1554,7 +1561,7 @@ const dict = {
     en: '* Model availability may vary by country',
     ar: '* قد يختلف توفر الطراز حسب الدولة',
   },
-  'msm.choose': { tr: 'Seçmek', en: 'Choose', ar: 'اختيار' },
+  'msm.choose': { tr: 'Seç', en: 'Choose', ar: 'اختيار' },
   'msm.pickHint': { tr: 'Listeden bir model seçin', en: 'Pick a model from the list', ar: 'اختر طرازًا من القائمة' },
   'msm.empty': { tr: 'Bu filtrelerle eşleşen model bulunamadı.', en: 'No models match these filters.', ar: 'لا توجد طُرُز مطابقة لهذه المرشحات.' },
   'msm.info': { tr: 'Bilgi metni yakında eklenecek.', en: 'Info text will be added soon.', ar: 'سيتم إضافة نص المعلومات قريباً.' },
@@ -1664,7 +1671,7 @@ const dict = {
   'mse.selectedModel': { tr: 'Seçilen Model', en: 'Selected Model', ar: 'الطراز المختار' },
   'mse.addScreen': { tr: 'Başka bir ekran ekle', en: 'Add another screen', ar: 'أضف شاشة أخرى' },
   'mse.reset': { tr: 'Sıfırla', en: 'Reset', ar: 'إعادة تعيين' },
-  'mse.complete': { tr: 'Tamamlamak', en: 'Complete', ar: 'إتمام' },
+  'mse.complete': { tr: 'Tamamla', en: 'Complete', ar: 'إتمام' },
   'mse.moveUp': { tr: 'Yukarı taşı', en: 'Move up', ar: 'تحريك لأعلى' },
   'mse.moveDown': { tr: 'Aşağı taşı', en: 'Move down', ar: 'تحريك لأسفل' },
   'mse.delete': { tr: 'Sil', en: 'Delete', ar: 'حذف' },

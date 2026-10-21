@@ -25,8 +25,18 @@ process.stdout.write(cikti)
 
 /* "dosya:satır:sütun: error kural(...)" — uyarılar "warning" yazıyor. */
 const hatalar = cikti.split('\n').filter((satir) => /:\s*error\s/.test(satir))
-if (hatalar.length > 0 || (oxlint.status !== 0 && oxlint.status !== null)) {
+/*
+ * ÇIKIŞ KODUNA BAKILMIYOR: oxlint yalnızca uyarı bulduğunda da 1 dönüyor.
+ * Bu koşul yüzünden sarmalayıcı HER çalıştırmada düşüyordu; hatayla uyarıyı
+ * ayırt etme amacı tam tersine dönmüştü. Karar artık çıktının kendisinden
+ * veriliyor, oxlint'in hiç çalışamaması ayrıca yakalanıyor.
+ */
+if (hatalar.length > 0) {
   console.error('\nLINT DÜŞTÜ: ' + hatalar.length + ' hata düzeyinde bulgu var (yukarıda).')
+  process.exit(1)
+}
+if (!cikti.trim() && oxlint.status !== 0) {
+  console.error('\nLINT ÇALIŞTIRILAMADI (oxlint çıkış kodu ' + oxlint.status + ').')
   process.exit(1)
 }
 
