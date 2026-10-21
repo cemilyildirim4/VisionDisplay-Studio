@@ -9082,7 +9082,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/* Model */}
-          <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('model.heading')}</h2>
+          <h2 className="text-[17px] font-semibold uppercase tracking-[0.06em] text-neutral-600 dark:text-neutral-400 m-0 mb-0.5">{t('model.heading')}</h2>
 
           {/*
             Hangi modeli seçeceğini bilmeyen kullanıcı için isteğe bağlı
@@ -9112,39 +9112,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </button>
           )}
           {hasModel ? (
-            <div className="border border-neutral-200 dark:border-[#2c333f] rounded-lg p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-[17px] text-neutral-500 dark:text-neutral-400 mb-1">{selectedModel.series?.name || t('model.defaultSeries')}</div>
+            /*
+             * MODEL KARTI DARALTILDI.
+             *
+             * Üç satır ve bir ürün görseli kutusuyla 177 piksel tutuyordu;
+             * panelde en çok yer kaplayan bloktu. Seri adı model kodunun
+             * altına tek satır olarak indi, görsel kutusu kalktı (bilgi
+             * taşımıyordu), "Model değişikliği" aynı satıra geçti.
+             */
+            <div className="border border-neutral-200 dark:border-[#2c333f] rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="text-[28px] font-bold text-neutral-900 dark:text-neutral-100 leading-tight">{selectedModel.modelCode}</div>
+                    <span className="text-[21px] font-bold leading-tight text-neutral-900 dark:text-neutral-100">
+                      {selectedModel.modelCode}
+                    </span>
                     <ProductTypeBadge productType={selectedModel.productType} size="md" />
                   </div>
+                  <div className="truncate text-[15px] text-neutral-500 dark:text-neutral-400">
+                    {selectedModel.series?.name || t('model.defaultSeries')}
+                  </div>
                 </div>
-                {/* Ürün görseli — veritabanında adres varsa o, yoksa genel ekran ikonu */}
-                <div className="w-16 h-11 rounded-lg bg-neutral-50 dark:bg-[#1b2029] border border-neutral-200 dark:border-[#2c333f] shrink-0 flex items-center justify-center overflow-hidden">
-                  {selectedModel.imageUrl ? (
-                    <img src={selectedModel.imageUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2.5" y="5" width="19" height="12" rx="1" />
-                      <line x1="8" y1="20" x2="16" y2="20" />
-                      <line x1="12" y1="17" x2="12" y2="20" />
-                    </svg>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(true)}
+                  className="shrink-0 inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[15.5px] font-semibold text-neutral-700 hover:text-brand dark:text-neutral-200"
+                >
+                  {t('model.change')}
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 6 15 12 9 18" />
+                  </svg>
+                </button>
               </div>
-              <hr className="border-neutral-100 dark:border-[#242b36] my-3" />
-              <button
-                type="button"
-                onClick={() => setModalOpen(true)}
-                className="flex items-center gap-1 text-[19px] font-semibold text-neutral-800 dark:text-neutral-200 hover:text-brand"
-              >
-                {t('model.change')}
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 6 15 12 9 18" />
-                </svg>
-              </button>
             </div>
           ) : cabinetsLoading ? (
             // İskelet (skeleton) yükleme — API'den model listesi gelene kadar boş bir
@@ -9176,7 +9175,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </button>
           )}
 
-          <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('wall.heading')}</h2>
+          <h2 className="text-[17px] font-semibold uppercase tracking-[0.06em] text-neutral-600 dark:text-neutral-400 m-0 mb-0.5">{t('wall.heading')}</h2>
 
           {/*
             BİRİM ALANIN YANINDA YAZIYOR.
@@ -9187,19 +9186,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             yerleşim alanı oluşuyor ve her şey bozuluyor. Birim artık sayının
             hemen yanında — tahmin edilecek bir şey kalmıyor.
           */}
+          {/*
+            İKİ ÖLÇÜ ALT ALTA DEĞİL YAN YANA.
+
+            Panelde kaydırma olmayacak (ürün kararı) ve sığdırmanın bedeli
+            yazının küçülmesi. Bu kutu tek başına 126 piksel tutuyordu;
+            yan yana yarıya iniyor.
+          */}
           <Card>
-            <div className="flex items-center justify-between mb-3">
-              <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
-              <div className="flex items-center gap-1.5">
-                <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
-                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
+                <div className="mt-1 flex items-center gap-1">
+                  <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
+                  <span className="text-[15px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
-              <div className="flex items-center gap-1.5">
-                <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
-                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+              <div>
+                <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
+                <div className="mt-1 flex items-center gap-1">
+                  <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
+                  <span className="text-[15px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+                </div>
               </div>
             </div>
           </Card>
@@ -9226,7 +9234,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           {hasModel && (
             <>
-              <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('screen.heading')}</h2>
+              <h2 className="text-[17px] font-semibold uppercase tracking-[0.06em] text-neutral-600 dark:text-neutral-400 m-0 mb-0.5">{t('screen.heading')}</h2>
 
               {screenMode === 'multi' ? (
                 /* Çoklu ekran: ekran listesi */
@@ -9329,29 +9337,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   )}
 
                   {/* Sütunlar */}
-                  <div className="mb-3">
+                  <div className="mb-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.columns')}</span>
+                      {/*
+                        Kabin hesabı etiketin ALTINA değil YANINA: ayrı satır
+                        olduğunda panelde 20 piksel daha yer istiyordu.
+                        Ölçüler modelden geliyor (previewModel).
+                      */}
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[17px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
+                          {t('screen.columns')}
+                        </span>
+                        <span className="block truncate text-[14.5px] text-neutral-500 dark:text-neutral-400">
+                          {cols} × {mmYazi(kabinWmm)} mm = {mmYazi(cols * kabinWmm)} mm
+                        </span>
+                      </span>
                       <Stepper value={cols} onChange={setCols} min={1} max={colsMax} />
-                    </div>
-                    {/*
-                      Kabin hesabı: kaç kabin × kabinin gerçek ölçüsü = toplam.
-                      Ölçüler modelden geliyor (previewModel), sabit değil —
-                      başka bir model seçilince kendiliğinden değişir.
-                    */}
-                    <div className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-1">
-                      {cols} × {mmYazi(kabinWmm)} mm = {mmYazi(cols * kabinWmm)} mm
                     </div>
                   </div>
 
                   {/* Satırlar */}
-                  <div className="mb-3">
+                  <div className="mb-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.rows')}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[17px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
+                          {t('screen.rows')}
+                        </span>
+                        <span className="block truncate text-[14.5px] text-neutral-500 dark:text-neutral-400">
+                          {rows} × {mmYazi(kabinHmm)} mm = {mmYazi(rows * kabinHmm)} mm
+                        </span>
+                      </span>
                       <Stepper value={rows} onChange={setRows} min={1} max={rowsMax} />
-                    </div>
-                    <div className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-1">
-                      {rows} × {mmYazi(kabinHmm)} mm = {mmYazi(rows * kabinHmm)} mm
                     </div>
                   </div>
                 </>
@@ -9406,11 +9422,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {screenMode === 'multi' ? t('parca.duzenle') : t('parca.bol')}
                 </button>
               </div>
-              <p className="mt-1 mb-0 text-[15px] leading-snug text-neutral-500 dark:text-neutral-400">
-                {screenMode === 'multi' && screens.length > 0
-                  ? screens.length + ' ' + t('parca.adet')
-                  : t('parca.tek')}
-              </p>
+              {/* Tek parçayken açıklamaya gerek yok: düğmenin adı zaten söylüyor. */}
+              {screenMode === 'multi' && screens.length > 0 && (
+                <p className="mt-1 mb-0 text-[15px] leading-snug text-neutral-500 dark:text-neutral-400">
+                  {screens.length} {t('parca.adet')}
+                </p>
+              )}
               {screenMode === 'multi' && (
                 <button
                   type="button"
@@ -9434,15 +9451,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {hasModel && (
             <>
+              {/* Tek satır: etiket ve sayı yan yana — panelde yer dar. */}
               {!isVideoWall && ekranCozunurlugu && (
-                <div className="mb-2">
-                  <div className="text-[17px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('res.heading')}</div>
-                  <div
-                    title={t('res.totalHint')}
-                    className="py-2.5 px-4 rounded-lg border border-neutral-200 dark:border-[#2c333f] text-[18px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100"
-                  >
-                    {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)} piksel
-                  </div>
+                <div
+                  title={t('res.totalHint')}
+                  className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2"
+                >
+                  <span className="text-[16px] font-semibold uppercase tracking-[0.06em] text-neutral-600 dark:text-neutral-400">
+                    {t('res.heading')}
+                  </span>
+                  <span className="text-[17px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
+                    {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)}
+                  </span>
                 </div>
               )}
 
@@ -11612,18 +11632,17 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
  * içeriğin kırpılıp erişilemez kalmasındansa kaydırılabilir olması iyidir.
  */
 /*
- * PANEL ARTIK HİÇ KÜÇÜLMÜYOR.
+ * PANEL KAYDIRILMIYOR — İÇERİK SIĞDIRILIYOR.
  *
- * Panel içeriği, ekrana sığsın diye CSS ile küçültülüyordu. Ölçüm: iki
- * ekran kurulduğunda içerik 1056 piksel yer istiyor, panelde 795 piksel
- * var; aradaki fark küçültmeyle kapatılınca ekrandaki yazılar 9,7 – 14
- * piksele düşüyordu. Kullanıcının "her şey sıkışık, yazılar okunmuyor"
- * demesinin sebebi buydu — önce taban 0,30'du, 0,88'e çekmek de yetmedi.
+ * Ürün kararı: sol panelde kaydırma olmayacak. Sığdırmanın bedeli yazının
+ * küçülmesi, o yüzden bloklar ayrıca sadeleştirildi (başlıklar, model
+ * kartı, kapasite kartları, çözünürlük satırı); küçültmeye mümkün
+ * olduğunca az iş kalsın diye.
  *
- * Yazı boyu artık hiç değişmiyor; sığmayan içerik kaydırılıyor.
- * Okunmayan bir panel, kaydırılan panelden kötüdür.
+ * Taban 0,30 idi ve yazılar üçte bire inebiliyordu; okunur bir yerde
+ * duruyor.
  */
-const EN_KUCUK_ORAN = 1
+const EN_KUCUK_ORAN = 0.62
 
 function Sigdir({ children, className = '' }) {
   const disRef = useRef(null)
@@ -11712,13 +11731,8 @@ function Sigdir({ children, className = '' }) {
        * bedeli de okunmayan yazıydı. Artık küçültme okunur bir tabanda
        * duruyor ve artan içerik kaydırmayla geziliyor.
        */
-      const tasiyor = sonGerek * oran > disH + 1
-      if (tasiyor) {
-        ic.style.height = 'auto'
-        dis.style.overflowY = 'auto'
-      } else {
-        dis.style.overflowY = 'hidden'
-      }
+      /* Masaüstünde kaydırma yok: içerik her hâlükârda panele sığdırılıyor. */
+      dis.style.overflowY = 'hidden'
     }
 
     hesapla()

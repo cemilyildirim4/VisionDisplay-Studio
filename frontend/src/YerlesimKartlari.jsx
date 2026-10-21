@@ -13,7 +13,8 @@ export default function YerlesimKartlari({ t, secenekler, orientation, onSelect 
   ]
 
   return (
-    <div className="mt-3 pt-1 flex flex-col sm:flex-row gap-3">
+    /* Dar panelde iki kart ALT ALTA degil YAN YANA: yukseklik yarıya iniyor. */
+    <div className="mt-2 flex flex-row gap-2">
       {kartlar.map(({ id, etiket, veri }) => {
         const secili = orientation === id
         const maks = veri.piksel === maxPx && maxPx > 0
@@ -24,7 +25,7 @@ export default function YerlesimKartlari({ t, secenekler, orientation, onSelect 
             aria-pressed={secili}
             aria-label={`${etiket}: ${veri.cols}×${veri.rows} ${t('conf.layoutGrid')} · ${veri.piksel.toLocaleString('tr-TR')} ${t('conf.layoutPixels')}`}
             onClick={() => onSelect(id, veri)}
-            className={`relative flex-1 text-left rounded-xl border-2 px-4 py-3.5 min-h-[72px] transition-all duration-200 ${
+            className={`relative flex-1 text-left rounded-xl border-2 px-2.5 py-2 min-h-[56px] transition-all duration-200 ${
               secili
                 ? 'btn-selected ring-2 ring-brand/40 ring-offset-1 dark:ring-offset-[#0d1117]'
                 : 'border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#161a21] text-neutral-700 dark:text-neutral-200 hover:border-brand/50 hover:bg-brand/[0.04]'
