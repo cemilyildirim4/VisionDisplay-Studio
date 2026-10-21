@@ -223,13 +223,8 @@ const dict = {
   'tool.showMeasures': { tr: 'Ölçüleri göster', en: 'Show measurements', ar: 'إظهار القياسات' },
 
   // ---------- Ekran modu sekmeleri ----------
-  /*
-   * BU İKİSİ "KAÇ EKRAN" DEĞİL, "BU EKRAN KAÇ PARÇA" sorusunu soruyor.
-   * Odadaki ekran sayısı aşağıdaki "Ekranlar" listesinde.
-   */
   'mode.single': { tr: 'Tek Ekran', en: 'Single Screen', ar: 'شاشة واحدة' },
   'mode.multi': { tr: 'Çoklu Ekran', en: 'Multi Screen', ar: 'شاشات متعددة' },
-
 
   // ---------- Model bölümü ----------
   'model.heading': { tr: 'Model', en: 'Model', ar: 'الطراز' },
@@ -317,7 +312,7 @@ const dict = {
   },
   'ekran.duzenleniyor': { tr: 'düzenleniyor', en: 'editing', ar: 'قيد التحرير' },
   'ekran.cokluIpucu': {
-    tr: 'Odaya birden çok ekran koyabilirsiniz; her birinin kendi yeri ve içeriği olur.',
+    tr: 'Aynı fotoğrafa birden çok ekran koyabilirsiniz.',
     en: 'Place the current screen, then press "Add screen": it is pinned where it stands and you get a new one of the same size. Click a pinned screen or press "Edit" to go back to it.',
     ar: 'ضع الشاشة الحالية ثم اضغط «إضافة شاشة»: تُثبّت في مكانها وتحصل على واحدة جديدة بالمقاس نفسه.',
   },

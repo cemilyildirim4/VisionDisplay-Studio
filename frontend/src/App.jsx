@@ -9107,6 +9107,104 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 {t('ekran.ekle')}
               </button>
 
+            </div>
+          )}
+
+          {/* Model */}
+          <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('model.heading')}</h2>
+
+          {/*
+            Hangi modeli seçeceğini bilmeyen kullanıcı için isteğe bağlı
+            sihirbaz. Yeri model panelinin ÜSTÜ: soru zaten "hangisini
+            seçeceğim" diye sorulurken, cevabı seçim kutusundan sonra sunmak
+            geç kalıyordu. Ana akış (tek ekran, sihirbazsız) değişmiyor —
+            burası yalnızca bir kısayol, o yüzden düğme değil satır: ince
+            kenarlık, tek satır metin ve önünde sade bir pusula ikonu.
+          */}
+          {!hasModel && !cabinetsLoading && (
+            <button
+              type="button"
+              onClick={() => setWizardOpen(true)}
+              className="w-full mb-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2 flex items-center gap-2 text-left text-brand hover:border-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors"
+            >
+              {/*
+                İkon dolu bir daire içinde: ince çizgili hâli panel küçültülünce
+                (bkz. Sigdir) silikleşip görünmez oluyordu.
+              */}
+              <span className="w-6 h-6 rounded-full bg-brand text-white shrink-0 inline-flex items-center justify-center">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9.2 9a3 3 0 1 1 4 2.8c-.8.3-1.2 1-1.2 1.8v.4" />
+                  <path d="M12 17.4h.01" />
+                </svg>
+              </span>
+              <span className="text-[16.5px] font-semibold leading-tight">{t('wiz.entry')}</span>
+            </button>
+          )}
+          {hasModel ? (
+            <div className="border border-neutral-200 dark:border-[#2c333f] rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[17px] text-neutral-500 dark:text-neutral-400 mb-1">{selectedModel.series?.name || t('model.defaultSeries')}</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="text-[28px] font-bold text-neutral-900 dark:text-neutral-100 leading-tight">{selectedModel.modelCode}</div>
+                    <ProductTypeBadge productType={selectedModel.productType} size="md" />
+                  </div>
+                </div>
+                {/* Ürün görseli — veritabanında adres varsa o, yoksa genel ekran ikonu */}
+                <div className="w-16 h-11 rounded-lg bg-neutral-50 dark:bg-[#1b2029] border border-neutral-200 dark:border-[#2c333f] shrink-0 flex items-center justify-center overflow-hidden">
+                  {selectedModel.imageUrl ? (
+                    <img src={selectedModel.imageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2.5" y="5" width="19" height="12" rx="1" />
+                      <line x1="8" y1="20" x2="16" y2="20" />
+                      <line x1="12" y1="17" x2="12" y2="20" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <hr className="border-neutral-100 dark:border-[#242b36] my-3" />
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="flex items-center gap-1 text-[19px] font-semibold text-neutral-800 dark:text-neutral-200 hover:text-brand"
+              >
+                {t('model.change')}
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 6 15 12 9 18" />
+                </svg>
+              </button>
+            </div>
+          ) : cabinetsLoading ? (
+            // İskelet (skeleton) yükleme — API'den model listesi gelene kadar boş bir
+            // "seç" butonu göstermek yerine yüklendiğini hissettiren bir animasyon.
+            <div className="w-full h-[150px] rounded-lg border border-neutral-200 dark:border-[#2c333f] p-3 animate-pulse">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="h-3 w-24 bg-neutral-200 dark:bg-[#242b36] rounded mb-2" />
+                  <div className="h-5 w-36 bg-neutral-200 dark:bg-[#242b36] rounded" />
+                </div>
+                <div className="w-16 h-11 rounded-lg bg-neutral-200 dark:bg-[#242b36] shrink-0" />
+              </div>
+              <div className="h-px bg-neutral-100 dark:bg-[#242b36] my-3" />
+              <div className="h-4 w-28 bg-neutral-200 dark:bg-[#242b36] rounded" />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="w-full h-[150px] border-2 border-dashed border-neutral-300 dark:border-[#39414f] rounded-lg flex flex-col items-center justify-center gap-3 text-neutral-500 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-[#4a5364] hover:text-neutral-500 transition-colors"
+            >
+              <span className="w-9 h-9 rounded-full border-2 border-current flex items-center justify-center">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="12" y1="6" x2="12" y2="18" />
+                  <line x1="6" y1="12" x2="18" y2="12" />
+                </svg>
+              </span>
+              <span className="text-base">{t('model.select')}</span>
+            </button>
+          )}
+
               {/*
                 EKRAN YERLEŞİMİ — birleştirme.
 
@@ -9213,105 +9311,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   )}
                 </div>
               )}
-
-            </div>
-          )}
-
-          {/* Model */}
-          <h2 className="text-[17px] font-semibold uppercase tracking-[0.06em] text-neutral-600 dark:text-neutral-400 m-0 mb-0.5">{t('model.heading')}</h2>
-
-          {/*
-            Hangi modeli seçeceğini bilmeyen kullanıcı için isteğe bağlı
-            sihirbaz. Yeri model panelinin ÜSTÜ: soru zaten "hangisini
-            seçeceğim" diye sorulurken, cevabı seçim kutusundan sonra sunmak
-            geç kalıyordu. Ana akış (tek ekran, sihirbazsız) değişmiyor —
-            burası yalnızca bir kısayol, o yüzden düğme değil satır: ince
-            kenarlık, tek satır metin ve önünde sade bir pusula ikonu.
-          */}
-          {!hasModel && !cabinetsLoading && (
-            <button
-              type="button"
-              onClick={() => setWizardOpen(true)}
-              className="w-full mb-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2 flex items-center gap-2 text-left text-brand hover:border-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors"
-            >
-              {/*
-                İkon dolu bir daire içinde: ince çizgili hâli panel küçültülünce
-                (bkz. Sigdir) silikleşip görünmez oluyordu.
-              */}
-              <span className="w-6 h-6 rounded-full bg-brand text-white shrink-0 inline-flex items-center justify-center">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9.2 9a3 3 0 1 1 4 2.8c-.8.3-1.2 1-1.2 1.8v.4" />
-                  <path d="M12 17.4h.01" />
-                </svg>
-              </span>
-              <span className="text-[16.5px] font-semibold leading-tight">{t('wiz.entry')}</span>
-            </button>
-          )}
-          {hasModel ? (
-            /*
-             * MODEL KARTI DARALTILDI.
-             *
-             * Üç satır ve bir ürün görseli kutusuyla 177 piksel tutuyordu;
-             * panelde en çok yer kaplayan bloktu. Seri adı model kodunun
-             * altına tek satır olarak indi, görsel kutusu kalktı (bilgi
-             * taşımıyordu), "Model değişikliği" aynı satıra geçti.
-             */
-            <div className="border border-neutral-200 dark:border-[#2c333f] rounded-lg px-3 py-2">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[21px] font-bold leading-tight text-neutral-900 dark:text-neutral-100">
-                      {selectedModel.modelCode}
-                    </span>
-                    <ProductTypeBadge productType={selectedModel.productType} size="md" />
-                  </div>
-                  <div className="truncate text-[15px] text-neutral-500 dark:text-neutral-400">
-                    {selectedModel.series?.name || t('model.defaultSeries')}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(true)}
-                  className="shrink-0 inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[15.5px] font-semibold text-neutral-700 hover:text-brand dark:text-neutral-200"
-                >
-                  {t('model.change')}
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 6 15 12 9 18" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ) : cabinetsLoading ? (
-            // İskelet (skeleton) yükleme — API'den model listesi gelene kadar boş bir
-            // "seç" butonu göstermek yerine yüklendiğini hissettiren bir animasyon.
-            <div className="w-full h-[150px] rounded-lg border border-neutral-200 dark:border-[#2c333f] p-3 animate-pulse">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <div className="h-3 w-24 bg-neutral-200 dark:bg-[#242b36] rounded mb-2" />
-                  <div className="h-5 w-36 bg-neutral-200 dark:bg-[#242b36] rounded" />
-                </div>
-                <div className="w-16 h-11 rounded-lg bg-neutral-200 dark:bg-[#242b36] shrink-0" />
-              </div>
-              <div className="h-px bg-neutral-100 dark:bg-[#242b36] my-3" />
-              <div className="h-4 w-28 bg-neutral-200 dark:bg-[#242b36] rounded" />
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="w-full h-[150px] border-2 border-dashed border-neutral-300 dark:border-[#39414f] rounded-lg flex flex-col items-center justify-center gap-3 text-neutral-500 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-[#4a5364] hover:text-neutral-500 transition-colors"
-            >
-              <span className="w-9 h-9 rounded-full border-2 border-current flex items-center justify-center">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <line x1="12" y1="6" x2="12" y2="18" />
-                  <line x1="6" y1="12" x2="18" y2="12" />
-                </svg>
-              </span>
-              <span className="text-base">{t('model.select')}</span>
-            </button>
-          )}
-
-          <h2 className="text-[17px] font-semibold uppercase tracking-[0.06em] text-neutral-600 dark:text-neutral-400 m-0 mb-0.5">{t('wall.heading')}</h2>
+          <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('wall.heading')}</h2>
 
           {/*
             BİRİM ALANIN YANINDA YAZIYOR.
@@ -9322,28 +9322,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             yerleşim alanı oluşuyor ve her şey bozuluyor. Birim artık sayının
             hemen yanında — tahmin edilecek bir şey kalmıyor.
           */}
-          {/*
-            İKİ ÖLÇÜ ALT ALTA DEĞİL YAN YANA.
-
-            Panelde kaydırma olmayacak (ürün kararı) ve sığdırmanın bedeli
-            yazının küçülmesi. Bu kutu tek başına 126 piksel tutuyordu;
-            yan yana yarıya iniyor.
-          */}
           <Card>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
-                <div className="mt-1 flex items-center gap-1">
-                  <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
-                  <span className="text-[15px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
-                </div>
+            <div className="flex items-center justify-between mb-3">
+              <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
+              <div className="flex items-center gap-1.5">
+                <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
+                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
               </div>
-              <div>
-                <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
-                <div className="mt-1 flex items-center gap-1">
-                  <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
-                  <span className="text-[15px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
-                </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
+              <div className="flex items-center gap-1.5">
+                <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
+                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
               </div>
             </div>
           </Card>
@@ -9370,7 +9361,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           {hasModel && (
             <>
-              <h2 className="text-[17px] font-semibold uppercase tracking-[0.06em] text-neutral-600 dark:text-neutral-400 m-0 mb-0.5">{t('screen.heading')}</h2>
+              <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('screen.heading')}</h2>
 
               {screenMode === 'multi' ? (
                 /* Çoklu ekran: ekran listesi */
@@ -9473,37 +9464,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   )}
 
                   {/* Sütunlar */}
-                  <div className="mb-2">
+                  <div className="mb-3">
                     <div className="flex items-center justify-between">
-                      {/*
-                        Kabin hesabı etiketin ALTINA değil YANINA: ayrı satır
-                        olduğunda panelde 20 piksel daha yer istiyordu.
-                        Ölçüler modelden geliyor (previewModel).
-                      */}
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[17px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
-                          {t('screen.columns')}
-                        </span>
-                        <span className="block truncate text-[14.5px] text-neutral-500 dark:text-neutral-400">
-                          {cols} × {mmYazi(kabinWmm)} mm = {mmYazi(cols * kabinWmm)} mm
-                        </span>
-                      </span>
+                      <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.columns')}</span>
                       <Stepper value={cols} onChange={setCols} min={1} max={colsMax} />
+                    </div>
+                    {/*
+                      Kabin hesabı: kaç kabin × kabinin gerçek ölçüsü = toplam.
+                      Ölçüler modelden geliyor (previewModel), sabit değil —
+                      başka bir model seçilince kendiliğinden değişir.
+                    */}
+                    <div className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-1">
+                      {cols} × {mmYazi(kabinWmm)} mm = {mmYazi(cols * kabinWmm)} mm
                     </div>
                   </div>
 
                   {/* Satırlar */}
-                  <div className="mb-2">
+                  <div className="mb-3">
                     <div className="flex items-center justify-between">
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[17px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
-                          {t('screen.rows')}
-                        </span>
-                        <span className="block truncate text-[14.5px] text-neutral-500 dark:text-neutral-400">
-                          {rows} × {mmYazi(kabinHmm)} mm = {mmYazi(rows * kabinHmm)} mm
-                        </span>
-                      </span>
+                      <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.rows')}</span>
                       <Stepper value={rows} onChange={setRows} min={1} max={rowsMax} />
+                    </div>
+                    <div className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-1">
+                      {rows} × {mmYazi(kabinHmm)} mm = {mmYazi(rows * kabinHmm)} mm
                     </div>
                   </div>
                 </>
@@ -9520,18 +9503,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {hasModel && (
             <>
-              {/* Tek satır: etiket ve sayı yan yana — panelde yer dar. */}
               {!isVideoWall && ekranCozunurlugu && (
-                <div
-                  title={t('res.totalHint')}
-                  className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2"
-                >
-                  <span className="text-[16px] font-semibold uppercase tracking-[0.06em] text-neutral-600 dark:text-neutral-400">
-                    {t('res.heading')}
-                  </span>
-                  <span className="text-[17px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
-                    {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)}
-                  </span>
+                <div className="mb-2">
+                  <div className="text-[17px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('res.heading')}</div>
+                  <div
+                    title={t('res.totalHint')}
+                    className="py-2.5 px-4 rounded-lg border border-neutral-200 dark:border-[#2c333f] text-[18px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100"
+                  >
+                    {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)} piksel
+                  </div>
                 </div>
               )}
 
@@ -9669,7 +9649,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {t('content.hint')}
                 </p>
               </div>
-
 
             </>
           )}
@@ -11554,17 +11533,18 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
  * içeriğin kırpılıp erişilemez kalmasındansa kaydırılabilir olması iyidir.
  */
 /*
- * PANEL KAYDIRILMIYOR — İÇERİK SIĞDIRILIYOR.
+ * PANEL ARTIK HİÇ KÜÇÜLMÜYOR.
  *
- * Ürün kararı: sol panelde kaydırma olmayacak. Sığdırmanın bedeli yazının
- * küçülmesi, o yüzden bloklar ayrıca sadeleştirildi (başlıklar, model
- * kartı, kapasite kartları, çözünürlük satırı); küçültmeye mümkün
- * olduğunca az iş kalsın diye.
+ * Panel içeriği, ekrana sığsın diye CSS ile küçültülüyordu. Ölçüm: iki
+ * ekran kurulduğunda içerik 1056 piksel yer istiyor, panelde 795 piksel
+ * var; aradaki fark küçültmeyle kapatılınca ekrandaki yazılar 9,7 – 14
+ * piksele düşüyordu. Kullanıcının "her şey sıkışık, yazılar okunmuyor"
+ * demesinin sebebi buydu — önce taban 0,30'du, 0,88'e çekmek de yetmedi.
  *
- * Taban 0,30 idi ve yazılar üçte bire inebiliyordu; okunur bir yerde
- * duruyor.
+ * Yazı boyu artık hiç değişmiyor; sığmayan içerik kaydırılıyor.
+ * Okunmayan bir panel, kaydırılan panelden kötüdür.
  */
-const EN_KUCUK_ORAN = 0.62
+const EN_KUCUK_ORAN = 1
 
 function Sigdir({ children, className = '' }) {
   const disRef = useRef(null)
@@ -11653,8 +11633,13 @@ function Sigdir({ children, className = '' }) {
        * bedeli de okunmayan yazıydı. Artık küçültme okunur bir tabanda
        * duruyor ve artan içerik kaydırmayla geziliyor.
        */
-      /* Masaüstünde kaydırma yok: içerik her hâlükârda panele sığdırılıyor. */
-      dis.style.overflowY = 'hidden'
+      const tasiyor = sonGerek * oran > disH + 1
+      if (tasiyor) {
+        ic.style.height = 'auto'
+        dis.style.overflowY = 'auto'
+      } else {
+        dis.style.overflowY = 'hidden'
+      }
     }
 
     hesapla()
