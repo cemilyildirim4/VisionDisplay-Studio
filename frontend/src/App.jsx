@@ -11533,18 +11533,17 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
  * içeriğin kırpılıp erişilemez kalmasındansa kaydırılabilir olması iyidir.
  */
 /*
- * PANEL ARTIK HİÇ KÜÇÜLMÜYOR.
+ * PANEL KAYDIRILMIYOR — İÇERİK SIĞDIRILIYOR.
  *
- * Panel içeriği, ekrana sığsın diye CSS ile küçültülüyordu. Ölçüm: iki
- * ekran kurulduğunda içerik 1056 piksel yer istiyor, panelde 795 piksel
- * var; aradaki fark küçültmeyle kapatılınca ekrandaki yazılar 9,7 – 14
- * piksele düşüyordu. Kullanıcının "her şey sıkışık, yazılar okunmuyor"
- * demesinin sebebi buydu — önce taban 0,30'du, 0,88'e çekmek de yetmedi.
+ * Ürün kararı: sol panelde kaydırma olmayacak, içeriğin tamamı tek
+ * ekranda görünecek. Bedeli yazının küçülmesi; kullanıcı bunu bilerek
+ * istedi ("sığdır hepsini, yazıları küçült").
  *
- * Yazı boyu artık hiç değişmiyor; sığmayan içerik kaydırılıyor.
- * Okunmayan bir panel, kaydırılan panelden kötüdür.
+ * Taban, kaydırmanın hiç gerekmeyeceği kadar düşük: iki ekran kurulu bir
+ * panelde içerik 1542, panel 795 piksel — yani oran 0,52'ye kadar
+ * inebiliyor; alçak ekranlarda daha da aşağı.
  */
-const EN_KUCUK_ORAN = 1
+const EN_KUCUK_ORAN = 0.35
 
 function Sigdir({ children, className = '' }) {
   const disRef = useRef(null)
@@ -11633,13 +11632,8 @@ function Sigdir({ children, className = '' }) {
        * bedeli de okunmayan yazıydı. Artık küçültme okunur bir tabanda
        * duruyor ve artan içerik kaydırmayla geziliyor.
        */
-      const tasiyor = sonGerek * oran > disH + 1
-      if (tasiyor) {
-        ic.style.height = 'auto'
-        dis.style.overflowY = 'auto'
-      } else {
-        dis.style.overflowY = 'hidden'
-      }
+      /* Kaydırma yok: içerik her hâlükârda panele sığdırılıyor. */
+      dis.style.overflowY = 'hidden'
     }
 
     hesapla()
