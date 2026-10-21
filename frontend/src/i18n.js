@@ -550,7 +550,7 @@ const dict = {
   'sih.alanIleAyarla': { tr: 'Ölçüm ile ayarla', en: 'Set by measuring', ar: 'الضبط بالقياس' },
   'sih.elleDuzenle': { tr: 'Manuel düzenle', en: 'Edit manually', ar: 'تحرير يدوي' },
   'sih.alanAciklama': {
-    tr: 'Her kenar için, kenarın göründüğü yerin iki ucuna tıklayın.',
+    tr: 'Alanın dört köşesine tıklayın.',
     en: 'Click the four corners of the area the screen should cover: top-left, top-right, bottom-right, bottom-left. The marks can be dragged afterwards. The design stays hidden until all four are placed.',
     ar: 'انقر على زوايا المنطقة الأربع التي يجب أن تغطيها الشاشة. يبقى التصميم مخفيًا حتى وضع النقاط الأربع.',
   },
@@ -562,7 +562,7 @@ const dict = {
   'scene.alanOlcusu': { tr: 'alan', en: 'area', ar: 'المنطقة' },
   'sih.alanBitir': { tr: 'Alanı onayla', en: 'Confirm the area', ar: 'تأكيد المنطقة' },
   'sih.alanBaslik': {
-    tr: 'Alanın 4 kenarını çizin',
+    tr: 'Alanın 4 köşesini işaretleyin',
     en: 'Mark the four corners of the area',
     ar: 'حدّد زوايا المنطقة الأربع',
   },
@@ -786,10 +786,27 @@ const dict = {
     ar: 'يُشتق مقياس الصورة بالسنتيمتر من هذا الرقم، ويُحسب حجم التصميم تبعًا له.',
   },
   'sih.alanDetay': {
-    tr: 'Üst, alt, sol ve sağ kenar için birer çizgi; sıra önemli değil. Kenar duvarın kenarı olabilir, ekranın biteceği hayali bir çizgi de. Köşeler çizgilerin kesişiminden çıkıyor, dolayısıyla köşe kadrajın dışında kalsa bile olur. Uçlar sonradan sürüklenebilir; yapışmayı Alt ile kapatabilirsiniz.',
-    en: 'One line for the top, bottom, left and right edge; the order does not matter. An edge can be the wall’s edge or an imaginary line where the screen ends. Corners come from where the lines cross, so a corner may fall outside the frame. The ends can be dragged later; hold Alt to disable snapping.',
-    ar: 'خط لكل حافة: علوية وسفلية ويسرى ويمنى، والترتيب غير مهم. تنتج الزوايا من تقاطع الخطوط، لذا قد تقع زاوية خارج الإطار. يمكن سحب الأطراف لاحقًا، و Alt يوقف الالتصاق.',
+    tr: 'Sırayla sol üst, sağ üst, sağ alt, sol alt köşeye tıklayın. İşaretler sonradan sürüklenebilir; yapışmayı Alt ile kapatabilirsiniz. Köşe görünmüyorsa aşağıdaki düğmeyle kenarlardan bulabilirsiniz.',
+    en: 'Click top-left, top-right, bottom-right, bottom-left in order. The marks can be dragged afterwards; hold Alt to disable snapping. If a corner is not visible, use the button below to find it from the edges.',
+    ar: 'انقر بالترتيب: أعلى اليسار، أعلى اليمين، أسفل اليمين، أسفل اليسار. يمكن سحب العلامات لاحقًا. إذا كانت الزاوية غير مرئية فاستخدم الزر أدناه.',
   },
+  'sih.kenarAciklama': {
+    tr: 'Her kenar için, kenarın göründüğü yerin iki ucuna tıklayın.',
+    en: 'For each edge, click the two ends of the part you can see.',
+    ar: 'لكل حافة، انقر على طرفي الجزء الظاهر منها.',
+  },
+  'sih.kenarDetay': {
+    tr: 'Üst, alt, sol ve sağ kenar için birer çizgi; sıra önemli değil. Kenar duvarın kenarı olabilir, ekranın biteceği hayali bir çizgi de. Köşeler çizgilerin kesişiminden çıkıyor, dolayısıyla köşe kadrajın dışında kalsa bile olur.',
+    en: 'One line for the top, bottom, left and right edge; the order does not matter. An edge can be the wall’s edge or an imaginary line where the screen ends. Corners come from where the lines cross, so a corner may fall outside the frame.',
+    ar: 'خط لكل حافة، والترتيب غير مهم. تنتج الزوايا من تقاطع الخطوط، لذا قد تقع زاوية خارج الإطار.',
+  },
+  'sih.kenarKur': { tr: 'Köşeleri oluştur', en: 'Build the corners', ar: 'أنشئ الزوايا' },
+  'sih.kenarBasla': {
+    tr: 'Köşe görünmüyor — kenarlardan bul',
+    en: 'Corner not visible — find it from the edges',
+    ar: 'الزاوية غير مرئية — اعثر عليها من الحواف',
+  },
+  'sih.vazgec': { tr: 'Vazgeç', en: 'Cancel', ar: 'إلغاء' },
   'sih.alaniDuzenle': { tr: 'Alanı düzenle', en: 'Edit the area', ar: 'تعديل المنطقة' },
   'sih.kenarSayac': { tr: 'kenar', en: 'edges', ar: 'حواف' },
   'sih.kenarKesismedi': {

@@ -137,6 +137,26 @@ const panelOlcusu = (s) =>
     return { sutun: al('SÜTUNLAR'), satir: al('SATIRLAR') }
   })
 
+/** Alanın dört köşesine sırayla tıklar — varsayılan yol. */
+async function dortKose(s) {
+  const t = await tuval(s)
+  const x = t.x + t.w * 0.33
+  const y = t.y + t.h * 0.26
+  const en = t.w * 0.26
+  const boy = t.h * 0.28
+  for (const [px, py] of [
+    [x, y],
+    [x + en, y + boy * 0.06],
+    [x + en, y + boy],
+    [x, y + boy * 0.94],
+  ]) {
+    await s.mouse.move(px, py)
+    await s.mouse.down()
+    await s.mouse.up()
+    await s.waitForTimeout(420)
+  }
+}
+
 /**
  * DÖRT KENAR ÇİZGİSİ ÇİZER.
  *
@@ -320,12 +340,12 @@ const a = await akis('A — ALANI İŞARETLE', async ({ s, bas, denetle, icerir,
   if (!(await bas('Alanı işaretle', 1800))) return dus('"Alanı işaretle" düğmesi bulunamadı')
   if (!(await denetle('alan işaretlemeye geçildi'))) return false
 
-  /* Eski köşe adımı ve ayrı "kenarlardan bul" kipi kalkmış olmalı. */
-  if (await icerir('Köşe görünmüyor')) return dus('eski "kenarlardan bul" kipi hâlâ var')
-  if (!(await icerir('kenarını çizin'))) return dus('kenar çizim adımı açılmadı')
+  /* Varsayılan yol köşe seçme; kenar çizimi düğmenin arkasında durmalı. */
+  if (!(await icerir('köşesini işaretleyin'))) return dus('köşe işaretleme adımı açılmadı')
+  if (!(await icerir('Köşe görünmüyor'))) return dus('"Köşe görünmüyor" düğmesi yok')
 
-  await dortKenar(s)
-  if (!(await denetle('4 kenar çizildi'))) return false
+  await dortKose(s)
+  if (!(await denetle('4 köşe işaretlendi'))) return false
 
   /* Çizgilerin kesişiminden geçerli bir dörtgen çıkmalı: onay açılmış olmalı. */
   const kart = await kartBilgisi(s)
@@ -436,11 +456,42 @@ const b = await akis('B — SERBEST YERLEŞTİR', async ({ s, bas, denetle, icer
   return true
 })
 
+/* ── C) KÖŞE GÖRÜNMÜYOR → KENARLARDAN ─────────────────────────────── */
+const c = await akis('C — KÖŞE GÖRÜNMÜYOR, KENARLARDAN', async ({ s, bas, denetle, icerir, dus }) => {
+  if (!(await bas('Alanı işaretle', 1800))) return dus('"Alanı işaretle" düğmesi bulunamadı')
+  if (!(await denetle('alan işaretlemeye geçildi'))) return false
+
+  if (!(await bas('Köşe görünmüyor — kenarlardan bul', 1500))) {
+    return dus('"Köşe görünmüyor" düğmesi bulunamadı')
+  }
+  if (!(await icerir('kenarın göründüğü yerin iki ucuna'))) return dus('kenar çizim kipi açılmadı')
+  if (!(await denetle('kenar çizimine geçildi'))) return false
+
+  await dortKenar(s)
+  if (!(await denetle('4 kenar çizildi'))) return false
+
+  if (!(await bas('Köşeleri oluştur', 2000))) return dus('"Köşeleri oluştur" açılmadı')
+  if (!(await denetle('köşeler kenarlardan kuruldu'))) return false
+
+  /* Kip kapanmalı ve köşe seçmeye dönülmeli: ince ayar köşelerden. */
+  if (await icerir('kenarın göründüğü yerin iki ucuna')) return dus('kenar çizim kipi kapanmadı')
+  if (!(await icerir('köşesini işaretleyin'))) return dus('köşe seçmeye dönülmedi')
+
+  const kart = await kartBilgisi(s)
+  if (!(kart.dugmeler || []).includes('Alanı onayla')) {
+    return dus('kenarlardan kurulan alan onaylanabilir değil')
+  }
+  await bas('Alanı onayla', 2500)
+  if (!(await denetle('alan onaylandı'))) return false
+  return true
+})
+
 await tarayici.close()
 
 console.log('\n─────────────────────────────')
-console.log('A (alanı işaretle)   :', a ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
+console.log('A (köşe işaretle)    :', a ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
 console.log('B (serbest yerleştir):', b ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
+console.log('C (kenarlardan bul)  :', c ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
 if (hataSayisi > 0) {
   console.log('\nAKIS TESTI DUSTU — yayina alinmamali.')
   process.exitCode = 1

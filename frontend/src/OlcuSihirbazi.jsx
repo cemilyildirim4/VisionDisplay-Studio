@@ -97,8 +97,15 @@ function SihirbazKart({
   /* İşaretleme geçerli mi (içe çökmüş dörtgen kabul edilmiyor). */
   alanGecerli = true,
   /* GÖRÜNMEYEN KÖŞE — iki kenardan bulunuyor. */
+  /* Kenar çizimi alt kipi açık mı (köşe görünmediğinde). */
+  kenarCizim = false,
   /* Kaç kenar çizgisi tamamlandı (0–4). */
   kenarCizgiSayisi = 0,
+  /* Dört çizgi tamam ve kesişimleri bir alan veriyor mu. */
+  kenarAlaniHazir = false,
+  onKenarCizimeGec = null,
+  onKenarVazgec = null,
+  onKenarlardanKur = null,
   /* Kenar çizgilerini yeniden açar: uçları sürüklenebilir olur. */
   onAlanDuzenle = null,
   /* Alan zaten işaretliyse yeniden işaretlemeden yerleştirmeye dönülüyor. */
@@ -638,26 +645,60 @@ function SihirbazKart({
             Tuvalin üstüne yönerge şeridi konmuyor; aynı gerekçe referans
             adımındaki gibi: fotoğrafın üstü temiz kalsın, yönerge burada.
           */}
-          {alanKipi && (
-            <>
-              <p className={aciklama}>{t('sih.alanAciklama')}</p>
-              {detayAcik && (
-                <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.alanDetay')}</p>
-              )}
-              {/*
-                SAYAÇ KÖŞEYİ DEĞİL ÇİZGİYİ SAYIYOR.
+          {/*
+            KENAR ÇİZİMİ — köşe görünmediğinde açılan alt kip.
 
-                Kullanıcı artık köşe koymuyor, kenar çiziyor: her kenar iki
-                tıklama. "3 / 4 kenar" nerede kalındığını doğrudan söylüyor.
-              */}
+            Dört kenara birer çizgi çekiliyor, köşeler kesişimlerden
+            kuruluyor ve kip kapanıyor; ince ayar yine köşelerden yapılıyor.
+          */}
+          {alanKipi && kenarCizim && (
+            <>
+              <p className={aciklama}>{t('sih.kenarAciklama')}</p>
+              {detayAcik && (
+                <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.kenarDetay')}</p>
+              )}
               <p
                 className={`${kucuk} ${
-                  kenarCizgiSayisi >= 4
+                  kenarAlaniHazir
                     ? 'text-emerald-700 dark:text-emerald-400'
                     : 'text-neutral-500 dark:text-neutral-400'
                 }`}
               >
                 {kenarCizgiSayisi} / 4 {t('sih.kenarSayac')}
+              </p>
+              <div className="mt-2 flex items-center gap-1.5">
+                <button type="button" onClick={onKenarVazgec} className={yan}>
+                  {t('sih.vazgec')}
+                </button>
+                <button
+                  type="button"
+                  onClick={onKenarlardanKur}
+                  disabled={!kenarAlaniHazir}
+                  className={ana}
+                >
+                  {t('sih.kenarKur')}
+                </button>
+              </div>
+              {kenarCizgiSayisi >= 4 && !kenarAlaniHazir && (
+                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.kenarKesismedi')}</p>
+              )}
+            </>
+          )}
+
+          {alanKipi && !kenarCizim && (
+            <>
+              <p className={aciklama}>{t('sih.alanAciklama')}</p>
+              {detayAcik && (
+                <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>{t('sih.alanDetay')}</p>
+              )}
+              <p
+                className={`${kucuk} ${
+                  alanNoktaSayisi >= 4
+                    ? 'text-emerald-700 dark:text-emerald-400'
+                    : 'text-neutral-500 dark:text-neutral-400'
+                }`}
+              >
+                {alanNoktaSayisi} / 4
               </p>
               <div className="mt-2 flex items-center gap-1.5">
                 {/*
@@ -678,23 +719,31 @@ function SihirbazKart({
                 <button
                   type="button"
                   onClick={onAlanBitir}
-                  /* Dört çizgi tamam ve kesişimler geçerli bir dörtgen verdi. */
-                  disabled={kenarCizgiSayisi < 4 || alanNoktaSayisi < 4 || !alanGecerli}
+                  disabled={alanNoktaSayisi < 4 || !alanGecerli}
                   className={ana}
                 >
                   {t('sih.alanBitir')}
                 </button>
               </div>
-              {/*
-                Dört çizgi var ama kesişimleri dörtgen vermiyor: çizgilerden
-                ikisi aynı kenarı gösteriyor ya da biri bambaşka bir yöne
-                çizilmiş olabilir.
-              */}
-              {kenarCizgiSayisi >= 4 && alanNoktaSayisi < 4 && (
-                <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.kenarKesismedi')}</p>
-              )}
-              {kenarCizgiSayisi >= 4 && alanNoktaSayisi === 4 && !alanGecerli && (
+              {/* İçe çökmüş dörtgen hiçbir dikdörtgenin görüntüsü değil. */}
+              {alanNoktaSayisi === 4 && !alanGecerli && (
                 <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.alanGecersiz')}</p>
+              )}
+              {/*
+                KÖŞE GÖRÜNMÜYORSA KENARLARDAN.
+
+                Köşe kadrajın dışında, bir eşyanın arkasında ya da duvar
+                orada bitmiyorsa tıklanacak bir köşe yok. O zaman dört
+                kenara çizgi çekiliyor ve köşeler kesişimlerden kuruluyor.
+              */}
+              {onKenarCizimeGec && (
+                <button
+                  type="button"
+                  onClick={onKenarCizimeGec}
+                  className="mt-1.5 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                >
+                  {t('sih.kenarBasla')}
+                </button>
               )}
             </>
           )}
