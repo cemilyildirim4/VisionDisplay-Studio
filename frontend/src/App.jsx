@@ -406,8 +406,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [multiModalOpen, setMultiModalOpen] = useState(false)
   const [screens, setScreens] = useState([])
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
-  /* Çoklu ekran penceresi: yerleşim ve içerik (bkz. coklu.ac). */
-  const [cokluAyarAcik, setCokluAyarAcik] = useState(false)
   // Teknik Özellikler pop-up'ı (Bileşenler de içinde)
   const [specsOpen, setSpecsOpen] = useState(false)
   /*
@@ -8995,6 +8993,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         <div className="yatay-sag">
         <aside className="yatay-panel yatay-panel-model w-full min-w-0 lg:w-[340px] shrink-0 order-2 lg:order-1 border-t lg:border-t-0 lg:border-r border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
           <Sigdir className="flex flex-col gap-2">
+          {/* Tek/Çoklu Ekran sekmeleri (yalnızca model seçilince) */}
+          {hasModel && (
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setScreenMode('single')
+                  setCols(1)
+                  setRows(1)
+                }}
+                className={`py-2.5 rounded-lg text-[19px] transition-colors ${
+                  screenMode === 'single'
+                    ? 'btn-selected border-2'
+                    : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
+                }`}
+              >
+                {t('mode.single')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMultiModalOpen(true)}
+                className={`py-2.5 rounded-lg text-[19px] transition-colors ${
+                  screenMode === 'multi'
+                    ? 'btn-selected border-2'
+                    : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
+                }`}
+              >
+                {t('mode.multi')}
+              </button>
+            </div>
+          )}
 
           {/*
             EKRANLAR — aynı arka plana birden çok ekran.
@@ -9077,6 +9106,113 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               >
                 {t('ekran.ekle')}
               </button>
+
+              {/*
+                EKRAN YERLEŞİMİ — birleştirme.
+
+                İki ya da daha çok ekran seçilip duruş biçimi veriliyor;
+                ekranlar kenarlarından birleşiyor ve aralarında boşluk
+                kalmıyor. Grup liderden TÜRETİLDİĞİ için tek parça taşınıyor
+                ve dikiş hiç açılmıyor (bkz. grupKoseleri). "Ayır" grubu
+                bozuyor, ekranlar bulundukları yerde kalıyor.
+
+                Birleştirme isteğe bağlı: seçilmeyen ekranlar bağımsız.
+              */}
+              {sabitEkranlar.length >= 1 && (
+                <div className="mt-3 rounded-lg border border-neutral-200 dark:border-[#2c333f] p-2.5">
+                  <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
+                    {t('yerlesim.baslik')}
+                  </div>
+                  {grup ? (
+                    <>
+                      <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('yerlesim.' + grup.tip)} · {grup.uyeler.length} {t('ekran.tekil')}
+                        {grup.tip === 'acili' ? ' · ' + grup.aci + '°' : ''}
+                      </p>
+                      <p className="mt-1 mb-0 text-[16.5px] leading-snug text-neutral-400 dark:text-neutral-500">
+                        {t('yerlesim.grupNot')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={grubuAyir}
+                        className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        {t('yerlesim.ayir')}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('yerlesim.ipucu')}
+                      </p>
+                      <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1">
+                        {[
+                          ...sabitEkranlar.map((e, i) => ({ ...e, sira: e.sira || i + 1 })),
+                          { id: aktifEkranId, sira: aktifSira },
+                        ]
+                          .filter((e) => e.id)
+                          .sort((a, b) => (a.sira || 0) - (b.sira || 0))
+                          .map((e) => (
+                            <li key={e.id}>
+                              <label className="flex items-center gap-2 text-[16px] text-neutral-700 dark:text-neutral-200">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4"
+                                  checked={grupSecim.includes(e.id)}
+                                  onChange={() =>
+                                    setGrupSecim((l) =>
+                                      l.includes(e.id) ? l.filter((x) => x !== e.id) : [...l, e.id],
+                                    )
+                                  }
+                                />
+                                {e.sira}. {t('ekran.tekil')}
+                              </label>
+                            </li>
+                          ))}
+                      </ul>
+                      <div className="mt-2 grid grid-cols-5 gap-1">
+                        {['duz', 'l', 'u', 'kutu', 'acili'].map((tip) => (
+                          <button
+                            key={tip}
+                            type="button"
+                            onClick={() => setGrupTipi(tip)}
+                            title={t('yerlesim.' + tip)}
+                            className={`rounded-md py-1.5 text-[13px] font-semibold leading-tight transition-colors ${
+                              grupTipi === tip
+                                ? 'bg-brand text-white'
+                                : 'border border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-400'
+                            }`}
+                          >
+                            {t('yerlesim.' + tip)}
+                          </button>
+                        ))}
+                      </div>
+                      {grupTipi === 'acili' && (
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="10"
+                            max="170"
+                            step="5"
+                            value={grupAcisi}
+                            onChange={(e) => setGrupAcisi(Number(e.target.value) || 135)}
+                            className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                          />
+                          <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={ekranlariBirlestir}
+                        disabled={grupSecim.length < 2}
+                        className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
+                      >
+                        {t('yerlesim.birlestir')}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
 
             </div>
           )}
@@ -9377,73 +9513,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/*
-            ÇOKLU EKRAN İŞLERİ AYRI PENCEREDE.
-
-            Ekran yerleşimi (birleştirme) ve içerik yalnızca birden çok
-            ekranla uğraşırken lazım; panelde dururken paneli sürekli
-            kaydırmak gerekiyordu.
-          */}
-          {hasModel && (
-            <button
-              type="button"
-              onClick={() => setCokluAyarAcik(true)}
-              className="mb-3 w-full flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-[17px] font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="4" width="9" height="16" rx="1.5" />
-                <rect x="13" y="4" width="9" height="16" rx="1.5" />
-              </svg>
-              {t('coklu.ac')}
-            </button>
-          )}
-
-          {/*
-            PARÇALI EKRAN — ekranın kendi özelliği.
-
-            Bu, odadaki ekran SAYISI değil: tek bir ekranın kaç parçadan
-            oluştuğu. Parçalar yan yana tek şerit olarak duruyor ve tek
-            içerik paylaşıyor. Odaya ikinci bir ekran koymak için
-            yukarıdaki "Ekran ekle" var.
-
-            Üstte Tek/Çoklu diye duruyordu ve "kaç ekran" sorusuyla
-            karışıyordu; türün ve kabin sayısının yanı doğru yeri.
-          */}
-          {hasModel && (
-            <div className="mb-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[17px] font-semibold text-neutral-700 dark:text-neutral-200">
-                  {t('parca.baslik')}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setMultiModalOpen(true)}
-                  className="shrink-0 rounded-lg border border-neutral-200 px-3 py-2 text-[15px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
-                >
-                  {screenMode === 'multi' ? t('parca.duzenle') : t('parca.bol')}
-                </button>
-              </div>
-              {/* Tek parçayken açıklamaya gerek yok: düğmenin adı zaten söylüyor. */}
-              {screenMode === 'multi' && screens.length > 0 && (
-                <p className="mt-1 mb-0 text-[15px] leading-snug text-neutral-500 dark:text-neutral-400">
-                  {screens.length} {t('parca.adet')}
-                </p>
-              )}
-              {screenMode === 'multi' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScreenMode('single')
-                    setScreens([])
-                  }}
-                  className="mt-2 w-full rounded-lg py-2 text-[15px] font-medium text-neutral-500 transition-colors hover:text-brand dark:text-neutral-400"
-                >
-                  {t('parca.tekeDon')}
-                </button>
-              )}
-            </div>
-          )}
-
-          {/*
             ÇÖZÜNÜRLÜK ve İÇERİK SOL PANELDE.
             İkisi de ekranın kendi özelliği — model, duvar ve kabin ayarlarının
             devamı. Sağ panel mekân ve yerleştirme işleriyle dolduğu için bu iki
@@ -9465,6 +9534,141 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </span>
                 </div>
               )}
+
+              <div className="mb-2">
+                <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('content.heading')}</h2>
+
+                {/*
+                  İÇERİK HAVUZU.
+
+                  Eskiden burada üç sabit kutu vardı ve yükleme doğrudan o anki
+                  ekranın içeriği oluyordu: aynı görseli ikinci ekranda
+                  kullanmak için yeniden yüklemek gerekiyordu. Artık yüklenen
+                  havuza giriyor, aşağıdaki listede her ekran kendi içeriğini
+                  havuzdan seçiyor.
+                */}
+                <input
+                  ref={havuzInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,video/mp4,video/webm,video/ogg"
+                  onChange={havuzaYukle}
+                  className="hidden"
+                />
+                <div className="flex flex-wrap gap-2">
+                  {icerikHavuzuTam.map((h) => (
+                    <div key={h.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => icerikAta(aktifEkranId, h.id)}
+                        title={h.ad}
+                        className={`relative w-[78px] h-14 rounded-lg overflow-hidden flex items-end justify-center ${
+                          icerikKimligi(content, contentUrl) === h.id
+                            ? 'ring-2 ring-brand'
+                            : 'border border-neutral-200 dark:border-[#2c333f]'
+                        }`}
+                      >
+                        <IcerikOnizleme oge={h} />
+                        <span className="relative w-full px-1 py-0.5 text-[12px] font-semibold text-white bg-black/50 truncate">
+                          {h.ad}
+                        </span>
+                      </button>
+                      {/* Yüklenen öğe havuzdan çıkarılabiliyor; sabitler duruyor. */}
+                      {h.id.startsWith('y') && (
+                        <button
+                          type="button"
+                          onClick={() => havuzdanCikar(h.id)}
+                          aria-label={t('content.havuzCikar')}
+                          title={t('content.havuzCikar')}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-neutral-700 text-white text-[12px] leading-none flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => havuzInputRef.current?.click()}
+                    className="w-[78px] h-14 rounded-lg border border-dashed border-neutral-300 dark:border-[#39414f] text-[14px] font-medium text-neutral-500 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                  >
+                    + {t('content.havuzYukle')}
+                  </button>
+                </div>
+
+                {/*
+                  EKRAN BAŞINA İÇERİK.
+
+                  Her satır bir ekran: hangi içeriği gösteriyor ve o içeriğin
+                  TAMAMINI mı yoksa kendine düşen dilimi mi. "Bölünmüş" ancak
+                  aynı içeriği seçen başka bir ekran varsa iş yapıyor.
+                */}
+                {sabitEkranlar.length >= 1 && (
+                  <div className="mt-3">
+                    <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
+                      {t('content.ekranBasina')}
+                    </div>
+                    <ul className="mt-1.5 mb-0 list-none p-0 flex flex-col gap-1.5">
+                      {ekranIcerikSatirlari.map((r) => {
+                        const secili = icerikHavuzuTam.find((x) => x.id === r.havuzId)
+                        return (
+                          <li
+                            key={r.id}
+                            className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2 py-1.5"
+                          >
+                            <span className="shrink-0 text-[15px] font-medium text-neutral-700 dark:text-neutral-200">
+                              {r.sira}.
+                            </span>
+                            <div className="relative w-10 h-7 shrink-0 rounded overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                              <IcerikOnizleme oge={secili} />
+                            </div>
+                            <select
+                              value={r.havuzId}
+                              onChange={(ev) => icerikAta(r.id, ev.target.value)}
+                              className="flex-1 min-w-0 text-[15px] rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-transparent px-1.5 py-1"
+                            >
+                              {icerikHavuzuTam.map((h) => (
+                                <option key={h.id} value={h.id}>
+                                  {h.ad}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="shrink-0 flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                              {[false, true].map((v) => (
+                                <button
+                                  key={String(v)}
+                                  type="button"
+                                  onClick={() => bolunmusAta(r.id, v)}
+                                  className={`px-2 py-1 text-[14px] ${
+                                    r.bolunmus === v
+                                      ? 'bg-brand text-white'
+                                      : 'text-neutral-500 dark:text-neutral-400'
+                                  }`}
+                                >
+                                  {v ? t('content.bolunmus') : t('content.tamami')}
+                                </button>
+                              ))}
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={icerigiTumuneUygula}
+                      className="mt-2 w-full py-2 rounded-lg text-[15.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                    >
+                      {t('content.tumuneUygula')}
+                    </button>
+                    <p className="mt-1.5 mb-0 text-[14.5px] leading-snug text-neutral-400 dark:text-neutral-500">
+                      {t('content.bolunmusIpucu')}
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-2 m-0">
+                  {t('content.hint')}
+                </p>
+              </div>
 
 
             </>
@@ -10987,288 +11191,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       )}
 
       {/* Sıfırlama onayı */}
-      {/*
-        ÇOKLU EKRAN PENCERESİ — yerleşim ve içerik.
-        İçerikleri panelden olduğu gibi taşındı.
-      */}
-      {cokluAyarAcik && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#001334]/45 p-4 sm:p-6"
-          onClick={() => setCokluAyarAcik(false)}
-        >
-          <div
-            className="my-auto w-full max-w-[720px] rounded-2xl bg-white p-5 shadow-2xl dark:bg-[#161a21] sm:p-7"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="m-0 text-[22px] font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
-                {t('coklu.baslik')}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setCokluAyarAcik(false)}
-                aria-label={t('sih.kapat')}
-                className="shrink-0 rounded-lg p-2 text-neutral-500 hover:text-brand dark:text-neutral-400"
-              >
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex flex-col gap-2">
-              {/*
-                EKRAN YERLEŞİMİ — birleştirme.
-
-                İki ya da daha çok ekran seçilip duruş biçimi veriliyor;
-                ekranlar kenarlarından birleşiyor ve aralarında boşluk
-                kalmıyor. Grup liderden TÜRETİLDİĞİ için tek parça taşınıyor
-                ve dikiş hiç açılmıyor (bkz. grupKoseleri). "Ayır" grubu
-                bozuyor, ekranlar bulundukları yerde kalıyor.
-
-                Birleştirme isteğe bağlı: seçilmeyen ekranlar bağımsız.
-              */}
-              {sabitEkranlar.length >= 1 && (
-                <div className="mt-3 rounded-lg border border-neutral-200 dark:border-[#2c333f] p-2.5">
-                  <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
-                    {t('yerlesim.baslik')}
-                  </div>
-                  {grup ? (
-                    <>
-                      <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('yerlesim.' + grup.tip)} · {grup.uyeler.length} {t('ekran.tekil')}
-                        {grup.tip === 'acili' ? ' · ' + grup.aci + '°' : ''}
-                      </p>
-                      <p className="mt-1 mb-0 text-[16.5px] leading-snug text-neutral-400 dark:text-neutral-500">
-                        {t('yerlesim.grupNot')}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={grubuAyir}
-                        className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                      >
-                        {t('yerlesim.ayir')}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('yerlesim.ipucu')}
-                      </p>
-                      <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1">
-                        {[
-                          ...sabitEkranlar.map((e, i) => ({ ...e, sira: e.sira || i + 1 })),
-                          { id: aktifEkranId, sira: aktifSira },
-                        ]
-                          .filter((e) => e.id)
-                          .sort((a, b) => (a.sira || 0) - (b.sira || 0))
-                          .map((e) => (
-                            <li key={e.id}>
-                              <label className="flex items-center gap-2 text-[16px] text-neutral-700 dark:text-neutral-200">
-                                <input
-                                  type="checkbox"
-                                  className="h-4 w-4"
-                                  checked={grupSecim.includes(e.id)}
-                                  onChange={() =>
-                                    setGrupSecim((l) =>
-                                      l.includes(e.id) ? l.filter((x) => x !== e.id) : [...l, e.id],
-                                    )
-                                  }
-                                />
-                                {e.sira}. {t('ekran.tekil')}
-                              </label>
-                            </li>
-                          ))}
-                      </ul>
-                      <div className="mt-2 grid grid-cols-5 gap-1">
-                        {['duz', 'l', 'u', 'kutu', 'acili'].map((tip) => (
-                          <button
-                            key={tip}
-                            type="button"
-                            onClick={() => setGrupTipi(tip)}
-                            title={t('yerlesim.' + tip)}
-                            className={`rounded-md py-1.5 text-[13px] font-semibold leading-tight transition-colors ${
-                              grupTipi === tip
-                                ? 'bg-brand text-white'
-                                : 'border border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-400'
-                            }`}
-                          >
-                            {t('yerlesim.' + tip)}
-                          </button>
-                        ))}
-                      </div>
-                      {grupTipi === 'acili' && (
-                        <div className="mt-2 flex items-center gap-1.5">
-                          <input
-                            type="number"
-                            min="10"
-                            max="170"
-                            step="5"
-                            value={grupAcisi}
-                            onChange={(e) => setGrupAcisi(Number(e.target.value) || 135)}
-                            className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
-                          />
-                          <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={ekranlariBirlestir}
-                        disabled={grupSecim.length < 2}
-                        className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
-                      >
-                        {t('yerlesim.birlestir')}
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-              <div className="mb-2">
-                <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('content.heading')}</h2>
-
-                {/*
-                  İÇERİK HAVUZU.
-
-                  Eskiden burada üç sabit kutu vardı ve yükleme doğrudan o anki
-                  ekranın içeriği oluyordu: aynı görseli ikinci ekranda
-                  kullanmak için yeniden yüklemek gerekiyordu. Artık yüklenen
-                  havuza giriyor, aşağıdaki listede her ekran kendi içeriğini
-                  havuzdan seçiyor.
-                */}
-                <input
-                  ref={havuzInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,video/mp4,video/webm,video/ogg"
-                  onChange={havuzaYukle}
-                  className="hidden"
-                />
-                <div className="flex flex-wrap gap-2">
-                  {icerikHavuzuTam.map((h) => (
-                    <div key={h.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => icerikAta(aktifEkranId, h.id)}
-                        title={h.ad}
-                        className={`relative w-[78px] h-14 rounded-lg overflow-hidden flex items-end justify-center ${
-                          icerikKimligi(content, contentUrl) === h.id
-                            ? 'ring-2 ring-brand'
-                            : 'border border-neutral-200 dark:border-[#2c333f]'
-                        }`}
-                      >
-                        <IcerikOnizleme oge={h} />
-                        <span className="relative w-full px-1 py-0.5 text-[12px] font-semibold text-white bg-black/50 truncate">
-                          {h.ad}
-                        </span>
-                      </button>
-                      {/* Yüklenen öğe havuzdan çıkarılabiliyor; sabitler duruyor. */}
-                      {h.id.startsWith('y') && (
-                        <button
-                          type="button"
-                          onClick={() => havuzdanCikar(h.id)}
-                          aria-label={t('content.havuzCikar')}
-                          title={t('content.havuzCikar')}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-neutral-700 text-white text-[12px] leading-none flex items-center justify-center hover:bg-red-600 transition-colors"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => havuzInputRef.current?.click()}
-                    className="w-[78px] h-14 rounded-lg border border-dashed border-neutral-300 dark:border-[#39414f] text-[14px] font-medium text-neutral-500 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                  >
-                    + {t('content.havuzYukle')}
-                  </button>
-                </div>
-
-                {/*
-                  EKRAN BAŞINA İÇERİK.
-
-                  Her satır bir ekran: hangi içeriği gösteriyor ve o içeriğin
-                  TAMAMINI mı yoksa kendine düşen dilimi mi. "Bölünmüş" ancak
-                  aynı içeriği seçen başka bir ekran varsa iş yapıyor.
-                */}
-                {sabitEkranlar.length >= 1 && (
-                  <div className="mt-3">
-                    <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
-                      {t('content.ekranBasina')}
-                    </div>
-                    <ul className="mt-1.5 mb-0 list-none p-0 flex flex-col gap-1.5">
-                      {ekranIcerikSatirlari.map((r) => {
-                        const secili = icerikHavuzuTam.find((x) => x.id === r.havuzId)
-                        return (
-                          <li
-                            key={r.id}
-                            className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2 py-1.5"
-                          >
-                            <span className="shrink-0 text-[15px] font-medium text-neutral-700 dark:text-neutral-200">
-                              {r.sira}.
-                            </span>
-                            <div className="relative w-10 h-7 shrink-0 rounded overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
-                              <IcerikOnizleme oge={secili} />
-                            </div>
-                            <select
-                              value={r.havuzId}
-                              onChange={(ev) => icerikAta(r.id, ev.target.value)}
-                              className="flex-1 min-w-0 text-[15px] rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-transparent px-1.5 py-1"
-                            >
-                              {icerikHavuzuTam.map((h) => (
-                                <option key={h.id} value={h.id}>
-                                  {h.ad}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="shrink-0 flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
-                              {[false, true].map((v) => (
-                                <button
-                                  key={String(v)}
-                                  type="button"
-                                  onClick={() => bolunmusAta(r.id, v)}
-                                  className={`px-2 py-1 text-[14px] ${
-                                    r.bolunmus === v
-                                      ? 'bg-brand text-white'
-                                      : 'text-neutral-500 dark:text-neutral-400'
-                                  }`}
-                                >
-                                  {v ? t('content.bolunmus') : t('content.tamami')}
-                                </button>
-                              ))}
-                            </div>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                    <button
-                      type="button"
-                      onClick={icerigiTumuneUygula}
-                      className="mt-2 w-full py-2 rounded-lg text-[15.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                    >
-                      {t('content.tumuneUygula')}
-                    </button>
-                    <p className="mt-1.5 mb-0 text-[14.5px] leading-snug text-neutral-400 dark:text-neutral-500">
-                      {t('content.bolunmusIpucu')}
-                    </p>
-                  </div>
-                )}
-
-                <p className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-2 m-0">
-                  {t('content.hint')}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setCokluAyarAcik(false)}
-              className="mt-5 w-full rounded-xl bg-brand px-4 py-3 text-[17px] font-semibold text-white hover:opacity-90"
-            >
-              {t('coklu.bitti')}
-            </button>
-          </div>
-        </div>
-      )}
-
       {resetConfirmOpen && (
         <div className="fixed inset-0 z-50 bg-[#001334]/45 flex items-center justify-center p-4" onClick={() => setResetConfirmOpen(false)}>
           <div className="bg-white dark:bg-[#161a21] rounded-3xl px-10 py-9 w-full max-w-md relative shadow-2xl" onClick={(e) => e.stopPropagation()}>

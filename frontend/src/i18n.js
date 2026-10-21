@@ -227,21 +227,9 @@ const dict = {
    * BU İKİSİ "KAÇ EKRAN" DEĞİL, "BU EKRAN KAÇ PARÇA" sorusunu soruyor.
    * Odadaki ekran sayısı aşağıdaki "Ekranlar" listesinde.
    */
-  'mode.single': { tr: 'Tek parça', en: 'One piece', ar: 'قطعة واحدة' },
-  'mode.multi': { tr: 'Çok parçalı', en: 'Multiple pieces', ar: 'عدة قطع' },
-  'coklu.ac': { tr: 'Çoklu ekran ayarları', en: 'Multi-screen settings', ar: 'إعدادات الشاشات المتعددة' },
-  'coklu.baslik': { tr: 'Çoklu ekran', en: 'Multiple screens', ar: 'شاشات متعددة' },
-  'coklu.bitti': { tr: 'Tamam', en: 'Done', ar: 'تم' },
-  'parca.baslik': { tr: 'Parçalı ekran', en: 'Multi-piece screen', ar: 'شاشة متعددة القطع' },
-  'parca.bol': { tr: 'Parçalara böl', en: 'Split into pieces', ar: 'قسّم إلى قطع' },
-  'parca.duzenle': { tr: 'Parçaları düzenle', en: 'Edit the pieces', ar: 'تحرير القطع' },
-  'parca.tekeDon': { tr: 'Tek parçaya dön', en: 'Back to one piece', ar: 'العودة إلى قطعة واحدة' },
-  'parca.adet': { tr: 'parçadan oluşuyor', en: 'pieces', ar: 'قطع' },
-  'parca.tek': {
-    tr: 'Tek parça. Odaya ikinci bir ekran koymak için yukarıdaki "Ekran ekle".',
-    en: 'One piece. To put a second screen in the room, use "Add screen" above.',
-    ar: 'قطعة واحدة. لإضافة شاشة ثانية إلى الغرفة استخدم «إضافة شاشة» أعلاه.',
-  },
+  'mode.single': { tr: 'Tek Ekran', en: 'Single Screen', ar: 'شاشة واحدة' },
+  'mode.multi': { tr: 'Çoklu Ekran', en: 'Multi Screen', ar: 'شاشات متعددة' },
+
 
   // ---------- Model bölümü ----------
   'model.heading': { tr: 'Model', en: 'Model', ar: 'الطراز' },
