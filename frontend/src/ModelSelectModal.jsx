@@ -358,6 +358,19 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
+  /*
+   * MODEL PENCERESİ HER AÇILIŞTA TEMİZ BAŞLIYOR.
+   *
+   * Seçim pencere kapanınca duruyordu. Satıra tıklamak SEÇİMİ ÇEVİRİYOR
+   * (aynı modele ikinci kez tıklamak seçimi kaldırıyor), dolayısıyla
+   * sıfırlayıp aynı modeli yeniden seçmek isteyen kullanıcı tıklıyor ve
+   * seçim hemen kalkıyordu: "Seçmek" gri kalıyor, hiçbir şey olmuyordu.
+   * Kullanıcının gördüğü "sıfırlayınca bozuluyor" buydu.
+   */
+  useEffect(() => {
+    if (open) setSelectedId(null)
+  }, [open])
+
   const filterList = useMemo(() => buildFilters(tab), [tab])
 
   // Pencere açıkken arkadaki sayfa kaymasın (mobilde kaydırma devri)

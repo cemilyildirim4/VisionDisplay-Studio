@@ -2015,6 +2015,84 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     kareleriTemizle()
     // Sıfırlama kalıcı olmalı: taslak durursa geri tuşuyla eski tasarım döner.
     taslagiSil()
+
+    /*
+     * ───────────────────────────────────────────────────────────────────
+     * FOTOĞRAFA BAĞLI HER ŞEY DE GİDİYOR.
+     *
+     * Burada bir ara yalnızca model ve içerik temizleniyordu. Fotoğrafın
+     * kendisi, referans ölçeği, işaretlenen alan, sabitlenen ekranlar ve
+     * sihirbazın hangi adımda kaldığı state'te duruyordu. Sahne 'none'
+     * olduğu için ekranda görünmüyorlardı, ama sonraki kurulumda geri
+     * geliyorlardı: eski fotoğrafın ölçeği yenisine uygulanıyor,
+     * silindiği sanılan ekranlar listeye dönüyor, sihirbaz yarım bir
+     * adımda açılıyordu.
+     * ───────────────────────────────────────────────────────────────────
+     */
+    /* 1) Fotoğraf ve ondan türeyen her şey */
+    setOzelSahne(null)
+    setOzelUyari(null)
+    setOzelNesneler(null)
+    setOzelInceleniyor(false)
+    setSigmazUyari(null)
+    setKenarHarita(null)
+    setExif35(null)
+    setFotoOdak(null)
+    setIsaretZoom(1)
+    setIsaretKay({ x: 0, y: 0 })
+
+    /* 2) Referans ve ölçek */
+    setRefNokta([])
+    setRefUzunlukCm('')
+    setRefBoyCm('')
+    setRefKipi(false)
+    setRefMesaj(null)
+    setRefEskidi(false)
+    setRef2Nokta([])
+    setRef2UzunlukCm('')
+    setRef2Kipi(false)
+
+    /* 3) İşaretlenen alan */
+    setAlanKipi(false)
+    setAlanNokta([])
+    setAlanCizgi([])
+    setAlanKenarKipi(false)
+    setAlanElleEn('')
+    setAlanElleBoy('')
+    setAlanKonum({ u: 0.5, v: 0.5 })
+    setAlanDoldur(false)
+    setAlanOlcek(null)
+
+    /* 4) Tasarımın yeri: elle dörtgen, hedef yüzey, ölçü kutusu */
+    setElleKose(null)
+    setElleAci({ yaw: 0, tilt: 0 })
+    setHedefKose(null)
+    setHedefTur(null)
+    setKoseKipi(false)
+    setTaslakKutu(null)
+    setOlcuKutu(null)
+    setKutuEn('')
+    setKutuBoy('')
+    setKutuMesaj(null)
+    setKutuDuzen(null)
+    setCizimDuzeltme({ x: 0, y: 0 })
+
+    /* 5) L köşesi */
+    setLKoseKipi(false)
+    setLKoseNokta([])
+    setLKoseBoyCm('')
+
+    /* 6) Ekranlar ve gruplar */
+    setSabitEkranlar([])
+    setAktifEkranId(null)
+    setAktifSira(1)
+    setGrup(null)
+    setGrupSecim([])
+
+    /* 7) Sihirbaz: hiçbir adımda değil */
+    setSihirbazAdim(0)
+    setDuzenlemede(false)
+    setTasarimAcik(false)
   }
 
   /*

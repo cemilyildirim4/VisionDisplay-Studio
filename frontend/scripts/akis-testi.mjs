@@ -157,6 +157,31 @@ async function dortKose(s) {
   }
 }
 
+/**
+ * MODEL SEÇ + FOTOĞRAF YÜKLE.
+ *
+ * Hem ilk kurulumda hem sıfırlamadan sonraki kurulumda aynı adımlar.
+ */
+async function modelVeFotograf(s, bas, INCELEME) {
+  await bas('Yapılandırmayı başlat', 2500)
+  await s.getByText('DEMO-P1.25').first().click()
+  await s.waitForTimeout(900)
+  await s.evaluate(() => {
+    const d = [...document.querySelectorAll('button')].find((x) => /Seçmek/.test(x.innerText) && !x.disabled)
+    if (d) d.click()
+  })
+  await s.waitForTimeout(4000)
+  await bas('Kendi fotoğrafım', 2000)
+  for (const g of await s.$$('input[type="file"]')) {
+    const kabul = await g.getAttribute('accept')
+    if (kabul && kabul.includes('webp')) {
+      await g.setInputFiles(FOTO)
+      break
+    }
+  }
+  await s.waitForTimeout(INCELEME)
+}
+
 /** Alanın köşelerinden yalnızca ilk üçünü tıklar. */
 async function ucKose(s) {
   const t = await tuval(s)
@@ -504,12 +529,79 @@ const c = await akis('C — KÖŞE GÖRÜNMÜYOR', async ({ s, bas, denetle, ice
   return true
 })
 
+/* ── D) SIFIRLA, SONRA BAŞTAN KUR ─────────────────────────────────── */
+const dYol = await akis('D — SIFIRLA VE BAŞTAN KUR', async ({ s, bas, denetle, icerir, dus }) => {
+  /* Akışın ORTASINDA sıfırlanıyor: en çok artık state burada kalıyor. */
+  if (!(await bas('Alanı işaretle', 1800))) return dus('"Alanı işaretle" düğmesi bulunamadı')
+  await ucKose(s)
+  if (!(await denetle('3 köşe işaretlendi (yarım bırakılacak)'))) return false
+
+  if (!(await bas('Sıfırla', 1200))) return dus('"Sıfırla" düğmesi bulunamadı')
+  if (!(await icerir('tüm ayarları sıfırlar'))) return dus('sıfırlama onayı açılmadı')
+  if (!(await bas('Tamam', 3500))) return dus('sıfırlama onaylanamadı')
+  if (!(await denetle('sıfırlandı'))) return false
+
+  /* Sıfırlama gerçekten baştan başlatmalı. */
+  const temiz = await s.evaluate(() => {
+    const g = (document.body.innerText || '').replace(/\s+/g, ' ')
+    const kart = [...document.querySelectorAll('div')].find(
+      (d) => /border-brand/.test(d.className || '') && /rounded-xl/.test(d.className || ''),
+    )
+    return {
+      baslat: /Yapılandırmayı başlat/.test(g),
+      kart: !!kart,
+      foto: !!document.querySelector('#pdf-onizleme img'),
+      tasarim: !!document.querySelector('[data-tasarim-yuz]'),
+      ekran: (g.match(/\d+\. ekran/g) || []).length,
+    }
+  })
+  console.log('  · sıfırlamadan sonra          :', JSON.stringify(temiz))
+  if (!temiz.baslat) return dus('başlangıç ekranına dönülmedi')
+  if (temiz.kart) return dus('sihirbaz kartı hâlâ açık')
+  if (temiz.foto) return dus('fotoğraf hâlâ duruyor')
+  if (temiz.tasarim) return dus('tasarım hâlâ duruyor')
+  if (temiz.ekran) return dus('ekran listesi temizlenmedi')
+
+  /* Baştan kur: ikinci kurulum ilk kurulum gibi davranmalı. */
+  await modelVeFotograf(s, bas, INCELEME_SURESI)
+  if (!(await denetle('sıfırlamadan sonra yeniden kuruldu'))) return false
+
+  if (!(await icerir('Referans ölçü'))) return dus('ikinci kurulumda referans adımı açılmadı')
+  if (await icerir('Ölçek alındı')) return dus('eski fotoğrafın ölçeği taşındı')
+
+  /* Referans ve alan bir kez daha: ikinci kurulum sonuna kadar yürümeli. */
+  const t = await tuval(s)
+  for (const [px, py] of [
+    [t.x + t.w * 0.3, t.y + t.h * 0.7],
+    [t.x + t.w * 0.3, t.y + t.h * 0.3],
+  ]) {
+    await s.mouse.move(px, py)
+    await s.mouse.down()
+    await s.mouse.up()
+    await s.waitForTimeout(500)
+  }
+  if (!(await bas('Devam', 1600))) return dus('ikinci kurulumda "Devam" yok')
+  if (!(await kartaSayiYaz(s, 210))) return dus('ikinci kurulumda santim kutusu yok')
+  await s.waitForTimeout(900)
+  if (!(await bas('Devam', 1800))) return dus('ikinci kurulumda ölçekten sonra "Devam" yok')
+  if (!(await bas('Alanı işaretle', 1800))) return dus('ikinci kurulumda alan adımı açılmadı')
+
+  /* Eski işaretler geride kalmamalı. */
+  if (!(await icerir('0 / 4'))) return dus('eski köşeler taşındı (sayaç sıfırdan başlamadı)')
+
+  await dortKose(s)
+  await bas('Alanı onayla', 2500)
+  if (!(await denetle('ikinci kurulumda alan onaylandı'))) return false
+  return true
+})
+
 await tarayici.close()
 
 console.log('\n─────────────────────────────')
 console.log('A (köşe işaretle)    :', a ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
 console.log('B (serbest yerleştir):', b ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
 console.log('C (köşe görünmüyor)  :', c ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
+console.log('D (sıfırla, baştan)  :', dYol ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
 if (hataSayisi > 0) {
   console.log('\nAKIS TESTI DUSTU — yayina alinmamali.')
   process.exitCode = 1

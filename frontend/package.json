@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint && node scripts/tdz-denetimi.mjs",
+    "lint": "node scripts/lint.mjs",
     "preview": "vite preview",
     "test": "node src/homografi.test.mjs && node src/referansOlcek.test.mjs && node src/referansDuzlem.test.mjs",
     "tdz": "node scripts/tdz-denetimi.mjs",
