@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { kenarlardanKoseler, cizgiyiUzat } from './alanKenar.js'
+import { cizgiyiUzat } from './alanKenar.js'
 
 /*
  * İŞARET KÜÇÜK, VURUŞ ALANI BÜYÜK.
@@ -98,6 +98,11 @@ export default function ReferansSecici({
    * kenar görünüyor.
    */
   kenarCizim = false,
+  /*
+   * İki kenarın kesişimi — görünmeyen köşe. Hesabı App yapıyor; burada
+   * yalnızca vurgulanıyor ki kullanıcı köşeyi eklemeden önce görsün.
+   */
+  kesisimNoktasi = null,
 }) {
   /*
    * HER ŞEY FOTOĞRAFIN İÇİNDE KALIYOR.
@@ -315,9 +320,7 @@ export default function ReferansSecici({
   if (kenarCizim) {
     for (let i = 0; i + 1 < noktalar.length; i += 2) kenarCizgileri.push([noktalar[i], noktalar[i + 1]])
   }
-  const kenarDortgen =
-    kenarCizim && kenarCizgileri.length === 4 ? kenarlardanKoseler(kenarCizgileri) : null
-  const kenarDortgenYolu = kenarDortgen ? kenarDortgen.map((p) => `${p.x},${p.y}`).join(' ') : null
+
   const uzunlukPx = cizgiKipi && a && b ? Math.hypot(b.x - a.x, b.y - a.y) : 0
   /*
    * ROZETTE YAZAN SAYI ORİJİNAL GÖRSEL PİKSELİ.
@@ -532,26 +535,12 @@ export default function ReferansSecici({
           )
         })}
 
-      {/* Dört çizgi tamamlandı: kesişimlerden çıkan alan çerçevesi. */}
-      {kenarDortgenYolu && (
-        <>
-          <polygon
-            points={kenarDortgenYolu}
-            fill="rgba(22,163,74,0.10)"
-            stroke="rgba(0,0,0,0.45)"
-            strokeWidth="5.5"
-            strokeDasharray="8 5"
-            pointerEvents="none"
-          />
-          <polygon
-            points={kenarDortgenYolu}
-            fill="none"
-            stroke={renk}
-            strokeWidth="3"
-            strokeDasharray="8 5"
-            pointerEvents="none"
-          />
-        </>
+      {/* Bulunan köşe: eklemeden önce nerede olacağı görünüyor. */}
+      {kesisimNoktasi && (
+        <g pointerEvents="none">
+          <circle cx={kesisimNoktasi.x} cy={kesisimNoktasi.y} r="11" fill="none" stroke="#f59e0b" strokeWidth="2.5" />
+          <circle cx={kesisimNoktasi.x} cy={kesisimNoktasi.y} r="2.5" fill="#f59e0b" />
+        </g>
       )}
 
       {/* Tamamlanmamış dörtgen: konulan noktalar arasındaki kenarlar. */}
@@ -686,15 +675,29 @@ export default function ReferansSecici({
       {noktalar.map((p, i) => (
         <g key={i}>
           {/* Görünmeyen geniş vuruş alanı: küçük daireyi tutturmak zor. */}
-          <circle
-            cx={p.x}
-            cy={p.y}
-            r={VURUS}
-            fill="rgba(0,0,0,0.001)"
-            onPointerDown={noktayaBas(i)}
-            /* Katman fareyi bırakmış olsa da tutamak her zaman tutuluyor. */
-            style={{ cursor: 'grab', pointerEvents: 'auto' }}
-          />
+          {/*
+            TUTAMAK YALNIZCA İŞARETLEME BİTTİKTEN SONRA.
+
+            Vuruş alanı işaretten geniş (18 piksel). İşaretleme sürerken bu
+            alan yeni nokta koymayı engelliyordu: kullanıcı var olan bir
+            noktanın yakınına — örneğin ikinci ekranı birincinin köşesine
+            denk getirmek için tam onun üstüne — tıklayamıyor, onun yerine
+            o noktayı sürüklemeye başlıyordu.
+
+            Kontenjan dolana kadar tutamak kapalı; dolunca açılıyor ve köşe
+            yeri düzeltilebiliyor.
+          */}
+          {noktalar.length >= enCokNokta && (
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={VURUS}
+              fill="rgba(0,0,0,0.001)"
+              onPointerDown={noktayaBas(i)}
+              /* Katman fareyi bırakmış olsa da tutamak her zaman tutuluyor. */
+              style={{ cursor: 'grab', pointerEvents: 'auto' }}
+            />
+          )}
           {/*
             Beyaz dış hat: işaret hem açık hem koyu zeminde görünür kalıyor.
             İç halka boş — altındaki piksel okunuyor.

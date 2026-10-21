@@ -664,7 +664,7 @@ function SihirbazKart({
                     : 'text-neutral-500 dark:text-neutral-400'
                 }`}
               >
-                {kenarCizgiSayisi} / 4 {t('sih.kenarSayac')}
+                {kenarCizgiSayisi} / 2 {t('sih.kenarSayac')}
               </p>
               <div className="mt-2 flex items-center gap-1.5">
                 <button type="button" onClick={onKenarVazgec} className={yan}>
@@ -679,7 +679,7 @@ function SihirbazKart({
                   {t('sih.kenarKur')}
                 </button>
               </div>
-              {kenarCizgiSayisi >= 4 && !kenarAlaniHazir && (
+              {kenarCizgiSayisi >= 2 && !kenarAlaniHazir && (
                 <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{t('sih.kenarKesismedi')}</p>
               )}
             </>

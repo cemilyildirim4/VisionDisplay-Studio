@@ -153,7 +153,7 @@ import { useSession } from './SessionContext.jsx'
 import { icDortgen, duvarDunyasi, dunyaDortgeni } from './homografi.js'
 import { bolmeDilimleri } from './icerikBolme.js'
 import { kenarHaritasiCikar, yapisacakNokta } from './kenarBulucu.js'
-import { kenarlardanKoseler } from './alanKenar.js'
+import { dogruKesisimi } from './alanKenar.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
@@ -1057,13 +1057,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [alanCizgi, setAlanCizgi] = useState([])
   /*
-   * KENAR ÇİZİMİ BİR ALT KİP.
+   * GÖRÜNMEYEN KÖŞEYİ BULMA — tek köşelik bir alt kip.
    *
-   * Varsayılan yol dört köşeye tıklamak. Köşe görünmüyorsa (kadrajın
+   * Varsayılan yol dört köşeye tıklamak. Bir köşe görünmüyorsa (kadrajın
    * dışında, bir eşyanın arkasında ya da duvar orada bitmiyorsa) kullanıcı
-   * "Köşe görünmüyor" diyor ve kenar çizimine geçiyor: dört kenara birer
-   * çizgi çekiliyor, köşeler kesişimlerden kuruluyor ve kip kapanıyor.
-   * Böylece ince ayar yine köşelerden yapılıyor.
+   * "Köşe görünmüyor" diyor ve O KÖŞEDE BİRLEŞEN İKİ KENARI işaretliyor:
+   * her kenarın görünen parçasından ikişer nokta. İki doğrunun kesişimi o
+   * köşe oluyor, köşe listeye ekleniyor ve kip kapanıyor.
+   *
+   * Dört kenarı birden çizdirmek denenip bırakıldı: görünmeyen şey tek bir
+   * köşe, dördünü birden çizdirmek görünen köşeleri de elden çıkarıyordu.
    */
   const [alanKenarKipi, setAlanKenarKipi] = useState(false)
   /*
@@ -3833,32 +3836,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAlanKenarKipi(false)
   }
 
-  /* Köşe görünmüyor: kenar çizimine geç. */
+  /* Köşe görünmüyor: o köşede birleşen iki kenarı işaretlemeye geç. */
   const kenarCizimeGec = () => {
     setAlanCizgi([])
     setAlanKenarKipi(true)
   }
 
-  /* Kenar çiziminden vazgeç: köşe seçmeye dön, köşelere dokunma. */
+  /* Vazgeç: köşe seçmeye dön, konulmuş köşelere dokunma. */
   const kenarCizimdenVazgec = () => {
     setAlanCizgi([])
     setAlanKenarKipi(false)
   }
 
   /*
-   * KENARLARDAN KÖŞELERİ KUR.
+   * İKİ KENARIN KESİŞİMİ = GÖRÜNMEYEN KÖŞE.
    *
-   * Dört çizginin kesişimleri alanın köşeleri oluyor; kip kapanıyor ve
-   * kullanıcı normal köşe tutamaklarıyla ince ayar yapabiliyor.
+   * Köşe kadrajın dışına düşebiliyor; sınır uygulanmıyor çünkü hesap
+   * görüntü düzleminde çalışıyor ve pikselin fotoğrafın içinde olması
+   * gerekmiyor.
    */
-  const kenarlardanKur = () => {
+  const gorunmeyenKoseyiEkle = () => {
     const t = alanCizgi.map(oranTuvale)
-    if (t.length < 8) return
-    const cizgiler = []
-    for (let i = 0; i + 1 < t.length; i += 2) cizgiler.push([t[i], t[i + 1]])
-    const k = kenarlardanKoseler(cizgiler)
+    if (t.length < 4) return
+    const k = dogruKesisimi(t[0], t[1], t[2], t[3])
     if (!k) return
-    setAlanNokta(k.map(tuvalOrana))
+    setAlanNokta((l) => (l.length >= 4 ? l : [...l, tuvalOrana(k)]))
     setAlanCizgi([])
     setAlanKenarKipi(false)
   }
@@ -5293,13 +5295,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Sığdırma işlevinin kendi parametresiyle çakışmasın diye ikinci ad. */
   const alanTuvalDurum = alanTuval
 
-  /* Dört çizgi tamam mı ve kesişimleri bir alan veriyor mu. */
-  const kenarAlaniHazir = (() => {
+  /* İki kenar tamam ve kesişiyorlar mı — kesişim de gösteriliyor. */
+  const kenarKesisimi = (() => {
     const t = alanCizgi.map(oranTuvale)
-    if (t.length < 8) return false
-    const cizgiler = []
-    for (let i = 0; i + 1 < t.length; i += 2) cizgiler.push([t[i], t[i + 1]])
-    return !!kenarlardanKoseler(cizgiler)
+    if (t.length < 4) return null
+    return dogruKesisimi(t[0], t[1], t[2], t[3])
   })()
 
   /*
@@ -8244,7 +8244,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               contentUrl={contentUrl}
               oranTuvale={oranTuvale}
               dilimler={bolunmusDilimler}
-              onSec={ekraniDuzenle}
+              /*
+               * İŞARETLEME SÜRERKEN EKRAN SEÇİLMİYOR.
+               *
+               * Sabit ekranlar tıklanabilir (üstlerine basınca düzenlemeye
+               * giriliyor). Ama alan işaretlenirken kullanıcı tam onların
+               * köşesine nokta koymak istiyor — uç uca getirmenin yolu bu.
+               * O sırada tıklama ekranı seçiyordu ve nokta hiç konmuyordu.
+               */
+              onSec={olcuAraciAcik ? null : ekraniDuzenle}
             />
           )}
 
@@ -8481,7 +8489,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               olcek={isaretZoom}
               onKaydir={isaretKaydir}
               kenarCizim
-              enCokNokta={8}
+              /* İki kenar = dört nokta; kesişimleri aranan köşe. */
+              enCokNokta={4}
+              kesisimNoktasi={kenarKesisimi}
               noktalar={alanCizgi.map(oranTuvale)}
               onDegis={kenarCizgileriDegisti}
               yapiskanNoktalar={yapiskanNoktalar}
@@ -9923,10 +9933,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             /* Kenar çizimi alt kipi: köşe görünmediğinde. */
                             kenarCizim={alanKenarKipi}
                             kenarCizgiSayisi={Math.floor(alanCizgi.length / 2)}
-                            kenarAlaniHazir={kenarAlaniHazir}
+                            kenarAlaniHazir={!!kenarKesisimi}
                             onKenarCizimeGec={kenarCizimeGec}
                             onKenarVazgec={kenarCizimdenVazgec}
-                            onKenarlardanKur={kenarlardanKur}
+                            onKenarlardanKur={gorunmeyenKoseyiEkle}
                             onAlanBitir={alaniBitir}
                             /* Sarmalayici sart: dogrudan verilince React tiklama olayini
                                ilk parametre olarak gecirir ve dortgen sanilir. */

@@ -791,16 +791,16 @@ const dict = {
     ar: 'انقر بالترتيب: أعلى اليسار، أعلى اليمين، أسفل اليمين، أسفل اليسار. يمكن سحب العلامات لاحقًا. إذا كانت الزاوية غير مرئية فاستخدم الزر أدناه.',
   },
   'sih.kenarAciklama': {
-    tr: 'Her kenar için, kenarın göründüğü yerin iki ucuna tıklayın.',
-    en: 'For each edge, click the two ends of the part you can see.',
-    ar: 'لكل حافة، انقر على طرفي الجزء الظاهر منها.',
+    tr: 'Görünmeyen köşede birleşen iki kenarı işaretleyin: her kenarın görünen ucundan ikişer nokta.',
+    en: 'Mark the two edges that meet at the hidden corner: two points on the visible part of each.',
+    ar: 'حدّد الحافتين اللتين تلتقيان عند الزاوية المخفية: نقطتان على الجزء الظاهر من كل منهما.',
   },
   'sih.kenarDetay': {
-    tr: 'Üst, alt, sol ve sağ kenar için birer çizgi; sıra önemli değil. Kenar duvarın kenarı olabilir, ekranın biteceği hayali bir çizgi de. Köşeler çizgilerin kesişiminden çıkıyor, dolayısıyla köşe kadrajın dışında kalsa bile olur.',
-    en: 'One line for the top, bottom, left and right edge; the order does not matter. An edge can be the wall’s edge or an imaginary line where the screen ends. Corners come from where the lines cross, so a corner may fall outside the frame.',
-    ar: 'خط لكل حافة، والترتيب غير مهم. تنتج الزوايا من تقاطع الخطوط، لذا قد تقع زاوية خارج الإطار.',
+    tr: 'İki çizgi uzatılıp kesiştirilir; kesişim o köşe olur. Köşe kadrajın dışına düşse de olur. Köşe eklenince köşe işaretlemeye dönersiniz, kalan köşeleri normal tıklarsınız.',
+    en: 'The two lines are extended until they cross; the crossing is that corner. It may fall outside the frame. After it is added you return to clicking the remaining corners normally.',
+    ar: 'يُمدّ الخطان حتى يتقاطعا، والتقاطع هو تلك الزاوية، وقد تقع خارج الإطار. بعد إضافتها تعود إلى النقر على بقية الزوايا.',
   },
-  'sih.kenarKur': { tr: 'Köşeleri oluştur', en: 'Build the corners', ar: 'أنشئ الزوايا' },
+  'sih.kenarKur': { tr: 'Köşeyi ekle', en: 'Add the corner', ar: 'أضف الزاوية' },
   'sih.kenarBasla': {
     tr: 'Köşe görünmüyor — kenarlardan bul',
     en: 'Corner not visible — find it from the edges',
@@ -809,10 +809,11 @@ const dict = {
   'sih.vazgec': { tr: 'Vazgeç', en: 'Cancel', ar: 'إلغاء' },
   'sih.alaniDuzenle': { tr: 'Alanı düzenle', en: 'Edit the area', ar: 'تعديل المنطقة' },
   'sih.kenarSayac': { tr: 'kenar', en: 'edges', ar: 'حواف' },
+  'sih.kesisimHazir': { tr: 'Köşe bulundu ✓', en: 'Corner found ✓', ar: 'تم إيجاد الزاوية ✓' },
   'sih.kenarKesismedi': {
-    tr: 'Çizgiler bir alan oluşturmuyor; karşılıklı iki kenarı aynı yöne çizmiş olabilirsiniz.',
-    en: 'The lines do not form an area; two opposite edges may have been drawn in the same direction.',
-    ar: 'لا تشكّل الخطوط منطقة؛ ربما رُسمت حافتان متقابلتان في الاتجاه نفسه.',
+    tr: 'İki çizgi kesişmiyor; birbirine paralel görünüyorlar.',
+    en: 'The two lines do not cross; they look parallel.',
+    ar: 'لا يتقاطع الخطان؛ يبدوان متوازيين.',
   },
   'sih.2.aciklama': {
     tr: 'İşaretlediğiniz iki nokta arası gerçekte kaç santim?',

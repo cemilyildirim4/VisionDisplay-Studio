@@ -157,34 +157,48 @@ async function dortKose(s) {
   }
 }
 
-/**
- * DÖRT KENAR ÇİZGİSİ ÇİZER.
- *
- * Her kenar iki tıklama: kenarın göründüğü yerin iki ucu. Sıra kasten
- * KARIŞIK veriliyor (alt, sağ, üst, sol) — uygulamanın hangi çizginin
- * hangi kenar olduğunu kendisi bulması gerekiyor. Çizgiler kenarın
- * tamamını değil ORTA parçasını kaplıyor; köşeler kesişimden çıkmalı.
- */
-async function dortKenar(s) {
+/** Alanın köşelerinden yalnızca ilk üçünü tıklar. */
+async function ucKose(s) {
   const t = await tuval(s)
-  const sol = t.x + t.w * 0.33
-  const ust = t.y + t.h * 0.26
-  const sag = sol + t.w * 0.26
-  const alt = ust + t.h * 0.28
+  const x = t.x + t.w * 0.33
+  const y = t.y + t.h * 0.26
+  const en = t.w * 0.26
+  const boy = t.h * 0.28
+  for (const [px, py] of [
+    [x, y],
+    [x + en, y + boy * 0.06],
+    [x + en, y + boy],
+  ]) {
+    await s.mouse.move(px, py)
+    await s.mouse.down()
+    await s.mouse.up()
+    await s.waitForTimeout(420)
+  }
+  return { x, y, en, boy }
+}
+
+/**
+ * GÖRÜNMEYEN KÖŞENİN İKİ KENARINI İŞARETLER.
+ *
+ * Eksik köşe sol alt. Orada birleşen iki kenar: sol kenar (yukarıdan
+ * aşağı) ve alt kenar (sağdan sola). Her birinin GÖRÜNEN parçasından
+ * ikişer nokta konuyor; köşenin kendisine hiç tıklanmıyor.
+ */
+async function ikiKenar(s, k) {
   const ic = (a, b, p) => a + (b - a) * p
-  const cizgiler = [
-    /* alt */ [[ic(sol, sag, 0.2), alt], [ic(sol, sag, 0.8), alt]],
-    /* sağ */ [[sag, ic(ust, alt, 0.2)], [sag, ic(ust, alt, 0.8)]],
-    /* üst */ [[ic(sol, sag, 0.2), ust], [ic(sol, sag, 0.8), ust]],
-    /* sol */ [[sol, ic(ust, alt, 0.2)], [sol, ic(ust, alt, 0.8)]],
+  const noktalar = [
+    /* sol kenar: üstten ortaya kadar */
+    [k.x, ic(k.y, k.y + k.boy, 0.1)],
+    [k.x, ic(k.y, k.y + k.boy, 0.55)],
+    /* alt kenar: sağdan ortaya kadar */
+    [ic(k.x, k.x + k.en, 0.9), k.y + k.boy],
+    [ic(k.x, k.x + k.en, 0.45), k.y + k.boy],
   ]
-  for (const c of cizgiler) {
-    for (const [px, py] of c) {
-      await s.mouse.move(px, py)
-      await s.mouse.down()
-      await s.mouse.up()
-      await s.waitForTimeout(380)
-    }
+  for (const [px, py] of noktalar) {
+    await s.mouse.move(px, py)
+    await s.mouse.down()
+    await s.mouse.up()
+    await s.waitForTimeout(420)
   }
 }
 
@@ -457,29 +471,33 @@ const b = await akis('B — SERBEST YERLEŞTİR', async ({ s, bas, denetle, icer
 })
 
 /* ── C) KÖŞE GÖRÜNMÜYOR → KENARLARDAN ─────────────────────────────── */
-const c = await akis('C — KÖŞE GÖRÜNMÜYOR, KENARLARDAN', async ({ s, bas, denetle, icerir, dus }) => {
+const c = await akis('C — KÖŞE GÖRÜNMÜYOR', async ({ s, bas, denetle, icerir, dus }) => {
   if (!(await bas('Alanı işaretle', 1800))) return dus('"Alanı işaretle" düğmesi bulunamadı')
   if (!(await denetle('alan işaretlemeye geçildi'))) return false
+
+  /* Üç köşe normal; dördüncü köşe görünmüyor varsayılıyor. */
+  const k = await ucKose(s)
+  if (!(await denetle('3 köşe işaretlendi'))) return false
 
   if (!(await bas('Köşe görünmüyor — kenarlardan bul', 1500))) {
     return dus('"Köşe görünmüyor" düğmesi bulunamadı')
   }
-  if (!(await icerir('kenarın göründüğü yerin iki ucuna'))) return dus('kenar çizim kipi açılmadı')
-  if (!(await denetle('kenar çizimine geçildi'))) return false
+  if (!(await icerir('birleşen iki kenarı'))) return dus('köşe bulma kipi açılmadı')
+  if (!(await denetle('köşe bulma kipine geçildi'))) return false
 
-  await dortKenar(s)
-  if (!(await denetle('4 kenar çizildi'))) return false
+  await ikiKenar(s, k)
+  if (!(await denetle('iki kenar işaretlendi'))) return false
 
-  if (!(await bas('Köşeleri oluştur', 2000))) return dus('"Köşeleri oluştur" açılmadı')
-  if (!(await denetle('köşeler kenarlardan kuruldu'))) return false
+  if (!(await bas('Köşeyi ekle', 1800))) return dus('"Köşeyi ekle" açılmadı (kesişim bulunamadı)')
+  if (!(await denetle('köşe kenarlardan bulundu'))) return false
 
-  /* Kip kapanmalı ve köşe seçmeye dönülmeli: ince ayar köşelerden. */
-  if (await icerir('kenarın göründüğü yerin iki ucuna')) return dus('kenar çizim kipi kapanmadı')
-  if (!(await icerir('köşesini işaretleyin'))) return dus('köşe seçmeye dönülmedi')
+  /* Kip kapanmalı, köşe seçmeye dönülmeli ve dördüncü köşe eklenmiş olmalı. */
+  if (await icerir('birleşen iki kenarı')) return dus('köşe bulma kipi kapanmadı')
+  if (!(await icerir('4 / 4'))) return dus('dördüncü köşe eklenmedi')
 
   const kart = await kartBilgisi(s)
   if (!(kart.dugmeler || []).includes('Alanı onayla')) {
-    return dus('kenarlardan kurulan alan onaylanabilir değil')
+    return dus('kenarlardan bulunan köşeyle alan onaylanabilir değil')
   }
   await bas('Alanı onayla', 2500)
   if (!(await denetle('alan onaylandı'))) return false
@@ -491,7 +509,7 @@ await tarayici.close()
 console.log('\n─────────────────────────────')
 console.log('A (köşe işaretle)    :', a ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
 console.log('B (serbest yerleştir):', b ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
-console.log('C (kenarlardan bul)  :', c ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
+console.log('C (köşe görünmüyor)  :', c ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
 if (hataSayisi > 0) {
   console.log('\nAKIS TESTI DUSTU — yayina alinmamali.')
   process.exitCode = 1
