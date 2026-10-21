@@ -1040,6 +1040,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [grupSecim, setGrupSecim] = useState([])
   const [grupTipi, setGrupTipi] = useState('duz')
   const [grupAcisi, setGrupAcisi] = useState(135)
+  /*
+   * L YERLEŞİMİNDE SOL KANADIN SÜTUN SAYISI.
+   * null ise ekran L değil. Sağ kanat kalan sütunlar.
+   */
+  const [lSolCols, setLSolCols] = useState(null)
+  /* Yerleşim panelinde girilen sol kanat sütunu — henüz uygulanmamış değer. */
+  const [lSolSecim, setLSolSecim] = useState(1)
 
   const [duzenlemede, setDuzenlemede] = useState(false)
   /*
@@ -2334,13 +2341,43 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * `wallWm/wallHm` ile birebir aynı kural; ikisi ayrışırsa mekân ile ekranlar
    * yine birbirini tutmaz.
    */
-  const cokluAktif = screenMode === 'multi' && screens.length > 0
-  const tasarimWm = cokluAktif
-    ? screens.reduce((t, s) => t + Math.max(1, s.cols) * cwM, 0)
-    : ekranWm
-  const tasarimHm = cokluAktif
-    ? Math.max(...screens.map((s) => Math.max(1, s.rows) * chM))
-    : ekranHm
+  /*
+   * TASARIMDAKİ BÜTÜN EKRANLAR — fotoğrafsız şerit için.
+   *
+   * Liste ekran kayıtlarından ve elde duran ekrandan kuruluyor; ayrıca bir
+   * "çoklu ekran" durumu tutulmuyor (tek sistem). Her parçanın ölçüsü
+   * KENDİ yönünden türüyor.
+   */
+  const ekranParcalari = [
+    ...sabitEkranlar.map((e, i) => ({ sira: e.sira || i + 1, ...(e.ayar || {}) })),
+    { sira: aktifSira, cols, rows, orientation, screenType, lSolCols },
+  ]
+    .sort((a, b) => (a.sira || 0) - (b.sira || 0))
+    .map((e) => {
+      const dikey = e.orientation === 'portrait'
+      const kw = ((dikey ? selectedModel?.heightMm : selectedModel?.widthMm) || 500) / 1000
+      const kh = ((dikey ? selectedModel?.widthMm : selectedModel?.heightMm) || 500) / 1000
+      const c = Math.max(1, e.cols || 1)
+      const r = Math.max(1, e.rows || 1)
+      const sol = e.lSolCols ? Math.max(1, Math.min(c - 1, e.lSolCols)) : null
+      return {
+        cols: c,
+        rows: r,
+        type: e.screenType || 'flat',
+        leftCols: sol || undefined,
+        rightCols: sol ? c - sol : undefined,
+        wm: c * kw,
+        hm: r * kh,
+      }
+    })
+
+  /*
+   * Fotoğraf akışında ekranlar tek tek yerleşiyor ve her biri kendi
+   * dörtgeniyle çiziliyor; şerit yalnızca fotoğrafsız sahnelerde anlamlı.
+   */
+  const cokluAktif = scene !== 'ozel' && ekranParcalari.length > 1
+  const tasarimWm = cokluAktif ? ekranParcalari.reduce((t, s) => t + s.wm, 0) : ekranWm
+  const tasarimHm = cokluAktif ? Math.max(...ekranParcalari.map((s) => s.hm)) : ekranHm
 
   /*
    * BU BLOK TASARIM ÖLÇÜSÜNÜN TANIMINDAN SONRA DURMAK ZORUNDA.
@@ -2441,14 +2478,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * çakışıyor. Bu yüzden L varken mekân yalnızca ekranı çiziyor.
    */
   const lTipiVar = cokluAktif
-    ? screens.some((s) => (s.type || 'flat') === 'lshape')
+    ? ekranParcalari.some((s) => (s.type || 'flat') === 'lshape')
     : (screenType || 'flat') === 'lshape'
 
   const ekranSekli = useMemo(() => {
     if (!(tasarimWm > 0) || !(tasarimHm > 0)) return null
     // Tek ekranda da tür bilgisi var; çoklu ekranda her ekranın kendi türü
     const parcalar = cokluAktif
-      ? screens.map((s) => ({ cols: Math.max(1, s.cols), rows: Math.max(1, s.rows), type: s.type || "flat", leftCols: s.leftCols, rightCols: s.rightCols }))
+      ? ekranParcalari.map((s) => ({ cols: s.cols, rows: s.rows, type: s.type, leftCols: s.leftCols, rightCols: s.rightCols }))
       : [{ cols: Math.max(1, cols), rows: Math.max(1, rows), type: screenType || "flat" }]
     // Hepsi düzse mekân eskisi gibi dikdörtgen kasa çizsin
     if (!parcalar.some((p) => p.type === "lshape" || p.type === "curved" || p.type === "curvedIn")) return null
@@ -2522,7 +2559,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const ayakOrani = useMemo(() => {
     const parcalar = cokluAktif
-      ? screens.map((s) => ({ cols: Math.max(1, s.cols), type: s.type || 'flat', leftCols: s.leftCols, rightCols: s.rightCols }))
+      ? ekranParcalari.map((s) => ({ cols: s.cols, type: s.type, leftCols: s.leftCols, rightCols: s.rightCols }))
       : [{ cols: Math.max(1, cols), type: screenType || 'flat' }]
     if (!(tasarimWm > 0)) return 0.5
     const toplamCols = parcalar.reduce((a, s) => a + s.cols, 0)
@@ -2940,10 +2977,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!cokluAktif) {
       if ((screenType || 'flat') !== 'lshape') return null
       const c = Math.max(2, cols)
-      return { cols: c, rows: Math.max(1, rows), ...kanatlar(c) }
+      /* Kullanıcı 4 + 2 dediyse ekranda da 4 + 2 çizilsin (bkz. lSolCols). */
+      const sol = lSolCols ? Math.max(1, Math.min(c - 1, lSolCols)) : null
+      return { cols: c, rows: Math.max(1, rows), ...kanatlar(c, sol, sol ? c - sol : null) }
     }
-    if (screens.length !== 1) return null
-    const e = screens[0]
+    if (ekranParcalari.length !== 1) return null
+    const e = ekranParcalari[0]
     if ((e?.type || 'flat') !== 'lshape') return null
     const c = Math.max(2, e.cols)
     return { cols: c, rows: Math.max(1, e.rows), ...kanatlar(c, e.leftCols, e.rightCols) }
@@ -4298,6 +4337,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     orientation,
     screenType,
     curveAmount,
+    lSolCols,
     content,
     contentUrl: contentUrl || null,
     bolunmus,
@@ -4309,6 +4349,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * tasiyor; "Duzenle" ile donuldugunde alani da geri gelsin diye.
    */
   const ekranKaydi = () => {
+    /*
+     * Fotoğrafsız sahnede ekranın yeri yok, yalnızca ayarı var. Dörtgen
+     * aranırsa kayıt hiç oluşmuyor ve ekran kayboluyordu.
+     */
+    if (scene !== 'ozel') {
+      return {
+        id: aktifEkranId ?? yeniEkranKimligi(),
+        sira: aktifSira,
+        oran: null,
+        ayar: ekranAyariAnlik(),
+      }
+    }
     if (!Array.isArray(koseMutlak) || koseMutlak.length !== 4) return null
     const oran = koseMutlak.map(tuvalOrana)
     if (oran.some((q) => !Number.isFinite(q?.x) || !Number.isFinite(q?.y))) return null
@@ -4371,7 +4423,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * o da "Alanı işaretle / Serbest yerleştir" seçimiyle başlıyor.
      */
     setAlanKipi(false)
-    setSihirbazAdim(3)
+    /* Ölçü sihirbazı fotoğrafa ait; fotoğrafsız sahnede açılacak adım yok. */
+    if (scene === 'ozel') setSihirbazAdim(3)
   }
 
   const ekranEkleEski = () => {
@@ -4455,6 +4508,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        */
       if (ayar.orientation) setOrientation(ayar.orientation)
       if (ayar.screenType) setScreenType(ayar.screenType)
+      setLSolCols(ayar.lSolCols ?? null)
       if (ayar.curveAmount != null) setCurveAmount(ayar.curveAmount)
       if (ayar.cols > 0) setCols(ayar.cols)
       if (ayar.rows > 0) setRows(ayar.rows)
@@ -4471,7 +4525,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAlanOlcek(secilen.olcek || null)
     setAlanElleEn(secilen.elleEn || '')
     setAlanElleBoy(secilen.elleBoy || '')
-    elleKoseyeYaz(secilen.oran.map(oranTuvale))
+    /* Yersiz kayıtta (fotoğrafsız sahne) geri yüklenecek köşe yok. */
+    if (Array.isArray(secilen.oran) && secilen.oran.length === 4) elleKoseyeYaz(secilen.oran.map(oranTuvale))
     setAktifEkranId(secilen.id)
     setAktifSira(secilen.sira || 1)
     /*
@@ -4530,6 +4585,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       .filter((e) => grupSecim.includes(e.id))
       .sort((a, b) => (a.sira || 0) - (b.sira || 0))
       .map((e) => e.id)
+    /*
+     * TEK EKRAN + L = İÇ L.
+     *
+     * Birleştirilecek ikinci bir ekran yok; ekranın KENDİSİ köşede
+     * katlanıyor. Eski pencerenin "İç L Tipi" işi buydu.
+     */
+    if (grupTipi === 'l' && sirali.length === 1) {
+      const hedef = sirali[0]
+      if (hedef !== aktifEkranId) ekraniDuzenle(hedef)
+      setScreenType('lshape')
+      setLSolCols(Math.max(1, Math.min(Math.max(2, cols) - 1, lSolSecim)))
+      setGrupSecim([])
+      return
+    }
     if (sirali.length < 2) return
     setGrup({ tip: grupTipi, aci: grupAcisi, uyeler: sirali })
   }
@@ -4539,6 +4608,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Türetilmiş dörtgenler kayıtlara yazılıyor ki hiçbiri yerinden oynamasın.
    */
   const grubuAyir = () => {
+    /* İç L'de grup yok; katlanan ekranın kendisi düze dönüyor. */
+    if (!grup && (screenType || 'flat') === 'lshape') {
+      setScreenType('flat')
+      setLSolCols(null)
+      return
+    }
     if (grupKoseleri) {
       setSabitEkranlar((l) =>
         l.map((e) =>
@@ -8342,7 +8417,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           contentUrl={contentUrl}
                           screenType={screenType}
                           curveAmount={curveAmount}
-                          screens={screenMode === 'multi' ? screens : null}
+                          screens={cokluAktif ? ekranParcalari : null}
                           koseler={koseler}
                           tuvalW={genislik}
                           tuvalH={yukseklik}
@@ -9448,7 +9523,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               <button
                 type="button"
                 onClick={ekranEkle}
-                disabled={!koseMutlak}
+                disabled={scene === 'ozel' && !koseMutlak}
                 className="mt-1.5 w-full py-2 rounded-lg text-[16px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
                 + {t('ekran.ekle')}
@@ -9475,16 +9550,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
                 Birleştirme isteğe bağlı: seçilmeyen ekranlar bağımsız.
               */}
-              {sabitEkranlar.length >= 1 && (
+              {/* Tek ekranla da açık: "L" burada tek ekranı köşede katlıyor. */}
+              {hasModel && (
                 <div className="mt-3 rounded-lg border border-neutral-200 dark:border-[#2c333f] p-2.5">
                   <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
                     {t('yerlesim.baslik')}
                   </div>
-                  {grup ? (
+                  {grup || (screenType || 'flat') === 'lshape' ? (
                     <>
                       <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('yerlesim.' + grup.tip)} · {grup.uyeler.length} {t('ekran.tekil')}
-                        {grup.tip === 'acili' ? ' · ' + grup.aci + '°' : ''}
+                        {grup ? (
+                          <>
+                            {t('yerlesim.' + grup.tip)} · {grup.uyeler.length} {t('ekran.tekil')}
+                            {grup.tip === 'acili' ? ' · ' + grup.aci + '°' : ''}
+                          </>
+                        ) : (
+                          <>
+                            {t('yerlesim.l')} · {aktifSira}. {t('ekran.tekil')} ·{' '}
+                            {lSolCols || Math.ceil(Math.max(2, cols) / 2)} + {Math.max(2, cols) - (lSolCols || Math.ceil(Math.max(2, cols) / 2))}
+                          </>
+                        )}
                       </p>
                       <p className="mt-1 mb-0 text-[16.5px] leading-snug text-neutral-400 dark:text-neutral-500">
                         {t('yerlesim.grupNot')}
@@ -9502,30 +9587,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
                         {t('yerlesim.ipucu')}
                       </p>
+                      {/*
+                        Seçim satırları ekran listesiyle AYNI kaynaktan
+                        (ekranOzetleri): küçük resim ve dizilim burada da
+                        görünsün, kullanıcı hangi ekranı işaretlediğini
+                        sırasından tahmin etmek zorunda kalmasın.
+                      */}
                       <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1">
-                        {[
-                          ...sabitEkranlar.map((e, i) => ({ ...e, sira: e.sira || i + 1 })),
-                          { id: aktifEkranId, sira: aktifSira },
-                        ]
-                          .filter((e) => e.id)
-                          .sort((a, b) => (a.sira || 0) - (b.sira || 0))
-                          .map((e) => (
-                            <li key={e.id}>
-                              <label className="flex items-center gap-2 text-[16px] text-neutral-700 dark:text-neutral-200">
-                                <input
-                                  type="checkbox"
-                                  className="h-4 w-4"
-                                  checked={grupSecim.includes(e.id)}
-                                  onChange={() =>
-                                    setGrupSecim((l) =>
-                                      l.includes(e.id) ? l.filter((x) => x !== e.id) : [...l, e.id],
-                                    )
-                                  }
+                        {ekranOzetleri.map((e) => (
+                          <li key={e.id ?? 'aktif'}>
+                            <label className="flex items-center gap-2 text-[15px] text-neutral-700 dark:text-neutral-200">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 shrink-0"
+                                checked={grupSecim.includes(e.id)}
+                                onChange={() =>
+                                  setGrupSecim((l) =>
+                                    l.includes(e.id) ? l.filter((x) => x !== e.id) : [...l, e.id],
+                                  )
+                                }
+                              />
+                              <span className="relative w-9 h-6 shrink-0 rounded overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                                <IcerikOnizleme
+                                  oge={icerikHavuzuTam.find((x) => x.id === e.havuzId)}
+                                  dilim={e.dilim}
+                                  oynatImi
                                 />
-                                {e.sira}. {t('ekran.tekil')}
-                              </label>
-                            </li>
-                          ))}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate">
+                                {e.sira}. {t('ekran.tekil')} · {e.ayar.cols || 1}×{e.ayar.rows || 1}
+                              </span>
+                            </label>
+                          </li>
+                        ))}
                       </ul>
                       <div className="mt-2 grid grid-cols-5 gap-1">
                         {['duz', 'l', 'u', 'kutu', 'acili'].map((tip) => (
@@ -9544,6 +9638,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           </button>
                         ))}
                       </div>
+                      {/*
+                        İÇ L — tek ekran işaretliyken.
+                        Ekranın kendisi köşede katlanıyor; sol kanadın kaç
+                        sütun olduğu burada giriliyor, kalanı sağ kanat.
+                      */}
+                      {grupTipi === 'l' && grupSecim.length === 1 && (
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <span className="text-[14.5px] text-neutral-500 dark:text-neutral-400">
+                            {t('mse.leftWing')}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <Stepper
+                              value={lSolSecim}
+                              onChange={setLSolSecim}
+                              min={1}
+                              max={Math.max(1, Math.max(2, cols) - 1)}
+                            />
+                            <span className="text-[14.5px] text-neutral-500 dark:text-neutral-400">
+                              + {Math.max(0, Math.max(2, cols) - lSolSecim)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       {grupTipi === 'acili' && (
                         <div className="mt-2 flex items-center gap-1.5">
                           <input
@@ -9561,7 +9678,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <button
                         type="button"
                         onClick={ekranlariBirlestir}
-                        disabled={grupSecim.length < 2}
+                        disabled={grupTipi === 'l' ? grupSecim.length < 1 : grupSecim.length < 2}
                         className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
                       >
                         {t('yerlesim.birlestir')}
@@ -10941,7 +11058,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         rows={rows}
         /* Çoklu düzen kuruluysa kamerada da AYNI düzen çizilsin diye
            ekran listesi geçilir; tek ekranda null kalır. */
-        screens={screenMode === 'multi' ? screens : null}
+        screens={cokluAktif ? ekranParcalari : null}
         content={content}
         contentUrl={contentUrl}
         screenType={screenType}
@@ -10958,7 +11075,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         model={previewModel}
         cols={cols}
         rows={rows}
-        screens={screenMode === 'multi' ? screens : null}
+        screens={cokluAktif ? ekranParcalari : null}
         content={content}
         contentUrl={contentUrl}
         screenType={screenType}
@@ -11002,7 +11119,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
              */
             screenType={screenType}
             curveAmount={curveAmount}
-            screens={screenMode === 'multi' ? screens : null}
+            screens={cokluAktif ? ekranParcalari : null}
             /* AR'da deklanşör işletim sistemine ait; fotoğraf için kamera
                ekranına geçiriyoruz (bkz. Scene3D → onOpenCamera) */
             onOpenCamera={() => {
