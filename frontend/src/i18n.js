@@ -229,6 +229,9 @@ const dict = {
    */
   'mode.single': { tr: 'Tek parça', en: 'One piece', ar: 'قطعة واحدة' },
   'mode.multi': { tr: 'Çok parçalı', en: 'Multiple pieces', ar: 'عدة قطع' },
+  'coklu.ac': { tr: 'Çoklu ekran ayarları', en: 'Multi-screen settings', ar: 'إعدادات الشاشات المتعددة' },
+  'coklu.baslik': { tr: 'Çoklu ekran', en: 'Multiple screens', ar: 'شاشات متعددة' },
+  'coklu.bitti': { tr: 'Tamam', en: 'Done', ar: 'تم' },
   'parca.baslik': { tr: 'Parçalı ekran', en: 'Multi-piece screen', ar: 'شاشة متعددة القطع' },
   'parca.bol': { tr: 'Parçalara böl', en: 'Split into pieces', ar: 'قسّم إلى قطع' },
   'parca.duzenle': { tr: 'Parçaları düzenle', en: 'Edit the pieces', ar: 'تحرير القطع' },
