@@ -451,9 +451,7 @@ const a = await akis('A — ALANI İŞARETLE', async ({ s, bas, denetle, icerir,
    * olmalı; artan bir kabinden büyükse bir sıra daha sığardı.
    * Alan 300 × 150 cm = 3000 × 1500 mm (yukarıda yazıldı).
    */
-  await ayarlariAc(s, bas)
   const ilk = await panelOlcusu(s)
-  await ayarlariKapat(s, bas)
   console.log('  · panel ölçüsü                :', JSON.stringify(ilk))
   if (!ilk.sutun || !ilk.satir) return dus('panelde sütun/satır ölçüsü okunamadı')
   const denetleEksen = (ad, o, alanMm) => {
@@ -468,9 +466,7 @@ const a = await akis('A — ALANI İŞARETLE', async ({ s, bas, denetle, icerir,
 
   /* İkinci basış hiçbir şeyi değiştirmemeli: tek seferde oturmuş olmalı. */
   await bas('Tasarımı ölçüye sığdır', 2500)
-  await ayarlariAc(s, bas)
   const ikinci = await panelOlcusu(s)
-  await ayarlariKapat(s, bas)
   if (ikinci.sutun?.adet !== ilk.sutun.adet || ikinci.satir?.adet !== ilk.satir.adet) {
     return dus('ikinci sığdırma sonucu değiştirdi: ' + JSON.stringify(ikinci))
   }
@@ -501,12 +497,9 @@ const b = await akis('B — SERBEST YERLEŞTİR', async ({ s, bas, denetle, icer
   if (!once.var || !(once.en > 10)) return dus('serbest yerleştirmede kutu kurulmadı')
   if (once.saydamlik > 0.05) return dus('kutu konurken tasarım görünüyor (gizli olmalıydı)')
 
-  if (!(await ayarlariAc(s, bas))) return dus('"Ekran ayarları" penceresi açılmadı')
   const artti = (await kabinArtir(s, 'Sütunlar')) || (await kabinArtir(s, 'Sütun'))
   if (!artti) return dus('sütun adımlayıcısı bulunamadı')
-  await s.waitForTimeout(1500)
-  await ayarlariKapat(s, bas)
-  await s.waitForTimeout(1200)
+  await s.waitForTimeout(2200)
   const sonra = await tasarimGorunur(s)
   console.log('  · sütun artınca            :', JSON.stringify(sonra))
   if (!(sonra.en > once.en + 2)) return dus('kutu kabin sayısıyla büyümedi')

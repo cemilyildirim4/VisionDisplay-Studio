@@ -106,9 +106,19 @@ export default function EkEkranlar({
         const d = koseDonusumu(wPx, hPx, koseler)
         if (!d) return null
 
-        const { cols: eCols, rows: eRows, bgImage, video, yayinda } = ayarli(ekran)
-        /* Dilim yoksa {0,0,1,1}: içerik ekranın tamamını kaplıyor. */
-        const dlm = dilimler?.get(ekran.id) || null
+        /*
+         * Dilim yoksa {0,0,1,1}: içerik ekranın tamamını kaplıyor.
+         * "bos" ise bu ekran bölmeye katılamıyor (yeri belli değil) ve
+         * içerik hiç çizilmiyor — tamamını çizmek tekrar izlenimi verir.
+         */
+        const ham = dilimler?.get(ekran.id) || null
+        const bolmeDisi = !!ham?.bos
+        const dlm = bolmeDisi ? null : ham
+
+        const { cols: eCols, rows: eRows, bgImage: hamGorsel, video: hamVideo, yayinda: hamYayin } = ayarli(ekran)
+        const bgImage = bolmeDisi ? null : hamGorsel
+        const video = bolmeDisi ? null : hamVideo
+        const yayinda = bolmeDisi ? false : hamYayin
         const icEn = wPx * (dlm?.sw || 1)
         const icBoy = hPx * (dlm?.sh || 1)
         const icSol = dlm ? wPx * dlm.sx : 0

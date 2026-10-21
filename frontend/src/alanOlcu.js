@@ -205,33 +205,43 @@ export function grupDortgenleri(liderKose, asal, f, olculer, acilar) {
     Math.abs(P.z) > 1e-9 ? { x: asal.x + (f * P.x) / P.z, y: asal.y + (f * P.y) / P.z } : null
 
   /*
-   * YÜRÜYÜŞ — verilen başlangıç yönüyle panelleri 3B'de kuruyor.
-   * İki kez koşuyor: önce grubun hangi yöne baktığını ölçmek, sonra
-   * kameraya döndürülmüş hâlini çizmek için.
+   * YÜRÜYÜŞ — LİDER SABİT, ZİNCİR BİR TARAFTAN UZUYOR.
+   *
+   * Lider, kullanıcının işaretlediği dörtgenin ta kendisi; ona hiç
+   * dokunulmuyor. Sonraki paneller liderin sağ kenarından (taraf = +1) ya
+   * da sol kenarından (taraf = −1) devam ediyor ve her dikişte yön dikey
+   * eksende kıvrılıyor.
+   *
+   * Önce bütün grup bir açı taramasıyla döndürülüyordu; o tarama liderin
+   * kendisini de duvarından koparıyordu (ölçüldü). Seçilecek tek şey
+   * kaldı: hangi taraf.
    */
-  const yuru = (baslangic) => {
-    const panel = []
-    let imlec = X[0]
-    let yon = baslangic
-    for (let i = 0; i < olculer.length; i++) {
+  const yuru = (taraf) => {
+    const panel = [{ kose: [X[0], X[1], X[2], X[3]], yon: e1 }]
+    const ters = (v) => ({ x: -v.x, y: -v.y, z: -v.z })
+    let yon = taraf > 0 ? e1 : ters(e1)
+    let imlec = taraf > 0 ? X[1] : X[0]
+    for (let i = 1; i < olculer.length; i++) {
       const en = olculer[i]?.enCm
       const boy = olculer[i]?.boyCm
       if (!(en > 0) || !(boy > 0)) return null
-      const su = imlec
-      const sagU = ekle(su, yon, en * k)
-      const sagA = ekle(sagU, e2, boy * k)
-      const solA = ekle(su, e2, boy * k)
-      panel.push({ kose: [su, sagU, sagA, solA], yon })
-      imlec = sagU
-      const aci = acilar?.[i] ?? 0
+      const aci = acilar?.[i - 1] ?? 0
       if (aci) {
         const a = dondur(yon, e2, aci)
         const b = dondur(yon, e2, -aci)
         /* Dikişte sahnenin İÇİNE dönülüyor: köşe ürünü böyle durur. */
-        const merkez = (yn) =>
-          ekle(ekle(imlec, yn, (olculer[i + 1]?.enCm || en) * k * 0.5), e2, boy * k * 0.5)
+        const merkez = (yn) => ekle(ekle(imlec, yn, en * k * 0.5), e2, boy * k * 0.5)
         yon = merkez(a).z >= merkez(b).z ? a : b
       }
+      const uc = ekle(imlec, yon, en * k)
+      /* Köşe sırası her zaman sol üst → sağ üst → sağ alt → sol alt. */
+      const ustSol = taraf > 0 ? imlec : uc
+      const ustSag = taraf > 0 ? uc : imlec
+      panel.push({
+        kose: [ustSol, ustSag, ekle(ustSag, e2, boy * k), ekle(ustSol, e2, boy * k)],
+        yon: taraf > 0 ? yon : ters(yon),
+      })
+      imlec = uc
     }
     return panel
   }
@@ -277,25 +287,34 @@ export function grupDortgenleri(liderKose, asal, f, olculer, acilar) {
     return enAz
   }
 
-  let yonBaslangic = e1
-  if ((acilar || []).some((a) => a)) {
-    const dene = (derece) => {
-      const y = dondur(e1, e2, derece)
-      const pn = yuru(y)
-      return pn ? { derece, alan: enKotuYuz(pn) } : null
-    }
-    let enIyi = { derece: 0, alan: -1 }
-    for (let g = -180; g < 180; g += 10) {
-      const s2 = dene(g)
-      if (s2 && s2.alan > enIyi.alan) enIyi = s2
-    }
-    for (let g = enIyi.derece - 10; g <= enIyi.derece + 10; g += 2) {
-      const s2 = dene(g)
-      if (s2 && s2.alan > enIyi.alan) enIyi = s2
-    }
-    if (enIyi.alan > 0) yonBaslangic = dondur(e1, e2, enIyi.derece)
-  }
-  const panel = yuru(yonBaslangic)
+  /*
+   * ZİNCİR HANGİ TARAFA UZASIN.
+   *
+   * İki seçenek de kuruluyor ve EN KÖTÜ YÜZÜ kameraya daha dönük olan
+   * alınıyor; yani hiçbir panel kenarından görünmüyor. Tek panelli grupta
+   * seçilecek bir şey yok.
+   */
+  const panel = (() => {
+    const sag = yuru(1)
+    if (olculer.length < 2) return sag
+    /*
+     * DÜZ DİZİLİMDE HER ZAMAN SAĞA.
+     *
+     * Dikiş açısı yoksa paneller zaten aynı düzlemde; hangi tarafa
+     * uzadıkları görünürlüğü değiştirmiyor ama beklentiyi değiştiriyor:
+     * ekranlar sebepsiz yere solda birikiyordu.
+     */
+    if (!(acilar || []).some((x) => x)) return sag
+    const sol = yuru(-1)
+    if (!sag) return sol
+    if (!sol) return sag
+    /*
+     * BERABERLİKTE SAĞ: düz dizilimde iki taraf da aynı derecede görünür
+     * ve ekranlar sebepsiz yere sola atlıyordu. Sol ancak BELİRGİN biçimde
+     * daha iyiyse seçiliyor.
+     */
+    return enKotuYuz(sol) > enKotuYuz(sag) + 0.02 ? sol : sag
+  })()
   if (!panel) return null
   const sonuc = []
   for (const pn of panel) {

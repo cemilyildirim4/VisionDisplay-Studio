@@ -187,7 +187,7 @@ export default function ReferansSecici({
    * En yakın yapışma noktası — Alt basılıysa yapışma kapalı.
    * Kullanıcı bilerek köşenin yanına koymak isteyebilir.
    */
-  const yakin = (p, kapali) => {
+  const yakin = (p, kapali, kenarYapisAcik = false) => {
     if (kapali || !p) return null
     /*
      * SIRA ÖNEMLİ: önce BAŞKA EKRANIN köşesi, sonra fotoğraftaki kenar.
@@ -206,7 +206,20 @@ export default function ReferansSecici({
       }
     }
     if (en) return en.q
-    if (kenaraYapis) {
+    /*
+     * FOTOĞRAFTAKİ KENARA YAPIŞMA ARTIK İSTEĞE BAĞLI.
+     *
+     * Nokta, yakınındaki her güçlü geçişe kendiliğinden atlıyordu;
+     * kullanıcı tam istediği yeri işaretleyemiyor, işaret atlaya atlaya
+     * gidiyordu. Yarıçapı daraltmak yetmedi — tahmin, kullanıcının
+     * elinden işi almamalı.
+     *
+     * Artık yalnızca SHIFT basılıyken çalışıyor: isteyen kenara
+     * oturtuyor, istemeyen tam tıkladığı yere koyuyor. Başka ekranların
+     * köşelerine yapışma duruyor (yukarıda) — o, uç uca getirmenin yolu
+     * ve kullanıcının açık isteği.
+     */
+    if (kenaraYapis && kenarYapisAcik) {
       const k = kenaraYapis(p)
       if (k && Number.isFinite(k.x) && Number.isFinite(k.y)) return kis(k)
     }
@@ -234,7 +247,7 @@ export default function ReferansSecici({
     if (noktalar.length >= enCokNokta) return
     const ham = yerel(e)
     if (!ham) return
-    const y = yakin(ham, e.altKey)
+    const y = yakin(ham, e.altKey, e.shiftKey)
     setSecili(noktalar.length)
     onDegis([...noktalar, y || ham])
     setYapisan(null)
@@ -274,7 +287,7 @@ export default function ReferansSecici({
       /* Sürükleme yokken imleç çizgisi ve yapışma vurgusu için yeri saklıyoruz. */
       if (noktalar.length < enCokNokta) {
         const ham = yerel(e)
-        const y = yakin(ham, e.altKey)
+        const y = yakin(ham, e.altKey, e.shiftKey)
         setYapisan(y)
         if (ham) setBuyutecNokta(y || ham)
         if (noktalar.length > 0 && ham) setImlec(y || ham)
@@ -286,7 +299,7 @@ export default function ReferansSecici({
       y: s.bas.y + (e.clientY - s.fareY) / z,
     })
     /* Var olan bir noktayı sürüklerken de yapışıyor: köşe düzeltirken de lazım. */
-    const y = yakin(ham, e.altKey)
+    const y = yakin(ham, e.altKey, e.shiftKey)
     setYapisan(y)
     setBuyutecNokta(y || ham)
     onDegis(noktalar.map((q, j) => (j === s.i ? y || ham : q)))

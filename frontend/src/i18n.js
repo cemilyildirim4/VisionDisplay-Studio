@@ -786,7 +786,7 @@ const dict = {
     ar: 'يُشتق مقياس الصورة بالسنتيمتر من هذا الرقم، ويُحسب حجم التصميم تبعًا له.',
   },
   'sih.alanDetay': {
-    tr: 'Sırayla sol üst, sağ üst, sağ alt, sol alt köşeye tıklayın. İşaretler sonradan sürüklenebilir; yapışmayı Alt ile kapatabilirsiniz. Köşe görünmüyorsa aşağıdaki düğmeyle kenarlardan bulabilirsiniz.',
+    tr: 'Sırayla sol üst, sağ üst, sağ alt, sol alt köşeye tıklayın. İşaretler sonradan sürüklenebilir. Nokta tam tıkladığınız yere konur; Shift basılı tutarsanız fotoğraftaki en yakın kenara oturur. Köşe görünmüyorsa aşağıdaki düğmeyle kenarlardan bulabilirsiniz.',
     en: 'Click top-left, top-right, bottom-right, bottom-left in order. The marks can be dragged afterwards; hold Alt to disable snapping. If a corner is not visible, use the button below to find it from the edges.',
     ar: 'انقر بالترتيب: أعلى اليسار، أعلى اليمين، أسفل اليمين، أسفل اليسار. يمكن سحب العلامات لاحقًا. إذا كانت الزاوية غير مرئية فاستخدم الزر أدناه.',
   },
@@ -1492,9 +1492,6 @@ const dict = {
     en: 'drag to pan',
     ar: 'اسحب للتحريك',
   },
-  'ayar.ac': { tr: 'Ekran ayarları', en: 'Screen settings', ar: 'إعدادات الشاشة' },
-  'ayar.baslik': { tr: 'Ekran ayarları', en: 'Screen settings', ar: 'إعدادات الشاشة' },
-  'ayar.bitti': { tr: 'Tamam', en: 'Done', ar: 'تم' },
   'content.havuzYukle': { tr: 'Yükle', en: 'Upload', ar: 'رفع' },
   'content.havuzCikar': { tr: 'Havuzdan çıkar', en: 'Remove from library', ar: 'إزالة من المكتبة' },
   'content.ekranBasina': { tr: 'Ekran başına içerik', en: 'Content per screen', ar: 'المحتوى لكل شاشة' },

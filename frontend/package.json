@@ -12,7 +12,8 @@
     "tdz": "node scripts/tdz-denetimi.mjs",
     "test:acilis": "node scripts/acilis-testi.mjs",
     "test:akis": "node scripts/akis-testi.mjs",
-    "yayin-oncesi": "npm run lint && npm run build && npm run test:acilis && npm run test:akis"
+    "yayin-oncesi": "npm run lint && npm run build && npm run test:acilis && npm run test:akis && npm run test:bolme",
+    "test:bolme": "node scripts/bolme-testi.mjs"
   },
   "dependencies": {
     "@fontsource/poppins": "^5.3.0",
