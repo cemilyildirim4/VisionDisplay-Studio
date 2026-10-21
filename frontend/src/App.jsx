@@ -4350,10 +4350,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const ekranKaydi = () => {
     /*
-     * Fotoğrafsız sahnede ekranın yeri yok, yalnızca ayarı var. Dörtgen
-     * aranırsa kayıt hiç oluşmuyor ve ekran kayboluyordu.
+     * YERİ OLMAYAN EKRAN DA KAYIT. Fotoğrafsız sahnede ekranın yeri hiç
+     * yok; fotoğraflı sahnede de henüz yerleştirilmemiş olabilir. Kayıt
+     * üretilmediğinde o ekran listeden sessizce düşüyordu — akordeonda
+     * bir satıra tıklamak bütün bir ekranı siliyor demekti.
      */
-    if (scene !== 'ozel') {
+    const yerliKose = Array.isArray(koseMutlak) && koseMutlak.length === 4 ? koseMutlak.map(tuvalOrana) : null
+    const oran =
+      yerliKose && !yerliKose.some((q) => !Number.isFinite(q?.x) || !Number.isFinite(q?.y)) ? yerliKose : null
+    if (scene !== 'ozel' || !oran) {
       return {
         id: aktifEkranId ?? yeniEkranKimligi(),
         sira: aktifSira,
@@ -4361,9 +4366,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         ayar: ekranAyariAnlik(),
       }
     }
-    if (!Array.isArray(koseMutlak) || koseMutlak.length !== 4) return null
-    const oran = koseMutlak.map(tuvalOrana)
-    if (oran.some((q) => !Number.isFinite(q?.x) || !Number.isFinite(q?.y))) return null
     return {
       id: aktifEkranId ?? yeniEkranKimligi(),
       sira: aktifSira,
@@ -4525,8 +4527,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setAlanOlcek(secilen.olcek || null)
     setAlanElleEn(secilen.elleEn || '')
     setAlanElleBoy(secilen.elleBoy || '')
-    /* Yersiz kayıtta (fotoğrafsız sahne) geri yüklenecek köşe yok. */
+    /*
+     * Yersiz kayıtta geri yüklenecek köşe yok; eldekiler de TEMİZLENİYOR.
+     * Önceki ekranın köşeleri kalırsa yeri belli olmayan ekran yerleşmiş
+     * gibi görünüyor ve bölünmüş içerikte kendine dilim alıyordu.
+     */
     if (Array.isArray(secilen.oran) && secilen.oran.length === 4) elleKoseyeYaz(secilen.oran.map(oranTuvale))
+    else setElleKose(null)
     setAktifEkranId(secilen.id)
     setAktifSira(secilen.sira || 1)
     /*

@@ -125,15 +125,38 @@ async function olcuYaz(s, en, boy) {
  * konduğu da orada. Ekrandaki piksel ölçüsü bu soruyu cevaplayamıyor:
  * perspektif yüzünden alanla tasarımın pikselleri karşılaştırılamaz.
  */
+/*
+ * PANELDEKI OLCU — akordeonun ACIK satirindan.
+ *
+ * Eskiden panelde eksen basina "SUTUNLAR 9 x 320 mm = 2880 mm" satiri
+ * vardi; sol panel sadelestirilince o satirlar kalkti (kabin sayisi
+ * yerine kurulacak ekranin olcusu soruluyor). Ayni bilgi su an acik
+ * satirda duruyor: kutularda kabin sayisi, altinda toplam metre.
+ */
 const panelOlcusu = (s) =>
   s.evaluate(() => {
-    /* Ayarlar penceresi panelin DIŞINDA; bütün gövdeyi tarıyoruz. */
-    const g = (document.body.innerText || '').replace(/\s+/g, ' ')
-    const al = (etiket) => {
-      const m = g.match(new RegExp(etiket + '\\s+(\\d+)\\s*×\\s*(\\d+) mm = (\\d+) mm'))
-      return m ? { adet: Number(m[1]), kabinMm: Number(m[2]), toplamMm: Number(m[3]) } : null
+    const panel = document.querySelector('aside.yatay-panel-model')
+    const liste = panel && panel.querySelector('ul')
+    const acik = liste && [...liste.children].find((li) => li.className.includes('btn-selected'))
+    if (!acik) return { sutun: null, satir: null, tani: 'acik satir yok' }
+    /* Stepper kutulari type=text + inputMode=decimal; olcu bolumundeki
+       ilk iki kutu sutun ve satir. */
+    const adet = [...acik.querySelectorAll('input[inputmode="decimal"]')]
+      .map((x) => Number(String(x.value).replace(',', '.')))
+      .filter((n) => n > 0)
+    const metin = (acik.innerText || '').replace(/\s+/g, ' ')
+    const m = metin.match(/([\d.,]+) × ([\d.,]+) m/)
+    if (!m || adet.length < 2) {
+      return { sutun: null, satir: null, tani: 'adet=' + JSON.stringify(adet) + ' metin=' + metin.slice(0, 160) }
     }
-    return { sutun: al('SÜTUNLAR'), satir: al('SATIRLAR') }
+    /* "2,88" -> 2880 mm. Binlik ayirac nokta, ondalik virgul. */
+    const mm = (x) => Math.round(Number(x.split('.').join('').replace(',', '.')) * 1000)
+    const enMm = mm(m[1])
+    const boyMm = mm(m[2])
+    return {
+      sutun: { adet: adet[0], kabinMm: Math.round(enMm / adet[0]), toplamMm: enMm },
+      satir: { adet: adet[1], kabinMm: Math.round(boyMm / adet[1]), toplamMm: boyMm },
+    }
   })
 
 /** Alanın dört köşesine sırayla tıklar — varsayılan yol. */
@@ -166,7 +189,8 @@ async function modelVeFotograf(s, bas, INCELEME) {
   await s.getByText('DEMO-P1.25').first().click()
   await s.waitForTimeout(900)
   await s.evaluate(() => {
-    const d = [...document.querySelectorAll('button')].find((x) => /Seçmek/.test(x.innerText) && !x.disabled)
+    /* Dugme metni mastardan emir kipine gecti: "Secmek" -> "Sec". */
+  const d = [...document.querySelectorAll('button')].find((x) => /^(Seç|Seçmek)$/.test((x.innerText || '').trim()) && !x.disabled)
     if (d) d.click()
   })
   await s.waitForTimeout(4000)
@@ -262,6 +286,11 @@ const kabinArtir = (s, etiketMetni) =>
 
 /** Bir akışı yürütür; her adımda çökme denetimi yapar. */
 async function akis(baslik, yol) {
+  /*
+   * TEK YOL CALISTIRMA: YOL=A gibi. Dort yol birden uzun suruyor ve
+   * dusen yolu ayikla gormek icin hepsini yeniden kosmak gerekiyordu.
+   */
+  if (process.env.YOL && !baslik.startsWith(process.env.YOL)) return true
   console.log('\n═══ ' + baslik + ' ═══')
   const baglam = await tarayici.newContext({ viewport: { width: 1600, height: 950 } })
   const s = await baglam.newPage()
@@ -331,7 +360,8 @@ async function akis(baslik, yol) {
     await s.getByText('DEMO-P1.25').first().click()
     await s.waitForTimeout(900)
     await s.evaluate(() => {
-      const d = [...document.querySelectorAll('button')].find((x) => /Seçmek/.test(x.innerText) && !x.disabled)
+      /* Dugme metni mastardan emir kipine gecti: "Secmek" -> "Sec". */
+  const d = [...document.querySelectorAll('button')].find((x) => /^(Seç|Seçmek)$/.test((x.innerText || '').trim()) && !x.disabled)
       if (d) d.click()
     })
     await s.waitForTimeout(4000)

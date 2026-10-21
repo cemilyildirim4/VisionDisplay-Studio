@@ -97,7 +97,8 @@ await bas('Yapılandırmayı başlat', 2500)
 await s.getByText('DEMO-P1.25').first().click()
 await s.waitForTimeout(900)
 await s.evaluate(() => {
-  const d = [...document.querySelectorAll('button')].find((x) => /Seçmek/.test(x.innerText) && !x.disabled)
+  /* Dugme metni mastardan emir kipine gecti: "Secmek" -> "Sec". */
+  const d = [...document.querySelectorAll('button')].find((x) => /^(Seç|Seçmek)$/.test((x.innerText || '').trim()) && !x.disabled)
   if (d) d.click()
 })
 await s.waitForTimeout(4000)
@@ -126,38 +127,62 @@ await bas('Devam', 1500)
 await alanKur(0.2, 0.3, 0.2, 0.3)
 console.log('1. ekran kuruldu')
 /* 2. ekran: sağda */
-await bas('Ekran ekle', 2500)
+await bas('+ Ekran ekle', 2500)
 await alanKur(0.48, 0.3, 0.2, 0.3)
 console.log('2. ekran kuruldu')
 /* Ucuncu ekrana gecerek ilk ikisini de SABITLE: asil kullanim boyle. */
-await bas('Ekran ekle', 2500)
+await bas('+ Ekran ekle', 2500)
 console.log('3. ekrana gecildi (ilk iki ekran sabit)')
 
-/* Görsel penceresi: ikisine de ÖRNEK GÖRÜNTÜ + Bölünmüş */
-const pencere = await bas('Görselleri düzenle', 1500)
-console.log('gorsel penceresi:', pencere)
-const atama = await s.evaluate(() => {
-  const secimler = [...document.querySelectorAll('select')]
-  const sonuc = []
-  for (const sec of secimler) {
+/*
+ * HER EKRANA AYRI AYRI: ÖRNEK GÖRÜNTÜ + Bölünmüş.
+ *
+ * İçerik artık ekranın kendi satırında ve aynı anda tek satır açık
+ * (akordeon). Kapalı satıra tıklamak o ekranı ele alıyor.
+ */
+const acilanSatir = (n) =>
+  s.evaluate((sira) => {
+    const panel = document.querySelector('aside.yatay-panel-model')
+    const liste = panel && panel.querySelector('ul')
+    if (!liste) return 'liste yok'
+    const satir = [...liste.children].find((li) => (li.innerText || '').trim().startsWith(sira + '. '))
+    if (!satir) return 'satir yok'
+    if (satir.className.includes('btn-selected')) return 'zaten acik'
+    satir.querySelector('button')?.click()
+    return 'acildi'
+  }, n)
+
+const atananlar = []
+for (const sira of [1, 2, 3]) {
+  await acilanSatir(sira)
+  await s.waitForTimeout(1600)
+  const sonuc = await s.evaluate(() => {
+    const panel = document.querySelector('aside.yatay-panel-model')
+    const liste = panel && panel.querySelector('ul')
+    const acik = liste && [...liste.children].find((li) => li.className.includes('btn-selected'))
+    if (!acik) return 'acik satir yok'
+    const sec = acik.querySelector('select')
+    if (!sec) return 'secim kutusu yok'
     const se = [...sec.options].find((o) => /ÖRNEK GÖRÜNTÜ/i.test(o.textContent || ''))
-    if (!se) continue
+    if (!se) return 'ornek goruntu yok'
     const yaz = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set
     yaz.call(sec, se.value)
     sec.dispatchEvent(new Event('change', { bubbles: true }))
-    sonuc.push(se.textContent.trim())
-  }
-  return { secimSayisi: secimler.length, atanan: sonuc }
-})
-console.log('icerik atamasi:', JSON.stringify(atama))
-await s.waitForTimeout(1200)
-const bolundu = await s.evaluate(() => {
-  const d = [...document.querySelectorAll('button')].filter(
-    (b) => (b.textContent || '').trim() === 'Bölünmüş',
-  )
-  d.forEach((b) => b.click())
-  return d.length
-})
+    return se.textContent.trim()
+  })
+  atananlar.push(sira + ':' + sonuc)
+  await s.waitForTimeout(1200)
+  await s.evaluate(() => {
+    const panel = document.querySelector('aside.yatay-panel-model')
+    const liste = panel && panel.querySelector('ul')
+    const acik = liste && [...liste.children].find((li) => li.className.includes('btn-selected'))
+    const b = acik && [...acik.querySelectorAll('button')].find((x) => (x.textContent || '').trim() === 'Bölünmüş')
+    b?.click()
+  })
+  await s.waitForTimeout(1200)
+}
+console.log('icerik atamasi:', JSON.stringify(atananlar))
+const bolundu = atananlar.length
 console.log('bolunmus dugmesi tiklandi:', bolundu)
 await s.waitForTimeout(1500)
 await bas('Tamam', 1500)
