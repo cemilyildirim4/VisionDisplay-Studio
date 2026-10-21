@@ -312,7 +312,7 @@ const dict = {
   },
   'ekran.duzenleniyor': { tr: 'düzenleniyor', en: 'editing', ar: 'قيد التحرير' },
   'ekran.cokluIpucu': {
-    tr: 'Aynı fotoğrafa birden çok ekran koyabilirsiniz. "Ekran ekle" duran ekranı olduğu yere sabitler ve yeni ekran için alan işaretlemenizi ister. Bir ekrana fotoğraftan tıklayarak ya da "Düzenle" ile ona geri dönersiniz.',
+    tr: 'Aynı fotoğrafa birden çok ekran koyabilirsiniz.',
     en: 'Place the current screen, then press "Add screen": it is pinned where it stands and you get a new one of the same size. Click a pinned screen or press "Edit" to go back to it.',
     ar: 'ضع الشاشة الحالية ثم اضغط «إضافة شاشة»: تُثبّت في مكانها وتحصل على واحدة جديدة بالمقاس نفسه.',
   },

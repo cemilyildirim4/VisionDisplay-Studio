@@ -9085,112 +9085,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 {t('ekran.ekle')}
               </button>
 
-              {/*
-                EKRAN YERLEŞİMİ — birleştirme.
-
-                İki ya da daha çok ekran seçilip duruş biçimi veriliyor;
-                ekranlar kenarlarından birleşiyor ve aralarında boşluk
-                kalmıyor. Grup liderden TÜRETİLDİĞİ için tek parça taşınıyor
-                ve dikiş hiç açılmıyor (bkz. grupKoseleri). "Ayır" grubu
-                bozuyor, ekranlar bulundukları yerde kalıyor.
-
-                Birleştirme isteğe bağlı: seçilmeyen ekranlar bağımsız.
-              */}
-              {sabitEkranlar.length >= 1 && (
-                <div className="mt-3 rounded-lg border border-neutral-200 dark:border-[#2c333f] p-2.5">
-                  <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
-                    {t('yerlesim.baslik')}
-                  </div>
-                  {grup ? (
-                    <>
-                      <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('yerlesim.' + grup.tip)} · {grup.uyeler.length} {t('ekran.tekil')}
-                        {grup.tip === 'acili' ? ' · ' + grup.aci + '°' : ''}
-                      </p>
-                      <p className="mt-1 mb-0 text-[16.5px] leading-snug text-neutral-400 dark:text-neutral-500">
-                        {t('yerlesim.grupNot')}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={grubuAyir}
-                        className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                      >
-                        {t('yerlesim.ayir')}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('yerlesim.ipucu')}
-                      </p>
-                      <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1">
-                        {[
-                          ...sabitEkranlar.map((e, i) => ({ ...e, sira: e.sira || i + 1 })),
-                          { id: aktifEkranId, sira: aktifSira },
-                        ]
-                          .filter((e) => e.id)
-                          .sort((a, b) => (a.sira || 0) - (b.sira || 0))
-                          .map((e) => (
-                            <li key={e.id}>
-                              <label className="flex items-center gap-2 text-[16px] text-neutral-700 dark:text-neutral-200">
-                                <input
-                                  type="checkbox"
-                                  className="h-4 w-4"
-                                  checked={grupSecim.includes(e.id)}
-                                  onChange={() =>
-                                    setGrupSecim((l) =>
-                                      l.includes(e.id) ? l.filter((x) => x !== e.id) : [...l, e.id],
-                                    )
-                                  }
-                                />
-                                {e.sira}. {t('ekran.tekil')}
-                              </label>
-                            </li>
-                          ))}
-                      </ul>
-                      <div className="mt-2 grid grid-cols-5 gap-1">
-                        {['duz', 'l', 'u', 'kutu', 'acili'].map((tip) => (
-                          <button
-                            key={tip}
-                            type="button"
-                            onClick={() => setGrupTipi(tip)}
-                            title={t('yerlesim.' + tip)}
-                            className={`rounded-md py-1.5 text-[13px] font-semibold leading-tight transition-colors ${
-                              grupTipi === tip
-                                ? 'bg-brand text-white'
-                                : 'border border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-400'
-                            }`}
-                          >
-                            {t('yerlesim.' + tip)}
-                          </button>
-                        ))}
-                      </div>
-                      {grupTipi === 'acili' && (
-                        <div className="mt-2 flex items-center gap-1.5">
-                          <input
-                            type="number"
-                            min="10"
-                            max="170"
-                            step="5"
-                            value={grupAcisi}
-                            onChange={(e) => setGrupAcisi(Number(e.target.value) || 135)}
-                            className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
-                          />
-                          <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={ekranlariBirlestir}
-                        disabled={grupSecim.length < 2}
-                        className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
-                      >
-                        {t('yerlesim.birlestir')}
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
@@ -10863,6 +10757,112 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </div>
             {/* Panelden taşınan ayarlar — içerikleri değişmedi. */}
             <div className="flex flex-col gap-2">
+              {/*
+                EKRAN YERLEŞİMİ — birleştirme.
+
+                İki ya da daha çok ekran seçilip duruş biçimi veriliyor;
+                ekranlar kenarlarından birleşiyor ve aralarında boşluk
+                kalmıyor. Grup liderden TÜRETİLDİĞİ için tek parça taşınıyor
+                ve dikiş hiç açılmıyor (bkz. grupKoseleri). "Ayır" grubu
+                bozuyor, ekranlar bulundukları yerde kalıyor.
+
+                Birleştirme isteğe bağlı: seçilmeyen ekranlar bağımsız.
+              */}
+              {sabitEkranlar.length >= 1 && (
+                <div className="mt-3 rounded-lg border border-neutral-200 dark:border-[#2c333f] p-2.5">
+                  <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
+                    {t('yerlesim.baslik')}
+                  </div>
+                  {grup ? (
+                    <>
+                      <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('yerlesim.' + grup.tip)} · {grup.uyeler.length} {t('ekran.tekil')}
+                        {grup.tip === 'acili' ? ' · ' + grup.aci + '°' : ''}
+                      </p>
+                      <p className="mt-1 mb-0 text-[16.5px] leading-snug text-neutral-400 dark:text-neutral-500">
+                        {t('yerlesim.grupNot')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={grubuAyir}
+                        className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        {t('yerlesim.ayir')}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-1 mb-0 text-[15.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('yerlesim.ipucu')}
+                      </p>
+                      <ul className="mt-2 mb-0 list-none p-0 flex flex-col gap-1">
+                        {[
+                          ...sabitEkranlar.map((e, i) => ({ ...e, sira: e.sira || i + 1 })),
+                          { id: aktifEkranId, sira: aktifSira },
+                        ]
+                          .filter((e) => e.id)
+                          .sort((a, b) => (a.sira || 0) - (b.sira || 0))
+                          .map((e) => (
+                            <li key={e.id}>
+                              <label className="flex items-center gap-2 text-[16px] text-neutral-700 dark:text-neutral-200">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4"
+                                  checked={grupSecim.includes(e.id)}
+                                  onChange={() =>
+                                    setGrupSecim((l) =>
+                                      l.includes(e.id) ? l.filter((x) => x !== e.id) : [...l, e.id],
+                                    )
+                                  }
+                                />
+                                {e.sira}. {t('ekran.tekil')}
+                              </label>
+                            </li>
+                          ))}
+                      </ul>
+                      <div className="mt-2 grid grid-cols-5 gap-1">
+                        {['duz', 'l', 'u', 'kutu', 'acili'].map((tip) => (
+                          <button
+                            key={tip}
+                            type="button"
+                            onClick={() => setGrupTipi(tip)}
+                            title={t('yerlesim.' + tip)}
+                            className={`rounded-md py-1.5 text-[13px] font-semibold leading-tight transition-colors ${
+                              grupTipi === tip
+                                ? 'bg-brand text-white'
+                                : 'border border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-400'
+                            }`}
+                          >
+                            {t('yerlesim.' + tip)}
+                          </button>
+                        ))}
+                      </div>
+                      {grupTipi === 'acili' && (
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="10"
+                            max="170"
+                            step="5"
+                            value={grupAcisi}
+                            onChange={(e) => setGrupAcisi(Number(e.target.value) || 135)}
+                            className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                          />
+                          <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={ekranlariBirlestir}
+                        disabled={grupSecim.length < 2}
+                        className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
+                      >
+                        {t('yerlesim.birlestir')}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
           <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('wall.heading')}</h2>
 
           {/*
@@ -11578,13 +11578,18 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
  * içeriğin kırpılıp erişilemez kalmasındansa kaydırılabilir olması iyidir.
  */
 /*
- * PANELİN EN ÇOK NE KADAR KÜÇÜLEBİLECEĞİ.
+ * PANEL ARTIK HİÇ KÜÇÜLMÜYOR.
  *
- * 0,30 idi: panel sığmadığında yazılar üçte bire iniyor ve okunmaz hâle
- * geliyordu ("her şey sıkışık, yazılar görünmüyor"). Okunur bir tabanda
- * duruyor; bu tabanda da sığmıyorsa panel kaydırılıyor.
+ * Panel içeriği, ekrana sığsın diye CSS ile küçültülüyordu. Ölçüm: iki
+ * ekran kurulduğunda içerik 1056 piksel yer istiyor, panelde 795 piksel
+ * var; aradaki fark küçültmeyle kapatılınca ekrandaki yazılar 9,7 – 14
+ * piksele düşüyordu. Kullanıcının "her şey sıkışık, yazılar okunmuyor"
+ * demesinin sebebi buydu — önce taban 0,30'du, 0,88'e çekmek de yetmedi.
+ *
+ * Yazı boyu artık hiç değişmiyor; sığmayan içerik kaydırılıyor.
+ * Okunmayan bir panel, kaydırılan panelden kötüdür.
  */
-const EN_KUCUK_ORAN = 0.88
+const EN_KUCUK_ORAN = 1
 
 function Sigdir({ children, className = '' }) {
   const disRef = useRef(null)
