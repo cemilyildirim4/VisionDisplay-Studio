@@ -406,6 +406,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [multiModalOpen, setMultiModalOpen] = useState(false)
   const [screens, setScreens] = useState([])
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  /* Görsel düzenleme ayarları penceresi (bkz. ayar.ac). */
+  const [ayarlarAcik, setAyarlarAcik] = useState(false)
   // Teknik Özellikler pop-up'ı (Bileşenler de içinde)
   const [specsOpen, setSpecsOpen] = useState(false)
   /*
@@ -3993,17 +3995,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     setRef2Kipi(false)
     setSihirbazAdim(4)
-    /* Onay tasarımı göstermiyor: kullanıcı sığdır deyince çıkıyor. */
-    setTasarimAcik(false)
     /*
-     * ONAYDA OTOMATİK SIĞDIRMA YOK.
+     * ONAY TASARIMI GÖSTERİYOR.
      *
-     * Onay anında sığdırma bir kez kendiliğinden çalışıyor ve ÖLÇÜLEN
-     * santimi kullanıyordu; kullanıcı hemen ardından alanın gerçek
-     * en/boyunu yazıp sığdır deyince bambaşka bir sonuç çıkıyor, ekran iki
-     * kez değişiyordu. Artık tek bir sığdırma var: kullanıcının bastığı.
-     * Tasarımın göründüğü an da orası.
+     * Bir ara tasarım ancak "Tasarımı ölçüye sığdır" deyince çıkıyordu;
+     * ürün kararı değişti: alan onaylandığı anda görünüyor. Ölçü işi o
+     * noktada bitmiş oluyor, dolayısıyla "ölçü yaparken tasarım
+     * görünmesin" kuralıyla çelişmiyor.
      */
+    setTasarimAcik(true)
+    /*
+     * ONAYDA BİR KEZ SIĞDIRILIYOR.
+     *
+     * Tasarım onayla birlikte görünüyor; görünen şeyin alanın ortasında
+     * tek kabinlik bir pul olması anlamsız olurdu. Bu yüzden ölçülen
+     * santimle bir kez sığdırılıyor.
+     *
+     * Kullanıcı alanın GERÇEK en/boyunu yazıp "Tasarımı ölçüye sığdır"
+     * derse ikinci bir sığdırma oluyor ve sonuç değişebiliyor — ölçülen
+     * santim ile yazılan santim farklıysa bu kaçınılmaz; doğru olan,
+     * yazılanı kullanan ikincisidir.
+     */
+    if (k) tasarimiAlanaSigdir(k)
   }
 
   /* Alanı tamamen doldur — montaj payıyla (bkz. sigdirDortgen). */
@@ -4058,7 +4071,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       Array.isArray(disaridanKose) && disaridanKose.length === 4 ? disaridanKose : alanTuvalDurum
     const olcekPxM = alanOlcegiPxM || cizimOlcek
     if (!alanTuval || !(olcekPxM > 0)) return
-    const m = previewModel || selectedModel
+    /*
+     * HAM MODEL — previewModel değil.
+     *
+     * previewModel, ekran dikey duruyorken kabinin enini ve boyunu takas
+     * ederek veriyor. Hesap ondan beslenince "yatay" aslında "şu anki
+     * duruş" demek oluyor, ama sonuç MUTLAK yön olarak yazılıyor; ekran bir
+     * kez dikeye döndüyse sonraki sığdırmalar yönü ters belirliyordu.
+     */
+    const m = selectedModel || previewModel
     if (!m) return
     const enPx =
       (Math.hypot(alanTuval[1].x - alanTuval[0].x, alanTuval[1].y - alanTuval[0].y) +
@@ -5784,7 +5805,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * değiştirir, bu yüzden iki dizilim sık sık birebir aynı çıkıyor ve
      * eşitlik bir üstünlük sayılmıyor (aynı kural yüzey önerisinde de var).
      */
-    const m = previewModel || selectedModel
+    /* Burada da ham model: yatay/dikey mutlak kalsın (bkz. tasarimiAlanaSigdir). */
+    const m = selectedModel || previewModel
     const secenek = yerlesimSecenekleri(m, duvarOlcu.wm, duvarOlcu.hm)
     if (!secenek) return
     const { yatay, dikey } = secenek
@@ -9267,345 +9289,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </button>
           )}
 
-          <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('wall.heading')}</h2>
-
           {/*
-            BİRİM ALANIN YANINDA YAZIYOR.
+            EKRAN AYARLARI — ayrı bir pencerede.
 
-            Bu iki alan METRE ile çalışıyor ama ekranda hiçbir yerde "m"
-            yazmıyordu. Ölçü kutusu ise SANTİM istiyor. Kullanıcı buradaki
-            0,96'yı okuyup santim alanına da 0,96 yazdığında 1 santimlik bir
-            yerleşim alanı oluşuyor ve her şey bozuluyor. Birim artık sayının
-            hemen yanında — tahmin edilecek bir şey kalmıyor.
-          */}
-          <Card>
-            <div className="flex items-center justify-between mb-3">
-              <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
-              <div className="flex items-center gap-1.5">
-                <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
-                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
-              <div className="flex items-center gap-1.5">
-                <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
-                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
-              </div>
-            </div>
-          </Card>
-
-              {/* Yapılandırma */}
-              <div className="mb-2">
-                <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('conf.heading')}</div>
-                <button
-                  type="button"
-                  onClick={fitToWall}
-                  className="w-full py-2.5 rounded-lg text-[19px] font-medium transition-colors border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand"
-                >
-                  {t('conf.fitToWall')}
-                </button>
-                {yerlesimBilgisi && (
-                  <YerlesimKartlari
-                    t={t}
-                    secenekler={yerlesimBilgisi}
-                    orientation={orientation}
-                    onSelect={uygulaYerlesim}
-                  />
-                )}
-              </div>
-
-          {hasModel && (
-            <>
-              <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('screen.heading')}</h2>
-
-              {screenMode === 'multi' ? (
-                /* Çoklu ekran: ekran listesi */
-                <div className="border border-neutral-200 dark:border-[#2c333f] rounded-lg p-3 mb-2">
-                  {screens.map((s, i) => (
-                    <div key={i} className="flex items-center justify-between gap-3 py-2 border-b border-neutral-100 dark:border-[#242b36] last:border-b-0">
-                      <div>
-                        <div className="text-[16.5px] font-medium text-neutral-800 dark:text-neutral-200">
-                          {t('screen.label')} {String(i + 1).padStart(2, '0')} ({t(`screen.${s.type}`)})
-                        </div>
-                        <div className="text-[15.5px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-                          {t('screen.columns')} {s.cols} × {t('screen.rows')} {s.rows}
-                        </div>
-                      </div>
-                      <ScreenThumb content={content} contentUrl={contentUrl} type={s.type} />
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setMultiModalOpen(true)}
-                    className="flex items-center gap-1 text-[19px] font-semibold text-neutral-800 dark:text-neutral-200 hover:text-brand mt-3"
-                  >
-                    {t('screen.changeSettings')}
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="9 6 15 12 9 18" />
-                    </svg>
-                  </button>
-
-                  {/*
-                    Listede kavisli ekran varsa kavis burada da ayarlanabilir.
-                    Denetim yalnızca tek ekran dalındaydı; çoklu düzende
-                    kavisli ekran seçilince kavisi değiştirmenin hiçbir yolu
-                    yoktu, tasarım %60'a mahkûm kalıyordu.
-                  */}
-                  {screens.some((s) => s.type === 'curved' || s.type === 'curvedIn') && (
-                    <KavisAyari
-                      t={t}
-                      deger={curveAmount}
-                      onChange={setCurveAmount}
-                      /* Listede iç bükey varsa açı ona göre okunur */
-                      icbukey={screens.some((s) => s.type === 'curvedIn')}
-                      genislikM={tasarimWm}
-                      coklu
-                    />
-                  )}
-                </div>
-              ) : (
-                <>
-                  {isVideoWall ? (
-                    /* Video duvarı: Oryantasyon */
-                    <div className="mb-2">
-                      <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.orientation')}</div>
-                      <Segmented
-                        buyuk
-                        value={orientation}
-                        onChange={(v) => {
-                          const veri = v === 'portrait' ? yerlesimBilgisi?.dikey : yerlesimBilgisi?.yatay
-                          if (veri) uygulaYerlesim(v, veri)
-                          else setOrientation(v)
-                        }}
-                        options={[
-                          { v: 'landscape', l: t('screen.landscape') },
-                          { v: 'portrait', l: t('screen.portrait') },
-                        ]}
-                      />
-                    </div>
-                  ) : (
-                    /* LED: Ekran Türü */
-                    <div className="mb-2">
-                      <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.type')}</div>
-                      <Segmented
-                        buyuk
-                        cols={3}
-                        value={screenType}
-                        onChange={setScreenType}
-                        options={[
-                          { v: 'flat', l: t('screen.flat') },
-                          { v: 'curved', l: t('screen.curved') },
-                          { v: 'curvedIn', l: t('screen.curvedIn') },
-                        ]}
-                      />
-
-                      {/*
-                        KAVİS MİKTARI — yalnızca kavisli tiplerde görünür.
-                        Değer state'te vardı ama ayarlanacak bir denetim yoktu
-                        (kodda "UI slider ileride" notu duruyordu): herkes 60
-                        değerine mahkûmdu. Kavis 2D önizlemede, kamerada ve 3D
-                        sahnede aynı anda değişir.
-                      */}
-                      {(screenType === 'curved' || screenType === 'curvedIn') && (
-                        <KavisAyari
-                          t={t}
-                          deger={curveAmount}
-                          onChange={setCurveAmount}
-                          icbukey={screenType === 'curvedIn'}
-                          genislikM={tasarimWm}
-                        />
-                      )}
-                    </div>
-                  )}
-
-                  {/* Sütunlar */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.columns')}</span>
-                      <Stepper value={cols} onChange={setCols} min={1} max={colsMax} />
-                    </div>
-                    {/*
-                      Kabin hesabı: kaç kabin × kabinin gerçek ölçüsü = toplam.
-                      Ölçüler modelden geliyor (previewModel), sabit değil —
-                      başka bir model seçilince kendiliğinden değişir.
-                    */}
-                    <div className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-1">
-                      {cols} × {mmYazi(kabinWmm)} mm = {mmYazi(cols * kabinWmm)} mm
-                    </div>
-                  </div>
-
-                  {/* Satırlar */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.rows')}</span>
-                      <Stepper value={rows} onChange={setRows} min={1} max={rowsMax} />
-                    </div>
-                    <div className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-1">
-                      {rows} × {mmYazi(kabinHmm)} mm = {mmYazi(rows * kabinHmm)} mm
-                    </div>
-                  </div>
-                </>
-              )}
-
-            </>
-          )}
-
-          {/*
-            ÇÖZÜNÜRLÜK ve İÇERİK SOL PANELDE.
-            İkisi de ekranın kendi özelliği — model, duvar ve kabin ayarlarının
-            devamı. Sağ panel mekân ve yerleştirme işleriyle dolduğu için bu iki
-            blok buraya alındı; içerikleri değişmedi.
+            Duvar ölçüsü, yapılandırma, ekran dizilimi ve içerik buradan
+            çıkarıldı: panel hepsini ekrana sığdırmak için içeriği
+            küçültüyor ve yazılar okunmaz hâle geliyordu. Panelde akışın
+            kendisi kalıyor; ayarlar geniş bir pencerede açılıyor.
           */}
           {hasModel && (
-            <>
-              {!isVideoWall && ekranCozunurlugu && (
-                <div className="mb-2">
-                  <div className="text-[17px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('res.heading')}</div>
-                  <div
-                    title={t('res.totalHint')}
-                    className="py-2.5 px-4 rounded-lg border border-neutral-200 dark:border-[#2c333f] text-[18px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100"
-                  >
-                    {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)} piksel
-                  </div>
-                </div>
-              )}
-
-              <div className="mb-2">
-                <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('content.heading')}</h2>
-
-                {/*
-                  İÇERİK HAVUZU.
-
-                  Eskiden burada üç sabit kutu vardı ve yükleme doğrudan o anki
-                  ekranın içeriği oluyordu: aynı görseli ikinci ekranda
-                  kullanmak için yeniden yüklemek gerekiyordu. Artık yüklenen
-                  havuza giriyor, aşağıdaki listede her ekran kendi içeriğini
-                  havuzdan seçiyor.
-                */}
-                <input
-                  ref={havuzInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,video/mp4,video/webm,video/ogg"
-                  onChange={havuzaYukle}
-                  className="hidden"
-                />
-                <div className="flex flex-wrap gap-2">
-                  {icerikHavuzuTam.map((h) => (
-                    <div key={h.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => icerikAta(aktifEkranId, h.id)}
-                        title={h.ad}
-                        className={`relative w-[78px] h-14 rounded-lg overflow-hidden flex items-end justify-center ${
-                          icerikKimligi(content, contentUrl) === h.id
-                            ? 'ring-2 ring-brand'
-                            : 'border border-neutral-200 dark:border-[#2c333f]'
-                        }`}
-                      >
-                        <IcerikOnizleme oge={h} />
-                        <span className="relative w-full px-1 py-0.5 text-[12px] font-semibold text-white bg-black/50 truncate">
-                          {h.ad}
-                        </span>
-                      </button>
-                      {/* Yüklenen öğe havuzdan çıkarılabiliyor; sabitler duruyor. */}
-                      {h.id.startsWith('y') && (
-                        <button
-                          type="button"
-                          onClick={() => havuzdanCikar(h.id)}
-                          aria-label={t('content.havuzCikar')}
-                          title={t('content.havuzCikar')}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-neutral-700 text-white text-[12px] leading-none flex items-center justify-center hover:bg-red-600 transition-colors"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => havuzInputRef.current?.click()}
-                    className="w-[78px] h-14 rounded-lg border border-dashed border-neutral-300 dark:border-[#39414f] text-[14px] font-medium text-neutral-500 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                  >
-                    + {t('content.havuzYukle')}
-                  </button>
-                </div>
-
-                {/*
-                  EKRAN BAŞINA İÇERİK.
-
-                  Her satır bir ekran: hangi içeriği gösteriyor ve o içeriğin
-                  TAMAMINI mı yoksa kendine düşen dilimi mi. "Bölünmüş" ancak
-                  aynı içeriği seçen başka bir ekran varsa iş yapıyor.
-                */}
-                {sabitEkranlar.length >= 1 && (
-                  <div className="mt-3">
-                    <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
-                      {t('content.ekranBasina')}
-                    </div>
-                    <ul className="mt-1.5 mb-0 list-none p-0 flex flex-col gap-1.5">
-                      {ekranIcerikSatirlari.map((r) => {
-                        const secili = icerikHavuzuTam.find((x) => x.id === r.havuzId)
-                        return (
-                          <li
-                            key={r.id}
-                            className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2 py-1.5"
-                          >
-                            <span className="shrink-0 text-[15px] font-medium text-neutral-700 dark:text-neutral-200">
-                              {r.sira}.
-                            </span>
-                            <div className="relative w-10 h-7 shrink-0 rounded overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
-                              <IcerikOnizleme oge={secili} />
-                            </div>
-                            <select
-                              value={r.havuzId}
-                              onChange={(ev) => icerikAta(r.id, ev.target.value)}
-                              className="flex-1 min-w-0 text-[15px] rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-transparent px-1.5 py-1"
-                            >
-                              {icerikHavuzuTam.map((h) => (
-                                <option key={h.id} value={h.id}>
-                                  {h.ad}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="shrink-0 flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
-                              {[false, true].map((v) => (
-                                <button
-                                  key={String(v)}
-                                  type="button"
-                                  onClick={() => bolunmusAta(r.id, v)}
-                                  className={`px-2 py-1 text-[14px] ${
-                                    r.bolunmus === v
-                                      ? 'bg-brand text-white'
-                                      : 'text-neutral-500 dark:text-neutral-400'
-                                  }`}
-                                >
-                                  {v ? t('content.bolunmus') : t('content.tamami')}
-                                </button>
-                              ))}
-                            </div>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                    <button
-                      type="button"
-                      onClick={icerigiTumuneUygula}
-                      className="mt-2 w-full py-2 rounded-lg text-[15.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                    >
-                      {t('content.tumuneUygula')}
-                    </button>
-                    <p className="mt-1.5 mb-0 text-[14.5px] leading-snug text-neutral-400 dark:text-neutral-500">
-                      {t('content.bolunmusIpucu')}
-                    </p>
-                  </div>
-                )}
-
-                <p className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-2 m-0">
-                  {t('content.hint')}
-                </p>
-              </div>
-            </>
+            <button
+              type="button"
+              onClick={() => setAyarlarAcik(true)}
+              className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3.5 text-[18px] font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.63.68 1.1 1.33 1.1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              {t('ayar.ac')}
+            </button>
           )}
 
           </Sigdir>
@@ -11126,6 +10829,392 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       )}
 
       {/* Sıfırlama onayı */}
+      {/*
+        EKRAN AYARLARI PENCERESİ.
+
+        İçeriği panelden olduğu gibi taşındı. Burada duruyor çünkü
+        panelin içeriğine scale uygulanıyor ve dönüşümlü bir atanın
+        içindeki fixed öğe viewport yerine o ataya göre konumlanır.
+      */}
+      {ayarlarAcik && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#001334]/45 p-4 sm:p-6"
+          onClick={() => setAyarlarAcik(false)}
+        >
+          <div
+            className="my-auto w-full max-w-[760px] rounded-2xl bg-white p-5 shadow-2xl dark:bg-[#161a21] sm:p-7"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="m-0 text-[22px] font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
+                {t('ayar.baslik')}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setAyarlarAcik(false)}
+                aria-label={t('sih.kapat')}
+                className="shrink-0 rounded-lg p-2 text-neutral-500 hover:text-brand dark:text-neutral-400"
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                </svg>
+              </button>
+            </div>
+            {/* Panelden taşınan ayarlar — içerikleri değişmedi. */}
+            <div className="flex flex-col gap-2">
+          <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('wall.heading')}</h2>
+
+          {/*
+            BİRİM ALANIN YANINDA YAZIYOR.
+
+            Bu iki alan METRE ile çalışıyor ama ekranda hiçbir yerde "m"
+            yazmıyordu. Ölçü kutusu ise SANTİM istiyor. Kullanıcı buradaki
+            0,96'yı okuyup santim alanına da 0,96 yazdığında 1 santimlik bir
+            yerleşim alanı oluşuyor ve her şey bozuluyor. Birim artık sayının
+            hemen yanında — tahmin edilecek bir şey kalmıyor.
+          */}
+          <Card>
+            <div className="flex items-center justify-between mb-3">
+              <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
+              <div className="flex items-center gap-1.5">
+                <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
+                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
+              <div className="flex items-center gap-1.5">
+                <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
+                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+              </div>
+            </div>
+          </Card>
+
+              {/* Yapılandırma */}
+              <div className="mb-2">
+                <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('conf.heading')}</div>
+                <button
+                  type="button"
+                  onClick={fitToWall}
+                  className="w-full py-2.5 rounded-lg text-[19px] font-medium transition-colors border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand"
+                >
+                  {t('conf.fitToWall')}
+                </button>
+                {yerlesimBilgisi && (
+                  <YerlesimKartlari
+                    t={t}
+                    secenekler={yerlesimBilgisi}
+                    orientation={orientation}
+                    onSelect={uygulaYerlesim}
+                  />
+                )}
+              </div>
+
+          {hasModel && (
+            <>
+              <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('screen.heading')}</h2>
+
+              {screenMode === 'multi' ? (
+                /* Çoklu ekran: ekran listesi */
+                <div className="border border-neutral-200 dark:border-[#2c333f] rounded-lg p-3 mb-2">
+                  {screens.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between gap-3 py-2 border-b border-neutral-100 dark:border-[#242b36] last:border-b-0">
+                      <div>
+                        <div className="text-[16.5px] font-medium text-neutral-800 dark:text-neutral-200">
+                          {t('screen.label')} {String(i + 1).padStart(2, '0')} ({t(`screen.${s.type}`)})
+                        </div>
+                        <div className="text-[15.5px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                          {t('screen.columns')} {s.cols} × {t('screen.rows')} {s.rows}
+                        </div>
+                      </div>
+                      <ScreenThumb content={content} contentUrl={contentUrl} type={s.type} />
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setMultiModalOpen(true)}
+                    className="flex items-center gap-1 text-[19px] font-semibold text-neutral-800 dark:text-neutral-200 hover:text-brand mt-3"
+                  >
+                    {t('screen.changeSettings')}
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 6 15 12 9 18" />
+                    </svg>
+                  </button>
+
+                  {/*
+                    Listede kavisli ekran varsa kavis burada da ayarlanabilir.
+                    Denetim yalnızca tek ekran dalındaydı; çoklu düzende
+                    kavisli ekran seçilince kavisi değiştirmenin hiçbir yolu
+                    yoktu, tasarım %60'a mahkûm kalıyordu.
+                  */}
+                  {screens.some((s) => s.type === 'curved' || s.type === 'curvedIn') && (
+                    <KavisAyari
+                      t={t}
+                      deger={curveAmount}
+                      onChange={setCurveAmount}
+                      /* Listede iç bükey varsa açı ona göre okunur */
+                      icbukey={screens.some((s) => s.type === 'curvedIn')}
+                      genislikM={tasarimWm}
+                      coklu
+                    />
+                  )}
+                </div>
+              ) : (
+                <>
+                  {isVideoWall ? (
+                    /* Video duvarı: Oryantasyon */
+                    <div className="mb-2">
+                      <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.orientation')}</div>
+                      <Segmented
+                        buyuk
+                        value={orientation}
+                        onChange={(v) => {
+                          const veri = v === 'portrait' ? yerlesimBilgisi?.dikey : yerlesimBilgisi?.yatay
+                          if (veri) uygulaYerlesim(v, veri)
+                          else setOrientation(v)
+                        }}
+                        options={[
+                          { v: 'landscape', l: t('screen.landscape') },
+                          { v: 'portrait', l: t('screen.portrait') },
+                        ]}
+                      />
+                    </div>
+                  ) : (
+                    /* LED: Ekran Türü */
+                    <div className="mb-2">
+                      <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('screen.type')}</div>
+                      <Segmented
+                        buyuk
+                        cols={3}
+                        value={screenType}
+                        onChange={setScreenType}
+                        options={[
+                          { v: 'flat', l: t('screen.flat') },
+                          { v: 'curved', l: t('screen.curved') },
+                          { v: 'curvedIn', l: t('screen.curvedIn') },
+                        ]}
+                      />
+
+                      {/*
+                        KAVİS MİKTARI — yalnızca kavisli tiplerde görünür.
+                        Değer state'te vardı ama ayarlanacak bir denetim yoktu
+                        (kodda "UI slider ileride" notu duruyordu): herkes 60
+                        değerine mahkûmdu. Kavis 2D önizlemede, kamerada ve 3D
+                        sahnede aynı anda değişir.
+                      */}
+                      {(screenType === 'curved' || screenType === 'curvedIn') && (
+                        <KavisAyari
+                          t={t}
+                          deger={curveAmount}
+                          onChange={setCurveAmount}
+                          icbukey={screenType === 'curvedIn'}
+                          genislikM={tasarimWm}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sütunlar */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.columns')}</span>
+                      <Stepper value={cols} onChange={setCols} min={1} max={colsMax} />
+                    </div>
+                    {/*
+                      Kabin hesabı: kaç kabin × kabinin gerçek ölçüsü = toplam.
+                      Ölçüler modelden geliyor (previewModel), sabit değil —
+                      başka bir model seçilince kendiliğinden değişir.
+                    */}
+                    <div className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-1">
+                      {cols} × {mmYazi(kabinWmm)} mm = {mmYazi(cols * kabinWmm)} mm
+                    </div>
+                  </div>
+
+                  {/* Satırlar */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">{t('screen.rows')}</span>
+                      <Stepper value={rows} onChange={setRows} min={1} max={rowsMax} />
+                    </div>
+                    <div className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-1">
+                      {rows} × {mmYazi(kabinHmm)} mm = {mmYazi(rows * kabinHmm)} mm
+                    </div>
+                  </div>
+                </>
+              )}
+
+            </>
+          )}
+
+          {/*
+            ÇÖZÜNÜRLÜK ve İÇERİK SOL PANELDE.
+            İkisi de ekranın kendi özelliği — model, duvar ve kabin ayarlarının
+            devamı. Sağ panel mekân ve yerleştirme işleriyle dolduğu için bu iki
+            blok buraya alındı; içerikleri değişmedi.
+          */}
+          {hasModel && (
+            <>
+              {!isVideoWall && ekranCozunurlugu && (
+                <div className="mb-2">
+                  <div className="text-[17px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('res.heading')}</div>
+                  <div
+                    title={t('res.totalHint')}
+                    className="py-2.5 px-4 rounded-lg border border-neutral-200 dark:border-[#2c333f] text-[18px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100"
+                  >
+                    {fmt(ekranCozunurlugu.resW)} × {fmt(ekranCozunurlugu.resH)} piksel
+                  </div>
+                </div>
+              )}
+
+              <div className="mb-2">
+                <h2 className="text-[25px] font-bold tracking-tight m-0 mb-2">{t('content.heading')}</h2>
+
+                {/*
+                  İÇERİK HAVUZU.
+
+                  Eskiden burada üç sabit kutu vardı ve yükleme doğrudan o anki
+                  ekranın içeriği oluyordu: aynı görseli ikinci ekranda
+                  kullanmak için yeniden yüklemek gerekiyordu. Artık yüklenen
+                  havuza giriyor, aşağıdaki listede her ekran kendi içeriğini
+                  havuzdan seçiyor.
+                */}
+                <input
+                  ref={havuzInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,video/mp4,video/webm,video/ogg"
+                  onChange={havuzaYukle}
+                  className="hidden"
+                />
+                <div className="flex flex-wrap gap-2">
+                  {icerikHavuzuTam.map((h) => (
+                    <div key={h.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => icerikAta(aktifEkranId, h.id)}
+                        title={h.ad}
+                        className={`relative w-[78px] h-14 rounded-lg overflow-hidden flex items-end justify-center ${
+                          icerikKimligi(content, contentUrl) === h.id
+                            ? 'ring-2 ring-brand'
+                            : 'border border-neutral-200 dark:border-[#2c333f]'
+                        }`}
+                      >
+                        <IcerikOnizleme oge={h} />
+                        <span className="relative w-full px-1 py-0.5 text-[12px] font-semibold text-white bg-black/50 truncate">
+                          {h.ad}
+                        </span>
+                      </button>
+                      {/* Yüklenen öğe havuzdan çıkarılabiliyor; sabitler duruyor. */}
+                      {h.id.startsWith('y') && (
+                        <button
+                          type="button"
+                          onClick={() => havuzdanCikar(h.id)}
+                          aria-label={t('content.havuzCikar')}
+                          title={t('content.havuzCikar')}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-neutral-700 text-white text-[12px] leading-none flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => havuzInputRef.current?.click()}
+                    className="w-[78px] h-14 rounded-lg border border-dashed border-neutral-300 dark:border-[#39414f] text-[14px] font-medium text-neutral-500 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                  >
+                    + {t('content.havuzYukle')}
+                  </button>
+                </div>
+
+                {/*
+                  EKRAN BAŞINA İÇERİK.
+
+                  Her satır bir ekran: hangi içeriği gösteriyor ve o içeriğin
+                  TAMAMINI mı yoksa kendine düşen dilimi mi. "Bölünmüş" ancak
+                  aynı içeriği seçen başka bir ekran varsa iş yapıyor.
+                */}
+                {sabitEkranlar.length >= 1 && (
+                  <div className="mt-3">
+                    <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
+                      {t('content.ekranBasina')}
+                    </div>
+                    <ul className="mt-1.5 mb-0 list-none p-0 flex flex-col gap-1.5">
+                      {ekranIcerikSatirlari.map((r) => {
+                        const secili = icerikHavuzuTam.find((x) => x.id === r.havuzId)
+                        return (
+                          <li
+                            key={r.id}
+                            className="flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2 py-1.5"
+                          >
+                            <span className="shrink-0 text-[15px] font-medium text-neutral-700 dark:text-neutral-200">
+                              {r.sira}.
+                            </span>
+                            <div className="relative w-10 h-7 shrink-0 rounded overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                              <IcerikOnizleme oge={secili} />
+                            </div>
+                            <select
+                              value={r.havuzId}
+                              onChange={(ev) => icerikAta(r.id, ev.target.value)}
+                              className="flex-1 min-w-0 text-[15px] rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-transparent px-1.5 py-1"
+                            >
+                              {icerikHavuzuTam.map((h) => (
+                                <option key={h.id} value={h.id}>
+                                  {h.ad}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="shrink-0 flex rounded-lg overflow-hidden border border-neutral-200 dark:border-[#2c333f]">
+                              {[false, true].map((v) => (
+                                <button
+                                  key={String(v)}
+                                  type="button"
+                                  onClick={() => bolunmusAta(r.id, v)}
+                                  className={`px-2 py-1 text-[14px] ${
+                                    r.bolunmus === v
+                                      ? 'bg-brand text-white'
+                                      : 'text-neutral-500 dark:text-neutral-400'
+                                  }`}
+                                >
+                                  {v ? t('content.bolunmus') : t('content.tamami')}
+                                </button>
+                              ))}
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={icerigiTumuneUygula}
+                      className="mt-2 w-full py-2 rounded-lg text-[15.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                    >
+                      {t('content.tumuneUygula')}
+                    </button>
+                    <p className="mt-1.5 mb-0 text-[14.5px] leading-snug text-neutral-400 dark:text-neutral-500">
+                      {t('content.bolunmusIpucu')}
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-[16.5px] text-neutral-500 dark:text-neutral-400 mt-2 m-0">
+                  {t('content.hint')}
+                </p>
+              </div>
+            </>
+          )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setAyarlarAcik(false)}
+              className="mt-5 w-full rounded-xl bg-brand px-4 py-3 text-[17px] font-semibold text-white hover:opacity-90"
+            >
+              {t('ayar.bitti')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {resetConfirmOpen && (
         <div className="fixed inset-0 z-50 bg-[#001334]/45 flex items-center justify-center p-4" onClick={() => setResetConfirmOpen(false)}>
           <div className="bg-white dark:bg-[#161a21] rounded-3xl px-10 py-9 w-full max-w-md relative shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -11488,7 +11577,14 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
  * Alt sınır 0,5: oraya dayanırsa (çok kısa bir pencerede) kaydırma açılır;
  * içeriğin kırpılıp erişilemez kalmasındansa kaydırılabilir olması iyidir.
  */
-const EN_KUCUK_ORAN = 0.3
+/*
+ * PANELİN EN ÇOK NE KADAR KÜÇÜLEBİLECEĞİ.
+ *
+ * 0,30 idi: panel sığmadığında yazılar üçte bire iniyor ve okunmaz hâle
+ * geliyordu ("her şey sıkışık, yazılar görünmüyor"). Okunur bir tabanda
+ * duruyor; bu tabanda da sığmıyorsa panel kaydırılıyor.
+ */
+const EN_KUCUK_ORAN = 0.88
 
 function Sigdir({ children, className = '' }) {
   const disRef = useRef(null)
@@ -11570,8 +11666,20 @@ function Sigdir({ children, className = '' }) {
        * Artan boşluğu justify-between bölümlerin arasına dağıtır.
        */
       ic.style.height = `${100 / oran}%`
-      // Masaüstünde kaydırma yok: içerik her hâlükârda panele sığdırılıyor.
-      dis.style.overflowY = 'hidden'
+      /*
+       * TABANDA DA SIĞMIYORSA KAYDIRILIYOR.
+       *
+       * Eskiden kaydırma hiç yoktu: içerik ne olursa olsun sığdırılıyordu,
+       * bedeli de okunmayan yazıydı. Artık küçültme okunur bir tabanda
+       * duruyor ve artan içerik kaydırmayla geziliyor.
+       */
+      const tasiyor = sonGerek * oran > disH + 1
+      if (tasiyor) {
+        ic.style.height = 'auto'
+        dis.style.overflowY = 'auto'
+      } else {
+        dis.style.overflowY = 'hidden'
+      }
     }
 
     hesapla()

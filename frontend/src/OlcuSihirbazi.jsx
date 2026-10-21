@@ -736,7 +736,15 @@ function SihirbazKart({
                 orada bitmiyorsa tıklanacak bir köşe yok. O zaman dört
                 kenara çizgi çekiliyor ve köşeler kesişimlerden kuruluyor.
               */}
-              {onKenarCizimeGec && (
+              {/*
+                İSTENEN KADAR GÖRÜNMEYEN KÖŞE.
+
+                Düğme dört köşe tamamlanana kadar duruyor: bir fotoğrafta
+                birden çok köşe görünmeyebiliyor (iki duvarın arkası, kadrajın
+                iki yanı). Her basışta bir köşe ekleniyor ve köşe seçmeye
+                dönülüyor; kalanları normal tıklamak da serbest.
+              */}
+              {onKenarCizimeGec && alanNoktaSayisi < 4 && (
                 <button
                   type="button"
                   onClick={onKenarCizimeGec}

@@ -127,9 +127,8 @@ async function olcuYaz(s, en, boy) {
  */
 const panelOlcusu = (s) =>
   s.evaluate(() => {
-    const g = [...document.querySelectorAll('aside')]
-      .map((x) => (x.innerText || '').replace(/\s+/g, ' '))
-      .join(' ')
+    /* Ayarlar penceresi panelin DIŞINDA; bütün gövdeyi tarıyoruz. */
+    const g = (document.body.innerText || '').replace(/\s+/g, ' ')
     const al = (etiket) => {
       const m = g.match(new RegExp(etiket + '\\s+(\\d+)\\s*×\\s*(\\d+) mm = (\\d+) mm'))
       return m ? { adet: Number(m[1]), kabinMm: Number(m[2]), toplamMm: Number(m[3]) } : null
@@ -227,10 +226,24 @@ async function ikiKenar(s, k) {
   }
 }
 
-/** Sol paneldeki bir adımlayıcıyı bir artırır (etiketine göre bulunuyor). */
+/**
+ * AYARLAR PENCERESİ.
+ *
+ * Duvar, yapılandırma, ekran dizilimi ve içerik panelden buraya taşındı;
+ * testin de oraya girip çıkması gerekiyor.
+ */
+const ayarlariAc = async (s, bas) => {
+  const acik = await s.evaluate(() => /Ekran ayarları/.test(document.body.innerText || ''))
+  if (!acik) return false
+  const oldu = await bas('Ekran ayarları', 1200)
+  return oldu
+}
+const ayarlariKapat = (s, bas) => bas('Tamam', 1200)
+
+/** Bir adımlayıcıyı bir artırır (etiketine göre bulunuyor). */
 const kabinArtir = (s, etiketMetni) =>
   s.evaluate((q) => {
-    const etiket = [...document.querySelectorAll('aside *')].find(
+    const etiket = [...document.querySelectorAll('*')].find(
       (e) => e.children.length === 0 && (e.textContent || '').trim() === q,
     )
     if (!etiket) return false
@@ -399,9 +412,15 @@ const a = await akis('A — ALANI İŞARETLE', async ({ s, bas, denetle, icerir,
    * ÜRÜN KARARI: ölçü sürerken tasarım görünmüyor; onay da göstermiyor.
    * Tasarım "Tasarımı ölçüye sığdır" deyince çıkıyor.
    */
+  /*
+   * ÜRÜN KARARI: ölçü sürerken tasarım görünmüyor ama ALAN ONAYLANINCA
+   * görünüyor — onayla birlikte ölçü işi bitiyor.
+   */
   const g1 = await tasarimGorunur(s)
-  console.log('  · onaydan sonra (gizli olmalı):', JSON.stringify(g1))
-  if (g1.var && g1.saydamlik > 0.05) return dus('onaydan sonra tasarım görünüyor (gizli olmalıydı)')
+  console.log('  · onaydan sonra (görünmeli)   :', JSON.stringify(g1))
+  if (!g1.var || !(g1.saydamlik > 0.05) || !(g1.en > 10)) {
+    return dus('alan onaylandığı hâlde tasarım görünmüyor')
+  }
 
   if ((await olcuYaz(s, 300, 150)) < 2) return dus('en/boy kutuları bulunamadı')
   if (!(await denetle('gerçek en/boy yazıldı'))) return false
@@ -432,7 +451,9 @@ const a = await akis('A — ALANI İŞARETLE', async ({ s, bas, denetle, icerir,
    * olmalı; artan bir kabinden büyükse bir sıra daha sığardı.
    * Alan 300 × 150 cm = 3000 × 1500 mm (yukarıda yazıldı).
    */
+  await ayarlariAc(s, bas)
   const ilk = await panelOlcusu(s)
+  await ayarlariKapat(s, bas)
   console.log('  · panel ölçüsü                :', JSON.stringify(ilk))
   if (!ilk.sutun || !ilk.satir) return dus('panelde sütun/satır ölçüsü okunamadı')
   const denetleEksen = (ad, o, alanMm) => {
@@ -447,7 +468,9 @@ const a = await akis('A — ALANI İŞARETLE', async ({ s, bas, denetle, icerir,
 
   /* İkinci basış hiçbir şeyi değiştirmemeli: tek seferde oturmuş olmalı. */
   await bas('Tasarımı ölçüye sığdır', 2500)
+  await ayarlariAc(s, bas)
   const ikinci = await panelOlcusu(s)
+  await ayarlariKapat(s, bas)
   if (ikinci.sutun?.adet !== ilk.sutun.adet || ikinci.satir?.adet !== ilk.satir.adet) {
     return dus('ikinci sığdırma sonucu değiştirdi: ' + JSON.stringify(ikinci))
   }
@@ -478,9 +501,12 @@ const b = await akis('B — SERBEST YERLEŞTİR', async ({ s, bas, denetle, icer
   if (!once.var || !(once.en > 10)) return dus('serbest yerleştirmede kutu kurulmadı')
   if (once.saydamlik > 0.05) return dus('kutu konurken tasarım görünüyor (gizli olmalıydı)')
 
+  if (!(await ayarlariAc(s, bas))) return dus('"Ekran ayarları" penceresi açılmadı')
   const artti = (await kabinArtir(s, 'Sütunlar')) || (await kabinArtir(s, 'Sütun'))
   if (!artti) return dus('sütun adımlayıcısı bulunamadı')
-  await s.waitForTimeout(2200)
+  await s.waitForTimeout(1500)
+  await ayarlariKapat(s, bas)
+  await s.waitForTimeout(1200)
   const sonra = await tasarimGorunur(s)
   console.log('  · sütun artınca            :', JSON.stringify(sonra))
   if (!(sonra.en > once.en + 2)) return dus('kutu kabin sayısıyla büyümedi')
