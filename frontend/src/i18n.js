@@ -223,8 +223,22 @@ const dict = {
   'tool.showMeasures': { tr: 'Ölçüleri göster', en: 'Show measurements', ar: 'إظهار القياسات' },
 
   // ---------- Ekran modu sekmeleri ----------
-  'mode.single': { tr: 'Tek Ekran', en: 'Single Screen', ar: 'شاشة واحدة' },
-  'mode.multi': { tr: 'Çoklu Ekran', en: 'Multi Screen', ar: 'شاشات متعددة' },
+  /*
+   * BU İKİSİ "KAÇ EKRAN" DEĞİL, "BU EKRAN KAÇ PARÇA" sorusunu soruyor.
+   * Odadaki ekran sayısı aşağıdaki "Ekranlar" listesinde.
+   */
+  'mode.single': { tr: 'Tek parça', en: 'One piece', ar: 'قطعة واحدة' },
+  'mode.multi': { tr: 'Çok parçalı', en: 'Multiple pieces', ar: 'عدة قطع' },
+  'parca.baslik': { tr: 'Parçalı ekran', en: 'Multi-piece screen', ar: 'شاشة متعددة القطع' },
+  'parca.bol': { tr: 'Parçalara böl', en: 'Split into pieces', ar: 'قسّم إلى قطع' },
+  'parca.duzenle': { tr: 'Parçaları düzenle', en: 'Edit the pieces', ar: 'تحرير القطع' },
+  'parca.tekeDon': { tr: 'Tek parçaya dön', en: 'Back to one piece', ar: 'العودة إلى قطعة واحدة' },
+  'parca.adet': { tr: 'parçadan oluşuyor', en: 'pieces', ar: 'قطع' },
+  'parca.tek': {
+    tr: 'Tek parça. Odaya ikinci bir ekran koymak için yukarıdaki "Ekran ekle".',
+    en: 'One piece. To put a second screen in the room, use "Add screen" above.',
+    ar: 'قطعة واحدة. لإضافة شاشة ثانية إلى الغرفة استخدم «إضافة شاشة» أعلاه.',
+  },
 
   // ---------- Model bölümü ----------
   'model.heading': { tr: 'Model', en: 'Model', ar: 'الطراز' },
@@ -312,7 +326,7 @@ const dict = {
   },
   'ekran.duzenleniyor': { tr: 'düzenleniyor', en: 'editing', ar: 'قيد التحرير' },
   'ekran.cokluIpucu': {
-    tr: 'Aynı fotoğrafa birden çok ekran koyabilirsiniz.',
+    tr: 'Odaya birden çok ekran koyabilirsiniz; her birinin kendi yeri ve içeriği olur.',
     en: 'Place the current screen, then press "Add screen": it is pinned where it stands and you get a new one of the same size. Click a pinned screen or press "Edit" to go back to it.',
     ar: 'ضع الشاشة الحالية ثم اضغط «إضافة شاشة»: تُثبّت في مكانها وتحصل على واحدة جديدة بالمقاس نفسه.',
   },

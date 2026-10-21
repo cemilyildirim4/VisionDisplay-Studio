@@ -8993,37 +8993,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         <div className="yatay-sag">
         <aside className="yatay-panel yatay-panel-model w-full min-w-0 lg:w-[340px] shrink-0 order-2 lg:order-1 border-t lg:border-t-0 lg:border-r border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
           <Sigdir className="flex flex-col gap-2">
-          {/* Tek/Çoklu Ekran sekmeleri (yalnızca model seçilince) */}
-          {hasModel && (
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setScreenMode('single')
-                  setCols(1)
-                  setRows(1)
-                }}
-                className={`py-2.5 rounded-lg text-[19px] transition-colors ${
-                  screenMode === 'single'
-                    ? 'btn-selected border-2'
-                    : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
-                }`}
-              >
-                {t('mode.single')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMultiModalOpen(true)}
-                className={`py-2.5 rounded-lg text-[19px] transition-colors ${
-                  screenMode === 'multi'
-                    ? 'btn-selected border-2'
-                    : 'border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-[#39414f]'
-                }`}
-              >
-                {t('mode.multi')}
-              </button>
-            </div>
-          )}
 
           {/*
             EKRANLAR — aynı arka plana birden çok ekran.
@@ -9493,6 +9462,51 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               )}
 
             </>
+          )}
+
+          {/*
+            PARÇALI EKRAN — ekranın kendi özelliği.
+
+            Bu, odadaki ekran SAYISI değil: tek bir ekranın kaç parçadan
+            oluştuğu. Parçalar yan yana tek şerit olarak duruyor ve tek
+            içerik paylaşıyor. Odaya ikinci bir ekran koymak için
+            yukarıdaki "Ekran ekle" var.
+
+            Üstte Tek/Çoklu diye duruyordu ve "kaç ekran" sorusuyla
+            karışıyordu; türün ve kabin sayısının yanı doğru yeri.
+          */}
+          {hasModel && (
+            <div className="mb-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[17px] font-semibold text-neutral-700 dark:text-neutral-200">
+                  {t('parca.baslik')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMultiModalOpen(true)}
+                  className="shrink-0 rounded-lg border border-neutral-200 px-3 py-2 text-[15px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
+                >
+                  {screenMode === 'multi' ? t('parca.duzenle') : t('parca.bol')}
+                </button>
+              </div>
+              <p className="mt-1 mb-0 text-[15px] leading-snug text-neutral-500 dark:text-neutral-400">
+                {screenMode === 'multi' && screens.length > 0
+                  ? screens.length + ' ' + t('parca.adet')
+                  : t('parca.tek')}
+              </p>
+              {screenMode === 'multi' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScreenMode('single')
+                    setScreens([])
+                  }}
+                  className="mt-2 w-full rounded-lg py-2 text-[15px] font-medium text-neutral-500 transition-colors hover:text-brand dark:text-neutral-400"
+                >
+                  {t('parca.tekeDon')}
+                </button>
+              )}
+            </div>
           )}
 
           {/*
