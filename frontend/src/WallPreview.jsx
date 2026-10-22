@@ -1041,7 +1041,16 @@ export default function WallPreview({
         hm: Math.max(1, s.rows) * ch,
       }
     })
-    const totalWm = list.reduce((a, s) => a + s.wm, 0)
+    /*
+     * KÜME İLE TEK DURAN EKRAN ARASINDA BOŞLUK.
+     * Yapışık çizilince hangisinin birleşimde olduğu anlaşılmıyordu.
+     */
+    const AYRIM_M = 0.08
+    const ayrimSayisi = list.reduce(
+      (a, s, i) => a + (i > 0 && (list[i - 1].paylasim || null) !== (s.paylasim || null) ? 1 : 0),
+      0,
+    )
+    const totalWm = list.reduce((a, s) => a + s.wm, 0) + ayrimSayisi * AYRIM_M
     const maxHm = Math.max(...list.map((s) => s.hm))
     // Sınırlayıcı duvar: en az ekranları içerecek kadar (Genişlik/Yükseklik'ten)
     const wallWm = Math.max(0.1, Number(width) || 0, totalWm)
@@ -1125,12 +1134,28 @@ export default function WallPreview({
     const humanH = HUMAN_HEIGHT_M * pxPerM
 
     let xAcc = 0
-    const placed = list.map((s) => {
+    const placed = list.map((s, i) => {
+      /* Paylaşım değişiyorsa araya boşluk. */
+      if (i > 0 && (list[i - 1].paylasim || null) !== (s.paylasim || null)) xAcc += AYRIM_M * pxPerM
       const wPx = s.wm * pxPerM
       const o = { ...s, wPx, hPx: s.hm * pxPerM, xStart: xAcc, center: xAcc + wPx / 2 }
       xAcc += wPx
       return o
     })
+
+    /*
+     * PAYLAŞIM ARALIKLARI — görsel kümenin kapladığı alana seriliyor.
+     * Kümede olmayan ekran kendi kutusunu kullanıyor.
+     */
+    const paylasimAlanlari = new Map()
+    for (const s of placed) {
+      if (!s.paylasim) continue
+      const a = paylasimAlanlari.get(s.paylasim) || { x0: Infinity, x1: -Infinity, h: 0 }
+      a.x0 = Math.min(a.x0, s.xStart)
+      a.x1 = Math.max(a.x1, s.xStart + s.wPx)
+      a.h = Math.max(a.h, s.hPx)
+      paylasimAlanlari.set(s.paylasim, a)
+    }
 
     // Tüm ekranlar düz VE hepsi genel/ortak içeriği kullanıyorsa (kendine özel içeriği yoksa):
     // TEK görsel katmanı tüm şeride yayılır, ekranlar sadece çerçeve olarak üstüne çizilir.
@@ -1301,7 +1326,8 @@ export default function WallPreview({
                           background: 'rgba(0,19,52,0.55)',
                         }}
                       >
-                        {i + 1}
+                        {/* Kart numarasıyla aynı: dizideki yeri değil, kendi sırası. */}
+                        {s.sira || i + 1}
                       </span>
                     ))}
                   </div>
@@ -1331,19 +1357,25 @@ export default function WallPreview({
                       lYon={s.lYon}
                       solKirim={s.solKirim || 0}
                       sagKirim={s.sagKirim || 0}
-                      {...(dilim
-                        ? {
+                      {...(() => {
+                        if (dilim) {
+                          return {
                             spanW: totalWpx * dilim.sw,
                             spanH: maxHpx * dilim.sh,
                             offsetX: s.xStart + totalWpx * dilim.sx,
                             offsetY: maxHpx - s.hPx + maxHpx * dilim.sy,
                           }
-                        : {
-                            spanW: totalWpx,
-                            spanH: maxHpx,
-                            offsetX: s.xStart,
-                            offsetY: maxHpx - s.hPx,
-                          })}
+                        }
+                        /* Paylaşan ekranlar kümenin alanını, ötekiler kendi kutusunu. */
+                        const alan = s.paylasim ? paylasimAlanlari.get(s.paylasim) : null
+                        if (!alan) return { spanW: s.wPx, spanH: s.hPx, offsetX: 0, offsetY: 0 }
+                        return {
+                          spanW: alan.x1 - alan.x0,
+                          spanH: alan.h,
+                          offsetX: s.xStart - alan.x0,
+                          offsetY: alan.h - s.hPx,
+                        }
+                      })()}
                     />
                   ))}
                 </div>

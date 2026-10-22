@@ -2345,6 +2345,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yine birbirini tutmaz.
    */
   /*
+   * GÖRSELİ PAYLAŞAN EKRAN KÜMELERİ.
+   *
+   * İki kaynak: birleşik grup ("Tek görsel" açıkken) ve tasarım alanında
+   * seçilip ortak görsel verilen ekranlar. Bir ekran en çok bir kümede.
+   */
+  const paylasimKumeleri = (() => {
+    const kumeler = []
+    if (grup?.tekGorsel !== false && Array.isArray(grup?.uyeler) && grup.uyeler.length > 1) {
+      kumeler.push(grup.uyeler)
+    }
+    for (const k of icerikGruplari) if (Array.isArray(k) && k.length > 1) kumeler.push(k)
+    return kumeler
+  })()
+  const paylasimKumesi = (id) => (id ? paylasimKumeleri.find((k) => k.includes(id)) || null : null)
+
+  /*
    * TASARIMDAKİ BÜTÜN EKRANLAR — fotoğrafsız şerit için.
    *
    * Liste ekran kayıtlarından ve elde duran ekrandan kuruluyor; ayrıca bir
@@ -2382,6 +2398,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
            görseli göstermesin. */
         content: e.content || 'led',
         contentUrl: e.contentUrl || null,
+        /*
+         * PAYLAŞIM KÜMESİ — görsel yalnızca bu küme boyunca yayılıyor.
+         * Kümede olmayan ekran görseli kendi tamamında gösteriyor ve
+         * toplam genişlik hesabına girmiyor.
+         */
+        paylasim: paylasimKumesi(e.id)?.join(',') || null,
       }
     })
 
@@ -7259,21 +7281,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Tek başına kalan ekran bölünmez — bölecek kimse yok, içeriğin tamamını
    * gösteriyor. Bu yüzden iki kişiden az küme atlanıyor.
    */
-  /*
-   * GÖRSELİ PAYLAŞAN EKRAN KÜMELERİ.
-   *
-   * İki kaynak: birleşik grup ("Tek görsel" açıkken) ve tasarım alanında
-   * seçilip ortak görsel verilen ekranlar. Bir ekran en çok bir kümede.
-   */
-  const paylasimKumeleri = (() => {
-    const kumeler = []
-    if (grup?.tekGorsel !== false && Array.isArray(grup?.uyeler) && grup.uyeler.length > 1) {
-      kumeler.push(grup.uyeler)
-    }
-    for (const k of icerikGruplari) if (Array.isArray(k) && k.length > 1) kumeler.push(k)
-    return kumeler
-  })()
-  const paylasimKumesi = (id) => (id ? paylasimKumeleri.find((k) => k.includes(id)) || null : null)
 
   /*
    * SEÇİM: elde duran ekran her zaman dahil.
