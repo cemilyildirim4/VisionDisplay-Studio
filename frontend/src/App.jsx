@@ -186,7 +186,7 @@ import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { useCabinets } from './hooks/useCabinets.js'
 import { mmYazi } from './birim.js'
-import { seriAdi } from './productType.js'
+import { birimSozcugu, seriAdi } from './productType.js'
 import {
   taslakEkranlari,
   taslakOlustur,
@@ -403,6 +403,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [cols, setCols] = useState(1)
   const [rows, setRows] = useState(1)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  /* Shift ile tasarım alanından seçilen ekranlar. */
+  const [secimKumesi, setSecimKumesi] = useState([])
+  /* "Shift + tıkla" ipucu bir kez gösteriliyor. */
+  const [shiftIpucu, setShiftIpucu] = useState(false)
+
+  /*
+   * ORTAK GÖRSELLİ EKRAN KÜMELERİ — birleşik OLMAYAN ekranlar için.
+   * Tasarım alanında seçilip "Seçili ekranlara görsel ekle" denince
+   * kuruluyor. Birleşik grubun kendi paylaşımı ayrı (bkz. grup.tekGorsel).
+   */
+  const [icerikGruplari, setIcerikGruplari] = useState([])
+
   /* Yerleşim kutusunda seçim açık mı (bkz. yerlesim.ac). */
   const [yerlesimAcik, setYerlesimAcik] = useState(false)
   /* İçerik kutusunun üstüne dosya sürükleniyor mu (bkz. content.ekle). */
@@ -1426,7 +1438,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * "Bölünmüş": bu ekran içeriği, aynı içeriği bölünmüş seçen ÖTEKİ
    * ekranlarla paylaşıyor (bkz. icerikBolme.js). Tek başınaysa etkisi yok.
    */
-  const [bolunmus, setBolunmus] = useState(false)
   /* Havuza yükleme: görsel ve video tek düğmeden geçiyor. */
   const havuzInputRef = useRef(null)
   // Adım adım akış: 1 Model · 2 Duvar · 3 Ekran · 4 İçerik
@@ -2005,7 +2016,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Sıfırlamada havuz da boşalıyor; adresler burada bırakılıyor. */
     for (const h of icerikHavuzu) if (h.url?.startsWith('blob:')) URL.revokeObjectURL(h.url)
     setIcerikHavuzu([])
-    setBolunmus(false)
     setContentUrl(null)
     setShowMeasurements(true)
     setResetConfirmOpen(false)
@@ -4358,7 +4368,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     lSolCols,
     content,
     contentUrl: contentUrl || null,
-    bolunmus,
   })
 
   /*
@@ -4424,7 +4433,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setContent('led')
     /* Havuzdaki adres bırakılmıyor: başka ekranlar onu kullanıyor olabilir. */
     setContentUrl(null)
-    setBolunmus(false)
     setAlanNokta([])
     setAlanCizgi([])
     setAlanElleEn('')
@@ -4534,7 +4542,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       if (ayar.rows > 0) setRows(ayar.rows)
       if (ayar.content) setContent(ayar.content)
       setContentUrl(ayar.contentUrl || null)
-      setBolunmus(!!ayar.bolunmus)
     }
     /* Seçilen ekranın kendi alanı ve alan içindeki yeri de geri geliyor. */
     setAlanKipi(false)
@@ -4625,7 +4632,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return
     }
     if (sirali.length < 2) return
-    setGrup({ tip: grupTipi, aci: grupAcisi, uyeler: sirali })
+    /* Birleşik ekranlar varsayılan olarak TEK görseli paylaşıyor. */
+    setGrup({ tip: grupTipi, aci: grupAcisi, uyeler: sirali, tekGorsel: true })
   }
 
   /*
@@ -4708,50 +4716,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!h) return
     /* Sabit seçeneklerin adresi kodda duruyor; kayda yazılmıyor. */
     const u = h.id.startsWith('y') ? h.url : null
-    if (!hedefId || hedefId === aktifEkranId) {
+    /*
+     * PAYLAŞIMDAKİ BİR EKRANA SEÇİLEN GÖRSEL BÜTÜN KÜMEYE.
+     * Küme tek resmi paylaşıyor; üyelerden birine başka bir görsel
+     * vermek paylaşımı sessizce bozardı.
+     */
+    const kume = paylasimKumesi(hedefId || aktifEkranId)
+    const hedefler = kume || [hedefId || aktifEkranId]
+    if (hedefler.includes(aktifEkranId) || !hedefId) {
       setContent(h.content)
       setContentUrl(u)
-      return
     }
     setSabitEkranlar((l) =>
-      l.map((e) => (e.id === hedefId ? { ...e, ayar: { ...(e.ayar || {}), content: h.content, contentUrl: u } } : e)),
+      l.map((e) => (hedefler.includes(e.id) ? { ...e, ayar: { ...(e.ayar || {}), content: h.content, contentUrl: u } } : e)),
     )
   }
 
-  const bolunmusAta = (hedefId, deger) => {
-    if (!hedefId || hedefId === aktifEkranId) {
-      setBolunmus(deger)
-      return
-    }
-    setSabitEkranlar((l) =>
-      l.map((e) => (e.id === hedefId ? { ...e, ayar: { ...(e.ayar || {}), bolunmus: deger } } : e)),
-    )
-  }
 
-  /* Elde duran ekranın içerik seçimini bütün ekranlara kopyalar. */
-  const icerigiTumuneUygula = () => {
-    setSabitEkranlar((l) =>
-      l.map((e) => ({
-        ...e,
-        ayar: { ...(e.ayar || {}), content, contentUrl: contentUrl || null, bolunmus },
-      })),
-    )
-  }
-
-  /* Panelde ekran başına bir satır: sıra, seçili içerik, tamamı/bölünmüş. */
-  const ekranIcerikSatirlari = [
-    ...sabitEkranlar.map((e, i) => ({
-      id: e.id,
-      sira: e.sira || i + 1,
-      havuzId: e.ayar?.content
-        ? icerikKimligi(e.ayar.content, e.ayar.contentUrl)
-        : icerikKimligi(content, contentUrl),
-      bolunmus: !!e.ayar?.bolunmus,
-    })),
-    { id: aktifEkranId, sira: aktifSira, havuzId: icerikKimligi(content, contentUrl), bolunmus },
-  ]
-    .filter((r) => r.id)
-    .sort((a, b) => (a.sira || 0) - (b.sira || 0))
 
   /*
    * SÜRÜKLE-BIRAK DA YÜKLÜYOR.
@@ -7212,6 +7193,87 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Tek başına kalan ekran bölünmez — bölecek kimse yok, içeriğin tamamını
    * gösteriyor. Bu yüzden iki kişiden az küme atlanıyor.
    */
+  /*
+   * GÖRSELİ PAYLAŞAN EKRAN KÜMELERİ.
+   *
+   * İki kaynak: birleşik grup ("Tek görsel" açıkken) ve tasarım alanında
+   * seçilip ortak görsel verilen ekranlar. Bir ekran en çok bir kümede.
+   */
+  const paylasimKumeleri = (() => {
+    const kumeler = []
+    if (grup?.tekGorsel !== false && Array.isArray(grup?.uyeler) && grup.uyeler.length > 1) {
+      kumeler.push(grup.uyeler)
+    }
+    for (const k of icerikGruplari) if (Array.isArray(k) && k.length > 1) kumeler.push(k)
+    return kumeler
+  })()
+  const paylasimKumesi = (id) => (id ? paylasimKumeleri.find((k) => k.includes(id)) || null : null)
+
+  /*
+   * SEÇİM: elde duran ekran her zaman dahil.
+   *
+   * Kullanıcı zaten onu düzenliyor; "şu an üzerinde çalıştığım ekranla
+   * şunu paylaştır" doğal okunuş. Ayrıca elde duran ekran EkEkranlar'da
+   * çizilmediği için Shift ile tıklanamıyor; dışarıda bırakmak iki
+   * ekranı paylaştırmayı imkânsız kılardı.
+   */
+  const secilenEkranlar = secimKumesi.length
+    ? [...new Set([aktifEkranId, ...secimKumesi].filter(Boolean))]
+    : []
+
+  /* Seçilen ekranlar ortak görselli bir küme oluyor. */
+  const secimiPaylastir = () => {
+    if (secilenEkranlar.length < 2) return
+    setIcerikGruplari((l) => [
+      ...l.filter((k) => !k.some((x) => secilenEkranlar.includes(x))),
+      secilenEkranlar,
+    ])
+    setSecimKumesi([])
+    havuzInputRef.current?.click()
+  }
+
+  /*
+   * İPUCU BİR KEZ.
+   * Çoklu seçim görünmez bir özellik; ilk tıklamada bir kez söyleniyor,
+   * birkaç saniye sonra kendiliğinden kalkıyor ve bir daha çıkmıyor.
+   */
+  const ipucunuGoster = () => {
+    try {
+      if (localStorage.getItem('vds.shiftIpucu')) return
+      localStorage.setItem('vds.shiftIpucu', '1')
+    } catch {
+      /* Depolama kapalıysa ipucu her açılışta bir kez çıkar; zararsız. */
+    }
+    setShiftIpucu(true)
+    setTimeout(() => setShiftIpucu(false), 5000)
+  }
+
+  /*
+   * PAYLAŞIMDAKİ EKRANLAR AYNI GÖRSELİ TAŞIR.
+   *
+   * Tek resmin dilimleri ancak hepsi aynı adresi gösterdiğinde
+   * hesaplanabiliyor. Elde duran ekranın içeriği değiştiğinde (havuzdan
+   * seçim, yükleme, sürükle-bırak) kümedeki ötekilere de yazılıyor.
+   * Değişiklik yoksa liste OLDUĞU GİBİ dönüyor: her render yeni bir dizi
+   * üretmek sonsuz döngü olurdu.
+   */
+  useEffect(() => {
+    const kume = paylasimKumesi(aktifEkranId)
+    if (!kume) return
+    setSabitEkranlar((l) => {
+      let degisti = false
+      const yeni = l.map((e) => {
+        if (!kume.includes(e.id)) return e
+        const a = e.ayar || {}
+        if (a.content === content && (a.contentUrl || null) === (contentUrl || null)) return e
+        degisti = true
+        return { ...e, ayar: { ...a, content, contentUrl: contentUrl || null } }
+      })
+      return degisti ? yeni : l
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, contentUrl, aktifEkranId, icerikGruplari, grup])
+
   const bolunmusDilimler = (() => {
     const m = selectedModel || previewModel
     if (!m) return null
@@ -7221,29 +7283,36 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const kh = ((dikey ? m.widthMm : m.heightMm) || 500) / 10
       return { enCm: Math.max(1, a.cols || 1) * kw, boyCm: Math.max(1, a.rows || 1) * kh }
     }
-    const anahtar = (a) => (a.content || 'led') + '|' + (a.contentUrl || '')
+    /*
+     * ADAYLAR: paylaşım kümesindeki ekranlar. Eskiden ölçüt "aynı içeriği
+     * seçmiş ve Bölünmüş işaretlenmiş olmak"tı; kullanıcı iki işi birden
+     * doğru yapmak zorundaydı.
+     */
     const adaylar = []
     for (const e of sabitEkranlar) {
-      const a = e.ayar
-      if (!a?.bolunmus) continue
+      const kume = paylasimKumesi(e.id)
+      if (!kume) continue
       /* Birleşmiş gruptaki ekran kendi kaydında değil, türetilmiş yerinde. */
       const k = grupKoseleri?.get(e.id) || e.oran?.map(oranTuvale)
-      if (!Array.isArray(k) || k.length !== 4) continue
-      adaylar.push({ id: e.id, koseler: k, ...kabinOlcusu(a), anahtar: anahtar(a) })
+      adaylar.push({
+        id: e.id,
+        koseler: Array.isArray(k) && k.length === 4 ? k : null,
+        ...kabinOlcusu(e.ayar || {}),
+        anahtar: kume.join(','),
+      })
     }
     /*
      * YERİ BELLİ OLMAYAN EKRAN DA HESABA GİRİYOR — ama yalnızca
      * "bölmeye katılamıyor" damgasıyla. Dışarıda bırakılınca içeriğin
      * TAMAMINI çiziyor ve görsel tekrarlanmış gibi görünüyordu.
      */
-    if (bolunmus && aktifEkranId) {
-      const a = ekranAyariAnlik()
+    if (aktifEkranId && paylasimKumesi(aktifEkranId)) {
       const yerli = Array.isArray(koseMutlak) && koseMutlak.length === 4
       adaylar.push({
         id: aktifEkranId,
         koseler: yerli ? aktifGrupKose || koseMutlak : null,
-        ...kabinOlcusu(a),
-        anahtar: anahtar(a),
+        ...kabinOlcusu(ekranAyariAnlik()),
+        anahtar: paylasimKumesi(aktifEkranId).join(','),
       })
     }
     if (adaylar.length < 2) return null
@@ -7269,6 +7338,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
     return harita.size ? harita : null
   })()
+
+  /*
+   * PAYLAŞIM NOTU — görsel bu ekrana nereden geliyor.
+   * Birleşik grupta görsel birleşimin; ortak görselli kümede ekranların
+   * kendi aralarında kurdukları bir bağ, o yüzden ayrılabiliyor.
+   */
+  const paylasimNotu = (id) => {
+    const kume = paylasimKumesi(id)
+    if (!kume) return null
+    const grupta = grup?.uyeler && kume === grup.uyeler
+    if (grupta) return { metin: t('icerik.grupGorseli'), ayrilabilir: false }
+    const siralar = kume
+      .map((x) => ekranOzetleri.find((o) => o.id === x)?.sira)
+      .filter(Boolean)
+      .join(', ')
+    return { metin: t('icerik.ortak') + ' (' + siralar + ')', ayrilabilir: true }
+  }
+
+  /* Ortak görsel kümesini bozar; ekranlar görseli kendi tamamında gösterir. */
+  const icerikGrubunuAyir = (id) => setIcerikGruplari((l) => l.filter((k) => !k.includes(id)))
 
   /* Metre yazımı: "2,88". Panelde ve özet satırında aynı biçim. */
   const mYazi = (v) => (v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -7325,7 +7414,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           ? icerikKimligi(r.ayar.content, r.ayar.contentUrl)
           : icerikKimligi(content, contentUrl),
         /* Bölünmüşse küçük resim o ekranın KENDİ dilimini göstersin. */
-        dilim: r.ayar.bolunmus ? bolunmusDilimler?.get(r.id) || null : null,
+        dilim: paylasimKumesi(r.id) ? bolunmusDilimler?.get(r.id) || null : null,
       }
     })
 
@@ -7415,7 +7504,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     agirlik: e.spec?.weight || 0,
     gucMax: e.spec?.pMax || 0,
     icerik: icerikHavuzuTam.find((x) => x.id === e.havuzId)?.ad || '',
-    bolunmus: !!e.ayar.bolunmus,
+    bolunmus: !!paylasimKumesi(e.id),
   }))
 
 
@@ -8616,6 +8705,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             olarak görünmeye devam ediyor; tasarım "Köşeyi kur" ile geri geliyor.
           */}
           {/*
+            SEÇİM ÇUBUĞU — birden çok ekran seçiliyken.
+            Seçilen ekranlar bir görseli tasarım alanındaki yerlerine göre
+            tek resim gibi paylaşabiliyor.
+          */}
+          {scene === 'ozel' && !olcuAraciAcik && secilenEkranlar.length > 1 && (
+            <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#001334]/85 px-3 py-1.5 text-[13px] text-white shadow-lg">
+              <span className="opacity-80">{secilenEkranlar.length} {t('ekran.tekil')}</span>
+              <button
+                type="button"
+                onClick={secimiPaylastir}
+                className="rounded-full bg-white/15 px-2.5 py-1 font-medium transition-colors hover:bg-white/30"
+              >
+                {t('secim.gorselEkle')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSecimKumesi([])}
+                className="opacity-75 underline underline-offset-2 transition-opacity hover:opacity-100"
+              >
+                {t('secim.kaldir')}
+              </button>
+            </div>
+          )}
+
+          {/* Çoklu seçim görünmez bir özellik; bir kez söyleniyor. */}
+          {shiftIpucu && (
+            <div className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 rounded-full bg-[#001334]/80 px-3 py-1.5 text-[12.5px] text-white shadow-lg">
+              {t('secim.ipucu')}
+            </div>
+          )}
+
+          {/*
             EKRAN NUMARALARI — listedeki satırla fotoğraftaki ekranı eşlemek için.
             Sabitlenenler kendi dörtgeninden, elde duran ekran koseMutlak'tan
             (grup varsa gruptaki yerinden) okunuyor.
@@ -8669,6 +8790,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               contentUrl={contentUrl}
               oranTuvale={oranTuvale}
               dilimler={bolunmusDilimler}
+              secililer={secimKumesi}
               /*
                * İŞARETLEME SÜRERKEN EKRAN SEÇİLMİYOR.
                *
@@ -8677,7 +8799,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * köşesine nokta koymak istiyor — uç uca getirmenin yolu bu.
                * O sırada tıklama ekranı seçiyordu ve nokta hiç konmuyordu.
                */
-              onSec={olcuAraciAcik ? null : ekraniDuzenle}
+              onSec={
+                olcuAraciAcik
+                  ? null
+                  : (id, shift) => {
+                      /* Shift: seçime ekle/çıkar. Düz tıklama: düzenlemeye al. */
+                      if (shift) {
+                        setSecimKumesi((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]))
+                        return
+                      }
+                      setSecimKumesi([])
+                      ipucunuGoster()
+                      ekraniDuzenle(id)
+                    }
+              }
             />
           )}
 
@@ -9583,23 +9718,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             </button>
                           </div>
 
-                          {/* Bölme ancak paylaşacak ikinci bir ekran varken iş yapıyor. */}
-                          {ekranOzetleri.length > 1 && (
-                            <div className="mt-1.5 flex overflow-hidden rounded-lg border border-neutral-300 dark:border-[#39414f]">
-                              {[false, true].map((v) => (
+                          {/*
+                            PAYLAŞIM NOTU.
+                            Görselin bu ekrana nereden geldiğini söylüyor;
+                            paylaşımda olmayan ekranda hiç çıkmıyor çünkü
+                            söylenecek bir şey yok.
+                          */}
+                          {paylasimNotu(e.id) && (
+                            <div className="mt-1.5 flex items-center gap-2 text-[12.5px] text-neutral-500 dark:text-neutral-400">
+                              <span className="min-w-0 flex-1 truncate">{paylasimNotu(e.id).metin}</span>
+                              {paylasimNotu(e.id).ayrilabilir && (
                                 <button
-                                  key={String(v)}
                                   type="button"
-                                  onClick={() => bolunmusAta(e.id, v)}
-                                  className={`flex-1 px-1 py-1 text-[14px] ${
-                                    e.ayar.bolunmus === v
-                                      ? 'bg-brand text-white'
-                                      : 'text-neutral-600 dark:text-neutral-300'
-                                  }`}
+                                  onClick={() => icerikGrubunuAyir(e.id)}
+                                  className="shrink-0 underline underline-offset-2 transition-colors hover:text-brand"
                                 >
-                                  {v ? t('content.bolunmus') : t('content.tamami')}
+                                  {t('yerlesim.ayir')}
                                 </button>
-                              ))}
+                              )}
                             </div>
                           )}
                         </div>
@@ -9662,7 +9798,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           </span>
                           <span className="block truncate text-[13.5px] tabular-nums text-neutral-500 dark:text-neutral-400">
                             {mYazi(e.enM)} × {mYazi(e.boyM)} m · {secili?.ad || '—'}
-                            {ekranOzetleri.length > 1 ? ` (${e.ayar.bolunmus ? t('content.bolunmus') : t('content.tamami')})` : ''}
                           </span>
                         </span>
                       </button>
@@ -9751,6 +9886,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       >
                         {t('yerlesim.ayir')}
                       </button>
+                      {/*
+                        GÖRSEL BİRLEŞİME AİT.
+                        Birleşik ekranlar varsayılan olarak tek resmi
+                        paylaşıyor; isteyen her ekrana ayrı görsel verebiliyor.
+                        Tek ekranın köşede katlanmasında (iç L) paylaşacak
+                        ikinci bir ekran yok, o yüzden yalnızca grupta.
+                      */}
+                      {grup && (
+                        <div className="mt-1 flex w-full overflow-hidden rounded-lg border border-neutral-200 dark:border-[#2c333f]">
+                          {[true, false].map((v) => (
+                            <button
+                              key={String(v)}
+                              type="button"
+                              onClick={() => setGrup((g) => (g ? { ...g, tekGorsel: v } : g))}
+                              className={`flex-1 px-1 py-1 text-[13.5px] ${
+                                (grup.tekGorsel !== false) === v
+                                  ? 'bg-brand text-white'
+                                  : 'text-neutral-600 dark:text-neutral-300'
+                              }`}
+                            >
+                              {v ? t('icerik.tekGorsel') : t('icerik.ayriGorsel')}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ) : !yerlesimAcik ? (
                     /* Birleştirme isteğe bağlı: seçim ancak istenince açılıyor. */
@@ -9890,7 +10050,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {hasModel && (
             <div className="rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2 text-[15px] tabular-nums text-neutral-700 dark:text-neutral-200">
               <span className="font-semibold">{t('panel.toplam')}:</span> {ekranOzetleri.length} {t('ekran.tekil')} ·{' '}
-              {fmt(tasarimToplami.kabin)} {t('panel.kabin')} · {fmt(tasarimToplami.resW)} × {fmt(tasarimToplami.resH)} px
+              {fmt(tasarimToplami.kabin)} {birimSozcugu(selectedModel?.productType, t)} · {fmt(tasarimToplami.resW)} × {fmt(tasarimToplami.resH)} px
             </div>
           )}
           {/*
@@ -11223,6 +11383,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           rows,
           screenType,
           resolution,
+          /* Sayılan şeyin adı ürün tipinden türüyor (bkz. birimSozcugu). */
+          productType: selectedModel?.productType ?? null,
           /* Ekranlar tek listeden; biri de olsa üçü de aynı yoldan geçsin. */
           screenMode: raporEkranlari.length > 1 ? 'multi' : 'single',
           screens: raporEkranlari,

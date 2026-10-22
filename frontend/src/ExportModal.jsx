@@ -3,6 +3,7 @@ import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import html2canvas from 'html2canvas-pro'
 import { useLang } from './useLang.js'
 import { fmt } from './specsData.js'
+import { birimSozcugu } from './productType.js'
 import { viewingDistanceFor } from './viewingDistance.js'
 import PrivacyModal from './PrivacyModal.jsx'
 import { API_URL, apiFetch } from './apiClient.js'
@@ -175,7 +176,7 @@ export default function ExportModal({ open, onClose, summary }) {
           s.type === 'lshape'
             ? `${t('screen.label')} ${String(i + 1).padStart(2, '0')}: ${t('mse.leftWing')} ${s.leftCols || Math.ceil((s.cols || 2) / 2)} + ${t('mse.rightWing')} ${s.rightCols || Math.floor((s.cols || 2) / 2)} ${t('screen.columns')} × ${s.rows} ${t('screen.rows')} (${t('screen.lshape')})`
             : `${t('screen.label')} ${String(i + 1).padStart(2, '0')}: ${s.cols} ${t('screen.columns')} × ${s.rows} ${t('screen.rows')} (${t(`screen.${s.type}`)})${
-                Number(s.wm) > 0 ? ` — ${fmt(s.wm, 2)} × ${fmt(s.hm, 2)} m, ${fmt(s.adet ?? s.cols * s.rows)} ${t('panel.kabin')}` : ''
+                Number(s.wm) > 0 ? ` — ${fmt(s.wm, 2)} × ${fmt(s.hm, 2)} m, ${fmt(s.adet ?? s.cols * s.rows)} ${birimSozcugu(summary.productType, t)}` : ''
               }`,
         )
       : [`${summary.cols} ${t('screen.columns')} × ${summary.rows} ${t('screen.rows')} (${t(`screen.${summary.screenType}`)})`]

@@ -33,8 +33,13 @@ export default function EkEkranlar({
   contentUrl,
   /* Oran (0..1) → mutlak tuval pikseli. App.jsx'teki dönüşümün aynısı. */
   oranTuvale,
-  /* Verilirse ekrana tıklanınca o ekran düzenlemeye alınıyor. */
+  /*
+   * Verilirse ekrana tıklanınca o ekran düzenlemeye alınıyor. Shift
+   * basılıysa düzenlemeye almak yerine SEÇİME ekleniyor (bkz. secililer).
+   */
   onSec = null,
+  /* Shift ile seçilmiş ekranların kimlikleri — mavi çerçeveyle belli. */
+  secililer = [],
   /*
    * BÖLÜNMÜŞ İÇERİK DİLİMLERİ — Map(ekran kimliği → {sx, sy, sw, sh}).
    * İçeriği paylaşan ekranlar için hesaplanıyor (bkz. icerikBolme.js);
@@ -128,7 +133,7 @@ export default function EkEkranlar({
         return (
           <div
             key={ekran.id ?? i}
-            onPointerDown={onSec ? (e) => { e.stopPropagation(); onSec(ekran.id) } : undefined}
+            onPointerDown={onSec ? (e) => { e.stopPropagation(); onSec(ekran.id, e.shiftKey) } : undefined}
             style={{
               position: 'absolute',
               left: 0,
@@ -148,6 +153,19 @@ export default function EkEkranlar({
               filter: yayinda ? LED_LIT_FILTER : undefined,
             }}
           >
+            {/* Seçili ekran: çerçeve ekranın KENDİ dönüşümünün içinde,
+                 yani perspektifle birlikte eğiliyor. */}
+            {secililer.includes(ekran.id) && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  boxShadow: 'inset 0 0 0 3px #2962ad',
+                  pointerEvents: 'none',
+                  zIndex: 5,
+                }}
+              />
+            )}
             {/* Video: ekranın kendi ölçüsünde, kırpılarak. */}
             {video && (
               <VideoLayer

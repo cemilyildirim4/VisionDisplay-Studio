@@ -24,6 +24,7 @@ import { useLang } from './useLang.js'
 import { useSession } from './SessionContext.jsx'
 import { DASH, fmt, computeSpecs } from './specsData.js'
 import { patchCableCount } from './hardwareRules.js'
+import { birimBasligi, birimSozcugu } from './productType.js'
 
 /* ------------------------------------------------------------- yapı taşları */
 
@@ -154,7 +155,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
   }
 
   const circuitText = (c) =>
-    has ? `${c.circuits} ${t('sp.circuit')}\n${t('sp.perCircuit')}: ${c.perCircuit} ${t('sp.cabinet')}` : DASH
+    has ? `${c.circuits} ${t('sp.circuit')}\n${t('sp.perCircuit')}: ${c.perCircuit} ${birimAdi}` : DASH
 
   /*
    * EKRAN DÖKÜMÜ — yalnızca birden çok ekran varsa.
@@ -163,6 +164,9 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
    * burada hiçbir ölçü yeniden hesaplanmıyor. Yeniden hesaplamak, her
    * ekranın kendi yönünü kaybetmek demekti.
    */
+  /* Sayılan şey kabin mi panel mi — modelin ürün tipinden. */
+  const birim = (anahtar) => birimBasligi(model?.productType, t, anahtar)
+  const birimAdi = birimSozcugu(model?.productType, t)
   const cokEkran = Array.isArray(ekranlar) && ekranlar.length > 1
   /*
    * TOPLAM GEREKTİREN ALANLAR DÖKÜMLE AYNI.
@@ -327,7 +331,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           <Veri label={t('sp.lengthHeight')} value={has ? `${fmt(s.W, 3)} x ${fmt(s.H, 3)} m` : DASH} />
           <Veri label={t('sp.area')} value={has ? `${fmt(s.area, 3)} m²` : DASH} />
           <Veri label={t('sp.diagonal')} value={has ? `${fmt(s.diagIn, 1)} ${t('sp.inch')}` : DASH} />
-          <Veri label={has ? t('sp.weightCabinets') : t('sp.weight')} value={has ? `${fmt(s.weight, 1)} kg` : DASH} />
+          <Veri label={has ? birim('sp.weightCabinets') : t('sp.weight')} value={has ? `${fmt(s.weight, 1)} kg` : DASH} />
           {has && <Veri label={t('sp.viewingDistance')} value={`${fmt(s.viewDist, 1)} m`} />}
         </Kart>
 
@@ -396,9 +400,9 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
         {/* --- Buradan sonrası eski "Bileşenler" bölümüydü, aynı ızgarada --- */}
 
         <Kart baslik={t('sp.ledCabinets')}>
-          <Veri label={t('sp.cabinetCount')} value={has ? `${fmt(total)} ${t('sp.unit')}` : DASH} />
+          <Veri label={birim('sp.cabinetCount')} value={has ? `${fmt(total)} ${t('sp.unit')}` : DASH} />
           {has && <Veri label={t('sp.spareCabinets')} value={`0 ${t('sp.unit')}`} />}
-          {has && <Veri label={`${t('sp.totalCabinets')} (${model.modelCode})`} value={`${fmt(total)} ${t('sp.units')}`} />}
+          {has && <Veri label={`${birim('sp.totalCabinets')} (${model.modelCode})`} value={`${fmt(total)} ${t('sp.units')}`} />}
         </Kart>
 
         {has && isAdmin && (

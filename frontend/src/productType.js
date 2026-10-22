@@ -35,3 +35,21 @@ export function seriAdi(ad, t) {
   /* Anahtar bulunamazsa i18n anahtarın kendisini döndürüyor. */
   return karsilik === 'seri.' + ad ? ad : karsilik
 }
+
+/**
+ * Sayılan şeyin adı: kabin mi panel mi.
+ *
+ * "32 kabin" ile "32 panel" aynı şey değil; hangisi olduğu modelin ürün
+ * tipinde yazılı. Cümle içinde kullanıldığı için küçük harf.
+ */
+export function birimSozcugu(productType, t) {
+  return isModule(productType) ? t('birim.panel') : t('birim.kabin')
+}
+
+/**
+ * Başlık biçimindeki karşılığı ("Kabin sayısı" / "Panel sayısı").
+ * Anahtarın panel sürümü sonuna P ekiyle duruyor.
+ */
+export function birimBasligi(productType, t, anahtar) {
+  return t(isModule(productType) ? anahtar + 'P' : anahtar)
+}
