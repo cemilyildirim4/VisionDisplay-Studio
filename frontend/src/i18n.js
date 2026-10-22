@@ -474,7 +474,7 @@ const dict = {
   'scene.salon': { tr: 'İç mekân', en: 'Indoor', ar: 'داخلي' },
   'scene.cephe': { tr: 'Dış mekân', en: 'Outdoor', ar: 'خارجي' },
   'scene.pano': { tr: 'Açık hava panosu', en: 'Outdoor billboard', ar: 'لوحة خارجية' },
-  'scene.customOff': { tr: 'Kapalı', en: 'Off', ar: 'معطّل' },
+  'scene.customOff': { tr: 'Mekân yok', en: 'No space', ar: 'بدون مكان' },
   'scene.custom': { tr: 'Kendi fotoğrafım', en: 'My photo', ar: 'صورتي' },
   'scene.viewDist': { tr: 'Mesafe', en: 'Distance', ar: 'المسافة' },
   'scene.viewDistHint': {
@@ -1268,7 +1268,7 @@ const dict = {
     ar: 'لم يتم العثور على زاوية واضحة؛ وُضعت الشاشة من الأمام. يمكنك توجيهها.',
   },
   'scene.on': { tr: 'Açık', en: 'On', ar: 'مفعّل' },
-  'scene.off': { tr: 'Mekân yok', en: 'No space', ar: 'بدون مكان' },
+  'scene.off': { tr: 'Kapalı', en: 'Off', ar: 'معطّل' },
   'scene.rotate': { tr: 'Döndür', en: 'Rotate', ar: 'تدوير' },
   'scene.rotateReset': { tr: 'Döndürmeyi sıfırla', en: 'Reset rotation', ar: 'إعادة ضبط التدوير' },
   'scene.fillMode': { tr: 'Mevcut ekran', en: 'Existing screen', ar: 'الشاشة الحالية' },

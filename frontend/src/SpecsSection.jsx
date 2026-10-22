@@ -325,14 +325,13 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
       <Izgara>
         {ekranDokumu}
         {secenekler}
-        {/* Başlık kartta zaten yazıyor; içeride ikinci kez tekrarlanıyordu. */}
-        <Kart baslik={t('sp.screenConfigLxh')}>
-          <div className="text-[21px] font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50">
-            {has ? `${cols} ${t('sp.unit')} x ${rows} ${t('sp.unit')}` : DASH}
-          </div>
-        </Kart>
-
+        {/*
+          Dizilim kendi kartını hak etmiyordu: tek satırlık bilgi için bir
+          kart, hem yer yiyor hem de çoklu ekranda üstteki dökümü tekrar
+          ediyordu. Ölçülerin yanında duruyor.
+        */}
         <Kart baslik={t('sp.screenSpecs')} genis>
+          <Veri label={t('sp.screenConfigLxh')} value={has ? `${cols} ${t('sp.unit')} x ${rows} ${t('sp.unit')}` : DASH} />
           <Veri label={t('sp.lengthHeight')} value={has ? `${fmt(s.W, 3)} x ${fmt(s.H, 3)} m` : DASH} />
           <Veri label={t('sp.area')} value={has ? `${fmt(s.area, 3)} m²` : DASH} />
           <Veri label={t('sp.diagonal')} value={has ? `${fmt(s.diagIn, 1)} ${t('sp.inch')}` : DASH} />
