@@ -178,7 +178,7 @@ export function VideoLayer({ src, gw, gh, left, top, lit, senkron = false }) {
  */
 // AR/kamera ekranı da AYNI bileşeni kullanır: tasarım orada da birebir aynı
 // çizilsin, iki ayrı kod yolu birbirinden ayrı düşmesin diye dışa açıldı.
-export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols }) {
+export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols, lYon = 'ice' }) {
   const nCols = Math.max(1, cols)
   const nRows = Math.max(1, rows)
   const isNone = content === 'none'
@@ -262,10 +262,11 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     const lCols = Math.max(1, leftCols || Math.ceil(nCols / 2))
     const rCols = Math.max(1, rightCols || Math.max(1, nCols - lCols))
     /*
-     * DİKİŞ, SÜTUN ORANINDA DEĞİL: köşeye çaprazdan bakınca uzaklaşan
-     * kanat kısalmış görünür. Ön kanat kutunun daha büyük payını alıyor.
+     * DİKİŞ SÜTUN ORANINDA. Tam çaprazdan (45°) bakışta iki yüz de aynı
+     * oranda kısalır; biri ötekinden geniş çizilirse köşe değil, sivrilen
+     * tuhaf bir şekil çıkıyor.
      */
-    const leftW = wPx * (lCols / (lCols + rCols * L_KACIS_ORANI))
+    const leftW = wPx * (lCols / (lCols + rCols))
     const rightW = wPx - leftW
     const cw = (model?.widthMm || 500) / 1000
     // Dikiş kenarının üstten/alttan içeri girme oranı (%). Köşenin derinlik hissi.
@@ -275,20 +276,30 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     const leftDots = isNone || isLit ? null : ledDotSize(leftW / lCols, hPx / nRows)
     const rightDots = isNone || isLit ? null : ledDotSize(rightW / rCols, hPx / nRows)
     /*
-     * KÖŞE TEK YÖNE DÖNÜYOR.
+     * KIRIM YÖNÜ KÖŞENİN TÜRÜNÜ ANLATIR.
      *
-     * İki kanat dikişte simetrik kırılınca karşıdan bakılan bir papyon
-     * çıkıyordu. Çaprazdan bakılan bir köşede ön kanat neredeyse
-     * dikdörtgen kalır; uzaklaşan kanat dikişte tam boyunda başlar, uzak
-     * ucunda kısalır.
+     *   İÇE (oda köşesi): ortak kenar UZAKTA → dikiş kısa, dış kenarlar
+     *   tam boy. Siluet kum saati gibi.
+     *
+     *   DIŞA (kolon köşesi): ortak kenar EN YAKIN nokta → dikiş tam boy,
+     *   dış kenarlar kısa. Siluet ortası şişkin altıgen.
+     *
+     * İki yüz simetrik: aynı oranda kısalıyorlar.
      */
-    const pOn = 5
-    const leftClip = `polygon(0% 0%, 100% ${pOn}%, 100% ${100 - pOn}%, 0% 100%)`
-    const rightClip = `polygon(0% ${pOn}%, 100% ${pOn + p}%, 100% ${100 - pOn - p}%, 0% ${100 - pOn}%)`
+    const disa = lYon === 'disa'
+    /* Kısa kenar yukarıdan/aşağıdan p kadar içeri giriyor. */
+    const leftClip = disa
+      ? `polygon(0% ${p}%, 100% 0%, 100% 100%, 0% ${100 - p}%)`
+      : `polygon(0% 0%, 100% ${p}%, 100% ${100 - p}%, 0% 100%)`
+    const rightClip = disa
+      ? `polygon(0% 0%, 100% ${p}%, 100% ${100 - p}%, 0% 100%)`
+      : `polygon(0% ${p}%, 100% 0%, 100% 100%, 0% ${100 - p}%)`
 
     // İki kanadın birleşiminin dış hattı — alttaki dolgu katmanı bu şekle kırpılır
     const lYuzde = (leftW / wPx) * 100
-    const birlesikClip = `polygon(0% 0%, ${lYuzde}% ${pOn}%, 100% ${pOn + p}%, 100% ${100 - pOn - p}%, ${lYuzde}% ${100 - pOn}%, 0% 100%)`
+    const birlesikClip = disa
+      ? `polygon(0% ${p}%, ${lYuzde}% 0%, 100% ${p}%, 100% ${100 - p}%, ${lYuzde}% 100%, 0% ${100 - p}%)`
+      : `polygon(0% 0%, ${lYuzde}% ${p}%, 100% 0%, 100% 100%, ${lYuzde}% ${100 - p}%, 0% 100%)`
 
     return (
       <div className="relative shrink-0 max-w-full" style={{ width: wPx, height: hPx }}>
@@ -431,19 +442,19 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
         >
           {(() => {
-            const yOn = (hPx * pOn) / 100
-            const yUzak = (hPx * (pOn + p)) / 100
+            const yp = (hPx * p) / 100
             const hat = isNone ? '#64748b' : 'rgba(0,0,0,0.55)'
+            /* Dışa dönük köşede dikiş TAM BOY, dış kenarlar kısa. */
+            const dHat = disa
+              ? `M0,${yp} L${leftW},0 L${wPx},${yp} L${wPx},${hPx - yp} L${leftW},${hPx} L0,${hPx - yp} Z`
+              : `M0,0 L${leftW},${yp} L${wPx},0 L${wPx},${hPx} L${leftW},${hPx - yp} L0,${hPx} Z`
+            const y1 = disa ? 0 : yp
+            const y2 = disa ? hPx : hPx - yp
             return (
               <>
-                <path
-                  d={`M0,0 L${leftW},${yOn} L${wPx},${yUzak} L${wPx},${hPx - yUzak} L${leftW},${hPx - yOn} L0,${hPx} Z`}
-                  fill="none"
-                  stroke={hat}
-                  strokeWidth="1.25"
-                />
+                <path d={dHat} fill="none" stroke={hat} strokeWidth="1.25" />
                 {/* Köşe çizgisi: iki yüzün buluştuğu kenar. */}
-                <line x1={leftW} y1={yOn} x2={leftW} y2={hPx - yOn} stroke={hat} strokeWidth="1.25" />
+                <line x1={leftW} y1={y1} x2={leftW} y2={y2} stroke={hat} strokeWidth="1.25" />
               </>
             )
           })()}
@@ -462,9 +473,9 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
             style={{
               position: 'absolute',
               left: leftW,
-              /* Kırım tek yöne döndü: çizgi ÖN kanadın payına oturuyor. */
-              top: `${pOn}%`,
-              height: `${100 - 2 * pOn}%`,
+              /* Dikiş: içe dönükte kısa (uzaktaki kenar), dışa dönükte tam boy. */
+              top: disa ? '0%' : `${p}%`,
+              height: disa ? '100%' : `${100 - 2 * p}%`,
               width: 3,
               transform: 'translateX(-50%)',
               background:
@@ -937,12 +948,8 @@ export default function WallPreview({
        * göründüğü için açık hâlinden dar yer kaplar, komşuları da o
        * kadar sola yaslanır.
        */
-      const lKisalma =
-        s.type === 'lshape'
-          ? (Math.max(1, s.leftCols || Math.ceil(sut / 2)) +
-              Math.max(1, s.rightCols || sut - Math.ceil(sut / 2)) * L_KACIS_ORANI) /
-            sut
-          : 1
+      /* 45° bakışta iki yüz de aynı oranda kısalıyor (bkz. L_KACIS_ORANI). */
+      const lKisalma = s.type === 'lshape' ? L_KACIS_ORANI : 1
       const solCols = Math.max(1, s.leftCols || Math.ceil(sut / 2))
       return {
         ...s,
@@ -1241,6 +1248,7 @@ export default function WallPreview({
                       curveAmount={curveAmount}
                       leftCols={s.leftCols}
                       rightCols={s.rightCols}
+                      lYon={s.lYon}
                       {...(dilim
                         ? {
                             spanW: totalWpx * dilim.sw,

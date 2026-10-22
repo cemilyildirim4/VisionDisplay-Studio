@@ -187,9 +187,11 @@ function ekranUclari(s, cabW, curveAmount) {
     const sagCols = Math.max(1, s.rightCols || Math.max(1, cols - solCols))
     const cos = Math.cos(L_YARIM_ACI)
     const sin = Math.sin(L_YARIM_ACI)
+    /* 'ice' oda köşesi: dikiş UZAKTA, kanatlar geriye açılıyor. */
+    const y = s.lYon === 'disa' ? 1 : -1
     return {
-      sol: { x: -solCols * cabW * cos, z: solCols * cabW * sin, aci: L_YARIM_ACI },
-      sag: { x: sagCols * cabW * cos, z: sagCols * cabW * sin, aci: -L_YARIM_ACI },
+      sol: { x: -solCols * cabW * cos, z: y * solCols * cabW * sin, aci: y * L_YARIM_ACI },
+      sag: { x: sagCols * cabW * cos, z: y * sagCols * cabW * sin, aci: -y * L_YARIM_ACI },
     }
   }
 
@@ -347,14 +349,16 @@ function KavisliDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, curve
 }
 
 /** İç L tipi: iki düz kanat ortada 90°'lik bir köşe yapar. */
-function LDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, leftCols, rightCols, uvOffset = 0, uvRepeat = 1, payL = 0, payR = 0 }) {
+function LDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, leftCols, rightCols, lYon = 'ice', uvOffset = 0, uvRepeat = 1, payL = 0, payR = 0 }) {
   const solCols = Math.max(1, leftCols || Math.ceil(cols / 2))
   const sagCols = Math.max(1, rightCols || Math.max(1, cols - solCols))
   const toplamCols = solCols + sagCols
   const solW = solCols * cabW
   const sagW = sagCols * cabW
   const cos = Math.cos(L_YARIM_ACI)
-  const sin = Math.sin(L_YARIM_ACI)
+  /* 'ice' oda köşesi: dikiş uzakta kalsın diye kanatlar GERİYE açılıyor. */
+  const sin = Math.sin(L_YARIM_ACI) * (lYon === 'disa' ? 1 : -1)
+  const donus = L_YARIM_ACI * (lYon === 'disa' ? 1 : -1)
 
   /*
    * Köşe (dikiş) orijinde; iki kanat oradan izleyiciye doğru açılıyor. Kanat
@@ -370,7 +374,7 @@ function LDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, leftCols, r
    */
   return (
     <group>
-      <group position={[-(solW / 2) * cos, 0, (solW / 2) * sin]} rotation={[0, L_YARIM_ACI, 0]}>
+      <group position={[-(solW / 2) * cos, 0, (solW / 2) * sin]} rotation={[0, donus, 0]}>
         <DuzDuvar
           cabW={cabW}
           cabH={cabH}
@@ -384,7 +388,7 @@ function LDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, leftCols, r
           payL={payL}
         />
       </group>
-      <group position={[(sagW / 2) * cos, 0, (sagW / 2) * sin]} rotation={[0, -L_YARIM_ACI, 0]}>
+      <group position={[(sagW / 2) * cos, 0, (sagW / 2) * sin]} rotation={[0, -donus, 0]}>
         <DuzDuvar
           cabW={cabW}
           cabH={cabH}
@@ -455,10 +459,10 @@ function IlkKare({ onIlkKare }) {
 }
 
 /** Tek bir ekranı, biçimine göre doğru duvar bileşeniyle çizer. */
-function Duvar({ ortak, screenType, curveAmount, leftCols, rightCols, uvOffset, uvRepeat, payL, payR }) {
+function Duvar({ ortak, screenType, curveAmount, leftCols, rightCols, lYon, uvOffset, uvRepeat, payL, payR }) {
   const uv = { uvOffset, uvRepeat, payL, payR }
   if (screenType === 'lshape') {
-    return <LDuvar {...ortak} {...uv} leftCols={leftCols} rightCols={rightCols} />
+    return <LDuvar {...ortak} {...uv} leftCols={leftCols} rightCols={rightCols} lYon={lYon} />
   }
   if (screenType === 'curved' || screenType === 'curvedIn') {
     return <KavisliDuvar {...ortak} {...uv} curveAmount={curveAmount} konkav={screenType === 'curvedIn'} />
@@ -479,7 +483,7 @@ function Duvar({ ortak, screenType, curveAmount, leftCols, rightCols, uvOffset, 
  * 3D katmanı (Mekan3D.jsx) aynı ekranı çiziyor. İki yerde iki ayrı ekran
  * geometrisi tutmak, birinde yapılan düzeltmenin ötekine geçmemesi demekti.
  */
-export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, screenType, curveAmount, leftCols, rightCols, screens }) {
+export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, screenType, curveAmount, leftCols, rightCols, lYon, screens }) {
   const cabW = (model?.widthMm || 500) / 1000
   const cabH = (model?.heightMm || 500) / 1000
   const cabD = (model?.depthMm || 100) / 1000
@@ -643,6 +647,7 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
               screenType={y.s.type || 'flat'}
               curveAmount={curveAmount}
               leftCols={y.s.leftCols}
+              lYon={y.s.lYon}
               rightCols={y.s.rightCols}
               uvOffset={y.uvOffset}
               uvRepeat={y.uvRepeat}
@@ -662,11 +667,12 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
       curveAmount={curveAmount}
       leftCols={leftCols}
       rightCols={rightCols}
+      lYon={lYon}
     />
   )
 }
 
-function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenType, curveAmount, leftCols, rightCols, screens }) {
+function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenType, curveAmount, leftCols, rightCols, lYon, screens }) {
   const { camera } = useThree()
   const cabinetCount = screens?.length
     ? screens.reduce((acc, s) => acc + Math.max(1, s.cols || 1) * Math.max(1, s.rows || 1), 0)
@@ -718,6 +724,7 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
           curveAmount={curveAmount}
           leftCols={leftCols}
           rightCols={rightCols}
+          lYon={lYon}
           screens={screens}
         />
       </group>
@@ -986,7 +993,7 @@ function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
   )
 }
 
-export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens, onOpenCamera, onSaved }) {
+export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, lYon = 'ice', screens, onOpenCamera, onSaved }) {
   const { t } = useLang()
   const { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy } = useGlbAr()
   /* Tasarımda köşe var mı: tek ekranın kendi türü ya da listedeki herhangi biri. */
@@ -1456,6 +1463,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           curveAmount={curveAmount}
           leftCols={leftCols}
           rightCols={rightCols}
+          lYon={lYon}
           screens={screens}
         />
         <IlkKare onIlkKare={() => setSahneHazir(true)} />

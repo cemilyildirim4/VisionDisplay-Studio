@@ -185,18 +185,20 @@ export const bezelGapStyle = (cellW, cellH, gapPx, color = BEZEL_COLOR) => ({
 /*
  * L KÖŞESİNİN DERİNLİĞİ.
  *
- * Dikiş kenarının üstten ve alttan içeri girme oranı. %10'da köşe
- * okunmuyordu: iki kanat düpedüz tek bir şerit gibi duruyordu.
+ * Kısa kenarın üstten ve alttan içeri girme oranı. Yakın kenar uzak
+ * kenardan yaklaşık %17 uzun görünür — köşe okunur, perspektif abartılı
+ * değil.
  */
-export const L_KIRILMA_PCT = 22
+export const L_KIRILMA_PCT = 8
 
 /*
  * UZAKLAŞAN KANADIN KISALMA ORANI.
  *
- * Köşeye hafif çaprazdan bakıldığında yan kanat kısalmış görünür. Çizim
- * oranı bu; kanadın gerçek ölçüsü değişmiyor.
+ * TAM ÇAPRAZDAN (45°) bakışta İKİ yüz de aynı oranda kısalır: cos45.
+ * Simetri köşenin okunması için şart — bir yüz ötekinden büyük çizilince
+ * ne iç ne dış köşeye benziyordu. Yüzlerin gerçek ölçüsü değişmiyor.
  */
-export const L_KACIS_ORANI = 0.62
+export const L_KACIS_ORANI = 0.71
 
 /*
  * KAVİS AÇISI 32°'NİN KATLARINDA.

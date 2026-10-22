@@ -341,6 +341,8 @@ const dict = {
   'yerlesim.u': { tr: 'U tipi', en: 'U shape', ar: 'شكل U' },
   'yerlesim.kutu': { tr: 'Küp', en: 'Box', ar: 'مكعب' },
   'yerlesim.acili': { tr: 'Açılı', en: 'Angled', ar: 'بزاوية' },
+  'yerlesim.ice': { tr: 'İçe doğru', en: 'Inward', ar: 'إلى الداخل' },
+  'yerlesim.disa': { tr: 'Dışa doğru', en: 'Outward', ar: 'إلى الخارج' },
   'yerlesim.birlestir': { tr: 'Birleştir', en: 'Join', ar: 'دمج' },
   'yerlesim.ayir': { tr: 'Ayır', en: 'Split', ar: 'فصل' },
   'ekran.silOnay': {

@@ -1059,6 +1059,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [lSolCols, setLSolCols] = useState(null)
   /* Yerleşim panelinde girilen sol kanat sütunu — henüz uygulanmamış değer. */
   const [lSolSecim, setLSolSecim] = useState(1)
+  /*
+   * KÖŞE YÖNÜ: 'ice' oda köşesi (ortak kenar uzakta), 'disa' kolon köşesi
+   * (ortak kenar en yakın nokta). Panelde seçiliyor, birleşimle saklanıyor.
+   */
+  const [lYonSecim, setLYonSecim] = useState('ice')
+  /* Katlanan TEK ekranın (iç L) kendi yönü. */
+  const [lYon, setLYon] = useState('ice')
 
   const [duzenlemede, setDuzenlemede] = useState(false)
   /*
@@ -2353,7 +2360,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * elde duran ekran, kartında görsel seçili olmasına rağmen tasarım
      * alanında simsiyah çiziliyordu.
      */
-    { id: aktifEkranId, sira: aktifSira, cols, rows, orientation, screenType, lSolCols, content, contentUrl },
+    { id: aktifEkranId, sira: aktifSira, cols, rows, orientation, screenType, lSolCols, lYon, content, contentUrl },
   ]
     .sort((a, b) => (a.sira || 0) - (b.sira || 0))
     .map((e) => {
@@ -2370,6 +2377,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         type: e.screenType || 'flat',
         leftCols: sol || undefined,
         rightCols: sol ? c - sol : undefined,
+        lYon: e.lYon || 'ice',
         wm: c * kw,
         hm: r * kh,
         /* Her parça KENDİ içeriğini taşıyor: önizlemede hepsi aynı
@@ -2397,6 +2405,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const birlesik = {
       ...sol,
       type: 'lshape',
+      lYon: grup.lYon || 'ice',
       cols: sol.cols + sagCols,
       rows: Math.max(...katlanan.map((x) => x.rows)),
       leftCols: sol.cols,
@@ -4371,6 +4380,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     screenType,
     curveAmount,
     lSolCols,
+    lYon,
     content,
     contentUrl: contentUrl || null,
   })
@@ -4542,6 +4552,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       if (ayar.orientation) setOrientation(ayar.orientation)
       if (ayar.screenType) setScreenType(ayar.screenType)
       setLSolCols(ayar.lSolCols ?? null)
+      setLYon(ayar.lYon || 'ice')
       if (ayar.curveAmount != null) setCurveAmount(ayar.curveAmount)
       if (ayar.cols > 0) setCols(ayar.cols)
       if (ayar.rows > 0) setRows(ayar.rows)
@@ -4647,13 +4658,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const hedef = sirali[0]
       if (hedef !== aktifEkranId) ekraniDuzenle(hedef)
       setScreenType('lshape')
+      setLYon(lYonSecim)
       setLSolCols(Math.max(1, Math.min(Math.max(2, cols) - 1, lSolSecim)))
       setGrupSecim([])
       return
     }
     if (sirali.length < 2) return
     /* Birleşik ekranlar varsayılan olarak TEK görseli paylaşıyor. */
-    setGrup({ tip: grupTipi, aci: grupAcisi, uyeler: sirali, tekGorsel: true })
+    setGrup({ tip: grupTipi, aci: grupAcisi, uyeler: sirali, tekGorsel: true, lYon: lYonSecim })
   }
 
   /*
@@ -4665,6 +4677,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!grup && (screenType || 'flat') === 'lshape') {
       setScreenType('flat')
       setLSolCols(null)
+      setLYon('ice')
       return
     }
     if (grupKoseleri) {
@@ -7159,7 +7172,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
     const olculer = grup.uyeler.map(kabinOlcu)
     if (olculer.some((o) => !o)) return null
-    const aci = grup.tip === 'duz' ? 0 : grup.tip === 'acili' ? grup.aci || 135 : 90
+    /*
+     * KÖŞE YÖNÜ KIRIMIN İŞARETİ.
+     * İçe (oda köşesi) ile dışa (kolon köşesi) aynı açının iki yönü;
+     * zincir hep aynı yöne kırılınca ikisi aynı çıkıyordu.
+     */
+    const hamAci = grup.tip === 'duz' ? 0 : grup.tip === 'acili' ? grup.aci || 135 : 90
+    const aci = hamAci === 0 ? 0 : grup.lYon === 'disa' ? 360 - hamAci : hamAci
     const acilar = grup.uyeler.slice(1).map(() => aci)
     const dortgenler = grupDortgenleri(
       liderKose,
@@ -7462,12 +7481,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (grup) {
       const sira = (id) => ekranOzetleri.find((x) => x.id === id)?.sira
       const uyeler = (grup.uyeler || []).map(sira).filter(Boolean).join('+')
-      return t('yerlesim.' + grup.tip) + ' (' + uyeler + ')' + (grup.tip === 'acili' ? ' · ' + grup.aci + '°' : '')
+      const yon = grup.tip === 'acili' ? ' · ' + grup.aci + '°' : ' · ' + t('yerlesim.' + (grup.lYon || 'ice'))
+      return t('yerlesim.' + grup.tip) + ' (' + uyeler + ')' + yon
     }
     if (!icLVar) return ''
     const toplam = Math.max(2, cols)
     const sol = lSolCols || Math.ceil(toplam / 2)
-    return t('yerlesim.l') + ' (' + sol + '+' + (toplam - sol) + ')'
+    return t('yerlesim.l') + ' (' + sol + '+' + (toplam - sol) + ') · ' + t('yerlesim.' + lYon)
   })()
 
   /*
@@ -7479,9 +7499,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setGrupSecim(grup.uyeler || [])
       setGrupTipi(grup.tip || 'duz')
       setGrupAcisi(grup.aci || 135)
+      setLYonSecim(grup.lYon || 'ice')
     } else {
       setGrupSecim([aktifEkranId])
       setGrupTipi('l')
+      setLYonSecim(lYon)
       setLSolSecim(lSolCols || Math.ceil(Math.max(2, cols) / 2))
     }
     grubuAyir()
@@ -8605,6 +8627,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           content={content}
                           contentUrl={contentUrl}
                           screenType={screenType}
+                          lYon={lYon}
                           curveAmount={curveAmount}
                           screens={cokluAktif ? ekranSeridi : null}
                           koseler={koseler}
@@ -9999,6 +10022,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         ))}
                       </div>
                       {/*
+                        KÖŞE YÖNÜ — oda köşesi mi kolon köşesi mi.
+                        İkisi bambaşka görünür; hangisinin kurulacağını
+                        ancak kullanıcı bilir.
+                      */}
+                      {(grupTipi === 'l' || grupTipi === 'u' || grupTipi === 'kutu') && (
+                        <div className="mt-2 flex overflow-hidden rounded-lg border border-neutral-300 dark:border-[#39414f]">
+                          {['ice', 'disa'].map((y) => (
+                            <button
+                              key={y}
+                              type="button"
+                              onClick={() => setLYonSecim(y)}
+                              className={`flex-1 px-1 py-1 text-[13.5px] ${
+                                lYonSecim === y ? 'bg-brand text-white' : 'text-neutral-600 dark:text-neutral-300'
+                              }`}
+                            >
+                              {t('yerlesim.' + y)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {/*
                         İÇ L — tek ekran işaretliyken.
                         Ekranın kendisi köşede katlanıyor; sol kanadın kaç
                         sütun olduğu burada giriliyor, kalanı sağ kanat.
@@ -11344,6 +11388,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         content={content}
         contentUrl={contentUrl}
         screenType={screenType}
+        lYon={lYon}
         resolution={resolution}
         curveAmount={curveAmount}
         hideRegions={isVideoWall}
@@ -11385,6 +11430,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
              * biçimiyle (düz / kavisli / iç L) yan yana çizilir.
              */
             screenType={screenType}
+            lYon={lYon}
             curveAmount={curveAmount}
             screens={cokluAktif ? ekranSeridi : null}
             /* AR'de "Kaydet" denen kare de rapora girsin */
