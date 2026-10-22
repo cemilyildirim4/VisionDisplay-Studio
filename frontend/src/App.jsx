@@ -2348,7 +2348,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const ekranParcalari = [
     ...sabitEkranlar.map((e, i) => ({ id: e.id, sira: e.sira || i + 1, ...(e.ayar || {}) })),
-    { id: aktifEkranId, sira: aktifSira, cols, rows, orientation, screenType, lSolCols },
+    /*
+     * İÇERİK DE BURADA. Eksik kalınca parça "içerik yok" sayılıyor ve
+     * elde duran ekran, kartında görsel seçili olmasına rağmen tasarım
+     * alanında simsiyah çiziliyordu.
+     */
+    { id: aktifEkranId, sira: aktifSira, cols, rows, orientation, screenType, lSolCols, content, contentUrl },
   ]
     .sort((a, b) => (a.sira || 0) - (b.sira || 0))
     .map((e) => {
@@ -4588,6 +4593,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * Referansı yine de değiştirmek isteyen "Geri" ile oraya gidiyor.
      * ───────────────────────────────────────────────────────────────────
      */
+    /*
+     * ÖLÇÜ AKIŞI FOTOĞRAFA AİT.
+     *
+     * Fotoğrafsız sahnede ölçülecek bir şey yok; akışı açmak tasarımı
+     * gizliyor ve mekân panelini kapatıyordu (bkz. olcuAcik). Ekran
+     * kartına tıklamak bütün ekranları yok ediyor gibi görünmesinin
+     * sebebi buydu.
+     */
+    if (scene !== 'ozel') {
+      setDuzenlemede(false)
+      setRefKipi(false)
+      setAlanKipi(false)
+      setSihirbazAdim(0)
+      return
+    }
     setDuzenlemede(true)
     if (Array.isArray(secilen.alan) && secilen.alan.length === 4) {
       setRefKipi(false)
