@@ -341,6 +341,8 @@ const dict = {
   'yerlesim.u': { tr: 'U tipi', en: 'U shape', ar: 'شكل U' },
   'yerlesim.kutu': { tr: 'Küp', en: 'Box', ar: 'مكعب' },
   'yerlesim.acili': { tr: 'Açılı', en: 'Angled', ar: 'بزاوية' },
+  'yerlesim.enAzUc': { tr: 'U tipi için en az 3 ekran seçin', en: 'U shape needs at least 3 screens', ar: 'شكل U يحتاج 3 شاشات على الأقل' },
+  'yerlesim.enAzDort': { tr: 'Küp için en az 4 ekran seçin', en: 'Box needs at least 4 screens', ar: 'المكعب يحتاج 4 شاشات على الأقل' },
   'yerlesim.enAzIki': { tr: 'En az 2 ekran seçin', en: 'Select at least 2 screens', ar: 'اختر شاشتين على الأقل' },
   'yerlesim.ice': { tr: 'İçe doğru', en: 'Inward', ar: 'إلى الداخل' },
   'yerlesim.disa': { tr: 'Dışa doğru', en: 'Outward', ar: 'إلى الخارج' },

@@ -2386,33 +2386,63 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     })
 
   /*
-   * ŞERİTTE L GRUBU TEK KATLANMIŞ EKRAN.
+   * BİRLEŞİMİN DÜZLEMDEKİ GEOMETRİSİ.
    *
-   * Şeridin katlama çizimi iki kanatlı (bkz. WallPreview → Screen, isL).
-   * L grubunun iki üyesi tam olarak iki kanat; başka bir çizim yolu
-   * açmaya gerek yok. U, küp ve açılı iki kanada sığmadığı için şeritte
-   * yan yana kalıyor — fotoğrafta hepsi doğru çiziliyor.
+   * Ekranlar üstten bakışta kırık bir çizgi: her eklemde aynı açıyla
+   * dönüyorlar. Zincir simetrik kuruluyor, yani köşeye tam çaprazdan
+   * bakılıyor ve yüzler eşit açıyla görünüyor.
+   *
+   * Her ekran için iki şey çıkıyor:
+   *   olcek  — genişliğin çizimdeki kısalma oranı (açısının kosinüsü),
+   *   kırım  — her KENARIN derinliğine göre kısalması (uzak kenar kısa).
+   *
+   * Kosinüs sıfıra inince kanat çizgi hâline geliyor; alt sınır var ki
+   * kullanıcı ekranın orada olduğunu görebilsin.
+   */
+  const birlesimGeometrisi = (uyeParcalari, aciDerece, yon) => {
+    const n = uyeParcalari.length
+    if (n < 2) return new Map()
+    const d = yon === 'disa' ? 1 : -1
+    const A = ((aciDerece || 0) * Math.PI) / 180
+    const acilar = uyeParcalari.map((_, k) => (k - (n - 1) / 2) * A * d)
+    /* Düzlemdeki köşe noktaları; derinlik y ekseni (büyük y = uzak). */
+    let x = 0
+    let y = 0
+    const koseler = [{ x, y }]
+    uyeParcalari.forEach((u, k) => {
+      x += Math.cos(acilar[k]) * u.wm
+      y += Math.sin(acilar[k]) * u.wm
+      koseler.push({ x, y })
+    })
+    const derinlikler = koseler.map((k) => k.y)
+    const enAz = Math.min(...derinlikler)
+    const aralik = Math.max(...derinlikler) - enAz
+    const kirim = (dy) => (aralik > 1e-6 ? (L_KIRILMA_PCT * (dy - enAz)) / aralik : 0)
+    const harita = new Map()
+    uyeParcalari.forEach((u, k) => {
+      harita.set(u.id, {
+        olcek: Math.max(0.4, Math.abs(Math.cos(acilar[k]))),
+        solKirim: kirim(koseler[k].y),
+        sagKirim: kirim(koseler[k + 1].y),
+      })
+    })
+    return harita
+  }
+
+  /*
+   * ŞERİT: her ekran kendi ölçüsüyle, birleşimdekiler kırımıyla.
+   * Eskiden L tek bir "katlanmış ekrana" indirgeniyor ve ekranların
+   * satır sayısı en büyüğüne eşitleniyordu; 1×1'lik ekran 4×4'lük
+   * komşusuyla aynı yükseklikte çiziliyordu.
    */
   const ekranSeridi = (() => {
-    const uyeler = grup?.tip === 'l' && Array.isArray(grup.uyeler) ? grup.uyeler : null
+    const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : null
     if (!uyeler || uyeler.length < 2) return ekranParcalari
-    const katlanan = ekranParcalari.filter((x) => uyeler.includes(x.id))
-    if (katlanan.length < 2) return ekranParcalari
-    const sol = katlanan[0]
-    const sagCols = katlanan.slice(1).reduce((a, x) => a + x.cols, 0)
-    const birlesik = {
-      ...sol,
-      type: 'lshape',
-      lYon: grup.lYon || 'ice',
-      cols: sol.cols + sagCols,
-      rows: Math.max(...katlanan.map((x) => x.rows)),
-      leftCols: sol.cols,
-      rightCols: sagCols,
-      wm: katlanan.reduce((a, x) => a + x.wm, 0),
-      hm: Math.max(...katlanan.map((x) => x.hm)),
-    }
-    const kalan = ekranParcalari.filter((x) => !uyeler.includes(x.id))
-    return [birlesik, ...kalan]
+    const aci = grup.tip === 'duz' ? 0 : grup.tip === 'acili' ? grup.aci || 135 : 90
+    const uyeParcalari = uyeler.map((id) => ekranParcalari.find((x) => x.id === id)).filter(Boolean)
+    if (uyeParcalari.length < 2) return ekranParcalari
+    const geo = birlesimGeometrisi(uyeParcalari, aci, grup.lYon || 'ice')
+    return ekranParcalari.map((x) => (geo.has(x.id) ? { ...x, ...geo.get(x.id) } : x))
   })()
 
   /*
@@ -9930,13 +9960,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     ))}
                   </ul>
 
-                  {/* Şekil düğmesi doğrudan işi yapıyor; ayrıca onay istemiyor. */}
+                  {/*
+                    Şekil düğmesi doğrudan işi yapıyor; ayrıca onay istemiyor.
+                    Her şeklin kendi en az ekran sayısı var: U üç, küp dört
+                    yüzeyden oluşuyor.
+                  */}
                   <div className="mt-2 grid grid-cols-5 gap-1">
-                    {['duz', 'l', 'u', 'kutu', 'acili'].map((tip) => (
+                    {[
+                      { tip: 'duz', enAz: 2 },
+                      { tip: 'l', enAz: 2 },
+                      { tip: 'u', enAz: 3 },
+                      { tip: 'kutu', enAz: 4 },
+                      { tip: 'acili', enAz: 2 },
+                    ].map(({ tip, enAz }) => (
                       <button
                         key={tip}
                         type="button"
-                        disabled={grupSecim.length < 2}
+                        disabled={grupSecim.length < enAz}
                         onClick={() => {
                           setGrupTipi(tip)
                           birlesimiKur(tip, grupSecim, grupAcisi, lYonSecim)
@@ -9952,8 +9992,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       </button>
                     ))}
                   </div>
-                  {grupSecim.length < 2 && (
-                    <p className="mt-1.5 mb-0 text-[13px] text-red-600 dark:text-red-400">{t('yerlesim.enAzIki')}</p>
+                  {/* Eksik olan ne, düğmenin altında yazıyor. */}
+                  {grupSecim.length < 4 && (
+                    <p className="mt-1.5 mb-0 text-[13px] leading-snug text-red-600 dark:text-red-400">
+                      {grupSecim.length < 2
+                        ? t('yerlesim.enAzIki')
+                        : grupSecim.length < 3
+                          ? t('yerlesim.enAzUc') + ' · ' + t('yerlesim.enAzDort')
+                          : t('yerlesim.enAzDort')}
+                    </p>
                   )}
 
                   {/*

@@ -164,7 +164,8 @@ export function VideoLayer({ src, gw, gh, left, top, lit, senkron = false }) {
         maxHeight: 'none',
         left: -left,
         top: -top,
-        objectFit: 'fill',
+        /* Sigdir: uzatip kirpmak goruntunun bir kismini yok ediyordu. */
+        objectFit: 'contain',
         filter: lit ? LED_LIT_FILTER : undefined,
         pointerEvents: 'none',
       }}
@@ -178,9 +179,38 @@ export function VideoLayer({ src, gw, gh, left, top, lit, senkron = false }) {
  */
 // AR/kamera ekranı da AYNI bileşeni kullanır: tasarım orada da birebir aynı
 // çizilsin, iki ayrı kod yolu birbirinden ayrı düşmesin diye dışa açıldı.
-export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols, lYon = 'ice' }) {
+/**
+ * Görselin en/boy oranı — "sığdır" (contain) için gerekli.
+ *
+ * CSS'in contain'i her öğeyi KENDİ kutusuna sığdırır; paylaşılan bir
+ * yüzeyde her ekran ayrı ayrı sığdırırsa parçalar birbirini tutmaz.
+ * Oran bir kez okunup ortak yüzeye uygulanıyor.
+ */
+function useGorselOrani(src) {
+  const [oran, setOran] = useState(null)
+  useEffect(() => {
+    if (!src) {
+      setOran(null)
+      return undefined
+    }
+    let iptal = false
+    const g = new Image()
+    g.onload = () => {
+      if (!iptal && g.naturalWidth > 0 && g.naturalHeight > 0) setOran(g.naturalWidth / g.naturalHeight)
+    }
+    g.src = src
+    return () => {
+      iptal = true
+    }
+  }, [src])
+  return oran
+}
+
+export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols, lYon = 'ice', solKirim = 0, sagKirim = 0 }) {
   const nCols = Math.max(1, cols)
   const nRows = Math.max(1, rows)
+  /* Kanca koşulsuz ve en üstte: aşağıda erken dönüşler var. */
+  const gorselOrani = useGorselOrani(contentUrl || (content === 'photo' ? DEFAULT_CONTENT_SRC : null))
   const isNone = content === 'none'
   // 'curved' = dışa kavisli (konveks), 'curvedIn' = içe kavisli (konkav)
   /*
@@ -220,12 +250,29 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
    * yani gözle görülmüyor. Çoklu ekranda dilimler ortak `gw/gh` kullandığı
    * için hizalama da bozulmuyor.
    */
-  const bgW = Math.ceil(gw)
-  const bgH = Math.ceil(gh)
+  /*
+   * GÖRSELİN TAMAMI GÖRÜNÜYOR (contain).
+   *
+   * Yüzeyi doldurmak için uzatılıp taşan yanı kırpılıyordu; görselin bir
+   * kısmı hiçbir ekranda görünmüyordu. Oran tutmazsa kalan yer ekranın
+   * kendi zemininde (kapalı LED) siyah kalıyor.
+   */
+  const sigdir = (() => {
+    if (!gorselOrani || !(gw > 0) || !(gh > 0)) return { w: gw, h: gh, x: 0, y: 0 }
+    const yuzeyOrani = gw / gh
+    if (gorselOrani > yuzeyOrani) {
+      const h = gw / gorselOrani
+      return { w: gw, h, x: 0, y: (gh - h) / 2 }
+    }
+    const w = gh * gorselOrani
+    return { w, h: gh, x: (gw - w) / 2, y: 0 }
+  })()
+  const bgW = Math.ceil(sigdir.w)
+  const bgH = Math.ceil(sigdir.h)
   const bgFor = (leftGlobal) => ({
     backgroundImage: bgImage || undefined,
     backgroundSize: `${bgW}px ${bgH}px`,
-    backgroundPosition: `${-leftGlobal}px ${-offsetY}px`,
+    backgroundPosition: `${-leftGlobal + sigdir.x}px ${-offsetY + sigdir.y}px`,
     backgroundRepeat: 'no-repeat',
   })
 
@@ -522,14 +569,22 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
   // Diyot dokusu kabin ölçüsünden türer → desen kabin sınırlarıyla hizalı olur
   const cabinetDots = ledDotSize(wPx / nCols, hPx / nRows)
 
+  /*
+   * BİRLEŞİMDEKİ EKRANIN KENARLARI DERİNLİĞİNE GÖRE KISALIYOR.
+   * Kırım ekran başına geliyor (bkz. birlesimGeometrisi); L, U, küp ve
+   * açılı aynı çizimle çalışıyor. Kırım yoksa kutu dikdörtgen kalıyor.
+   */
+  const kirimVar = solKirim > 0.01 || sagKirim > 0.01
+  const kirimYolu = `polygon(0% ${solKirim}%, 100% ${sagKirim}%, 100% ${100 - sagKirim}%, 0% ${100 - solKirim}%)`
   return (
     <div
       style={{
         width: wPx,
         height: hPx,
         position: 'relative',
+        clipPath: kirimVar ? kirimYolu : undefined,
         backgroundColor: frameOnly ? 'transparent' : isNone ? '#ffffff' : '#0a0a0a',
-        border: isNone ? '1px solid #64748b' : undefined,
+        border: isNone && !kirimVar ? '1px solid #64748b' : undefined,
         // Panel çevresinde gölge/ışıma YOK: kenarlarda gölgelik olarak görünüyordu
         // ve kavisli ekranla tutarsızdı (orada da hiç yok).
       }}
@@ -537,6 +592,27 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     >
       {!frameOnly && bgImage && (
         <div style={{ position: 'absolute', inset: 0, filter: isLit ? LED_LIT_FILTER : undefined, ...bgFor(offsetX) }} />
+      )}
+
+      {/*
+        KIRIMLI EKRANIN DIŞ HATTI — kenarlık clipPath ile kırpıldığı için
+        SVG ile çiziliyor. Açık temada beyaz duvarın üstünde şeklin nerede
+        bittiği bu çizgiden anlaşılıyor.
+      */}
+      {kirimVar && (
+        <svg
+          width={wPx}
+          height={hPx}
+          viewBox={`0 0 ${wPx} ${hPx}`}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+        >
+          <path
+            d={`M0,${(hPx * solKirim) / 100} L${wPx},${(hPx * sagKirim) / 100} L${wPx},${hPx - (hPx * sagKirim) / 100} L0,${hPx - (hPx * solKirim) / 100} Z`}
+            fill="none"
+            stroke={isNone ? '#64748b' : 'rgba(0,0,0,0.55)'}
+            strokeWidth="1.25"
+          />
+        </svg>
       )}
 
       {/* spanW verilmişse içerik paylaşılıyor demektir: senkron gerekiyor. */}
@@ -948,8 +1024,12 @@ export default function WallPreview({
        * göründüğü için açık hâlinden dar yer kaplar, komşuları da o
        * kadar sola yaslanır.
        */
-      /* 45° bakışta iki yüz de aynı oranda kısalıyor (bkz. L_KACIS_ORANI). */
-      const lKisalma = s.type === 'lshape' ? L_KACIS_ORANI : 1
+      /*
+       * KISALMA: birleşimdeki ekranın kendi açısından (bkz.
+       * birlesimGeometrisi). Tek ekranın köşede katlanması (iç L) hâlâ
+       * kendi oranını kullanıyor.
+       */
+      const lKisalma = Number(s.olcek) > 0 ? s.olcek : s.type === 'lshape' ? L_KACIS_ORANI : 1
       const solCols = Math.max(1, s.leftCols || Math.ceil(sut / 2))
       return {
         ...s,
@@ -1249,6 +1329,8 @@ export default function WallPreview({
                       leftCols={s.leftCols}
                       rightCols={s.rightCols}
                       lYon={s.lYon}
+                      solKirim={s.solKirim || 0}
+                      sagKirim={s.sagKirim || 0}
                       {...(dilim
                         ? {
                             spanW: totalWpx * dilim.sw,
@@ -1353,7 +1435,7 @@ export default function WallPreview({
                         kendi ölçüsü yazılıyor.
                       */}
                       <span className="bg-neutral-800 text-white text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">
-                        {s.kanatWm ? s.kanatWm.map((x) => fmtU(x)).join(' · ') : fmtU(s.gercekWm ?? s.wm)}
+                        {fmtU(s.gercekWm ?? s.wm)}
                       </span>
                     </div>
                   )
