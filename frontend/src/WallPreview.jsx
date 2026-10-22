@@ -416,29 +416,38 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           görüntüsünün sebebi buydu. Şekil SVG ile çiziliyor: iki trapezin dış
           hattı + ortadaki köşe çizgisi.
         */}
-        {isNone && (
-          <svg
-            width={wPx}
-            height={hPx}
-            viewBox={`0 0 ${wPx} ${hPx}`}
-            style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
-          >
-            {(() => {
-              const pY = (hPx * p) / 100
-              return (
-                <>
-                  <path
-                    d={`M0,0 L${leftW},${pY} L${wPx},0 L${wPx},${hPx} L${leftW},${hPx - pY} L0,${hPx} Z`}
-                    fill="none"
-                    stroke="#64748b"
-                    strokeWidth="1"
-                  />
-                  <line x1={leftW} y1={pY} x2={leftW} y2={hPx - pY} stroke="#64748b" strokeWidth="1" />
-                </>
-              )
-            })()}
-          </svg>
-        )}
+{/*
+          DIŞ HAT VE KÖŞE ÇİZGİSİ — HER ZAMAN.
+
+          Hat yalnızca "Resim Yok" seçiliyken çiziliyordu. Açık temada
+          beyaz duvarın üstünde iki yüzün nerede bittiği, hatta köşenin
+          olup olmadığı anlaşılmıyordu. Hat artık her içerikte var ve
+          kırımın asimetrik geometrisine oturuyor.
+        */}
+        <svg
+          width={wPx}
+          height={hPx}
+          viewBox={`0 0 ${wPx} ${hPx}`}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+        >
+          {(() => {
+            const yOn = (hPx * pOn) / 100
+            const yUzak = (hPx * (pOn + p)) / 100
+            const hat = isNone ? '#64748b' : 'rgba(0,0,0,0.55)'
+            return (
+              <>
+                <path
+                  d={`M0,0 L${leftW},${yOn} L${wPx},${yUzak} L${wPx},${hPx - yUzak} L${leftW},${hPx - yOn} L0,${hPx} Z`}
+                  fill="none"
+                  stroke={hat}
+                  strokeWidth="1.25"
+                />
+                {/* Köşe çizgisi: iki yüzün buluştuğu kenar. */}
+                <line x1={leftW} y1={yOn} x2={leftW} y2={hPx - yOn} stroke={hat} strokeWidth="1.25" />
+              </>
+            )
+          })()}
+        </svg>
 
         {/*
           KÖŞE ÇİZGİSİ — yalnızca ince bir kırım gölgesi. Beyaz ışık teli
@@ -453,8 +462,9 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
             style={{
               position: 'absolute',
               left: leftW,
-              top: `${p}%`,
-              height: `${100 - 2 * p}%`,
+              /* Kırım tek yöne döndü: çizgi ÖN kanadın payına oturuyor. */
+              top: `${pOn}%`,
+              height: `${100 - 2 * pOn}%`,
               width: 3,
               transform: 'translateX(-50%)',
               background:
@@ -933,7 +943,16 @@ export default function WallPreview({
               Math.max(1, s.rightCols || sut - Math.ceil(sut / 2)) * L_KACIS_ORANI) /
             sut
           : 1
-      return { ...s, wm: sut * cw * lKisalma, hm: Math.max(1, s.rows) * ch }
+      const solCols = Math.max(1, s.leftCols || Math.ceil(sut / 2))
+      return {
+        ...s,
+        /* ÇİZİM genişliği: çaprazdan görünen (kısalmış) hâli. */
+        wm: sut * cw * lKisalma,
+        /* ETİKET için GERÇEK genişlik; kanatlı tasarımda kanat kanat. */
+        gercekWm: sut * cw,
+        kanatWm: s.type === 'lshape' ? [solCols * cw, (sut - solCols) * cw] : null,
+        hm: Math.max(1, s.rows) * ch,
+      }
     })
     const totalWm = list.reduce((a, s) => a + s.wm, 0)
     const maxHm = Math.max(...list.map((s) => s.hm))
@@ -1281,7 +1300,8 @@ export default function WallPreview({
                   satıra alınıp duvarın kenarına yaslanıyor. Geniş boşlukta
                   eskisi gibi ortalanıyor.
                 */}
-                {marginXpx > 2 && marginXm > 0.004 && (
+                {/* Köşeli tasarımda kenar payının karşılığı yok (bkz. gercekWm). */}
+                {!list.some((x) => x.type === 'lshape') && marginXpx > 2 && marginXm > 0.004 && (
                   <>
                     <div
                       className="absolute"
@@ -1318,7 +1338,15 @@ export default function WallPreview({
                       className="absolute flex flex-col items-center gap-1 max-w-[70vw] pointer-events-none"
                       style={{ left: marginXpx + s.center, transform: 'translateX(-50%)', top: isTop ? -34 - bombePx : wallH + 26 + bombePx }}
                     >
-                      <span className="bg-neutral-800 text-white text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(s.wm)}</span>
+                      {/*
+                        GERÇEK ÖLÇÜ. Kutu genişliği çaprazdan görünen
+                        genişlik; onu yazmak hiçbir yerde olmayan bir
+                        sayı üretiyordu. Kanatlı tasarımda her yüzeyin
+                        kendi ölçüsü yazılıyor.
+                      */}
+                      <span className="bg-neutral-800 text-white text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">
+                        {s.kanatWm ? s.kanatWm.map((x) => fmtU(x)).join(' · ') : fmtU(s.gercekWm ?? s.wm)}
+                      </span>
                     </div>
                   )
                 })}
