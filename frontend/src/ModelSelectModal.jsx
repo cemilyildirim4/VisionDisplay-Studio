@@ -318,7 +318,7 @@ const COMPARE_ROWS = [
 
 const MAX_COMPARE = 4
 
-export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) {
+export default function ModelSelectModal({ open, onClose, cabinets, onChoose, onWizard = null }) {
   const { t, lang } = useLang()
   const [tab, setTab] = useState('led')
   /*
@@ -612,6 +612,26 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
               </svg>
             </button>
           </div>
+
+          {/*
+            HANGİ MODELİ SEÇECEĞİNİ BİLMEYENE KISAYOL.
+            Soru burada soruluyor; yardımın yeri de burası.
+          */}
+          {onWizard && (
+            <button
+              type="button"
+              onClick={onWizard}
+              className="mb-3 flex shrink-0 items-center gap-1.5 self-start text-[13px] font-medium text-brand hover:underline"
+            >
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9.2 9a3 3 0 1 1 4 2.8c-.8.3-1.2 1-1.2 1.8v.4" />
+                  <path d="M12 17.4h.01" />
+                </svg>
+              </span>
+              {t('wiz.entry')}
+            </button>
+          )}
 
           <div className="shrink-0 mb-3">
             {filtreAcik && (

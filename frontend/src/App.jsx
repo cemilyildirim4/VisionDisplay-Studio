@@ -8296,6 +8296,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         <BrandMark title={t('app.title')} subtitle={t('app.tagline')} />
 
         {/*
+          MODEL ÇİPİ — hangi modelle çalışıldığı her ekranda görünsün.
+          Sol paneldeki kart en uzun bloktu ama tasarım boyunca bir kez
+          dokunuluyor. Seçilmemişken vurgulu: yapılacak ilk iş o.
+        */}
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          title={seriAdi(selectedModel?.series?.name, t) || t('model.heading')}
+          className={`shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+            hasModel
+              ? 'border border-neutral-300 text-neutral-700 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-200'
+              : 'bg-brand text-white hover:opacity-90'
+          }`}
+        >
+          <span>{hasModel ? selectedModel.modelCode : t('model.select')}</span>
+          {/* Tip etiketi ve ok yatay telefonda gizli: ad kesilmesin. */}
+          {hasModel && (
+            <span className="yatay-gizle inline-flex items-center gap-1.5">
+              <ProductTypeBadge productType={selectedModel.productType} />
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </span>
+          )}
+        </button>
+
+        {/*
           Araç düğmeleri başlık çubuğunda. Önce solda dikey bir şeritteydi ama
           duvar büyüdükçe çizimin üstüne biniyordu; burada hiçbir zaman çakışmaz.
         */}
@@ -8863,6 +8890,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   : (id, shift) => {
                       /* Shift: seçime ekle/çıkar. Düz tıklama: düzenlemeye al. */
                       if (shift) {
+                        /*
+                         * Tasarım alanındaki seçim ile yerleşim çipleri AYNI
+                         * listeyi kullanıyor; iki ayrı seçim kullanıcıyı
+                         * hangisinin geçerli olduğunu tahmin etmeye bırakıyordu.
+                         */
+                        const yeni = grupSecim.includes(id)
+                          ? grupSecim.filter((x) => x !== id)
+                          : [...grupSecim, id]
+                        setGrupSecim(yeni)
                         setSecimKumesi((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]))
                         return
                       }
@@ -9489,103 +9525,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         <div className="yatay-sag">
         <aside className="yatay-panel yatay-panel-model w-full min-w-0 lg:w-[340px] shrink-0 order-2 lg:order-1 border-t lg:border-t-0 lg:border-r border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
           <Sigdir className="flex flex-col gap-2">
-          {/* Model */}
-          <h2 className="text-[20px] font-bold tracking-tight m-0 mb-1">{t('model.heading')}</h2>
-
           {/*
-            Hangi modeli seçeceğini bilmeyen kullanıcı için isteğe bağlı
-            sihirbaz. Yeri model panelinin ÜSTÜ: soru zaten "hangisini
-            seçeceğim" diye sorulurken, cevabı seçim kutusundan sonra sunmak
-            geç kalıyordu. Ana akış (tek ekran, sihirbazsız) değişmiyor —
-            burası yalnızca bir kısayol, o yüzden düğme değil satır: ince
-            kenarlık, tek satır metin ve önünde sade bir pusula ikonu.
+            DUVAR EN ÜSTTE — kurulumun İLK kararı.
+            Ekranlar duvara göre diziliyor; ölçü panelin en altındayken
+            kullanıcı önce ekranı kurup sonra duvarı yazıyordu.
           */}
-          {!hasModel && !cabinetsLoading && (
-            <button
-              type="button"
-              onClick={() => setWizardOpen(true)}
-              className="w-full mb-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-2 flex items-center gap-2 text-left text-brand hover:border-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors"
-            >
-              {/*
-                İkon dolu bir daire içinde: ince çizgili hâli panel küçültülünce
-                (bkz. Sigdir) silikleşip görünmez oluyordu.
-              */}
-              <span className="w-6 h-6 rounded-full bg-brand text-white shrink-0 inline-flex items-center justify-center">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9.2 9a3 3 0 1 1 4 2.8c-.8.3-1.2 1-1.2 1.8v.4" />
-                  <path d="M12 17.4h.01" />
-                </svg>
-              </span>
-              <span className="text-[16.5px] font-semibold leading-tight">{t('wiz.entry')}</span>
-            </button>
-          )}
-          {/*
-            MODEL KARTI DARALTILDI.
-
-            Üç satır ve bir ürün görseli kutusuyla panelin en uzun bloğuydu;
-            ekran listesini aşağı itiyordu. Seri adı model kodunun altına
-            tek satır olarak indi, "Değiştir" aynı satıra geçti.
-          */}
-          {hasModel ? (
-            <div className="border border-neutral-200 dark:border-[#2c333f] rounded-lg px-3 py-2">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  {/*
-                    Kod BÖLÜNMEZ bir ad: dar panelde satır sarması
-                    "DEMO-" / "P1.25" diye ortasından geçiyordu. Rozet alt
-                    satıra inerek koda yer açıyor.
-                  */}
-                  <div className="truncate text-[21px] font-bold leading-tight text-neutral-900 dark:text-neutral-100">
-                    {selectedModel.modelCode}
-                  </div>
-                  <div className="mt-0.5">
-                    <ProductTypeBadge productType={selectedModel.productType} size="md" />
-                  </div>
-                  {/* Ad kesilmesin: uzun seri adları iki satıra iner. */}
-                  <div className="text-[15px] leading-snug text-neutral-500 dark:text-neutral-400">
-                    {seriAdi(selectedModel.series?.name, t) || t('model.defaultSeries')}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(true)}
-                  className="shrink-0 flex items-center gap-1 rounded-lg px-2 py-1.5 text-[15.5px] font-semibold text-neutral-700 dark:text-neutral-200 hover:text-brand"
-                >
-                  {t('model.change')}
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 6 15 12 9 18" />
-                  </svg>
-                </button>
+          {hasModel && (
+            <div className="mb-1">
+              <h2 className="text-[20px] font-bold tracking-tight m-0 mb-1">{t('wall.heading')}</h2>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                <SayiKutusu
+                  etiket={t('wall.width')}
+                  deger={width}
+                  onChange={setWidth}
+                  min={widthMin}
+                  max={40}
+                  adim={0.1}
+                  birim="m"
+                />
+                <SayiKutusu
+                  etiket={t('wall.height')}
+                  deger={height}
+                  onChange={setHeight}
+                  min={heightMin}
+                  max={20}
+                  adim={0.1}
+                  birim="m"
+                />
               </div>
             </div>
-          ) : cabinetsLoading ? (
-            // İskelet (skeleton) yükleme — API'den model listesi gelene kadar boş bir
-            // "seç" butonu göstermek yerine yüklendiğini hissettiren bir animasyon.
-            <div className="w-full h-[150px] rounded-lg border border-neutral-200 dark:border-[#2c333f] p-3 animate-pulse">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <div className="h-3 w-24 bg-neutral-200 dark:bg-[#242b36] rounded mb-2" />
-                  <div className="h-5 w-36 bg-neutral-200 dark:bg-[#242b36] rounded" />
-                </div>
-                <div className="w-16 h-11 rounded-lg bg-neutral-200 dark:bg-[#242b36] shrink-0" />
-              </div>
-              <div className="h-px bg-neutral-100 dark:bg-[#242b36] my-3" />
-              <div className="h-4 w-28 bg-neutral-200 dark:bg-[#242b36] rounded" />
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="w-full h-[150px] border-2 border-dashed border-neutral-300 dark:border-[#39414f] rounded-lg flex flex-col items-center justify-center gap-3 text-neutral-500 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-[#4a5364] hover:text-neutral-500 transition-colors"
-            >
-              <span className="w-9 h-9 rounded-full border-2 border-current flex items-center justify-center">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <line x1="12" y1="6" x2="12" y2="18" />
-                  <line x1="6" y1="12" x2="18" y2="12" />
-                </svg>
-              </span>
-              <span className="text-base">{t('model.select')}</span>
-            </button>
           )}
 
           {/*
@@ -9936,36 +9904,44 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     görünsün, kullanıcı hangi ekranı işaretlediğini
                     sırasından tahmin etmek zorunda kalmasın.
                   */}
-                  <ul className="mt-1.5 mb-0 list-none p-0 flex flex-col gap-1">
-                    {ekranOzetleri.map((e) => (
-                      <li key={e.id ?? 'aktif'}>
-                        <label className="flex items-center gap-2 text-[15px] text-neutral-700 dark:text-neutral-200">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 shrink-0"
-                            checked={grupSecim.includes(e.id)}
-                            onChange={() => {
-                              const yeni = grupSecim.includes(e.id)
-                                ? grupSecim.filter((x) => x !== e.id)
-                                : [...grupSecim, e.id]
-                              setGrupSecim(yeni)
-                              birlesimiKur(grupTipi, yeni, grupAcisi, lYonSecim)
-                            }}
-                          />
-                          <span className="relative h-6 w-9 shrink-0 overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]">
+                  {/*
+                    ÇİP IZGARASI — alt alta onay kutuları paneli uzatıyordu.
+                    İki sütun: dört ekran iki satır, altı ekran üç satır.
+                    Seçim durumu çipin KENDİSİNDE (dolu mavi), ayrı bir
+                    kutucuğa gerek yok.
+                  */}
+                  <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                    {ekranOzetleri.map((e) => {
+                      const secili = grupSecim.includes(e.id)
+                      return (
+                        <button
+                          key={e.id ?? 'aktif'}
+                          type="button"
+                          onClick={() => {
+                            const yeni = secili ? grupSecim.filter((x) => x !== e.id) : [...grupSecim, e.id]
+                            setGrupSecim(yeni)
+                            birlesimiKur(grupTipi, yeni, grupAcisi, lYonSecim)
+                          }}
+                          className={`flex min-w-0 items-center gap-1.5 rounded-lg border px-1.5 py-1 text-[13.5px] transition-colors ${
+                            secili
+                              ? 'border-brand bg-brand text-white'
+                              : 'border-neutral-300 text-neutral-600 hover:border-brand dark:border-[#39414f] dark:text-neutral-300'
+                          }`}
+                        >
+                          <span className="relative h-5 w-7 shrink-0 overflow-hidden rounded border border-black/15">
                             <IcerikOnizleme
                               oge={icerikHavuzuTam.find((x) => x.id === e.havuzId)}
                               dilim={e.dilim}
                               oynatImi
                             />
                           </span>
-                          <span className="min-w-0 flex-1 truncate">
-                            {e.sira}. {t('ekran.tekil')} · {e.ayar.cols || 1}×{e.ayar.rows || 1}
+                          <span className="min-w-0 flex-1 truncate text-left">
+                            {e.sira} · {e.ayar.cols || 1}×{e.ayar.rows || 1}
                           </span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
+                        </button>
+                      )
+                    })}
+                  </div>
 
                   {/*
                     Şekil düğmesi doğrudan işi yapıyor; ayrıca onay istemiyor.
@@ -10095,45 +10071,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             <div className="rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2 text-[15px] tabular-nums text-neutral-700 dark:text-neutral-200">
               <span className="font-semibold">{t('panel.toplam')}:</span> {ekranOzetleri.length} {t('ekran.tekil')} ·{' '}
               {fmt(tasarimToplami.kabin)} {birimSozcugu(selectedModel?.productType, t)} · {fmt(tasarimToplami.resW)} × {fmt(tasarimToplami.resH)} px
-            </div>
-          )}
-          {/*
-            DUVAR ÖLÇÜSÜ VE SIĞDIRMA PANELDE AÇIKTA.
-
-            Katlanmış "Diğer ayarlar" bölümünün arkasındaydılar; oysa
-            tasarımın kendi ayarları ve kurulum sırasında aranıyorlar.
-            Hesap sonucu olan "maksimum kapasite" ile donanım seçeneği
-            Mini PC teknik özelliklere taşındı.
-          */}
-          {hasModel && (
-            <div>
-              <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('wall.heading')}</h2>
-
-              {/*
-                BİRİM ALANIN YANINDA YAZIYOR.
-
-                Bu iki alan METRE ile çalışıyor ama ekranda hiçbir yerde "m"
-                yazmıyordu. Ölçü kutusu ise SANTİM istiyor. Kullanıcı buradaki
-                0,96'yı okuyup santim alanına da 0,96 yazdığında 1 santimlik bir
-                yerleşim alanı oluşuyor ve her şey bozuluyor. Birim artık sayının
-                hemen yanında — tahmin edilecek bir şey kalmıyor.
-              */}
-              <Card>
-                <div className="flex items-center justify-between mb-3">
-                  <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
-                  <div className="flex items-center gap-1.5">
-                    <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
-                    <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
-                  <div className="flex items-center gap-1.5">
-                    <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
-                    <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
-                  </div>
-                </div>
-              </Card>
             </div>
           )}
           </Sigdir>
@@ -11363,6 +11300,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <ModelSelectModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
+        /* "Hangi modeli seçeceğinizi bilmiyorum" yardımı pencerenin içinde. */
+        onWizard={() => {
+          setModalOpen(false)
+          setWizardOpen(true)
+        }}
         cabinets={displayCabinets}
         onChoose={handleChoose}
       />
@@ -12179,21 +12121,36 @@ function FieldLabel({ children, muted = false }) {
  * kırpılmıyor. (Stepper daraldıkça etiketle bitişip + düğmesini dışarı
  * düşürüyordu.)
  */
-function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99 }) {
+function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null }) {
   const dugme =
     'h-6 w-6 shrink-0 rounded border border-neutral-300 text-[15px] leading-none text-neutral-700 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-35 dark:border-[#39414f] dark:text-neutral-200'
+  /* Ondalık adımda kayan nokta kalıntısı kalmasın (0,1+0,2). */
+  const yuvarla = (v) => Number(v.toFixed(2))
   return (
     <span className="flex min-w-0 items-center gap-1">
       <span className="shrink-0 text-[13.5px] text-neutral-600 dark:text-neutral-300">{etiket}</span>
-      <button type="button" aria-label="−" onClick={() => onChange(Math.max(min, deger - 1))} disabled={deger <= min} className={dugme}>
+      <button
+        type="button"
+        aria-label="−"
+        onClick={() => onChange(Math.max(min, yuvarla(deger - adim)))}
+        disabled={deger <= min}
+        className={dugme}
+      >
         −
       </button>
       <span className="min-w-[1.5rem] text-center text-[14.5px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
-        {deger}
+        {adim < 1 ? (deger || 0).toFixed(2).replace('.', ',') : deger}
       </span>
-      <button type="button" aria-label="+" onClick={() => onChange(Math.min(max, deger + 1))} disabled={deger >= max} className={dugme}>
+      <button
+        type="button"
+        aria-label="+"
+        onClick={() => onChange(Math.min(max, yuvarla(deger + adim)))}
+        disabled={deger >= max}
+        className={dugme}
+      >
         +
       </button>
+      {birim && <span className="shrink-0 text-[13px] text-neutral-500 dark:text-neutral-400">{birim}</span>}
     </span>
   )
 }
