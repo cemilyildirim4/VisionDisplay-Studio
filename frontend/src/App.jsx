@@ -415,8 +415,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [icerikGruplari, setIcerikGruplari] = useState([])
 
-  /* Yerleşim kutusunda seçim açık mı (bkz. yerlesim.ac). */
-  const [yerlesimAcik, setYerlesimAcik] = useState(false)
   /* İçerik kutusunun üstüne dosya sürükleniyor mu (bkz. content.ekle). */
   const [icerikSurukle, setIcerikSurukle] = useState(false)
   // Teknik Özellikler pop-up'ı (Bileşenler de içinde)
@@ -4639,33 +4637,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * geri alma yok; yanlışlıkla basılan bir düğme bütün bir ekranın kurulum
    * emeğini siliyordu.
    */
+
   /*
-   * BİRLEŞTİR — seçilen ekranlar kenarlarından birleşiyor.
-   * Sıra listedeki sıra; lider ilk üye.
+   * BİRLEŞİMİ KUR — değerler DIŞARIDAN veriliyor.
+   *
+   * Şekle, kutucuğa, açıya ya da köşe yönüne basıldığı anda çağrılıyor.
+   * Durum güncellemeleri eşzamansız olduğu için o anki değerleri
+   * beklemek yerine çağıran ne verdiyse onunla kuruluyor.
    */
-  const ekranlariBirlestir = () => {
+  const birlesimiKur = (tip, secim, aci, yon) => {
     const sirali = [...sabitEkranlar, { id: aktifEkranId, sira: aktifSira }]
-      .filter((e) => grupSecim.includes(e.id))
+      .filter((e) => secim.includes(e.id))
       .sort((a, b) => (a.sira || 0) - (b.sira || 0))
       .map((e) => e.id)
-    /*
-     * TEK EKRAN + L = İÇ L.
-     *
-     * Birleştirilecek ikinci bir ekran yok; ekranın KENDİSİ köşede
-     * katlanıyor. Eski pencerenin "İç L Tipi" işi buydu.
-     */
-    if (grupTipi === 'l' && sirali.length === 1) {
-      const hedef = sirali[0]
-      if (hedef !== aktifEkranId) ekraniDuzenle(hedef)
-      setScreenType('lshape')
-      setLYon(lYonSecim)
-      setLSolCols(Math.max(1, Math.min(Math.max(2, cols) - 1, lSolSecim)))
-      setGrupSecim([])
+    /* İki ekrandan azı birleşim değildir. */
+    if (sirali.length < 2) {
+      setGrup(null)
       return
     }
-    if (sirali.length < 2) return
-    /* Birleşik ekranlar varsayılan olarak TEK görseli paylaşıyor. */
-    setGrup({ tip: grupTipi, aci: grupAcisi, uyeler: sirali, tekGorsel: true, lYon: lYonSecim })
+    setGrup((eski) => ({
+      tip,
+      aci,
+      uyeler: sirali,
+      /* Görsel paylaşımı kullanıcının kararı; şekil değişince sıfırlanmıyor. */
+      tekGorsel: eski?.tekGorsel ?? true,
+      lYon: yon,
+    }))
   }
 
   /*
@@ -7313,6 +7310,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content, contentUrl, aktifEkranId, icerikGruplari, grup])
 
+  /*
+   * İKİ EKRAN VARSA İKİSİ DE İŞARETLİ.
+   * Tek olasılık zaten o; kullanıcıdan iki kutucuğu ayrıca işaretlemesini
+   * istemek boş bir adım. Daha çok ekran varken seçim kullanıcıya kalıyor.
+   */
+  useEffect(() => {
+    if (grupSecim.length || grup) return
+    const hepsi = [...sabitEkranlar.map((e) => e.id), aktifEkranId].filter(Boolean)
+    if (hepsi.length === 2) setGrupSecim(hepsi)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sabitEkranlar, aktifEkranId])
+
   const bolunmusDilimler = (() => {
     const m = selectedModel || previewModel
     if (!m) return null
@@ -7469,46 +7478,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const alanIsaretli = scene === 'ozel' && Array.isArray(alanNokta) && alanNokta.length === 4
 
-  /*
-   * BİRLEŞİK DURUM TEK YERDE.
-   *
-   * İki ayrı birleşme var: birden çok ekranın grubu ve tek ekranın köşede
-   * katlanması (iç L). Kutu ikisini de aynı biçimde gösteriyor.
-   */
-  const icLVar = (screenType || 'flat') === 'lshape'
-  const birlesikVar = !!grup || icLVar
-  const grupAdi = (() => {
-    if (grup) {
-      const sira = (id) => ekranOzetleri.find((x) => x.id === id)?.sira
-      const uyeler = (grup.uyeler || []).map(sira).filter(Boolean).join('+')
-      const yon = grup.tip === 'acili' ? ' · ' + grup.aci + '°' : ' · ' + t('yerlesim.' + (grup.lYon || 'ice'))
-      return t('yerlesim.' + grup.tip) + ' (' + uyeler + ')' + yon
-    }
-    if (!icLVar) return ''
-    const toplam = Math.max(2, cols)
-    const sol = lSolCols || Math.ceil(toplam / 2)
-    return t('yerlesim.l') + ' (' + sol + '+' + (toplam - sol) + ') · ' + t('yerlesim.' + lYon)
-  })()
-
-  /*
-   * DÜZENLE — grubu bozup seçimi aynı değerlerle yeniden açıyor.
-   * Ayırmak ekranları yerinden oynatmıyor (bkz. grubuAyir).
-   */
-  const yerlesimiDuzenle = () => {
-    if (grup) {
-      setGrupSecim(grup.uyeler || [])
-      setGrupTipi(grup.tip || 'duz')
-      setGrupAcisi(grup.aci || 135)
-      setLYonSecim(grup.lYon || 'ice')
-    } else {
-      setGrupSecim([aktifEkranId])
-      setGrupTipi('l')
-      setLYonSecim(lYon)
-      setLSolSecim(lSolCols || Math.ceil(Math.max(2, cols) / 2))
-    }
-    grubuAyir()
-    setYerlesimAcik(true)
-  }
 
   /*
    * TASARIMIN TOPLAMI — ekranlar yan yana duruyor kabulüyle.
@@ -9900,208 +9869,156 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
                 Birleştirme isteğe bağlı: seçilmeyen ekranlar bağımsız.
               */}
-              {/* Tek ekranla da açık: "L" burada tek ekranı köşede katlıyor. */}
-              {hasModel && (
+              {/*
+                YERLEŞİM HEP AÇIK.
+
+                Ekran kutucukları ve şekil düğmeleri her zaman görünüyor;
+                her değişiklik ANINDA uygulanıyor. Önce "şekli seç, sonra
+                Birleştir'e bas" iki adımdı ve ilk adım hiçbir şey
+                yapmadığı için düğmeler işlevsiz görünüyordu.
+
+                Birleştirecek ikinci bir ekran yoksa bölümün de işi yok.
+              */}
+              {hasModel && ekranOzetleri.length > 1 && (
                 <div className="mt-3 rounded-lg border border-neutral-200 dark:border-[#2c333f] p-2.5">
-                  {/* Başlık yalnızca birleşim YOKKEN: kurulmuş birleşim tek satır. */}
-                  {!birlesikVar && (
-                    <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
-                      {t('yerlesim.baslik')}
+                  <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
+                    {t('yerlesim.baslik')}
+                  </div>
+
+                  {/*
+                    Seçim satırları ekran listesiyle AYNI kaynaktan
+                    (ekranOzetleri): küçük resim ve dizilim burada da
+                    görünsün, kullanıcı hangi ekranı işaretlediğini
+                    sırasından tahmin etmek zorunda kalmasın.
+                  */}
+                  <ul className="mt-1.5 mb-0 list-none p-0 flex flex-col gap-1">
+                    {ekranOzetleri.map((e) => (
+                      <li key={e.id ?? 'aktif'}>
+                        <label className="flex items-center gap-2 text-[15px] text-neutral-700 dark:text-neutral-200">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 shrink-0"
+                            checked={grupSecim.includes(e.id)}
+                            onChange={() => {
+                              const yeni = grupSecim.includes(e.id)
+                                ? grupSecim.filter((x) => x !== e.id)
+                                : [...grupSecim, e.id]
+                              setGrupSecim(yeni)
+                              birlesimiKur(grupTipi, yeni, grupAcisi, lYonSecim)
+                            }}
+                          />
+                          <span className="relative h-6 w-9 shrink-0 overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]">
+                            <IcerikOnizleme
+                              oge={icerikHavuzuTam.find((x) => x.id === e.havuzId)}
+                              dilim={e.dilim}
+                              oynatImi
+                            />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate">
+                            {e.sira}. {t('ekran.tekil')} · {e.ayar.cols || 1}×{e.ayar.rows || 1}
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Şekil düğmesi doğrudan işi yapıyor; ayrıca onay istemiyor. */}
+                  <div className="mt-2 grid grid-cols-5 gap-1">
+                    {['duz', 'l', 'u', 'kutu', 'acili'].map((tip) => (
+                      <button
+                        key={tip}
+                        type="button"
+                        disabled={grupSecim.length < 2}
+                        onClick={() => {
+                          setGrupTipi(tip)
+                          birlesimiKur(tip, grupSecim, grupAcisi, lYonSecim)
+                        }}
+                        title={t('yerlesim.' + tip)}
+                        className={`rounded-md py-1.5 text-[13px] font-semibold leading-tight transition-colors disabled:opacity-40 ${
+                          grup && grupTipi === tip
+                            ? 'bg-brand text-white'
+                            : 'border border-neutral-300 text-neutral-600 enabled:hover:border-brand enabled:hover:text-brand dark:border-[#39414f] dark:text-neutral-400'
+                        }`}
+                      >
+                        {t('yerlesim.' + tip)}
+                      </button>
+                    ))}
+                  </div>
+                  {grupSecim.length < 2 && (
+                    <p className="mt-1.5 mb-0 text-[13px] text-red-600 dark:text-red-400">{t('yerlesim.enAzIki')}</p>
+                  )}
+
+                  {/*
+                    KÖŞE YÖNÜ — oda köşesi mi kolon köşesi mi.
+                    İkisi bambaşka görünür; hangisinin kurulacağını
+                    ancak kullanıcı bilir.
+                  */}
+                  {(grupTipi === 'l' || grupTipi === 'u' || grupTipi === 'kutu') && (
+                    <div className="mt-2 flex overflow-hidden rounded-lg border border-neutral-300 dark:border-[#39414f]">
+                      {['ice', 'disa'].map((y) => (
+                        <button
+                          key={y}
+                          type="button"
+                          onClick={() => {
+                            setLYonSecim(y)
+                            birlesimiKur(grupTipi, grupSecim, grupAcisi, y)
+                          }}
+                          className={`flex-1 px-1 py-1 text-[13.5px] ${
+                            lYonSecim === y ? 'bg-brand text-white' : 'text-neutral-600 dark:text-neutral-300'
+                          }`}
+                        >
+                          {t('yerlesim.' + y)}
+                        </button>
+                      ))}
                     </div>
                   )}
-                  {birlesikVar ? (
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14.5px]">
-                      {/* Adın kendisi hangi ekranların birleştiğini de söylüyor. */}
-                      <span className="min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-200">
-                        <span className="font-semibold">{t('yerlesim.birlesim')}:</span> {grupAdi}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={yerlesimiDuzenle}
-                        className="shrink-0 font-medium text-neutral-600 underline underline-offset-2 transition-colors hover:text-brand dark:text-neutral-300"
-                      >
-                        {t('yerlesim.duzenle')}
-                      </button>
-                      <span aria-hidden className="shrink-0 text-neutral-300 dark:text-neutral-600">·</span>
-                      <button
-                        type="button"
-                        onClick={grubuAyir}
-                        className="shrink-0 font-medium text-neutral-600 underline underline-offset-2 transition-colors hover:text-brand dark:text-neutral-300"
-                      >
-                        {t('yerlesim.ayir')}
-                      </button>
-                      {/*
-                        GÖRSEL BİRLEŞİME AİT.
-                        Birleşik ekranlar varsayılan olarak tek resmi
-                        paylaşıyor; isteyen her ekrana ayrı görsel verebiliyor.
-                        Tek ekranın köşede katlanmasında (iç L) paylaşacak
-                        ikinci bir ekran yok, o yüzden yalnızca grupta.
-                      */}
-                      {grup && (
-                        <div className="mt-1 flex w-full overflow-hidden rounded-lg border border-neutral-200 dark:border-[#2c333f]">
-                          {[true, false].map((v) => (
-                            <button
-                              key={String(v)}
-                              type="button"
-                              onClick={() => setGrup((g) => (g ? { ...g, tekGorsel: v } : g))}
-                              className={`flex-1 px-1 py-1 text-[13.5px] ${
-                                (grup.tekGorsel !== false) === v
-                                  ? 'bg-brand text-white'
-                                  : 'text-neutral-600 dark:text-neutral-300'
-                              }`}
-                            >
-                              {v ? t('icerik.tekGorsel') : t('icerik.ayriGorsel')}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+
+                  {/* Açı değişir değişmez çizim de değişiyor. */}
+                  {grupTipi === 'acili' && (
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="10"
+                        max="170"
+                        step="5"
+                        value={grupAcisi}
+                        onChange={(e) => {
+                          const v = Number(e.target.value) || 135
+                          setGrupAcisi(v)
+                          birlesimiKur(grupTipi, grupSecim, v, lYonSecim)
+                        }}
+                        className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                      />
+                      <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
                     </div>
-                  ) : !yerlesimAcik ? (
-                    /* Birleştirme isteğe bağlı: seçim ancak istenince açılıyor. */
-                    <button
-                      type="button"
-                      onClick={() => setYerlesimAcik(true)}
-                      className="mt-2 w-full rounded-lg border border-neutral-200 py-2 text-[15px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
-                    >
-                      {t('yerlesim.ac')}
-                    </button>
-                  ) : (
+                  )}
+
+                  {/* Birleşim kurulduysa: görsel paylaşımı ve ayırma. */}
+                  {grup && (
                     <>
-                      <p className="mt-1 mb-0 text-[14px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('yerlesim.ipucu')}
-                      </p>
-                      {/*
-                        Seçim satırları ekran listesiyle AYNI kaynaktan
-                        (ekranOzetleri): küçük resim ve dizilim burada da
-                        görünsün, kullanıcı hangi ekranı işaretlediğini
-                        sırasından tahmin etmek zorunda kalmasın.
-                      */}
-                      <ul className="mt-1.5 mb-0 list-none p-0 flex flex-col gap-1">
-                        {ekranOzetleri.map((e) => (
-                          <li key={e.id ?? 'aktif'}>
-                            <label className="flex items-center gap-2 text-[15px] text-neutral-700 dark:text-neutral-200">
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 shrink-0"
-                                checked={grupSecim.includes(e.id)}
-                                onChange={() =>
-                                  setGrupSecim((l) =>
-                                    l.includes(e.id) ? l.filter((x) => x !== e.id) : [...l, e.id],
-                                  )
-                                }
-                              />
-                              <span className="relative h-6 w-9 shrink-0 overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]">
-                                <IcerikOnizleme
-                                  oge={icerikHavuzuTam.find((x) => x.id === e.havuzId)}
-                                  dilim={e.dilim}
-                                  oynatImi
-                                />
-                              </span>
-                              <span className="min-w-0 flex-1 truncate">
-                                {e.sira}. {t('ekran.tekil')} · {e.ayar.cols || 1}×{e.ayar.rows || 1}
-                              </span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="mt-2 grid grid-cols-5 gap-1">
-                        {['duz', 'l', 'u', 'kutu', 'acili'].map((tip) => (
+                      <div className="mt-2 flex w-full overflow-hidden rounded-lg border border-neutral-200 dark:border-[#2c333f]">
+                        {[true, false].map((v) => (
                           <button
-                            key={tip}
+                            key={String(v)}
                             type="button"
-                            onClick={() => setGrupTipi(tip)}
-                            title={t('yerlesim.' + tip)}
-                            className={`rounded-md py-1.5 text-[13px] font-semibold leading-tight transition-colors ${
-                              grupTipi === tip
+                            onClick={() => setGrup((g) => (g ? { ...g, tekGorsel: v } : g))}
+                            className={`flex-1 px-1 py-1 text-[13.5px] ${
+                              (grup.tekGorsel !== false) === v
                                 ? 'bg-brand text-white'
-                                : 'border border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-400'
+                                : 'text-neutral-600 dark:text-neutral-300'
                             }`}
                           >
-                            {t('yerlesim.' + tip)}
+                            {v ? t('icerik.tekGorsel') : t('icerik.ayriGorsel')}
                           </button>
                         ))}
                       </div>
-                      {/*
-                        KÖŞE YÖNÜ — oda köşesi mi kolon köşesi mi.
-                        İkisi bambaşka görünür; hangisinin kurulacağını
-                        ancak kullanıcı bilir.
-                      */}
-                      {(grupTipi === 'l' || grupTipi === 'u' || grupTipi === 'kutu') && (
-                        <div className="mt-2 flex overflow-hidden rounded-lg border border-neutral-300 dark:border-[#39414f]">
-                          {['ice', 'disa'].map((y) => (
-                            <button
-                              key={y}
-                              type="button"
-                              onClick={() => setLYonSecim(y)}
-                              className={`flex-1 px-1 py-1 text-[13.5px] ${
-                                lYonSecim === y ? 'bg-brand text-white' : 'text-neutral-600 dark:text-neutral-300'
-                              }`}
-                            >
-                              {t('yerlesim.' + y)}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {/*
-                        İÇ L — tek ekran işaretliyken.
-                        Ekranın kendisi köşede katlanıyor; sol kanadın kaç
-                        sütun olduğu burada giriliyor, kalanı sağ kanat.
-                      */}
-                      {grupTipi === 'l' && grupSecim.length === 1 && (
-                        <div className="mt-2 flex items-center justify-between gap-2">
-                          <span className="text-[14.5px] text-neutral-500 dark:text-neutral-400">
-                            {t('mse.leftWing')}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            <Stepper
-                              value={lSolSecim}
-                              onChange={setLSolSecim}
-                              min={1}
-                              max={Math.max(1, Math.max(2, cols) - 1)}
-                            />
-                            <span className="text-[14.5px] text-neutral-500 dark:text-neutral-400">
-                              + {Math.max(0, Math.max(2, cols) - lSolSecim)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      {grupTipi === 'acili' && (
-                        <div className="mt-2 flex items-center gap-1.5">
-                          <input
-                            type="number"
-                            min="10"
-                            max="170"
-                            step="5"
-                            value={grupAcisi}
-                            onChange={(e) => setGrupAcisi(Number(e.target.value) || 135)}
-                            className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
-                          />
-                          <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
-                        </div>
-                      )}
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setYerlesimAcik(false)
-                            setGrupSecim([])
-                          }}
-                          className="rounded-lg border border-neutral-200 py-2 text-[15px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
-                        >
-                          {t('yerlesim.vazgec')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            ekranlariBirlestir()
-                            setYerlesimAcik(false)
-                          }}
-                          disabled={grupTipi === 'l' ? grupSecim.length < 1 : grupSecim.length < 2}
-                          className="rounded-lg bg-brand py-2 text-[15px] font-semibold text-white transition-opacity enabled:hover:opacity-90 disabled:opacity-40"
-                        >
-                          {t('yerlesim.birlestir')}
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={grubuAyir}
+                        className="mt-2 w-full rounded-lg border border-neutral-200 py-2 text-[15px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
+                      >
+                        {t('yerlesim.ayir')}
+                      </button>
                     </>
                   )}
                 </div>
