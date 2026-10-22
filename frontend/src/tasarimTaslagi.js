@@ -33,6 +33,39 @@ const ANAHTAR = 'vds.tasarim.taslak.v1'
 /** Yüklenen dosyaya bağlı içerik türleri — blob adresi olmadan anlamsızlar. */
 const YUKLENEN_ICERIK = new Set(['upload', 'video'])
 
+/** Blob adresine bağlı içerik saklanamaz; o ekran LED yüzeye düşer. */
+function temizAyar(ayar) {
+  const a = { ...(ayar || {}) }
+  if (YUKLENEN_ICERIK.has(a.content)) a.content = 'led'
+  a.contentUrl = null
+  return a
+}
+
+/**
+ * Taslaktaki ekran listesi.
+ *
+ * Eski taslaklarda liste "screens" adiyla ve yalnizca dizilim bilgisiyle
+ * duruyordu; onlar da yeri olmayan ekranlara çevriliyor ki eski bir teklif
+ * açıldığında ekranları kaybolmasın.
+ */
+export function taslakEkranlari(taslak) {
+  if (Array.isArray(taslak?.ekranlar)) return taslak.ekranlar
+  if (!Array.isArray(taslak?.screens)) return []
+  return taslak.screens.map((s, i) => ({
+    id: 'eski-' + i,
+    sira: i + 1,
+    oran: null,
+    ayar: {
+      cols: Math.max(1, Number(s.cols) || 1),
+      rows: Math.max(1, Number(s.rows) || 1),
+      screenType: s.type || 'flat',
+      orientation: s.orientation || 'landscape',
+      content: 'led',
+      contentUrl: null,
+    },
+  }))
+}
+
 /** Yapılandırma durumundan saklanabilir düz bir nesne üretir. */
 export function taslakOlustur(durum) {
   const yuklenen = YUKLENEN_ICERIK.has(durum.content)
@@ -52,9 +85,19 @@ export function taslakOlustur(durum) {
     sboxRedundancy: durum.sboxRedundancy ?? 'no',
     hasMiniPc: Boolean(durum.hasMiniPc),
     scene: durum.scene ?? 'none',
-    // Çoklu ekranda her ekranın kendi düzeni — teklif özetindeki cümlenin aksine
-    // makineye geri verilebilir hâli.
-    screens: Array.isArray(durum.screens) ? durum.screens : [],
+    /*
+     * EKRAN LİSTESİ — tasarımın asıl gövdesi.
+     *
+     * Elde duran ekran yukarıdaki alanlarda (cols/rows/screenType...);
+     * ötekiler burada, her biri kendi ayarı ve fotoğraftaki yeriyle.
+     * Yüklenen içerik saklanamadığı için LED yüzeye düşüyor.
+     */
+    ekranlar: (Array.isArray(durum.ekranlar) ? durum.ekranlar : []).map((e) => ({
+      id: e.id,
+      sira: e.sira,
+      oran: Array.isArray(e.oran) ? e.oran : null,
+      ayar: temizAyar(e.ayar),
+    })),
     content: yuklenen ? 'led' : (durum.content ?? 'led'),
     // Kendi dosyası olan içerik geri yüklenemiyor; kullanıcıya bunu söyleyelim
     icerikDustu: yuklenen,

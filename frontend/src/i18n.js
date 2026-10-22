@@ -223,6 +223,7 @@ const dict = {
   'tool.showMeasures': { tr: 'Ölçüleri göster', en: 'Show measurements', ar: 'إظهار القياسات' },
 
   // ---------- Ekran modu sekmeleri ----------
+  'content.ekle': { tr: 'Görsel veya video ekle', en: 'Add image or video', ar: 'أضف صورة أو فيديو' },
   'diger.baslik': { tr: 'Diğer ayarlar', en: 'Other settings', ar: 'إعدادات أخرى' },
   'sp.perScreen': { tr: 'Ekran dökümü', en: 'Per-screen breakdown', ar: 'تفصيل لكل شاشة' },
   'panel.toplam': { tr: 'Toplam', en: 'Total', ar: 'الإجمالي' },
@@ -296,11 +297,10 @@ const dict = {
   'ekran.duzenle': { tr: 'Düzenle', en: 'Edit', ar: 'تحرير' },
   'ekran.sil': { tr: 'Kaldır', en: 'Remove', ar: 'إزالة' },
   'yerlesim.baslik': { tr: 'Ekran yerleşimi', en: 'Screen layout', ar: 'تخطيط الشاشات' },
-  'yerlesim.ipucu': {
-    tr: 'Birleştirilecek ekranları seçin ve duruş biçimini belirleyin. Ekranlar kenarlarından birleşir, aralarında boşluk kalmaz.',
-    en: 'Pick the screens to join and choose the arrangement. They meet edge to edge with no gap.',
-    ar: 'اختر الشاشات التي تريد دمجها وحدّد شكل الترتيب.',
-  },
+  'yerlesim.ipucu': { tr: 'Grup tek parça taşınır.', en: 'The group moves as one piece.', ar: 'تتحرك المجموعة كقطعة واحدة.' },
+  'yerlesim.ac': { tr: 'Ekranları birleştir (L, U, küp…)', en: 'Join screens (L, U, box…)', ar: 'دمج الشاشات (L، U، مكعب…)' },
+  'yerlesim.duzenle': { tr: 'Düzenle', en: 'Edit', ar: 'تحرير' },
+  'yerlesim.vazgec': { tr: 'Vazgeç', en: 'Cancel', ar: 'إلغاء' },
   'yerlesim.grupNot': {
     tr: 'Birleşik grup tek parça taşınır; bir üyeye tıklamak grubu düzenlemeye alır. Tek tek taşımak için ayırın.',
     en: 'A joined group moves as one piece; clicking a member edits the group. Split it to move them separately.',

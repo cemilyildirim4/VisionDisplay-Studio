@@ -145,9 +145,9 @@ const acilanSatir = (n) =>
     const panel = document.querySelector('aside.yatay-panel-model')
     const liste = panel && panel.querySelector('ul')
     if (!liste) return 'liste yok'
-    const satir = [...liste.children].find((li) => (li.innerText || '').trim().startsWith(sira + '. '))
+    const satir = [...liste.children].find((li) => Number(li.dataset.ekran) === sira)
     if (!satir) return 'satir yok'
-    if (satir.className.includes('btn-selected')) return 'zaten acik'
+    if (satir.dataset.acik === '1') return 'zaten acik'
     satir.querySelector('button')?.click()
     return 'acildi'
   }, n)
@@ -159,23 +159,20 @@ for (const sira of [1, 2, 3]) {
   const sonuc = await s.evaluate(() => {
     const panel = document.querySelector('aside.yatay-panel-model')
     const liste = panel && panel.querySelector('ul')
-    const acik = liste && [...liste.children].find((li) => li.className.includes('btn-selected'))
+    const acik = liste && [...liste.children].find((li) => li.dataset.acik === '1')
     if (!acik) return 'acik satir yok'
-    const sec = acik.querySelector('select')
-    if (!sec) return 'secim kutusu yok'
-    const se = [...sec.options].find((o) => /ÖRNEK GÖRÜNTÜ/i.test(o.textContent || ''))
-    if (!se) return 'ornek goruntu yok'
-    const yaz = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set
-    yaz.call(sec, se.value)
-    sec.dispatchEvent(new Event('change', { bubbles: true }))
-    return se.textContent.trim()
+    /* Havuz kareleri: basligi iceriğin adi. */
+    const kare = [...acik.querySelectorAll('button[title]')].find((x) => /ÖRNEK GÖRÜNTÜ/i.test(x.title || ''))
+    if (!kare) return 'ornek goruntu karesi yok'
+    kare.click()
+    return kare.title.trim()
   })
   atananlar.push(sira + ':' + sonuc)
   await s.waitForTimeout(1200)
   await s.evaluate(() => {
     const panel = document.querySelector('aside.yatay-panel-model')
     const liste = panel && panel.querySelector('ul')
-    const acik = liste && [...liste.children].find((li) => li.className.includes('btn-selected'))
+    const acik = liste && [...liste.children].find((li) => li.dataset.acik === '1')
     const b = acik && [...acik.querySelectorAll('button')].find((x) => (x.textContent || '').trim() === 'Bölünmüş')
     b?.click()
   })

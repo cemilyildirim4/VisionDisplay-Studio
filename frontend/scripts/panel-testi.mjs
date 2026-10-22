@@ -88,8 +88,9 @@ const olcum = await s.evaluate(() => {
   const liste = panel?.querySelector('ul')
   const satirlar = liste ? [...liste.children] : []
   /* Acik satir: ikinci kenarlikli (btn-selected) olan. */
-  const acik = satirlar.filter((li) => li.className.includes('btn-selected'))
-  const kapali = satirlar.filter((li) => !li.className.includes('btn-selected'))
+  /* Acik satir biçim sınıfından değil, veri niteliğinden tanınıyor. */
+  const acik = satirlar.filter((li) => li.dataset.acik === '1')
+  const kapali = satirlar.filter((li) => li.dataset.acik !== '1')
   const acikGovde = acik[0] || null
   const metin = (el) => (el?.innerText || '').replace(/\s+/g, ' ')
   const toplamSatiri = [...(panel?.querySelectorAll('div') || [])]
@@ -125,7 +126,13 @@ const olcum = await s.evaluate(() => {
     satirSayisi: satirlar.length,
     acikSayisi: acik.length,
     kapaliKucukResim: kapali.every((li) => !!li.querySelector('span > div, span > video, span > span')),
-    acikIcerikSecimi: !!acikGovde?.querySelector('select'),
+    /*
+     * Icerik secimi artik acilir liste degil: buyuk kutu (tikla ya da
+     * surukle-birak) ve altinda havuz kareleri. Her havuz karesinin
+     * baslik (title) niteligi var.
+     */
+    acikIcerikKutusu: !!acikGovde?.querySelector('button[class*="border-dashed"]'),
+    acikHavuzKare: (acikGovde?.querySelectorAll('button[title]') || []).length,
     acikTur: /Düz|Dışa|İçe/.test(metin(acikGovde)),
     acikOlcu: (acikGovde?.querySelectorAll('input[type="number"], button') || []).length > 4,
     acikYon: /Yatay|Dikey/.test(metin(acikGovde)),
@@ -160,7 +167,8 @@ console.log('--- SOL PANEL ---')
 console.log('  model secildi      :', modelSecildi ? 'evet' : 'HAYIR ✗')
 console.log('  satir sayisi       :', olcum.satirSayisi, olcum.satirSayisi === 3 ? '✓' : '✗ (3 bekleniyordu)')
 console.log('  acik satir sayisi  :', olcum.acikSayisi, olcum.acikSayisi === 1 ? '✓' : '✗ (1 bekleniyordu)')
-console.log('  acik: icerik secimi:', olcum.acikIcerikSecimi ? '✓' : '✗')
+console.log('  acik: icerik kutusu :', olcum.acikIcerikKutusu ? '✓' : '✗')
+console.log('  acik: havuz kareler:', olcum.acikHavuzKare, olcum.acikHavuzKare >= 4 ? '✓' : '✗')
 console.log('  acik: tur          :', olcum.acikTur ? '✓' : '✗')
 console.log('  acik: olcu         :', olcum.acikOlcu ? '✓' : '✗')
 console.log('  acik: yon          :', olcum.acikYon ? '✓' : '✗')
@@ -180,7 +188,8 @@ console.log('  kabin uyumu        :', kabinUyumlu ? '✓' : '✗ (' + pencereKab
 const gecti =
   olcum.satirSayisi === 3 &&
   olcum.acikSayisi === 1 &&
-  olcum.acikIcerikSecimi &&
+  olcum.acikIcerikKutusu &&
+  olcum.acikHavuzKare >= 4 &&
   olcum.acikTur &&
   olcum.acikOlcu &&
   olcum.acikYon &&

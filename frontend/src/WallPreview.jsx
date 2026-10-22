@@ -701,7 +701,6 @@ export default function WallPreview({
   model,
   width,
   height,
-  screenMode = 'single',
   screens = [],
   cols = 1,
   rows = 1,
@@ -895,7 +894,18 @@ export default function WallPreview({
     onEkranKutusu({ sol: a.left, ust: a.top })
   })
 
-  const isMulti = screenMode === 'multi' && screens.length > 0
+  /*
+   * ŞERİT, LİSTENİN KENDİSİNDEN.
+   *
+   * Eskiden ayrı bir "çoklu ekran kipi" vardı ve kip kapalıyken liste
+   * dolu olsa bile tek ekran çiziliyordu. Birden çok ekran varsa şerit
+   * çizilir; başka bir anahtar yok.
+   */
+  /*
+   * Liste VERİLDİYSE şerit çizilir, tek parça olsa bile: L grubu tek
+   * katlanmış ekrana iniyor ve o da listenin kendisinden geliyor.
+   */
+  const isMulti = Array.isArray(screens) && screens.length >= 1
 
   // ---- ÇOKLU EKRAN ----
   if (isMulti) {
@@ -1146,7 +1156,9 @@ export default function WallPreview({
                       resolution={resolution}
                       model={model}
                       content={s.content || content}
-                      contentUrl={s.content ? null : contentUrl}
+                      /* Parçanın kendi adresi varsa o: yüklenen görsel/video
+                         yalnızca "content" anahtarıyla taşınamıyor. */
+                      contentUrl={s.content ? s.contentUrl || null : contentUrl}
                       hideRegions={hideRegions}
                       frameOnly={useSingle}
                       curveAmount={curveAmount}

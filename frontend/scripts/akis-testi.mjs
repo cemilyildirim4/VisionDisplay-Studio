@@ -137,7 +137,7 @@ const panelOlcusu = (s) =>
   s.evaluate(() => {
     const panel = document.querySelector('aside.yatay-panel-model')
     const liste = panel && panel.querySelector('ul')
-    const acik = liste && [...liste.children].find((li) => li.className.includes('btn-selected'))
+    const acik = liste && [...liste.children].find((li) => li.dataset.acik === '1')
     if (!acik) return { sutun: null, satir: null, tani: 'acik satir yok' }
     /* Stepper kutulari type=text + inputMode=decimal; olcu bolumundeki
        ilk iki kutu sutun ve satir. */
