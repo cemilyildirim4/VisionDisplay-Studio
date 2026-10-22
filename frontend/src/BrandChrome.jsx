@@ -39,8 +39,12 @@ export function BrandMark({
    * kendi iki satırı (firma adı + sayfa adı) zaten var; logodan da ayrılınca
    * antet üç satıra çıkıp yer kaplıyordu. Artık her ölçüde yan yana.
    */
+  /*
+   * w-full DEĞİL: antet bütün genişliği isteyince yanındaki araç
+   * düğmelerinin üstüne biniyordu. Kalan yeri alıyor ve daralabiliyor.
+   */
   return (
-    <div className="flex flex-row flex-nowrap items-center gap-2.5 sm:gap-4 min-w-0 w-full max-w-full">
+    <div className="flex min-w-0 flex-1 flex-row flex-nowrap items-center gap-2.5 sm:gap-4">
       <a
         href="/"
         onClick={goToConfigurator}

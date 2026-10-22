@@ -274,12 +274,21 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     // Diyot dokusu yalnızca panel kapalıyken görünür (yayın varken görüntü izlenir)
     const leftDots = isNone || isLit ? null : ledDotSize(leftW / lCols, hPx / nRows)
     const rightDots = isNone || isLit ? null : ledDotSize(rightW / rCols, hPx / nRows)
-    const leftClip = `polygon(0% 0%, 100% ${p}%, 100% ${100 - p}%, 0% 100%)`
-    const rightClip = `polygon(0% ${p}%, 100% 0%, 100% 100%, 0% ${100 - p}%)`
+    /*
+     * KÖŞE TEK YÖNE DÖNÜYOR.
+     *
+     * İki kanat dikişte simetrik kırılınca karşıdan bakılan bir papyon
+     * çıkıyordu. Çaprazdan bakılan bir köşede ön kanat neredeyse
+     * dikdörtgen kalır; uzaklaşan kanat dikişte tam boyunda başlar, uzak
+     * ucunda kısalır.
+     */
+    const pOn = 5
+    const leftClip = `polygon(0% 0%, 100% ${pOn}%, 100% ${100 - pOn}%, 0% 100%)`
+    const rightClip = `polygon(0% ${pOn}%, 100% ${pOn + p}%, 100% ${100 - pOn - p}%, 0% ${100 - pOn}%)`
 
     // İki kanadın birleşiminin dış hattı — alttaki dolgu katmanı bu şekle kırpılır
     const lYuzde = (leftW / wPx) * 100
-    const birlesikClip = `polygon(0% 0%, ${lYuzde}% ${p}%, 100% 0%, 100% 100%, ${lYuzde}% ${100 - p}%, 0% 100%)`
+    const birlesikClip = `polygon(0% 0%, ${lYuzde}% ${pOn}%, 100% ${pOn + p}%, 100% ${100 - pOn - p}%, ${lYuzde}% ${100 - pOn}%, 0% 100%)`
 
     return (
       <div className="relative shrink-0 max-w-full" style={{ width: wPx, height: hPx }}>

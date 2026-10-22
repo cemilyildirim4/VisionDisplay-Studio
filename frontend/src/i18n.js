@@ -231,6 +231,7 @@ const dict = {
   'dik.serit': { tr: 'Yan çevirin, daha rahat', en: 'Turn sideways for more room', ar: 'أدره أفقيًا ليكون أسهل' },
   'diger.baslik': { tr: 'Diğer ayarlar', en: 'Other settings', ar: 'إعدادات أخرى' },
   'sp.options': { tr: 'Seçenekler ve kapasite', en: 'Options and capacity', ar: 'الخيارات والسعة' },
+  'sp.perScreenNote': { tr: '(ekran başına)', en: '(per screen)', ar: '(لكل شاشة)' },
   'sp.perScreen': { tr: 'Ekran dökümü', en: 'Per-screen breakdown', ar: 'تفصيل لكل شاشة' },
   'panel.toplam': { tr: 'Toplam', en: 'Total', ar: 'الإجمالي' },
   /* Sayılan şeyin adı — ürün tipine göre (bkz. birimSozcugu). */
@@ -1397,7 +1398,8 @@ const dict = {
     ar: 'تم الحفظ — نُزّلت إلى جهازك.',
   },
 
-  'ar.title': { tr: 'Nasıl Görüneceğini Gör', en: 'See How It Will Look', ar: 'شاهد كيف سيبدو' },
+  /* Pencerenin adı, onu açan düğmeyle aynı (bkz. cam.open). */
+  'ar.title': { tr: 'Kamerayla gör', en: 'View with camera', ar: 'المشاهدة بالكاميرا' },
   'ar.open': { tr: 'Nasıl görüneceğini gör', en: 'See how it will look', ar: 'شاهد كيف سيبدو' },
   'ar.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
   // ---------- Yeni kare geldiğinde çıkan seçim ----------
@@ -1858,7 +1860,8 @@ const dict = {
   'sp.ledCabinets': { tr: 'LED Kabinler', en: 'LED Cabinets', ar: 'خزائن LED' },
   'sp.cabinetCount': { tr: 'Kabin sayısı', en: 'No. of cabinets', ar: 'عدد الخزائن' },
   'sp.cabinetCountP': { tr: 'Panel sayısı', en: 'No. of panels', ar: 'عدد اللوحات' },
-  'sp.spareCabinets': { tr: 'Yedek Dolap Sayısı', en: 'No. of Spare Cabinets', ar: 'عدد الخزائن الاحتياطية' },
+  'sp.spareCabinets': { tr: 'Yedek kabin sayısı', en: 'No. of spare cabinets', ar: 'عدد الخزائن الاحتياطية' },
+  'sp.spareCabinetsP': { tr: 'Yedek panel sayısı', en: 'No. of spare panels', ar: 'عدد اللوحات الاحتياطية' },
   'sp.totalCabinets': { tr: 'Toplam kabin sayısı', en: 'Total no. of cabinets', ar: 'إجمالي عدد الخزائن' },
   'sp.totalCabinetsP': { tr: 'Toplam panel sayısı', en: 'Total no. of panels', ar: 'إجمالي عدد اللوحات' },
   'sp.sbox': { tr: 'S-Kutu', en: 'S-Box', ar: 'S-Box' },

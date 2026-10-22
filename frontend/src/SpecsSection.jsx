@@ -127,7 +127,13 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
   const { t } = useLang()
   const { isAdmin } = useSession()
   const has = !!model
-  const total = cols * rows
+  /*
+   * SAYILAN KABİN/PANEL: TASARIMIN TAMAMI.
+   * cols × rows yalnızca elde duran ekranı sayıyor; birden çok ekran
+   * varken üstteki dökümle çelişiyordu.
+   */
+  const cokEkranVar = Array.isArray(ekranlar) && ekranlar.length > 1
+  const total = cokEkranVar && toplam ? toplam.kabin : cols * rows
   const s = computeSpecs(model, cols, rows)
   if (s && preview) {
     if (Number(preview.totalMaxPowerWatts) > 0) s.pMax = Number(preview.totalMaxPowerWatts)
@@ -167,7 +173,9 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
   /* Sayılan şey kabin mi panel mi — modelin ürün tipinden. */
   const birim = (anahtar) => birimBasligi(model?.productType, t, anahtar)
   const birimAdi = birimSozcugu(model?.productType, t)
-  const cokEkran = Array.isArray(ekranlar) && ekranlar.length > 1
+  /* Tek ekrana ait değerler, birden çok ekran varken ne olduklarını söylesin. */
+  const ekranBasina = (etiket) => (cokEkranVar ? etiket + ' ' + t('sp.perScreenNote') : etiket)
+  const cokEkran = cokEkranVar
   /*
    * TOPLAM GEREKTİREN ALANLAR DÖKÜMLE AYNI.
    *
@@ -238,7 +246,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
                   <span className="block max-w-[150px] truncate">{e.icerik || DASH}</span>
                   <span className="block text-[11.5px] text-neutral-400 dark:text-neutral-500">
                     {t(`screen.${e.type || 'flat'}`)}
-                    {e.bolunmus ? ' · ' + t('content.bolunmus') : ''}
+                    {e.bolunmus ? ' · ' + t('icerik.tekGorsel') : ''}
                   </span>
                 </td>
                 <td className="py-1.5 pr-2">
@@ -327,10 +335,9 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           ediyordu. Ölçülerin yanında duruyor.
         */}
         <Kart baslik={t('sp.screenSpecs')} genis>
-          <Veri label={t('sp.screenConfigLxh')} value={has ? `${cols} ${t('sp.unit')} x ${rows} ${t('sp.unit')}` : DASH} />
-          <Veri label={t('sp.lengthHeight')} value={has ? `${fmt(s.W, 3)} x ${fmt(s.H, 3)} m` : DASH} />
+          <Veri label={ekranBasina(t('sp.lengthHeight'))} value={has ? `${fmt(s.W, 3)} x ${fmt(s.H, 3)} m` : DASH} />
           <Veri label={t('sp.area')} value={has ? `${fmt(s.area, 3)} m²` : DASH} />
-          <Veri label={t('sp.diagonal')} value={has ? `${fmt(s.diagIn, 1)} ${t('sp.inch')}` : DASH} />
+          <Veri label={ekranBasina(t('sp.diagonal'))} value={has ? `${fmt(s.diagIn, 1)} ${t('sp.inch')}` : DASH} />
           <Veri label={has ? birim('sp.weightCabinets') : t('sp.weight')} value={has ? `${fmt(s.weight, 1)} kg` : DASH} />
           {has && <Veri label={t('sp.viewingDistance')} value={`${fmt(s.viewDist, 1)} m`} />}
         </Kart>
@@ -401,7 +408,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
 
         <Kart baslik={t('sp.ledCabinets')}>
           <Veri label={birim('sp.cabinetCount')} value={has ? `${fmt(total)} ${t('sp.unit')}` : DASH} />
-          {has && <Veri label={t('sp.spareCabinets')} value={`0 ${t('sp.unit')}`} />}
+          {has && <Veri label={birim('sp.spareCabinets')} value={`0 ${t('sp.unit')}`} />}
           {has && <Veri label={`${birim('sp.totalCabinets')} (${model.modelCode})`} value={`${fmt(total)} ${t('sp.units')}`} />}
         </Kart>
 

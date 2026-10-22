@@ -1386,7 +1386,14 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
   const toplamH = cokluVar
     ? Math.max(...screens.map((s) => Math.max(1, s.rows || 1))) * cabH
     : Math.max(1, rows) * cabH
-  const uzaklik = Math.max(1.2, toplamW * 0.95, toplamH * 1.7)
+  /*
+   * İLK AÇILIŞTA HER ŞEY KADRAJDA.
+   *
+   * 45° görüş açısıyla genişliğin 0,95 katı uzaklık, kenarları kadraj
+   * dışında bırakıyordu. Yarısının tanjantından türeyen asgari uzaklık
+   * genişliğin ~1,2 katı; üstüne biraz pay konuyor.
+   */
+  const uzaklik = Math.max(1.6, toplamW * 1.25, toplamH * 2)
 
   return (
     <div className="fixed inset-0 z-[60] bg-[#0b0d12]">
@@ -1432,7 +1439,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           anlaşılıyordu.
         */
         camera={{
-          position: [koseliMi ? uzaklik * 0.34 : 0, toplamH * 0.12, koseliMi ? uzaklik * 0.9 : uzaklik],
+          position: [koseliMi ? uzaklik * 0.38 : 0, toplamH * 0.12, koseliMi ? uzaklik * 0.95 : uzaklik],
           fov: 45,
           far: Math.max(100, uzaklik * 10),
         }}

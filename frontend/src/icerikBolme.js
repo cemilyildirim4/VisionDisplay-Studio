@@ -47,25 +47,39 @@ export function bolmeDilimleri(ekranlar) {
   const hazir = []
   for (const e of ekranlar) {
     const k = e?.koseler
-    if (!Array.isArray(k) || k.length !== 4) return null
-    if (k.some((p) => !Number.isFinite(p?.x) || !Number.isFinite(p?.y))) return null
-    if (!(e.enCm > 0) || !(e.boyCm > 0)) return null
+    /*
+     * ELVERİŞSİZ EKRAN YALNIZCA KENDİSİ DIŞARIDA KALIYOR.
+     *
+     * Eskiden biri bile elverişsizse hesap tümüyle iptal oluyor ve
+     * kümedeki HİÇBİR ekran dilim almıyordu; hepsi görselin tamamını
+     * çiziyor, yani paylaşım hiç olmamış gibi görünüyordu.
+     */
+    if (!Array.isArray(k) || k.length !== 4) continue
+    if (k.some((p) => !Number.isFinite(p?.x) || !Number.isFinite(p?.y))) continue
+    if (!(e.enCm > 0) || !(e.boyCm > 0)) continue
     const o = kenarOrtalari(k)
-    const pEn = o.sag - o.sol
-    const pBoy = o.alt - o.ust
+    /*
+     * KÖŞEDEN DÖNEN KANATTA genişlik negatif çıkıyor (sağ kenar solun
+     * soluna düşüyor). Ölçü işaretsiz alınıyor; başnokta iki kenarın
+     * soldakinden.
+     */
+    const pEn = Math.abs(o.sag - o.sol)
+    const pBoy = Math.abs(o.alt - o.ust)
     /* Ekran fotoğrafta kenarına dönmüşse (neredeyse çizgi) ölçek patlar. */
-    if (!(pEn > 2) || !(pBoy > 2)) return null
+    if (!(pEn > 2) || !(pBoy > 2)) continue
     hazir.push({
       id: e.id,
       enCm: e.enCm,
       boyCm: e.boyCm,
-      sol: o.sol,
-      ust: o.ust,
+      sol: Math.min(o.sol, o.sag),
+      ust: Math.min(o.ust, o.alt),
       /* cm / piksel — ekranın kendi derinliğindeki ölçek. */
       olcekX: e.enCm / pEn,
       olcekY: e.boyCm / pBoy,
     })
   }
+  /* Paylaşacak en az iki ekran kalmadıysa bölünecek bir şey de yok. */
+  if (hazir.length < 2) return null
 
   /* Ortak çerçevenin başnoktası: en soldaki ve en üstteki kenar. */
   const enSol = Math.min(...hazir.map((e) => e.sol))

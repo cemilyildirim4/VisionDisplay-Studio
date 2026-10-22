@@ -910,7 +910,12 @@ export default function ArView({
           kapatmak, ekranı hiç denenemez bırakıyordu.
         */}
         {hata && (
-          <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-8 bg-[#10141b]">
+          /*
+             Araç çubukları z-40'ta; katmansız bırakılan bu panel onların
+             ALTINDA kalıyor ve alttaki çubuk "Kapat" düğmesine yapılan
+             tıklamayı yutuyordu.
+          */
+          <div className="absolute inset-0 z-[65] flex items-center justify-center p-4 sm:p-8 bg-[#10141b]">
             <div className="max-w-sm w-full text-center px-2">
               <p className="text-neutral-200 text-sm leading-relaxed m-0">{hata}</p>
               <div className="mt-5 flex flex-col gap-2.5">

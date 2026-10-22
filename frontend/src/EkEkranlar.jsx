@@ -133,7 +133,17 @@ export default function EkEkranlar({
         return (
           <div
             key={ekran.id ?? i}
-            onPointerDown={onSec ? (e) => { e.stopPropagation(); onSec(ekran.id, e.shiftKey) } : undefined}
+            onPointerDown={
+              onSec
+                ? (e) => {
+                    /* preventDefault: Shift basılıyken tarayıcı metin seçimine
+                       başlıyor ve ekran hiç seçilmiyordu. */
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onSec(ekran.id, e.shiftKey)
+                  }
+                : undefined
+            }
             style={{
               position: 'absolute',
               left: 0,

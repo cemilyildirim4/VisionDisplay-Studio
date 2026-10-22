@@ -8368,7 +8368,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           Artik hepsi tek ekranda; alanlar iki panele bolunerek kaydirma
           gerekmeden sigiyor.
         */}
-        <main ref={tuvalRef} id="pdf-onizleme" className={(adayKipi ? 'aday-secim ' : '') + "yatay-onizleme order-1 lg:order-2 grow-0 shrink-0 basis-auto h-[62vh] min-w-0 relative overflow-hidden bg-[#f4f4f4] dark:bg-[#232830] lg:flex-1 lg:h-auto lg:min-h-0"}>
+        {/* select-none: Shift + tıklama metin seçimi başlatıyordu (bkz. onSec). */}
+        <main ref={tuvalRef} id="pdf-onizleme" className={(adayKipi ? 'aday-secim ' : '') + "select-none yatay-onizleme order-1 lg:order-2 grow-0 shrink-0 basis-auto h-[62vh] min-w-0 relative overflow-hidden bg-[#f4f4f4] dark:bg-[#232830] lg:flex-1 lg:h-auto lg:min-h-0"}>
           {/*
             YAKINLAŞTIRMA SARMALAYICISI.
 
@@ -8741,7 +8742,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Sabitlenenler kendi dörtgeninden, elde duran ekran koseMutlak'tan
             (grup varsa gruptaki yerinden) okunuyor.
           */}
-          {scene === 'ozel' && !refKipi && !lKoseKipi && !olcuAcik && (
+          {scene === 'ozel' && !refKipi && !lKoseKipi && (
             <EkranNumaralari
               aktifId={aktifEkranId}
               ekranlar={[
@@ -10162,12 +10163,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       { id: CEPHE_ID, ad: 'scene.cephe' },
                       { id: 'avm', ad: 'avm.title' },
                       { id: 'meydan-gece', ad: 'dis.title' },
-                      ...(ozelSahne ? [{ id: 'ozel', ad: 'scene.custom' }] : []),
+                      /* Fotoğraf henüz yokken de listede: seçmek dosya seçiciyi açıyor. */
+                      { id: 'ozel', ad: 'scene.custom' },
                       { id: 'none', ad: 'scene.customOff' }].map((s) => (
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => setScene(s.id)}
+                        onClick={() => {
+                          setScene(s.id)
+                          /*
+                           * "Kendi fotoğrafım" seçildi ama ortada fotoğraf yok:
+                           * kullanıcıdan ayrıca bir düğme aramasını istemek
+                           * yerine dosya seçici doğrudan açılıyor.
+                           */
+                          if (s.id === 'ozel' && !ozelSahne) ozelDosyaRef.current?.click()
+                        }}
                         className={`py-2.5 rounded-lg text-[16px] transition-colors hover:border-neutral-300 dark:hover:border-[#39414f] ${
                           scene === s.id
                             ? 'btn-selected border-2'
