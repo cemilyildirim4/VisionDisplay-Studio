@@ -11,7 +11,6 @@ import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
 import { BrandMark, BrandStripe } from './BrandChrome.jsx'
 import ProductTypeBadge from './ProductTypeBadge.jsx'
-import YerlesimKartlari from './YerlesimKartlari.jsx'
 import ProfileMenu from './ProfileMenu.jsx'
 import DikeyUyari from './DikeyUyari.jsx'
 import ChatHelp from './ChatHelp.jsx'
@@ -408,8 +407,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [yerlesimAcik, setYerlesimAcik] = useState(false)
   /* İçerik kutusunun üstüne dosya sürükleniyor mu (bkz. content.ekle). */
   const [icerikSurukle, setIcerikSurukle] = useState(false)
-  /* Panelin altındaki kapalı bölüm (bkz. diger.baslik). */
-  const [digerAyarAcik, setDigerAyarAcik] = useState(false)
   // Teknik Özellikler pop-up'ı (Bileşenler de içinde)
   const [specsOpen, setSpecsOpen] = useState(false)
   /*
@@ -7347,6 +7344,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * "Alanı düzenle" ise hiç görünmüyor.
    */
   const alanDuzenlenebilir = scene === 'ozel' && !!koseMutlak
+  /*
+   * İŞARETLENMİŞ ALAN — "Alana sığdır" ancak bu varken bir iş yapıyor.
+   * Serbest yerleştirmede alan yok; tasarım doğrudan taşınıyor.
+   */
+  const alanIsaretli = scene === 'ozel' && Array.isArray(alanNokta) && alanNokta.length === 4
 
   /*
    * BİRLEŞİK DURUM TEK YERDE.
@@ -7360,12 +7362,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (grup) {
       const sira = (id) => ekranOzetleri.find((x) => x.id === id)?.sira
       const uyeler = (grup.uyeler || []).map(sira).filter(Boolean).join('+')
-      return t('yerlesim.' + grup.tip) + ' · ' + uyeler + (grup.tip === 'acili' ? ' · ' + grup.aci + '°' : '')
+      return t('yerlesim.' + grup.tip) + ' (' + uyeler + ')' + (grup.tip === 'acili' ? ' · ' + grup.aci + '°' : '')
     }
     if (!icLVar) return ''
     const toplam = Math.max(2, cols)
     const sol = lSolCols || Math.ceil(toplam / 2)
-    return t('yerlesim.l') + ' · ' + aktifSira + '. ' + t('ekran.tekil') + ' · ' + sol + '+' + (toplam - sol)
+    return t('yerlesim.l') + ' (' + sol + '+' + (toplam - sol) + ')'
   })()
 
   /*
@@ -9344,8 +9346,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             <div className="border border-neutral-200 dark:border-[#2c333f] rounded-lg px-3 py-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="text-[21px] font-bold text-neutral-900 dark:text-neutral-100 leading-tight">{selectedModel.modelCode}</div>
+                  {/*
+                    Kod BÖLÜNMEZ bir ad: dar panelde satır sarması
+                    "DEMO-" / "P1.25" diye ortasından geçiyordu. Rozet alt
+                    satıra inerek koda yer açıyor.
+                  */}
+                  <div className="truncate text-[21px] font-bold leading-tight text-neutral-900 dark:text-neutral-100">
+                    {selectedModel.modelCode}
+                  </div>
+                  <div className="mt-0.5">
                     <ProductTypeBadge productType={selectedModel.productType} size="md" />
                   </div>
                   {/* Ad kesilmesin: uzun seri adları iki satıra iner. */}
@@ -9427,7 +9436,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         <span className="flex-1 text-[16px] font-semibold">
                           {e.sira}. {t('ekran.tekil')}
                         </span>
-                        {grupta && <span className="shrink-0 text-[13px] opacity-80">{t('yerlesim.' + grup.tip)}</span>}
                         {/* Son ekran kaldırılamaz: tasarımda hiç ekran kalmaması demekti. */}
                         {ekranOzetleri.length > 1 && (
                           <button
@@ -9447,6 +9455,77 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         seçimler okunmuyordu; mavi yalnızca başlık şeridinde.
                       */}
                       <div className="flex flex-col gap-2.5 bg-neutral-100 px-2.5 py-2 dark:bg-[#1b2029]">
+                        {/* ---- Tür ---- */}
+                        {!isVideoWall && (
+                          <div>
+                            <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
+                              {t('screen.type')}
+                            </div>
+                            <Segmented
+                              cols={3}
+                              value={screenType}
+                              onChange={setScreenType}
+                              options={[
+                                { v: 'flat', l: t('screen.flat') },
+                                { v: 'curved', l: t('screen.curved') },
+                                { v: 'curvedIn', l: t('screen.curvedIn') },
+                              ]}
+                            />
+                            {(screenType === 'curved' || screenType === 'curvedIn') && (
+                              <KavisAyari
+                                t={t}
+                                deger={curveAmount}
+                                onChange={setCurveAmount}
+                                icbukey={screenType === 'curvedIn'}
+                                genislikM={tasarimWm}
+                              />
+                            )}
+                          </div>
+                        )}
+
+                        {/* ---- Boyut ---- */}
+                        <div>
+                          <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
+                            {t('screen.boyut')}
+                          </div>
+                          {/*
+                            Sütun ve satır KENDİ kutularında: etiketle sayı
+                            aynı satırdayken panel daraldıkça bitişiyor ve
+                            + düğmesi dışarı düşüyordu.
+                          */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <SayiKutusu etiket={t('screen.columns')} deger={cols} onChange={setCols} min={1} max={colsMax} />
+                            <SayiKutusu etiket={t('screen.rows')} deger={rows} onChange={setRows} min={1} max={rowsMax} />
+                          </div>
+
+                          <div className="mt-2">
+                          <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
+                            {t('screen.orientation')}
+                          </div>
+                          <Segmented
+                            value={orientation}
+                            onChange={(v) => {
+                              const veri = v === 'portrait' ? yerlesimBilgisi?.dikey : yerlesimBilgisi?.yatay
+                              if (veri) uygulaYerlesim(v, veri)
+                              else setOrientation(v)
+                            }}
+                            options={[
+                              { v: 'landscape', l: t('screen.landscape') },
+                              { v: 'portrait', l: t('screen.portrait') },
+                            ]}
+                          />
+                        </div>
+
+                          {/*
+                            Metre ve piksel ALTTA tek satırda: kullanıcı kabin
+                            sayısını değil kurulacak ekranın ölçüsünü soruyor.
+                          */}
+                          <div className="mt-1 text-[14.5px] tabular-nums text-neutral-600 dark:text-neutral-300">
+                            {mYazi(e.enM)} × {mYazi(e.boyM)} m
+                            {e.resW > 0 && ` · ${fmt(e.resW)} × ${fmt(e.resH)} px`}
+                          </div>
+                        </div>
+
                         {/* ---- İçerik ---- */}
                         <div>
                           <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
@@ -9537,78 +9616,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           )}
                         </div>
 
-                        {/* ---- Tür ---- */}
-                        {!isVideoWall && (
-                          <div>
-                            <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
-                              {t('screen.type')}
-                            </div>
-                            <Segmented
-                              cols={3}
-                              value={screenType}
-                              onChange={setScreenType}
-                              options={[
-                                { v: 'flat', l: t('screen.flat') },
-                                { v: 'curved', l: t('screen.curved') },
-                                { v: 'curvedIn', l: t('screen.curvedIn') },
-                              ]}
-                            />
-                            {(screenType === 'curved' || screenType === 'curvedIn') && (
-                              <KavisAyari
-                                t={t}
-                                deger={curveAmount}
-                                onChange={setCurveAmount}
-                                icbukey={screenType === 'curvedIn'}
-                                genislikM={tasarimWm}
-                              />
-                            )}
-                          </div>
-                        )}
-
-                        {/* ---- Ölçü ---- */}
-                        <div>
-                          <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
-                            {t('screen.olcu')}
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="text-[14.5px] text-neutral-600 dark:text-neutral-300">{t('screen.columns')}</span>
-                              <Stepper value={cols} onChange={setCols} min={1} max={colsMax} />
-                            </div>
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="text-[14.5px] text-neutral-600 dark:text-neutral-300">{t('screen.rows')}</span>
-                              <Stepper value={rows} onChange={setRows} min={1} max={rowsMax} />
-                            </div>
-                          </div>
-                          {/*
-                            Metre ve piksel ALTTA tek satırda: kullanıcı kabin
-                            sayısını değil kurulacak ekranın ölçüsünü soruyor.
-                          */}
-                          <div className="mt-1 text-[14.5px] tabular-nums text-neutral-600 dark:text-neutral-300">
-                            {mYazi(e.enM)} × {mYazi(e.boyM)} m
-                            {e.resW > 0 && ` · ${fmt(e.resW)} × ${fmt(e.resH)} px`}
-                          </div>
-                        </div>
-
-                        {/* ---- Yön ---- */}
-                        <div>
-                          <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
-                            {t('screen.orientation')}
-                          </div>
-                          <Segmented
-                            value={orientation}
-                            onChange={(v) => {
-                              const veri = v === 'portrait' ? yerlesimBilgisi?.dikey : yerlesimBilgisi?.yatay
-                              if (veri) uygulaYerlesim(v, veri)
-                              else setOrientation(v)
-                            }}
-                            options={[
-                              { v: 'landscape', l: t('screen.landscape') },
-                              { v: 'portrait', l: t('screen.portrait') },
-                            ]}
-                          />
-                        </div>
-
                         {/*
                           ALAN İŞLERİ.
                           "Alana sığdır" her zaman var: fotoğraf varsa işaretli
@@ -9616,15 +9623,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           fotoğrafsız sahnede düzenlenecek bir alan olmadığı
                           için gizli.
                         */}
-                        <div className={alanDuzenlenebilir ? 'grid grid-cols-2 gap-2' : ''}>
-                          <button
-                            type="button"
-                            onClick={() => (alanDuzenlenebilir ? tasarimiAlanaSigdir() : fitToWall())}
-                            className="w-full rounded-lg border border-neutral-300 py-1.5 text-[14.5px] font-medium text-neutral-700 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
-                          >
-                            {t('ekran.alanaSigdir')}
-                          </button>
-                          {alanDuzenlenebilir && (
+                        {/* Sığdırılacak bir alan yoksa düğmenin yapacağı iş de yok. */}
+                        {alanIsaretli && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => tasarimiAlanaSigdir()}
+                              className="w-full rounded-lg border border-neutral-300 py-1.5 text-[14.5px] font-medium text-neutral-700 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+                            >
+                              {t('ekran.alanaSigdir')}
+                            </button>
                             <button
                               type="button"
                               onClick={elleDuzenlemeyeGec}
@@ -9632,8 +9640,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             >
                               {t('ekran.alaniDuzenle')}
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </li>
                   ) : (
@@ -9728,33 +9736,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               {/* Tek ekranla da açık: "L" burada tek ekranı köşede katlıyor. */}
               {hasModel && (
                 <div className="mt-3 rounded-lg border border-neutral-200 dark:border-[#2c333f] p-2.5">
-                  <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
-                    {t('yerlesim.baslik')}
-                  </div>
+                  {/* Başlık yalnızca birleşim YOKKEN: kurulmuş birleşim tek satır. */}
+                  {!birlesikVar && (
+                    <div className="text-[16px] font-semibold text-neutral-700 dark:text-neutral-200">
+                      {t('yerlesim.baslik')}
+                    </div>
+                  )}
                   {birlesikVar ? (
-                    <>
-                      {/* Grubun adı hangi ekranların birleştiğini de söylüyor. */}
-                      <div className="mt-1 text-[15px] text-neutral-600 dark:text-neutral-300">{grupAdi}</div>
-                      <p className="mt-0.5 mb-0 text-[14px] leading-snug text-neutral-400 dark:text-neutral-500">
-                        {t('yerlesim.grupNot')}
-                      </p>
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={yerlesimiDuzenle}
-                          className="rounded-lg border border-neutral-200 py-2 text-[15px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
-                        >
-                          {t('yerlesim.duzenle')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={grubuAyir}
-                          className="rounded-lg border border-neutral-200 py-2 text-[15px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
-                        >
-                          {t('yerlesim.ayir')}
-                        </button>
-                      </div>
-                    </>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14.5px]">
+                      {/* Adın kendisi hangi ekranların birleştiğini de söylüyor. */}
+                      <span className="min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-200">
+                        <span className="font-semibold">{t('yerlesim.birlesim')}:</span> {grupAdi}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={yerlesimiDuzenle}
+                        className="shrink-0 font-medium text-neutral-600 underline underline-offset-2 transition-colors hover:text-brand dark:text-neutral-300"
+                      >
+                        {t('yerlesim.duzenle')}
+                      </button>
+                      <span aria-hidden className="shrink-0 text-neutral-300 dark:text-neutral-600">·</span>
+                      <button
+                        type="button"
+                        onClick={grubuAyir}
+                        className="shrink-0 font-medium text-neutral-600 underline underline-offset-2 transition-colors hover:text-brand dark:text-neutral-300"
+                      >
+                        {t('yerlesim.ayir')}
+                      </button>
+                    </div>
                   ) : !yerlesimAcik ? (
                     /* Birleştirme isteğe bağlı: seçim ancak istenince açılıyor. */
                     <button
@@ -9897,108 +9906,49 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </div>
           )}
           {/*
-            DİĞER AYARLAR — varsayılan KAPALI.
+            DUVAR ÖLÇÜSÜ VE SIĞDIRMA PANELDE AÇIKTA.
 
-            Duvar ölçüsü ve yapılandırma kurulumda bir kez bakılıp bırakılan
-            ayarlar; panelde sürekli göz önünde durunca ekran listesini
-            aşağı itiyor ve yazıların küçülmesine yol açıyorlardı.
+            Katlanmış "Diğer ayarlar" bölümünün arkasındaydılar; oysa
+            tasarımın kendi ayarları ve kurulum sırasında aranıyorlar.
+            Hesap sonucu olan "maksimum kapasite" ile donanım seçeneği
+            Mini PC teknik özelliklere taşındı.
           */}
           {hasModel && (
-            <div className="rounded-lg border border-neutral-200 dark:border-[#2c333f]">
+            <div>
+              <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('wall.heading')}</h2>
+
+              {/*
+                BİRİM ALANIN YANINDA YAZIYOR.
+
+                Bu iki alan METRE ile çalışıyor ama ekranda hiçbir yerde "m"
+                yazmıyordu. Ölçü kutusu ise SANTİM istiyor. Kullanıcı buradaki
+                0,96'yı okuyup santim alanına da 0,96 yazdığında 1 santimlik bir
+                yerleşim alanı oluşuyor ve her şey bozuluyor. Birim artık sayının
+                hemen yanında — tahmin edilecek bir şey kalmıyor.
+              */}
+              <Card>
+                <div className="flex items-center justify-between mb-3">
+                  <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
+                  <div className="flex items-center gap-1.5">
+                    <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
+                    <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
+                  <div className="flex items-center gap-1.5">
+                    <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
+                    <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
+                  </div>
+                </div>
+              </Card>
               <button
                 type="button"
-                onClick={() => setDigerAyarAcik((o) => !o)}
-                aria-expanded={digerAyarAcik}
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-[15.5px] font-semibold text-neutral-700 dark:text-neutral-200"
+                onClick={fitToWall}
+                className="mt-2 w-full rounded-lg border border-neutral-200 py-2 text-[15px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
               >
-                {t('diger.baslik')}
-                <svg
-                  viewBox="0 0 24 24"
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={digerAyarAcik ? 'rotate-180 transition-transform' : 'transition-transform'}
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
+                {t('conf.fitToWall')}
               </button>
-              {digerAyarAcik && (
-                <div className="border-t border-neutral-200 dark:border-[#2c333f] px-3 py-2">
-          <h2 className="text-[27px] font-bold tracking-tight m-0 mb-2">{t('wall.heading')}</h2>
-
-          {/*
-            BİRİM ALANIN YANINDA YAZIYOR.
-
-            Bu iki alan METRE ile çalışıyor ama ekranda hiçbir yerde "m"
-            yazmıyordu. Ölçü kutusu ise SANTİM istiyor. Kullanıcı buradaki
-            0,96'yı okuyup santim alanına da 0,96 yazdığında 1 santimlik bir
-            yerleşim alanı oluşuyor ve her şey bozuluyor. Birim artık sayının
-            hemen yanında — tahmin edilecek bir şey kalmıyor.
-          */}
-          <Card>
-            <div className="flex items-center justify-between mb-3">
-              <FieldLabel muted={!hasModel}>{t('wall.width')}</FieldLabel>
-              <div className="flex items-center gap-1.5">
-                <Stepper value={width} onChange={setWidth} min={widthMin} max={40} step={1} decimals={2} />
-                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <FieldLabel muted={!hasModel}>{t('wall.height')}</FieldLabel>
-              <div className="flex items-center gap-1.5">
-                <Stepper value={height} onChange={setHeight} min={heightMin} max={20} step={1} decimals={2} />
-                <span className="w-4 text-[16.5px] font-semibold text-neutral-500 dark:text-neutral-400">m</span>
-              </div>
-            </div>
-          </Card>
-
-              {/* Yapılandırma */}
-              <div className="mb-2">
-                <div className="text-[19px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400 mb-2">{t('conf.heading')}</div>
-                <button
-                  type="button"
-                  onClick={fitToWall}
-                  className="w-full py-2.5 rounded-lg text-[19px] font-medium transition-colors border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand"
-                >
-                  {t('conf.fitToWall')}
-                </button>
-                {yerlesimBilgisi && (
-                  <YerlesimKartlari
-                    t={t}
-                    secenekler={yerlesimBilgisi}
-                    orientation={orientation}
-                    onSelect={uygulaYerlesim}
-                  />
-                )}
-              </div>
-
-                  {/*
-                    MİNİ PC — tasarımın tamamına ait, kurulumda bir kez
-                    işaretlenen bir seçenek. Sağ panelde mekân ayarlarının
-                    arasında duruyordu; ekranla da mekânla da ilgisi yok.
-                  */}
-                  {!isVideoWall && (
-                    <label
-                      title={t('minipc.hint') + ' — ' + t('minipc.offHint')}
-                      className="mt-2 flex items-center gap-2.5 cursor-pointer rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2 hover:border-brand/40 transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={hasMiniPc}
-                        onChange={(e) => setHasMiniPc(e.target.checked)}
-                        className="h-4 w-4 shrink-0 accent-[#2962ad]"
-                      />
-                      <span className="min-w-0 text-[14px] font-medium text-neutral-800 dark:text-neutral-100 leading-snug">
-                        {t('minipc.heading')}
-                      </span>
-                    </label>
-                  )}
-                </div>
-              )}
             </div>
           )}
           </Sigdir>
@@ -10161,8 +10111,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   onChange={mekanFotoSecildi}
                   className="hidden"
                 />
-                {/* Fotoğrafı değiştirmek de akışın ortasında yapılacak iş değil. */}
-                {!olcuAcik && (
+                {/*
+                  Fotoğrafı değiştirmek akışın ortasında yapılacak iş değil;
+                  hazır mekânda ya da mekânsız çalışırken ise değiştirilecek
+                  bir fotoğraf yok.
+                */}
+                {!olcuAcik && scene === 'ozel' && (
                 <button
                   type="button"
                   onClick={() => ozelDosyaRef.current?.click()}
@@ -11173,14 +11127,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           >
             {t('privacy.footerLink')}
           </button>
-          {/*
-            SÜRÜM DAMGASI — "yeni sürüm mü açık?" sorusunun tek cevabı.
-            Yayın saatini gösteriyor; tarayıcı eski paketi açtıysa burada eski
-            saat yazıyor ve durum hemen anlaşılıyor.
-          */}
-          <div className="mt-1 text-center text-[10.5px] text-neutral-300 dark:text-neutral-600 tabular-nums select-all">
-            {__YAPIM__}
-          </div>
           </Sigdir>
         </aside>
         </div>
@@ -11200,6 +11146,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         isVideoWall={isVideoWall}
         ekranlar={raporEkranlari}
         toplam={tasarimToplami}
+        /* Sol panelden taşındı: biri hesap sonucu, öteki donanım seçeneği. */
+        onMiniPc={setHasMiniPc}
+        kapasite={yerlesimBilgisi}
+        orientation={orientation}
+        onKapasite={uygulaYerlesim}
         preview={hwPreview}
         matchError={hwMatchError}
       />
@@ -12039,6 +11990,37 @@ function FieldLabel({ children, muted = false }) {
  * Kapsayıcı konumlandırmayı kendi yapıyor (relative + overflow-hidden);
  * burası yalnızca içini dolduruyor.
  */
+/**
+ * DAR PANELDE DE TAM GÖRÜNEN SAYI KUTUSU.
+ *
+ * Etiket üstte, altında eksi–sayı–artı. Düğmeler sabit boyda, sayı
+ * aradaki esnek alanda: kutu ne kadar daralırsa daralsın düğmeler
+ * kırpılmıyor. (Stepper daraldıkça etiketle bitişip + düğmesini dışarı
+ * düşürüyordu.)
+ */
+function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99 }) {
+  const dugme =
+    'h-7 w-7 shrink-0 rounded-md border border-neutral-300 text-[17px] leading-none text-neutral-700 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-35 dark:border-[#39414f] dark:text-neutral-200'
+  return (
+    <div className="min-w-0 rounded-lg border border-neutral-300 px-1.5 py-1 dark:border-[#39414f]">
+      <div className="mb-0.5 truncate text-[12px] font-semibold uppercase tracking-[0.05em] text-neutral-500 dark:text-neutral-400">
+        {etiket}
+      </div>
+      <div className="flex items-center gap-1">
+        <button type="button" aria-label="−" onClick={() => onChange(Math.max(min, deger - 1))} disabled={deger <= min} className={dugme}>
+          −
+        </button>
+        <span className="min-w-0 flex-1 text-center text-[15px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
+          {deger}
+        </span>
+        <button type="button" aria-label="+" onClick={() => onChange(Math.min(max, deger + 1))} disabled={deger >= max} className={dugme}>
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* Ekran satırlarındaki iki küçük ikon — ayrı bileşen, iki yerde kullanılıyor. */
 function CopKutusu() {
   return (

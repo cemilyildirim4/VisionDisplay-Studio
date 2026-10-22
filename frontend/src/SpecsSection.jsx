@@ -24,6 +24,7 @@ import { useLang } from './useLang.js'
 import { useSession } from './SessionContext.jsx'
 import { DASH, fmt, computeSpecs } from './specsData.js'
 import { patchCableCount } from './hardwareRules.js'
+import YerlesimKartlari from './YerlesimKartlari.jsx'
 
 /* ------------------------------------------------------------- yapı taşları */
 
@@ -122,7 +123,7 @@ function Izgara({ children }) {
 /* ------------------------------------------------------------------ içerik */
 
 /** Pop-up içeriği (Teknik Özellikler + Bileşenler tek ızgarada). */
-function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null, ekranlar = [], toplam = null }) {
+function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null, ekranlar = [], toplam = null, onMiniPc = null, kapasite = null, orientation = 'landscape', onKapasite = null }) {
   const { t } = useLang()
   const { isAdmin } = useSession()
   const has = !!model
@@ -183,6 +184,41 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
     s.resW = toplam.resW
     s.resH = toplam.resH
   }
+  /*
+   * SEÇENEKLER VE KAPASİTE — sol panelden taşındı.
+   * Mini PC bir donanım seçeneği; kapasite ise duvara sığan en büyük
+   * dizilimi söyleyen bir hesap. İkisi de tasarımın sayılarıyla birlikte.
+   */
+  const secenekler =
+    onMiniPc || (kapasite && onKapasite) ? (
+      <Kart baslik={t('sp.options')} genis>
+        {onMiniPc && (
+          <label
+            title={t('minipc.hint') + ' — ' + t('minipc.offHint')}
+            className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-neutral-200 px-3 py-2 transition-colors hover:border-brand/40 dark:border-[#2c333f]"
+          >
+            <input
+              type="checkbox"
+              checked={hasMiniPc}
+              onChange={(e) => onMiniPc(e.target.checked)}
+              className="h-4 w-4 shrink-0 accent-[#2962ad]"
+            />
+            <span className="min-w-0 text-[14px] font-medium leading-snug text-neutral-800 dark:text-neutral-100">
+              {t('minipc.heading')}
+            </span>
+          </label>
+        )}
+        {kapasite && onKapasite && (
+          <div className="mt-1">
+            <div className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">
+              {t('conf.heading')}
+            </div>
+            <YerlesimKartlari t={t} secenekler={kapasite} orientation={orientation} onSelect={onKapasite} />
+          </div>
+        )}
+      </Kart>
+    ) : null
+
   const ekranDokumu = cokEkran ? (
     <Kart baslik={t('sp.perScreen')} genis vurgulu>
       <div className="-mx-1 overflow-x-auto">
@@ -249,6 +285,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
     return (
       <Izgara>
         {ekranDokumu}
+        {secenekler}
         <Kart baslik={t('sp.screenConfig')}>
           <Veri buyuk label={t('sp.lengthHeight')} value={has ? `${cols} ${t('sp.unit')} x ${rows} ${t('sp.unit')}` : DASH} />
           <Veri label={t('sp.totalScreens')} value={has ? `${fmt(total)} ${t('sp.unit')}` : DASH} />
@@ -287,6 +324,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
 
       <Izgara>
         {ekranDokumu}
+        {secenekler}
         {/* Başlık kartta zaten yazıyor; içeride ikinci kez tekrarlanıyordu. */}
         <Kart baslik={t('sp.screenConfigLxh')}>
           <div className="text-[21px] font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50">
