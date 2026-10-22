@@ -139,11 +139,21 @@ const panelOlcusu = (s) =>
     const liste = panel && panel.querySelector('ul')
     const acik = liste && [...liste.children].find((li) => li.dataset.acik === '1')
     if (!acik) return { sutun: null, satir: null, tani: 'acik satir yok' }
-    /* Stepper kutulari type=text + inputMode=decimal; olcu bolumundeki
-       ilk iki kutu sutun ve satir. */
-    const adet = [...acik.querySelectorAll('input[inputmode="decimal"]')]
-      .map((x) => Number(String(x.value).replace(',', '.')))
-      .filter((n) => n > 0)
+    /*
+     * Sayilar artik giris kutusunda degil: "Sutun - 9 + Satir - 9 +".
+     * Etiketten sonraki ilk sayi o eksenin degeri.
+     */
+    const metinHam = (acik.innerText || '').replace(/\s+/g, ' ')
+    const eksenSayisi = (etiket) => {
+      const i = metinHam.indexOf(etiket)
+      if (i < 0) return 0
+      for (const parca of metinHam.slice(i + etiket.length, i + etiket.length + 24).split(' ')) {
+        const n = Number(parca)
+        if (Number.isFinite(n) && n > 0) return n
+      }
+      return 0
+    }
+    const adet = [eksenSayisi('Sütun'), eksenSayisi('Satır')].filter((n) => n > 0)
     const metin = (acik.innerText || '').replace(/\s+/g, ' ')
     const m = metin.match(/([\d.,]+) × ([\d.,]+) m/)
     if (!m || adet.length < 2) {

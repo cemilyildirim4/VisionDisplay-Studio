@@ -7853,8 +7853,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * duruyorsa (kutu solda, tasarım ortada) ekran büsbütün anlaşılmaz
    * hâle geliyor. Araç açıkken tasarım gizli, kapanınca görünür.
    */
-  const olcuAraciAcik =
-    refKipi || ref2Kipi || lKoseKipi || alanKipi || !!lKoseCizimi || taslakKutuAcik
+  /*
+   * ÇİZİMİN KENDİSİ GİZLEME SEBEBİ DEĞİL.
+   *
+   * L köşesi çizimi (lKoseCizimi) bir KİP değil, iki duvar işaretlendikten
+   * sonra kalıcı olarak duran bir SONUÇ. Listeye dahil edilince köşe bir
+   * kez işaretlendiğinde "araç açık" bir daha kapanmıyor ve tasarım bir
+   * daha hiç çizilmiyordu. İşaretleme sürerken gizlemenin gerekçesi
+   * geçerli; onu zaten lKoseKipi anlatıyor.
+   */
+  const olcuAraciAcik = refKipi || ref2Kipi || lKoseKipi || alanKipi || taslakKutuAcik
 
   /** Dörtgenin merkezi, durusaOturt'un beklediği {cx, cy} adlarıyla. */
   const koseMerkeziCx = (k) => ({
@@ -10263,6 +10271,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 )}
 
                 {/*
+                  TASARIMI ALANA SIĞDIR — bir adımın içinde saklı değil.
+                  Fotoğrafta alan işaretlendiği anda yapılacak ilk iş bu;
+                  menü arkasında durunca kimse bulamıyordu.
+                */}
+                {alanIsaretli && !olcuAcik && (
+                  <button
+                    type="button"
+                    onClick={() => tasarimiAlanaSigdir()}
+                    className="mt-2 w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90"
+                  >
+                    {t('ekran.alanaSigdir')}
+                  </button>
+                )}
+
+                {/*
                   ÇEKİM MESAFESİ ARTIK AYRI BİR ALAN DEĞİL.
 
                   Kendi fotoğrafında ölçeği belirleyen tek sayı vardı ama iki
@@ -10553,7 +10576,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               sonradan düzeltmek için bir yere girmek
                               gerekmesin.
                             */}
-                            {lKoseCizimi && !lKoseKipi && !refKipi && lSekilPaneli}
                             {/*
                               İKİ ANA EYLEM: BAŞTAN BAŞLA ve DÜZENLE.
 
