@@ -2144,11 +2144,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setRows(kazanan.rows)
   }
 
-  const uygulaYerlesim = (yon, veri) => {
-    setOrientation(yon)
-    setCols(veri.cols)
-    setRows(veri.rows)
-  }
 
   /*
    * PANONUN GERÇEK ÖLÇÜSÜ (metre) — fotoğrafın ölçeğinden.
@@ -2491,10 +2486,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * karşılaştırma ayrı bir iş ve sağ paneldeki "Tasarımı duvara tam sığdır"
    * onu yapıyor; taşma da taramayla işaretleniyor.
    */
-  const yerlesimBilgisi = useMemo(
-    () => yerlesimSecenekleri(selectedModel, width, height),
-    [selectedModel, width, height],
-  )
 
   /*
    * L TİPİ EKRANDA KİOSK ÇİZİLMİYOR.
@@ -9493,28 +9484,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             aynı satırdayken panel daraldıkça bitişiyor ve
                             + düğmesi dışarı düşüyordu.
                           */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <SayiKutusu etiket={t('screen.columns')} deger={cols} onChange={setCols} min={1} max={colsMax} />
-                            <SayiKutusu etiket={t('screen.rows')} deger={rows} onChange={setRows} min={1} max={rowsMax} />
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                            <SayiKutusu etiket={t('screen.colsShort')} deger={cols} onChange={setCols} min={1} max={colsMax} />
+                            <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsMax} />
                           </div>
 
-                          <div className="mt-2">
-                          <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
-                            {t('screen.orientation')}
-                          </div>
-                          <Segmented
-                            value={orientation}
-                            onChange={(v) => {
-                              const veri = v === 'portrait' ? yerlesimBilgisi?.dikey : yerlesimBilgisi?.yatay
-                              if (veri) uygulaYerlesim(v, veri)
-                              else setOrientation(v)
-                            }}
-                            options={[
-                              { v: 'landscape', l: t('screen.landscape') },
-                              { v: 'portrait', l: t('screen.portrait') },
-                            ]}
-                          />
-                        </div>
+                          {/*
+                            YÖN AYRI BİR KARAR DEĞİL.
+
+                            Yatay/dikey, duvara sığdırmanın SONUCU: hangi
+                            dizilim boşluksuz sığıp daha çok piksel veriyorsa
+                            o seçiliyor (bkz. fitToWall). İki ayrı karar
+                            bırakıldığında biri ötekini bozuyordu.
+                          */}
+                          <button
+                            type="button"
+                            onClick={fitToWall}
+                            className="mt-2 w-full rounded-lg border border-neutral-300 py-1.5 text-[14.5px] font-medium text-neutral-700 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+                          >
+                            {t('conf.fitToWall')}
+                          </button>
 
                           {/*
                             Metre ve piksel ALTTA tek satırda: kullanıcı kabin
@@ -9532,14 +9521,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             {t('content.heading')}
                           </div>
                           {/*
-                            TEK BÜYÜK KUTU: tıkla ya da sürükle-bırak.
-                            Açılır liste + küçük "Yükle" bağlantısıyla görsel
-                            eklemek iki adımdı ve içerik görünmeden ad
-                            okunuyordu.
+                            KÜÇÜK RESİMLER VE EKLEME TEK SATIRDA.
+
+                            Kocaman bir önizleme kutusu kartın yarısını
+                            kaplıyordu; oysa seçili içerik havuzda zaten
+                            halkalı duruyor. Sürükle-bırak satırın kendisinde.
                           */}
-                          <button
-                            type="button"
-                            onClick={() => havuzInputRef.current?.click()}
+                          <div
                             onDragOver={(ev) => {
                               ev.preventDefault()
                               setIcerikSurukle(true)
@@ -9550,22 +9538,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               setIcerikSurukle(false)
                               dosyayiHavuzaAl(ev.dataTransfer?.files?.[0])
                             }}
-                            className={`relative block h-[84px] w-full overflow-hidden rounded-lg border-2 border-dashed transition-colors ${
-                              icerikSurukle ? 'border-brand' : 'border-neutral-300 dark:border-[#39414f]'
+                            className={`flex gap-1 overflow-x-auto rounded-lg pb-0.5 ${
+                              icerikSurukle ? 'ring-2 ring-brand' : ''
                             }`}
                           >
-                            <IcerikOnizleme oge={secili} dilim={e.dilim} />
-                            {/* Gerçek bir içerik yoksa kutu ne yapılacağını söylüyor. */}
-                            {!secili?.url && (
-                              <span className="absolute inset-0 flex items-center justify-center bg-black/30 px-2 text-center text-[14px] font-semibold text-white">
-                                {t('content.ekle')}
-                              </span>
-                            )}
-                          </button>
-
-                          {/* Havuz: tek sıra kare, hepsi bir bakışta. */}
-                          <div className="mt-1.5 flex gap-1 overflow-x-auto pb-0.5">
-                            {icerikHavuzuTam.map((h) => (
+                            {/* "Resim yok" ayrı bir seçenek değil: kapalı LED zaten o. */}
+                            {icerikHavuzuTam
+                              .filter((h) => h.id !== 'none')
+                              .map((h) => (
                               <span key={h.id} className="relative shrink-0">
                                 <button
                                   type="button"
@@ -9593,6 +9573,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 )}
                               </span>
                             ))}
+                            {/* Ekleme düğmesi küçük resimlerle AYNI satırda. */}
+                            <button
+                              type="button"
+                              onClick={() => havuzInputRef.current?.click()}
+                              className="flex h-8 shrink-0 items-center gap-1 rounded border border-dashed border-neutral-300 px-2 text-[12.5px] font-medium text-neutral-500 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-400"
+                            >
+                              + {t('content.ekleKisa')}
+                            </button>
                           </div>
 
                           {/* Bölme ancak paylaşacak ikinci bir ekran varken iş yapıyor. */}
@@ -9942,13 +9930,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </div>
                 </div>
               </Card>
-              <button
-                type="button"
-                onClick={fitToWall}
-                className="mt-2 w-full rounded-lg border border-neutral-200 py-2 text-[15px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
-              >
-                {t('conf.fitToWall')}
-              </button>
             </div>
           )}
           </Sigdir>
@@ -11146,11 +11127,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         isVideoWall={isVideoWall}
         ekranlar={raporEkranlari}
         toplam={tasarimToplami}
-        /* Sol panelden taşındı: biri hesap sonucu, öteki donanım seçeneği. */
+        /* Sol panelden taşındı: donanım seçeneği, tasarımın sayılarıyla birlikte. */
         onMiniPc={setHasMiniPc}
-        kapasite={yerlesimBilgisi}
-        orientation={orientation}
-        onKapasite={uygulaYerlesim}
         preview={hwPreview}
         matchError={hwMatchError}
       />
@@ -11505,34 +11483,6 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 
       <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
         {t('screen.curveArc')}: {acilar[durak]}° · {KAVIS_ACI_ADIMI}° {t('screen.curveStepNote')}
       </div>
-      {genislikM > 0 && (
-        <>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
-              {t('screen.curveDiameter')}
-            </span>
-            <Stepper
-              value={cap ? Math.round(cap * 100) / 100 : 0}
-              onChange={(v) => onChange(kavisYuzdesiniOturt(curveAmountForDiameter(v, icbukey, genislikM), icbukey))}
-              /*
-               * EN KÜÇÜK ÇAP, ÇİZİLEBİLEN EN KESKİN KAVİS.
-               *
-               * Kavis derinliği %100'de genişliğin %13–16'sı ile sınırlı
-               * (bkz. content.js). Daha küçük bir çap girilirse çizim aynı
-               * kalıyor ve alan kullanıcıyı yanıltıyordu; alt sınır artık o
-               * noktadaki gerçek çap.
-               */
-              min={Math.max(0.5, Math.round(((curveDiameterM(100, icbukey, genislikM) || genislikM) * 100)) / 100)}
-              max={200}
-              step={0.1}
-              decimals={2}
-            />
-          </div>
-          <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-            {t('screen.curveDiameterHint')}
-          </p>
-        </>
-      )}
       {coklu && (
         <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
           {t('screen.curveAllScreens')}
@@ -12000,24 +11950,20 @@ function FieldLabel({ children, muted = false }) {
  */
 function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99 }) {
   const dugme =
-    'h-7 w-7 shrink-0 rounded-md border border-neutral-300 text-[17px] leading-none text-neutral-700 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-35 dark:border-[#39414f] dark:text-neutral-200'
+    'h-6 w-6 shrink-0 rounded border border-neutral-300 text-[15px] leading-none text-neutral-700 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-35 dark:border-[#39414f] dark:text-neutral-200'
   return (
-    <div className="min-w-0 rounded-lg border border-neutral-300 px-1.5 py-1 dark:border-[#39414f]">
-      <div className="mb-0.5 truncate text-[12px] font-semibold uppercase tracking-[0.05em] text-neutral-500 dark:text-neutral-400">
-        {etiket}
-      </div>
-      <div className="flex items-center gap-1">
-        <button type="button" aria-label="−" onClick={() => onChange(Math.max(min, deger - 1))} disabled={deger <= min} className={dugme}>
-          −
-        </button>
-        <span className="min-w-0 flex-1 text-center text-[15px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
-          {deger}
-        </span>
-        <button type="button" aria-label="+" onClick={() => onChange(Math.min(max, deger + 1))} disabled={deger >= max} className={dugme}>
-          +
-        </button>
-      </div>
-    </div>
+    <span className="flex min-w-0 items-center gap-1">
+      <span className="shrink-0 text-[13.5px] text-neutral-600 dark:text-neutral-300">{etiket}</span>
+      <button type="button" aria-label="−" onClick={() => onChange(Math.max(min, deger - 1))} disabled={deger <= min} className={dugme}>
+        −
+      </button>
+      <span className="min-w-[1.5rem] text-center text-[14.5px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
+        {deger}
+      </span>
+      <button type="button" aria-label="+" onClick={() => onChange(Math.min(max, deger + 1))} disabled={deger >= max} className={dugme}>
+        +
+      </button>
+    </span>
   )
 }
 

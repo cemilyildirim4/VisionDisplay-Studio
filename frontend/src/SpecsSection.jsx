@@ -24,7 +24,6 @@ import { useLang } from './useLang.js'
 import { useSession } from './SessionContext.jsx'
 import { DASH, fmt, computeSpecs } from './specsData.js'
 import { patchCableCount } from './hardwareRules.js'
-import YerlesimKartlari from './YerlesimKartlari.jsx'
 
 /* ------------------------------------------------------------- yapı taşları */
 
@@ -123,7 +122,7 @@ function Izgara({ children }) {
 /* ------------------------------------------------------------------ içerik */
 
 /** Pop-up içeriği (Teknik Özellikler + Bileşenler tek ızgarada). */
-function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null, ekranlar = [], toplam = null, onMiniPc = null, kapasite = null, orientation = 'landscape', onKapasite = null }) {
+function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null, ekranlar = [], toplam = null, onMiniPc = null }) {
   const { t } = useLang()
   const { isAdmin } = useSession()
   const has = !!model
@@ -185,12 +184,13 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
     s.resH = toplam.resH
   }
   /*
-   * SEÇENEKLER VE KAPASİTE — sol panelden taşındı.
-   * Mini PC bir donanım seçeneği; kapasite ise duvara sığan en büyük
-   * dizilimi söyleyen bir hesap. İkisi de tasarımın sayılarıyla birlikte.
+   * SEÇENEKLER — sol panelden taşındı.
+   * Mini PC bir donanım seçeneği; yeri tasarımın sayılarıyla birlikte.
+   * ("Maksimum kapasite" kalktı: aynı hesabı "Duvara sığdır" kendisi
+   * yapıp uyguluyor, ayrıca sormaya gerek yok.)
    */
   const secenekler =
-    onMiniPc || (kapasite && onKapasite) ? (
+    onMiniPc ? (
       <Kart baslik={t('sp.options')} genis>
         {onMiniPc && (
           <label
@@ -207,14 +207,6 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
               {t('minipc.heading')}
             </span>
           </label>
-        )}
-        {kapasite && onKapasite && (
-          <div className="mt-1">
-            <div className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">
-              {t('conf.heading')}
-            </div>
-            <YerlesimKartlari t={t} secenekler={kapasite} orientation={orientation} onSelect={onKapasite} />
-          </div>
         )}
       </Kart>
     ) : null
