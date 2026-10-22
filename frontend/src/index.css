@@ -246,24 +246,25 @@ button:disabled {
     height: 100dvh;
     overflow: hidden;
   }
+  /* AYARLAR SOLDA, TASARIM SAĞDA — masaüstü düzeniyle aynı sıra. */
   .yatay-kap {
     display: grid;
-    grid-template-columns: 1fr minmax(240px, 300px);
+    grid-template-columns: minmax(240px, 300px) 1fr;
     grid-template-rows: minmax(0, 1fr);
     min-height: 0;
   }
   .yatay-onizleme {
-    grid-column: 1;
+    grid-column: 2;
     grid-row: 1 / span 2;
     height: auto;
     min-height: 0;
     flex-basis: auto;
   }
-  /* Sağ sütun TEK kaydırma alanı: iki panel alt alta, birlikte kayar. */
+  /* Ayar sütunu TEK kaydırma alanı: iki panel alt alta, birlikte kayar. */
   .yatay-sag {
     display: flex;
     flex-direction: column;
-    grid-column: 2;
+    grid-column: 1;
     grid-row: 1;
     min-height: 0;
     overflow-y: auto;
@@ -291,6 +292,28 @@ button:disabled {
  */
 @media (orientation: landscape) and (max-height: 600px) {
   .yatay-gizle { display: none; }
+
+  /*
+   * ARAÇ DÜĞMELERİ: İKON ÜSTTE, YAZI ALTTA.
+   *
+   * Yazı yalnızca masaüstünde görünüyordu; telefonda sekiz ikonun
+   * hangisinin ne olduğunu ancak basınca öğreniyordunuz. Dikey dizilim
+   * hem yazıyı getiriyor hem de tek satıra sığıyor.
+   *
+   * Seçici iki sınıflı: tek sınıflı "hidden" kuralını yenmesi gerekiyor.
+   */
+  .arac-dugme {
+    flex-direction: column;
+    height: auto;
+    gap: 2px;
+    padding: 0.25rem 0.45rem;
+    line-height: 1.05;
+  }
+  .arac-dugme .arac-etiket {
+    display: inline;
+    font-size: 9px;
+    font-weight: 600;
+  }
 }
 
 html, body {

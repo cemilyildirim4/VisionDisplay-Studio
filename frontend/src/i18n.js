@@ -224,6 +224,11 @@ const dict = {
 
   // ---------- Ekran modu sekmeleri ----------
   'content.ekle': { tr: 'Görsel veya video ekle', en: 'Add image or video', ar: 'أضف صورة أو فيديو' },
+  'dik.baslik': { tr: 'Telefonu yan çevirin', en: 'Turn your phone sideways', ar: 'أدر هاتفك أفقيًا' },
+  'dik.masaustu': { tr: 'En iyi deneyim bilgisayarda', en: 'Best experienced on a computer', ar: 'أفضل تجربة على الحاسوب' },
+  'dik.cevirdim': { tr: 'Tamam, çevirdim', en: "Done, I've turned it", ar: 'تم، لقد أدرته' },
+  'dik.yinede': { tr: 'Yine de devam et', en: 'Continue anyway', ar: 'المتابعة على أي حال' },
+  'dik.serit': { tr: 'Yan çevirin, daha rahat', en: 'Turn sideways for more room', ar: 'أدره أفقيًا ليكون أسهل' },
   'diger.baslik': { tr: 'Diğer ayarlar', en: 'Other settings', ar: 'إعدادات أخرى' },
   'sp.perScreen': { tr: 'Ekran dökümü', en: 'Per-screen breakdown', ar: 'تفصيل لكل شاشة' },
   'panel.toplam': { tr: 'Toplam', en: 'Total', ar: 'الإجمالي' },
@@ -239,6 +244,15 @@ const dict = {
   'model.heading': { tr: 'Model', en: 'Model', ar: 'الطراز' },
   'model.select': { tr: 'Modelinizi seçin', en: 'Select your model', ar: 'اختر طرازك' },
   'model.change': { tr: 'Model değişikliği', en: 'Change model', ar: 'تغيير الطراز' },
+  /*
+   * SERİ ADLARI — kataloğun Türkçe adlarının karşılığı.
+   * Anahtar, veritabanındaki adın kendisi. Listede olmayan bir seri adı
+   * olduğu gibi yazılıyor (bkz. seriAdi).
+   */
+  'seri.LED İç Mekan (Duvar)': { tr: 'LED İç Mekan (Duvar)', en: 'LED Indoor (Wall)', ar: 'LED داخلي (جدار)' },
+  'seri.LED İç Mekan': { tr: 'LED İç Mekan', en: 'LED Indoor', ar: 'LED داخلي' },
+  'seri.LED Dış Mekan': { tr: 'LED Dış Mekan', en: 'LED Outdoor', ar: 'LED خارجي' },
+  'seri.Video Duvarı': { tr: 'Video Duvarı', en: 'Video Wall', ar: 'جدار فيديو' },
   'model.defaultSeries': { tr: 'LED İç Mekan', en: 'LED Indoor', ar: 'LED داخلي' },
 
   // ---------- Duvar bölümü ----------
@@ -375,6 +389,7 @@ const dict = {
   'fit.close': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
   'fit.errCamera': { tr: 'Kamera açılamadı. Tarayıcı ayarlarından kamera iznini verip tekrar deneyin.', en: 'Could not open the camera. Allow camera access and try again.', ar: 'تعذّر فتح الكاميرا.' },
   'fit.errShot': { tr: 'Kare alınamadı, tekrar deneyin.', en: 'Could not capture the shot, try again.', ar: 'تعذّر التقاط اللقطة.' },
+  'cam.open': { tr: 'Kamerayla gör', en: 'View with camera', ar: 'المشاهدة بالكاميرا' },
   'fit.open': { tr: 'Kamerada oturt', en: 'Fit in camera', ar: 'التركيب بالكاميرا' },
   'fit.viewDist': { tr: 'Önerilen izleme mesafesi', en: 'Recommended viewing distance', ar: 'مسافة المشاهدة الموصى بها' },
   'fit.asSeenFrom': { tr: 'Bu görünüm yaklaşık şu uzaklığa denk', en: 'This view is roughly the same as from', ar: 'هذا المنظر يعادل تقريبًا من' },
@@ -1250,7 +1265,7 @@ const dict = {
     ar: 'لم يتم العثور على زاوية واضحة؛ وُضعت الشاشة من الأمام. يمكنك توجيهها.',
   },
   'scene.on': { tr: 'Açık', en: 'On', ar: 'مفعّل' },
-  'scene.off': { tr: 'Kapalı', en: 'Off', ar: 'معطّل' },
+  'scene.off': { tr: 'Mekân yok', en: 'No space', ar: 'بدون مكان' },
   'scene.rotate': { tr: 'Döndür', en: 'Rotate', ar: 'تدوير' },
   'scene.rotateReset': { tr: 'Döndürmeyi sıfırla', en: 'Reset rotation', ar: 'إعادة ضبط التدوير' },
   'scene.fillMode': { tr: 'Mevcut ekran', en: 'Existing screen', ar: 'الشاشة الحالية' },
@@ -1580,6 +1595,7 @@ const dict = {
   'compare.powerMax': { tr: 'Maksimum Güç', en: 'Maximum Power', ar: 'أقصى طاقة' },
   'compare.refreshRate': { tr: 'Yenileme Hızı', en: 'Refresh Rate', ar: 'معدل التحديث' },
   'compare.viewingDistance': { tr: 'İzleme Mesafesi', en: 'Viewing Distance', ar: 'مسافة المشاهدة' },
+  'scene3d.loading': { tr: '3D sahne hazırlanıyor…', en: 'Preparing the 3D scene…', ar: 'يتم تحضير المشهد ثلاثي الأبعاد…' },
   'scene3d.open': { tr: '3D Görünüm', en: '3D View', ar: 'عرض ثلاثي الأبعاد' },
   'scene3d.title': { tr: '3D Görünüm (Beta)', en: '3D View (Beta)', ar: 'عرض ثلاثي الأبعاد (بيتا)' },
   'scene3d.lodLow': { tr: '· Büyük duvar: sadeleştirilmiş detay', en: '· Large wall: simplified detail', ar: '· جدار كبير: تفاصيل مبسطة' },
@@ -1777,7 +1793,7 @@ const dict = {
   'sp.screenConfig': { tr: 'Ekran Yapılandırması', en: 'Screen Configuration', ar: 'تهيئة الشاشة' },
   'sp.unit': { tr: 'Birim', en: 'Unit', ar: 'وحدة' },
   'sp.units': { tr: 'Ünite', en: 'Units', ar: 'وحدات' },
-  'sp.totalScreens': { tr: 'Toplam Ekran Sayısı', en: 'Total No. of Screens', ar: 'إجمالي عدد الشاشات' },
+  'sp.totalScreens': { tr: 'Modül sayısı', en: 'Module count', ar: 'عدد الوحدات' },
   'sp.screenSpecs': { tr: 'Ekran Özellikleri', en: 'Screen Specifications', ar: 'مواصفات الشاشة' },
   'sp.lengthHeight': { tr: 'Uzunluk x Yükseklik', en: 'Length x Height', ar: 'الطول × الارتفاع' },
   'sp.lengthHeightDepth': { tr: 'Uzunluk x Yükseklik x Derinlik', en: 'Length x Height x Depth', ar: 'الطول × الارتفاع × العمق' },

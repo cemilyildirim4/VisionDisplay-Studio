@@ -182,7 +182,21 @@ export const bezelGapStyle = (cellW, cellH, gapPx, color = BEZEL_COLOR) => ({
  * Hem ekranın kırpımı (WallPreview) hem mekândaki kasa (Salon/Cephe) bu
  * değeri kullanır; ikisi ayrışırsa çerçeve ekranı tutmaz.
  */
-export const L_KIRILMA_PCT = 10
+/*
+ * L KÖŞESİNİN DERİNLİĞİ.
+ *
+ * Dikiş kenarının üstten ve alttan içeri girme oranı. %10'da köşe
+ * okunmuyordu: iki kanat düpedüz tek bir şerit gibi duruyordu.
+ */
+export const L_KIRILMA_PCT = 22
+
+/*
+ * UZAKLAŞAN KANADIN KISALMA ORANI.
+ *
+ * Köşeye hafif çaprazdan bakıldığında yan kanat kısalmış görünür. Çizim
+ * oranı bu; kanadın gerçek ölçüsü değişmiyor.
+ */
+export const L_KACIS_ORANI = 0.62
 
 /*
  * KAVİS AÇISI 32°'NİN KATLARINDA.

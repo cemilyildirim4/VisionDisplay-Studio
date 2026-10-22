@@ -6,7 +6,6 @@ import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import { useConfigurationPreview } from './useConfigurationPreview.js'
-import Oturtma from './Oturtma.jsx'
 import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
 import PrivacyModal from './PrivacyModal.jsx'
@@ -14,6 +13,7 @@ import { BrandMark, BrandStripe } from './BrandChrome.jsx'
 import ProductTypeBadge from './ProductTypeBadge.jsx'
 import YerlesimKartlari from './YerlesimKartlari.jsx'
 import ProfileMenu from './ProfileMenu.jsx'
+import DikeyUyari from './DikeyUyari.jsx'
 import ChatHelp from './ChatHelp.jsx'
 import Scene, { PANO_ID, SALON_ID, CEPHE_ID } from './Scene.jsx'
 import { salonOlcek } from './Salon.jsx'
@@ -187,6 +187,7 @@ import { SAMPLE_VIDEO_SRC, VIDEO_TYPES, VIDEO_MAX_MB } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { useCabinets } from './hooks/useCabinets.js'
 import { mmYazi } from './birim.js'
+import { seriAdi } from './productType.js'
 import {
   taslakEkranlari,
   taslakOlustur,
@@ -417,7 +418,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ölçülere göre bir TASLAK çerçeve görünüyor, deklanşöre basılınca tasarım
    * o çerçeveye oturuyor. İkisi birbirine karışmasın diye ayrı pencereler.
    */
-  const [oturtmaAcik, setOturtmaAcik] = useState(false)
   const [showMeasurements, setShowMeasurements] = useState(true)
   const [exportOpen, setExportOpen] = useState(false)
   /*
@@ -8148,6 +8148,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   return (
     <div className="bg-[#f7f9fc] dark:bg-[#0b0f16] text-[#1c1c2b] dark:text-neutral-100 font-sans">
+      {/* Dik telefonda uyarı; yan çevrilince kendiliğinden kalkıyor. */}
+      <DikeyUyari />
       {/* Konfigüratör — tek ekran yüksekliği */}
       {/* Masaüstü: tek ekran yüksekliği. Mobil: içerik alt alta dizilip sayfa kayar. */}
       <div className="yatay-sayfa min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
@@ -8184,22 +8186,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </svg>
           </IconButton>
 
-          {/* Kamerada oturt — taslak çerçeve, sonra çekim (bkz. Oturtma.jsx) */}
-          <IconButton
-            active={hasModel}
-            pasifNot={t('tool.modelGerek')}
-            label={t('fit.open')}
-            sadeceIkon
-            onClick={() => hasModel && setOturtmaAcik(true)}
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" />
-              <rect x="8" y="8" width="8" height="8" rx="1" />
-            </svg>
-          </IconButton>
-
-          {/* AR / kamera simülasyonu — bkz. Mekân bölümündeki eşi */}
-          <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('ar.open')} onClick={() => hasModel && setArAcik(true)}>
+          {/*
+            KAMERA TEK KAPIDAN.
+            "Nasıl görüneceğini gör", "Kamerada oturt" ve sağ paneldeki
+            kopyaları aynı yere çıkıyordu; hangisinin ne yaptığı belli
+            değildi. Tek giriş kaldı.
+          */}
+          <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('cam.open')} onClick={() => hasModel && setArAcik(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 8a2 2 0 0 1 2-2h2.2l1.2-2h7.2l1.2 2H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <circle cx="12" cy="12.5" r="3.4" />
@@ -9355,7 +9348,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     <div className="text-[21px] font-bold text-neutral-900 dark:text-neutral-100 leading-tight">{selectedModel.modelCode}</div>
                     <ProductTypeBadge productType={selectedModel.productType} size="md" />
                   </div>
-                  <div className="truncate text-[15px] text-neutral-500 dark:text-neutral-400">{selectedModel.series?.name || t('model.defaultSeries')}</div>
+                  {/* Ad kesilmesin: uzun seri adları iki satıra iner. */}
+                  <div className="text-[15px] leading-snug text-neutral-500 dark:text-neutral-400">
+                    {seriAdi(selectedModel.series?.name, t) || t('model.defaultSeries')}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -9699,12 +9695,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 })}
               </ul>
 
-              {/* Düğme neden kapalı, sessiz kalmasın. */}
-              {scene === 'ozel' && !koseMutlak && (
-                <p className="mt-1.5 mb-0 text-[14.5px] leading-snug text-amber-600 dark:text-amber-400">
-                  {t('ekran.oncelikOlcu')}
-                </p>
-              )}
               <button
                 type="button"
                 onClick={ekranEkle}
@@ -11132,33 +11122,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {t('scene.recenter')}
                   </button>
                 )}
-                {/* Ölçüm bitene kadar gizli (bkz. olcuAcik). */}
-                {hasModel && !olcuAcik && (
-                  <button
-                    type="button"
-                    onClick={() => setArAcik(true)}
-                    className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
-                  >
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 8a2 2 0 0 1 2-2h2.2l1.2-2h7.2l1.2 2H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                      <circle cx="12" cy="12.5" r="3.4" />
-                    </svg>
-                    {t('ar.open')}
-                  </button>
-                )}
-                {hasModel && !olcuAcik && (
-                  <button
-                    type="button"
-                    onClick={() => setOturtmaAcik(true)}
-                    className="mt-2 w-full py-2.5 rounded-lg text-[16px] font-semibold border border-brand text-brand hover:bg-brand-tint dark:hover:bg-[#1b2436] transition-colors inline-flex items-center justify-center gap-1.5"
-                  >
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" />
-                      <rect x="8" y="8" width="8" height="8" rx="1" />
-                    </svg>
-                    {t('fit.open')}
-                  </button>
-                )}
               </div>
             </>
           )}
@@ -11269,21 +11232,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         onSaved={kareKaydedildi}
       />
 
-      <Oturtma
-        open={oturtmaAcik && hasModel}
-        onClose={() => setOturtmaAcik(false)}
-        model={previewModel}
-        cols={cols}
-        rows={rows}
-        screens={cokluAktif ? ekranSeridi : null}
-        content={content}
-        contentUrl={contentUrl}
-        screenType={screenType}
-        resolution={resolution}
-        curveAmount={curveAmount}
-        hideRegions={isVideoWall}
-        onSaved={kareKaydedildi}
-      />
 
       {/*
         AVM KORİDORU — fotoğraflı mekân.
@@ -11320,12 +11268,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             screenType={screenType}
             curveAmount={curveAmount}
             screens={cokluAktif ? ekranSeridi : null}
-            /* AR'da deklanşör işletim sistemine ait; fotoğraf için kamera
-               ekranına geçiriyoruz (bkz. Scene3D → onOpenCamera) */
-            onOpenCamera={() => {
-              setScene3dOpen(false)
-              setArAcik(true)
-            }}
             /* AR'de "Kaydet" denen kare de rapora girsin */
             onSaved={kareKaydedildi}
           />
@@ -11580,19 +11522,28 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 
         </span>
         <span className="text-[16px] font-semibold text-brand">{acilar[durak]}°</span>
       </div>
-      <input
-        type="range"
-        min={0}
-        max={acilar.length - 1}
-        step={1}
-        value={durak}
-        onChange={(e) => onChange(acidanYuzde(acilar[Number(e.target.value)]))}
-        aria-label={t('screen.curveAmount')}
-        className="w-full accent-[#2962ad] cursor-pointer"
-      />
-      <div className="flex justify-between text-[13px] text-neutral-400 dark:text-neutral-500">
-        <span>{t('screen.curveFlat')}</span>
-        <span>{t('screen.curveMax')}</span>
+      {/*
+        KAYDIRICI YERİNE İKİ AÇI.
+
+        Kurulabilir açılar 32°'nin katları; kaydırıcı iki durak arasında
+        gidip geliyor, hangi değerde olduğunu da ayrı bir yazıdan okumak
+        gerekiyordu. Düğmeler seçeneği doğrudan gösteriyor.
+      */}
+      <div className="grid grid-cols-2 gap-2">
+        {[32, 64].map((a) => (
+          <button
+            key={a}
+            type="button"
+            onClick={() => onChange(acidanYuzde(a))}
+            className={`rounded-lg py-2 text-[15px] font-semibold transition-colors ${
+              acilar[durak] === a
+                ? 'bg-brand text-white'
+                : 'border border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300'
+            }`}
+          >
+            {a}°
+          </button>
+        ))}
       </div>
       {/*
         Yüzde tek başına anlamsız: "%60 kavis" kaç derece demek, kullanıcı
@@ -12175,14 +12126,15 @@ function IconButton({ children, label, active, onClick, sadeceIkon = false, pasi
       disabled={active === false}
       title={active === false && pasifNot ? pasifNot : label}
       aria-label={label}
-      className={`h-9 rounded-full px-2.5 lg:pl-2.5 lg:pr-3 inline-flex items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap transition-colors shrink-0 ${
+      className={`arac-dugme h-9 rounded-full px-2.5 lg:pl-2.5 lg:pr-3 inline-flex items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap transition-colors shrink-0 ${
         active
           ? 'btn-selected'
           : 'border border-neutral-300 dark:border-[#39414f] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
       }`}
     >
       <span className="shrink-0 flex items-center justify-center">{children}</span>
-      {!sadeceIkon && <span className="hidden lg:inline">{label}</span>}
+      {/* Yatay telefonda da görünür (bkz. .arac-etiket). */}
+      {!sadeceIkon && <span className="arac-etiket hidden lg:inline">{label}</span>}
     </button>
   )
 }

@@ -164,6 +164,25 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
    * ekranın kendi yönünü kaybetmek demekti.
    */
   const cokEkran = Array.isArray(ekranlar) && ekranlar.length > 1
+  /*
+   * TOPLAM GEREKTİREN ALANLAR DÖKÜMLE AYNI.
+   *
+   * computeSpecs tek bir ekranı hesaplıyor; birden çok ekran varsa
+   * aşağıdaki kartlar tasarımın tamamını göstermeli, yoksa üstteki
+   * dökümle çelişiyorlar. Ölçü/köşegen gibi EKRANA ait alanlar elde
+   * duran ekranın kalıyor — onların tasarım geneli karşılığı yok.
+   */
+  if (s && cokEkran && toplam) {
+    s.total = toplam.kabin
+    s.area = toplam.alan
+    s.weight = toplam.agirlik
+    s.pMax = toplam.gucMax
+    s.pTyp = toplam.gucTip
+    s.btuMax = toplam.gucMax * 3.412
+    s.btuTyp = toplam.gucTip * 3.412
+    s.resW = toplam.resW
+    s.resH = toplam.resH
+  }
   const ekranDokumu = cokEkran ? (
     <Kart baslik={t('sp.perScreen')} genis vurgulu>
       <div className="-mx-1 overflow-x-auto">
@@ -268,8 +287,11 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
 
       <Izgara>
         {ekranDokumu}
+        {/* Başlık kartta zaten yazıyor; içeride ikinci kez tekrarlanıyordu. */}
         <Kart baslik={t('sp.screenConfigLxh')}>
-          <Veri buyuk label={t('sp.screenConfigLxh')} value={has ? `${cols} ${t('sp.unit')} x ${rows} ${t('sp.unit')}` : DASH} />
+          <div className="text-[21px] font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50">
+            {has ? `${cols} ${t('sp.unit')} x ${rows} ${t('sp.unit')}` : DASH}
+          </div>
         </Kart>
 
         <Kart baslik={t('sp.screenSpecs')} genis>

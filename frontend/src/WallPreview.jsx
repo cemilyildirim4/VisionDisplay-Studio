@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
-import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, L_KIRILMA_PCT } from './content.js'
+import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, L_KIRILMA_PCT, L_KACIS_ORANI } from './content.js'
 import { videoSrcFor, senkronaKatil } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { yonDonusumu } from './hooks/useYon.js'
@@ -261,9 +261,11 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
     // Kanat başına sütun sayısı: verilmişse (bağımsız kanat girişi), yoksa toplamın eşit bölünmesi
     const lCols = Math.max(1, leftCols || Math.ceil(nCols / 2))
     const rCols = Math.max(1, rightCols || Math.max(1, nCols - lCols))
-    const totalCols = lCols + rCols
-    // Kanat genişlikleri kendi sütun oranına göre (eşit değil, dinamik)
-    const leftW = wPx * (lCols / totalCols)
+    /*
+     * DİKİŞ, SÜTUN ORANINDA DEĞİL: köşeye çaprazdan bakınca uzaklaşan
+     * kanat kısalmış görünür. Ön kanat kutunun daha büyük payını alıyor.
+     */
+    const leftW = wPx * (lCols / (lCols + rCols * L_KACIS_ORANI))
     const rightW = wPx - leftW
     const cw = (model?.widthMm || 500) / 1000
     // Dikiş kenarının üstten/alttan içeri girme oranı (%). Köşenin derinlik hissi.
@@ -909,7 +911,21 @@ export default function WallPreview({
 
   // ---- ÇOKLU EKRAN ----
   if (isMulti) {
-    const list = screens.map((s) => ({ ...s, wm: Math.max(1, s.cols) * cw, hm: Math.max(1, s.rows) * ch }))
+    const list = screens.map((s) => {
+      const sut = Math.max(1, s.cols)
+      /*
+       * L parçası kutusuna KISALMIŞ genişlikle giriyor: köşe çaprazdan
+       * göründüğü için açık hâlinden dar yer kaplar, komşuları da o
+       * kadar sola yaslanır.
+       */
+      const lKisalma =
+        s.type === 'lshape'
+          ? (Math.max(1, s.leftCols || Math.ceil(sut / 2)) +
+              Math.max(1, s.rightCols || sut - Math.ceil(sut / 2)) * L_KACIS_ORANI) /
+            sut
+          : 1
+      return { ...s, wm: sut * cw * lKisalma, hm: Math.max(1, s.rows) * ch }
+    })
     const totalWm = list.reduce((a, s) => a + s.wm, 0)
     const maxHm = Math.max(...list.map((s) => s.hm))
     // Sınırlayıcı duvar: en az ekranları içerecek kadar (Genişlik/Yükseklik'ten)
@@ -1143,6 +1159,39 @@ export default function WallPreview({
                     )}
                   </div>
                 )}
+                {/*
+                  z3: EKRAN NUMARALARI.
+                  Listedeki satırla şeritteki ekranı eşlemek için; tıklamayı
+                  yutmuyor, ekranın kendi çizimine de karışmıyor.
+                */}
+                {placed.length > 1 && (
+                  <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
+                    {placed.map((s, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          position: 'absolute',
+                          left: s.xStart + s.wPx / 2,
+                          top: maxHpx - s.hPx / 2,
+                          transform: 'translate(-50%, -50%)',
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          background: 'rgba(0,19,52,0.55)',
+                        }}
+                      >
+                        {i + 1}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 {/* z2: Ekranlar (tek görselde yalnız çerçeve; diğerinde kendi içerikleri) */}
                 <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'flex-end' }}>
                   {placed.map((s, i) => (
@@ -1473,6 +1522,12 @@ export default function WallPreview({
     : { x: marginXpx, y: marginYpx, w: screenW, h: screenH }
 
   const olcuBoy = Math.max(16, Math.min(30, Math.round(Math.min(gorunenKutu.w, gorunenKutu.h) / 5)))
+  /*
+   * +/- DÜĞMELERİ TASARIMIN ÖLÇÜSÜNE BAĞLI DEĞİL.
+   * Dokunma hedefi her tasarımda aynı olmalı; ölçü etiketlerinin boyu
+   * (olcuBoy) tasarımla büyüyüp küçülmeye devam ediyor.
+   */
+  const dugmeBoy = 28
   /* Etiket puntosu da tasarımla birlikte: düğme boyunun ~%38'i. */
   const olcuYazi = Math.max(7, Math.min(10, Math.round(olcuBoy * 0.34)))
   const marginXm = Math.max(0, (wallWm - screenWm) / 2)
@@ -1692,11 +1747,16 @@ export default function WallPreview({
               {/* Üstteki +/- : Sütun (ekran genişliği) */}
               <div
                 data-pdf-gizle className="absolute flex items-stretch rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
-                style={{ left: gorunenKutu.x + gorunenKutu.w / 2, top: gorunenKutu.y - olcuBoy - olcuYazi * 2.6 - sahnePayPx, transform: 'translateX(-50%)' }}
+                /* Kabın dışına taşıp yarım görünmesinler. */
+                style={{
+                  left: Math.min(Math.max(dugmeBoy, gorunenKutu.x + gorunenKutu.w / 2), Math.max(dugmeBoy, size.w - dugmeBoy)),
+                  top: Math.max(2, gorunenKutu.y - dugmeBoy - olcuYazi * 2.6 - sahnePayPx),
+                  transform: 'translateX(-50%)',
+                }}
               >
-                <StepBtn boy={olcuBoy} dir="minus" onClick={() => onColsChange?.(Math.max(1, nCols - 1))} disabled={nCols <= 1} />
+                <StepBtn boy={dugmeBoy} dir="minus" onClick={() => onColsChange?.(Math.max(1, nCols - 1))} disabled={nCols <= 1} />
                 <div className="w-px bg-neutral-200 dark:bg-[#2c333f]" />
-                <StepBtn boy={olcuBoy} dir="plus" onClick={() => onColsChange?.(Math.min(colsMax, nCols + 1))} disabled={nCols >= colsMax} />
+                <StepBtn boy={dugmeBoy} dir="plus" onClick={() => onColsChange?.(Math.min(colsMax, nCols + 1))} disabled={nCols >= colsMax} />
               </div>
 
               {/* Sağdaki +/- : Satır (ekran yüksekliği) */}
@@ -1704,12 +1764,20 @@ export default function WallPreview({
                 data-pdf-gizle className="absolute flex flex-col rounded-full overflow-hidden border border-neutral-300 dark:border-[#39414f] bg-white dark:bg-[#161a21] shadow-sm z-10"
                 /* Telefonda kabın dışına düşüp tıklanamaz hale geliyordu: sağ
                    kenarın içinde kalacak şekilde sınırlanıyor. */
-                style={{ /* Etiketin genişliği kadar daha dışarıda: hap etiketin üstüne binmesin. */
-                  left: gorunenKutu.x + gorunenKutu.w + olcuYazi * 4.6 + sahnePayPx, top: gorunenKutu.y + gorunenKutu.h / 2, transform: 'translateY(-50%)' }}
+                style={{
+                  /* Etiketin genişliği kadar daha dışarıda: hap etiketin üstüne
+                     binmesin; ama kabın dışına da düşmesin. */
+                  left: Math.min(
+                    gorunenKutu.x + gorunenKutu.w + olcuYazi * 4.6 + sahnePayPx,
+                    Math.max(dugmeBoy, size.w - dugmeBoy / 2 - 2),
+                  ),
+                  top: gorunenKutu.y + gorunenKutu.h / 2,
+                  transform: 'translateY(-50%)',
+                }}
               >
-                <StepBtn boy={olcuBoy} dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
+                <StepBtn boy={dugmeBoy} dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
                 <div className="h-px bg-neutral-200 dark:bg-[#2c333f]" />
-                <StepBtn boy={olcuBoy} dir="plus" onClick={() => onRowsChange?.(Math.min(rowsMax, nRows + 1))} disabled={nRows >= rowsMax} />
+                <StepBtn boy={dugmeBoy} dir="plus" onClick={() => onRowsChange?.(Math.min(rowsMax, nRows + 1))} disabled={nRows >= rowsMax} />
               </div>
 
               {/* İzleme mesafesi çizgisi — mekân sahnesi açıkken gizlenir.

@@ -427,7 +427,31 @@ function IcerikMalzemesi({ texture, uvOffset = 0, uvRepeat = 1 }) {
   }, [dilim, texture])
 
   if (dilim) return <meshBasicMaterial map={dilim} toneMapped={false} />
-  return <meshStandardMaterial color="#0a4f8c" emissive="#0a4f8c" emissiveIntensity={0.4} />
+  /*
+   * İÇERİK YOKSA KAPALI LED.
+   *
+   * Doku yokken yüzey mavi ve ışıklı çiziliyordu; oysa "LED EKRAN"
+   * seçeneği "içerik yok" demek. Kapalı bir panel koyu ve mat görünür —
+   * 2D önizlemedeki karşılığı da bu.
+   */
+  return <meshStandardMaterial color="#0d0f12" roughness={0.85} metalness={0.1} />
+}
+
+/**
+ * İlk kare çizildiğinde haber verir.
+ *
+ * Sahne kurulurken tuval kapkara duruyor; "yüklendi" diyebilmek için
+ * gerçekten bir kare çizilmesini beklemek gerekiyor — bileşenin monte
+ * olması yetmiyor, asıl bekleme geometri ve dokularda.
+ */
+function IlkKare({ onIlkKare }) {
+  const bildirildi = useRef(false)
+  useFrame(() => {
+    if (bildirildi.current) return
+    bildirildi.current = true
+    onIlkKare?.()
+  })
+  return null
 }
 
 /** Tek bir ekranı, biçimine göre doğru duvar bileşeniyle çizer. */
@@ -965,6 +989,13 @@ function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
 export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, screens, onOpenCamera, onSaved }) {
   const { t } = useLang()
   const { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy } = useGlbAr()
+  /* Tasarımda köşe var mı: tek ekranın kendi türü ya da listedeki herhangi biri. */
+  const koseliMi =
+    (screenType || 'flat') === 'lshape' ||
+    (Array.isArray(screens) && screens.some((x) => (x?.type || 'flat') === 'lshape'))
+
+  /* İlk kare çizilene kadar yükleniyor göstergesi duruyor. */
+  const [sahneHazir, setSahneHazir] = useState(false)
 
   /*
    * AR GERÇEKTEN AÇILABİLİYOR MU?
@@ -1395,7 +1426,16 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
       <Canvas
         shadows
         gl={{ preserveDrawingBuffer: true }}
-        camera={{ position: [0, toplamH * 0.12, uzaklik], fov: 45, far: Math.max(100, uzaklik * 10) }}
+        /*
+          Köşe varsa kamera baştan biraz yana: karşıdan bakınca köşeli
+          tasarım düz bir şerit gibi görünüyor, köşe ancak döndürünce
+          anlaşılıyordu.
+        */
+        camera={{
+          position: [koseliMi ? uzaklik * 0.34 : 0, toplamH * 0.12, koseliMi ? uzaklik * 0.9 : uzaklik],
+          fov: 45,
+          far: Math.max(100, uzaklik * 10),
+        }}
         dpr={[1, 2]}
       >
         <SceneContent
@@ -1411,8 +1451,17 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           rightCols={rightCols}
           screens={screens}
         />
+        <IlkKare onIlkKare={() => setSahneHazir(true)} />
         <OrbitControls makeDefault enablePan={false} minDistance={0.8} maxDistance={Math.max(12, uzaklik * 3)} />
       </Canvas>
+
+      {/* Sahne kurulana kadar: kapkara ekran "donmuş" izlenimi veriyordu. */}
+      {!sahneHazir && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#0b0d12] text-white/70">
+          <span className="h-9 w-9 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+          <span className="text-[13px]">{t('scene3d.loading')}</span>
+        </div>
+      )}
 
       {/*
         ÖRNEK MEKÂN ŞERİDİ — alt barın üstünde açılıp kapanır; kameradaki

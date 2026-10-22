@@ -21,6 +21,8 @@ export default function ChatHelp({ open, onClose }) {
   // Örnek sorular ilk açılışta görünür, ilk sorudan sonra kapanır
   const [showTips, setShowTips] = useState(true)
   const bodyRef = useRef(null)
+  /* Son balon: kaydırma onun başına hizalanıyor. */
+  const sonBalonRef = useRef(null)
 
   /*
    * SOHBETİN HAFIZASI — bir önceki mesaj unutulmuyor.
@@ -43,9 +45,24 @@ export default function ChatHelp({ open, onClose }) {
     setShowTips(true)
   }, [lang])
 
-  // Yeni mesaj gelince en alta kaydır
+  /*
+   * CEVABIN BAŞI HİZALANIYOR, SONU DEĞİL.
+   *
+   * En alta kaydırmak uzun cevaplarda kullanıcıyı metnin sonuna
+   * düşürüyordu; okumaya baştan başlamak için yukarı kaydırmak
+   * gerekiyordu. Son balonun üstü görünür oluyor, devamını görmek
+   * isteyen kendisi kaydırıyor.
+   */
   useEffect(() => {
-    if (open && bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
+    if (!open) return
+    const kap = bodyRef.current
+    const son = sonBalonRef.current
+    if (!kap) return
+    if (!son) {
+      kap.scrollTop = kap.scrollHeight
+      return
+    }
+    kap.scrollTop = Math.max(0, son.offsetTop - 8)
   }, [msgs, open])
 
   // Esc ile kapat
@@ -169,21 +186,25 @@ export default function ChatHelp({ open, onClose }) {
       {open && (
         <div className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] sm:w-96 max-h-[min(78vh,560px)] bg-white dark:bg-[#161a21] rounded-2xl shadow-2xl border border-neutral-200 dark:border-[#2c333f] flex flex-col overflow-hidden">
           {/* Başlık */}
-          <div className="bg-brand text-white px-4 py-3 flex items-center justify-between shrink-0 relative">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-8 h-8 rounded-lg bg-white dark:bg-[#121821] flex items-center justify-center shrink-0 p-1">
+          {/*
+            Başlık kendi katmanında (z-10) ve opak: kaydırırken mesajların
+            üstüne binmesin, yazıyı kessin.
+          */}
+          <div className="relative z-10 flex shrink-0 items-center justify-between bg-brand px-3.5 py-2 text-white">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-7 h-7 rounded-lg bg-white dark:bg-[#121821] flex items-center justify-center shrink-0 p-0.5">
                 <img src="/masaustu-logo-isaret.png" alt="" className="w-full h-full object-contain" />
               </span>
               <div className="min-w-0">
-                <div className="text-sm font-semibold leading-tight truncate">{t('chat.title')}</div>
-                <div className="text-[11px] text-white/70 leading-tight truncate">{t('chat.subtitle')}</div>
+                <div className="text-[13px] font-semibold leading-tight truncate">{t('chat.title')}</div>
+                <div className="text-[10.5px] text-white/70 leading-tight truncate">{t('chat.subtitle')}</div>
               </div>
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label={t('exp.close')}
-              className="text-white/70 hover:text-white transition-colors inline-flex items-center justify-center min-h-[44px] min-w-[44px] shrink-0"
+              className="text-white/70 hover:text-white transition-colors inline-flex items-center justify-center min-h-[36px] min-w-[36px] shrink-0"
             >
               <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <path d="M6 6l12 12M18 6L6 18" />
@@ -198,13 +219,14 @@ export default function ChatHelp({ open, onClose }) {
               m.who === 'me' ? (
                 <div
                   key={i}
+                  ref={i === msgs.length - 1 ? sonBalonRef : null}
                   className="self-end max-w-[88%] text-[13px] leading-relaxed whitespace-pre-line rounded-2xl rounded-br-sm px-3.5 py-2.5 bg-brand text-white"
                 >
                   {m.text}
                 </div>
               ) : (
                 // Bot mesajları logolu — kimin konuştuğu belli olsun
-                <div key={i} className="self-start flex items-start gap-2 max-w-[92%]">
+                <div key={i} ref={i === msgs.length - 1 ? sonBalonRef : null} className="self-start flex items-start gap-2 max-w-[92%]">
                   <img
                     src="/masaustu-logo-isaret.png"
                     alt=""

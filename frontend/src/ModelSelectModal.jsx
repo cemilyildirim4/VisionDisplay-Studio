@@ -189,6 +189,27 @@ function SortArrow({ dir }) {
   )
 }
 
+/**
+ * Model satırındaki küçük ürün görseli.
+ * Veritabanında adres yoksa genel bir ekran ikonu konuyor — boş kutu
+ * bırakmak satırları hizasız gösteriyordu.
+ */
+function UrunGorseli({ kaynak }) {
+  return (
+    <span className="flex h-7 w-10 shrink-0 items-center justify-center overflow-hidden rounded border border-neutral-200 bg-neutral-50 dark:border-[#2c333f] dark:bg-[#1b2029]">
+      {kaynak ? (
+        <img src={kaynak} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2.5" y="5" width="19" height="12" rx="1" />
+          <line x1="8" y1="20" x2="16" y2="20" />
+          <line x1="12" y1="17" x2="12" y2="20" />
+        </svg>
+      )}
+    </span>
+  )
+}
+
 /** Üst şeritteki açılır filtre düğmesi. */
 function FilterDropdown({ filter, selected, onToggle, isOpen, onOpen }) {
   const { t } = useLang()
@@ -532,9 +553,16 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
             ))}
           </div>
 
-          {/* Arama */}
-          <div className="flex items-center gap-3 mb-3 shrink-0">
-            <div className="relative flex-1">
+          {/*
+            ÜST ŞERİT TEK SATIR.
+
+            Arama, ürün tipi ve filtre ayrı ayrı üç satır kaplıyordu; alçak
+            ekranlarda listeye birkaç piksel kalıyordu. Filtreler artık her
+            ekranda kapalı başlıyor — seçilmiş filtre varsa sayısı düğmede
+            yazıyor, yani kapalıyken de ne olduğu belli.
+          */}
+          <div className="mb-3 flex flex-wrap items-center gap-2 shrink-0">
+            <div className="relative min-w-[160px] flex-1">
               <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500">
                 <circle cx="11" cy="11" r="7" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -543,14 +571,9 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('msm.modelNamePh')}
-                className="w-full max-w-full bg-neutral-100 dark:bg-[#222833] rounded-lg py-2 min-h-[44px] pl-10 pr-3 text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand/25"
+                className="w-full max-w-full bg-neutral-100 dark:bg-[#222833] rounded-lg py-2 min-h-[40px] pl-10 pr-3 text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand/25"
               />
             </div>
-          </div>
-
-          {/* Ürün tipi: Kabin / Panel */}
-          <div className="flex flex-wrap items-center gap-2 mb-3 shrink-0">
-            <span className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 mr-1">{t('msm.filterType')}</span>
             {[
               { v: 'all', labelKey: 'msm.allTypes' },
               { v: PRODUCT_TYPES.CABINET, labelKey: 'type.cabinet' },
@@ -560,7 +583,7 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                 key={f.v}
                 type="button"
                 onClick={() => setTypeFilter(f.v)}
-                className={`rounded-full px-3 py-2 min-h-[44px] text-[12px] font-semibold border transition-colors ${
+                className={`rounded-full px-3 py-2 min-h-[40px] text-[12px] font-semibold border transition-colors ${
                   typeFilter === f.v
                     ? 'btn-selected border'
                     : 'border-neutral-300 dark:border-[#39414f] text-neutral-600 dark:text-neutral-300 hover:border-brand'
@@ -569,49 +592,46 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                 {t(f.labelKey)}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setFiltreAcik((a) => !a)}
+              aria-expanded={filtreAcik}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 min-h-[40px] text-[12px] font-semibold transition-colors ${
+                filtreAcik || filterCount > 0
+                  ? 'border-brand text-brand'
+                  : 'border-neutral-300 dark:border-[#39414f] text-neutral-600 dark:text-neutral-300 hover:border-brand'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+              {t('msm.filter')}
+              {filterCount > 0 && <span>({filterCount})</span>}
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${filtreAcik ? 'rotate-180' : ''}`}>
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
           </div>
 
-          {/*
-            Filtre şeridi — eskiden soldaki 240 px'lik sütundaydı.
-            Üste alınınca tablo tüm genişliği kullanıyor.
-          */}
           <div className="shrink-0 mb-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setFiltreAcik((a) => !a)}
-                aria-expanded={filtreAcik}
-                className="flex items-center gap-1.5 text-sm font-medium text-neutral-900 dark:text-neutral-100 mr-1 sm:cursor-default"
-              >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                </svg>
-                {t('msm.filter')}
-                {filterCount > 0 && <span className="text-brand">({filterCount})</span>}
-                {/* Ok yalnızca telefonda: orada açılıp kapanıyor */}
-                {kucukEkran && (
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${filtreAcik ? "rotate-180" : ""}`}>
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                )}
-              </button>
-              <span className={!kucukEkran || filtreAcik ? "contents" : "hidden"}>
-              {filterList.map((f) => (
-                <FilterDropdown
-                  key={f.label}
-                  filter={f}
-                  selected={filters[f.label] || []}
-                  onToggle={toggleFilter}
-                  isOpen={openFilter === f.label}
-                  onOpen={() => setOpenFilter((p) => (p === f.label ? null : f.label))}
-                />
-              ))}
-              </span>
-            </div>
+            {filtreAcik && (
+              <div className="flex flex-wrap items-center gap-2">
+                {filterList.map((f) => (
+                  <FilterDropdown
+                    key={f.label}
+                    filter={f}
+                    selected={filters[f.label] || []}
+                    onToggle={toggleFilter}
+                    isOpen={openFilter === f.label}
+                    onOpen={() => setOpenFilter((p) => (p === f.label ? null : f.label))}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Seçili filtreler rozet olarak — tek tek kaldırılabilir */}
             {filterCount > 0 && (
-              <div className="flex flex-wrap items-center gap-2 mt-2.5">
+              <div className={`flex flex-wrap items-center gap-2 ${filtreAcik ? 'mt-2.5' : ''}`}>
                 {filterList.flatMap((f) =>
                   (filters[f.label] || []).map((opt) => (
                     <button
@@ -720,6 +740,8 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose }) 
                       >
                         {idx === 0 ? (
                           <span className="inline-flex items-center gap-2 min-w-0 flex-wrap">
+                            {/* Ürün görseli: kod okumadan hangi ürün olduğu anlaşılsın. */}
+                            <UrunGorseli kaynak={c.imageUrl} />
                             <span className="truncate">{val}</span>
                             <ProductTypeBadge productType={c.productType} />
                           </span>
