@@ -608,10 +608,22 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
 
     // Zinciri yatayda ortala (ilk sol uç ile son sağ uç arasının ortası orijine)
     const ortala = (konum[0].x + uclar[0].sol.x + x) / 2
-    const genislikler = uclar.map((u) => u.sag.x - u.sol.x)
-    const toplamW = genislikler.reduce((acc, w) => acc + w, 0)
+    /*
+     * DİLİM GERÇEK GENİŞLİKLERE GÖRE, 2D ile birebir aynı kural.
+     *
+     * Yüzey = kümedeki ekranların gerçek genişlikleri toplamı; her ekran
+     * kendi payına düşen dilimi gösteriyor. Açı yalnızca o yüzeyin
+     * görünüşünü değiştiriyor, dilimin içeriğini değil.
+     */
+    const gercekW = list.map((e) => (e.wm > 0 ? e.wm : e.cols * cabW))
+    const kumeToplam = new Map()
+    const kumeOnceki = new Map()
+    list.forEach((e, i) => {
+      if (!e.paylasim) return
+      kumeOnceki.set(i, kumeToplam.get(e.paylasim) || 0)
+      kumeToplam.set(e.paylasim, (kumeToplam.get(e.paylasim) || 0) + gercekW[i])
+    })
 
-    let uv = 0
     return list.map((s, i) => {
       const h = s.rows * cabH
       /*
@@ -621,19 +633,20 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
        */
       const oncekiDonus = i > 0 ? uclar[i].sol.aci - uclar[i - 1].sag.aci : 0
       const sonrakiDonus = i < list.length - 1 ? uclar[i + 1].sol.aci - uclar[i].sag.aci : 0
-      const yer = {
+      /* Kümede olmayan ekran görselin tamamını kendi yüzeyinde gösteriyor. */
+      const kumeW = s.paylasim ? kumeToplam.get(s.paylasim) : 0
+      const dilimVar = kumeW > 0 && gercekW[i] > 0
+      return {
         key: i,
         s,
         x: konum[i].x - ortala,
         y: (h - enYuksek) / 2,
         z: konum[i].z,
-        uvOffset: uv,
-        uvRepeat: genislikler[i] / toplamW,
+        uvOffset: dilimVar ? kumeOnceki.get(i) / kumeW : 0,
+        uvRepeat: dilimVar ? gercekW[i] / kumeW : 1,
         payL: dikisPayi(cabD, oncekiDonus),
         payR: dikisPayi(cabD, sonrakiDonus),
       }
-      uv += genislikler[i] / toplamW
-      return yer
     })
   }, [screens, cabW, cabH, cabD, curveAmount])
 
