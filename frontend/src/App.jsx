@@ -7890,6 +7890,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const olcuAraciAcik = refKipi || ref2Kipi || lKoseKipi || alanKipi || taslakKutuAcik
 
+  /*
+   * YERİNDE 3B KATMAN ÇİZİLİYOR MU.
+   *
+   * Tek kaynak: hem katmanın kendisi hem de "düz çizimi gizle" kararı
+   * buradan okuyor. Ayrı ayrı yazıldıklarında ikisi ayrışıyordu — ölçü
+   * kipi katmanı kaldırıyor, "gizle" kararı ise bir kez açılmış
+   * uc3dHazir bayrağına bakmaya devam ediyordu: 3B yok, 2B de gizli,
+   * ekranda hiçbir şey kalmıyordu.
+   */
+  const uc3dKatmanVar =
+    PANEL.kabinGovdesi &&
+    !tasarimGizli &&
+    !duvarDunya &&
+    YERINDE_3B &&
+    surukleAktif &&
+    !lKoseCizimi &&
+    !refKipi &&
+    !lKoseKipi
+
   /** Dörtgenin merkezi, durusaOturt'un beklediği {cx, cy} adlarıyla. */
   const koseMerkeziCx = (k) => ({
     cx: k.reduce((t, q) => t + q.x, 0) / k.length,
@@ -8640,16 +8659,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * böyleydi, referans adımı için de aynısı geçerli.
                */
               /* Ölçü aracı açıkken tasarım çizilmiyor (bkz. olcuAraciAcik). */
-              ekranGizle={(uc3dHazir && !duvarDunya) || tasarimGizli || olcuAraciAcik}
+              /* Düz çizim yalnızca 3B GERÇEKTEN çiziliyorken gizleniyor. */
+              ekranGizle={(uc3dHazir && uc3dKatmanVar && !duvarDunya) || tasarimGizli || olcuAraciAcik}
               uc3dKatman={
-                PANEL.kabinGovdesi &&
-                !tasarimGizli &&
-                !duvarDunya &&
-                YERINDE_3B &&
-                surukleAktif &&
-                !lKoseCizimi &&
-                !refKipi &&
-                !lKoseKipi
+                uc3dKatmanVar
                   ? ({ koseler, genislik, yukseklik }) => (
                       <Suspense fallback={null}>
                         <Mekan3D
