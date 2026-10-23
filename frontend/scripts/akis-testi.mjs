@@ -7,8 +7,7 @@
  *
  * Denenen akış (yeni sıra):
  *   model seç → fotoğraf yükle → REFERANS (2 nokta + santim) → tek seçim
- *   A) "Alanı işaretle"    → 4 köşe → onayla → en/boy → sığdır → bitir
- *   B) "Serbest yerleştir" → kutu kabin sayısıyla büyüyor mu → bitir
+ *   A) "Duvar diplerini işaretle" → noktalar → sistem yerleştirir
  *
  * Çökme denetiminin yanında iki ÜRÜN denetimi daha var, ikisi de canlıda
  * çıkan hatalardan geliyor:
@@ -427,173 +426,65 @@ async function akis(baslik, yol) {
   }
 }
 
-/* ── A) ALANI İŞARETLE ───────────────────────────────────────────────── */
-const a = await akis('A — ALANI İŞARETLE', async ({ s, bas, denetle, icerir, dus }) => {
-  if (!(await bas('Alanı işaretle', 1800))) return dus('"Alanı işaretle" düğmesi bulunamadı')
-  if (!(await denetle('alan işaretlemeye geçildi'))) return false
-
-  /* Varsayılan yol köşe seçme; kenar çizimi düğmenin arkasında durmalı. */
-  if (!(await icerir('köşesini işaretleyin'))) return dus('köşe işaretleme adımı açılmadı')
-  if (!(await icerir('Köşe görünmüyor'))) return dus('"Köşe görünmüyor" düğmesi yok')
-
-  await dortKose(s)
-  if (!(await denetle('4 köşe işaretlendi'))) return false
-
-  /* Çizgilerin kesişiminden geçerli bir dörtgen çıkmalı: onay açılmış olmalı. */
-  const kart = await kartBilgisi(s)
-  const onayAcik = (kart.dugmeler || []).includes('Alanı onayla')
-  console.log('  · onay düğmesi açık        :', onayAcik ? 'evet' : 'HAYIR')
-  if (!onayAcik) return dus('kenarlardan geçerli bir alan çıkmadı')
-
-  await bas('Alanı onayla', 2500)
-  if (!(await denetle('alan onaylandı'))) return false
-
-  /*
-   * ÜRÜN KARARI: ölçü sürerken tasarım görünmüyor; onay da göstermiyor.
-   * Tasarım "Tasarımı ölçüye sığdır" deyince çıkıyor.
-   */
-  /*
-   * ÜRÜN KARARI: ölçü sürerken tasarım görünmüyor ama ALAN ONAYLANINCA
-   * görünüyor — onayla birlikte ölçü işi bitiyor.
-   */
-  const g1 = await tasarimGorunur(s)
-  console.log('  · onaydan sonra (görünmeli)   :', JSON.stringify(g1))
-  if (!g1.var || !(g1.saydamlik > 0.05) || !(g1.en > 10)) {
-    return dus('alan onaylandığı hâlde tasarım görünmüyor')
+/* ── A) DUVAR DİBİNİ İŞARETLE ────────────────────────────────────────── */
+/*
+ * Kullanıcı duvarın yere değdiği çizginin iki ucuna tıklıyor; gerisini
+ * sistem hesaplıyor. Düz tek ekranda iki tık yetiyor.
+ */
+const duvarDibiniIsaretle = async (s, bas, sayi = 2) => {
+  if (!(await bas('Duvar diplerini işaretle', 1800))) return false
+  const t = await tuval(s)
+  /* Noktalar fotoğrafın içinde kalmalı: kenara çok yakın tıklama sayılmıyor. */
+  const yerler = [
+    [t.x + t.w * 0.3, t.y + t.h * 0.7],
+    [t.x + t.w * 0.7, t.y + t.h * 0.65],
+    [t.x + t.w * 0.5, t.y + t.h * 0.6],
+    [t.x + t.w * 0.4, t.y + t.h * 0.55],
+  ].slice(0, sayi)
+  for (const [px, py] of yerler) {
+    await s.mouse.move(px, py)
+    await s.mouse.down()
+    await s.mouse.up()
+    await s.waitForTimeout(600)
   }
-
-  if ((await olcuYaz(s, 300, 150)) < 2) return dus('en/boy kutuları bulunamadı')
-  if (!(await denetle('gerçek en/boy yazıldı'))) return false
-
-  if (!(await bas('Tasarımı ölçüye sığdır', 2800))) {
-    return dus('"Tasarımı ölçüye sığdır" çıkmadı (en/boy yazıldığı hâlde)')
-  }
-  if (!(await denetle('ölçüye sığdırıldı'))) return false
-
-  const g2 = await tasarimGorunur(s)
-  console.log('  · sığdırdıktan sonra          :', JSON.stringify(g2))
-  if (!g2.var || !(g2.saydamlik > 0.05) || !(g2.en > 10)) {
-    return dus('sığdırmadan sonra tasarım görünmüyor')
-  }
-
-  /*
-   * TEK SEFERDE TAM OTURMA.
-   *
-   * Kural: taşma yok ve alana sığan EN FAZLA kabin. Yani her eksende
-   *   0 ≤ alan − tasarım < bir kabin
-   * olmalı. Bir kabinden büyük boşluk kalıyorsa bir sıra daha sığardı.
-   */
-  /*
-   * TEK SEFERDE TAM OTURMA.
-   *
-   * Kural: taşma yok ve alana sığan EN FAZLA kabin. Yani her eksende
-   *   0 ≤ alan − tasarım < bir kabin
-   * olmalı; artan bir kabinden büyükse bir sıra daha sığardı.
-   * Alan 300 × 150 cm = 3000 × 1500 mm (yukarıda yazıldı).
-   */
-  const ilk = await panelOlcusu(s)
-  console.log('  · panel ölçüsü                :', JSON.stringify(ilk))
-  if (!ilk.sutun || !ilk.satir) return dus('panelde sütun/satır ölçüsü okunamadı')
-  const denetleEksen = (ad, o, alanMm) => {
-    const artan = alanMm - o.toplamMm
-    console.log('  · ' + ad + ': ' + o.adet + ' × ' + o.kabinMm + ' = ' + o.toplamMm + ' mm, artan ' + artan + ' mm')
-    if (artan < 0) return ad + ' taşıyor'
-    if (artan >= o.kabinMm) return ad + ' tam oturmuyor, bir tane daha sığardı'
-    return null
-  }
-  const h1 = denetleEksen('en', ilk.sutun, 3000) || denetleEksen('boy', ilk.satir, 1500)
-  if (h1) return dus(h1)
-
-  /* İkinci basış hiçbir şeyi değiştirmemeli: tek seferde oturmuş olmalı. */
-  await bas('Tasarımı ölçüye sığdır', 2500)
-  const ikinci = await panelOlcusu(s)
-  if (ikinci.sutun?.adet !== ilk.sutun.adet || ikinci.satir?.adet !== ilk.satir.adet) {
-    return dus('ikinci sığdırma sonucu değiştirdi: ' + JSON.stringify(ikinci))
-  }
-  if (!(await denetle('tek seferde tam oturdu'))) return false
-
-  await bas('Bitir ve tasarımı göster', 2500)
-  if (!(await denetle('bitirildi'))) return false
-  console.log('  · sihirbaz kapandı         :', (await icerir('Alanı onayla')) ? 'HAYIR' : 'evet')
+  await s.waitForTimeout(2000)
   return true
-})
+}
 
-/* ── B) SERBEST YERLEŞTİR ────────────────────────────────────────────── */
-const b = await akis('B — SERBEST YERLEŞTİR', async ({ s, bas, denetle, icerir, dus }) => {
-  if (!(await bas('Serbest yerleştir', 2500))) return dus('"Serbest yerleştir" düğmesi bulunamadı')
-  if (!(await denetle('serbest yerleştirmeye geçildi'))) return false
+const a = await akis('A — DUVAR DİBİ', async ({ s, bas, denetle, icerir, dus }) => {
+  if (!(await icerir('Duvar diplerini işaretle'))) return dus('duvar dibi adımı açılmadı')
+  /* Eski yollar geri gelmemeli. */
+  if (await icerir('Serbest yerleştir')) return dus('eski "Serbest yerleştir" hâlâ duruyor')
 
-  if (await icerir('henüz hazır değil')) return dus('"henüz hazır değil" notu hâlâ çıkıyor')
-  if (!(await icerir('Kutuyu gövdesinden tutup'))) return dus('yerleştirme adımı açılmadı')
-  if (await icerir('Yerleşim alanının ölçüsü')) return dus('eski santim kutusu adımına düştü')
+  if (!(await duvarDibiniIsaretle(s, bas))) return dus('"Duvar diplerini işaretle" düğmesi yok')
+  if (!(await denetle('duvar dibi işaretlendi'))) return false
 
   /*
-   * Kutu konurken tasarım GİZLİ: taşınan şey kesikli kutu, altındaki
-   * duvarın görünmesi gerekiyor. Ölçüsü yine de okunuyor — büyüyüp
-   * büyümediği saydamlıktan bağımsız.
+   * ÜRÜN KARARI: işaretleme bitince sistem yerleştiriyor ve tasarım
+   * GÖRÜNÜR oluyor. Ayrıca bir düğmeye basılması beklenmiyor.
    */
-  const once = await tasarimGorunur(s)
-  console.log('  · başlangıç kutusu (gizli)    :', JSON.stringify(once))
-  if (!once.var || !(once.en > 10)) return dus('serbest yerleştirmede kutu kurulmadı')
-  if (once.saydamlik > 0.05) return dus('kutu konurken tasarım görünüyor (gizli olmalıydı)')
-
-  const artti = (await kabinArtir(s, 'Sütunlar')) || (await kabinArtir(s, 'Sütun'))
-  if (!artti) return dus('sütun adımlayıcısı bulunamadı')
-  await s.waitForTimeout(2200)
-  const sonra = await tasarimGorunur(s)
-  console.log('  · sütun artınca            :', JSON.stringify(sonra))
-  if (!(sonra.en > once.en + 2)) return dus('kutu kabin sayısıyla büyümedi')
-  if (!(await denetle('kutu kabin sayısıyla büyüdü'))) return false
-
-  await bas('Bitir ve tasarımı göster', 2500)
-  if (!(await denetle('bitirildi'))) return false
-  /* "Bitir ve tasarımı göster" adını hak etmeli. */
-  const son = await tasarimGorunur(s)
-  console.log('  · bitirince                   :', JSON.stringify(son))
-  if (!(son.saydamlik > 0.05)) return dus('bitirildiği hâlde tasarım görünmüyor')
-  return true
-})
-
-/* ── C) KÖŞE GÖRÜNMÜYOR → KENARLARDAN ─────────────────────────────── */
-const c = await akis('C — KÖŞE GÖRÜNMÜYOR', async ({ s, bas, denetle, icerir, dus }) => {
-  if (!(await bas('Alanı işaretle', 1800))) return dus('"Alanı işaretle" düğmesi bulunamadı')
-  if (!(await denetle('alan işaretlemeye geçildi'))) return false
-
-  /* Üç köşe normal; dördüncü köşe görünmüyor varsayılıyor. */
-  const k = await ucKose(s)
-  if (!(await denetle('3 köşe işaretlendi'))) return false
-
-  if (!(await bas('Köşe görünmüyor — kenarlardan bul', 1500))) {
-    return dus('"Köşe görünmüyor" düğmesi bulunamadı')
-  }
-  if (!(await icerir('birleşen iki kenarı'))) return dus('köşe bulma kipi açılmadı')
-  if (!(await denetle('köşe bulma kipine geçildi'))) return false
-
-  await ikiKenar(s, k)
-  if (!(await denetle('iki kenar işaretlendi'))) return false
-
-  if (!(await bas('Köşeyi ekle', 1800))) return dus('"Köşeyi ekle" açılmadı (kesişim bulunamadı)')
-  if (!(await denetle('köşe kenarlardan bulundu'))) return false
-
-  /* Kip kapanmalı, köşe seçmeye dönülmeli ve dördüncü köşe eklenmiş olmalı. */
-  if (await icerir('birleşen iki kenarı')) return dus('köşe bulma kipi kapanmadı')
-  if (!(await icerir('4 / 4'))) return dus('dördüncü köşe eklenmedi')
-
-  const kart = await kartBilgisi(s)
-  if (!(kart.dugmeler || []).includes('Alanı onayla')) {
-    return dus('kenarlardan bulunan köşeyle alan onaylanabilir değil')
-  }
-  await bas('Alanı onayla', 2500)
-  if (!(await denetle('alan onaylandı'))) return false
+  const g = await tasarimGorunur(s)
+  console.log('  · yerleştikten sonra          :', JSON.stringify(g))
+  if (!g.var || !(g.en > 10)) return dus('tasarım yerleşmedi')
+  if (!(g.saydamlik > 0.05)) return dus('yerleştiği hâlde tasarım görünmüyor')
   return true
 })
 
 /* ── D) SIFIRLA, SONRA BAŞTAN KUR ─────────────────────────────────── */
 const dYol = await akis('D — SIFIRLA VE BAŞTAN KUR', async ({ s, bas, denetle, icerir, dus }) => {
   /* Akışın ORTASINDA sıfırlanıyor: en çok artık state burada kalıyor. */
-  if (!(await bas('Alanı işaretle', 1800))) return dus('"Alanı işaretle" düğmesi bulunamadı')
-  await ucKose(s)
-  if (!(await denetle('3 köşe işaretlendi (yarım bırakılacak)'))) return false
+  if (!(await bas('Duvar diplerini işaretle', 1800))) {
+    return dus('"Duvar diplerini işaretle" düğmesi bulunamadı')
+  }
+  /* Tek nokta konup yarım bırakılıyor. */
+  {
+    const t = await tuval(s)
+    await s.mouse.move(t.x + t.w * 0.3, t.y + t.h * 0.7)
+    await s.mouse.down()
+    await s.mouse.up()
+    await s.waitForTimeout(700)
+  }
+  if (!(await denetle('1 nokta konuldu (yarım bırakılacak)'))) return false
 
   if (!(await bas('Sıfırla', 1200))) return dus('"Sıfırla" düğmesi bulunamadı')
   if (!(await icerir('tüm ayarları sıfırlar'))) return dus('sıfırlama onayı açılmadı')
@@ -643,23 +534,23 @@ const dYol = await akis('D — SIFIRLA VE BAŞTAN KUR', async ({ s, bas, denetle
   if (!(await kartaSayiYaz(s, 210))) return dus('ikinci kurulumda santim kutusu yok')
   await s.waitForTimeout(900)
   if (!(await bas('Devam', 1800))) return dus('ikinci kurulumda ölçekten sonra "Devam" yok')
-  if (!(await bas('Alanı işaretle', 1800))) return dus('ikinci kurulumda alan adımı açılmadı')
-
+  if (!(await icerir('Duvar diplerini işaretle'))) {
+    return dus('ikinci kurulumda duvar dibi adımı açılmadı')
+  }
   /* Eski işaretler geride kalmamalı. */
-  if (!(await icerir('0 / 4'))) return dus('eski köşeler taşındı (sayaç sıfırdan başlamadı)')
+  if (!(await icerir('0 / 2'))) return dus('eski noktalar taşındı (sayaç sıfırdan başlamadı)')
 
-  await dortKose(s)
-  await bas('Alanı onayla', 2500)
-  if (!(await denetle('ikinci kurulumda alan onaylandı'))) return false
+  if (!(await duvarDibiniIsaretle(s, bas))) return dus('ikinci kurulumda işaretleme düğmesi yok')
+  if (!(await denetle('ikinci kurulumda yerleştirildi'))) return false
+  const g2 = await tasarimGorunur(s)
+  if (!g2.var || !(g2.saydamlik > 0.05)) return dus('ikinci kurulumda tasarım görünmüyor')
   return true
 })
 
 await tarayici.close()
 
 console.log('\n─────────────────────────────')
-console.log('A (köşe işaretle)    :', a ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
-console.log('B (serbest yerleştir):', b ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
-console.log('C (köşe görünmüyor)  :', c ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
+console.log('A (duvar dibi)       :', a ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
 console.log('D (sıfırla, baştan)  :', dYol ? 'GEÇTI ✓' : 'DÜŞTÜ ✗')
 if (hataSayisi > 0) {
   console.log('\nAKIS TESTI DUSTU — yayina alinmamali.')
