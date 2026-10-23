@@ -7894,7 +7894,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * daha hiç çizilmiyordu. İşaretleme sürerken gizlemenin gerekçesi
    * geçerli; onu zaten lKoseKipi anlatıyor.
    */
-  const olcuAraciAcik = refKipi || ref2Kipi || lKoseKipi || alanKipi || taslakKutuAcik
+  /*
+   * BİTEN ÖLÇÜ ARTIK GİZLEMİYOR.
+   *
+   * Kipler işaretleme bittikten sonra da açık kalıyor (çizgiler ekranda
+   * dursun diye; onları "Çizgileri gizle" kaldırıyor). Gizleme kuralı
+   * doğrudan kipe bakınca tasarım bir daha hiç çizilmiyordu: referans
+   * alınmış, alan işaretlenmiş, içerik seçilmiş ama fotoğrafta hiçbir
+   * şey yok.
+   *
+   * Her araç kendi BİTİŞ ölçütüyle susuyor:
+   *   referans → ölçek (px/cm) alındı,
+   *   alan     → dört köşe kondu.
+   */
+  /*
+   * ÖLÇÜ BİTTİ Mİ.
+   *
+   * Ölçek alınmış ve alanın dört köşesi belli: ekranın nereye, hangi
+   * büyüklükte duracağı artık biliniyor. Bu noktadan sonra tasarımı
+   * gizlemenin hiçbir gerekçesi yok.
+   */
+  const olcuTamam = !!refPxCm && alanNokta.length === 4
+  const refIsaretleniyor = (refKipi || ref2Kipi) && !refPxCm
+  const alanIsaretleniyor = alanKipi && alanNokta.length < 4
+  const olcuAraciAcik = refIsaretleniyor || lKoseKipi || alanIsaretleniyor || taslakKutuAcik
 
   /*
    * YERİNDE 3B KATMAN ÇİZİLİYOR MU.
@@ -8666,7 +8689,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                */
               /* Ölçü aracı açıkken tasarım çizilmiyor (bkz. olcuAraciAcik). */
               /* Düz çizim yalnızca 3B GERÇEKTEN çiziliyorken gizleniyor. */
-              ekranGizle={(uc3dHazir && uc3dKatmanVar && !duvarDunya) || tasarimGizli || olcuAraciAcik}
+              /*
+                Ölçü bitince tasarım çıkıyor: ayrıca bir düğmeye basılması
+                beklenmiyor (o düğme akış yenilenirken kalkmıştı ve
+                tasarimAcik'ı yazan kimse kalmamıştı).
+              */
+              ekranGizle={
+                (uc3dHazir && uc3dKatmanVar && !duvarDunya) ||
+                (tasarimGizli && !olcuTamam) ||
+                olcuAraciAcik
+              }
               uc3dKatman={
                 uc3dKatmanVar
                   ? ({ koseler, genislik, yukseklik }) => (
