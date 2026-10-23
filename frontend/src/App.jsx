@@ -109,7 +109,7 @@ function SekilTus({ onClick, etiket, yol }) {
 import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
 /* Alan içine yerleştirme ve sığdırma — ikisi de hazır (bkz. homografi.js). */
 import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
-import { duvarPlani, duvarYonergesi } from './duvarYerlesim.js'
+import { duvarPlani, duvarYonergesi, duvarParcalari, kacisNoktasi, duvardaDortgen } from './duvarYerlesim.js'
 /* İşaretlenen alanın GERÇEK ölçüsü — eğimi hesaba katarak (bkz. alanOlcu.js). */
 import {
   dortgenGercekOlcu,
@@ -7951,14 +7951,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    *   alan     → dört köşe kondu.
    */
   /*
-   * ÖLÇÜ BİTTİ Mİ.
-   *
-   * Ölçek alınmış ve alanın dört köşesi belli: ekranın nereye, hangi
-   * büyüklükte duracağı artık biliniyor. Bu noktadan sonra tasarımı
-   * gizlemenin hiçbir gerekçesi yok.
-   */
-  const olcuTamam = !!refPxCm && alanNokta.length === 4
-  /*
    * DUVAR DİBİ PLANI.
    *
    * Kaç tık gerektiği tasarımın kaç duvara yaslandığına bağlı: düz ve
@@ -7968,6 +7960,74 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const duvarPlan = duvarPlani(grup?.tip || null, screenType)
   const duvarYonerge = duvarYonergesi(duvarPlan, duvarNokta.length)
   const duvarTamam = duvarNokta.length >= duvarPlan.tik
+
+  /*
+   * ÖLÇÜ BİTTİ Mİ.
+   *
+   * Ölçek alınmış ve alanın dört köşesi belli: ekranın nereye, hangi
+   * büyüklükte duracağı artık biliniyor. Bu noktadan sonra tasarımı
+   * gizlemenin hiçbir gerekçesi yok.
+   */
+  const olcuTamam = !!refPxCm && (alanNokta.length === 4 || duvarTamam)
+
+  /*
+   * İŞARETLENEN NOKTALARDAN YERLEŞTİRME.
+   *
+   * Üç girdi var: duvar dibinin tuvaldeki noktaları, referans ölçeği
+   * (px/cm) ve tasarımın gerçek ölçüsü (m). Çıktı, tasarımın fotoğraftaki
+   * dört köşesi.
+   *
+   * Dikey ölçek duvarın her ucunda farklı: uzak uç küçülür. Oran, ucun
+   * UFKA uzaklığından çıkıyor; ufku da iki duvar dibinin uzatılmış
+   * doğrularının kesişimi veriyor. Tek duvar işaretlendiyse ikinci bir
+   * yön yok, o zaman duvar karşıdan görülüyor sayılıyor ve iki uç aynı
+   * ölçekte.
+   *
+   * Boyut ve perspektif kullanıcıya bırakılmıyor; ikisi de buradan
+   * geliyor. Kullanıcıya kalan tek şey taşımak.
+   */
+  const duvardanYerlestir = () => {
+    if (!(refPxCm > 0)) return false
+    const nk = duvarNokta.map(oranTuvale)
+    const parcalar = duvarParcalari(nk)
+    if (!parcalar.length) return false
+
+    const ufuk =
+      parcalar.length >= 2
+        ? kacisNoktasi(parcalar[0].a, parcalar[0].b, parcalar[1].a, parcalar[1].b)
+        : null
+    const ufukY = ufuk && Number.isFinite(ufuk.y) ? ufuk.y : null
+
+    /* Gerçek ölçünün piksel karşılığı: metre → santim → piksel. */
+    const enPx = tasarimWm * 100 * refPxCm
+    const boyPx = tasarimHm * 100 * refPxCm
+    if (!(enPx > 1) || !(boyPx > 1)) return false
+
+    /* Tasarım duvarın ortasına oturuyor; duvardan genişse duvarı dolduruyor. */
+    const duvar = parcalar[0]
+    const pay = Math.min(1, enPx / duvar.uzunlukPx)
+    const kose = duvardaDortgen(duvar.a, duvar.b, boyPx, ufukY, 0.5 - pay / 2, 0.5 + pay / 2)
+    if (!kose) return false
+
+    elleKoseyeYaz(kose)
+    return true
+  }
+
+  /*
+   * SON NOKTA KONUNCA SİSTEM YERLEŞTİRİYOR.
+   *
+   * Kullanıcıdan ayrıca bir düğmeye basması istenmiyor: işaretleme
+   * bitince yapılacak tek şey zaten bu. Yerleştirme bir kez çalışıyor,
+   * sonra kip kapanıyor ve tasarım görünür oluyor.
+   */
+  const duvarYerlestirRef = useRef(null)
+  duvarYerlestirRef.current = duvardanYerlestir
+  useEffect(() => {
+    if (!duvarKipi || !duvarTamam) return
+    const oldu = duvarYerlestirRef.current?.()
+    if (oldu) setDuvarKipi(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duvarKipi, duvarTamam])
 
   const refIsaretleniyor = (refKipi || ref2Kipi) && !refPxCm
   const alanIsaretleniyor = alanKipi && alanNokta.length < 4
