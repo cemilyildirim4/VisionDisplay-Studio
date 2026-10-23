@@ -295,13 +295,23 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
      * İki yüz simetrik: aynı oranda kısalıyorlar.
      */
     const disa = lYon === 'disa'
-    /* Kısa kenar yukarıdan/aşağıdan p kadar içeri giriyor. */
-    const leftClip = disa
-      ? `polygon(0% ${p}%, 100% 0%, 100% 100%, 0% ${100 - p}%)`
-      : `polygon(0% 0%, 100% ${p}%, 100% ${100 - p}%, 0% 100%)`
-    const rightClip = disa
-      ? `polygon(0% 0%, 100% ${p}%, 100% ${100 - p}%, 0% 100%)`
-      : `polygon(0% ${p}%, 100% 0%, 100% 100%, 0% ${100 - p}%)`
+    /*
+     * KANAT KESİLMİYOR, EĞİLİYOR.
+     *
+     * Kısa kenar yukarıdan/aşağıdan p kadar içeri giriyor. Bu şekil
+     * eskiden clipPath ile KESİLEREK elde ediliyordu; görselin köşeleri
+     * yok oluyordu. Artık dikdörtgenin dört köşesi trapezin dört
+     * köşesine taşınıyor: görselin tamamı duruyor, perspektifle yatıyor.
+     */
+    const yp = (hPx * p) / 100
+    const kose = (w, solUst, sagUst) => [
+      { x: 0, y: solUst },
+      { x: w, y: sagUst },
+      { x: w, y: hPx - sagUst },
+      { x: 0, y: hPx - solUst },
+    ]
+    const leftEgim = koseDonusumu(leftW, hPx, disa ? kose(leftW, yp, 0) : kose(leftW, 0, yp))
+    const rightEgim = koseDonusumu(rightW, hPx, disa ? kose(rightW, 0, yp) : kose(rightW, yp, 0))
 
     // İki kanadın birleşiminin dış hattı — alttaki dolgu katmanı bu şekle kırpılır
     const lYuzde = (leftW / wPx) * 100
@@ -354,7 +364,11 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
               position: 'relative',
               width: leftW,
               height: hPx,
-              clipPath: leftClip,
+              /* Eğim zemini de kapsıyor: köşelerde siyah üçgen kalmıyor. */
+              transform: leftEgim || undefined,
+              transformOrigin: '0 0',
+              /* Video katmanı bütün şerit boyunda; kanadın dışına taşmasın. */
+              overflow: 'hidden',
               /*
                * frameOnly: içerik ŞERİT düzeyinde tek katman olarak çiziliyor
                * (çoklu ekran). Kanat kendi zeminini boyarsa o katmanı kapatır
@@ -400,7 +414,9 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
               position: 'relative',
               width: rightW,
               height: hPx,
-              clipPath: rightClip,
+              transform: rightEgim || undefined,
+              transformOrigin: '0 0',
+              overflow: 'hidden',
               backgroundColor: frameOnly ? 'transparent' : isNone ? '#ffffff' : '#0a0a0a',
               filter: !frameOnly && isLit ? LED_LIT_FILTER : undefined,
               ...(frameOnly ? null : bgFor(offsetX + leftW)),
@@ -536,44 +552,42 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
    * açılı aynı çizimle çalışıyor. Kırım yoksa kutu dikdörtgen kalıyor.
    */
   const kirimVar = solKirim > 0.01 || sagKirim > 0.01
-  const kirimYolu = `polygon(0% ${solKirim}%, 100% ${sagKirim}%, 100% ${100 - sagKirim}%, 0% ${100 - solKirim}%)`
+  /*
+   * KIRIM KESMİYOR, EĞİYOR.
+   *
+   * Birleşimdeki ekranın derinliğe giden kenarı kısalıyor. Şekil eskiden
+   * clipPath ile kesiliyordu: görselin üst ve alt köşeleri yok oluyordu.
+   * Artık dikdörtgenin dört köşesi trapezin dört köşesine taşınıyor —
+   * görsel kesilmiyor, perspektifle yatıyor.
+   */
+  const ySol = (hPx * solKirim) / 100
+  const ySag = (hPx * sagKirim) / 100
+  const kirimEgimi = kirimVar
+    ? koseDonusumu(wPx, hPx, [
+        { x: 0, y: ySol },
+        { x: wPx, y: ySag },
+        { x: wPx, y: hPx - ySag },
+        { x: 0, y: hPx - ySol },
+      ])
+    : null
   return (
-    <div
-      style={{
-        width: wPx,
-        height: hPx,
-        position: 'relative',
-        clipPath: kirimVar ? kirimYolu : undefined,
-        backgroundColor: frameOnly ? 'transparent' : isNone ? '#ffffff' : '#0a0a0a',
-        border: isNone && !kirimVar ? '1px solid #64748b' : undefined,
-        // Panel çevresinde gölge/ışıma YOK: kenarlarda gölgelik olarak görünüyordu
-        // ve kavisli ekranla tutarsızdı (orada da hiç yok).
-      }}
-      className="overflow-hidden shrink-0"
-    >
+    <div style={{ width: wPx, height: hPx, position: 'relative' }} className="shrink-0">
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          /* Eğim zemini de kapsıyor: köşelerde siyah üçgen kalmıyor. */
+          transform: kirimEgimi || undefined,
+          transformOrigin: '0 0',
+          backgroundColor: frameOnly ? 'transparent' : isNone ? '#ffffff' : '#0a0a0a',
+          border: isNone && !kirimVar ? '1px solid #64748b' : undefined,
+          // Panel çevresinde gölge/ışıma YOK: kenarlarda gölgelik olarak görünüyordu
+          // ve kavisli ekranla tutarsızdı (orada da hiç yok).
+        }}
+        className="overflow-hidden"
+      >
       {!frameOnly && bgImage && (
         <div style={{ position: 'absolute', inset: 0, filter: isLit ? LED_LIT_FILTER : undefined, ...bgFor(offsetX) }} />
-      )}
-
-      {/*
-        KIRIMLI EKRANIN DIŞ HATTI — kenarlık clipPath ile kırpıldığı için
-        SVG ile çiziliyor. Açık temada beyaz duvarın üstünde şeklin nerede
-        bittiği bu çizgiden anlaşılıyor.
-      */}
-      {kirimVar && (
-        <svg
-          width={wPx}
-          height={hPx}
-          viewBox={`0 0 ${wPx} ${hPx}`}
-          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
-        >
-          <path
-            d={`M0,${(hPx * solKirim) / 100} L${wPx},${(hPx * sagKirim) / 100} L${wPx},${hPx - (hPx * sagKirim) / 100} L0,${hPx - (hPx * solKirim) / 100} Z`}
-            fill="none"
-            stroke={isNone ? '#64748b' : 'rgba(0,0,0,0.55)'}
-            strokeWidth="1.25"
-          />
-        </svg>
       )}
 
       {/* spanW verilmişse içerik paylaşılıyor demektir: senkron gerekiyor. */}
@@ -592,7 +606,30 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
       {!frameOnly && isLit && (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: LED_SHEEN }} />
       )}
+      </div>
 
+      {/*
+        EĞİK EKRANIN DIŞ HATTI.
+
+        Hat eğilen katmanın DIŞINDA duruyor: kendisi de eğilseydi çizgi
+        kalınlığı köşelerde bozulurdu. Açık temada beyaz duvarın üstünde
+        şeklin nerede bittiği bu çizgiden anlaşılıyor.
+      */}
+      {kirimVar && (
+        <svg
+          width={wPx}
+          height={hPx}
+          viewBox={`0 0 ${wPx} ${hPx}`}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+        >
+          <path
+            d={`M0,${ySol} L${wPx},${ySag} L${wPx},${hPx - ySag} L0,${hPx - ySol} Z`}
+            fill="none"
+            stroke={isNone ? '#64748b' : 'rgba(0,0,0,0.55)'}
+            strokeWidth="1.25"
+          />
+        </svg>
+      )}
     </div>
   )
 }
