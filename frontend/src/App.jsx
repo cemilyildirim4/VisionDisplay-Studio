@@ -8012,18 +8012,44 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         : null
     const ufukY = ufuk && Number.isFinite(ufuk.y) ? ufuk.y : null
 
+    /*
+     * KÖŞEYİ SARAN BİRLEŞİM: LİDER KÖŞEYE YASLANIYOR.
+     *
+     * Grubun bütün üyeleri liderin dörtgeninden türüyor; ikinci kol ondan
+     * 90° kırılarak komşu duvarın düzlemine düşüyor. Dolayısıyla köşeli
+     * yerleşim için tek yapılacak iş, lideri işaretlenen köşeye yaslamak.
+     * Oraya konan en, bütün şeridin değil LİDERİN kendi eni.
+     */
+    const uyeler = Array.isArray(grup?.uyeler) && grup.uyeler.length > 1 ? grup.uyeler : null
+    const koseli = parcalar.length >= 2 && !!uyeler
+    const liderId = uyeler ? uyeler[0] : aktifEkranId
+    const liderParca = uyeler ? ekranParcalari.find((x) => x.id === liderId) : null
+    const enM = koseli ? liderParca?.wm || tasarimWm / uyeler.length : tasarimWm
+    const boyM = koseli ? liderParca?.hm || tasarimHm : tasarimHm
+
     /* Gerçek ölçünün piksel karşılığı: metre → santim → piksel. */
-    const enPx = tasarimWm * 100 * olcekPxCm
-    const boyPx = tasarimHm * 100 * olcekPxCm
+    const enPx = enM * 100 * olcekPxCm
+    const boyPx = boyM * 100 * olcekPxCm
     if (!(enPx > 1) || !(boyPx > 1)) return false
 
-    /* Tasarım duvarın ortasına oturuyor; duvardan genişse duvarı dolduruyor. */
     const duvar = parcalar[0]
     const pay = Math.min(1, enPx / duvar.uzunlukPx)
-    const kose = duvardaDortgen(duvar.a, duvar.b, boyPx, ufukY, 0.5 - pay / 2, 0.5 + pay / 2)
+    /*
+     * Köşelide liderin DIŞ ucu köşeye değiyor (duvarın sonu); tek duvarda
+     * tasarım duvarın ortasına oturuyor.
+     */
+    const sol = koseli ? 1 - pay : 0.5 - pay / 2
+    const sag = koseli ? 1 : 0.5 + pay / 2
+    const kose = duvardaDortgen(duvar.a, duvar.b, boyPx, ufukY, sol, sag)
     if (!kose) return false
 
-    elleKoseyeYaz(kose)
+    if (liderId === aktifEkranId) {
+      elleKoseyeYaz(kose)
+    } else {
+      /* Lider kayıtlı bir ekransa dörtgeni onun kaydına yazılıyor. */
+      const oran = kose.map(tuvalOrana)
+      setSabitEkranlar((l) => l.map((e) => (e.id === liderId ? { ...e, oran } : e)))
+    }
     return true
   }
 
