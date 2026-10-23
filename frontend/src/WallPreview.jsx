@@ -164,8 +164,8 @@ export function VideoLayer({ src, gw, gh, left, top, lit, senkron = false }) {
         maxHeight: 'none',
         left: -left,
         top: -top,
-        /* Sigdir: uzatip kirpmak goruntunun bir kismini yok ediyordu. */
-        objectFit: 'contain',
+        /* Yüzeyi tam dolduruyor: kırpma da siyah bant da yok. */
+        objectFit: 'fill',
         filter: lit ? LED_LIT_FILTER : undefined,
         pointerEvents: 'none',
       }}
@@ -179,38 +179,9 @@ export function VideoLayer({ src, gw, gh, left, top, lit, senkron = false }) {
  */
 // AR/kamera ekranı da AYNI bileşeni kullanır: tasarım orada da birebir aynı
 // çizilsin, iki ayrı kod yolu birbirinden ayrı düşmesin diye dışa açıldı.
-/**
- * Görselin en/boy oranı — "sığdır" (contain) için gerekli.
- *
- * CSS'in contain'i her öğeyi KENDİ kutusuna sığdırır; paylaşılan bir
- * yüzeyde her ekran ayrı ayrı sığdırırsa parçalar birbirini tutmaz.
- * Oran bir kez okunup ortak yüzeye uygulanıyor.
- */
-function useGorselOrani(src) {
-  const [oran, setOran] = useState(null)
-  useEffect(() => {
-    if (!src) {
-      setOran(null)
-      return undefined
-    }
-    let iptal = false
-    const g = new Image()
-    g.onload = () => {
-      if (!iptal && g.naturalWidth > 0 && g.naturalHeight > 0) setOran(g.naturalWidth / g.naturalHeight)
-    }
-    g.src = src
-    return () => {
-      iptal = true
-    }
-  }, [src])
-  return oran
-}
-
 export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols, lYon = 'ice', solKirim = 0, sagKirim = 0 }) {
   const nCols = Math.max(1, cols)
   const nRows = Math.max(1, rows)
-  /* Kanca koşulsuz ve en üstte: aşağıda erken dönüşler var. */
-  const gorselOrani = useGorselOrani(contentUrl || (content === 'photo' ? DEFAULT_CONTENT_SRC : null))
   const isNone = content === 'none'
   // 'curved' = dışa kavisli (konveks), 'curvedIn' = içe kavisli (konkav)
   /*
@@ -251,28 +222,18 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
    * için hizalama da bozulmuyor.
    */
   /*
-   * GÖRSELİN TAMAMI GÖRÜNÜYOR (contain).
+   * GÖRSEL YÜZEYİ TAM DOLDURUYOR.
    *
-   * Yüzeyi doldurmak için uzatılıp taşan yanı kırpılıyordu; görselin bir
-   * kısmı hiçbir ekranda görünmüyordu. Oran tutmazsa kalan yer ekranın
-   * kendi zemininde (kapalı LED) siyah kalıyor.
+   * Dört köşe dört köşeye: oran tutmazsa görsel esniyor. Kırpma yok,
+   * kenarda siyah bant yok. (Bir ara sığdırmaya geçilmişti; o da
+   * kenarlarda bant bırakıyordu.)
    */
-  const sigdir = (() => {
-    if (!gorselOrani || !(gw > 0) || !(gh > 0)) return { w: gw, h: gh, x: 0, y: 0 }
-    const yuzeyOrani = gw / gh
-    if (gorselOrani > yuzeyOrani) {
-      const h = gw / gorselOrani
-      return { w: gw, h, x: 0, y: (gh - h) / 2 }
-    }
-    const w = gh * gorselOrani
-    return { w, h: gh, x: (gw - w) / 2, y: 0 }
-  })()
-  const bgW = Math.ceil(sigdir.w)
-  const bgH = Math.ceil(sigdir.h)
+  const bgW = Math.ceil(gw)
+  const bgH = Math.ceil(gh)
   const bgFor = (leftGlobal) => ({
     backgroundImage: bgImage || undefined,
     backgroundSize: `${bgW}px ${bgH}px`,
-    backgroundPosition: `${-leftGlobal + sigdir.x}px ${-offsetY + sigdir.y}px`,
+    backgroundPosition: `${-leftGlobal}px ${-offsetY}px`,
     backgroundRepeat: 'no-repeat',
   })
 
@@ -1144,17 +1105,19 @@ export default function WallPreview({
     })
 
     /*
-     * PAYLAŞIM ARALIKLARI — görsel kümenin kapladığı alana seriliyor.
-     * Kümede olmayan ekran kendi kutusunu kullanıyor.
+     * PAYLAŞIMDA DİLİM GERÇEK GENİŞLİKLERE GÖRE.
+     *
+     * Yüzey, kümedeki ekranların GERÇEK genişliklerinin toplamı; her
+     * ekran kendi payına düşen dilimi gösteriyor. Çizimdeki kısalma
+     * (perspektif) yalnızca kutuyu daraltıyor, dilimin içeriğini değil.
      */
     const paylasimAlanlari = new Map()
-    for (const s of placed) {
-      if (!s.paylasim) continue
-      const a = paylasimAlanlari.get(s.paylasim) || { x0: Infinity, x1: -Infinity, h: 0 }
-      a.x0 = Math.min(a.x0, s.xStart)
-      a.x1 = Math.max(a.x1, s.xStart + s.wPx)
-      a.h = Math.max(a.h, s.hPx)
-      paylasimAlanlari.set(s.paylasim, a)
+    for (const x of placed) {
+      if (!x.paylasim) continue
+      const a = paylasimAlanlari.get(x.paylasim) || { toplam: 0, onceki: new Map() }
+      a.onceki.set(x, a.toplam)
+      a.toplam += x.gercekWm || x.wm
+      paylasimAlanlari.set(x.paylasim, a)
     }
 
     // Tüm ekranlar düz VE hepsi genel/ortak içeriği kullanıyorsa (kendine özel içeriği yoksa):
@@ -1366,14 +1329,21 @@ export default function WallPreview({
                             offsetY: maxHpx - s.hPx + maxHpx * dilim.sy,
                           }
                         }
-                        /* Paylaşan ekranlar kümenin alanını, ötekiler kendi kutusunu. */
+                        /*
+                          Paylaşan ekran, görselin kendi gerçek genişliğine
+                          düşen dilimini gösteriyor; ötekiler görselin
+                          tamamını kendi kutusunda.
+                        */
                         const alan = s.paylasim ? paylasimAlanlari.get(s.paylasim) : null
-                        if (!alan) return { spanW: s.wPx, spanH: s.hPx, offsetX: 0, offsetY: 0 }
+                        const kendi = s.gercekWm || s.wm
+                        if (!alan || !(kendi > 0)) return { spanW: s.wPx, spanH: s.hPx, offsetX: 0, offsetY: 0 }
+                        const oran = s.wPx / kendi
                         return {
-                          spanW: alan.x1 - alan.x0,
-                          spanH: alan.h,
-                          offsetX: s.xStart - alan.x0,
-                          offsetY: alan.h - s.hPx,
+                          spanW: alan.toplam * oran,
+                          /* Her ekran kendi diliminin TAM yüksekliğini gösteriyor. */
+                          spanH: s.hPx,
+                          offsetX: (alan.onceki.get(s) || 0) * oran,
+                          offsetY: 0,
                         }
                       })()}
                     />

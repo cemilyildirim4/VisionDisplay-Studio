@@ -4551,18 +4551,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * geliyor. Hiçbir ekran kaybolmuyor, her an tam olarak biri düzenleniyor ve
    * kimlikler yer değiştirmiyor (bkz. aktifEkranId).
    */
-  const ekraniDuzenle = (istenenId) => {
-    /*
-     * GRUP TEK PARÇA.
-     *
-     * Bir üyeye tıklamak lideri düzenlemeye alıyor: grup liderden
-     * türetildiği için başka bir üyeyi tek başına oynatmak dikişi açardı.
-     * Tek tek taşımak isteyen "Ayır" diyor.
-     */
-    const id =
-      grup && Array.isArray(grup.uyeler) && grup.uyeler.includes(istenenId)
-        ? grup.uyeler[0]
-        : istenenId
+  const ekraniDuzenle = (id) => {
     const secilen = sabitEkranlar.find((e) => e.id === id)
     if (!secilen) return
     /*
@@ -12226,7 +12215,8 @@ function IcerikOnizleme({ oge, dilim = null, oynatImi = false }) {
         position: 'absolute',
         inset: 0,
         backgroundImage: `url("${oge.url}")`,
-        backgroundSize: 'cover',
+        /* Kutuyu tam dolduruyor: çizimdeki kuralla aynı (kırpma yok). */
+        backgroundSize: '100% 100%',
         backgroundPosition: 'center',
         ...(dilimStili || {}),
       }}
