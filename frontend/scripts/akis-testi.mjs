@@ -7,8 +7,7 @@
  *
  * Denenen akış (yeni sıra):
  *   model seç → fotoğraf yükle → REFERANS (2 nokta + santim) → tek seçim
- *   A) "Alanı işaretle"    → 4 köşe → onayla → en/boy → sığdır → bitir
- *   B) "Serbest yerleştir" → kutu kabin sayısıyla büyüyor mu → bitir
+ *   A) "Duvar diplerini işaretle" → noktalar → sistem yerleştirir
  *
  * Çökme denetiminin yanında iki ÜRÜN denetimi daha var, ikisi de canlıda
  * çıkan hatalardan geliyor:
@@ -474,9 +473,18 @@ const a = await akis('A — DUVAR DİBİ', async ({ s, bas, denetle, icerir, dus
 /* ── D) SIFIRLA, SONRA BAŞTAN KUR ─────────────────────────────────── */
 const dYol = await akis('D — SIFIRLA VE BAŞTAN KUR', async ({ s, bas, denetle, icerir, dus }) => {
   /* Akışın ORTASINDA sıfırlanıyor: en çok artık state burada kalıyor. */
-  if (!(await bas('Alanı işaretle', 1800))) return dus('"Alanı işaretle" düğmesi bulunamadı')
-  await ucKose(s)
-  if (!(await denetle('3 köşe işaretlendi (yarım bırakılacak)'))) return false
+  if (!(await bas('Duvar diplerini işaretle', 1800))) {
+    return dus('"Duvar diplerini işaretle" düğmesi bulunamadı')
+  }
+  /* Tek nokta konup yarım bırakılıyor. */
+  {
+    const t = await tuval(s)
+    await s.mouse.move(t.x + t.w * 0.3, t.y + t.h * 0.7)
+    await s.mouse.down()
+    await s.mouse.up()
+    await s.waitForTimeout(700)
+  }
+  if (!(await denetle('1 nokta konuldu (yarım bırakılacak)'))) return false
 
   if (!(await bas('Sıfırla', 1200))) return dus('"Sıfırla" düğmesi bulunamadı')
   if (!(await icerir('tüm ayarları sıfırlar'))) return dus('sıfırlama onayı açılmadı')

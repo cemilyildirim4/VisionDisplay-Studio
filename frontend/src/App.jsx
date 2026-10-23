@@ -1710,6 +1710,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * iniyor, birleşim ve görseller yok oluyordu.
        */
       setSabitEkranlar((l) => l.map((x) => ({ ...x, oran: null })))
+      /* Duvar dibi noktaları da bu fotoğrafa aitti. */
+      setDuvarKipi(false)
+      setDuvarNokta([])
       setAlanKipi(false)
       setAlanNokta([])
       setAlanElleEn('')
@@ -2096,6 +2099,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setRef2Kipi(false)
 
     /* 3) İşaretlenen alan */
+    /* Duvar dibi kipi açık kalırsa referans tıklamaları ona gider. */
+    setDuvarKipi(false)
+    setDuvarNokta([])
     setAlanKipi(false)
     setAlanNokta([])
     setAlanCizgi([])
@@ -2119,6 +2125,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setKutuMesaj(null)
     setKutuDuzen(null)
     setCizimDuzeltme({ x: 0, y: 0 })
+
+    /* Duvar dibi işaretlemesi */
+    setDuvarKipi(false)
+    setDuvarNokta([])
 
     /* 5) L köşesi */
     setLKoseKipi(false)
@@ -6577,6 +6587,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setSabitEkranlar([])
     setAktifEkranId(null)
     setAktifSira(1)
+    /* Duvar dibi kipi açık kalırsa referans tıklamaları ona gider. */
+    setDuvarKipi(false)
+    setDuvarNokta([])
     setAlanKipi(false)
     setAlanNokta([])
     setAlanElleEn('')
