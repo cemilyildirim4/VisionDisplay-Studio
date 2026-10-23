@@ -1051,6 +1051,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [grupTipi, setGrupTipi] = useState('duz')
   const [grupAcisi, setGrupAcisi] = useState(135)
   /*
+   * Kutunun KENDİ metni. Sayıdan ayrı tutuluyor, çünkü yazmaya başlayan
+   * kullanıcı önce kutuyu boşaltıyor; boş metin sayı olarak geçersiz ama
+   * kutuda bir an duruyor olmalı, yoksa yazmak mümkün olmuyor.
+   */
+  const [grupAciYazi, setGrupAciYazi] = useState('135')
+  /*
    * L YERLEŞİMİNDE SOL KANADIN SÜTUN SAYISI.
    * null ise ekran L değil. Sağ kanat kalan sütunlar.
    */
@@ -10059,7 +10065,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     İkisi bambaşka görünür; hangisinin kurulacağını
                     ancak kullanıcı bilir.
                   */}
-                  {(grupTipi === 'l' || grupTipi === 'u' || grupTipi === 'kutu') && (
+                  {/* Açılı birleşim de yönü kullanıyor: düğmesi artık orada da var. */}
+                  {(grupTipi === 'l' || grupTipi === 'u' || grupTipi === 'kutu' || grupTipi === 'acili') && (
                     <div className="mt-2 flex overflow-hidden rounded-lg border border-neutral-300 dark:border-[#39414f]">
                       {['ice', 'disa'].map((y) => (
                         <button
@@ -10086,12 +10093,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         type="number"
                         min="10"
                         max="170"
-                        step="5"
-                        value={grupAcisi}
+                        step="1"
+                        value={grupAciYazi}
                         onChange={(e) => {
-                          const v = Number(e.target.value) || 135
-                          setGrupAcisi(v)
-                          birlesimiKur(grupTipi, grupSecim, v, lYonSecim)
+                          const ham = e.target.value
+                          setGrupAciYazi(ham)
+                          /* Geçerli bir açı çıktığı anda çizim de değişiyor. */
+                          const v = Number(ham)
+                          if (ham.trim() !== '' && Number.isFinite(v) && v >= 10 && v <= 170) {
+                            setGrupAcisi(v)
+                            birlesimiKur(grupTipi, grupSecim, v, lYonSecim)
+                          }
+                        }}
+                        onBlur={() => {
+                          /* Kutudan çıkınca metin, çizimdeki açıya geri oturuyor. */
+                          const v = Number(grupAciYazi)
+                          const oturan =
+                            grupAciYazi.trim() === '' || !Number.isFinite(v)
+                              ? grupAcisi
+                              : Math.max(10, Math.min(170, Math.round(v)))
+                          setGrupAciYazi(String(oturan))
+                          if (oturan !== grupAcisi) {
+                            setGrupAcisi(oturan)
+                            birlesimiKur(grupTipi, grupSecim, oturan, lYonSecim)
+                          }
                         }}
                         className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
                       />
