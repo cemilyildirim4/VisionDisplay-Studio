@@ -8569,6 +8569,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               resolution={resolution}
               curveAmount={curveAmount}
               showMeasurements={olculerGorunsun}
+              /* Rozetler de "Ölçüleri gizle" ile kalkıyor. */
+              numaraGoster={showMeasurements}
               onColsChange={setCols}
               onRowsChange={setRows}
               colsMax={colsMax}
@@ -8815,7 +8817,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Sabitlenenler kendi dörtgeninden, elde duran ekran koseMutlak'tan
             (grup varsa gruptaki yerinden) okunuyor.
           */}
-          {scene === 'ozel' && !refKipi && !lKoseKipi && (
+          {showMeasurements && scene === 'ozel' && !refKipi && !lKoseKipi && (
             <EkranNumaralari
               aktifId={aktifEkranId}
               ekranlar={[

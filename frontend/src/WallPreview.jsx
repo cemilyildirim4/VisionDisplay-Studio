@@ -815,6 +815,11 @@ export default function WallPreview({
   screenType = 'flat',
   resolution = 'FHD',
   showMeasurements = true,
+  /*
+   * Numara rozetleri "Ölçüleri gizle" ile birlikte kalkıyor. Ayrı bir
+   * özellik, çünkü showMeasurements fotoğraf mekânında zaten kapalı.
+   */
+  numaraGoster = true,
   onColsChange,
   onRowsChange,
   colsMax = Infinity,
@@ -1304,7 +1309,7 @@ export default function WallPreview({
                   Listedeki satırla şeritteki ekranı eşlemek için; tıklamayı
                   yutmuyor, ekranın kendi çizimine de karışmıyor.
                 */}
-                {placed.length > 1 && (
+                {placed.length > 1 && numaraGoster && (
                   <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
                     {placed.map((s, i) => (
                       <span
