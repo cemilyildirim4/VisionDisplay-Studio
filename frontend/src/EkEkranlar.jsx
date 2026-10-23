@@ -16,9 +16,7 @@
  */
 
 import { koseDonusumu } from './homografi.js'
-import { ledDotSize, ledDotsStyle, LED_LIT_FILTER } from './content.js'
-import { contentImage, VideoLayer } from './WallPreview.jsx'
-import { videoSrcFor } from './videoContent.js'
+import { Screen } from './WallPreview.jsx'
 
 /* İki nokta arası uzaklık — kaynak dikdörtgenin ölçüsü buradan. */
 const uzaklik = (a, b) => Math.hypot(a.x - b.x, a.y - b.y)
@@ -31,6 +29,10 @@ export default function EkEkranlar({
   rows,
   content,
   contentUrl,
+  /* Ekranın kendi kaydında yoksa panelden gelen değerler kullanılıyor. */
+  model = null,
+  resolution = null,
+  curveAmount = 60,
   /* Oran (0..1) → mutlak tuval pikseli. App.jsx'teki dönüşümün aynısı. */
   oranTuvale,
   /*
@@ -61,22 +63,25 @@ export default function EkEkranlar({
    */
   const ayarli = (ekran) => {
     const a = ekran?.ayar || {}
-    const e = a.content || content
-    const u = a.content ? a.contentUrl || null : contentUrl
+    const c = a.cols > 0 ? a.cols : cols
+    const sol = a.lSolCols ? Math.max(1, Math.min(c - 1, a.lSolCols)) : null
     return {
-      cols: a.cols > 0 ? a.cols : cols,
+      cols: c,
       rows: a.rows > 0 ? a.rows : rows,
-      bgImage: e !== 'none' ? contentImage(e, u) : null,
       /*
-       * VİDEO AYRI BİR ÖĞE.
+       * EKRAN TİPİ DE KAYDIN İÇİNDE.
        *
-       * contentImage video içeriklerde null dönüyor (video CSS arka planı
-       * olamaz). Sabit ekranlar yalnızca arka plan çizdiği için içeriği
-       * video olan bir ekran sabitlenince SİMSİYAH kalıyordu; düzenlenen
-       * ekranda oynayan video, sabitlenince duruyordu.
+       * Burası eskiden yalnızca içerik ve kabin sayısı okuyordu; ekranın
+       * BİÇİMİ (kavis, L, kanat bölmesi, köşe yönü) hiç taşınmıyordu ve
+       * fotoğrafa konan her ekran düz dikdörtgene dönüyordu.
        */
-      video: e !== 'none' ? videoSrcFor(e, u) : null,
-      yayinda: e !== 'none' && e !== 'led',
+      type: a.screenType || 'flat',
+      leftCols: sol || undefined,
+      rightCols: sol ? c - sol : undefined,
+      lYon: a.lYon || 'ice',
+      curveAmount: a.curveAmount > 0 ? a.curveAmount : curveAmount,
+      content: a.content || content,
+      contentUrl: a.content ? a.contentUrl || null : contentUrl,
     }
   }
 
@@ -120,15 +125,13 @@ export default function EkEkranlar({
         const bolmeDisi = !!ham?.bos
         const dlm = bolmeDisi ? null : ham
 
-        const { cols: eCols, rows: eRows, bgImage: hamGorsel, video: hamVideo, yayinda: hamYayin } = ayarli(ekran)
-        const bgImage = bolmeDisi ? null : hamGorsel
-        const video = bolmeDisi ? null : hamVideo
-        const yayinda = bolmeDisi ? false : hamYayin
+        const ayar = ayarli(ekran)
         const icEn = wPx * (dlm?.sw || 1)
         const icBoy = hPx * (dlm?.sh || 1)
         const icSol = dlm ? wPx * dlm.sx : 0
         const icUst = dlm ? hPx * dlm.sy : 0
-        const diyot = !yayinda ? ledDotSize(wPx / Math.max(1, eCols), hPx / Math.max(1, eRows)) : null
+        /* Kavisli ekranın tuvali kendi kutusundan taşıyor; orada kırpma yok. */
+        const kavisli = ayar.type === 'curved' || ayar.type === 'curvedIn'
 
         return (
           <div
@@ -152,17 +155,36 @@ export default function EkEkranlar({
               height: hPx,
               transform: d,
               transformOrigin: '0 0',
-              overflow: 'hidden',
-              backgroundColor: '#0a0a0a',
+              overflow: kavisli ? 'visible' : 'hidden',
               pointerEvents: onSec ? 'auto' : 'none',
               cursor: onSec ? 'pointer' : undefined,
-              backgroundImage: bgImage || undefined,
-              backgroundSize: `${Math.ceil(icEn)}px ${Math.ceil(icBoy)}px`,
-              backgroundPosition: dlm ? `${-icSol}px ${-icUst}px` : undefined,
-              backgroundRepeat: 'no-repeat',
-              filter: yayinda ? LED_LIT_FILTER : undefined,
             }}
           >
+            {/*
+              EKRAN KENDİ TİPİYLE ÇİZİLİYOR — tasarım alanındaki çizimin
+              aynısı. Dörtgen dönüşümü bunun üstüne perspektifi veriyor,
+              yani biçim fotoğrafa geçerken kaybolmuyor.
+            */}
+            <Screen
+              wPx={wPx}
+              hPx={hPx}
+              cols={ayar.cols}
+              rows={ayar.rows}
+              type={ayar.type}
+              model={model}
+              resolution={resolution}
+              curveAmount={ayar.curveAmount}
+              leftCols={ayar.leftCols}
+              rightCols={ayar.rightCols}
+              lYon={ayar.lYon}
+              /* Bölmeye katılamayan ekran kapalı panel olarak duruyor. */
+              content={bolmeDisi ? 'led' : ayar.content}
+              contentUrl={bolmeDisi ? null : ayar.contentUrl}
+              spanW={dlm ? icEn : undefined}
+              spanH={dlm ? icBoy : undefined}
+              offsetX={icSol}
+              offsetY={icUst}
+            />
             {/* Seçili ekran: çerçeve ekranın KENDİ dönüşümünün içinde,
                  yani perspektifle birlikte eğiliyor. */}
             {secililer.includes(ekran.id) && (
@@ -173,27 +195,6 @@ export default function EkEkranlar({
                   boxShadow: 'inset 0 0 0 3px #2962ad',
                   pointerEvents: 'none',
                   zIndex: 5,
-                }}
-              />
-            )}
-            {/* Video: ekranın kendi ölçüsünde, kırpılarak. */}
-            {video && (
-              <VideoLayer
-                src={video}
-                gw={icEn}
-                gh={icBoy}
-                left={icSol}
-                top={icUst}
-                lit={yayinda}
-                senkron={!!dlm}
-              />
-            )}
-            {diyot && (
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  ...ledDotsStyle(diyot.dotW, diyot.dotH),
                 }}
               />
             )}

@@ -8864,6 +8864,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               rows={rows}
               content={content}
               contentUrl={contentUrl}
+              /* Ekranın kendi kaydında tip yoksa panelden gelen değerler. */
+              model={previewModel}
+              resolution={resolution}
+              curveAmount={curveAmount}
               oranTuvale={oranTuvale}
               dilimler={bolunmusDilimler}
               secililer={secimKumesi}
@@ -9516,6 +9520,66 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         <div className="yatay-sag">
         <aside className="yatay-panel yatay-panel-model w-full min-w-0 lg:w-[340px] shrink-0 order-2 lg:order-1 border-t lg:border-t-0 lg:border-r border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
           <Sigdir className="flex flex-col gap-2">
+          {/*
+            MODEL SEÇİLMEDEN PANEL BOŞ KALMIYOR.
+
+            Panelin bütün blokları modele bağlı olduğu için sol taraf model
+            seçilene kadar bomboş duruyordu; kullanıcı nereden başlayacağını
+            bilmiyordu. Kart ilk adımı veriyor, altındaki kilitli satırlar da
+            sıranın ne olduğunu gösteriyor.
+          */}
+          {!hasModel && (
+            <div className="mb-1 flex flex-col gap-3">
+              <div className="rounded-2xl border-2 border-brand bg-brand/5 p-4 dark:bg-brand/10">
+                <h2 className="m-0 text-[18px] font-bold tracking-tight">{t('ilk.baslik')}</h2>
+                <p className="m-0 mt-1 text-[13.5px] leading-snug text-neutral-600 dark:text-neutral-300">
+                  {t('ilk.aciklama')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(true)}
+                  className="mt-3 w-full rounded-full bg-brand px-5 py-2.5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-dark"
+                >
+                  {t('ilk.dugme')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWizardOpen(true)}
+                  className="mt-2 w-full text-[12.5px] font-medium text-brand hover:underline"
+                >
+                  {t('wiz.entry')}
+                </button>
+              </div>
+
+              {/* Sonraki adımlar: soluk ve tıklanamaz — yalnızca sırayı anlatıyor. */}
+              <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                {[t('ilk.adim2'), t('ilk.adim3'), t('ilk.adim4')].map((ad) => (
+                  <li
+                    key={ad}
+                    className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-neutral-400 dark:border-[#2c333f] dark:bg-[#161a21] dark:text-neutral-500"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="shrink-0"
+                    >
+                      <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+                      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+                    </svg>
+                    <span className="text-[14px] font-semibold">{ad}</span>
+                    <span className="ml-auto text-[11.5px] font-normal">{t('ilk.kilit')}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/*
             DUVAR EN ÜSTTE — kurulumun İLK kararı.
             Ekranlar duvara göre diziliyor; ölçü panelin en altındayken

@@ -1650,6 +1650,15 @@ const dict = {
   'scene3d.arReady': { tr: 'Model hazır — telefonda AR düğmesine dokunun', en: 'Model ready — tap the AR button on your phone', ar: 'النموذج جاهز — انقر على زر الواقع المعزز على هاتفك' },
   /* Kısa tutuldu: dar panelde üç satıra taşıp gereğinden çok yer kaplıyordu. */
   'wiz.entry': { tr: 'Hangi modeli seçeceğinizi bilmiyor musunuz?', en: 'Not sure which model to pick?', ar: 'لا تعرف أي طراز تختار؟' },
+
+  /* Model seçilmeden sol panelde duran ilk adım kartı. */
+  'ilk.baslik': { tr: '1. Model seçin', en: '1. Select a model', ar: '١. اختر الطراز' },
+  'ilk.aciklama': { tr: 'Başlamak için LED modelini seçin.', en: 'Pick an LED model to get started.', ar: 'اختر طراز شاشة LED للبدء.' },
+  'ilk.dugme': { tr: 'Model seç', en: 'Select model', ar: 'اختر الطراز' },
+  'ilk.adim2': { tr: '2. Duvar ölçüsü', en: '2. Wall size', ar: '٢. مقاس الجدار' },
+  'ilk.adim3': { tr: '3. Ekranlar', en: '3. Screens', ar: '٣. الشاشات' },
+  'ilk.adim4': { tr: '4. Ekran yerleşimi', en: '4. Screen layout', ar: '٤. ترتيب الشاشات' },
+  'ilk.kilit': { tr: 'Önce model seçin', en: 'Select a model first', ar: 'اختر الطراز أولاً' },
   'wiz.title': { tr: 'Model Öneri Sihirbazı', en: 'Model Recommendation Wizard', ar: 'معالج اقتراح الطراز' },
   'wiz.step1Title': { tr: 'Ekran nerede duracak?', en: 'Where will the screen be placed?', ar: 'أين ستوضع الشاشة؟' },
   'wiz.step2Title': { tr: 'İzleyiciler ekrana ortalama ne kadar yakın olacak?', en: 'How close will viewers typically be?', ar: 'ما مدى قرب المشاهدين عادةً؟' },
