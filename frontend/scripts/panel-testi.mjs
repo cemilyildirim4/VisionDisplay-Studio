@@ -135,7 +135,12 @@ const olcum = await s.evaluate(() => {
     acikHavuzKare: (acikGovde?.querySelectorAll('button[title]') || []).length,
     acikTur: /Düz|Dışa|İçe/.test(metin(acikGovde)),
     acikOlcu: (acikGovde?.querySelectorAll('input[type="number"], button') || []).length > 4,
-    acikYon: /Yatay|Dikey/.test(metin(acikGovde)),
+    /*
+     * Kabin yönü artık sorulmuyor: "Duvara sığdır" yatay ve dikey
+     * yerleşimi hesaplayıp çok LED alanı kendisi seçiyor. Seçim panele
+     * geri sızarsa bu satır yakalar.
+     */
+    acikYonYok: !/Yatay|Dikey/.test(metin(acikGovde)),
     toplamSatiri: (toplamSatiri || '').trim().slice(0, 90),
     kapaliMetinler: kapali.map((li) => metin(li).slice(0, 80)),
     tasma,
@@ -171,7 +176,7 @@ console.log('  acik: icerik kutusu :', olcum.acikIcerikKutusu ? '✓' : '✗')
 console.log('  acik: havuz kareler:', olcum.acikHavuzKare, olcum.acikHavuzKare >= 4 ? '✓' : '✗')
 console.log('  acik: tur          :', olcum.acikTur ? '✓' : '✗')
 console.log('  acik: olcu         :', olcum.acikOlcu ? '✓' : '✗')
-console.log('  acik: yon          :', olcum.acikYon ? '✓' : '✗')
+console.log('  acik: yon secimi yok:', olcum.acikYonYok ? '✓' : 'VAR ✗')
 console.log('  kapali kucuk resim :', olcum.kapaliKucukResim ? '✓' : '✗')
 console.log('  kapali satirlar    :', JSON.stringify(olcum.kapaliMetinler))
 console.log('  toplam satiri      :', olcum.toplamSatiri || 'YOK ✗')
@@ -192,7 +197,7 @@ const gecti =
   olcum.acikHavuzKare >= 4 &&
   olcum.acikTur &&
   olcum.acikOlcu &&
-  olcum.acikYon &&
+  olcum.acikYonYok &&
   olcum.kapaliKucukResim &&
   olcum.tasma.length === 0 &&
   !olcum.kesik &&

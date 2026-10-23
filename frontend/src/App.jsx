@@ -109,6 +109,7 @@ function SekilTus({ onClick, etiket, yol }) {
 import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
 /* Alan içine yerleştirme ve sığdırma — ikisi de hazır (bkz. homografi.js). */
 import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
+import { duvarPlani, duvarYonergesi } from './duvarYerlesim.js'
 /* İşaretlenen alanın GERÇEK ölçüsü — eğimi hesaba katarak (bkz. alanOlcu.js). */
 import {
   dortgenGercekOlcu,
@@ -898,6 +899,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * değiştirirdi.
    */
   const [refNokta, setRefNokta] = useState([])
+  /*
+   * DUVAR DİBİ İŞARETLEME.
+   *
+   * Noktalar oran olarak (fotoğrafın 0..1'i) tutuluyor — referans
+   * noktalarıyla aynı kural: pencere boyu değişince ya da sahneye
+   * yakınlaşınca işaretler fotoğrafın üstünde durdukları yerde kalıyor.
+   */
+  const [duvarKipi, setDuvarKipi] = useState(false)
+  const [duvarNokta, setDuvarNokta] = useState([])
   const [refUzunlukCm, setRefUzunlukCm] = useState('')
   /*
    * REFERANS TÜRÜ.
@@ -7948,9 +7958,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * gizlemenin hiçbir gerekçesi yok.
    */
   const olcuTamam = !!refPxCm && alanNokta.length === 4
+  /*
+   * DUVAR DİBİ PLANI.
+   *
+   * Kaç tık gerektiği tasarımın kaç duvara yaslandığına bağlı: düz ve
+   * kavisli tek duvara (2), L ve açılı bir köşeye (3), U iki köşeye (4),
+   * küp ise hiçbir duvara değil zemine oturuyor (2, zemin çizgisi).
+   */
+  const duvarPlan = duvarPlani(grup?.tip || null, screenType)
+  const duvarYonerge = duvarYonergesi(duvarPlan, duvarNokta.length)
+  const duvarTamam = duvarNokta.length >= duvarPlan.tik
+
   const refIsaretleniyor = (refKipi || ref2Kipi) && !refPxCm
   const alanIsaretleniyor = alanKipi && alanNokta.length < 4
-  const olcuAraciAcik = refIsaretleniyor || lKoseKipi || alanIsaretleniyor || taslakKutuAcik
+  const duvarIsaretleniyor = duvarKipi && !duvarTamam
+  const olcuAraciAcik =
+    refIsaretleniyor || lKoseKipi || alanIsaretleniyor || taslakKutuAcik || duvarIsaretleniyor
 
   /*
    * YERİNDE 3B KATMAN ÇİZİLİYOR MU.
@@ -9060,6 +9083,60 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
             />
+          )}
+
+          {/*
+            DUVAR DİBİ İŞARETLEME KATMANI.
+
+            Referans seçicinin aynısı; farkı tık sayısı ve yapışmanın
+            kapalı olması. Ürün kararı: sistem otomatik çizgi/duvar
+            aramıyor, noktaları her zaman kullanıcı koyuyor.
+          */}
+          {duvarKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+            <>
+              <ReferansSecici
+                foto={isaretFoto}
+                olcek={isaretZoom}
+                onKaydir={isaretKaydir}
+                noktalar={duvarNokta.map(oranTuvale)}
+                onDegis={(tuvalNoktalari) => setDuvarNokta(tuvalNoktalari.map(tuvalOrana))}
+                enCokNokta={duvarPlan.tik}
+                tuvalW={tuvalBoyut.w}
+                tuvalH={tuvalBoyut.h}
+                sinir={fotoSinir}
+              />
+              {/* Konan noktalar numaralı: kullanıcı sırayı görsün. */}
+              <svg
+                width={tuvalBoyut.w}
+                height={tuvalBoyut.h}
+                viewBox={`0 0 ${tuvalBoyut.w} ${tuvalBoyut.h}`}
+                style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 16 }}
+              >
+                {duvarNokta.map(oranTuvale).map((p, i) => (
+                  <g key={i}>
+                    <circle cx={p.x} cy={p.y + 18} r="9.5" fill="#2962ad" />
+                    <text
+                      x={p.x}
+                      y={p.y + 18}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize="11.5"
+                      fontWeight="700"
+                      fill="#ffffff"
+                    >
+                      {i + 1}
+                    </text>
+                  </g>
+                ))}
+              </svg>
+              {/* Her tıkta sıradaki yönerge — tuvalin üstünde. */}
+              <div
+                style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 17 }}
+                className="pointer-events-none max-w-[90%] rounded-xl bg-[#001334]/85 px-4 py-2.5 text-center text-[14px] font-medium leading-snug text-white shadow-lg"
+              >
+                {t(duvarYonerge)}
+              </div>
+            </>
           )}
 
           {refKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
@@ -10417,6 +10494,45 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </svg>
                   {ozelSahne ? t('scene.customChange') : t('scene.customAdd')}
                 </button>
+                )}
+
+                {/*
+                  DUVAR DİBİNDEN YERLEŞTİRME — yeni yol.
+
+                  Eski "Alan işaretle" akışı yerinde duruyor; bu kart onun
+                  yanında. Kullanıcı duvarın yere değdiği çizgiyi
+                  işaretliyor, sistem tasarımı kendisi oturtuyor.
+                */}
+                {scene === 'ozel' && ozelSahne && (
+                  <div className="mt-3 rounded-xl border border-neutral-200 p-3 dark:border-[#2c333f]">
+                    <h4 className="m-0 text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">
+                      {t('dyer.baslik')}
+                    </h4>
+                    {!refPxCm ? (
+                      <p className="mb-0 mt-1 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                        {t('dyer.olcekGerek')}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mb-0 mt-1 text-[13px] leading-snug text-neutral-600 dark:text-neutral-300">
+                          {t(duvarYonerge)}
+                        </p>
+                        <p className="mb-0 mt-1 text-[12.5px] tabular-nums text-neutral-500 dark:text-neutral-400">
+                          {duvarNokta.length} / {duvarPlan.tik}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDuvarNokta([])
+                            setDuvarKipi(true)
+                          }}
+                          className="mt-2 w-full rounded-lg bg-brand px-4 py-2.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
+                        >
+                          {duvarNokta.length ? t('dyer.bastan') : t('dyer.giris')}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
 
                 {/*
