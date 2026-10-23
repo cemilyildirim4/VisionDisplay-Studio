@@ -127,6 +127,14 @@ function SihirbazKart({
   setAlanElleEn = null,
   setAlanElleBoy = null,
   onAlanIsaretle = null,
+  /*
+   * DUVAR DİBİ ADIMI — 3. adımın yeni içeriği.
+   * Yönergeyi ve sayacı App hesaplıyor; burada yalnızca gösteriliyor.
+   */
+  onDuvarIsaretle = null,
+  duvarYonergeMetni = '',
+  duvarKonan = 0,
+  duvarGereken = 2,
   onAlanBitir = null,
   onAlanSigdir = null,
   /* L'nin son adımında çizilen kanat şekli tuşları (bkz. App.jsx). */
@@ -786,34 +794,23 @@ function SihirbazKart({
           */}
           {!alanKipi && adim === 3 && !lKose && (
             <>
-              <p className={aciklama}>{t('sih.sec.aciklama')}</p>
-              {onAlanIsaretle && (
-                <>
-                  <button type="button" onClick={onAlanIsaretle} className={`mt-2 w-full ${ana}`}>
-                    {t('sih.sec.alan')}
-                  </button>
-                  {detayAcik && (
-                    <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
-                      {t('sih.sec.alanNot')}
-                    </p>
-                  )}
-                </>
-              )}
-              {PANEL.manuelDuzenle && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => onElleDuzenle?.()}
-                    className="mt-2 w-full py-2.5 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                  >
-                    {t('sih.sec.serbest')}
-                  </button>
-                  {detayAcik && (
-                    <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
-                      {t('sih.sec.serbestNot')}
-                    </p>
-                  )}
-                </>
+              {/*
+                DUVAR DİBİ — kullanıcıdan hayal etmesi istenmiyor.
+                Eskiden burada "alanı işaretle" (dört köşeyi tahmin et) ve
+                "serbest yerleştir" (kutuyu elle boyutlandır) vardı; ikisi de
+                perspektifi kullanıcıya kurduruyordu.
+              */}
+              <p className={aciklama}>{t('dyer.adimAciklama')}</p>
+              <p className={`mt-1 text-[13.5px] leading-snug text-neutral-700 dark:text-neutral-200`}>
+                {duvarYonergeMetni}
+              </p>
+              <p className={`${kucuk} tabular-nums text-neutral-500 dark:text-neutral-400`}>
+                {duvarKonan} / {duvarGereken}
+              </p>
+              {onDuvarIsaretle && (
+                <button type="button" onClick={onDuvarIsaretle} className={`mt-2 w-full ${ana}`}>
+                  {duvarKonan ? t('dyer.bastan') : t('dyer.giris')}
+                </button>
               )}
               {kutuMesaj && (
                 <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{kutuMesaj}</p>

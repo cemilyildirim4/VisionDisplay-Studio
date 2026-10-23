@@ -1676,6 +1676,7 @@ const dict = {
   'dyer.u4': { tr: 'Üçüncü duvarın dış ucuna tıklayın', en: 'Click the outer end of the third wall', ar: 'انقر الطرف الخارجي للجدار الثالث' },
   'dyer.zemin1': { tr: 'Zemindeki düz bir çizginin (fayans, halı kenarı) bir ucuna tıklayın', en: 'Click one end of a straight line on the floor (tile or rug edge)', ar: 'انقر أحد طرفي خط مستقيم على الأرض (حافة بلاط أو سجادة)' },
   'dyer.zemin2': { tr: 'Şimdi aynı çizginin öteki ucuna tıklayın', en: 'Now click the other end of the same line', ar: 'انقر الآن الطرف الآخر لنفس الخط' },
+  'dyer.adimAciklama': { tr: 'Ekranın konacağı duvarların yere değdiği çizgiyi işaretleyin; gerisini sistem hesaplar.', en: 'Mark where the walls meet the floor; the rest is computed for you.', ar: 'حدّد التقاء الجدران بالأرض؛ الباقي يُحسب تلقائيًا.' },
   'dyer.bitti': { tr: 'Yerleştirildi. İsterseniz taşıyıp kaydırabilirsiniz.', en: 'Placed. You can drag it to reposition.', ar: 'تم الوضع. يمكنك سحبه لتغيير موضعه.' },
   'wiz.title': { tr: 'Model Öneri Sihirbazı', en: 'Model Recommendation Wizard', ar: 'معالج اقتراح الطراز' },
   'wiz.step1Title': { tr: 'Ekran nerede duracak?', en: 'Where will the screen be placed?', ar: 'أين ستوضع الشاشة؟' },

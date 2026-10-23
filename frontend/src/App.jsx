@@ -7987,7 +7987,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * geliyor. Kullanıcıya kalan tek şey taşımak.
    */
   const duvardanYerlestir = () => {
-    if (!(refPxCm > 0)) return false
+    /*
+     * ÖLÇEK TUVAL PİKSELİNDE.
+     *
+     * refPxCm fotoğrafın KENDİ çözünürlüğündeki piksel/cm; buradaki
+     * hesap ise tuval pikselinde yapılıyor. İkisini karıştırmak
+     * tasarımı kat kat yanlış büyüklükte koyar. Referansın iki ucu
+     * zaten oran olarak duruyor: tuvale çevirip aradaki uzaklığı
+     * santime bölmek doğru ölçeği veriyor.
+     */
+    const refCm = Number(String(refUzunlukCm).replace(",", "."))
+    if (refNokta.length !== 2 || !(refCm > 0)) return false
+    const ra = oranTuvale(refNokta[0])
+    const rb = oranTuvale(refNokta[1])
+    const olcekPxCm = Math.hypot(rb.x - ra.x, rb.y - ra.y) / refCm
+    if (!(olcekPxCm > 0)) return false
     const nk = duvarNokta.map(oranTuvale)
     const parcalar = duvarParcalari(nk)
     if (!parcalar.length) return false
@@ -7999,8 +8013,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const ufukY = ufuk && Number.isFinite(ufuk.y) ? ufuk.y : null
 
     /* Gerçek ölçünün piksel karşılığı: metre → santim → piksel. */
-    const enPx = tasarimWm * 100 * refPxCm
-    const boyPx = tasarimHm * 100 * refPxCm
+    const enPx = tasarimWm * 100 * olcekPxCm
+    const boyPx = tasarimHm * 100 * olcekPxCm
     if (!(enPx > 1) || !(boyPx > 1)) return false
 
     /* Tasarım duvarın ortasına oturuyor; duvardan genişse duvarı dolduruyor. */
@@ -8025,7 +8039,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   useEffect(() => {
     if (!duvarKipi || !duvarTamam) return
     const oldu = duvarYerlestirRef.current?.()
-    if (oldu) setDuvarKipi(false)
+    if (!oldu) return
+    /*
+     * İŞ BİTTİ: sihirbaz kapanıyor, tasarım görünür oluyor ve kullanıcıya
+     * kalan tek şey taşımak. Boyut ve perspektif hesaptan geldiği için
+     * ayrıca bir onay adımı yok.
+     */
+    setDuvarKipi(false)
+    setSihirbazAdim(0)
+    setTasarimAcik(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duvarKipi, duvarTamam])
 
@@ -9154,6 +9176,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {duvarKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <>
+              {/*
+                İŞARETLEME KATMANI EN ÜSTTE.
+                Aynı yığında başka katmanlar da var (sabit ekranlar, taşıma
+                yüzeyi); DOM sırası onları üste alıyor ve tıklamalar
+                işaretleyiciye hiç ulaşmıyordu.
+              */}
+              <div style={{ position: 'absolute', inset: 0, zIndex: 18 }}>
               <ReferansSecici
                 foto={isaretFoto}
                 olcek={isaretZoom}
@@ -9165,6 +9194,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 tuvalH={tuvalBoyut.h}
                 sinir={fotoSinir}
               />
+              </div>
               {/* Konan noktalar numaralı: kullanıcı sırayı görsün. */}
               <svg
                 width={tuvalBoyut.w}
@@ -10557,45 +10587,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 )}
 
                 {/*
-                  DUVAR DİBİNDEN YERLEŞTİRME — yeni yol.
-
-                  Eski "Alan işaretle" akışı yerinde duruyor; bu kart onun
-                  yanında. Kullanıcı duvarın yere değdiği çizgiyi
-                  işaretliyor, sistem tasarımı kendisi oturtuyor.
-                */}
-                {scene === 'ozel' && ozelSahne && (
-                  <div className="mt-3 rounded-xl border border-neutral-200 p-3 dark:border-[#2c333f]">
-                    <h4 className="m-0 text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">
-                      {t('dyer.baslik')}
-                    </h4>
-                    {!refPxCm ? (
-                      <p className="mb-0 mt-1 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
-                        {t('dyer.olcekGerek')}
-                      </p>
-                    ) : (
-                      <>
-                        <p className="mb-0 mt-1 text-[13px] leading-snug text-neutral-600 dark:text-neutral-300">
-                          {t(duvarYonerge)}
-                        </p>
-                        <p className="mb-0 mt-1 text-[12.5px] tabular-nums text-neutral-500 dark:text-neutral-400">
-                          {duvarNokta.length} / {duvarPlan.tik}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDuvarNokta([])
-                            setDuvarKipi(true)
-                          }}
-                          className="mt-2 w-full rounded-lg bg-brand px-4 py-2.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
-                        >
-                          {duvarNokta.length ? t('dyer.bastan') : t('dyer.giris')}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/*
                   TASARIMI ALANA SIĞDIR — bir adımın içinde saklı değil.
                   Fotoğrafta alan işaretlendiği anda yapılacak ilk iş bu;
                   menü arkasında durunca kimse bulamıyordu.
@@ -10673,6 +10664,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             adim={sihirbazAdim}
                             t={t}
                             refNoktaSayisi={refNokta.length}
+                            /* 3. adım: duvar diplerini işaretle. */
+                            onDuvarIsaretle={() => {
+                              setDuvarNokta([])
+                              setDuvarKipi(true)
+                            }}
+                            duvarYonergeMetni={t(duvarYonerge)}
+                            duvarKonan={duvarNokta.length}
+                            duvarGereken={duvarPlan.tik}
                             onIsaretle={() => {
                               setRefNokta([])
                               setRefKipi(true)
