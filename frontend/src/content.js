@@ -189,7 +189,14 @@ export const bezelGapStyle = (cellW, cellH, gapPx, color = BEZEL_COLOR) => ({
  * kenardan yaklaşık %17 uzun görünür — köşe okunur, perspektif abartılı
  * değil.
  */
-export const L_KIRILMA_PCT = 8
+/*
+ * L KÖŞESİNDE KENARIN KISALMA PAYI (%).
+ *
+ * 8 iken köşe okunmuyordu: iki kanat karşıdan bakınca sıkışmış tek bir
+ * şerit gibi duruyordu. Pay derinleşince kanatların biri öne, biri geriye
+ * gidiyor ve 90 derecelik köşe tek bakışta anlaşılıyor.
+ */
+export const L_KIRILMA_PCT = 15
 
 /*
  * UZAKLAŞAN KANADIN KISALMA ORANI.

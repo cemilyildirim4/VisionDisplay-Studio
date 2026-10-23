@@ -1690,9 +1690,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setLSolAlt(0)
       setLSagUst(0)
       setLSagAlt(0)
-      setSabitEkranlar([])
-      setAktifEkranId(null)
-      setAktifSira(1)
+      /*
+       * EKRANLAR MEKÂNA AİT DEĞİL.
+       *
+       * Ekran listesi — sayısı, tipi, boyutu, içeriği, birleşimi — bütün
+       * mekânlarda ORTAK. Yeni fotoğrafa ait olmayan tek şey ekranların o
+       * fotoğraftaki YERİ. Eskiden bütün liste siliniyordu: "Mekân yok"ta
+       * kurulan üç ekranlı L düzeni, kendi fotoğrafına geçerken tek ekrana
+       * iniyor, birleşim ve görseller yok oluyordu.
+       */
+      setSabitEkranlar((l) => l.map((x) => ({ ...x, oran: null })))
       setAlanKipi(false)
       setAlanNokta([])
       setAlanElleEn('')
@@ -2373,7 +2380,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * "çoklu ekran" durumu tutulmuyor (tek sistem). Her parçanın ölçüsü
    * KENDİ yönünden türüyor.
    */
-  const ekranParcalari = [
+  const ekranParcalariHam = [
     ...sabitEkranlar.map((e, i) => ({ id: e.id, sira: e.sira || i + 1, ...(e.ayar || {}) })),
     /*
      * İÇERİK DE BURADA. Eksik kalınca parça "içerik yok" sayılıyor ve
@@ -2412,6 +2419,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         paylasim: paylasimKumesi(e.id)?.join(',') || null,
       }
     })
+
+  /*
+   * PAYLAŞIM KÜMESİNDE İÇERİK ORTAK.
+   *
+   * "Tek görsel" açık bir birleşimde görsel çoğu zaman tek bir ekranın
+   * kartından veriliyor; ötekiler kendi kaydındaki "led" ile kalıyor ve
+   * tasarımda SİMSİYAH çiziliyordu. Kart "birleşimin görseli
+   * kullanılıyor" dediği hâlde ekranda görünen buydu.
+   *
+   * İçeriği ekrandan değil KÜMEDEN okumak doğrusu: kümede içerik veren
+   * ilk ekran kümenin içeriğidir ve bütün üyeler onu gösterir. Buradan
+   * türeyen her şey (şerit, 3B, fotoğraf, PDF) kendiliğinden düzeliyor.
+   */
+  const ekranParcalari = (() => {
+    const kumeIcerigi = new Map()
+    for (const p of ekranParcalariHam) {
+      if (!p.paylasim || kumeIcerigi.has(p.paylasim)) continue
+      if (p.content && p.content !== 'led' && p.content !== 'none') {
+        kumeIcerigi.set(p.paylasim, { content: p.content, contentUrl: p.contentUrl })
+      }
+    }
+    if (kumeIcerigi.size === 0) return ekranParcalariHam
+    return ekranParcalariHam.map((p) =>
+      p.paylasim && kumeIcerigi.has(p.paylasim) ? { ...p, ...kumeIcerigi.get(p.paylasim) } : p,
+    )
+  })()
 
   /*
    * BİRLEŞİMİN DÜZLEMDEKİ GEOMETRİSİ.
