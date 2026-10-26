@@ -81,28 +81,32 @@ export function bolmeDilimleri(ekranlar) {
   /* Paylaşacak en az iki ekran kalmadıysa bölünecek bir şey de yok. */
   if (hazir.length < 2) return null
 
-  /* Ortak çerçevenin başnoktası: en soldaki kenar (dikeyi ölçü veriyor). */
-  const enSol = Math.min(...hazir.map((e) => e.sol))
-
   /*
-   * DİKEY HİZA PİKSELDEN DEĞİL ÖLÇÜDEN.
+   * YERLEŞİM PİKSELDEN DEĞİL ÖLÇÜDEN.
    *
-   * Ekranlar zemine basıyor; köşeyi saran birleşimde iki kanat iki ayrı
-   * duvarda olduğu için üst kenarları fotoğrafta aynı yükseklikte
-   * GÖRÜNMÜYOR, ama fiziksel olarak aynı hizadalar. Piksel üst kenarı
-   * kullanmak bu perspektif farkını dilime taşıyordu: görselin
-   * ortasındaki yatay bir çizgi bir ekranda aşağı, komşusunda yukarı
-   * kayıyordu. Hiza tabandan, ortak yüzeyin boyu da en uzun ekranın
-   * boyu.
+   * Piksel yalnızca SIRAYI veriyor: fotoğrafta soldan sağa kim önce.
+   * Geri kalan her şey gerçek ölçüden geliyor — ekranlar yan yana
+   * açılmış tek bir yüzey gibi, her biri kendi gerçek genişliği kadar
+   * yer kaplıyor, hepsi tabandan hizalı.
+   *
+   * Eskiden yatay yer, dörtgenin PİKSEL genişliğinden türetilen bir
+   * ölçekle santime çevriliyordu. Köşeyi saran birleşimde iki kanadın
+   * piksel genişliği perspektif yüzünden belirgin farklı olduğu için
+   * ikisi aynı ortak çerçeveyi bulamıyor, dilim ölçekleri ayrışıyor ve
+   * resim köşede hizalı devam etmiyordu. Dikeyde de aynı kusur vardı:
+   * iki kanat aynı zemine bastığı hâlde üst kenarları fotoğrafta aynı
+   * yükseklikte görünmüyor.
    */
   const enBuyukBoy = Math.max(...hazir.map((e) => e.boyCm))
-  const yerler = hazir.map((e) => ({
-    ...e,
-    x: (e.sol - enSol) * e.olcekX,
-    y: enBuyukBoy - e.boyCm,
-  }))
+  const sirali = [...hazir].sort((a, b) => a.sol - b.sol)
+  let akan = 0
+  const yerler = sirali.map((e) => {
+    const yer = { ...e, x: akan, y: enBuyukBoy - e.boyCm }
+    akan += e.enCm
+    return yer
+  })
 
-  const toplamEn = Math.max(...yerler.map((e) => e.x + e.enCm))
+  const toplamEn = akan
   const toplamBoy = enBuyukBoy
   if (!(toplamEn > 0) || !(toplamBoy > 0)) return null
 
