@@ -81,18 +81,29 @@ export function bolmeDilimleri(ekranlar) {
   /* Paylaşacak en az iki ekran kalmadıysa bölünecek bir şey de yok. */
   if (hazir.length < 2) return null
 
-  /* Ortak çerçevenin başnoktası: en soldaki ve en üstteki kenar. */
+  /* Ortak çerçevenin başnoktası: en soldaki kenar (dikeyi ölçü veriyor). */
   const enSol = Math.min(...hazir.map((e) => e.sol))
-  const enUst = Math.min(...hazir.map((e) => e.ust))
 
+  /*
+   * DİKEY HİZA PİKSELDEN DEĞİL ÖLÇÜDEN.
+   *
+   * Ekranlar zemine basıyor; köşeyi saran birleşimde iki kanat iki ayrı
+   * duvarda olduğu için üst kenarları fotoğrafta aynı yükseklikte
+   * GÖRÜNMÜYOR, ama fiziksel olarak aynı hizadalar. Piksel üst kenarı
+   * kullanmak bu perspektif farkını dilime taşıyordu: görselin
+   * ortasındaki yatay bir çizgi bir ekranda aşağı, komşusunda yukarı
+   * kayıyordu. Hiza tabandan, ortak yüzeyin boyu da en uzun ekranın
+   * boyu.
+   */
+  const enBuyukBoy = Math.max(...hazir.map((e) => e.boyCm))
   const yerler = hazir.map((e) => ({
     ...e,
     x: (e.sol - enSol) * e.olcekX,
-    y: (e.ust - enUst) * e.olcekY,
+    y: enBuyukBoy - e.boyCm,
   }))
 
   const toplamEn = Math.max(...yerler.map((e) => e.x + e.enCm))
-  const toplamBoy = Math.max(...yerler.map((e) => e.y + e.boyCm))
+  const toplamBoy = enBuyukBoy
   if (!(toplamEn > 0) || !(toplamBoy > 0)) return null
 
   const harita = new Map()

@@ -73,22 +73,32 @@ const kartaSayi = (v) =>
     return true
   }, v)
 
-/** Bir alanı kurup bitiren kısa akış (köşeler oran olarak veriliyor). */
-async function alanKur(kx, ky, ken, kboy) {
-  const m = await tuval()
-  const x = m.x + m.w * kx
-  const y = m.y + m.h * ky
-  const en = m.w * ken
-  const boy = m.h * kboy
-  await bas('Alanı işaretle', 1500)
+/**
+ * DUVAR DİBİNİ İŞARETLE — yerleştirmenin tek adımı.
+ *
+ * Duvarın yere değdiği çizginin iki ucuna tıklanıyor; bütün ekranlar
+ * gerçek genişlikleri oranında o duvara diziliyor.
+ *
+ * Noktalar TASARIM KATMANINA göre veriliyor: #pdf-onizleme daha geniş
+ * bir kutu ve ona göre verilen oranlar işaretleme katmanının dışına
+ * düşüyor, tıklamalar hiç sayılmıyordu.
+ */
+async function duvarDibiniIsaretle() {
+  const m = await s.evaluate(() => {
+    const k = document.querySelector('[data-tasarim-katman]') || document.querySelector('#pdf-onizleme')
+    const r = k.getBoundingClientRect()
+    return { x: r.x, y: r.y, w: r.width, h: r.height }
+  })
+  const basildi = await bas('Duvar diplerini işaretle', 1500)
   await tikla([
-    [x, y],
-    [x + en, y + boy * 0.05],
-    [x + en, y + boy],
-    [x, y + boy * 0.95],
+    [m.x + m.w * 0.3, m.y + m.h * 0.7],
+    [m.x + m.w * 0.7, m.y + m.h * 0.65],
   ])
-  await bas('Alanı onayla', 2500)
-  await bas('Bitir ve tasarımı göster', 2000)
+  await s.waitForTimeout(2200)
+  const kalan = await s.evaluate(() =>
+    (((document.body.innerText || '').replace(/\s+/g, ' ').match(/\d \/ \d/g) || []).join(',')),
+  )
+  console.log('  duvar dibi: dugme=' + basildi + ' kalan sayac=' + (kalan || 'yok'))
 }
 
 await s.goto(ADRES, { waitUntil: 'domcontentloaded' })
@@ -123,16 +133,14 @@ await kartaSayi(210)
 await s.waitForTimeout(800)
 await bas('Devam', 1500)
 
-/* 1. ekran: solda */
-await alanKur(0.2, 0.3, 0.2, 0.3)
-console.log('1. ekran kuruldu')
-/* 2. ekran: sağda */
+/*
+ * Üç ekran kuruluyor, sonra duvar dibi BİR KEZ işaretleniyor: yeni
+ * yolda yerleştirme ekran ekran değil, tek adımda ve hepsi birden.
+ */
 await bas('+ Ekran ekle', 2500)
-await alanKur(0.48, 0.3, 0.2, 0.3)
-console.log('2. ekran kuruldu')
-/* Ucuncu ekrana gecerek ilk ikisini de SABITLE: asil kullanim boyle. */
 await bas('+ Ekran ekle', 2500)
-console.log('3. ekrana gecildi (ilk iki ekran sabit)')
+console.log('3 ekran kuruldu (ilk ikisi sabit)')
+await duvarDibiniIsaretle()
 
 /*
  * HER EKRANA AYRI AYRI: ÖRNEK GÖRÜNTÜ + Bölünmüş.
@@ -159,7 +167,7 @@ for (const sira of [1, 2, 3]) {
   const sonuc = await s.evaluate(() => {
     const panel = document.querySelector('aside.yatay-panel-model')
     const liste = panel && panel.querySelector('ul')
-    const acik = liste && [...liste.children].find((li) => li.dataset.acik === '1')
+    const acik = panel && panel.querySelector('[data-acik="1"]')
     if (!acik) return 'acik satir yok'
     /* Havuz kareleri: basligi iceriğin adi. */
     const kare = [...acik.querySelectorAll('button[title]')].find((x) => /ÖRNEK GÖRÜNTÜ/i.test(x.title || ''))
@@ -172,7 +180,7 @@ for (const sira of [1, 2, 3]) {
   await s.evaluate(() => {
     const panel = document.querySelector('aside.yatay-panel-model')
     const liste = panel && panel.querySelector('ul')
-    const acik = liste && [...liste.children].find((li) => li.dataset.acik === '1')
+    const acik = panel && panel.querySelector('[data-acik="1"]')
     const b = acik && [...acik.querySelectorAll('button')].find((x) => (x.textContent || '').trim() === 'Bölünmüş')
     b?.click()
   })
@@ -184,6 +192,17 @@ console.log('bolunmus dugmesi tiklandi:', bolundu)
 await s.waitForTimeout(1500)
 await bas('Tamam', 1500)
 await s.waitForTimeout(1500)
+
+/* Tanı: sabit ekranlar katmanında kaç kutu var, etkin tasarım yerleşti mi. */
+const katmanBilgisi = await s.evaluate(() => {
+  const katman = [...document.querySelectorAll('div')].find((x) => x.style && x.style.zIndex === '13')
+  const yuz = document.querySelector('[data-tasarim-yuz]')
+  return {
+    sabitKutu: katman ? katman.children.length : -1,
+    etkinDon: yuz ? getComputedStyle(yuz).transform.slice(0, 12) : 'yok',
+  }
+})
+console.log('  tani: sabit kutu =', katmanBilgisi.sabitKutu, '| etkin donusum =', katmanBilgisi.etkinDon)
 
 const olcum = await s.evaluate(() => {
   const liste = []
@@ -218,9 +237,15 @@ for (const o of olcum) console.log('  ', JSON.stringify(o))
  */
 let dustu = 0
 const dus = (m) => { console.log('  ✗ ' + m); dustu++ }
-const cizenler = olcum.filter((o) => o.yer === 'SABIT')
-if (olcum.some((o) => o.yer === 'ETKIN')) dus('yeri belli olmayan ekran da icerik ciziyor (tekrar)')
-if (cizenler.length !== 2) dus('beklenen 2 yerlesmis ekran, bulunan ' + cizenler.length)
+/*
+ * DENETİMLER YENİ YOLA GÖRE.
+ *
+ * Eskiden ekranlar tek tek yerleştiriliyordu ve "yeri belli olmayan
+ * ekran" diye bir durum vardı; onun içerik çizmemesi gerekiyordu. Duvar
+ * dibi yolunda bütün ekranlar tek adımda yerleşiyor, o durum kalmadı.
+ * Ölçülen şey artık paylaşımın kendisi.
+ */
+if (olcum.length < 2) dus('beklenen en az 2 yerlesmis ekran, bulunan ' + olcum.length)
 if (!dustu) {
   const coz = (o) => {
     const [kw] = o.kutu.split('x').map(Number)
@@ -228,15 +253,19 @@ if (!dustu) {
     const px = parseFloat(o.bgPos.split(' ')[0])
     return { sw: bw / kw, sx: -px / kw }
   }
-  const a1 = coz(cizenler[0])
-  const a2 = coz(cizenler[1])
-  console.log('  · dilimler: 1 → [' + a1.sx.toFixed(2) + ', ' + (a1.sx + 1).toFixed(2) + '] / ' + a1.sw.toFixed(2) +
-              '  2 → [' + a2.sx.toFixed(2) + ', ' + (a2.sx + 1).toFixed(2) + '] / ' + a2.sw.toFixed(2))
-  if (Math.abs(a1.sw - a2.sw) > 0.05) dus('iki ekran ayni icerik kutusunu kullanmiyor: ' + a1.sw.toFixed(2) + ' vs ' + a2.sw.toFixed(2))
-  if (!(a1.sw > 1.05)) dus('bolme hic uygulanmamis (icerik kutusu ekran kadar)')
-  const sol = a1.sx < a2.sx ? a1 : a2
-  const sag = a1.sx < a2.sx ? a2 : a1
-  if (sag.sx < sol.sx + 1 - 0.02) dus('dilimler cakisiyor: ayni parca iki ekranda')
+  const dilimler = olcum.map(coz).sort((a, b) => a.sx - b.sx)
+  console.log(
+    '  · dilimler: ' +
+      dilimler.map((a) => '[' + a.sx.toFixed(2) + ', ' + (a.sx + 1).toFixed(2) + ']/' + a.sw.toFixed(2)).join('  '),
+  )
+  const ilk = dilimler[0].sw
+  /* Hepsi tek bir görseli paylaşıyor: içerik kutusu aynı olmalı. */
+  if (dilimler.some((a) => Math.abs(a.sw - ilk) > 0.05)) dus('ekranlar ayni icerik kutusunu kullanmiyor')
+  if (!(ilk > 1.05)) dus('bolme hic uygulanmamis (icerik kutusu ekran kadar)')
+  /* Her ekran görselin BAŞKA bir parçasını göstermeli. */
+  for (let i = 1; i < dilimler.length; i++) {
+    if (dilimler[i].sx < dilimler[i - 1].sx + 1 - 0.02) dus('dilimler cakisiyor: ayni parca iki ekranda')
+  }
 }
 console.log('sayfa hatasi:', hata.slice(0, 2).join(' | ') || 'yok')
 if (dustu) {

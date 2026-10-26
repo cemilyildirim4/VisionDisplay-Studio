@@ -136,7 +136,8 @@ const panelOlcusu = (s) =>
   s.evaluate(() => {
     const panel = document.querySelector('aside.yatay-panel-model')
     const liste = panel && panel.querySelector('ul')
-    const acik = liste && [...liste.children].find((li) => li.dataset.acik === '1')
+    /* Ayarlar artık karelerin ALTINDA, listenin içinde değil. */
+    const acik = panel && panel.querySelector('[data-acik="1"]')
     if (!acik) return { sutun: null, satir: null, tani: 'acik satir yok' }
     /*
      * Sayilar artik giris kutusunda degil: "Sutun - 9 + Satir - 9 +".

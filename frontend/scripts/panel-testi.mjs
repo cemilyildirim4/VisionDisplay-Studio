@@ -86,12 +86,15 @@ for (let i = 0; i < 2; i++) {
 const olcum = await s.evaluate(() => {
   const panel = document.querySelector('aside.yatay-panel-model')
   const liste = panel?.querySelector('ul')
-  const satirlar = liste ? [...liste.children] : []
-  /* Acik satir: ikinci kenarlikli (btn-selected) olan. */
-  /* Acik satir biçim sınıfından değil, veri niteliğinden tanınıyor. */
-  const acik = satirlar.filter((li) => li.dataset.acik === '1')
-  const kapali = satirlar.filter((li) => li.dataset.acik !== '1')
-  const acikGovde = acik[0] || null
+  /* Ekran kutuları; "+ Ekran ekle" kutusu sayıma girmiyor. */
+  const satirlar = liste ? [...liste.children].filter((li) => li.dataset.ekran) : []
+  /*
+   * EKRANLAR ARTIK KARE KUTULAR; ayarlar kutuların ALTINDA duruyor.
+   * Açık gövde veri niteliğinden tanınıyor, listenin içinde değil.
+   */
+  const acikGovde = panel?.querySelector('[data-acik="1"]') || null
+  const acik = acikGovde ? [acikGovde] : []
+  const kapali = satirlar
   const metin = (el) => (el?.innerText || '').replace(/\s+/g, ' ')
   const toplamSatiri = [...(panel?.querySelectorAll('div') || [])]
     .map((d) => d.innerText || '')

@@ -191,10 +191,7 @@ import { birimSozcugu, seriAdi } from './productType.js'
 import {
   taslakEkranlari,
   taslakOlustur,
-  taslagiYaz,
-  taslagiOku,
   taslagiSil,
-  sayfaYenilendi,
   duzenlemeyiAl,
 } from './tasarimTaslagi.js'
 
@@ -1497,11 +1494,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const duzenle = duzenlemeyiAl()
     if (duzenle) {
       bekleyenTaslakRef.current = duzenle
-    } else if (sayfaYenilendi()) {
+    } else {
+      /*
+       * SESSİZ GERİ YÜKLEME YOK.
+       *
+       * Sayfa her yeniden açılışta sıfırdan, model seçiminden başlıyor.
+       * Üzerinde çalışılan bir düzen varken çıkmak isteyen kullanıcıyı
+       * tarayıcının kendi uyarısı durduruyor (bkz. ayrılma uyarısı);
+       * uyarıya rağmen çıktıysa karar onundur, eski düzen geri
+       * getirilmiyor.
+       */
       taslagiSil()
       bekleyenTaslakRef.current = null
-    } else {
-      bekleyenTaslakRef.current = taslagiOku()
     }
   }
   const [taslakUyari, setTaslakUyari] = useState(null)
@@ -1570,23 +1574,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (t.icerikDustu) setTaslakUyari('Yüklediğiniz görsel/video geri yüklenemedi; içerik LED yüzeye alındı.')
   }, [displayCabinets, cabinetsLoading])
 
-  /* Tasarım her değiştiğinde taslak tazelenir. */
-  useEffect(() => {
-    // Geri yükleme sırası gelmemişken yazmak, bekleyen taslağın üstüne boş
-    // durum yazıp onu silerdi.
-    if (bekleyenTaslakRef.current) return
-    taslagiYaz(
-      taslakOlustur({
-        selectedModel, width, height, cols, rows, screenType,
-        orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene,
-        ekranlar: sabitEkranlar, content,
-        /* Kimlik, sıra ve birleşim olmadan düzen geri gelemiyor. */
-        lSolCols, lYon, aktifEkranId, aktifSira, grup, icerikGruplari,
-      }),
-    )
-  }, [selectedModel, width, height, cols, rows, screenType,
-      orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene, sabitEkranlar, content,
-      lSolCols, lYon, aktifEkranId, aktifSira, grup, icerikGruplari])
 
   const handleChoose = (model) => {
     // Başka bir modele geçmek, tasarımı baştan kurmak demek: eldeki kareler
@@ -2319,6 +2306,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   const hasModel = !!selectedModel
+
+  /*
+   * SAYFADAN AYRILMA UYARISI.
+   *
+   * Tasarım hiçbir yere kaydedilmiyor; sayfa kapanınca ya da yenilenince
+   * kayboluyor. Kullanıcı bunu yanlışlıkla yapabilir — tarayıcının kendi
+   * onayı araya giriyor. Yalnızca üzerinde çalışılan bir düzen varken,
+   * yani model seçiliyken: boş sayfadan çıkarken soru sormak gereksiz.
+   *
+   * Metni tarayıcı yazıyor; returnValue'ya verilen değer çoğu tarayıcıda
+   * yok sayılıyor ama uyarının çıkması için atanması gerekiyor.
+   */
+  useEffect(() => {
+    if (!hasModel) return undefined
+    const ayrilirken = (olay) => {
+      olay.preventDefault()
+      olay.returnValue = ''
+      return ''
+    }
+    window.addEventListener('beforeunload', ayrilirken)
+    return () => window.removeEventListener('beforeunload', ayrilirken)
+  }, [hasModel])
   const category = selectedModel?.category || 'led'
   const isVideoWall = category === 'videowall'
   /*
@@ -8101,6 +8110,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * İki kol köşede buluşuyor; aradaki açı işaretlenen duvarların
      * açısı, yani fotoğraftaki gerçek köşe.
      */
+    /*
+     * DÖRTGENLERİ YERİNE YAZAN ORTAK ADIM.
+     * Elde duran ekranınki elle dörtgene, ötekilerinki kendi kayıtlarına.
+     */
+    const yerlerineYaz = (liste) => {
+      const aktif = liste.find((x) => x.id === aktifEkranId)
+      if (aktif) elleKoseyeYaz(aktif.kose)
+      const digerleri = new Map(
+        liste.filter((x) => x.id !== aktifEkranId).map((x) => [x.id, x.kose.map(tuvalOrana)]),
+      )
+      if (digerleri.size) {
+        setSabitEkranlar((l) => l.map((e) => (digerleri.has(e.id) ? { ...e, oran: digerleri.get(e.id) } : e)))
+      }
+      setDuvardanKuruldu(true)
+    }
+
     if (koseli) {
       const yazilacak = []
       for (let i = 0; i < uyeler.length; i++) {
@@ -8111,23 +8136,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         if (!k) return false
         yazilacak.push({ id: uyeler[i], kose: k })
       }
-      const aktif = yazilacak.find((x) => x.id === aktifEkranId)
-      if (aktif) elleKoseyeYaz(aktif.kose)
-      const digerleri = new Map(
-        yazilacak.filter((x) => x.id !== aktifEkranId).map((x) => [x.id, x.kose.map(tuvalOrana)]),
-      )
-      if (digerleri.size) {
-        setSabitEkranlar((l) => l.map((e) => (digerleri.has(e.id) ? { ...e, oran: digerleri.get(e.id) } : e)))
-      }
-      setDuvardanKuruldu(true)
+      yerlerineYaz(yazilacak)
       return true
     }
 
-    /* Tek duvar: bütün tasarım duvarın ortasına. */
-    const kose = duvaraOturt(parcalar[0], tasarimWm, tasarimHm, 'orta')
+    const duvar = parcalar[0]
+
+    /*
+     * BİRLEŞİK OLMAYAN BİRDEN ÇOK EKRAN: DUVARA SIRAYLA.
+     *
+     * Hepsi aynı duvara, gerçek genişlikleri oranında ve listedeki
+     * sırayla diziliyor; blok duvarın ortasına oturuyor. Eskiden
+     * yalnızca elde duran ekran konuyor, ötekiler yersiz kalıyordu.
+     */
+    if (ekranParcalari.length > 1) {
+      const toplamPx = ekranParcalari.reduce((t, x) => t + (x.wm || 0), 0) * 100 * olcekPxCm
+      if (!(toplamPx > 1)) return false
+      const blok = Math.min(1, toplamPx / duvar.uzunlukPx)
+      let bas = 0.5 - blok / 2
+      const yazilacak = []
+      for (const x of ekranParcalari) {
+        const pay = (((x.wm || 0) * 100 * olcekPxCm) / toplamPx) * blok
+        const h = (x.hm || tasarimHm) * 100 * olcekPxCm
+        const k = duvardaDortgen(duvar.a, duvar.b, h, ufukY, olcekRefY, bas, bas + pay)
+        if (!k) return false
+        yazilacak.push({ id: x.id, kose: k })
+        bas += pay
+      }
+      yerlerineYaz(yazilacak)
+      return true
+    }
+
+    /* Tek ekran: duvarın ortasına. */
+    const kose = duvaraOturt(duvar, tasarimWm, tasarimHm, 'orta')
     if (!kose) return false
-    elleKoseyeYaz(kose)
-    setDuvardanKuruldu(true)
+    yerlerineYaz([{ id: aktifEkranId, kose }])
     return true
   }
 
@@ -9981,41 +10024,88 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {hasModel && (
             <div className="mb-1">
               <h2 className="text-[20px] font-bold tracking-tight m-0 mb-1">{t('ekran.coklu')}</h2>
-              <ul className="m-0 list-none p-0 flex flex-col gap-1.5">
+              {/*
+                KARELER — hangisinin hangisi olduğu tek bakışta.
+                Satıra sığmayan kutu alt satıra geçiyor; "+ Ekran ekle" de
+                aynı boyda ve dizinin sonunda.
+              */}
+              <ul className="m-0 grid list-none grid-cols-3 gap-1.5 p-0">
                 {ekranOzetleri.map((e) => {
                   const secili = icerikHavuzuTam.find((x) => x.id === e.havuzId)
-                  /* Birleşik ekranlar listede de bir arada görünsün. */
+                  /* Birleşik ekranlar burada da bir arada görünsün. */
                   const grupta = !!grup && Array.isArray(grup.uyeler) && grup.uyeler.includes(e.id)
-                  return e.acik ? (
-                    <li
-                      key={e.id || 'aktif'}
-                      data-ekran={e.sira}
-                      data-acik="1"
-                      className={`overflow-hidden rounded-lg border-2 border-brand ${grupta ? 'ring-2 ring-brand/35' : ''}`}
-                    >
-                      {/* Başlık şeridi — markanın mavisi burada kalıyor. */}
-                      <div className="flex items-center gap-2 bg-brand px-2.5 py-1.5 text-white">
-                        <span className="flex-1 text-[16px] font-semibold">
+                  return (
+                    <li key={e.id || 'aktif'} data-ekran={e.sira} className="m-0 p-0">
+                      <button
+                        type="button"
+                        onClick={() => !e.acik && ekraniDuzenle(e.id)}
+                        className={`flex aspect-square w-full flex-col gap-1 rounded-lg p-1.5 text-left transition-colors ${
+                          e.acik
+                            ? 'border-2 border-brand bg-brand/5 dark:bg-brand/10'
+                            : 'border border-neutral-200 hover:border-brand dark:border-[#2c333f]'
+                        } ${grupta ? 'ring-2 ring-brand/35' : ''}`}
+                      >
+                        <span className="relative block w-full flex-1 overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]">
+                          <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
+                        </span>
+                        <span className="block truncate text-[13px] font-semibold leading-tight text-neutral-800 dark:text-neutral-100">
                           {e.sira}. {t('ekran.tekil')}
                         </span>
-                        {/* Son ekran kaldırılamaz: tasarımda hiç ekran kalmaması demekti. */}
-                        {ekranOzetleri.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => ekraniKaldir(e.id)}
-                            aria-label={t('ekran.kaldir')}
-                            title={t('ekran.kaldir')}
-                            className="shrink-0 rounded-md p-1 text-white/85 transition-colors hover:bg-white/20 hover:text-white"
-                          >
-                            <CopKutusu />
-                          </button>
-                        )}
-                      </div>
+                        <span className="block truncate text-[12px] leading-tight tabular-nums text-neutral-500 dark:text-neutral-400">
+                          {t(`screen.${e.ayar.screenType || 'flat'}`)} · {e.ayar.cols || 1}×{e.ayar.rows || 1}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+                <li data-ekle="1" className="m-0 p-0">
+                  <button
+                    type="button"
+                    onClick={ekranEkle}
+                    disabled={scene === 'ozel' && !koseMutlak}
+                    className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-neutral-300 text-neutral-500 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 dark:border-[#39414f] dark:text-neutral-400"
+                  >
+                    <span className="text-[22px] font-light leading-none">+</span>
+                    <span className="px-1 text-center text-[12px] leading-tight">{t('ekran.ekle')}</span>
+                  </button>
+                </li>
+              </ul>
 
-                      {/*
-                        GÖVDE NÖTR KOYU. Mavi zemin üstünde giriş kutuları ve
-                        seçimler okunmuyordu; mavi yalnızca başlık şeridinde.
-                      */}
+              {/*
+                AYARLAR — KUTULARIN ALTINDA, SEÇİLİ EKRANA AİT.
+
+                Gövde satırın içinden buraya taşındı; içi değişmedi. Başka
+                bir kutuya tıklamak o ekranı ele alıyor (bkz. ekraniDuzenle)
+                ve ayarlar kendiliğinden ona geçiyor.
+              */}
+              {(() => {
+                const acik = ekranOzetleri.find((x) => x.acik)
+                if (!acik) return null
+                /* Gövde satırdan taşındığı gibi duruyor; oradaki adla eşleşsin. */
+                const e = acik
+                return (
+                  <div
+                    data-ekran={acik.sira}
+                    data-acik="1"
+                    className="mt-2 overflow-hidden rounded-lg border-2 border-brand"
+                  >
+                    <div className="flex items-center gap-2 bg-brand px-2.5 py-1.5 text-white">
+                      <span className="flex-1 text-[16px] font-semibold">
+                        {acik.sira}. {t('ekran.tekil')}
+                      </span>
+                      {/* Son ekran kaldırılamaz: tasarımda hiç ekran kalmaması demekti. */}
+                      {ekranOzetleri.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => ekraniKaldir(acik.id)}
+                          aria-label={t('ekran.kaldir')}
+                          title={t('ekran.kaldir')}
+                          className="shrink-0 rounded-md p-1 text-white/85 transition-colors hover:bg-white/20 hover:text-white"
+                        >
+                          <CopKutusu />
+                        </button>
+                      )}
+                    </div>
                       <div className="flex flex-col gap-2.5 bg-neutral-100 px-2.5 py-2 dark:bg-[#1b2029]">
                         {/* ---- Tür ---- */}
                         {!isVideoWall && (
@@ -10203,73 +10293,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           </div>
                         )}
                       </div>
-                    </li>
-                  ) : (
-                    <li
-                      key={e.id}
-                      data-ekran={e.sira}
-                      className={`group relative rounded-lg border border-neutral-200 dark:border-[#2c333f] ${
-                        grupta ? 'ring-2 ring-brand/35' : ''
-                      }`}
-                    >
-                      {/*
-                        KAPALI SATIR — her ekran için AYNI özet.
-                        Küçük resim o ekranın GERÇEKTEN oynattığı içeriği
-                        gösteriyor; bölünmüşse kendi dilimi, video ise oynat
-                        imiyle (bkz. IcerikOnizleme). Düzenle ve kaldır
-                        ikonları üstüne gelince çıkıyor: satır sakin duruyor
-                        ama işlemler bir tık uzakta.
-                      */}
-                      <button
-                        type="button"
-                        onClick={() => ekraniDuzenle(e.id)}
-                        className="flex w-full items-center gap-2 px-2 py-1.5 pr-16 text-left"
-                      >
-                        <span className="relative h-7 w-10 shrink-0 overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]">
-                          <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[15px] font-medium text-neutral-700 dark:text-neutral-200">
-                            {e.sira}. {t('ekran.tekil')} · {t(`screen.${e.ayar.screenType || 'flat'}`)} · {e.ayar.cols || 1}×{e.ayar.rows || 1}
-                          </span>
-                          <span className="block truncate text-[13.5px] tabular-nums text-neutral-500 dark:text-neutral-400">
-                            {mYazi(e.enM)} × {mYazi(e.boyM)} m · {secili?.ad || '—'}
-                          </span>
-                        </span>
-                      </button>
-                      <span className="absolute right-1 top-1/2 hidden -translate-y-1/2 gap-0.5 group-hover:flex group-focus-within:flex">
-                        <button
-                          type="button"
-                          onClick={() => ekraniDuzenle(e.id)}
-                          aria-label={t('ekran.duzenle')}
-                          title={t('ekran.duzenle')}
-                          className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 hover:text-brand dark:text-neutral-400 dark:hover:bg-[#222835]"
-                        >
-                          <Kalem />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => ekraniKaldir(e.id)}
-                          aria-label={t('ekran.kaldir')}
-                          title={t('ekran.kaldir')}
-                          className="rounded-md p-1 text-neutral-500 hover:bg-red-50 hover:text-red-600 dark:text-neutral-400 dark:hover:bg-red-950/40"
-                        >
-                          <CopKutusu />
-                        </button>
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-
-              <button
-                type="button"
-                onClick={ekranEkle}
-                disabled={scene === 'ozel' && !koseMutlak}
-                className="mt-1.5 w-full py-2 rounded-lg text-[16px] font-semibold bg-brand text-white enabled:hover:opacity-90 disabled:opacity-40 transition-opacity"
-              >
-                + {t('ekran.ekle')}
-              </button>
+                  </div>
+                )
+              })()}
 
               {/* Havuza yükleme girişi: büyük kutu ve sürükle-bırak buraya basıyor. */}
               <input
@@ -11864,6 +11890,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             selectedModel, width, height, cols, rows, screenType,
             orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene,
             ekranlar: sabitEkranlar, content,
+            /* Birleşim ve kimlikler olmadan teklif düzenlenirken düzen dağılıyor. */
+            lSolCols, lYon, aktifEkranId, aktifSira, grup, icerikGruplari,
           }),
         }}
       />
