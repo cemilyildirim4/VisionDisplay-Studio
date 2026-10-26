@@ -18,7 +18,7 @@
  * yer tutucudur; kendi katalog kodlarınızla değiştirilecek.
  */
 
-import { useEffect } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import { useSession } from './SessionContext.jsx'
@@ -35,6 +35,60 @@ import { birimBasligi, birimSozcugu } from './productType.js'
  * kartta kırpılıyordu; alt alta dizilince hem sığıyor hem de göz doğrudan
  * değeri buluyor. `buyuk` yalnızca kartın ana sayısı için.
  */
+export function MiniPcSecimi({ deger, onChange }) {
+  const { t } = useLang()
+  const grup = useId()
+  const [acik, setAcik] = useState(false)
+  const kart = (secili) =>
+    `flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[14px] font-medium leading-snug transition-colors ${
+      secili
+        ? 'border-brand bg-brand-tint text-neutral-900 dark:text-neutral-100'
+        : 'border-neutral-200 text-neutral-800 hover:border-brand/40 dark:border-[#2c333f] dark:text-neutral-100'
+    }`
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span className="text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">{t('minipc.ask')}</span>
+        <button
+          type="button"
+          aria-expanded={acik}
+          aria-label={t('minipc.info')}
+          title={t('minipc.info')}
+          onClick={() => setAcik((v) => !v)}
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-neutral-300 text-[12px] font-bold leading-none text-neutral-500 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+        >
+          ?
+        </button>
+      </div>
+      {acik && (
+        <p className="mb-2 text-[13px] leading-snug text-neutral-600 dark:text-neutral-300">{t('minipc.info')}</p>
+      )}
+      <div className="flex flex-col gap-1.5">
+        <label className={kart(deger === true)}>
+          <input
+            type="radio"
+            name={grup}
+            checked={deger === true}
+            onChange={() => onChange(true)}
+            className="h-4 w-4 shrink-0 accent-[#2962ad]"
+          />
+          {t('minipc.yes')}
+        </label>
+        <label className={kart(deger === false)}>
+          <input
+            type="radio"
+            name={grup}
+            checked={deger === false}
+            onChange={() => onChange(false)}
+            className="h-4 w-4 shrink-0 accent-[#2962ad]"
+          />
+          {t('minipc.no')}
+        </label>
+      </div>
+    </div>
+  )
+}
+
 function Veri({ label, value, buyuk = false }) {
   return (
     <div className="min-w-0">
@@ -213,22 +267,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
   const secenekler =
     onMiniPc ? (
       <Kart baslik={t('sp.options')} genis>
-        {onMiniPc && (
-          <label
-            title={t('minipc.hint') + ' — ' + t('minipc.offHint')}
-            className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-neutral-200 px-3 py-2 transition-colors hover:border-brand/40 dark:border-[#2c333f]"
-          >
-            <input
-              type="checkbox"
-              checked={hasMiniPc}
-              onChange={(e) => onMiniPc(e.target.checked)}
-              className="h-4 w-4 shrink-0 accent-[#2962ad]"
-            />
-            <span className="min-w-0 text-[14px] font-medium leading-snug text-neutral-800 dark:text-neutral-100">
-              {t('minipc.heading')}
-            </span>
-          </label>
-        )}
+        {onMiniPc && <MiniPcSecimi deger={hasMiniPc} onChange={onMiniPc} />}
       </Kart>
     ) : null
 
@@ -398,7 +437,10 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           <Kart baslik={t('sp.customerSelection')}>
             <Veri label={t('screen.type')} value={t(`screen.${screenType}`)} />
             <Veri label={t('sbox.heading')} value={sboxRedundancy === 'yes' ? t('common.yes') : t('common.no')} />
-            <Veri label={t('sp.miniPc')} value={hasMiniPc ? t('common.yes') : t('common.no')} />
+            <Veri
+              label={t('sp.miniPc')}
+              value={hasMiniPc === true ? t('common.yes') : hasMiniPc === false ? t('common.no') : DASH}
+            />
           </Kart>
         )}
 

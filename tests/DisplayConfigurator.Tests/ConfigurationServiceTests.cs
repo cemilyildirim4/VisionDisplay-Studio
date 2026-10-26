@@ -214,4 +214,84 @@ public class ConfigurationServiceTests
         Assert.StartsWith("UYARI:", warning);
         Assert.Contains("temin ediniz.", warning);
     }
+
+    [Fact]
+    public void ImageAspectRatio_PngEnBoyunuOkur()
+    {
+        Assert.Equal(2f, ProfessionalReportDocument.ImageAspectRatio(TinyPng(2, 1)), 2);
+        Assert.Equal(0.5f, ProfessionalReportDocument.ImageAspectRatio(TinyPng(1, 2)), 2);
+    }
+
+    [Fact]
+    public async Task GeneratePdf_GenisVeDikeyGorsel_SayfayiTasmaz()
+    {
+        var service = CreateService(out _, out _, seedHardware: false, pdfService: new PdfReportService());
+        var dto = new CreateConfigurationDto { ProjectName = "PDF", CabinId = 1, Cols = 4, Rows = 3 };
+
+        var wide = await service.GenerateSpecSheetPdfFromDtoAsync(
+            dto, new PdfReportExtras { PreviewImage = TinyPng(8, 2) }, PdfReportKind.Client);
+        var tall = await service.GenerateSpecSheetPdfFromDtoAsync(
+            dto, new PdfReportExtras { PreviewImage = TinyPng(2, 8) }, PdfReportKind.Admin);
+
+        Assert.True(wide.Length > 100);
+        Assert.True(tall.Length > 100);
+    }
+
+    private static byte[] TinyPng(int width, int height)
+    {
+        int stride = width * 3 + 1;
+        var raw = new byte[stride * height];
+        using var idat = new MemoryStream();
+        using (var zlib = new System.IO.Compression.ZLibStream(idat, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
+            zlib.Write(raw, 0, raw.Length);
+        var compressed = idat.ToArray();
+
+        using var png = new MemoryStream();
+        png.Write(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
+        WritePngChunk(png, "IHDR", new byte[]
+        {
+            (byte)(width >> 24), (byte)(width >> 16), (byte)(width >> 8), (byte)width,
+            (byte)(height >> 24), (byte)(height >> 16), (byte)(height >> 8), (byte)height,
+            8, 2, 0, 0, 0,
+        });
+        WritePngChunk(png, "IDAT", compressed);
+        WritePngChunk(png, "IEND", Array.Empty<byte>());
+        return png.ToArray();
+    }
+
+    private static void WritePngChunk(Stream stream, string type, byte[] data)
+    {
+        Span<byte> len = stackalloc byte[4];
+        len[0] = (byte)(data.Length >> 24);
+        len[1] = (byte)(data.Length >> 16);
+        len[2] = (byte)(data.Length >> 8);
+        len[3] = (byte)data.Length;
+        stream.Write(len);
+        var typeBytes = System.Text.Encoding.ASCII.GetBytes(type);
+        stream.Write(typeBytes);
+        stream.Write(data);
+        uint crc = PngCrc(typeBytes, data);
+        Span<byte> crcBytes = stackalloc byte[4];
+        crcBytes[0] = (byte)(crc >> 24);
+        crcBytes[1] = (byte)(crc >> 16);
+        crcBytes[2] = (byte)(crc >> 8);
+        crcBytes[3] = (byte)crc;
+        stream.Write(crcBytes);
+    }
+
+    private static uint PngCrc(byte[] type, byte[] data)
+    {
+        uint crc = 0xFFFFFFFF;
+        foreach (var b in type) crc = PngCrcStep(crc, b);
+        foreach (var b in data) crc = PngCrcStep(crc, b);
+        return crc ^ 0xFFFFFFFF;
+    }
+
+    private static uint PngCrcStep(uint crc, byte value)
+    {
+        crc ^= value;
+        for (int i = 0; i < 8; i++)
+            crc = (crc & 1) != 0 ? 0xEDB88320 ^ (crc >> 1) : crc >> 1;
+        return crc;
+    }
 }

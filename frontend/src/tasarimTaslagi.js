@@ -99,7 +99,7 @@ export function taslakOlustur(durum) {
     curveAmount: durum.curveAmount ?? 60,
     resolution: durum.resolution ?? 'FHD',
     sboxRedundancy: durum.sboxRedundancy ?? 'no',
-    hasMiniPc: Boolean(durum.hasMiniPc),
+    hasMiniPc: durum.hasMiniPc === true ? true : durum.hasMiniPc === false ? false : null,
     scene: durum.scene ?? 'none',
     /*
      * EKRAN LİSTESİ — tasarımın asıl gövdesi.

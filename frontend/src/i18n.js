@@ -477,6 +477,19 @@ const dict = {
     en: 'When off, video is driven by the processor only.',
     ar: 'عند الإيقاف يعمل الفيديو عبر المعالج فقط.',
   },
+  'minipc.ask': { tr: 'Mini PC olsun mu?', en: 'Include a Mini PC?', ar: 'هل تريد Mini PC؟' },
+  'minipc.yes': { tr: 'Evet, Mini PC istiyorum', en: 'Yes, I want a Mini PC', ar: 'نعم، أريد Mini PC' },
+  'minipc.no': { tr: 'Hayır, istemiyorum', en: "No, I don't", ar: 'لا، لا أريد' },
+  'minipc.info': {
+    tr: 'Mini PC, ekrandaki görüntüyü kendi üzerinden oynatır. İstemediğinizde görüntü yalnızca işlemci üzerinden gider.',
+    en: 'A Mini PC plays the picture on the screen by itself. Without it, the picture comes from the processor only.',
+    ar: 'يشغّل Mini PC الصورة على الشاشة بنفسه. بدونه تأتي الصورة من المعالج فقط.',
+  },
+  'minipc.need': {
+    tr: 'PDF için önce Mini PC seçimini yapın.',
+    en: 'Choose a Mini PC option before the PDF.',
+    ar: 'اختر خيار Mini PC قبل إنشاء PDF.',
+  },
   'common.no': { tr: 'Hayır', en: 'No', ar: 'لا' },
   'common.yes': { tr: 'Evet', en: 'Yes', ar: 'نعم' },
 

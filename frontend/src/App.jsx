@@ -4,7 +4,7 @@ import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
 import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
-import SpecsSection from './SpecsSection.jsx'
+import SpecsSection, { MiniPcSecimi } from './SpecsSection.jsx'
 import { useConfigurationPreview } from './useConfigurationPreview.js'
 import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
@@ -331,22 +331,15 @@ const SAMPLE_CABINETS = [
  * geliyor ki gösterilen sayı ile uygulanan yerleşim ayrışmasın.
  */
 /*
- * SÜTUN/SATIR ÜST SINIRI — DUVARDAN DEĞİL, DONANIMDAN.
- *
- * Eskiden sınır duvar ölçüsünden geliyordu: floor(width / kabinEni). Bu,
- * kullanıcının SEÇİMİNİ kısıtlıyordu: 30 cm'lik bir alana 32 cm'lik iki kabin
- * koymak imkânsızdı. Oysa "bu alan yetmiyor, ne kadar yetmiyor?" geçerli bir
- * soru ve cevabı ancak taşan tasarım çizilerek görülüyor.
- *
- * Ölçü kutusu artık yalnızca KARŞILAŞTIRMA REFERANSI: seçimi engellemiyor,
- * taşmayı gösteriyor (bkz. duvaraSigma uyarısı). Kaç tam kabinin sığdığını
- * hesaplamak yalnızca "Tasarımı duvara tam sığdır" düğmesinin işi.
- *
- * Sınır yine var ama anlamı değişti: tek eksende 200 kabin, 320 mm'lik kabinle
- * 64 metre eder; hiçbir gerçek kurulumda aşılmıyor. Buradaki tek işi arayüzün
- * ve 3B sahnenin uçsuz sayılarla kilitlenmesini önlemek.
+ * Tek eksende en fazla 200 kabin. Ekran bunun da altında duvara sığar:
+ * sütun ve satır, duvarın aldığı tam kabin sayısını aşamaz.
  */
 const EN_COK_KABIN_EKSEN = 200
+
+/* Metreyi, ölçüyü hâlâ içine alacak bir sonraki santimetreye yuvarlar. */
+function cmYukari(metre) {
+  return Math.ceil(Math.max(0, Number(metre) || 0) * 100 - 1e-6) / 100
+}
 
 function yerlesimSecenekleri(m, genislikM, yukseklikM) {
   if (!m) return null
@@ -518,7 +511,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [resolution, setResolution] = useState('FHD')
   const [sboxRedundancy, setSboxRedundancy] = useState('no') // no | yes
-  const [hasMiniPc, setHasMiniPc] = useState(false)
+  const [hasMiniPc, setHasMiniPc] = useState(null)
   /*
    * Ekranın arkasındaki mekân: 'none' ya da PANO_ID.
    *
@@ -1594,7 +1587,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setCurveAmount(t.curveAmount ?? 60)
     setResolution(t.resolution ?? 'FHD')
     setSboxRedundancy(t.sboxRedundancy ?? 'no')
-    setHasMiniPc(Boolean(t.hasMiniPc))
+    setHasMiniPc(t.hasMiniPc === true ? true : t.hasMiniPc === false ? false : null)
     setScene(t.scene ?? 'none')
     setSabitEkranlar(taslakEkranlari(t))
     setLSolCols(t.lSolCols ?? null)
@@ -2118,7 +2111,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setCurveAmount(60)
     setResolution('FHD')
     setSboxRedundancy('no')
-    setHasMiniPc(false)
+    setHasMiniPc(null)
     setContent('led')
     /* Sıfırlamada havuz da boşalıyor; adresler burada bırakılıyor. */
     for (const h of icerikHavuzu) if (h.url?.startsWith('blob:')) URL.revokeObjectURL(h.url)
@@ -2419,8 +2412,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   // EPS: 4,8 / 0,32 kayan noktada 14,999... çıkıyor; küçük tolerans olmadan
   // tam sığan son kabin sayılmıyor.
   const EPS = 1e-9
-  /* Duvar ölçüsünden bağımsız — bkz. EN_COK_KABIN_EKSEN. */
-
+  /* Sütun/satır sınırı aşağıda duvardan hesaplanıyor — bkz. colsMax. */
 
   /*
    * PANO ölçeği.
@@ -2451,11 +2443,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * görünüyor, oysa gerçekte 2 cm taşıyor. Yani ekran tam da kullanıcının
    * görmesi gereken şeyi — sığmadığını — gizliyordu.
    *
-   * Kabin bölünemeyen bir donanım; ölçüsü duvara göre esnemez. Duvar
-   * küçükse tasarım taşar ve taşması GÖRÜNÜR (bkz. mekanDuvarWm: duvar
-   * tasarımı içerecek kadar büyür, WallPreview'daki wallWm ile aynı kural).
-   * Kaç tam kabinin sığdığı ayrı bir hesap ve yerinde duruyor:
-   * tasarimiDuvaraSigdir / colsMax.
+   * Kabin bölünemeyen bir donanımdır; ölçüsü duvara göre esnemez.
+   * Duvara sığmayan kabin sayısı colsMax ile düşer.
    */
   const ekranWm = Math.max(1, cols) * cwM
   const ekranHm = Math.max(1, rows) * chM
@@ -4541,9 +4530,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setOrientation(dikeySec ? 'portrait' : 'landscape')
     setCols(c)
     setRows(r)
-    /* Duvar alanı da en az bu kadar olmalı, yoksa üst sınır kabinleri kırpar. */
-    setWidth((e) => Math.max(e, +yeniWm.toFixed(2)))
-    setHeight((e) => Math.max(e, +yeniHm.toFixed(2)))
+    /* Duvar, ekranın altında kalmasın. Aşağı yuvarlamak son kabini düşürür. */
+    setWidth((e) => Math.max(e, cmYukari(yeniWm)))
+    setHeight((e) => Math.max(e, cmYukari(yeniHm)))
     /*
      * Çizim YENİ gerçek ölçüyle, alanın ortasına. Ölçü dışarıdan veriliyor
      * çünkü cols/rows daha state'e yazılmadı ve tasarimWm hâlâ eskisini
@@ -5520,9 +5509,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const kh = (previewModel?.heightMm || 500) / 1000
     const yeniCols = Math.max(1, Math.floor(hedef.wm / kw + 1e-6))
     const yeniRows = Math.max(1, Math.floor(hedef.hm / kh + 1e-6))
-    /* Duvar ölçüsü de en az tasarım kadar olmalı, yoksa kabin sayısı kırpılır. */
-    setWidth((e) => Math.max(e, +(yeniCols * kw).toFixed(2)))
-    setHeight((e) => Math.max(e, +(yeniRows * kh).toFixed(2)))
+    /* Duvar, ekranın altında kalmasın. Aşağı yuvarlamak son kabini düşürür. */
+    setWidth((e) => Math.max(e, cmYukari(yeniCols * kw)))
+    setHeight((e) => Math.max(e, cmYukari(yeniRows * kh)))
     setCols(yeniCols)
     setRows(yeniRows)
     setOlcuSorusu(false)
@@ -6391,10 +6380,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setOrientation(dikeySec ? 'portrait' : 'landscape')
     setCols(c)
     setRows(r)
-    /* Duvar alanı da en az bu kadar olmalı, yoksa üst sınır kabinleri kırpar. */
-    /* Duvar grubun TAMAMINI almalı: ötekiler de içeride. */
-    setWidth((e) => Math.max(e, +(c * cwM2 + digerlerininEni).toFixed(2)))
-    setHeight((e) => Math.max(e, +(r * chM2).toFixed(2)))
+    /* Duvar grubun tamamını almalı. Aşağı yuvarlamak son kabini düşürür. */
+    setWidth((e) => Math.max(e, cmYukari(c * cwM2 + digerlerininEni)))
+    setHeight((e) => Math.max(e, cmYukari(r * chM2)))
     /*
      * SONUCU SÖYLE.
      *
@@ -6544,14 +6532,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * setCols/setRows eklenmemeli ve tasarımın fiziksel ölçüsü (cols × cwM,
    * rows × chM) kutu ölçüsünden okunmamalı.
    *
-   * Kural bir kez bozulmuştu, iki yerden sızıyordu:
-   *   1) ekranWm = Math.min(width, cols × cwM)  — tasarımı duvara kırpıyordu
-   *   2) cols > colsMax ise setCols(colsMax)    — seçimi sessizce azaltıyordu
-   * İkisi de kaldırıldı. Aşağıdaki duvariEsitle yalnızca SOL PANELDEKİ duvar
-   * metresini yazıyor; o sayı tasarım hesabına hiçbir yerden girmiyor.
-   *
-   * Tasarım ölçüsünü değiştirmeye yetkili yalnızca iki şey: kullanıcının
-   * sütun/satır ayarı ve "Tasarımı duvara tam sığdır" düğmesi.
+   * Fotoğraf kutusu kabin sayısını değiştirmez. Sol paneldeki duvar ölçüsü
+   * ayrıdır: ekran oraya sığar. Bu effect'e setCols yazılmaz.
    */
   useEffect(() => {
     if (!olcuKutu) return
@@ -9041,7 +9023,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * (Bir ara şişkinliğe yer bırakıp satır azaltmayı denedik: sayılar kendiliğinden
    * değiştiği için kafa karıştırıcı bulundu.)
    */
-  /* Duvar ölçüsünden bağımsız — bkz. EN_COK_KABIN_EKSEN. */
   const rowsMax = Math.max(1, Math.min(EN_COK_KABIN_EKSEN, Math.floor((height || 0) / kabinBoyM + 1e-6)))
   /*
    * DUVARIN ALT SINIRI TASARIMA BAĞLI DEĞİL.
@@ -9071,6 +9052,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const tasarimEnYuksek = Math.max(...ekranParcalari.map((x) => x.hm || 0), 0)
   const widthMin = hasModel ? Math.max(0.1, tasarimToplamEn) : 0
   const heightMin = hasModel ? Math.max(0.1, tasarimEnYuksek) : 0
+
+  /*
+   * Duvar, ekrandan küçük kalamaz. Tek ekranda kabin sayısı duvara kırpılır.
+   * Çoklu ekranda duvar ölçüsü şeridi içine alacak kadar büyür.
+   * rowsMax bu satırdan önce tanımlı olmalı; etki bağımlılık listesi
+   * render sırasında onu okuyor.
+   */
+  useEffect(() => {
+    if (!hasModel) return
+    if (cokluAktif) {
+      if ((Number(width) || 0) + EPS < tasarimWm) setWidth(cmYukari(tasarimWm))
+      if ((Number(height) || 0) + EPS < tasarimHm) setHeight(cmYukari(tasarimHm))
+      return
+    }
+    if ((Number(width) || 0) + EPS < cwM) {
+      setWidth(cmYukari(cwM))
+      return
+    }
+    if ((Number(height) || 0) + EPS < chM) {
+      setHeight(cmYukari(chM))
+      return
+    }
+    if (cols > colsMax) setCols(colsMax)
+    if (rows > rowsMax) setRows(rowsMax)
+  }, [hasModel, cokluAktif, width, height, cwM, chM, cols, rows, colsMax, rowsMax, tasarimWm, tasarimHm])
 
   /*
    * BURADA ESKİDEN BİR "GÜVENLİK AĞI" VARDI VE KALDIRILDI.
@@ -12306,6 +12312,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Ölçüm akışı sürerken gizli: teklif ve rapor, ölçü oturduktan
             sonraki işler (bkz. olcuAcik).
           */}
+          {hasModel && !olcuAcik && (
+            <div className="mt-3">
+              <MiniPcSecimi deger={hasMiniPc} onChange={setHasMiniPc} />
+              {hasMiniPc === null && (
+                <p className="mt-1.5 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">{t('minipc.need')}</p>
+              )}
+            </div>
+          )}
+
           {!olcuAcik && (
           <div className="mt-3 flex items-center gap-3">
             <button
@@ -12321,10 +12336,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           <button
             type="button"
-            disabled={!hasModel}
+            disabled={!hasModel || hasMiniPc === null}
             onClick={() => setExportOpen(true)}
             className={`flex-1 rounded-full text-[16px] font-semibold py-2.5 transition-colors ${
-              hasModel
+              hasModel && hasMiniPc !== null
                 ? 'btn-brand-primary cursor-pointer'
                 : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
@@ -13216,6 +13231,7 @@ function FieldLabel({ children, muted = false }) {
  * düşürüyordu.)
  */
 function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null }) {
+  const [taslak, setTaslak] = useState(null)
   const dugme =
     'h-6 w-6 shrink-0 rounded border border-neutral-300 text-[15px] leading-none text-neutral-700 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-35 dark:border-[#39414f] dark:text-neutral-200'
   /* Ondalık adımda kayan nokta kalıntısı kalmasın (0,1+0,2). */
@@ -13223,14 +13239,10 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
   /*
    * DEĞER ELLE DE YAZILABİLİYOR.
    *
-   * Kutu yalnızca +/- ile değişiyordu ve duvar adımı 10 cm: 1,00'dan
-   * 3,20'ye çıkmak yirmi iki tıklama ediyordu. Yazarken değer SERBEST
-   * (kutu boşaltılabiliyor); sınırlara ancak odaktan çıkınca çekiliyor,
-   * yoksa "3" yazarken sayı anında en küçük değere düşüyordu.
+   * Yazarken değer serbest (kutu boşaltılabiliyor); sınırlara ancak odaktan
+   * çıkınca çekiliyor, yoksa "3" yazarken sayı anında en küçük değere düşer.
    */
-  const [taslak, setTaslak] = useState(null)
   const bicim = (v) => (adim < 1 ? (v || 0).toFixed(2).replace('.', ',') : String(v ?? ''))
-  /* Virgül de ondalık ayıracı: Türkçe klavyede yazılan budur. */
   const sayiya = (m) => Number(String(m).replace(',', '.'))
   const bitir = () => {
     if (taslak == null) return
@@ -13245,8 +13257,8 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
       <button
         type="button"
         aria-label="−"
-        onClick={() => onChange(Math.max(min, yuvarla(deger - adim)))}
-        disabled={deger <= min}
+        onClick={() => onChange(Math.max(min, yuvarla((Number(deger) || 0) - adim)))}
+        disabled={(Number(deger) || 0) <= min}
         className={dugme}
       >
         −
@@ -13268,8 +13280,8 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
       <button
         type="button"
         aria-label="+"
-        onClick={() => onChange(Math.min(max, yuvarla(deger + adim)))}
-        disabled={deger >= max}
+        onClick={() => onChange(Math.min(max, yuvarla((Number(deger) || 0) + adim)))}
+        disabled={(Number(deger) || 0) >= max}
         className={dugme}
       >
         +

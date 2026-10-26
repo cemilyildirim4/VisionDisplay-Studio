@@ -107,9 +107,7 @@ public class ProfessionalReportDocument : IDocument
     {
         container.Column(col =>
         {
-            col.Item().AlignCenter().AlignMiddle()
-                .Image(gorsel)
-                .FitArea();
+            col.Item().Element(c => DrawContainedImage(c, gorsel, 460));
             /*
              * Kenar boşlukları TAHMİN — kamerada derinlik algılama yok, ölçek
              * müşterinin tasarımı duvara oturtmasından geliyor. Yanlış
@@ -168,10 +166,7 @@ public class ProfessionalReportDocument : IDocument
                     img.Item().Text("Müşteri görseli").FontSize(11).Bold().FontColor(BrandBlue);
                     img.Item().PaddingTop(6).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
                         .Background(Color.FromHex("#f8fafc")).Padding(6)
-                        .Height(225)
-                        .AlignCenter().AlignMiddle()
-                        .Image(_extras.PreviewImage)
-                        .FitArea();
+                        .Element(c => DrawContainedImage(c, _extras.PreviewImage, 225));
                 });
             }
         });
@@ -199,10 +194,7 @@ public class ProfessionalReportDocument : IDocument
                 col.Item().Text("Yapılandırma görseli").FontSize(12).Bold().FontColor(BrandBlue);
                 col.Item().PaddingTop(8).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
                     .Background(Color.FromHex("#f8fafc")).Padding(6)
-                    .MaxHeight(220)
-                    .AlignCenter().AlignMiddle()
-                    .Image(_extras.PreviewImage)
-                    .FitArea();
+                    .Element(c => DrawContainedImage(c, _extras.PreviewImage, 220));
                 col.Item().PaddingTop(10).Text("Ekran matrisi").FontSize(8).Bold().FontColor(Colors.Grey.Darken1);
                 col.Item().PaddingTop(2).Text($"{cols} × {rows}").FontSize(14).Bold().FontColor(Ink);
                 col.Item().PaddingTop(2)
@@ -210,6 +202,76 @@ public class ProfessionalReportDocument : IDocument
                     .FontSize(9).FontColor(Colors.Grey.Darken1);
             });
     }
+
+    /// <summary>
+    /// Fotoğrafı kendi en-boy oranında basar. Yükseklik tavanı aşılmaz;
+    /// kutu fotoğrafı gerdirmez, ortalar.
+    /// </summary>
+    private static void DrawContainedImage(IContainer container, byte[] bytes, float maxHeightPt)
+    {
+        container.AlignCenter().AlignMiddle()
+            .MaxHeight(maxHeightPt)
+            .AspectRatio(ImageAspectRatio(bytes), AspectRatioOption.FitArea)
+            .Image(bytes)
+            .FitArea();
+    }
+
+    /// <summary>PNG veya JPEG en/boy. Okunamazsa yatay bir kadraj varsayılır.</summary>
+    public static float ImageAspectRatio(byte[] bytes)
+    {
+        if (TryImageSize(bytes, out int width, out int height) && height > 0)
+            return Math.Clamp(width / (float)height, 0.2f, 6f);
+        return 1.6f;
+    }
+
+    private static bool TryImageSize(byte[] bytes, out int width, out int height)
+    {
+        width = 0;
+        height = 0;
+        if (bytes.Length >= 24
+            && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+        {
+            width = ReadBigEndian(bytes, 16);
+            height = ReadBigEndian(bytes, 20);
+            return width > 0 && height > 0;
+        }
+
+        if (bytes.Length < 4 || bytes[0] != 0xFF || bytes[1] != 0xD8)
+            return false;
+
+        int i = 2;
+        while (i + 8 < bytes.Length)
+        {
+            if (bytes[i] != 0xFF)
+            {
+                i++;
+                continue;
+            }
+            byte marker = bytes[i + 1];
+            if (marker == 0xC0 || marker == 0xC1 || marker == 0xC2)
+            {
+                height = ReadBigEndian16(bytes, i + 5);
+                width = ReadBigEndian16(bytes, i + 7);
+                return width > 0 && height > 0;
+            }
+            if (marker == 0xD8 || marker == 0xD9 || marker is >= 0xD0 and <= 0xD7)
+            {
+                i += 2;
+                continue;
+            }
+            if (i + 3 >= bytes.Length) return false;
+            int segment = ReadBigEndian16(bytes, i + 2);
+            if (segment < 2) return false;
+            i += 2 + segment;
+        }
+        return false;
+    }
+
+    private static int ReadBigEndian(byte[] bytes, int offset) =>
+        (bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3];
+
+    private static int ReadBigEndian16(byte[] bytes, int offset) =>
+        (bytes[offset] << 8) | bytes[offset + 1];
 
     private static void InfoLine(ColumnDescriptor card, string label, string value)
     {
@@ -351,35 +413,29 @@ public class ProfessionalReportDocument : IDocument
         });
     }
 
-    /* Figürün en/boy oranı — ön yüzdeki WallPreview silüetiyle aynı. */
-    private const float HumanFigWRatio = 0.43f;
+    /* Figürün en/boy oranı — ana sayfadaki silüetle aynı (viewBox 72 × 200). */
+    private const float HumanFigWRatio = 72f / 200f;
 
     /// <summary>
-    /// 1,80 m'lik figürü verilen puntoluk boyda çizer. Parçaların oranları
-    /// (baş · gövde · bacak) sabit; yalnızca ölçek değişir.
+    /// Ana sayfada duvar 1,80 m'yi geçince beliren silüetin aynısı.
+    /// Boy etiketi figürün üstünde durur; ayaklar ızgaranın alt hizasında kalır.
     /// </summary>
     private static void DrawHuman(IContainer container, float h)
     {
-        /*
-         * Parçaların toplamı TAM h olmalı — figürün tepesi ile ayak hizası
-         * arası 1,80 m'yi temsil ediyor. Boy etiketi bu yüzden figürün ÜSTÜNE
-         * konuyor: sütun alta hizalı olduğu için üstteki fazlalık figürü
-         * yukarı itmez, ayaklar ızgaranın alt kenarında kalır. (Etiket altta
-         * dururken figürü kendi yüksekliği kadar kısaltmak zorunda kalıyorduk.)
-         */
-        var bas = h * 0.19f;
-        var bosluk = h * 0.03f;
-        var govde = h * 0.42f;
-        var bacak = h - bas - govde - 2 * bosluk;
-        var renk = Color.FromHex("#94a3b8");
+        const string svg = """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 200">
+              <circle cx="36" cy="16" r="13" fill="#64748b"/>
+              <path fill="#64748b" d="M36 31 C24 33 14 42 12 56 L8 102 C8 108 14 110 17 105 L22 78 L26 118 C24 148 20 176 18 196 L30 196 L33 132 L39 132 L42 196 L54 196 C52 176 48 148 46 118 L50 78 L55 105 C58 110 64 108 64 102 L60 56 C58 42 48 33 36 31 Z"/>
+            </svg>
+            """;
 
         container.Column(c =>
         {
-            c.Item().AlignCenter().PaddingBottom(3)
-                .Text($"{HumanHeightM:0.00} m").FontSize(7).FontColor(Colors.Grey.Darken1);
-            c.Item().AlignCenter().Width(bas).Height(bas).Background(renk);
-            c.Item().AlignCenter().PaddingTop(bosluk).Width(bas * 1.3f).Height(govde).Background(renk);
-            c.Item().AlignCenter().PaddingTop(bosluk).Width(bas * 0.8f).Height(bacak).Background(renk);
+            c.Item().AlignCenter().PaddingBottom(2)
+                .Text("1,80 m").FontSize(7).FontColor(Color.FromHex("#64748b"));
+            c.Item().AlignCenter().Width(h * HumanFigWRatio).Height(h)
+                .Svg(svg)
+                .FitArea();
         });
     }
 
