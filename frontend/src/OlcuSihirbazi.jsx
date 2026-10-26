@@ -107,7 +107,12 @@ function SihirbazKart({
   onKenarVazgec = null,
   onKenarlardanKur = null,
   /* Kenar çizgilerini yeniden açar: uçları sürüklenebilir olur. */
-  onAlanDuzenle = null,
+  /*
+   * YERLEŞTİRMEYİ ONAYLA — adımın ana düğmesi.
+   * Dört köşe konmadan etkin değil; basınca sıradaki ekrana geçiliyor.
+   */
+  onYerOnayla = null,
+  yerOnayHazir = false,
   /* Alan zaten işaretliyse yeniden işaretlemeden yerleştirmeye dönülüyor. */
   onYerlesim = null,
   /* İKİNCİ REFERANS — odak tahmin ediliyorsa ölçümü kesinleştiriyor. */
@@ -800,6 +805,16 @@ function SihirbazKart({
                 kalan iş taşımak ve kanatları duvara yatırmak.
               */}
               <p className={aciklama}>{t('yer.adimAciklama')}</p>
+              {onYerOnayla && (
+                <button
+                  type="button"
+                  onClick={onYerOnayla}
+                  disabled={!yerOnayHazir}
+                  className={`mt-2 w-full ${ana} disabled:opacity-40`}
+                >
+                  {t('yer.onayla')}
+                </button>
+              )}
               {kutuMesaj && (
                 <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{kutuMesaj}</p>
               )}
@@ -838,15 +853,6 @@ function SihirbazKart({
                 kapatıyorlardı); kullanıcı isteyince açılıyor. Açıkken
                 tasarım gizleniyor, kapanınca geri geliyor.
               */}
-              {onAlanDuzenle && (
-                <button
-                  type="button"
-                  onClick={onAlanDuzenle}
-                  className="mt-2 w-full py-2 rounded-lg text-[14px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
-                >
-                  {t('sih.alaniDuzenle')}
-                </button>
-              )}
               {/*
                 ALAN YOKKEN (manuel yol) ÖLÇÜ KABİN SAYISIYLA DEĞİŞİYOR.
                 Kutuyu köşelerinden çekmek yalnızca duruşunu veriyor; santim

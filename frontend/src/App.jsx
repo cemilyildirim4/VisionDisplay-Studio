@@ -2392,7 +2392,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   // tam sığan son kabin sayılmıyor.
   const EPS = 1e-9
   /* Duvar ölçüsünden bağımsız — bkz. EN_COK_KABIN_EKSEN. */
-  const colsMax = EN_COK_KABIN_EKSEN
+
 
   /*
    * PANO ölçeği.
@@ -2538,6 +2538,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     )
   })()
 
+  /*
+   * KABİN ÖLÇÜSÜ — ekranın duruşuna göre.
+   * Dikey duran ekranda kabinin eni ile boyu takas oluyor.
+   */
+  const kabinEnM = ((orientation === 'portrait' ? selectedModel?.heightMm : selectedModel?.widthMm) || 500) / 1000
+  const kabinBoyM = ((orientation === 'portrait' ? selectedModel?.widthMm : selectedModel?.heightMm) || 500) / 1000
+  /* Yan yana duran öteki ekranlar duvardan yer kaplıyor. */
+  const digerlerininEni = ekranParcalari
+    .filter((x) => x.id !== aktifEkranId)
+    .reduce((t, x) => t + (x.wm || 0), 0)
+  /*
+   * SINIR DUVARDAN GELİYOR.
+   *
+   * Eskiden yalnızca kabin sayısının üst sınırı vardı ve tasarım duvarı
+   * rahatça aşabiliyordu. Sığmayan bir tasarım ne üretilebilir ne de
+   * doğru çizilir.
+   */
+  const colsMax = Math.max(
+    1,
+    Math.min(EN_COK_KABIN_EKSEN, Math.floor(((width || 0) - digerlerininEni) / kabinEnM + 1e-6)),
+  )
   /*
    * BİRLEŞİMİN DÜZLEMDEKİ GEOMETRİSİ.
    *
@@ -8550,7 +8571,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * değiştiği için kafa karıştırıcı bulundu.)
    */
   /* Duvar ölçüsünden bağımsız — bkz. EN_COK_KABIN_EKSEN. */
-  const rowsMax = EN_COK_KABIN_EKSEN
+  const rowsMax = Math.max(1, Math.min(EN_COK_KABIN_EKSEN, Math.floor((height || 0) / kabinBoyM + 1e-6)))
   /*
    * DUVARIN ALT SINIRI TASARIMA BAĞLI DEĞİL.
    *
@@ -8567,8 +8588,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    *
    * Alt sınır yalnızca sıfır/eksi olmasın diye: 0,1 m.
    */
-  const widthMin = hasModel ? 0.1 : 0
-  const heightMin = hasModel ? 0.1 : 0
+  /*
+   * DUVAR TASARIMDAN KÜÇÜK OLAMIYOR.
+   *
+   * Alt sınır bir ara tasarımdan koparılmıştı (yuvarlama yüzünden
+   * kullanıcının yazdığı ölçü sessizce değişiyordu). Yuvarlama yok:
+   * sınır tasarımın KENDİ ölçüsü, bu yüzden sessiz bir değişiklik de
+   * olmuyor.
+   */
+  const tasarimToplamEn = ekranParcalari.reduce((t, x) => t + (x.wm || 0), 0)
+  const tasarimEnYuksek = Math.max(...ekranParcalari.map((x) => x.hm || 0), 0)
+  const widthMin = hasModel ? Math.max(0.1, tasarimToplamEn) : 0
+  const heightMin = hasModel ? Math.max(0.1, tasarimEnYuksek) : 0
 
   /*
    * BURADA ESKİDEN BİR "GÜVENLİK AĞI" VARDI VE KALDIRILDI.
@@ -9323,17 +9354,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {yerNokta.length === 4 ? ' · ' + t('yer.duzelt') : ''}
                 </span>
               </div>
-              {/* Onay: dört köşe konduktan sonra, düzeltme fırsatı bırakarak. */}
-              {yerNokta.length === 4 && (
-                <button
-                  type="button"
-                  onClick={yerEkraniOnayla}
-                  style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 21 }}
-                  className="rounded-full bg-brand px-6 py-2.5 text-[15px] font-semibold text-white shadow-lg transition-opacity hover:opacity-90"
-                >
-                  {t('yer.onayla')}
-                </button>
-              )}
             </>
           )}
 
@@ -10109,6 +10129,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
                             <SayiKutusu etiket={t('screen.colsShort')} deger={cols} onChange={setCols} min={1} max={colsMax} />
                             <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsMax} />
+                            {/* Artış neden durdu: sessiz sınır yerine açık not. */}
+                            {(cols >= colsMax || rows >= rowsMax) && (
+                              <span className="w-full text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                                {t('olcu.duvarSiniri')}
+                              </span>
+                            )}
                           </div>
 
                           {/*
@@ -10133,7 +10159,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           */}
                           <div className="mt-1 text-[14.5px] tabular-nums text-neutral-600 dark:text-neutral-300">
                             {mYazi(e.enM)} × {mYazi(e.boyM)} m
-                            {e.resW > 0 && ` · ${fmt(e.resW)} × ${fmt(e.resH)} px`}
+                            {e.resW > 0 && ` · ${fmt(e.resW)} × ${fmt(e.resH)} piksel`}
                           </div>
                         </div>
 
@@ -10243,13 +10269,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               className="w-full rounded-lg border border-neutral-300 py-1.5 text-[14.5px] font-medium text-neutral-700 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
                             >
                               {t('ekran.alanaSigdir')}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={elleDuzenlemeyeGec}
-                              className="w-full rounded-lg border border-neutral-300 py-1.5 text-[14.5px] font-medium text-neutral-700 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
-                            >
-                              {t('ekran.alaniDuzenle')}
                             </button>
                           </div>
                         )}
@@ -10491,7 +10510,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {hasModel && (
             <div className="rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 py-2 text-[15px] tabular-nums text-neutral-700 dark:text-neutral-200">
               <span className="font-semibold">{t('panel.toplam')}:</span> {ekranOzetleri.length} {t('ekran.tekil')} ·{' '}
-              {fmt(tasarimToplami.kabin)} {birimSozcugu(selectedModel?.productType, t)} · {fmt(tasarimToplami.resW)} × {fmt(tasarimToplami.resH)} px
+              {fmt(tasarimToplami.kabin)} {birimSozcugu(selectedModel?.productType, t)} · {fmt(tasarimToplami.resW)} × {fmt(tasarimToplami.resH)} piksel
             </div>
           )}
           </Sigdir>
@@ -10760,6 +10779,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             adim={sihirbazAdim}
                             t={t}
                             refNoktaSayisi={refNokta.length}
+                            /* Yerleştir adımının ana düğmesi. */
+                            onYerOnayla={yerAktif ? yerEkraniOnayla : null}
+                            yerOnayHazir={yerNokta.length === 4}
                             onIsaretle={() => {
                               setRefNokta([])
                               setRefKipi(true)
@@ -10806,7 +10828,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             onGeri={sihirbazGeri}
                             onIleri={sihirbazIleri}
                             onKutuKur={sihirbazKutuKur}
-                            onElleDuzenle={elleDuzenlemeyeGec}
                             onBitir={sihirbazBitir}
                             onKapat={sihirbaziKapat}
                             /*
@@ -10892,7 +10913,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             duzenlemede={duzenlemede}
                             onAlanTemizle={alaniTemizle}
                             /* Alan varken: çizgileri yeniden açar (tutamaklar geri gelir). */
-                            onAlanDuzenle={alanNokta.length === 4 ? alaniDuzenle : null}
                             alanGecerli={alanGecerli}
                             /* Kenar çizimi alt kipi: köşe görünmediğinde. */
                             kenarCizim={alanKenarKipi}
