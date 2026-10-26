@@ -120,35 +120,38 @@ export function kacisNoktasi(p1, p2, p3, p4) {
  *
  * @param {{x,y}} a duvar dibinin bir ucu
  * @param {{x,y}} b öteki ucu
- * @param {number} boyPx ekranın yüksekliği, REFERANS ölçeğinde piksel
+ * @param {number} boyPx ekranın yüksekliği, REFERANSIN ölçüldüğü yerdeki piksel
  * @param {number|null} ufukY ufuk çizgisinin y'si (tuval pikseli)
+ * @param {number|null} refY referansın ölçüldüğü yerin y'si (tuval pikseli)
  * @param {number} sol 0..1 — ekranın duvar üstünde nereden başladığı
  * @param {number} sag 0..1 — nerede bittiği
  * @returns {Array<{x,y}>|null} [solÜst, sağÜst, sağAlt, solAlt]
  */
-export function duvardaDortgen(a, b, boyPx, ufukY, sol = 0, sag = 1) {
+export function duvardaDortgen(a, b, boyPx, ufukY, refY = null, sol = 0, sag = 1) {
   if (!a || !b || !(boyPx > 0)) return null
   const at = { x: a.x + (b.x - a.x) * sol, y: a.y + (b.y - a.y) * sol }
   const bt = { x: a.x + (b.x - a.x) * sag, y: a.y + (b.y - a.y) * sag }
   /*
-   * ÖLÇEK UCA GÖRE.
+   * ÖLÇEK MUTLAK — DUVARDAN DUVARA DEĞİŞMİYOR.
    *
    * Zemindeki bir noktanın ufka olan dikey uzaklığı, o noktanın
-   * kameraya uzaklığıyla ters orantılı. Yani (y - ufuk) ne kadar
-   * büyükse nokta o kadar yakın ve orada bir metre o kadar çok piksel
-   * tutuyor. İki ucun oranı bu yüzden (y - ufuk) oranı.
+   * kameraya uzaklığıyla ters orantılı: (y - ufuk) ne kadar büyükse
+   * nokta o kadar yakın ve orada bir metre o kadar çok piksel tutuyor.
+   *
+   * Dayanak REFERANSIN ölçüldüğü yer. Bir ara her duvar kendi iki
+   * ucunun ORTALAMASINA bölünüyordu; iki duvar aynı köşede buluşsa bile
+   * ortalamaları farklı olduğu için aynı fiziksel nokta iki yüzde iki
+   * ayrı yükseklik veriyor ve görsel tam köşede kayıyordu.
    */
-  let oranA = 1
-  let oranB = 1
-  if (Number.isFinite(ufukY)) {
-    const da = at.y - ufukY
-    const db = bt.y - ufukY
-    if (da > 1 && db > 1) {
-      const ortalama = (da + db) / 2
-      oranA = da / ortalama
-      oranB = db / ortalama
-    }
+  const dayanak = Number.isFinite(ufukY) && Number.isFinite(refY) ? refY - ufukY : null
+  const olcek = (p) => {
+    if (!(dayanak > 1)) return 1
+    const d = p.y - ufukY
+    if (!(d > 1)) return 1
+    return d / dayanak
   }
+  const oranA = olcek(at)
+  const oranB = olcek(bt)
   const solUst = { x: at.x, y: at.y - boyPx * oranA }
   const sagUst = { x: bt.x, y: bt.y - boyPx * oranB }
   if (![solUst, sagUst].every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))) return null

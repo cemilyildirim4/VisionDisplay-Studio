@@ -8036,6 +8036,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const ra = oranTuvale(refNokta[0])
     const rb = oranTuvale(refNokta[1])
     const olcekPxCm = Math.hypot(rb.x - ra.x, rb.y - ra.y) / refCm
+    /* Ölçeğin GEÇERLİ olduğu yer: referansın ölçüldüğü yükseklik. */
+    const olcekRefY = (ra.y + rb.y) / 2
     if (!(olcekPxCm > 0)) return false
     const nk = duvarNokta.map(oranTuvale)
     const parcalar = duvarParcalari(nk)
@@ -8063,7 +8065,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        */
       const sol = nere === 'son' ? 1 - pay : nere === 'bas' ? 0 : 0.5 - pay / 2
       const sag = nere === 'son' ? 1 : nere === 'bas' ? pay : 0.5 + pay / 2
-      return duvardaDortgen(parca.a, parca.b, h, ufukY, sol, sag)
+      return duvardaDortgen(parca.a, parca.b, h, ufukY, olcekRefY, sol, sag)
     }
 
     /*
@@ -12094,7 +12096,15 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 
 function EkranNumaralari({ ekranlar, aktifId }) {
   if (!Array.isArray(ekranlar) || ekranlar.length < 1) return null
   return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 6 }}>
+    /*
+     * ROZETLER EKRANLARIN ÜSTÜNDE.
+     *
+     * Katman zIndex 6 ile çiziliyordu; sabit ekranlar katmanı ise 13.
+     * Yani kayıtlı bir ekranın rozeti KENDİ ekranının arkasında kalıyor
+     * ve hiç görünmüyordu: iki ekranlı bir birleşimde yalnızca elde
+     * duran ekranın numarası okunuyordu.
+     */
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 14 }}>
       {ekranlar.map((e) => {
         const k = e.koseler
         if (!Array.isArray(k) || k.length !== 4) return null
