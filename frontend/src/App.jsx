@@ -1543,6 +1543,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setHasMiniPc(Boolean(t.hasMiniPc))
     setScene(t.scene ?? 'none')
     setSabitEkranlar(taslakEkranlari(t))
+    setLSolCols(t.lSolCols ?? null)
+    setLYon(t.lYon ?? 'ice')
+    /*
+     * KİMLİK VE SIRA GERİ GELİYOR.
+     *
+     * Elde duran ekran yeni bir kimlikle doğuyordu; birleşim üyelerini
+     * kimlikle anlattığı için o düzen bir daha kurulamıyordu. Sıra da
+     * yazılmayınca 1'e düşüyor ve listede iki tane "1. ekran" oluyordu.
+     */
+    if (t.aktifEkranId) setAktifEkranId(t.aktifEkranId)
+    setAktifSira(t.aktifSira ?? 1)
+    if (t.grup && Array.isArray(t.grup.uyeler) && t.grup.uyeler.length > 1) {
+      setGrup(t.grup)
+      setGrupSecim(t.grup.uyeler)
+      if (t.grup.tip) setGrupTipi(t.grup.tip)
+      if (t.grup.aci > 0) {
+        setGrupAcisi(t.grup.aci)
+        setGrupAciYazi(String(t.grup.aci))
+      }
+      if (t.grup.lYon) setLYonSecim(t.grup.lYon)
+    }
+    if (Array.isArray(t.icerikGruplari)) setIcerikGruplari(t.icerikGruplari)
     setContent(t.content ?? 'led')
     // Yüklenen görsel/video geri gelemez (blob adresi ölmüştür) — söyle.
     if (t.icerikDustu) setTaslakUyari('Yüklediğiniz görsel/video geri yüklenemedi; içerik LED yüzeye alındı.')
@@ -1558,10 +1580,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         selectedModel, width, height, cols, rows, screenType,
         orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene,
         ekranlar: sabitEkranlar, content,
+        /* Kimlik, sıra ve birleşim olmadan düzen geri gelemiyor. */
+        lSolCols, lYon, aktifEkranId, aktifSira, grup, icerikGruplari,
       }),
     )
   }, [selectedModel, width, height, cols, rows, screenType,
-      orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene, sabitEkranlar, content])
+      orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene, sabitEkranlar, content,
+      lSolCols, lYon, aktifEkranId, aktifSira, grup, icerikGruplari])
 
   const handleChoose = (model) => {
     // Başka bir modele geçmek, tasarımı baştan kurmak demek: eldeki kareler

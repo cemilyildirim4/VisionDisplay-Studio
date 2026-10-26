@@ -98,6 +98,25 @@ export function taslakOlustur(durum) {
       oran: Array.isArray(e.oran) ? e.oran : null,
       ayar: temizAyar(e.ayar),
     })),
+    /*
+     * ELDE DURAN EKRANIN L AYARLARI.
+     * Kanat bölmesi ve köşe yönü yalnızca kayıtlı ekranların ayarında
+     * saklanıyordu; elde duran ekran yenilenince düz ekrana dönüyordu.
+     */
+    lSolCols: durum.lSolCols ?? null,
+    lYon: durum.lYon ?? 'ice',
+    /*
+     * KİMLİK, SIRA VE BİRLEŞİM.
+     *
+     * Birleşim üyelerini KİMLİKLE anlatıyor; kimlikler korunmazsa geri
+     * yüklenen düzende hiçbir şeye bağlanamaz. Elde duran ekranın sırası
+     * da burada: yazılmayınca geri yüklemede 1'e düşüyor ve listede iki
+     * tane "1. ekran" oluyordu.
+     */
+    aktifEkranId: durum.aktifEkranId ?? null,
+    aktifSira: durum.aktifSira ?? 1,
+    grup: durum.grup ? { ...durum.grup } : null,
+    icerikGruplari: Array.isArray(durum.icerikGruplari) ? durum.icerikGruplari : [],
     content: yuklenen ? 'led' : (durum.content ?? 'led'),
     // Kendi dosyası olan içerik geri yüklenemiyor; kullanıcıya bunu söyleyelim
     icerikDustu: yuklenen,
