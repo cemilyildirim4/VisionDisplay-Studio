@@ -908,6 +908,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [duvarKipi, setDuvarKipi] = useState(false)
   const [duvarNokta, setDuvarNokta] = useState([])
+  /*
+   * YERLEŞİM DUVAR DİPLERİNDEN Mİ KURULDU.
+   *
+   * Açıkken grubun üyeleri liderden TÜRETİLMİYOR; her üyenin kendi
+   * duvarına oturan dörtgeni geçerli. Türetme açık kalırsa kendi
+   * hesabını yazıp duvarlara oturan dörtgenleri eziyor.
+   */
+  const [duvardanKuruldu, setDuvardanKuruldu] = useState(false)
   const [refUzunlukCm, setRefUzunlukCm] = useState('')
   /*
    * REFERANS TÜRÜ.
@@ -1713,6 +1721,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       /* Duvar dibi noktaları da bu fotoğrafa aitti. */
       setDuvarKipi(false)
       setDuvarNokta([])
+      setDuvardanKuruldu(false)
       setAlanKipi(false)
       setAlanNokta([])
       setAlanElleEn('')
@@ -1730,8 +1739,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * odağıyla kuruluyordu.
        */
       setDuzenlemede(false)
-      setGrup(null)
-      setGrupSecim([])
+      /*
+       * BİRLEŞİM DE MEKÂNA AİT DEĞİL.
+       *
+       * Ekran listesiyle aynı kural: birleşim ve içerik bütün mekânlarda
+       * ortak, yeni fotoğrafa ait olan tek şey ekranların o fotoğraftaki
+       * YERİ. Eskiden grup siliniyor ve ekranlar tek tek kalıyordu.
+       */
       setFotoOdak(null)
       /*
        * EXIF ODAĞI — ölçümün kesinliği buna bağlı.
@@ -2102,6 +2116,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Duvar dibi kipi açık kalırsa referans tıklamaları ona gider. */
     setDuvarKipi(false)
     setDuvarNokta([])
+    setDuvardanKuruldu(false)
     setAlanKipi(false)
     setAlanNokta([])
     setAlanCizgi([])
@@ -2129,6 +2144,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Duvar dibi işaretlemesi */
     setDuvarKipi(false)
     setDuvarNokta([])
+    setDuvardanKuruldu(false)
 
     /* 5) L köşesi */
     setLKoseKipi(false)
@@ -6590,6 +6606,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Duvar dibi kipi açık kalırsa referans tıklamaları ona gider. */
     setDuvarKipi(false)
     setDuvarNokta([])
+    setDuvardanKuruldu(false)
     setAlanKipi(false)
     setAlanNokta([])
     setAlanElleEn('')
@@ -7245,6 +7262,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const grupKoseleri = (() => {
     if (!grup || !Array.isArray(grup.uyeler) || grup.uyeler.length < 2) return null
+    /*
+     * DUVAR DİBİNDEN KURULDUYSA TÜRETME YOK.
+     * Her üye kendi duvarına oturdu; buradaki türetme onları ezerdi.
+     */
+    if (duvardanKuruldu) return null
     if (!(fotoYer?.genislik > 0)) return null
     const odak =
       fotoOdak > 1
@@ -8025,44 +8047,60 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         : null
     const ufukY = ufuk && Number.isFinite(ufuk.y) ? ufuk.y : null
 
-    /*
-     * KÖŞEYİ SARAN BİRLEŞİM: LİDER KÖŞEYE YASLANIYOR.
-     *
-     * Grubun bütün üyeleri liderin dörtgeninden türüyor; ikinci kol ondan
-     * 90° kırılarak komşu duvarın düzlemine düşüyor. Dolayısıyla köşeli
-     * yerleşim için tek yapılacak iş, lideri işaretlenen köşeye yaslamak.
-     * Oraya konan en, bütün şeridin değil LİDERİN kendi eni.
-     */
     const uyeler = Array.isArray(grup?.uyeler) && grup.uyeler.length > 1 ? grup.uyeler : null
     const koseli = parcalar.length >= 2 && !!uyeler
-    const liderId = uyeler ? uyeler[0] : aktifEkranId
-    const liderParca = uyeler ? ekranParcalari.find((x) => x.id === liderId) : null
-    const enM = koseli ? liderParca?.wm || tasarimWm / uyeler.length : tasarimWm
-    const boyM = koseli ? liderParca?.hm || tasarimHm : tasarimHm
 
-    /* Gerçek ölçünün piksel karşılığı: metre → santim → piksel. */
-    const enPx = enM * 100 * olcekPxCm
-    const boyPx = boyM * 100 * olcekPxCm
-    if (!(enPx > 1) || !(boyPx > 1)) return false
-
-    const duvar = parcalar[0]
-    const pay = Math.min(1, enPx / duvar.uzunlukPx)
-    /*
-     * Köşelide liderin DIŞ ucu köşeye değiyor (duvarın sonu); tek duvarda
-     * tasarım duvarın ortasına oturuyor.
-     */
-    const sol = koseli ? 1 - pay : 0.5 - pay / 2
-    const sag = koseli ? 1 : 0.5 + pay / 2
-    const kose = duvardaDortgen(duvar.a, duvar.b, boyPx, ufukY, sol, sag)
-    if (!kose) return false
-
-    if (liderId === aktifEkranId) {
-      elleKoseyeYaz(kose)
-    } else {
-      /* Lider kayıtlı bir ekransa dörtgeni onun kaydına yazılıyor. */
-      const oran = kose.map(tuvalOrana)
-      setSabitEkranlar((l) => l.map((e) => (e.id === liderId ? { ...e, oran } : e)))
+    /* Bir ekranı, verilen duvarın belli bir payına oturtan yardımcı. */
+    const duvaraOturt = (parca, enM, boyM, nere) => {
+      const w = enM * 100 * olcekPxCm
+      const h = boyM * 100 * olcekPxCm
+      if (!(w > 1) || !(h > 1)) return null
+      const pay = Math.min(1, w / parca.uzunlukPx)
+      /*
+       * 'son'  → ekranın dış ucu duvarın SONUNDA (köşeye değiyor)
+       * 'bas'  → duvarın BAŞINDA (köşeden başlıyor)
+       * 'orta' → duvarın ortasında
+       */
+      const sol = nere === 'son' ? 1 - pay : nere === 'bas' ? 0 : 0.5 - pay / 2
+      const sag = nere === 'son' ? 1 : nere === 'bas' ? pay : 0.5 + pay / 2
+      return duvardaDortgen(parca.a, parca.b, h, ufukY, sol, sag)
     }
+
+    /*
+     * KÖŞEYİ SARAN BİRLEŞİM: HER KOL KENDİ DUVARINA.
+     *
+     * İlk üye birinci duvarın köşeye bakan ucuna, son üye son duvarın
+     * köşeden başlayan ucuna, aradakiler kendi duvarlarının ortasına.
+     * İki kol köşede buluşuyor; aradaki açı işaretlenen duvarların
+     * açısı, yani fotoğraftaki gerçek köşe.
+     */
+    if (koseli) {
+      const yazilacak = []
+      for (let i = 0; i < uyeler.length; i++) {
+        const parca = parcalar[Math.min(i, parcalar.length - 1)]
+        const uye = ekranParcalari.find((x) => x.id === uyeler[i])
+        const nere = i === 0 ? 'son' : i === uyeler.length - 1 ? 'bas' : 'orta'
+        const k = duvaraOturt(parca, uye?.wm || 0, uye?.hm || tasarimHm, nere)
+        if (!k) return false
+        yazilacak.push({ id: uyeler[i], kose: k })
+      }
+      const aktif = yazilacak.find((x) => x.id === aktifEkranId)
+      if (aktif) elleKoseyeYaz(aktif.kose)
+      const digerleri = new Map(
+        yazilacak.filter((x) => x.id !== aktifEkranId).map((x) => [x.id, x.kose.map(tuvalOrana)]),
+      )
+      if (digerleri.size) {
+        setSabitEkranlar((l) => l.map((e) => (digerleri.has(e.id) ? { ...e, oran: digerleri.get(e.id) } : e)))
+      }
+      setDuvardanKuruldu(true)
+      return true
+    }
+
+    /* Tek duvar: bütün tasarım duvarın ortasına. */
+    const kose = duvaraOturt(parcalar[0], tasarimWm, tasarimHm, 'orta')
+    if (!kose) return false
+    elleKoseyeYaz(kose)
+    setDuvardanKuruldu(true)
     return true
   }
 
@@ -10983,14 +11021,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                      * doğrudan alan işaretlemeye gidiliyor
                                      * (bkz. ekraniDuzenle).
                                      */
+                                    /*
+                                     * DÜZENLE = DUVAR DİPLERİNİ YENİDEN İŞARETLE.
+                                     *
+                                     * Eskiden burası "alanın dört köşesini
+                                     * işaretle" kipini açıyordu; o akış
+                                     * kaldırıldı ve içine giren kullanıcı
+                                     * geri dönemiyordu. Ölçek varsa iş
+                                     * duvar dibini yeniden koymak, yoksa
+                                     * önce referans.
+                                     */
                                     setDuzenlemede(true)
-                                    if (alanNokta.length === 4) {
-                                      setRefKipi(false)
-                                      setSihirbazAdim(4)
-                                    } else if (refPxCm || refDuzlem) {
-                                      setRefKipi(false)
-                                      setAlanKipi(true)
-                                      setSihirbazAdim(0)
+                                    setRefKipi(false)
+                                    setAlanKipi(false)
+                                    if (refPxCm || refDuzlem) {
+                                      setDuvarNokta([])
+                                      setDuvarKipi(true)
+                                      setSihirbazAdim(3)
                                     } else {
                                       setSihirbazAdim(1)
                                     }

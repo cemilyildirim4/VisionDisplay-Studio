@@ -234,7 +234,7 @@ function SihirbazKart({
     : {
         1: t('sih.1.baslik'),
         2: t('sih.2.baslik'),
-        3: t('sih.3.yeniBaslik'),
+        3: t('dyer.baslik'),
         4: t('sih.4.baslik'),
       }
   const adimSayisi = lKose ? L_ADIM_SAYISI : ADIM_SAYISI
@@ -339,9 +339,9 @@ function SihirbazKart({
         */}
         {!lKose && (
           <span className="mb-1 flex items-center gap-1">
-            {['referans', 'alan', 'yerlesim'].map((ad, i, hepsi) => {
-              /* 3. adım artık "nasıl yerleştirelim" seçimi: o da alan aşaması. */
-              const suAn = alanKipi ? 'alan' : adim >= 4 ? 'yerlesim' : adim === 3 ? 'alan' : 'referans'
+            {['referans', 'duvar', 'yerlesim'].map((ad, i, hepsi) => {
+              /* 3. adım duvar diplerini işaretlemek; alan akışı kaldırıldı. */
+              const suAn = adim >= 4 ? 'yerlesim' : adim === 3 ? 'duvar' : 'referans'
               const sira = hepsi.indexOf(suAn)
               const etkin = i === sira
               const bitti = i < sira
