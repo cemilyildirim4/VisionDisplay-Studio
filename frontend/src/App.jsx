@@ -9425,6 +9425,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   tuvalW={tuvalBoyut.w}
                   tuvalH={tuvalBoyut.h}
                   sinir={fotoSinir}
+                  /*
+                   * YERLEŞMİŞ EKRANLARIN KÖŞELERİNE YAPIŞMA.
+                   *
+                   * İkinci ekranı birincinin kenarına denk getirmek göz
+                   * kararıyla yapılınca arada birkaç piksellik boşluk ya da
+                   * üst üste binme kalıyordu. Konan köşeler yakındaki
+                   * köşeye yapışıyor; hizalama elle uğraşmadan tutuyor.
+                   */
+                  yapiskanNoktalar={Object.values(yerKoseRef.current).flat()}
                 />
               </div>
               <div

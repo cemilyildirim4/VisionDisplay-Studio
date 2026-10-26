@@ -402,6 +402,24 @@ export default function ReferansSecici({
       <rect x="0" y="0" width={tuvalW} height={tuvalH} fill="rgba(0,0,0,0.001)" />
 
       {/*
+        YERLEŞMİŞ EKRANLARIN KÖŞELERİ GÖRÜNÜYOR.
+
+        Yeni ekranı komşusunun kenarına denk getirmek için nereye
+        tıklanacağının görünmesi gerekiyor; nokta yalnızca yapışma
+        hedefi olarak var olduğunda kullanıcı göz kararıyla tıklıyor
+        ve arada boşluk kalıyordu.
+      */}
+      {yapiskanNoktalar.map((q, i) =>
+        q && Number.isFinite(q.x) && Number.isFinite(q.y) ? (
+          <g key={'yapis' + i} pointerEvents="none">
+            <circle cx={q.x} cy={q.y} r="5" fill="none" stroke="#ffffff" strokeWidth="2.5" opacity="0.9" />
+            <circle cx={q.x} cy={q.y} r="5" fill="none" stroke="#2962ad" strokeWidth="1.5" />
+            <circle cx={q.x} cy={q.y} r="1.6" fill="#2962ad" />
+          </g>
+        ) : null,
+      )}
+
+      {/*
         ÇİZGİ KALIN VE KONTRASTLI.
 
         İnce tek renkli çizgi açık renkli bir duvarda seçilmiyordu. Altına
