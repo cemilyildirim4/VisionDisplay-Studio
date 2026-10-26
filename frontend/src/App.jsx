@@ -4301,18 +4301,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     setTasarimAcik(true)
     /*
-     * ONAYDA BİR KEZ SIĞDIRILIYOR.
+     * OTOMATİK SIĞDIRMA YOK.
      *
-     * Tasarım onayla birlikte görünüyor; görünen şeyin alanın ortasında
-     * tek kabinlik bir pul olması anlamsız olurdu. Bu yüzden ölçülen
-     * santimle bir kez sığdırılıyor.
-     *
-     * Kullanıcı alanın GERÇEK en/boyunu yazıp "Tasarımı ölçüye sığdır"
-     * derse ikinci bir sığdırma oluyor ve sonuç değişebiliyor — ölçülen
-     * santim ile yazılan santim farklıysa bu kaçınılmaz; doğru olan,
-     * yazılanı kullanan ikincisidir.
+     * Onayda tasarım alanı dolduracak boyuta çekiliyordu; kullanıcının
+     * panelde kurduğu gerçek ölçü sessizce değişiyordu. Ekran kendi
+     * ölçüsüyle ve işaretlenen alanın perspektifinde duruyor; alanı
+     * doldurması ancak "Alana sığdır" denince oluyor.
      */
-    if (k) tasarimiAlanaSigdir(k)
   }
 
   /* Alanı tamamen doldur — montaj payıyla (bkz. sigdirDortgen). */
@@ -8197,6 +8192,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setYerSira(0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sihirbazAdim, scene, ozelSahne])
+
+  /*
+   * ÖLÇÜ DEĞİŞİNCE FOTOĞRAFTAKİ EKRAN DA DEĞİŞİYOR.
+   *
+   * Sütun/satır değiştirince fotoğraftaki ekran olduğu gibi kalıyordu.
+   * Dörtgen artık merkezi ve perspektifi korunarak yeni gerçek ölçünün
+   * oranında büyüyüp küçülüyor; ekran aynı duvarda, aynı açıda kalıyor.
+   *
+   * Oran BİR ÖNCEKİ ölçüye göre alınıyor: üst üste değişiklikler
+   * birikmiyor ve dörtgenin şekli bozulmuyor.
+   */
+  const sonOlcuRef = useRef(null)
+  useEffect(() => {
+    const onceki = sonOlcuRef.current
+    sonOlcuRef.current = { w: ekranWm, h: ekranHm }
+    if (scene !== 'ozel' || !ozelSahne || !elleYerlesti) return
+    if (!onceki || !(onceki.w > 0) || !(onceki.h > 0)) return
+    if (!(ekranWm > 0) || !(ekranHm > 0)) return
+    const sx = ekranWm / onceki.w
+    const sy = ekranHm / onceki.h
+    if (Math.abs(sx - 1) < 1e-4 && Math.abs(sy - 1) < 1e-4) return
+    const k = koseMutlak
+    if (!Array.isArray(k) || k.length !== 4) return
+    const cx = k.reduce((t, q) => t + q.x, 0) / 4
+    const cy = k.reduce((t, q) => t + q.y, 0) / 4
+    elleKoseyeYaz(k.map((q) => ({ x: cx + (q.x - cx) * sx, y: cy + (q.y - cy) * sy })))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ekranWm, ekranHm])
 
   const refIsaretleniyor = (refKipi || ref2Kipi) && !refPxCm
   const alanIsaretleniyor = alanKipi && alanNokta.length < 4
