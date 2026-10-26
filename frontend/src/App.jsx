@@ -109,9 +109,7 @@ function SekilTus({ onClick, etiket, yol }) {
 import { lKoseGeometri, lKoseYanKanat, cepheYanYuzu, icBukeyKose } from './lKose.js'
 /* Alan içine yerleştirme ve sığdırma — ikisi de hazır (bkz. homografi.js). */
 import { dortgenNoktasi, sigdirDortgen, koseDonusumu } from './homografi.js'
-import { duvarPlani, duvarYonergesi, duvarParcalari, kacisNoktasi, duvardaDortgen } from './duvarYerlesim.js'
-import { kameraKur, baslangicYonleri, parcaDortgenleri, tutamakYerleri } from './sahneYerlesim.js'
-import YerlesimTutamaklari from './YerlesimTutamaklari.jsx'
+
 /* İşaretlenen alanın GERÇEK ölçüsü — eğimi hesaba katarak (bkz. alanOlcu.js). */
 import {
   dortgenGercekOlcu,
@@ -920,8 +918,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Açı listesi boşken tipten türetiliyor; kullanıcı bir kanadı
    * çevirince kendi listesi yazılıyor.
    */
-  const [yerKaydir, setYerKaydir] = useState({ x: 0, z: 0 })
-  const [yerYonleri, setYerYonleri] = useState(null)
+  /*
+   * EKRAN EKRAN YERLEŞTİRME.
+   *
+   * yerSira: o an yerleştirilen ekranın listedeki sırası; null ise
+   * yerleştirme bitmiş demektir. yerNokta: o ekran için konan köşeler.
+   */
+  const [yerSira, setYerSira] = useState(null)
+  const [yerNokta, setYerNokta] = useState([])
   const [refUzunlukCm, setRefUzunlukCm] = useState('')
   /*
    * REFERANS TÜRÜ.
@@ -8035,132 +8039,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kavisli tek duvara (2), L ve açılı bir köşeye (3), U iki köşeye (4),
    * küp ise hiçbir duvara değil zemine oturuyor (2, zemin çizgisi).
    */
-  const duvarPlan = duvarPlani(grup?.tip || null, screenType)
-  const duvarYonerge = duvarYonergesi(duvarPlan, duvarNokta.length)
-  const duvarTamam = duvarNokta.length >= duvarPlan.tik
-
-  /*
-   * ───────────────────────────────────────────────────────────────────
-   * FOTOĞRAFA YERLEŞTİRME — TEK KAMERA
-   * ───────────────────────────────────────────────────────────────────
-   *
-   * Ölçek TUVAL pikselinde: refPxCm fotoğrafın kendi çözünürlüğüne ait,
-   * buradaki hesap tuval pikselinde yapılıyor. İkisini karıştırmak
-   * tasarımı kat kat yanlış büyüklükte koyar.
-   */
-  const olcekTuvalPxCm = (() => {
-    const cm = Number(String(refUzunlukCm).replace(',', '.'))
-    if (refNokta.length !== 2 || !(cm > 0)) return 0
-    const a = oranTuvale(refNokta[0])
-    const b = oranTuvale(refNokta[1])
-    const o = Math.hypot(b.x - a.x, b.y - a.y) / cm
-    return Number.isFinite(o) && o > 0 ? o : 0
-  })()
-
-  /* Zincire giren ölçüler santim cinsinden. */
-  const yerParcalari = ekranParcalari.map((x) => ({
-    id: x.id,
-    enCm: (x.wm || 0) * 100,
-    boyCm: (x.hm || 0) * 100,
-  }))
-  /* Birleşim yoksa düz dizilim (180°). */
-  const yerAcisi = grup
-    ? grup.tip === 'duz'
-      ? 180
-      : grup.tip === 'acili'
-        ? grup.aci || 135
-        : 90
-    : 180
-  const yerVarsayilan = baslangicYonleri(yerParcalari.length, yerAcisi, grup?.lYon || 'ice')
-  const yerYon =
-    Array.isArray(yerYonleri) && yerYonleri.length === yerParcalari.length ? yerYonleri : yerVarsayilan
-  const yerKamera = kameraKur(tuvalBoyut.w, tuvalBoyut.h, olcekTuvalPxCm)
-  const yerDortgenleri = yerKamera ? parcaDortgenleri(yerKamera, yerParcalari, yerYon, yerKaydir) : []
-  const yerTutamak =
-    yerKamera && scene === 'ozel' && ozelSahne
-      ? tutamakYerleri(yerKamera, yerParcalari, yerYon, yerKaydir)
-      : { orta: null, uclar: [] }
-
-  /*
-   * KANADI ÇEVİRME.
-   *
-   * Kullanıcı kanadın ucundaki tutamağı çekiyor; o uç köşe etrafında
-   * bir yay çiziyor. Hangi açının o noktaya denk geldiğini kapalı
-   * biçimde çözmek yerine açı taranıyor: 180 deneme, her biri birkaç
-   * çarpma. Hem kısa hem de kameranın tamamını hesaba katıyor.
-   */
-  const kanadiCevir = (i, nokta) => {
-    if (!yerKamera || !(i >= 0) || i >= yerParcalari.length) return
-    let enIyi = null
-    let enYakin = Infinity
-    for (let derece = -85; derece <= 85; derece += 1) {
-      const deneme = yerYon.slice()
-      deneme[i] = (derece * Math.PI) / 180
-      const t = tutamakYerleri(yerKamera, yerParcalari, deneme, yerKaydir)
-      const u = t.uclar.find((x) => x.i === i)
-      if (!u) continue
-      const uzak = Math.hypot(u.nokta.x - nokta.x, u.nokta.y - nokta.y)
-      if (uzak < enYakin) {
-        enYakin = uzak
-        enIyi = deneme
-      }
-    }
-    if (enIyi) setYerYonleri(enIyi)
-  }
-
-  /* Taşıma: piksel farkı santime çevriliyor. */
-  const yerlesimiTasi = (dxPx, dyPx) => {
-    if (!(olcekTuvalPxCm > 0)) return
-    setYerKaydir((k) => ({
-      x: k.x + dxPx / olcekTuvalPxCm,
-      /* Aşağı sürüklemek tasarımı yaklaştırıyor: ekranda aşağısı yakın. */
-      z: k.z - dyPx / olcekTuvalPxCm,
-    }))
-  }
-
-  /*
-   * DÖRTGENLER EKRANLARA YAZILIYOR.
-   *
-   * Çizim zaten ekranların dörtgenlerinden besleniyor (elle dörtgen ve
-   * kayıtlı 'oran'); motor da oraya yazıyor. Böylece 2B çizim, fotoğraf
-   * ve PDF aynı kaynaktan besleniyor.
-   *
-   * İmza, YAZILAN şeyden değil GİRDİLERDEN üretiliyor: yazmak girdileri
-   * değiştirmediği için döngü oluşmuyor.
-   */
-  const yerImza = JSON.stringify([
-    yerKaydir,
-    yerYon.map((a) => Math.round(a * 1000)),
-    yerParcalari.map((x) => [x.id, Math.round(x.enCm), Math.round(x.boyCm)]),
-    Math.round(olcekTuvalPxCm * 100),
-    Math.round(tuvalBoyut.w),
-    Math.round(tuvalBoyut.h),
-  ])
-  const yerYazRef = useRef(null)
-  yerYazRef.current = () => {
-    const liste = []
-    for (let i = 0; i < yerParcalari.length; i++) {
-      const k = yerDortgenleri[i]
-      if (!k) continue
-      liste.push({ id: yerParcalari[i].id, kose: k })
-    }
-    if (!liste.length) return
-    const aktif = liste.find((x) => x.id === aktifEkranId)
-    if (aktif) elleKoseyeYaz(aktif.kose)
-    const digerleri = new Map(
-      liste.filter((x) => x.id !== aktifEkranId).map((x) => [x.id, x.kose.map(tuvalOrana)]),
-    )
-    if (digerleri.size) {
-      setSabitEkranlar((l) => l.map((e) => (digerleri.has(e.id) ? { ...e, oran: digerleri.get(e.id) } : e)))
-    }
-    setDuvardanKuruldu(true)
-  }
-  useEffect(() => {
-    if (scene !== 'ozel' || !ozelSahne) return
-    if (!(olcekTuvalPxCm > 0)) return
-    yerYazRef.current?.()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yerImza, scene, ozelSahne])
 
   /*
    * ÖLÇÜ BİTTİ Mİ.
@@ -8176,9 +8054,93 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const olcuTamam = !!refPxCm
 
 
+  /*
+   * ───────────────────────────────────────────────────────────────────
+   * EKRAN EKRAN YERLEŞTİRME
+   * ───────────────────────────────────────────────────────────────────
+   */
+  /*
+   * KONAN DÖRTGENLER ELDE TUTULUYOR.
+   *
+   * Toplama (ortak kenarların yapışması) durumdan okunduğunda son
+   * yazılan dörtgen henüz yerine geçmemiş oluyordu ve yapışma hiç
+   * çalışmıyordu. Dörtgenler konuldukları anda burada birikiyor.
+   */
+  const yerKoseRef = useRef({})
+  const yerAktif = yerSira != null && yerSira >= 0 && yerSira < ekranParcalari.length
+  const yerEkran = yerAktif ? ekranParcalari[yerSira] : null
+
+  /* Bir ekranın dörtgenini yerine yazıyor: elde duran ekran ayrı yola gidiyor. */
+  const dortgeniYaz = (id, kose) => {
+    if (!Array.isArray(kose) || kose.length !== 4) return
+    if (id === aktifEkranId) {
+      elleKoseyeYaz(kose)
+      return
+    }
+    const oran = kose.map(tuvalOrana)
+    setSabitEkranlar((l) => l.map((e) => (e.id === id ? { ...e, oran } : e)))
+  }
+
+  /*
+   * ORTAK KENARLAR YAPIŞIYOR.
+   *
+   * Kullanıcı her ekranı ayrı ayrı koyuyor; iki komşunun ortak kenarı
+   * elle tam üst üste gelmiyor. Birleşik grupta komşuların paylaştığı
+   * kenar ortalanıp ikisine de yazılıyor: arada boşluk da kalmıyor, üst
+   * üste binme de. Birleşik olmayan ekranlara dokunulmuyor — onlar
+   * kullanıcının koyduğu yerde kalıyor.
+   */
+  const birlesimiTopla = () => {
+    const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : null
+    if (!uyeler || uyeler.length < 2) return
+    const koseler = uyeler.map((id) => yerKoseRef.current[id] || null)
+    if (koseler.some((k) => !k)) return
+    const ortala = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
+    for (let i = 0; i < koseler.length - 1; i++) {
+      const sol = koseler[i]
+      const sag = koseler[i + 1]
+      /* Sol ekranın SAĞ kenarı ile sağ ekranın SOL kenarı aynı kenar. */
+      const ust = ortala(sol[1], sag[0])
+      const alt = ortala(sol[2], sag[3])
+      koseler[i] = [sol[0], ust, alt, sol[3]]
+      koseler[i + 1] = [ust, sag[1], sag[2], alt]
+    }
+    uyeler.forEach((id, i) => dortgeniYaz(id, koseler[i]))
+  }
+
+  /* Dört köşe konunca o ekran yerleşiyor ve sıra ötekine geçiyor. */
+  const yerNoktaDegisti = (tuvalNoktalari) => {
+    setYerNokta(tuvalNoktalari)
+    if (tuvalNoktalari.length < 4 || !yerEkran) return
+    yerKoseRef.current[yerEkran.id] = tuvalNoktalari
+    dortgeniYaz(yerEkran.id, tuvalNoktalari)
+    setYerNokta([])
+    if (yerSira + 1 < ekranParcalari.length) {
+      setYerSira(yerSira + 1)
+      return
+    }
+    /* Hepsi bitti: birleşimi topla ve sihirbazı kapat. */
+    birlesimiTopla()
+    setYerSira(null)
+    setTasarimAcik(true)
+    setSihirbazAdim(0)
+  }
+
+
+  /* Referans bitince yerleştirme başlıyor. */
+  useEffect(() => {
+    if (scene !== 'ozel' || !ozelSahne) return
+    if (sihirbazAdim !== 3) return
+    if (yerSira !== null) return
+    yerKoseRef.current = {}
+    setYerNokta([])
+    setYerSira(0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sihirbazAdim, scene, ozelSahne])
+
   const refIsaretleniyor = (refKipi || ref2Kipi) && !refPxCm
   const alanIsaretleniyor = alanKipi && alanNokta.length < 4
-  const olcuAraciAcik = refIsaretleniyor || lKoseKipi || alanIsaretleniyor || taslakKutuAcik
+  const olcuAraciAcik = refIsaretleniyor || lKoseKipi || alanIsaretleniyor || taslakKutuAcik || yerAktif
 
   /*
    * YERİNDE 3B KATMAN ÇİZİLİYOR MU.
@@ -9291,23 +9253,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/*
-            YERLEŞTİRME TUTAMAKLARI.
+            EKRANI YERLEŞTİRME — DÖRT KÖŞE.
 
-            Ortadaki tutamak taşıyor (birleşik grup tek parça, çünkü bütün
-            kanatlar aynı zincirden türüyor); kanat uçlarındakiler o kanadı
-            köşe etrafında çeviriyor. Boyut tutamağı YOK: ölçü referanstan
-            geliyor ve kilitli.
+            Sıradaki ekranın duracağı yerin dört köşesi tıklanıyor;
+            perspektif oradan geliyor. Katman en üstte: alttaki katmanlar
+            tıklamaları yutuyordu.
           */}
-          {scene === 'ozel' && ozelSahne && olcekTuvalPxCm > 0 && !olcuAraciAcik && !(tasarimGizli && !olcuTamam) && (
-            <YerlesimTutamaklari
-              orta={yerTutamak.orta}
-              uclar={grup && grup.tip !== 'duz' && yerParcalari.length > 1 ? yerTutamak.uclar : []}
-              tuvalW={tuvalBoyut.w}
-              tuvalH={tuvalBoyut.h}
-              onTasi={yerlesimiTasi}
-              onKanat={kanadiCevir}
-              ipucu={t('yer.ipucu')}
-            />
+          {yerAktif && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+            <>
+              <div style={{ position: 'absolute', inset: 0, zIndex: 18 }}>
+                <ReferansSecici
+                  foto={isaretFoto}
+                  olcek={isaretZoom}
+                  onKaydir={isaretKaydir}
+                  noktalar={yerNokta}
+                  onDegis={yerNoktaDegisti}
+                  enCokNokta={4}
+                  tuvalW={tuvalBoyut.w}
+                  tuvalH={tuvalBoyut.h}
+                  sinir={fotoSinir}
+                />
+              </div>
+              <div
+                style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 20 }}
+                className="pointer-events-none max-w-[90%] rounded-xl bg-[#001334]/85 px-4 py-2.5 text-center text-[14px] font-medium leading-snug text-white shadow-lg"
+              >
+                {t('yer.ekran').replace('{0}', String(yerEkran?.sira ?? yerSira + 1))}
+                <span className="mt-0.5 block text-[12.5px] font-normal tabular-nums text-white/80">
+                  {t('yer.kose').replace('{0}', String(yerNokta.length))}
+                </span>
+              </div>
+            </>
           )}
 
           {refKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (

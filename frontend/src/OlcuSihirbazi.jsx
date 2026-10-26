@@ -799,7 +799,7 @@ function SihirbazKart({
                 Ölçek referanstan geldiği için boyut kilitli; kullanıcıya
                 kalan iş taşımak ve kanatları duvara yatırmak.
               */}
-              <p className={aciklama}>{t('yer.ipucu')}</p>
+              <p className={aciklama}>{t('yer.adimAciklama')}</p>
               {kutuMesaj && (
                 <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{kutuMesaj}</p>
               )}
