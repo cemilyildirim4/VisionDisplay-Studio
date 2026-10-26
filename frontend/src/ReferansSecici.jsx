@@ -157,22 +157,6 @@ export default function ReferansSecici({
    * referansın hassasiyeti doğrudan ölçeğe geçiyor. Ok tuşları 1 piksel,
    * Shift ile 10 piksel.
    */
-  useEffect(() => {
-    const tus = (e) => {
-      if (!noktalar[secili]) return
-      const yon = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]
-      if (!yon) return
-      e.preventDefault()
-      const adim = e.shiftKey ? 10 : 1
-      onDegis(
-        noktalar.map((p, i) =>
-          i === secili ? kis({ x: p.x + yon[0] * adim, y: p.y + yon[1] * adim }) : p,
-        ),
-      )
-    }
-    window.addEventListener('keydown', tus)
-    return () => window.removeEventListener('keydown', tus)
-  }, [noktalar, secili, onDegis, tuvalW, tuvalH])
 
   const z = olcek > 0 ? olcek : 1
   const yerel = (e) => {
@@ -247,7 +231,7 @@ export default function ReferansSecici({
     if (noktalar.length >= enCokNokta) return
     const ham = yerel(e)
     if (!ham) return
-    const y = yakin(ham, e.altKey, e.shiftKey)
+    const y = yakin(ham, false, false)
     setSecili(noktalar.length)
     onDegis([...noktalar, y || ham])
     setYapisan(null)
@@ -287,7 +271,7 @@ export default function ReferansSecici({
       /* Sürükleme yokken imleç çizgisi ve yapışma vurgusu için yeri saklıyoruz. */
       if (noktalar.length < enCokNokta) {
         const ham = yerel(e)
-        const y = yakin(ham, e.altKey, e.shiftKey)
+        const y = yakin(ham, false, false)
         setYapisan(y)
         if (ham) setBuyutecNokta(y || ham)
         if (noktalar.length > 0 && ham) setImlec(y || ham)
@@ -299,7 +283,7 @@ export default function ReferansSecici({
       y: s.bas.y + (e.clientY - s.fareY) / z,
     })
     /* Var olan bir noktayı sürüklerken de yapışıyor: köşe düzeltirken de lazım. */
-    const y = yakin(ham, e.altKey, e.shiftKey)
+    const y = yakin(ham, false, false)
     setYapisan(y)
     setBuyutecNokta(y || ham)
     onDegis(noktalar.map((q, j) => (j === s.i ? y || ham : q)))

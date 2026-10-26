@@ -143,7 +143,7 @@ export default function EkEkranlar({
                        başlıyor ve ekran hiç seçilmiyordu. */
                     e.preventDefault()
                     e.stopPropagation()
-                    onSec(ekran.id, e.shiftKey)
+                    onSec(ekran.id, false)
                   }
                 : undefined
             }

@@ -548,7 +548,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kaydırma tuval pikselinde ve dönüşümden ÖNCE uygulanıyor
    * (translate(...) scale(z)), bu yüzden ekran pikseliyle birebir.
    */
-  const [isaretZoom, setIsaretZoom] = useState(1)
+  /*
+   * YAKINLAŞTIRMA KALKTI.
+   *
+   * Fotoğrafta tekerlekle yakınlaştırma ve yakınlaştırılmış fotoğrafı
+   * sürükleyip kaydırma gizli hareketlerdi; yanlışlıkla tetiklenince
+   * kullanıcı fotoğrafın neden kaydığını anlamıyordu. Ölçek sabit.
+   */
+  const isaretZoom = 1
+  const setIsaretZoom = () => {}
   const [isaretKay, setIsaretKay] = useState({ x: 0, y: 0 })
   /*
    * Fotoğraf değişince kenar haritası yeniden çıkarılıyor. İşlem bir
@@ -8134,6 +8142,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * çalışmıyordu. Dörtgenler konuldukları anda burada birikiyor.
    */
   const yerKoseRef = useRef({})
+  /*
+   * KÖŞE SIRASI DÜZELTİLİYOR.
+   *
+   * Köşeler tıklama sırasıyla saklanıyordu; farklı sırayla tıklayan
+   * kullanıcıda dörtgenin köşeleri yer değiştiriyor ve görsel 90 derece
+   * dönmüş ya da aynalanmış oturuyordu. Dörtgen artık her zaman
+   * [solÜst, sağÜst, sağAlt, solAlt] sırasında.
+   */
+  const koseSirala = (k) => {
+    if (!Array.isArray(k) || k.length !== 4) return k
+    const cx = k.reduce((t, q) => t + q.x, 0) / 4
+    const cy = k.reduce((t, q) => t + q.y, 0) / 4
+    /* Ekran koordinatında y aşağı: açıya göre sıralamak saat yönü veriyor. */
+    const sirali = [...k].sort(
+      (a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx),
+    )
+    /* Başlangıç sol üst: merkeze göre hem solda hem yukarıda olan. */
+    let bas = 0
+    let enIyi = Infinity
+    sirali.forEach((q, i) => {
+      const puan = q.x - cx + (q.y - cy)
+      if (puan < enIyi) {
+        enIyi = puan
+        bas = i
+      }
+    })
+    return [0, 1, 2, 3].map((i) => sirali[(bas + i) % 4])
+  }
+
+  /* Yerleşmemiş ilk ekranın sırası — ekleme yerleşimi bozmasın diye. */
+  const ilkYerlesmemis = () => ekranParcalari.findIndex((x) => !yerlesmisIdler.includes(x.id))
+
   const yerAktif = yerSira != null && yerSira >= 0 && yerSira < ekranParcalari.length
   const yerEkran = yerAktif ? ekranParcalari[yerSira] : null
 
@@ -8162,12 +8202,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   const yerEkraniOnayla = () => {
     if (yerNokta.length !== 4 || !yerEkran) return
-    yerKoseRef.current[yerEkran.id] = yerNokta
-    dortgeniYaz(yerEkran.id, yerNokta)
-    setYerlesmisIdler((l) => (l.includes(yerEkran.id) ? l : [...l, yerEkran.id]))
+    const duzgun = koseSirala(yerNokta)
+    yerKoseRef.current[yerEkran.id] = duzgun
+    dortgeniYaz(yerEkran.id, duzgun)
+    const yeni = yerlesmisIdler.includes(yerEkran.id) ? yerlesmisIdler : [...yerlesmisIdler, yerEkran.id]
+    setYerlesmisIdler(yeni)
     setYerNokta([])
-    if (yerSira + 1 < ekranParcalari.length) {
-      setYerSira(yerSira + 1)
+    /* Sıra, yerleşmemiş ilk ekrana geçiyor. */
+    const sonraki = ekranParcalari.findIndex((x) => !yeni.includes(x.id))
+    if (sonraki >= 0) {
+      setYerSira(sonraki)
       return
     }
     /*
@@ -8185,11 +8229,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (scene !== 'ozel' || !ozelSahne) return
     if (sihirbazAdim !== 3) return
     if (yerSira !== null) return
-    yerKoseRef.current = {}
-    setYerlesmisIdler([])
-    setElleYerlesti(false)
+    /*
+     * BİRİKİMLER KORUNUYOR.
+     *
+     * Burada her seferinde temizleniyordu ve sıra ilk ekrana dönüyordu:
+     * yeni bir ekran eklemek, yerleşmiş ekranları yeniden yerleştirtmek
+     * anlamına geliyordu. Sıra yalnızca yerleşmemiş ilk ekrandan
+     * başlıyor; hepsi yerleştiyse adım hiç açılmıyor.
+     */
+    const bos = ilkYerlesmemis()
+    if (bos < 0) return
     setYerNokta([])
-    setYerSira(0)
+    setYerSira(bos)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sihirbazAdim, scene, ozelSahne])
 
@@ -9134,7 +9185,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 window.addEventListener('pointerup', bitir)
               }}
               /* Çift tıklama otomatik açıya döndürüyor. */
-              onDoubleClick={() => setLKacis(null)}
             />
           )}
 

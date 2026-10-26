@@ -53,22 +53,7 @@ export default function KoseSecici({ koseler, onDegis, tuvalW, tuvalH, sinir = n
    * Klavyeyle ince ayar: yön tuşları 1 piksel, Shift ile 10 piksel. Fareyle
    * bir köşeyi piksel hassasiyetinde tutturmak zor; asıl işi bu yapıyor.
    */
-  useEffect(() => {
-    const tus = (e) => {
-      const yon = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]
-      if (!yon) return
-      e.preventDefault()
-      const adim = e.shiftKey ? 10 : 1
-      const yeni = koseler.map((k, i) =>
-        i === secili ? kis({ x: k.x + yon[0] * adim, y: k.y + yon[1] * adim }) : k,
-      )
-      /* Perspektif paydası sıfırı geçerse çizim yalanıyor; o hareket de kabul edilmiyor. */
-      if (dortgenGecerli(yeni) && perspektifGecerli(yeni)) onDegis(yeni)
-    }
-    window.addEventListener('keydown', tus)
-    return () => window.removeEventListener('keydown', tus)
-  }, [koseler, secili, onDegis])
-
+  
   const indi = (i) => (e) => {
     e.preventDefault()
     e.stopPropagation()
