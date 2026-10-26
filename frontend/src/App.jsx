@@ -7528,6 +7528,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   useEffect(() => {
     const kume = paylasimKumesi(aktifEkranId)
     if (!kume) return
+    /*
+     * BOŞ İÇERİK KÜMEYE YAZILMIYOR.
+     *
+     * Yeni eklenen ekran "LED EKRAN" (boş) ile doğuyor ve elde duran
+     * ekran o oluyor; bu etki o boşluğu kümenin tamamına yazınca
+     * 1. ekrana konulmuş görsel siliniyordu. Paylaşım yalnızca
+     * GERÇEK bir içerik verildiğinde yayılıyor; boş ekran kümenin
+     * görselini zaten gösteriyor (bkz. ekranParcalari).
+     */
+    if (content === 'led' || content === 'none') return
     setSabitEkranlar((l) => {
       let degisti = false
       const yeni = l.map((e) => {
