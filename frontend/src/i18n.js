@@ -727,7 +727,12 @@ const dict = {
   'sih.alanGercekOlcu': { tr: 'Alanın gerçek ölçüsü', en: 'Real size of the area', ar: 'المقاس الحقيقي للمنطقة' },
   'sih.ilerle.referans': { tr: 'Referans', en: 'Reference', ar: 'المرجع' },
   'sih.ilerle.alan': { tr: 'Alan', en: 'Area', ar: 'المنطقة' },
-  'sih.ilerle.duvar': { tr: 'Duvar dibi', en: 'Wall base', ar: 'أسفل الجدار' },
+  'yer.baslik': { tr: 'Yerleştir', en: 'Place', ar: 'الوضع' },
+  'yer.ipucu': {
+    tr: 'Ortadaki tutamakla taşıyın, kanat uçlarındaki tutamaklarla duvara yatırın.',
+    en: 'Drag the middle handle to move; use the wing-end handles to lay them against the wall.',
+    ar: 'اسحب المقبض الأوسط للتحريك، واستخدم مقابض أطراف الأجنحة لإسنادها إلى الجدار.',
+  },
   'sih.ilerle.yerlesim': { tr: 'Yerleştir', en: 'Place', ar: 'الوضع' },
   'sih.alanGecersiz': {
     tr: 'Köşeleri kontrol edin: bu dörtgen gerçekte olamaz (bir köşe içeri düşmüş ya da kenarlar kesişiyor).',

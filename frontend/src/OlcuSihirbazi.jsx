@@ -234,7 +234,7 @@ function SihirbazKart({
     : {
         1: t('sih.1.baslik'),
         2: t('sih.2.baslik'),
-        3: t('dyer.baslik'),
+        3: t('yer.baslik'),
         4: t('sih.4.baslik'),
       }
   const adimSayisi = lKose ? L_ADIM_SAYISI : ADIM_SAYISI
@@ -339,9 +339,9 @@ function SihirbazKart({
         */}
         {!lKose && (
           <span className="mb-1 flex items-center gap-1">
-            {['referans', 'duvar', 'yerlesim'].map((ad, i, hepsi) => {
-              /* 3. adım duvar diplerini işaretlemek; alan akışı kaldırıldı. */
-              const suAn = adim >= 4 ? 'yerlesim' : adim === 3 ? 'duvar' : 'referans'
+            {['referans', 'yerlesim'].map((ad, i, hepsi) => {
+              /* İki adım kaldı: ölçeği al, sonra yerleştir. */
+              const suAn = adim >= 3 ? 'yerlesim' : 'referans'
               const sira = hepsi.indexOf(suAn)
               const etkin = i === sira
               const bitti = i < sira
@@ -795,23 +795,11 @@ function SihirbazKart({
           {!alanKipi && adim === 3 && !lKose && (
             <>
               {/*
-                DUVAR DİBİ — kullanıcıdan hayal etmesi istenmiyor.
-                Eskiden burada "alanı işaretle" (dört köşeyi tahmin et) ve
-                "serbest yerleştir" (kutuyu elle boyutlandır) vardı; ikisi de
-                perspektifi kullanıcıya kurduruyordu.
+                YERLEŞTİRME — tasarım zaten ekranda.
+                Ölçek referanstan geldiği için boyut kilitli; kullanıcıya
+                kalan iş taşımak ve kanatları duvara yatırmak.
               */}
-              <p className={aciklama}>{t('dyer.adimAciklama')}</p>
-              <p className={`mt-1 text-[13.5px] leading-snug text-neutral-700 dark:text-neutral-200`}>
-                {duvarYonergeMetni}
-              </p>
-              <p className={`${kucuk} tabular-nums text-neutral-500 dark:text-neutral-400`}>
-                {duvarKonan} / {duvarGereken}
-              </p>
-              {onDuvarIsaretle && (
-                <button type="button" onClick={onDuvarIsaretle} className={`mt-2 w-full ${ana}`}>
-                  {duvarKonan ? t('dyer.bastan') : t('dyer.giris')}
-                </button>
-              )}
+              <p className={aciklama}>{t('yer.ipucu')}</p>
               {kutuMesaj && (
                 <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>{kutuMesaj}</p>
               )}

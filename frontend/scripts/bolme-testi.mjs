@@ -73,32 +73,12 @@ const kartaSayi = (v) =>
     return true
   }, v)
 
-/**
- * DUVAR DİBİNİ İŞARETLE — yerleştirmenin tek adımı.
- *
- * Duvarın yere değdiği çizginin iki ucuna tıklanıyor; bütün ekranlar
- * gerçek genişlikleri oranında o duvara diziliyor.
- *
- * Noktalar TASARIM KATMANINA göre veriliyor: #pdf-onizleme daha geniş
- * bir kutu ve ona göre verilen oranlar işaretleme katmanının dışına
- * düşüyor, tıklamalar hiç sayılmıyordu.
+/*
+ * Yerlestirme artik ayri bir adim degil: referans bitince tasarim
+ * kendiliginden geliyor. Burada yalnizca cizimin oturmasi bekleniyor.
  */
-async function duvarDibiniIsaretle() {
-  const m = await s.evaluate(() => {
-    const k = document.querySelector('[data-tasarim-katman]') || document.querySelector('#pdf-onizleme')
-    const r = k.getBoundingClientRect()
-    return { x: r.x, y: r.y, w: r.width, h: r.height }
-  })
-  const basildi = await bas('Duvar diplerini işaretle', 1500)
-  await tikla([
-    [m.x + m.w * 0.3, m.y + m.h * 0.7],
-    [m.x + m.w * 0.7, m.y + m.h * 0.65],
-  ])
-  await s.waitForTimeout(2200)
-  const kalan = await s.evaluate(() =>
-    (((document.body.innerText || '').replace(/\s+/g, ' ').match(/\d \/ \d/g) || []).join(',')),
-  )
-  console.log('  duvar dibi: dugme=' + basildi + ' kalan sayac=' + (kalan || 'yok'))
+async function yerlesmeyiBekle() {
+  await s.waitForTimeout(2500)
 }
 
 await s.goto(ADRES, { waitUntil: 'domcontentloaded' })
@@ -137,10 +117,15 @@ await bas('Devam', 1500)
  * Üç ekran kuruluyor, sonra duvar dibi BİR KEZ işaretleniyor: yeni
  * yolda yerleştirme ekran ekran değil, tek adımda ve hepsi birden.
  */
-await bas('+ Ekran ekle', 2500)
-await bas('+ Ekran ekle', 2500)
+/* Ekran ekle artık kare bir kutu; veri niteliğinden tıklanıyor. */
+const ekranEkle = async () => {
+  await s.evaluate(() => document.querySelector('[data-ekle] button')?.click())
+  await s.waitForTimeout(2500)
+}
+await ekranEkle()
+await ekranEkle()
 console.log('3 ekran kuruldu (ilk ikisi sabit)')
-await duvarDibiniIsaretle()
+await yerlesmeyiBekle()
 
 /*
  * HER EKRANA AYRI AYRI: ÖRNEK GÖRÜNTÜ + Bölünmüş.
