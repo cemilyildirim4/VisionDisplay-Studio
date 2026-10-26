@@ -3848,7 +3848,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * kalıyor, yoksa tasarım ekrandan kaybolup geri getirilemez olurdu.
        */
       const sinirli =
-        alanNokta.length === 4 ? kadrajaCek(elle, tuvalBoyut) : fotografaCek(elle, fotoYer)
+        /*
+         * KULLANICI KÖŞELERİ KENDİ KOYDUYSA ÇEKİLMİYOR.
+         *
+         * fotografaCek dörtgeni her çizimde fotoğrafın içine geri
+         * çekiyor; üst kenarı fotoğrafın dışında kalan bir yerleştirme
+         * sessizce aşağı kayıyordu (ölçüldü: 13 piksel). Dört köşeyi
+         * kendisi tıklayan kullanıcı nereye koyacağını biliyor.
+         */
+        alanNokta.length === 4 || elleYerlesti
+          ? kadrajaCek(elle, tuvalBoyut)
+          : fotografaCek(elle, fotoYer)
       /*
        * ÇİZİM DÜZELTMESİ BU DALDA DA UYGULANIYOR.
        *
@@ -4836,6 +4846,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       lYon: yon,
     }))
   }
+
+  /*
+   * DÜZ BİRLEŞİM VARSAYILAN.
+   *
+   * İkinci ekran eklenince hiçbir tip seçili olmuyordu: "Düz" bile
+   * vurgusuz duruyor, altındaki görsel paylaşımı ve "Ayır" sönük
+   * kalıyordu. Kullanıcı seçeneklerin çalıştığını ancak bir tipe
+   * tıklayınca görüyordu.
+   *
+   * Varsayılan BİR KEZ kuruluyor: "Ayır" dendikten sonra geri
+   * gelmiyor, yoksa ayırmak imkânsız olurdu.
+   */
+  const duzVarsayilanRef = useRef(false)
+  useEffect(() => {
+    if (grup || duzVarsayilanRef.current) return
+    if (ekranParcalari.length < 2) return
+    duzVarsayilanRef.current = true
+    const idler = ekranParcalari.map((x) => x.id)
+    setGrupSecim(idler)
+    setGrupTipi('duz')
+    birlesimiKur('duz', idler, grupAcisi, lYonSecim)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grup, ekranParcalari.length])
 
   /*
    * AYIR — grup bozuluyor, ekranlar BULUNDUKLARI yerde kalıyor.
@@ -7319,10 +7352,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const grupKoseleri = (() => {
     if (!grup || !Array.isArray(grup.uyeler) || grup.uyeler.length < 2) return null
     /*
-     * DUVAR DİBİNDEN KURULDUYSA TÜRETME YOK.
-     * Her üye kendi duvarına oturdu; buradaki türetme onları ezerdi.
+     * FOTOĞRAFTA TÜRETME YOK.
+     *
+     * Birleşim tipi (L, U, açılı, içe/dışa) fotoğraftaki şekle hiç
+     * karışmıyor: her ekranın yeri ve şekli YALNIZCA kullanıcının
+     * tıkladığı dört köşeden geliyor. Türetme açık kaldığında iki ekran
+     * tek bir dev eşkenar dörtgene dönüşüyor, yerleştirilmemiş olan da
+     * tavana doğru yamuluyordu.
+     *
+     * Birleşimin fotoğraftaki tek etkisi GÖRSEL: "Tek görsel" seçiliyse
+     * resim ekranlara gerçek genişlikleri oranında bölünüyor
+     * (bkz. icerikBolme).
      */
-    if (elleYerlesti) return null
+    if (scene === 'ozel') return null
     if (!(fotoYer?.genislik > 0)) return null
     const odak =
       fotoOdak > 1
@@ -8092,32 +8134,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setSabitEkranlar((l) => l.map((e) => (e.id === id ? { ...e, oran } : e)))
   }
 
-  /*
-   * ORTAK KENARLAR YAPIŞIYOR.
-   *
-   * Kullanıcı her ekranı ayrı ayrı koyuyor; iki komşunun ortak kenarı
-   * elle tam üst üste gelmiyor. Birleşik grupta komşuların paylaştığı
-   * kenar ortalanıp ikisine de yazılıyor: arada boşluk da kalmıyor, üst
-   * üste binme de. Birleşik olmayan ekranlara dokunulmuyor — onlar
-   * kullanıcının koyduğu yerde kalıyor.
-   */
-  const birlesimiTopla = () => {
-    const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : null
-    if (!uyeler || uyeler.length < 2) return
-    const koseler = uyeler.map((id) => yerKoseRef.current[id] || null)
-    if (koseler.some((k) => !k)) return
-    const ortala = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
-    for (let i = 0; i < koseler.length - 1; i++) {
-      const sol = koseler[i]
-      const sag = koseler[i + 1]
-      /* Sol ekranın SAĞ kenarı ile sağ ekranın SOL kenarı aynı kenar. */
-      const ust = ortala(sol[1], sag[0])
-      const alt = ortala(sol[2], sag[3])
-      koseler[i] = [sol[0], ust, alt, sol[3]]
-      koseler[i + 1] = [ust, sag[1], sag[2], alt]
-    }
-    uyeler.forEach((id, i) => dortgeniYaz(id, koseler[i]))
-  }
 
   /*
    * DÖRT KÖŞE KONDUKTAN SONRA DÜZELTİLEBİLİR.
@@ -8138,8 +8154,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setYerSira(yerSira + 1)
       return
     }
-    /* Hepsi bitti: ortak kenarları yapıştır ve sihirbazı kapat. */
-    birlesimiTopla()
+    /*
+     * Hepsi bitti. Köşelere DOKUNULMUYOR: her ekran kullanıcının
+     * tıkladığı dört köşede kalıyor.
+     */
     setYerSira(null)
     setTasarimAcik(true)
     setSihirbazAdim(0)
