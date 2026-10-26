@@ -912,7 +912,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * duvarına oturan dörtgeni geçerli. Türetme açık kalırsa kendi
    * hesabını yazıp duvarlara oturan dörtgenleri eziyor.
    */
-  const [duvardanKuruldu, setDuvardanKuruldu] = useState(false)
+  /*
+   * ELLE YERLEŞTİRİLDİ Mİ.
+   *
+   * Açıkken birleşik grubun üyeleri LİDERDEN türetilmiyor: her ekran
+   * kullanıcının koyduğu dört köşede kalıyor. Türetme açık kalırsa
+   * kendi hesabını yazıp kullanıcının yerleştirmesini eziyor.
+   */
+  const [elleYerlesti, setElleYerlesti] = useState(false)
   /*
    * YERLEŞTİRME: taşıma (cm) ve kanat açıları (radyan).
    * Açı listesi boşken tipten türetiliyor; kullanıcı bir kanadı
@@ -926,6 +933,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [yerSira, setYerSira] = useState(null)
   const [yerNokta, setYerNokta] = useState([])
+  /* Hangi ekranlar yerleşti — yerleşmemişin rozeti çizilmiyor. */
+  const [yerlesmisIdler, setYerlesmisIdler] = useState([])
   const [refUzunlukCm, setRefUzunlukCm] = useState('')
   /*
    * REFERANS TÜRÜ.
@@ -1746,7 +1755,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       /* Duvar dibi noktaları da bu fotoğrafa aitti. */
       setDuvarKipi(false)
       setDuvarNokta([])
-      setDuvardanKuruldu(false)
+      setElleYerlesti(false)
       setAlanKipi(false)
       setAlanNokta([])
       setAlanElleEn('')
@@ -2141,7 +2150,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Duvar dibi kipi açık kalırsa referans tıklamaları ona gider. */
     setDuvarKipi(false)
     setDuvarNokta([])
-    setDuvardanKuruldu(false)
+    setElleYerlesti(false)
     setAlanKipi(false)
     setAlanNokta([])
     setAlanCizgi([])
@@ -2169,7 +2178,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Duvar dibi işaretlemesi */
     setDuvarKipi(false)
     setDuvarNokta([])
-    setDuvardanKuruldu(false)
+    setElleYerlesti(false)
 
     /* 5) L köşesi */
     setLKoseKipi(false)
@@ -6653,7 +6662,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* Duvar dibi kipi açık kalırsa referans tıklamaları ona gider. */
     setDuvarKipi(false)
     setDuvarNokta([])
-    setDuvardanKuruldu(false)
+    setElleYerlesti(false)
     setAlanKipi(false)
     setAlanNokta([])
     setAlanElleEn('')
@@ -7313,7 +7322,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * DUVAR DİBİNDEN KURULDUYSA TÜRETME YOK.
      * Her üye kendi duvarına oturdu; buradaki türetme onları ezerdi.
      */
-    if (duvardanKuruldu) return null
+    if (elleYerlesti) return null
     if (!(fotoYer?.genislik > 0)) return null
     const odak =
       fotoOdak > 1
@@ -8073,6 +8082,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Bir ekranın dörtgenini yerine yazıyor: elde duran ekran ayrı yola gidiyor. */
   const dortgeniYaz = (id, kose) => {
     if (!Array.isArray(kose) || kose.length !== 4) return
+    /* Elle konan dörtgen, liderden türetmeyi kapatıyor. */
+    setElleYerlesti(true)
     if (id === aktifEkranId) {
       elleKoseyeYaz(kose)
       return
@@ -8108,18 +8119,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     uyeler.forEach((id, i) => dortgeniYaz(id, koseler[i]))
   }
 
-  /* Dört köşe konunca o ekran yerleşiyor ve sıra ötekine geçiyor. */
-  const yerNoktaDegisti = (tuvalNoktalari) => {
-    setYerNokta(tuvalNoktalari)
-    if (tuvalNoktalari.length < 4 || !yerEkran) return
-    yerKoseRef.current[yerEkran.id] = tuvalNoktalari
-    dortgeniYaz(yerEkran.id, tuvalNoktalari)
+  /*
+   * DÖRT KÖŞE KONDUKTAN SONRA DÜZELTİLEBİLİR.
+   *
+   * Son köşeye tıklayınca sıradaki ekrana atlanmıyordu ve yanlış konan
+   * bir köşe için baştan başlamak gerekiyordu. Köşeler sürüklenebilir
+   * tutamak olarak duruyor; kullanıcı beğenince onaylıyor.
+   */
+  const yerNoktaDegisti = (tuvalNoktalari) => setYerNokta(tuvalNoktalari)
+
+  const yerEkraniOnayla = () => {
+    if (yerNokta.length !== 4 || !yerEkran) return
+    yerKoseRef.current[yerEkran.id] = yerNokta
+    dortgeniYaz(yerEkran.id, yerNokta)
+    setYerlesmisIdler((l) => (l.includes(yerEkran.id) ? l : [...l, yerEkran.id]))
     setYerNokta([])
     if (yerSira + 1 < ekranParcalari.length) {
       setYerSira(yerSira + 1)
       return
     }
-    /* Hepsi bitti: birleşimi topla ve sihirbazı kapat. */
+    /* Hepsi bitti: ortak kenarları yapıştır ve sihirbazı kapat. */
     birlesimiTopla()
     setYerSira(null)
     setTasarimAcik(true)
@@ -8133,6 +8152,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (sihirbazAdim !== 3) return
     if (yerSira !== null) return
     yerKoseRef.current = {}
+    setYerlesmisIdler([])
+    setElleYerlesti(false)
     setYerNokta([])
     setYerSira(0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -9107,7 +9128,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   sira: aktifSira,
                   koseler: aktifGrupKose || koseMutlak,
                 },
-              ]}
+              ].filter((x) => yerSira == null || yerlesmisIdler.includes(x.id))}
             />
           )}
 
@@ -9281,8 +9302,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 {t('yer.ekran').replace('{0}', String(yerEkran?.sira ?? yerSira + 1))}
                 <span className="mt-0.5 block text-[12.5px] font-normal tabular-nums text-white/80">
                   {t('yer.kose').replace('{0}', String(yerNokta.length))}
+                  {yerNokta.length === 4 ? ' · ' + t('yer.duzelt') : ''}
                 </span>
               </div>
+              {/* Onay: dört köşe konduktan sonra, düzeltme fırsatı bırakarak. */}
+              {yerNokta.length === 4 && (
+                <button
+                  type="button"
+                  onClick={yerEkraniOnayla}
+                  style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 21 }}
+                  className="rounded-full bg-brand px-6 py-2.5 text-[15px] font-semibold text-white shadow-lg transition-opacity hover:opacity-90"
+                >
+                  {t('yer.onayla')}
+                </button>
+              )}
             </>
           )}
 

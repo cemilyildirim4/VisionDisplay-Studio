@@ -450,7 +450,16 @@ const dortKoseyeTikla = async (s, kx, ky, ken, kboy) => {
     await s.mouse.up()
     await s.waitForTimeout(420)
   }
-  await s.waitForTimeout(1200)
+  await s.waitForTimeout(900)
+  /* Dort kose konduktan sonra duzeltme firsati var: onay ayri bir adim. */
+  const onaylandi = await s.evaluate(() => {
+    const d = [...document.querySelectorAll('button')].find((x) => (x.textContent || '').trim() === 'Bu ekranı onayla')
+    if (!d) return false
+    d.click()
+    return true
+  })
+  await s.waitForTimeout(1600)
+  return onaylandi
 }
 
 const a = await akis('A — EKRAN EKRAN YERLEŞTİR', async ({ s, denetle, icerir, dus }) => {
@@ -464,7 +473,7 @@ const a = await akis('A — EKRAN EKRAN YERLEŞTİR', async ({ s, denetle, iceri
   const once = await tasarimGorunur(s)
   if (once.var && once.saydamlik > 0.05) return dus('köşeler konurken tasarım görünüyor')
 
-  await dortKoseyeTikla(s, 0.3, 0.3, 0.25, 0.3)
+  if (!(await dortKoseyeTikla(s, 0.3, 0.3, 0.25, 0.3))) return dus('"Bu ekranı onayla" düğmesi çıkmadı')
   if (!(await denetle('ekran yerleştirildi'))) return false
 
   const g = await tasarimGorunur(s)
