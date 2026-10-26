@@ -10396,34 +10396,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     </div>
                   )}
 
-                  {/* Birleşim kurulduysa: görsel paylaşımı ve ayırma. */}
-                  {grup && (
-                    <>
-                      <div className="mt-2 flex w-full overflow-hidden rounded-lg border border-neutral-200 dark:border-[#2c333f]">
-                        {[true, false].map((v) => (
-                          <button
-                            key={String(v)}
-                            type="button"
-                            onClick={() => setGrup((g) => (g ? { ...g, tekGorsel: v } : g))}
-                            className={`flex-1 px-1 py-1 text-[13.5px] ${
-                              (grup.tekGorsel !== false) === v
-                                ? 'bg-brand text-white'
-                                : 'text-neutral-600 dark:text-neutral-300'
-                            }`}
-                          >
-                            {v ? t('icerik.tekGorsel') : t('icerik.ayriGorsel')}
-                          </button>
-                        ))}
-                      </div>
+                  {/*
+                    GÖRSEL PAYLAŞIMI VE AYIRMA — HEP GÖRÜNÜYOR.
+
+                    Eskiden yalnızca birleşim kurulduktan sonra beliriyordu;
+                    kullanıcı seçeneklerin varlığını ancak bir tipe tıklayınca
+                    öğreniyordu. Ekran tipi düğmeleri gibi hep duruyorlar,
+                    birleşim yokken sönük ve tıklanamaz.
+                  */}
+                  <div className="mt-2 flex w-full overflow-hidden rounded-lg border border-neutral-200 dark:border-[#2c333f]">
+                    {[true, false].map((v) => (
                       <button
+                        key={String(v)}
                         type="button"
-                        onClick={grubuAyir}
-                        className="mt-2 w-full rounded-lg border border-neutral-200 py-2 text-[15px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
+                        disabled={!grup}
+                        onClick={() => setGrup((g) => (g ? { ...g, tekGorsel: v } : g))}
+                        className={`flex-1 px-1 py-1 text-[13.5px] disabled:opacity-40 ${
+                          grup && (grup.tekGorsel !== false) === v
+                            ? 'bg-brand text-white'
+                            : 'text-neutral-600 dark:text-neutral-300'
+                        }`}
                       >
-                        {t('yerlesim.ayir')}
+                        {v ? t('icerik.tekGorsel') : t('icerik.ayriGorsel')}
                       </button>
-                    </>
-                  )}
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!grup}
+                    onClick={grubuAyir}
+                    className="mt-2 w-full rounded-lg border border-neutral-200 py-2 text-[15px] font-medium text-neutral-600 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 dark:border-[#2c333f] dark:text-neutral-400"
+                  >
+                    {t('yerlesim.ayir')}
+                  </button>
                 </div>
               )}
           {/*
