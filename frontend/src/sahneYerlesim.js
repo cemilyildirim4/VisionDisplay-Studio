@@ -143,8 +143,20 @@ export function parcaDortgenleri(kamera, parcalar, yonler, kaydir = { x: 0, z: 0
    * ortası — kırık zincirde göz merkezi orada görüyor.
    */
   const hepsi = [...ust.map((p) => p.a), ust[ust.length - 1].b]
-  const ortX = hepsi.reduce((t, p) => t + p.x, 0) / hepsi.length
-  const ortZ = hepsi.reduce((t, p) => t + p.z, 0) / hepsi.length
+  /*
+   * DAYANAK ZİNCİRİN ORTA NOKTASI — ortalaması değil.
+   *
+   * Kullanıcı bir kanadı çevirdiğinde dönüşün ekseni KÖŞE olmalı: köşe
+   * yerinde kalsın, yalnızca o kanat sallansın. Zincir noktaların
+   * ortalamasına göre ortalanırsa köşe de her dönüşte kayıyor ve
+   * tasarım elin altından kaçıyor. İki kanatta orta nokta zaten
+   * köşenin kendisi; üç kanatta ortadaki kanadın ortası.
+   */
+  const orta = (hepsi.length - 1) / 2
+  const alt = hepsi[Math.floor(orta)]
+  const ustN = hepsi[Math.ceil(orta)]
+  const ortX = (alt.x + ustN.x) / 2
+  const ortZ = (alt.z + ustN.z) / 2
 
   /*
    * ZEMİN HİZASI.
