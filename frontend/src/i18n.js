@@ -1374,6 +1374,11 @@ const dict = {
   'scene.dragHint': { tr: 'sürükleyerek taşıyın', en: 'drag to move', ar: 'اسحب للتحريك' },
   'dis.title': { tr: 'Şehir meydanı', en: 'City plaza', ar: 'ساحة المدينة' },
   'ar.tapToPlace': { tr: 'Yerleştirmek için dokunun', en: 'Tap to place', ar: 'انقر للوضع' },
+  'ar.fareIpucu': {
+    tr: 'Taşımak için sürükleyin · Büyütmek için tekerlek · Eğim için sağ tıkla sürükleyin',
+    en: 'Drag to move · Wheel to zoom · Right-drag to tilt',
+    ar: 'اسحب للتحريك · العجلة للتكبير · السحب بالزر الأيمن للإمالة',
+  },
   'ar.reset': { tr: 'Sıfırla', en: 'Reset', ar: 'إعادة تعيين' },
   'ar.share': { tr: 'Paylaş', en: 'Share', ar: 'مشاركة' },
   'ar.nudge': { tr: 'Konumlandır', en: 'Reposition', ar: 'إعادة التموضع' },

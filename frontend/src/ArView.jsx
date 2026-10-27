@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import html2canvas from 'html2canvas-pro'
+import { egimDonusumu, egimKis, egimliCiz, FARE_VAR } from './egim.js'
 import { Screen, VideoLayer, contentImage, seritMaskePolygon } from './WallPreview.jsx'
 import { videoSrcFor } from './videoContent.js'
 import { LED_LIT_FILTER } from './content.js'
@@ -119,6 +120,8 @@ export default function ArView({
   // Son bilinen görünüm alanı ölçüsü — döndürmede oranlı taşıma için
   const oncekiKutuRef = useRef(null)
   const katmanRef = useRef(null)
+  /* Çekimde tasarım ayrı alınıyor: eğim tuvale kendi formülüyle işleniyor. */
+  const tasarimRef = useRef(null)
 
   const [ornekAcik, setOrnekAcik] = useState(false)
   /* Kaydetme/paylaşma sonrası kısa onay yazısı (bkz. kaydet) */
@@ -407,13 +410,32 @@ export default function ArView({
     }
   }
 
+  /*
+   * SAĞ TIK = EĞİM, YALNIZCA FAREDE.
+   *
+   * Parmakta eğim iki parmağı çevirerek veriliyor; farede öyle bir jest
+   * yok ve kullanıcı tasarımı duvara açılı oturtamıyordu. Sağ tuş basılıyken
+   * yatay sürükleme dikey eksende döndürüyor.
+   */
+  const egimRef = useRef(null)
+
   const parmakIndi = (e) => {
     e.currentTarget.setPointerCapture?.(e.pointerId)
+    if (e.pointerType === 'mouse' && e.button === 2) {
+      egimRef.current = { x: e.clientX, donus: donusRef.current }
+      return
+    }
     isaretRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     anlikKaydet()
   }
 
   const parmakHareket = (e) => {
+    const eg = egimRef.current
+    if (eg) {
+      /* Sağa çekince sağ kenar uzaklaşıyor: dönüş yönü sürüklemeyle aynı. */
+      setDonus(egimKis(eg.donus + (e.clientX - eg.x) * 0.35))
+      return
+    }
     if (!isaretRef.current.has(e.pointerId)) return
     isaretRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     const b = baslangicRef.current
@@ -434,6 +456,7 @@ export default function ArView({
   }
 
   const parmakKalkti = (e) => {
+    egimRef.current = null
     isaretRef.current.delete(e.pointerId)
     anlikKaydet() // kalan parmakla sürüklemeye sıçramadan devam
   }
@@ -591,11 +614,40 @@ export default function ArView({
       // Tasarım katmanı üstüne — html2canvas <video> çizemez, bu yüzden ikisi
       // ayrı ayrı alınıp burada birleştiriliyor.
       if (arAcik && katmanRef.current) {
+        /*
+         * ÖNCE TASARIM, EĞİMİ TUVALE ÇİZEREK.
+         *
+         * html2canvas 3B dönüşümü düzleştiriyor; eğim verilmiş tasarım
+         * karede düz çıkıyordu. Tasarım eğimsiz çekilip aynı formülle
+         * (bkz. egim.js) tuvale oturtuluyor, böylece kare ekranda
+         * görünenin aynısı oluyor.
+         */
+        const te = tasarimRef.current
+        if (te) {
+          const td = await html2canvas(te, {
+            backgroundColor: null,
+            scale: 1,
+            logging: false,
+            useCORS: true,
+            onclone: (_b, kopya) => {
+              const h2 = kopya.querySelector?.('[data-ar-tasarim]') || kopya
+              if (h2?.style) h2.style.transform = 'none'
+            },
+          })
+          const kutuW = tasarimWm * pxPerM
+          const kutuH = tasarimHm * pxPerM
+          egimliCiz(g, td, merkez.x - kutuW / 2, merkez.y - kutuH / 2, kutuW, kutuH, donus)
+        }
         const k = await html2canvas(katmanRef.current, {
           backgroundColor: null,
           scale: 1,
           logging: false,
           useCORS: true,
+          /* Tasarım yukarıda çizildi; burada yalnızca etiketler alınıyor. */
+          onclone: (_b, kopya) => {
+            const h2 = kopya.querySelector?.('[data-ar-tasarim]')
+            if (h2?.style) h2.style.visibility = 'hidden'
+          },
         })
         g.drawImage(k, 0, 0, W, H)
       }
@@ -989,6 +1041,8 @@ export default function ArView({
 
             {/* Tasarımın kendisi */}
             <div
+              ref={tasarimRef}
+              data-ar-tasarim
               className="absolute pointer-events-auto"
               style={{
                 left: sol,
@@ -1004,7 +1058,7 @@ export default function ArView({
                  * ve mekâna açılı oturduğu hissi çıkıyor. Amazon'da bu gerçek
                  * 3B model dönüşü; buradaki yaklaşık karşılığı.
                  */
-                transform: `perspective(1400px) rotateY(${donus}deg)`,
+                transform: egimDonusumu(donus),
                 transformStyle: 'preserve-3d',
               }}
               onPointerDown={parmakIndi}
@@ -1012,6 +1066,8 @@ export default function ArView({
               onPointerUp={parmakKalkti}
               onPointerCancel={parmakKalkti}
               onWheel={tekerlek}
+              /* Sağ tık eğim veriyor; tarayıcının menüsü araya girmesin. */
+              onContextMenu={(e) => e.preventDefault()}
             >
               {/*
                 SEÇİM DIŞ HATTI KALDIRILDI.
@@ -1115,6 +1171,20 @@ export default function ArView({
             onTusTakimi={() => setTusTakimi((a) => !a)}
             tusTakimi={tusTakimi}
           />
+        )}
+
+        {/*
+          FARE İPUCU — yalnızca bilgisayarda.
+
+          Sağ tıkla eğim görünmez bir özellik; dokunmatikte ise sağ tık
+          hiç yok, orada ipucu yapılamayacak bir şeyi anlatmış olurdu.
+        */}
+        {!hata && arAcik && asama === 'yerlesti' && FARE_VAR && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-28 z-20 flex justify-center px-4">
+            <p className="m-0 rounded-full bg-black/55 px-3.5 py-1.5 text-center text-[13px] leading-snug text-white">
+              {t('ar.fareIpucu')}
+            </p>
+          </div>
         )}
 
         {!hata && arAcik && asama === 'yerlesti' && tusTakimi && (

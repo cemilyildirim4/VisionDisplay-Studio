@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import html2canvas from 'html2canvas-pro'
+import { egimDonusumu, egimKis, egimliCiz, FARE_VAR } from './egim.js'
 import { Screen, VideoLayer, contentImage, seritMaskePolygon } from './WallPreview.jsx'
 import { videoSrcFor } from './videoContent.js'
 import { LED_LIT_FILTER } from './content.js'
@@ -98,6 +99,13 @@ export default function Oturtma({
   const [pxPerM, setPxPerM] = useState(0)
   const [hata, setHata] = useState(null)
   const [sonuc, setSonuc] = useState(null)
+  /*
+   * EĞİM — yalnızca farede, sağ tıkla sürükleyerek.
+   * Taslak duvara ancak tam karşıdan oturuyordu; duvara açılı bakan bir
+   * kadrajda ölçü doğru görünse de tasarım yüzeye yatmıyordu.
+   */
+  const [egim, setEgim] = useState(0)
+  const egimRef = useRef(null)
   const [mesgul, setMesgul] = useState(false)
   const [bildirim, setBildirim] = useState(null)
   const [takip, setTakip] = useState(true)
@@ -212,6 +220,10 @@ export default function Oturtma({
       setBildirim(t('fit.followOffHint'))
     }
     e.currentTarget.setPointerCapture?.(e.pointerId)
+    if (e.pointerType === 'mouse' && e.button === 2) {
+      egimRef.current = { x: e.clientX, egim }
+      return
+    }
     parmaklarRef.current.set(e.pointerId, e)
     const p = [...parmaklarRef.current.values()]
     baslangicRef.current =
@@ -221,6 +233,12 @@ export default function Oturtma({
   }
 
   const parmakHareket = (e) => {
+    const eg = egimRef.current
+    if (eg) {
+      /* Sağa çekince sağ kenar uzaklaşıyor: dönüş yönü sürüklemeyle aynı. */
+      setEgim(egimKis(eg.egim + (e.clientX - eg.x) * 0.35))
+      return
+    }
     if (!parmaklarRef.current.has(e.pointerId)) return
     parmaklarRef.current.set(e.pointerId, e)
     const b = baslangicRef.current
@@ -246,6 +264,7 @@ export default function Oturtma({
   }
 
   const parmakKalkti = (e) => {
+    egimRef.current = null
     parmaklarRef.current.delete(e.pointerId)
     if (parmaklarRef.current.size === 0) baslangicRef.current = null
     else {
@@ -255,6 +274,14 @@ export default function Oturtma({
           ? { tur: 'olcek', uzaklik: uzaklik(p[0], p[1]), pxPerM }
           : { tur: 'tasi', x: p[0].clientX, y: p[0].clientY, merkez }
     }
+  }
+
+  /* Tekerlek = iki parmakla büyütme. Masaüstünde jestin karşılığı yoktu. */
+  const tekerlek = (e) => {
+    const yeni = Math.max(EN_KUCUK, Math.min(EN_BUYUK, pxPerM * (e.deltaY < 0 ? 1.08 : 1 / 1.08)))
+    setPxPerM(yeni)
+    /* Büyüyen taslak kadrajdan taşmasın. */
+    setMerkez((m) => sinirla(m, tasarimWm * yeni, tasarimHm * yeni))
   }
 
   /* -------------------------------------------------------------- çekim */
@@ -511,9 +538,12 @@ export default function Oturtma({
           onclone: (_b, kopya) => {
             kopya.style.opacity = '1'
             kopya.style.visibility = 'visible'
+            /* Eğim tuvalde veriliyor; kopya düz çekiliyor. */
+            kopya.style.transform = 'none'
           },
         })
-        g.drawImage(k, sol, ust, w, h)
+        /* Eğim tuvale kendi formülüyle çiziliyor (bkz. egim.js). */
+        egimliCiz(g, k, sol, ust, w, h, egim)
       }
 
       setSonuc(c.toDataURL('image/jpeg', 0.92))
@@ -673,11 +703,23 @@ export default function Oturtma({
         {!hata && !sonuc && kutu.w > 0 && (
           <div
             className="absolute"
-            style={{ left: sol, top: ust, width: w, height: h, touchAction: 'none', cursor: 'move' }}
+            style={{
+              left: sol,
+              top: ust,
+              width: w,
+              height: h,
+              touchAction: 'none',
+              cursor: 'move',
+              transform: egimDonusumu(egim),
+              transformStyle: 'preserve-3d',
+            }}
             onPointerDown={parmakIndi}
             onPointerMove={parmakHareket}
             onPointerUp={parmakKalkti}
             onPointerCancel={parmakKalkti}
+            onWheel={tekerlek}
+            /* Sağ tık eğim veriyor; tarayıcının menüsü araya girmesin. */
+            onContextMenu={(e) => e.preventDefault()}
           >
             <div className="absolute inset-0 border border-dashed border-white/55" />
             {/* Köşe işaretleri: çerçevenin sınırı kamera görüntüsünde seçilsin */}
@@ -710,6 +752,19 @@ export default function Oturtma({
         {/* ÇEKİLEN KARE */}
         {sonuc && <img src={sonuc} alt="" className="absolute inset-0 w-full h-full object-cover" />}
       </div>
+
+      {/*
+        FARE İPUCU — yalnızca bilgisayarda.
+        Sağ tıkla eğim görünmez bir özellik; dokunmatikte sağ tık yok,
+        orada ipucu yapılamayacak bir şeyi anlatmış olurdu.
+      */}
+      {!hata && !sonuc && FARE_VAR && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-28 z-30 flex justify-center px-4">
+          <p className="m-0 rounded-full bg-black/55 px-3.5 py-1.5 text-center text-[13px] leading-snug text-white">
+            {t('ar.fareIpucu')}
+          </p>
+        </div>
+      )}
 
       {/* ÜST BAR */}
       <div className="absolute top-0 inset-x-0 z-40 flex items-center gap-3 px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
