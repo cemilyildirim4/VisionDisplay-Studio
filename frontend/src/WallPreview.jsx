@@ -7,6 +7,7 @@ import { videoSrcFor, senkronaKatil } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { yonDonusumu } from './hooks/useYon.js'
 import Kup2D from './Kup2D.jsx'
+import Birlesim2D from './Birlesim2D.jsx'
 import { koseDonusumu } from './homografi.js'
 
 /**
@@ -818,6 +819,8 @@ export default function WallPreview({
   showMeasurements = true,
   /* Küp birleşimi: şerit yerine gerçek kutu çiziliyor. */
   kupKipi = false,
+  /* L / U / açılı: kollar gerçek açısıyla, önden sabit. */
+  birlesimKipi = false,
   /*
    * Numara rozetleri "Ölçüleri gizle" ile birlikte kalkıyor. Ayrı bir
    * özellik, çünkü showMeasurements fotoğraf mekânında zaten kapalı.
@@ -1165,6 +1168,39 @@ export default function WallPreview({
       paylasimAlanlari.set(x.paylasim, a)
     }
 
+    /*
+     * DİLİM HESABI TEK YERDE.
+     *
+     * Şerit ile birleşim çizimi aynı bölmeyi kullanmak zorunda: "Tek
+     * görsel" açıkken görsel sol koldan arkaya, arkadan sağ kola
+     * kesintisiz akıyor. İki ayrı hesap olsaydı ikisi ayrışırdı.
+     */
+    const icerikProplari = (s) => {
+      if (dilim) {
+        return {
+          spanW: totalWpx * dilim.sw,
+          spanH: maxHpx * dilim.sh,
+          offsetX: s.xStart + totalWpx * dilim.sx,
+          offsetY: maxHpx - s.hPx + maxHpx * dilim.sy,
+        }
+      }
+      /*
+        Paylaşan ekran, görselin kendi gerçek genişliğine düşen dilimini
+        gösteriyor; ötekiler görselin tamamını kendi kutusunda.
+      */
+      const alan = s.paylasim ? paylasimAlanlari.get(s.paylasim) : null
+      const kendi = s.gercekWm || s.wm
+      if (!alan || !(kendi > 0)) return { spanW: s.wPx, spanH: s.hPx, offsetX: 0, offsetY: 0 }
+      const oran = s.wPx / kendi
+      return {
+        spanW: alan.toplam * oran,
+        /* Her ekran kendi diliminin TAM yüksekliğini gösteriyor. */
+        spanH: s.hPx,
+        offsetX: (alan.onceki.get(s) || 0) * oran,
+        offsetY: 0,
+      }
+    }
+
     // Tüm ekranlar düz VE hepsi genel/ortak içeriği kullanıyorsa (kendine özel içeriği yoksa):
     // TEK görsel katmanı tüm şeride yayılır, ekranlar sadece çerçeve olarak üstüne çizilir.
     // Bir ekranın kendine özel içeriği varsa (ör. "Resim Yok") o zaman her ekran kendi
@@ -1279,12 +1315,44 @@ export default function WallPreview({
                 </div>
               )}
 
+              {/*
+                L / U / AÇILI — ŞERİT DEĞİL GERÇEK ŞEKİL.
+
+                Şeritte 90°'lik kol yassılıyor ve U, L'den ayırt
+                edilemiyordu. Kollar artık kendi açısıyla duruyor.
+              */}
+              {birlesimKipi && !kupKipi && (
+                <div
+                  data-birlesim-yuz
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: stripTop,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    opacity: ekranGizle ? 0 : undefined,
+                  }}
+                >
+                  <Birlesim2D
+                    ekranlar={placed.map((s) => ({ ...s, icerikProp: icerikProplari(s) }))}
+                    pxPerM={pxPerM}
+                    model={model}
+                    resolution={resolution}
+                    content={content}
+                    contentUrl={contentUrl}
+                    hideRegions={hideRegions}
+                    curveAmount={curveAmount}
+                  />
+                </div>
+              )}
+
               {/* Ekranlar şeridi (ortalanmış, alta hizalı) */}
               <div
                 /* Testin görünürlüğü ölçebilmesi için sabit işaret. */
                 data-tasarim-yuz
                 style={{
-                  display: kupKipi ? 'none' : undefined,
+                  display: kupKipi || birlesimKipi ? 'none' : undefined,
                   position: 'absolute',
                   left: marginXpx,
                   top: stripTop,
@@ -1394,32 +1462,7 @@ export default function WallPreview({
                       lYon={s.lYon}
                       solKirim={s.solKirim || 0}
                       sagKirim={s.sagKirim || 0}
-                      {...(() => {
-                        if (dilim) {
-                          return {
-                            spanW: totalWpx * dilim.sw,
-                            spanH: maxHpx * dilim.sh,
-                            offsetX: s.xStart + totalWpx * dilim.sx,
-                            offsetY: maxHpx - s.hPx + maxHpx * dilim.sy,
-                          }
-                        }
-                        /*
-                          Paylaşan ekran, görselin kendi gerçek genişliğine
-                          düşen dilimini gösteriyor; ötekiler görselin
-                          tamamını kendi kutusunda.
-                        */
-                        const alan = s.paylasim ? paylasimAlanlari.get(s.paylasim) : null
-                        const kendi = s.gercekWm || s.wm
-                        if (!alan || !(kendi > 0)) return { spanW: s.wPx, spanH: s.hPx, offsetX: 0, offsetY: 0 }
-                        const oran = s.wPx / kendi
-                        return {
-                          spanW: alan.toplam * oran,
-                          /* Her ekran kendi diliminin TAM yüksekliğini gösteriyor. */
-                          spanH: s.hPx,
-                          offsetX: (alan.onceki.get(s) || 0) * oran,
-                          offsetY: 0,
-                        }
-                      })()}
+                      {...icerikProplari(s)}
                     />
                   ))}
                 </div>

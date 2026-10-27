@@ -2625,6 +2625,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const harita = new Map()
     uyeParcalari.forEach((u, k) => {
       harita.set(u.id, {
+        /* Düzlemdeki açı: tasarım ekranı ekranı bununla gerçekten döndürüyor. */
+        yon: acilar[k],
         olcek: Math.max(0.4, Math.abs(Math.cos(acilar[k]))),
         solKirim: kirim(koseler[k].y),
         sagKirim: kirim(koseler[k + 1].y),
@@ -2642,7 +2644,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const ekranSeridi = (() => {
     const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : null
     if (!uyeler || uyeler.length < 2) return ekranParcalari
-    /* Açılı birleşimde her eklemin kendi açısı; ötekilerde tek değer. */
+    const uyeSayisi = uyeler.length
+    /*
+     * L'DE TEK KÖŞE VAR.
+     *
+     * Açı bütün eklemlere uygulanınca üç ekranlı bir L, iki köşeden
+     * kırılıp U'ya dönüşüyordu; tasarım ekranında ikisi birbirinden
+     * ayırt edilemiyordu. L'de yalnızca bir eklem dönüyor, ötekiler düz
+     * (180°) kalıyor; köşe de diziyi en dengeli bölen yere düşüyor.
+     *
+     * U'da iki uç eklem 90° dönüyor, aradakiler düz: arka ekran kaç
+     * parçadan oluşursa oluşsun iki kol baştan ve sondan çıkıyor.
+     */
     const aci =
       grup.tip === 'duz'
         ? 0
@@ -2650,7 +2663,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           ? Array.isArray(grup.eklemler)
             ? grup.eklemler.map((e) => e?.aci ?? 135)
             : grup.aci || 135
-          : 90
+          : grup.tip === 'l'
+            ? Array.from({ length: uyeSayisi - 1 }, (_, j) =>
+                j === Math.max(0, Math.round(uyeSayisi / 2) - 1) ? 90 : 180,
+              )
+            : grup.tip === 'u'
+              ? Array.from({ length: uyeSayisi - 1 }, (_, j) =>
+                  j === 0 || j === uyeSayisi - 2 ? 90 : 180,
+                )
+              : 90
     const uyeParcalari = uyeler.map((id) => ekranParcalari.find((x) => x.id === id)).filter(Boolean)
     if (uyeParcalari.length < 2) return ekranParcalari
     const geo = birlesimGeometrisi(uyeParcalari, aci, grup.lYon || 'ice')
@@ -9201,6 +9222,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               showMeasurements={olculerGorunsun}
               /* Küp birleşiminde şerit yerine gerçek kutu çiziliyor. */
               kupKipi={grup?.tip === 'kutu'}
+              /*
+               * L, U ve açılı da şerit değil: kollar gerçek açısıyla
+               * duruyor, yoksa 90°'lik kol yassılıp U, L gibi görünüyor.
+               */
+              birlesimKipi={
+                (grup?.tip === 'l' || grup?.tip === 'u' || grup?.tip === 'acili') &&
+                cokluAktif &&
+                ekranSeridi.length > 1 &&
+                ekranSeridi.every((x) => Number.isFinite(x.yon))
+              }
               /* Rozetler de "Ölçüleri gizle" ile kalkıyor. */
               numaraGoster={showMeasurements}
               onColsChange={setCols}
