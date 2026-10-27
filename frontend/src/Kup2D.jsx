@@ -39,6 +39,8 @@ export default function Kup2D({
   model = null,
   resolution = null,
   sifirlaEtiketi = 'Yönü sıfırla',
+  /* Sade kip: yüz kenarlıkları kalkıyor. */
+  sade = false,
 }) {
   const [aci, setAci] = useState(-28)
   const surukle = useRef(null)
@@ -130,6 +132,7 @@ export default function Kup2D({
             cols={ekran?.cols || 1}
             rows={ekran?.rows || 1}
             type="flat"
+            sade={sade}
             model={model}
             resolution={resolution}
             content={ekran?.content || 'led'}
@@ -184,6 +187,7 @@ export default function Kup2D({
                 cols={ustEkran.cols || 1}
                 rows={ustEkran.rows || 1}
                 type="flat"
+                sade={sade}
                 model={model}
                 resolution={resolution}
                 content={ustEkran.content || 'led'}

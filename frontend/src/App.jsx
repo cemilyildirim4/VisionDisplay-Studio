@@ -9328,6 +9328,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               }
               /* Rozetler de "Ölçüleri gizle" ile kalkıyor. */
               numaraGoster={showMeasurements}
+              /*
+               * SADE KİP — kenarlıklar ve ayrım çizgileri de kalksın.
+               * Ölçü kalkınca tasarım tek görsel gibi görünmeli; yarım
+               * kaldırılan bir sadeleştirme hiç olmamasından kötü.
+               */
+              sade={!showMeasurements}
               onColsChange={setCols}
               onRowsChange={setRows}
               colsMax={colsMax}

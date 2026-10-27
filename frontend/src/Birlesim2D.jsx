@@ -30,6 +30,8 @@ export default function Birlesim2D({
   contentUrl = null,
   hideRegions = false,
   curveAmount = 60,
+  /* Sade kip: kenarlıklar ve ayrım çizgileri kalkıyor. */
+  sade = false,
 }) {
   if (!Array.isArray(ekranlar) || ekranlar.length < 2) return null
   if (ekranlar.some((e) => !Number.isFinite(e?.yon))) return null
@@ -177,6 +179,7 @@ export default function Birlesim2D({
               content={p.e.content || content}
               contentUrl={p.e.content ? p.e.contentUrl || null : contentUrl}
               hideRegions={hideRegions}
+              sade={sade}
               curveAmount={curveAmount}
               leftCols={p.e.leftCols}
               rightCols={p.e.rightCols}

@@ -195,7 +195,7 @@ export function VideoLayer({ src, gw, gh, left, top, lit, senkron = false }) {
  */
 // AR/kamera ekranı da AYNI bileşeni kullanır: tasarım orada da birebir aynı
 // çizilsin, iki ayrı kod yolu birbirinden ayrı düşmesin diye dışa açıldı.
-export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols, lYon = 'ice', solKirim = 0, sagKirim = 0 }) {
+export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols, lYon = 'ice', solKirim = 0, sagKirim = 0, sade = false }) {
   const nCols = Math.max(1, cols)
   const nRows = Math.max(1, rows)
   const isNone = content === 'none'
@@ -492,9 +492,9 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
             const y2 = disa ? hPx : hPx - yp
             return (
               <>
-                <path d={dHat} fill="none" stroke={hat} strokeWidth="1.25" />
+                {!sade && <path d={dHat} fill="none" stroke={hat} strokeWidth="1.25" />}
                 {/* Köşe çizgisi: iki yüzün buluştuğu kenar. */}
-                <line x1={leftW} y1={y1} x2={leftW} y2={y2} stroke={hat} strokeWidth="1.25" />
+                {!sade && <line x1={leftW} y1={y1} x2={leftW} y2={y2} stroke={hat} strokeWidth="1.25" />}
               </>
             )
           })()}
@@ -525,8 +525,10 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           />
         )}
         {/* Dış kenarlarda panel kalınlığı — en öndeki kenarlar olduğu için
-            ince bir açık şerit, gövdeye hacim kazandırır. */}
-        {!isNone && (
+            ince bir açık şerit, gövdeye hacim kazandırır.
+            Sade kipte yok: yan yana iki ekranın arasında ikisi birleşip
+            tek bir ayrım çizgisi oluşturuyordu. */}
+        {!isNone && !sade && (
           <>
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02))', pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))', pointerEvents: 'none' }} />
@@ -596,7 +598,8 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
           transform: kirimEgimi || undefined,
           transformOrigin: '0 0',
           backgroundColor: frameOnly ? 'transparent' : isNone ? '#ffffff' : '#0a0a0a',
-          border: isNone && !kirimVar ? '1px solid #64748b' : undefined,
+          /* Sade kipte kenarlık yok; boş ekran da tasarımın parçası gibi duruyor. */
+          border: isNone && !kirimVar && !sade ? '1px solid #64748b' : undefined,
           // Panel çevresinde gölge/ışıma YOK: kenarlarda gölgelik olarak görünüyordu
           // ve kavisli ekranla tutarsızdı (orada da hiç yok).
         }}
@@ -631,7 +634,7 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         kalınlığı köşelerde bozulurdu. Açık temada beyaz duvarın üstünde
         şeklin nerede bittiği bu çizgiden anlaşılıyor.
       */}
-      {kirimVar && (
+      {kirimVar && !sade && (
         <svg
           width={wPx}
           height={hPx}
@@ -833,6 +836,11 @@ export default function WallPreview({
    * özellik, çünkü showMeasurements fotoğraf mekânında zaten kapalı.
    */
   numaraGoster = true,
+  /*
+   * SADE KİP — "Ölçüleri gizle" açıkken kenarlıklar ve ayrım çizgileri de
+   * kalkıyor; tasarım tek bir görsel gibi duruyor.
+   */
+  sade = false,
   onColsChange,
   onRowsChange,
   colsMax = Infinity,
@@ -1326,6 +1334,7 @@ export default function WallPreview({
                 >
                   <Kup2D
                     ekranlar={placed}
+                    sade={sade}
                     pxPerM={pxPerM}
                     model={model}
                     resolution={resolution}
@@ -1355,6 +1364,7 @@ export default function WallPreview({
                 >
                   <Birlesim2D
                     ekranlar={placed.map((s) => ({ ...s, icerikProp: icerikProplari(s) }))}
+                    sade={sade}
                     pxPerM={pxPerM}
                     model={model}
                     resolution={resolution}
@@ -1474,6 +1484,7 @@ export default function WallPreview({
                          yalnızca "content" anahtarıyla taşınamıyor. */
                       contentUrl={s.content ? s.contentUrl || null : contentUrl}
                       hideRegions={hideRegions}
+                      sade={sade}
                       frameOnly={useSingle}
                       curveAmount={curveAmount}
                       leftCols={s.leftCols}
@@ -1843,6 +1854,7 @@ export default function WallPreview({
               content={content}
               contentUrl={contentUrl}
               hideRegions={hideRegions}
+              sade={sade}
               curveAmount={curveAmount}
               {...(dilim
                 ? {
