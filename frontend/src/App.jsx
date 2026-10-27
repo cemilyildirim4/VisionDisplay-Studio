@@ -8970,8 +8970,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       {/* Masaüstü: tek ekran yüksekliği. Mobil: içerik alt alta dizilip sayfa kayar. */}
       <div className="yatay-sayfa min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
       {/* Başlık çubuğu — kurumsal logo + sayfa adı */}
-      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-10 py-3 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
-        <BrandMark title={t('app.title')} subtitle={t('app.tagline')} />
+      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-6 py-3 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+        {/*
+          ALT BAŞLIK KALDIRILDI.
+
+          Antette üç satır vardı ve üçü de kırpılıyordu. Slogan bilgi
+          taşımıyor; kalkınca kalan iki satıra yetecek yer kalıyor.
+        */}
+        <BrandMark title={t('app.title')} />
 
         {/*
           MODEL ÇİPİ — hangi modelle çalışıldığı her ekranda görünsün.
@@ -9009,7 +9015,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           ekranın dışında kalıyor ve tıklanamıyordu. Dar ekranda satır SARIYOR,
           sm ve üzerinde eski tek satır düzeni sürüyor.
         */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 w-full sm:w-auto justify-start sm:flex-nowrap sm:justify-end">
+        {/*
+          ŞERİT SIĞMAYINCA ALT SATIRA SARIYOR.
+
+          Eskiden shrink-0 + flex-nowrap'ti: şerit hiç daralmıyor, kalan
+          her şeyi (antet dâhil) sıfıra eziyordu. Düğmelerin kendisi
+          değişmiyor — yalnızca dar masaüstünde ikinci satıra geçiyorlar.
+        */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-start sm:justify-end">
 <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('tool.reset')} onClick={() => hasModel && setResetConfirmOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />

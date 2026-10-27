@@ -40,11 +40,15 @@ export function BrandMark({
    * antet üç satıra çıkıp yer kaplıyordu. Artık her ölçüde yan yana.
    */
   /*
-   * w-full DEĞİL: antet bütün genişliği isteyince yanındaki araç
-   * düğmelerinin üstüne biniyordu. Kalan yeri alıyor ve daralabiliyor.
+   * ANTET EN DAR İÇERİĞİNİN ALTINA İNMİYOR.
+   *
+   * Eskiden min-w-0 + flex-1 ile kalan yeri alıyor ve sıfıra kadar
+   * daralabiliyordu; yanındaki düğme şeridi hiç daralmadığı için kalan yer
+   * çoğu zaman sıfırdı ve başlık kırpılıyordu. Artık ihtiyacı kadar yer
+   * alıyor, şerit de sığmazsa kendi içinde alt satıra sarıyor.
    */
   return (
-    <div className="flex min-w-0 flex-1 flex-row flex-nowrap items-center gap-2.5 sm:gap-4">
+    <div className="flex shrink-0 flex-row flex-nowrap items-center gap-2.5 sm:gap-4">
       <a
         href="/"
         onClick={goToConfigurator}
@@ -62,10 +66,19 @@ export function BrandMark({
           darkOnDark ? 'bg-white/20 h-9' : 'bg-neutral-200 dark:bg-[#2c333f] h-8'
         }`}
       />
-      <div className={`yatay-gizle min-w-0 w-auto max-w-full ${hideTextOnMobile ? 'hidden sm:block' : ''}`}>
+      {/*
+        BAŞLIK KIRPILMIYOR, ALT SATIRA İNİYOR.
+
+        Blok min-w-0 ile sıfıra kadar daralabiliyor ve içindeki truncate
+        başlığı kesiyordu: dar yerde "Ekran Konfigür…" görünüyordu. Yarım
+        okunan bir başlık hiç olmamasından kötü. Blok artık en uzun
+        KELİMESİ kadar yer istiyor; sığmayan başlık kelimesinden kırılıp
+        iki satır oluyor ("Ekran" / "Konfigüratörü").
+      */}
+      <div className={`yatay-gizle w-auto max-w-full ${hideTextOnMobile ? 'hidden sm:block' : ''}`}>
         {showCompany && (
           <p
-            className={`m-0 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] truncate ${
+            className={`m-0 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] ${
               darkOnDark ? 'text-white/55' : 'text-neutral-400 dark:text-neutral-500'
             }`}
           >
@@ -74,7 +87,7 @@ export function BrandMark({
         )}
         {title && (
           <h1
-            className={`m-0 truncate leading-tight tracking-tight font-bold ${
+            className={`m-0 leading-tight tracking-tight font-bold ${
               size === 'lg' ? 'text-lg sm:text-xl' : 'text-sm sm:text-base'
             } ${darkOnDark ? 'text-white' : 'text-neutral-900 dark:text-neutral-100'}`}
           >
