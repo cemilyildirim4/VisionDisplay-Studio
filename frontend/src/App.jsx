@@ -9537,16 +9537,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   yapiskanNoktalar={Object.values(yerKoseRef.current).flat()}
                 />
               </div>
-              <div
-                style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 20 }}
-                className="pointer-events-none max-w-[90%] rounded-xl bg-[#001334]/85 px-4 py-2.5 text-center text-[14px] font-medium leading-snug text-white shadow-lg"
-              >
-                {t('yer.ekran').replace('{0}', String(yerEkran?.sira ?? yerSira + 1))}
-                <span className="mt-0.5 block text-[12.5px] font-normal tabular-nums text-white/80">
-                  {t('yer.kose').replace('{0}', String(yerNokta.length))}
-                  {yerNokta.length === 4 ? ' · ' + t('yer.duzelt') : ''}
-                </span>
-              </div>
             </>
           )}
 
@@ -9960,41 +9950,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
           </div>
 
-          {/*
-            YAKINLAŞTIRMA DÜĞMELERİ — sarmalayıcının DIŞINDA, yani kendileri
-            büyümüyor. Yalnızca ölçüm akışı açıkken görünüyorlar: başka
-            zamanlarda tuval zaten sürüklenerek kullanılıyor.
-          */}
-          {olcuAcik && scene === 'ozel' && ozelSahne && fotoYer?.genislik > 0 && (
-            <div className="absolute left-3 bottom-3 z-40 flex items-center gap-0.5 rounded-lg bg-black/55 p-1 backdrop-blur-sm">
-              <button
-                type="button"
-                onClick={() => isaretYakinlastir(isaretZoom - 0.5)}
-                disabled={isaretZoom <= 1}
-                aria-label={t('isaret.uzaklas')}
-                title={t('isaret.uzaklas')}
-                className="w-7 h-7 rounded-md text-white text-[17px] leading-none enabled:hover:bg-white/20 disabled:opacity-35"
-              >
-                −
-              </button>
-              <span className="px-1 text-[12.5px] font-semibold text-white tabular-nums">
-                {isaretZoom.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}×
-              </span>
-              <button
-                type="button"
-                onClick={() => isaretYakinlastir(isaretZoom + 0.5)}
-                disabled={isaretZoom >= 4}
-                aria-label={t('isaret.yakinlas')}
-                title={t('isaret.yakinlas')}
-                className="w-7 h-7 rounded-md text-white text-[17px] leading-none enabled:hover:bg-white/20 disabled:opacity-35"
-              >
-                +
-              </button>
-              {isaretZoom > 1 && (
-                <span className="pl-1 pr-1 text-[11.5px] text-white/70">{t('isaret.kaydirNot')}</span>
-              )}
-            </div>
-          )}
         </main>
 
         {/*
@@ -10987,6 +10942,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             /* Yerleştir adımının ana düğmesi. */
                             onYerOnayla={yerAktif ? yerEkraniOnayla : null}
                             yerOnayHazir={yerNokta.length === 4}
+                            yerYonerge={yerAktif ? t('yer.ekran').replace('{0}', String(yerEkran?.sira ?? yerSira + 1)) : ''}
+                            yerSayac={yerAktif ? t('yer.kose').replace('{0}', String(yerNokta.length)) : ''}
                             onIsaretle={() => {
                               setRefNokta([])
                               setRefKipi(true)

@@ -113,6 +113,9 @@ function SihirbazKart({
    */
   onYerOnayla = null,
   yerOnayHazir = false,
+  /* Sıradaki ekranın yönergesi ve konan köşe sayısı — tuvalde değil burada. */
+  yerYonerge = '',
+  yerSayac = '',
   /* Alan zaten işaretliyse yeniden işaretlemeden yerleştirmeye dönülüyor. */
   onYerlesim = null,
   /* İKİNCİ REFERANS — odak tahmin ediliyorsa ölçümü kesinleştiriyor. */
@@ -805,6 +808,14 @@ function SihirbazKart({
                 kalan iş taşımak ve kanatları duvara yatırmak.
               */}
               <p className={aciklama}>{t('yer.adimAciklama')}</p>
+              {yerYonerge && (
+                <p className="mt-1 text-[14px] font-semibold leading-snug text-neutral-800 dark:text-neutral-100">
+                  {yerYonerge}
+                </p>
+              )}
+              {yerSayac && (
+                <p className={`${kucuk} tabular-nums text-neutral-500 dark:text-neutral-400`}>{yerSayac}</p>
+              )}
               {onYerOnayla && (
                 <button
                   type="button"
