@@ -7779,6 +7779,43 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const mYazi = (v) => (v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   /*
+   * TASARIMDAKİ DİLİMLER — fotoğraf olmadan da.
+   *
+   * bolunmusDilimler ekranların FOTOĞRAFTAKİ dörtgenlerinden hesaplanıyor;
+   * fotoğrafsız bir tasarımda dörtgen yok ve dilim de çıkmıyordu. Sonuç:
+   * "Tek görsel" açık bir grupta her kutuda görselin tamamı görünüyor,
+   * oysa tasarımda o ekran yalnızca kendi payını gösteriyordu.
+   *
+   * Burada bölme doğrudan GERÇEK ÖLÇÜLERDEN kuruluyor; WallPreview'daki
+   * icerikProplari ile aynı kural: yüzeyin eni kümenin toplam eni, boyu
+   * en uzun ekranınki, ekranlar alttan hizalı. İki hesabın ayrışmaması
+   * için ikisi de aynı iki sayıya bakıyor (en ve boy).
+   */
+  const tasarimDilimleri = (() => {
+    const harita = new Map()
+    for (const kume of paylasimKumeleri) {
+      const uyeler = kume
+        .map((id) => ekranParcalari.find((x) => x.id === id))
+        .filter((x) => x && x.wm > 0 && x.hm > 0)
+      if (uyeler.length < 2) continue
+      const toplamEn = uyeler.reduce((t, x) => t + x.wm, 0)
+      const enBuyukBoy = Math.max(...uyeler.map((x) => x.hm))
+      let akan = 0
+      for (const u of uyeler) {
+        harita.set(u.id, {
+          sw: toplamEn / u.wm,
+          sh: enBuyukBoy / u.hm,
+          sx: akan / u.wm,
+          /* Alt kenarlar aynı çizgide: kısa ekrana görselin ALT kısmı. */
+          sy: (enBuyukBoy - u.hm) / u.hm,
+        })
+        akan += u.wm
+      }
+    }
+    return harita
+  })()
+
+  /*
    * AKORDEON SATIRLARI — ekran başına tek özet kaydı.
    *
    * Açık satır ELDE DURAN ekran: ayarları global durumda (ekranAyariAnlik).
@@ -7841,7 +7878,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           return icerikKimligi(ic, url)
         })(),
         /* Bölünmüşse küçük resim o ekranın KENDİ dilimini göstersin. */
-        dilim: paylasimKumesi(r.id) ? bolunmusDilimler?.get(r.id) || null : null,
+        /*
+         * Fotoğraflı akışta dörtgenlerden, fotoğrafsız tasarımda gerçek
+         * ölçülerden; ikisi de yoksa bölme yok demektir.
+         */
+        dilim: paylasimKumesi(r.id)
+          ? bolunmusDilimler?.get(r.id) || tasarimDilimleri.get(r.id) || null
+          : null,
       }
     })
 
@@ -10360,13 +10403,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             : 'border border-neutral-200 hover:border-brand dark:border-[#2c333f]'
                         } ${grupta ? 'ring-2 ring-brand/35' : ''}`}
                       >
-                        <span className="relative block w-full flex-1 overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]">
+                        {/*
+                          Önizleme kutunun kalanını doldurmuyor, sabit bir
+                          paya oturuyor: artan yer yazılara gidiyor ve
+                          kutular derli toplu duruyor.
+                        */}
+                        <span className="relative block w-full shrink-0 basis-[38%] overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]">
                           <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
                         </span>
-                        <span className="block truncate text-[13px] font-semibold leading-tight text-neutral-800 dark:text-neutral-100">
+                        <span className="block truncate text-[15px] font-bold leading-tight text-neutral-900 dark:text-neutral-50">
                           {e.sira}. {t('ekran.tekil')}
                         </span>
-                        <span className="block truncate text-[12px] leading-tight tabular-nums text-neutral-500 dark:text-neutral-400">
+                        <span className="block truncate text-[13px] font-medium leading-tight tabular-nums text-neutral-700 dark:text-neutral-200">
                           {t(`screen.${e.ayar.screenType || 'flat'}`)} · {e.ayar.cols || 1}×{e.ayar.rows || 1}
                         </span>
                       </button>
@@ -13063,13 +13111,28 @@ function IcerikOnizleme({ oge, dilim = null, oynatImi = false }) {
   if (oge.tip === 'video')
     return (
       <>
+        {/*
+          VİDEO DA KENDİ DİLİMİNİ GÖSTERİYOR.
+
+          Görselde dilim uygulanıyor, videoda uygulanmıyordu: aynı kutuda
+          görsel kendi parçasını, video tamamını gösteriyordu. Video
+          kutunun sw katı büyütülüp sx kadar sola kaydırılıyor; görseldeki
+          "kırpma yok" kuralıyla aynı olsun diye object-fit: fill.
+        */}
         <video
           src={oge.url}
           autoPlay
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            position: 'absolute',
+            width: `${(dilim?.sw || 1) * 100}%`,
+            height: `${(dilim?.sh || 1) * 100}%`,
+            left: `${-(dilim?.sx || 0) * 100}%`,
+            top: `${-(dilim?.sy || 0) * 100}%`,
+            objectFit: 'fill',
+          }}
         />
         {oynatImi && (
           <span className="absolute inset-0 flex items-center justify-center">
