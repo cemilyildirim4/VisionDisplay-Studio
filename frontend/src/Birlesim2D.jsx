@@ -38,7 +38,15 @@ export default function Birlesim2D({
   let x = 0
   let z = 0
   const parcalar = ekranlar.map((e) => {
-    const w = (e.wm || 0) * pxPerM
+    /*
+     * GERÇEK EN, ŞERİDİN KISALTTIĞI EN DEĞİL.
+     *
+     * Şerit düz çizdiği için birleşimdeki ekranın enini açısının
+     * kosinüsüyle kısaltıp 'wm'e yazıyor (bkz. WallPreview → lKisalma).
+     * Burada perspektif gerçekten uygulandığı için o kısalma İKİNCİ KEZ
+     * işleniyor ve kol olduğunun yüzde kırkına iniyordu.
+     */
+    const w = (e.gercekWm ?? e.wm ?? 0) * pxPerM
     const t = e.yon
     const ax = x
     const az = z
@@ -74,7 +82,12 @@ export default function Birlesim2D({
    * geriden bakıyor. Tersi olsaydı (sabit uzaklık) sığ bir kol hiç
    * görünmez, derin bir kol ise balıkgözü gibi açılırdı.
    */
-  const D = Math.max(100, derinlik * 2.2, yayilim * 0.75, enYakin * 1.6)
+  /*
+   * Uzaklık ağırlıkla DERİNLİKTEN geliyor. Yayılıma bağlanınca geniş bir
+   * arka ekranın yanındaki sığ kol birkaç piksele iniyor ve U yine L gibi
+   * okunuyordu; yayılım artık yalnızca aşırı yakın bakışı engelliyor.
+   */
+  const D = Math.max(100, derinlik * 2.2, yayilim * 0.35, enYakin * 1.6)
 
   /*
    * KUTU İZDÜŞÜMDEN.

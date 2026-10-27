@@ -49,8 +49,18 @@ export default function Kup2D({
   const yanlar = ekranlar.slice(0, 4)
   const ustEkran = ekranlar[4] || null
 
-  const enM = yanlar[0]?.wm || 0
-  const derinlikM = yanlar[1]?.wm || enM
+  /*
+   * KUTUNUN ÖLÇÜSÜ KARŞILIKLI YÜZLERDEN.
+   *
+   * Ön ile arka aynı eni, sağ ile sol aynı derinliği paylaşıyor — kutu
+   * ancak böyle kapanır. Karşılıklı iki ekran farklı enle kurulduysa
+   * büyüğü belirliyor; küçüğü kendi kutusunun içinde kendi eniyle
+   * duruyor, zorla gerilmiyor.
+   */
+  /* Şeridin kısalttığı en değil gerçek en (bkz. Birlesim2D). */
+  const gEn = (e) => e?.gercekWm ?? e?.wm ?? 0
+  const enM = Math.max(gEn(yanlar[0]), gEn(yanlar[2]))
+  const derinlikM = Math.max(gEn(yanlar[1]), gEn(yanlar[3])) || enM
   const boyM = Math.max(...yanlar.map((x) => x.hm || 0), 0)
   if (!(enM > 0) || !(derinlikM > 0) || !(boyM > 0)) return null
 
@@ -86,33 +96,49 @@ export default function Kup2D({
 
   const yuzEni = (i) => (i % 2 === 0 ? W : D)
 
-  const yuz = (ekran, i) => (
-    <div
-      key={ekran?.id ?? i}
-      style={{
-        position: 'absolute',
-        left: '50%',
-        top: 0,
-        width: yuzEni(i),
-        height: H,
-        marginLeft: -yuzEni(i) / 2,
-        transform: yuzDonusumu(i),
-        backfaceVisibility: 'hidden',
-      }}
-    >
-      <Screen
-        wPx={yuzEni(i)}
-        hPx={H}
-        cols={ekran?.cols || 1}
-        rows={ekran?.rows || 1}
-        type="flat"
-        model={model}
-        resolution={resolution}
-        content={ekran?.content || 'led'}
-        contentUrl={ekran?.contentUrl || null}
-      />
-    </div>
-  )
+  /*
+   * YÜZLER KENDİ ÖLÇÜSÜYLE, ALTTAN HİZALI.
+   *
+   * Eskiden her yüz kutunun tam eni ve en uzun ekranın boyuyla
+   * çiziliyordu: 2×2'lik bir yüz, 4×4'lük komşusunun boyuna gerilip
+   * kabinleri olduğundan büyük görünüyordu. Yüz artık kendi gerçek
+   * ölçüsünde; kısa yüz kutunun alt kenarına oturuyor, üstte kalan
+   * pay açık duruyor — gerçekte de öyle durur.
+   */
+  const yuz = (ekran, i) => {
+    const kutuEni = yuzEni(i)
+    const eni = Math.min(kutuEni, gEn(ekran) * pxPerM || kutuEni)
+    const boyu = Math.min(H, (ekran?.hm || 0) * pxPerM || H)
+    return (
+      <div
+        key={ekran?.id ?? i}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 0,
+          width: kutuEni,
+          height: H,
+          marginLeft: -kutuEni / 2,
+          transform: yuzDonusumu(i),
+          backfaceVisibility: 'hidden',
+        }}
+      >
+        <div style={{ position: 'absolute', left: 0, bottom: 0, width: eni, height: boyu }}>
+          <Screen
+            wPx={eni}
+            hPx={boyu}
+            cols={ekran?.cols || 1}
+            rows={ekran?.rows || 1}
+            type="flat"
+            model={model}
+            resolution={resolution}
+            content={ekran?.content || 'led'}
+            contentUrl={ekran?.contentUrl || null}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative flex flex-col items-center" style={{ width: Math.max(W, D) * 1.6 }}>

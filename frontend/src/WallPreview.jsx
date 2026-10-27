@@ -1169,9 +1169,11 @@ export default function WallPreview({
     const paylasimAlanlari = new Map()
     for (const x of placed) {
       if (!x.paylasim) continue
-      const a = paylasimAlanlari.get(x.paylasim) || { toplam: 0, onceki: new Map() }
+      const a = paylasimAlanlari.get(x.paylasim) || { toplam: 0, enBuyukBoy: 0, onceki: new Map() }
       a.onceki.set(x, a.toplam)
       a.toplam += x.gercekWm || x.wm
+      /* Yüzeyin boyu en uzun ekranınki: kısalar alttan hizalı duruyor. */
+      a.enBuyukBoy = Math.max(a.enBuyukBoy, x.hm || 0)
       paylasimAlanlari.set(x.paylasim, a)
     }
 
@@ -1199,12 +1201,22 @@ export default function WallPreview({
       const kendi = s.gercekWm || s.wm
       if (!alan || !(kendi > 0)) return { spanW: s.wPx, spanH: s.hPx, offsetX: 0, offsetY: 0 }
       const oran = s.wPx / kendi
+      /*
+       * DİKEYDE DE DİLİM — ekranlar farklı boyda olabiliyor.
+       *
+       * Eskiden her ekran görselin TAM yüksekliğini kendi kutusunda
+       * gösteriyordu: kısa ekran, uzun komşusuyla aynı görüntüyü ezilmiş
+       * olarak çiziyordu. Ekranlar alttan hizalı olduğuna göre kısa
+       * ekrana düşen, görselin ALT kısmıdır; üstte kalan pay yukarı
+       * kaydırılarak dışarıda bırakılıyor.
+       */
+      const boyOran = s.hm > 0 ? s.hPx / s.hm : 0
+      const yuzeyBoy = alan.enBuyukBoy > 0 && boyOran > 0 ? alan.enBuyukBoy * boyOran : s.hPx
       return {
         spanW: alan.toplam * oran,
-        /* Her ekran kendi diliminin TAM yüksekliğini gösteriyor. */
-        spanH: s.hPx,
+        spanH: yuzeyBoy,
         offsetX: (alan.onceki.get(s) || 0) * oran,
-        offsetY: 0,
+        offsetY: yuzeyBoy - s.hPx,
       }
     }
 
