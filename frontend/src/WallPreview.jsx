@@ -6,6 +6,7 @@ import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_S
 import { videoSrcFor, senkronaKatil } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { yonDonusumu } from './hooks/useYon.js'
+import Kup2D from './Kup2D.jsx'
 import { koseDonusumu } from './homografi.js'
 
 /**
@@ -815,6 +816,8 @@ export default function WallPreview({
   screenType = 'flat',
   resolution = 'FHD',
   showMeasurements = true,
+  /* Küp birleşimi: şerit yerine gerçek kutu çiziliyor. */
+  kupKipi = false,
   /*
    * Numara rozetleri "Ölçüleri gizle" ile birlikte kalkıyor. Ayrı bir
    * özellik, çünkü showMeasurements fotoğraf mekânında zaten kapalı.
@@ -1248,11 +1251,40 @@ export default function WallPreview({
               style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }}
               className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative ${kavisPayiM > 0 ? 'overflow-visible' : 'overflow-hidden'}`}
             >
+              {/*
+                KÜP — ŞERİT DEĞİL KUTU.
+
+                Küp tipi seçiliyken ekranlar yan yana düz dikdörtgenler
+                olarak çiziliyordu; kullanıcı neyi kurduğunu göremiyordu.
+                Şerit JSX'i yerinde duruyor, yalnızca gizleniyor.
+              */}
+              {kupKipi && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: stripTop,
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Kup2D
+                    ekranlar={placed}
+                    pxPerM={pxPerM}
+                    model={model}
+                    resolution={resolution}
+                    sifirlaEtiketi={t('kup.sifirla')}
+                  />
+                </div>
+              )}
+
               {/* Ekranlar şeridi (ortalanmış, alta hizalı) */}
               <div
                 /* Testin görünürlüğü ölçebilmesi için sabit işaret. */
                 data-tasarim-yuz
                 style={{
+                  display: kupKipi ? 'none' : undefined,
                   position: 'absolute',
                   left: marginXpx,
                   top: stripTop,

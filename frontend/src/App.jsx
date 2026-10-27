@@ -9163,6 +9163,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               resolution={resolution}
               curveAmount={curveAmount}
               showMeasurements={olculerGorunsun}
+              /* Küp birleşiminde şerit yerine gerçek kutu çiziliyor. */
+              kupKipi={grup?.tip === 'kutu'}
               /* Rozetler de "Ölçüleri gizle" ile kalkıyor. */
               numaraGoster={showMeasurements}
               onColsChange={setCols}

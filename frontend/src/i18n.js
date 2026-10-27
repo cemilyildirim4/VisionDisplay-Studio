@@ -348,6 +348,7 @@ const dict = {
   'yerlesim.ice': { tr: 'İçe doğru', en: 'Inward', ar: 'إلى الداخل' },
   'yerlesim.disa': { tr: 'Dışa doğru', en: 'Outward', ar: 'إلى الخارج' },
   'yerlesim.birlestir': { tr: 'Birleştir', en: 'Join', ar: 'دمج' },
+  'kup.sifirla': { tr: 'Yönü sıfırla', en: 'Reset view', ar: 'إعادة الاتجاه' },
   'yerlesim.ayir': { tr: 'Ayır', en: 'Split', ar: 'فصل' },
   'ekran.silOnay': {
     tr: 'Bu ekran kaldırılsın mı? Alanı, ölçüsü ve içeriği de silinir; geri alınamaz.',
