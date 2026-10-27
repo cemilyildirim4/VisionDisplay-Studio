@@ -7723,9 +7723,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         resW: spec?.resW || 0,
         resH: spec?.resH || 0,
         /* İçeriği olmayan eski kayıt elde duran ekranın içeriğini gösteriyor. */
-        havuzId: r.ayar.content
-          ? icerikKimligi(r.ayar.content, r.ayar.contentUrl)
-          : icerikKimligi(content, contentUrl),
+        /*
+         * KÜÇÜK RESİM, EKRANIN GERÇEKTEN GÖSTERDİĞİ İÇERİK.
+         *
+         * Kutucuk ekranın KENDİ kaydındaki içeriği gösteriyordu; "Tek
+         * görsel" açıkken ekran kümenin görselini gösterdiği hâlde
+         * kutucukta siyah (LED) duruyordu. Çizimle kutucuk aynı kaynaktan
+         * okuyor: ekranParcalari paylaşım kümesini zaten çözüyor.
+         */
+        havuzId: (() => {
+          const parca = ekranParcalari.find((x) => x.id === r.id)
+          const ic = parca?.content ?? (r.ayar.content || content)
+          const url = parca ? parca.contentUrl : r.ayar.content ? r.ayar.contentUrl : contentUrl
+          return icerikKimligi(ic, url)
+        })(),
         /* Bölünmüşse küçük resim o ekranın KENDİ dilimini göstersin. */
         dilim: paylasimKumesi(r.id) ? bolunmusDilimler?.get(r.id) || null : null,
       }
