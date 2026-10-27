@@ -4639,6 +4639,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * (ürün kararı). Kayıtta durması, geri yüklenmediği hâlde "her ekranın
    * kendi modeli var" izlenimi bırakıyordu.
    */
+  /*
+   * DUVAR GRUBUN TAMAMINA AİT.
+   *
+   * Birleşik bir grup tek bir duvarın önünde duruyor; üyelerin ayrı
+   * duvar ölçüsü olması, hangi üye seçiliyse kutuda başka bir sayı
+   * görünmesi demekti. Değer elde duran ekrana yazılıyor, grup varsa
+   * öteki üyelerin kaydına da işleniyor.
+   */
+  const duvariGrubaYaz = (alan, deger) => {
+    const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : null
+    if (!uyeler || uyeler.length < 2) return
+    setSabitEkranlar((l) =>
+      l.map((e) => (uyeler.includes(e.id) ? { ...e, ayar: { ...(e.ayar || {}), [alan]: deger } } : e)),
+    )
+  }
+  const duvarEniniYaz = (v) => {
+    setWidth(v)
+    duvariGrubaYaz('duvarW', v)
+  }
+  const duvarBoyunuYaz = (v) => {
+    setHeight(v)
+    duvariGrubaYaz('duvarH', v)
+  }
+
   const ekranAyariAnlik = () => ({
     cols,
     rows,
@@ -4957,6 +4981,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         aci: eski?.eklemler?.[j]?.aci ?? aci ?? 135,
       })),
     }))
+    /*
+     * DUVAR BİRLEŞİMİN TAMAMININ.
+     *
+     * Birleşik grup tek bir duvarın önünde duruyor. Üyeler kendi duvar
+     * ölçüsünü taşımayı sürdürseydi, hangi üye seçilirse kartta başka bir
+     * sayı görünecekti. Elde duran ekranın ölçüsü hepsine yazılıyor.
+     */
+    setSabitEkranlar((l) =>
+      l.map((e) =>
+        sirali.includes(e.id)
+          ? { ...e, ayar: { ...(e.ayar || {}), duvarW: width, duvarH: height } }
+          : e,
+      ),
+    )
   }
 
   /*
@@ -8330,8 +8368,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const boyPx = (uzak(kose[0], kose[3]) + uzak(kose[1], kose[2])) / 2
     const enM = Math.round((enPx / olcekTuvalPxCm) * 1) / 100
     const boyM = Math.round((boyPx / olcekTuvalPxCm) * 1) / 100
-    if (enM > 0.05) setWidth(enM)
-    if (boyM > 0.05) setHeight(boyM)
+    if (enM > 0.05) duvarEniniYaz(enM)
+    if (boyM > 0.05) duvarBoyunuYaz(boyM)
   }
 
   /*
@@ -10245,35 +10283,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/*
-            DUVAR EN ÜSTTE — kurulumun İLK kararı.
-            Ekranlar duvara göre diziliyor; ölçü panelin en altındayken
-            kullanıcı önce ekranı kurup sonra duvarı yazıyordu.
+            DUVAR BURADA DEĞİL, EKRANIN KARTINDA.
+
+            Panelin en üstünde genel bir "Duvar" kutusu duruyordu; oysa
+            duvar ölçüsü her ekranda ayrı tutuluyor (bkz. ayar.duvarW) ve
+            ekran değişince kutudaki sayı sessizce değişiyordu. Kullanıcı
+            genel bir ayar sanıp seçili ekranın duvarını değiştiriyordu.
           */}
-          {hasModel && (
-            <div className="mb-1">
-              <h2 className="text-[20px] font-bold tracking-tight m-0 mb-1">{t('wall.heading')}</h2>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                <SayiKutusu
-                  etiket={t('wall.width')}
-                  deger={width}
-                  onChange={setWidth}
-                  min={widthMin}
-                  max={40}
-                  adim={0.1}
-                  birim="m"
-                />
-                <SayiKutusu
-                  etiket={t('wall.height')}
-                  deger={height}
-                  onChange={setHeight}
-                  min={heightMin}
-                  max={20}
-                  adim={0.1}
-                  birim="m"
-                />
-              </div>
-            </div>
-          )}
 
           {/*
             EKRANLAR — TEK SİSTEM, AKORDEON.
@@ -10409,6 +10425,44 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             )}
                           </div>
                         )}
+
+                        {/*
+                          ---- Duvar ----
+                          Ekranın durduğu duvar: sütun/satır sınırı,
+                          "Duvara sığdır" ve mekân çizimi hep buradan
+                          besleniyor. Birleşik grupta tek duvar var;
+                          değişiklik bütün üyelere yazılıyor.
+                        */}
+                        <div>
+                          <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
+                            {t('wall.heading')}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                            <SayiKutusu
+                              etiket={t('wall.width')}
+                              deger={width}
+                              onChange={duvarEniniYaz}
+                              min={widthMin}
+                              max={40}
+                              adim={0.1}
+                              birim="m"
+                            />
+                            <SayiKutusu
+                              etiket={t('wall.height')}
+                              deger={height}
+                              onChange={duvarBoyunuYaz}
+                              min={heightMin}
+                              max={20}
+                              adim={0.1}
+                              birim="m"
+                            />
+                          </div>
+                          {grup && Array.isArray(grup.uyeler) && grup.uyeler.length > 1 && (
+                            <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                              {t('wall.grup')}
+                            </p>
+                          )}
+                        </div>
 
                         {/* ---- Boyut ---- */}
                         <div>

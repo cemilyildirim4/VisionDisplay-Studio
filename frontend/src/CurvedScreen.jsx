@@ -220,10 +220,62 @@ export default function CurvedScreen({
     return () => cancelAnimationFrame(rafRef.current)
   }, [clampedAmount])
 
-  // NOT: Kutuya gölge verilmiyor — panel kavisli olduğu için dikdörtgen bir gölge
-  // panelin dışına taşıp beyaz duvarda gri iz bırakıyordu.
+  /*
+   * DUVARA OTURAN GÖLGE.
+   *
+   * Eskiden hiç gölge yoktu: kutuya verilen dikdörtgen gölge kavisin
+   * dışına taşıp beyaz duvarda gri bir iz bırakıyordu. Oysa gölgesiz
+   * ekran duvarın içine gömülmüş gibi duruyor.
+   *
+   * Gölge artık ekranın KENDİ hattını izliyor ve kalınlığı duvara olan
+   * uzaklıkla değişiyor:
+   *   dışa kavisli — iki uç duvara değer, orta öne çıkar: gölge uçlarda
+   *     yok denecek kadar ince, ortada kalın.
+   *   içe kavisli — orta duvara değer, uçlar öne çıkar: tam tersi.
+   * Duvarın kendisi düz kalıyor; değişen yalnızca aradaki boşluk.
+   */
+  const golge = (() => {
+    if (!(maxD > 0.5) || !(wPx > 0)) return null
+    const ADIM = 24
+    const alt = []
+    const golgeAlti = []
+    for (let i = 0; i <= ADIM; i++) {
+      const u = i / ADIM
+      const t = 2 * u - 1
+      const d = (maxD * Math.max(0, 1 - t * t)) / 2
+      /* Duvara uzaklık: dışbükeyde ortada en çok, içbükeyde uçlarda. */
+      const uzaklik = concave ? maxD / 2 - d : d
+      const x = wPx * u
+      const y = maxD / 2 + hPx + (concave ? -d : d)
+      alt.push([x, y])
+      golgeAlti.push([x, y + 1.5 + uzaklik * 1.35])
+    }
+    const nok = [...alt, ...golgeAlti.reverse()]
+    return {
+      yol: nok.map(([x, y], i) => (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ') + ' Z',
+      bulanik: Math.max(1.5, maxD * 0.12),
+      yukseklik: hPx + maxD + maxD,
+    }
+  })()
+
   return (
     <div className="relative shrink-0 max-w-full" style={{ width: wPx, height: hPx, overflow: 'visible' }}>
+      {golge && (
+        <svg
+          /* Tuvalle aynı çerçeve; gölge kutunun altına taştığı için daha uzun. */
+          style={{ position: 'absolute', top: -maxD / 2, left: 0, width: wPx, height: golge.yukseklik, overflow: 'visible', pointerEvents: 'none' }}
+          viewBox={'0 0 ' + wPx + ' ' + golge.yukseklik}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <defs>
+            <filter id={'kg' + Math.round(wPx) + Math.round(hPx)} x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation={golge.bulanik} />
+            </filter>
+          </defs>
+          <path d={golge.yol} fill="rgba(0,0,0,0.3)" filter={'url(#kg' + Math.round(wPx) + Math.round(hPx) + ')'} />
+        </svg>
+      )}
       {/* Tuval kutudan maxD kadar uzun; -maxD/2 ile ortalanır → kavis üstte ve altta
           eşit taşar, ekranın görsel merkezi kutunun merkeziyle çakışır. */}
       <canvas ref={canvasRef} style={{ position: 'absolute', top: -maxD / 2, left: 0, width: wPx, height: hPx + maxD }} />

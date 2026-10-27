@@ -273,6 +273,7 @@ const dict = {
   // ---------- Duvar bölümü ----------
   'olcu.duvarSiniri': { tr: 'Duvar ölçüsüne ulaşıldı', en: 'Wall size reached', ar: 'تم بلوغ مقاس الجدار' },
   'wall.heading': { tr: 'Duvar', en: 'Wall', ar: 'الجدار' },
+  'wall.grup': { tr: 'Birleşik grupta duvar hepsi için ortak.', en: 'In a joined group the wall is shared.', ar: 'في المجموعة المدمجة، الجدار مشترك.' },
   'wall.width': { tr: 'Genişlik', en: 'Width', ar: 'العرض' },
   'wall.height': { tr: 'Yükseklik', en: 'Height', ar: 'الارتفاع' },
 
