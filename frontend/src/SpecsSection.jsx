@@ -339,7 +339,12 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           <Veri label={t('sp.area')} value={has ? `${fmt(s.area, 3)} m²` : DASH} />
           <Veri label={ekranBasina(t('sp.diagonal'))} value={has ? `${fmt(s.diagIn, 1)} ${t('sp.inch')}` : DASH} />
           <Veri label={has ? birim('sp.weightCabinets') : t('sp.weight')} value={has ? `${fmt(s.weight, 1)} kg` : DASH} />
-          {has && <Veri label={t('sp.viewingDistance')} value={`${fmt(s.viewDist, 1)} m`} />}
+          {has && (
+            <Veri
+              label={t('sp.viewingDistance')}
+              value={`${t('sp.viewDistNear')} ${fmt(s.viewDistBase, 1)} m · ${t('sp.viewDistBest')} ${fmt(s.viewDist, 1)} m`}
+            />
+          )}
         </Kart>
 
         {has && (

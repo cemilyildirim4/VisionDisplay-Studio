@@ -553,7 +553,7 @@ const dict = {
     ar: 'مسافة المشاهدة',
   },
   'scene.viewDistFixedHint': {
-    tr: 'Seçilen modelin uygun izleme mesafesi. Yalnızca bilgidir; çizimi etkilemez.',
+    tr: 'Seçilen modelin uygun izleme mesafesi.',
     en: "The selected model's recommended viewing distance. Information only; it does not affect the drawing.",
     ar: 'مسافة المشاهدة الموصى بها للطراز المحدد. للعلم فقط؛ لا تؤثر على الرسم.',
   },
@@ -1231,7 +1231,7 @@ const dict = {
     ar: 'مسافة المشاهدة',
   },
   'scene.viewDistFixedHint': {
-    tr: 'Seçilen modelin uygun izleme mesafesi. Yalnızca bilgidir; çizimi etkilemez.',
+    tr: 'Seçilen modelin uygun izleme mesafesi.',
     en: "The selected model's recommended viewing distance. Information only; it does not affect the drawing.",
     ar: 'مسافة المشاهدة الموصى بها للطراز المحدد. للعلم فقط؛ لا تؤثر على الرسم.',
   },
@@ -1869,6 +1869,8 @@ const dict = {
   'sp.weight': { tr: 'Ağırlık', en: 'Weight', ar: 'الوزن' },
   'sp.weightCabinets': { tr: 'Ağırlık (yalnızca kabinler)', en: 'Weight (cabinets only)', ar: 'الوزن (الخزائن فقط)' },
   'sp.weightCabinetsP': { tr: 'Ağırlık (yalnızca paneller)', en: 'Weight (panels only)', ar: 'الوزن (اللوحات فقط)' },
+  'sp.viewDistNear': { tr: 'En yakın', en: 'Closest', ar: 'الأقرب' },
+  'sp.viewDistBest': { tr: 'Önerilen', en: 'Recommended', ar: 'الموصى به' },
   'sp.viewingDistance': { tr: 'En Uygun İzleme Mesafesi', en: 'Optimal Viewing Distance', ar: 'مسافة المشاهدة المثلى' },
   'sp.optical': { tr: 'Optik Parametre', en: 'Optical Parameter', ar: 'المعامل البصري' },
   'sp.totalPixels': { tr: 'Toplam Piksel', en: 'Total Pixels', ar: 'إجمالي البكسل' },

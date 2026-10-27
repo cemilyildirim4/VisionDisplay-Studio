@@ -6,7 +6,7 @@
  * birinde değişip diğerinde unutulmasın.
  */
 
-import { viewingDistanceFor } from './viewingDistance.js'
+import { baseViewingDistance, viewingDistanceFor } from './viewingDistance.js'
 
 export const DASH = '-'
 export const fmt = (n, d = 0) =>
@@ -46,6 +46,8 @@ export function computeSpecs(model, cols, rows) {
     pTyp,
     btuMax: pMax * 3.412,
     btuTyp: pTyp * 3.412,
+    /* En yakın: modelin kendi mesafesi. Önerilen: köşegeni de hesaba katan. */
+    viewDistBase: baseViewingDistance(model),
     viewDist: viewingDistanceFor(model, cols, rows),
     circuits: {
       c110_20: circuit(110, 20, perCabMax, total),
