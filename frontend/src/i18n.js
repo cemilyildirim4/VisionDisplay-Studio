@@ -348,6 +348,8 @@ const dict = {
   'yerlesim.ice': { tr: 'İçe doğru', en: 'Inward', ar: 'إلى الداخل' },
   'yerlesim.disa': { tr: 'Dışa doğru', en: 'Outward', ar: 'إلى الخارج' },
   'yerlesim.birlestir': { tr: 'Birleştir', en: 'Join', ar: 'دمج' },
+  'eklem.baslik': { tr: 'Birleşimler', en: 'Joints', ar: 'الوصلات' },
+  'eklem.uyari': { tr: 'Açı 90° ile 180° arasında olmalı.', en: 'The angle should be between 90° and 180°.', ar: 'يجب أن تكون الزاوية بين ٩٠° و١٨٠°.' },
   'kup.sifirla': { tr: 'Yönü sıfırla', en: 'Reset view', ar: 'إعادة الاتجاه' },
   'yerlesim.ayir': { tr: 'Ayır', en: 'Split', ar: 'فصل' },
   'ekran.silOnay': {

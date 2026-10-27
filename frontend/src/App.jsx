@@ -2583,12 +2583,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kosinüs sıfıra inince kanat çizgi hâline geliyor; alt sınır var ki
    * kullanıcı ekranın orada olduğunu görebilsin.
    */
-  const birlesimGeometrisi = (uyeParcalari, aciDerece, yon) => {
+  const birlesimGeometrisi = (uyeParcalari, aciGirdi, yon) => {
     const n = uyeParcalari.length
     if (n < 2) return new Map()
     const d = yon === 'disa' ? 1 : -1
-    const A = ((aciDerece || 0) * Math.PI) / 180
-    const acilar = uyeParcalari.map((_, k) => (k - (n - 1) / 2) * A * d)
+    /*
+     * HER EKLEMİN KENDİ AÇISI.
+     *
+     * Tek bir açı bütün eklemlere uygulanıyordu; üç ekranlı bir dizide
+     * iki köşenin farklı açıda olması mümkün değildi. Girdi dizi ise her
+     * eklem kendi açısını kullanıyor, tek sayı ise hepsi aynı (eski
+     * davranış).
+     *
+     * Zincir simetrik kuruluyor: toplam kırılmanın yarısı kadar geriden
+     * başlıyor, böylece köşeye tam çaprazdan bakılıyor.
+     */
+    const eklemAcilari = Array.from({ length: n - 1 }, (_, j) =>
+      Array.isArray(aciGirdi) ? aciGirdi[j] ?? 135 : aciGirdi || 0,
+    )
+    const kirilmalar = eklemAcilari.map((a) => (((Array.isArray(aciGirdi) ? 180 - a : a) || 0) * Math.PI) / 180)
+    const toplam = kirilmalar.reduce((t, k) => t + k, 0)
+    const acilar = []
+    let gecerli = (-toplam / 2) * d
+    for (let k = 0; k < n; k++) {
+      acilar.push(gecerli)
+      if (k < kirilmalar.length) gecerli += kirilmalar[k] * d
+    }
     /* Düzlemdeki köşe noktaları; derinlik y ekseni (büyük y = uzak). */
     let x = 0
     let y = 0
@@ -2622,7 +2642,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const ekranSeridi = (() => {
     const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : null
     if (!uyeler || uyeler.length < 2) return ekranParcalari
-    const aci = grup.tip === 'duz' ? 0 : grup.tip === 'acili' ? grup.aci || 135 : 90
+    /* Açılı birleşimde her eklemin kendi açısı; ötekilerde tek değer. */
+    const aci =
+      grup.tip === 'duz'
+        ? 0
+        : grup.tip === 'acili'
+          ? Array.isArray(grup.eklemler)
+            ? grup.eklemler.map((e) => e?.aci ?? 135)
+            : grup.aci || 135
+          : 90
     const uyeParcalari = uyeler.map((id) => ekranParcalari.find((x) => x.id === id)).filter(Boolean)
     if (uyeParcalari.length < 2) return ekranParcalari
     const geo = birlesimGeometrisi(uyeParcalari, aci, grup.lYon || 'ice')
@@ -4899,6 +4927,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       /* Görsel paylaşımı kullanıcının kararı; şekil değişince sıfırlanmıyor. */
       tekGorsel: eski?.tekGorsel ?? true,
       lYon: yon,
+      /*
+       * EKLEMLER — her komşu çift için bir kayıt.
+       * Var olanlar korunuyor; yeni eklem varsayılanla doğuyor. Ekran
+       * eklenip çıkınca ötekilerin açısı bozulmuyor.
+       */
+      eklemler: Array.from({ length: Math.max(0, sirali.length - 1) }, (_, j) => ({
+        aci: eski?.eklemler?.[j]?.aci ?? aci ?? 135,
+      })),
     }))
   }
 
@@ -10667,41 +10703,60 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     </div>
                   )}
 
-                  {/* Açı değişir değişmez çizim de değişiyor. */}
-                  {grupTipi === 'acili' && (
-                    <div className="mt-2 flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min="10"
-                        max="170"
-                        step="1"
-                        value={grupAciYazi}
-                        onChange={(e) => {
-                          const ham = e.target.value
-                          setGrupAciYazi(ham)
-                          /* Geçerli bir açı çıktığı anda çizim de değişiyor. */
-                          const v = Number(ham)
-                          if (ham.trim() !== '' && Number.isFinite(v) && v >= 10 && v <= 170) {
-                            setGrupAcisi(v)
-                            birlesimiKur(grupTipi, grupSecim, v, lYonSecim)
-                          }
-                        }}
-                        onBlur={() => {
-                          /* Kutudan çıkınca metin, çizimdeki açıya geri oturuyor. */
-                          const v = Number(grupAciYazi)
-                          const oturan =
-                            grupAciYazi.trim() === '' || !Number.isFinite(v)
-                              ? grupAcisi
-                              : Math.max(10, Math.min(170, Math.round(v)))
-                          setGrupAciYazi(String(oturan))
-                          if (oturan !== grupAcisi) {
-                            setGrupAcisi(oturan)
-                            birlesimiKur(grupTipi, grupSecim, oturan, lYonSecim)
-                          }
-                        }}
-                        className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
-                      />
-                      <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
+                  {/*
+                    BİRLEŞİMLER — her köşenin kendi açısı.
+
+                    Tek bir açı kutusu vardı ve hangi köşeye ait olduğu
+                    belli değildi; üç ekranlı bir dizide iki köşeyi farklı
+                    açıda kurmak da mümkün değildi.
+                  */}
+                  {grupTipi === 'acili' && grup && Array.isArray(grup.uyeler) && grup.uyeler.length > 1 && (
+                    <div className="mt-2">
+                      <div className="mb-1 text-[13.5px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
+                        {t('eklem.baslik')}
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {grup.uyeler.slice(0, -1).map((id, j) => {
+                          const solSira = ekranParcalari.find((x) => x.id === id)?.sira ?? j + 1
+                          const sagSira =
+                            ekranParcalari.find((x) => x.id === grup.uyeler[j + 1])?.sira ?? j + 2
+                          const deger = grup.eklemler?.[j]?.aci ?? 135
+                          const disinda = !(deger >= 90 && deger <= 180)
+                          return (
+                            <div key={id} className="flex items-center gap-2">
+                              <span className="w-14 shrink-0 text-[14px] font-medium tabular-nums text-neutral-700 dark:text-neutral-200">
+                                {solSira} – {sagSira}
+                              </span>
+                              <input
+                                type="number"
+                                min="10"
+                                max="180"
+                                step="1"
+                                value={deger}
+                                onChange={(e) => {
+                                  const v = Number(e.target.value)
+                                  setGrup((g) => {
+                                    if (!g) return g
+                                    const liste = Array.from(
+                                      { length: Math.max(0, g.uyeler.length - 1) },
+                                      (_, k) => ({ aci: g.eklemler?.[k]?.aci ?? 135 }),
+                                    )
+                                    liste[j] = { aci: Number.isFinite(v) ? v : 135 }
+                                    return { ...g, eklemler: liste }
+                                  })
+                                }}
+                                className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                              />
+                              <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
+                              {disinda && (
+                                <span className="text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
+                                  {t('eklem.uyari')}
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
 
