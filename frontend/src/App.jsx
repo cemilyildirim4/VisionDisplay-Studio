@@ -10525,10 +10525,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <button
                         key={tip}
                         type="button"
-                        disabled={grupSecim.length < enAz}
+                        /*
+                          TİPE BASMAK BİRLEŞTİRİYOR.
+
+                          Düğme önce çip seçmeyi bekliyordu: hiçbir çip
+                          seçilmemişken tipe basmak hiçbir şey yapmıyor,
+                          kullanıcı da düğmenin bozuk olduğunu sanıyordu.
+                          Çip seçilmemişse BÜTÜN ekranlar birleşiyor;
+                          seçim varsa yalnızca seçilenler.
+                        */
+                        disabled={ekranOzetleri.length < enAz}
                         onClick={() => {
+                          const secim =
+                            grupSecim.length >= enAz ? grupSecim : ekranOzetleri.map((x) => x.id)
                           setGrupTipi(tip)
-                          birlesimiKur(tip, grupSecim, grupAcisi, lYonSecim)
+                          setGrupSecim(secim)
+                          birlesimiKur(tip, secim, grupAcisi, lYonSecim)
                         }}
                         title={t('yerlesim.' + tip)}
                         className={`rounded-md py-1.5 text-[13px] font-semibold leading-tight transition-colors disabled:opacity-40 ${
