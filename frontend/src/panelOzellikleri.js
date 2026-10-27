@@ -60,6 +60,17 @@ export const PANEL = {
    * Şimdilik kapalı: yerleşimdeki sorun 3B olmadan aranacak. Hesapları ve
    * çizimleri yerinde duruyor, burayı true yapmak ikisini de geri getiriyor.
    */
+  /*
+   * AÇILDI, GERİ KAPATILDI (27 Ekim 2026).
+   *
+   * Açınca fotoğraf akışında tasarım kayboluyor: Mekan3D hazır deyince
+   * düz çizim gizleniyor (ekranGizle), ama ikinci kurulumda 3B katman
+   * çizmiyor ve ekranda hiçbir şey kalmıyor. Akış testinin "ikinci
+   * kurulumda tasarım görünmüyor" adımı tam olarak bunu yakalıyor.
+   *
+   * Kalınlığın geri gelmesi için önce o gizleme kuralının düzelmesi
+   * gerekiyor: 3B GERÇEKTEN çizene kadar düz çizim durmalı.
+   */
   kabinGovdesi: false,
 
   /* L köşesinin tarafı: Sol köşe / Orta / Sağ köşe ve "Otomatiğe dön". */

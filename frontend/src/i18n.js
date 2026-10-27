@@ -353,10 +353,11 @@ const dict = {
   'eklem.uyari': { tr: 'Açı 90° ile 180° arasında olmalı.', en: 'The angle should be between 90° and 180°.', ar: 'يجب أن تكون الزاوية بين ٩٠° و١٨٠°.' },
   'kup.sifirla': { tr: 'Yönü sıfırla', en: 'Reset view', ar: 'إعادة الاتجاه' },
   'yerlesim.ayir': { tr: 'Ayır', en: 'Split', ar: 'فصل' },
+  /* Soru başlıkta duruyor; gövde yalnızca sonucu yazıyor. */
   'ekran.silOnay': {
-    tr: 'Bu ekran kaldırılsın mı? Alanı, ölçüsü ve içeriği de silinir; geri alınamaz.',
-    en: 'Remove this screen? Its area, size and content go with it, and this cannot be undone.',
-    ar: 'هل تريد إزالة هذه الشاشة؟ ستُحذف منطقتها ومقاسها ومحتواها دون إمكانية التراجع.',
+    tr: 'Alanı, ölçüsü ve içeriği de silinir; geri alınamaz.',
+    en: 'Its area, size and content go with it, and this cannot be undone.',
+    ar: 'ستُحذف منطقتها ومقاسها ومحتواها دون إمكانية التراجع.',
   },
   'ekran.duzenleniyor': { tr: 'düzenleniyor', en: 'editing', ar: 'قيد التحرير' },
   'ekran.cokluIpucu': {
@@ -1594,11 +1595,16 @@ const dict = {
   'pdf.professional': { tr: 'PDF Raporu Al', en: 'Get PDF report', ar: 'الحصول على تقرير PDF' },
 
   // ---------- Sıfırlama onayı ----------
-  'reset.title': { tr: 'Tasarımı sıfırla', en: 'Reset design', ar: 'إعادة تعيين التصميم' },
+  'onay.vazgec': { tr: 'Vazgeç', en: 'Cancel', ar: 'إلغاء' },
+  'onay.sil': { tr: 'Sil', en: 'Delete', ar: 'حذف' },
+  'onay.silBaslik': { tr: 'Ekran silinsin mi?', en: 'Delete this screen?', ar: 'حذف هذه الشاشة؟' },
+  'onay.sifirla': { tr: 'Sıfırla', en: 'Reset', ar: 'إعادة تعيين' },
+  'onay.bilgi': { tr: 'Bir sorun var', en: 'Something went wrong', ar: 'حدثت مشكلة' },
+  'reset.title': { tr: 'Tasarım sıfırlansın mı?', en: 'Reset the design?', ar: 'إعادة تعيين التصميم؟' },
   'reset.body': {
-    tr: 'Bu işlem tüm ayarları sıfırlar. Devam etmek istiyor musunuz?',
-    en: 'This will reset all settings. Do you want to continue?',
-    ar: 'سيؤدي هذا إلى إعادة تعيين جميع الإعدادات. هل تريد المتابعة؟',
+    tr: 'Model seçimine kadar her şey silinecek.',
+    en: 'Everything back to the model choice will be cleared.',
+    ar: 'سيُحذف كل شيء حتى اختيار الطراز.',
   },
   'common.cancel': { tr: 'İptal', en: 'Cancel', ar: 'إلغاء' },
   'common.ok': { tr: 'Tamam', en: 'OK', ar: 'موافق' },
@@ -1872,6 +1878,7 @@ const dict = {
   'sp.screenSpecs': { tr: 'Ekran Özellikleri', en: 'Screen Specifications', ar: 'مواصفات الشاشة' },
   'sp.lengthHeight': { tr: 'Uzunluk x Yükseklik', en: 'Length x Height', ar: 'الطول × الارتفاع' },
   'sp.lengthHeightDepth': { tr: 'Uzunluk x Yükseklik x Derinlik', en: 'Length x Height x Depth', ar: 'الطول × الارتفاع × العمق' },
+  'sp.depth': { tr: 'Kalınlık (derinlik)', en: 'Depth', ar: 'العمق' },
   'sp.area': { tr: 'Alan', en: 'Area', ar: 'المساحة' },
   'sp.diagonal': { tr: 'Diyagonal', en: 'Diagonal', ar: 'القطر' },
   'sp.inch': { tr: 'inç', en: 'inch', ar: 'بوصة' },

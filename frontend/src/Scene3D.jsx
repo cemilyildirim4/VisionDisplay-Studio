@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import Onay from './Onay.jsx'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
@@ -486,7 +487,14 @@ function Duvar({ ortak, screenType, curveAmount, leftCols, rightCols, lYon, uvOf
 export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, screenType, curveAmount, leftCols, rightCols, lYon, screens }) {
   const cabW = (model?.widthMm || 500) / 1000
   const cabH = (model?.heightMm || 500) / 1000
-  const cabD = (model?.depthMm || 100) / 1000
+  /*
+   * KALINLIK BİLGİSİ YOKSA TAHMİN YOK.
+   *
+   * Eksik derinlik 100 mm sayılıyordu: kalınlığı girilmemiş bir model,
+   * girilmiş gibi kalın bir gövdeyle çiziliyordu. Bilinmeyen bir ölçüyü
+   * uydurmak, çizmemekten kötü — teklife giren bir sayı bu.
+   */
+  const cabD = model?.depthMm > 0 ? model.depthMm / 1000 : 0.01
 
   /*
    * İÇERİK KAYNAĞI
@@ -861,6 +869,8 @@ function disaAktarmaGeometrileri(scene) {
 /** GLB + USDZ dışa aktarma ve `<model-viewer>` ile gerçek Scene Viewer / Quick Look AR. */
 function useGlbAr() {
   const { t } = useLang()
+  /* Tarayıcının uyarı penceresi yerine uygulamanın kendi kutusu. */
+  const [uyari, setUyari] = useState(null)
   const [busy, setBusy] = useState(false)
   const [viewerUrl, setViewerUrl] = useState(null)
   // iOS Quick Look yalnızca USDZ açar; GLB'yi hiç tanımaz (bkz. model-viewer)
@@ -974,7 +984,7 @@ function useGlbAr() {
       setIosUrl(usdz ? URL.createObjectURL(new Blob([usdz], { type: 'model/vnd.usdz+zip' })) : null)
     } catch (e) {
       console.error('AR modeli oluşturulamadı:', e)
-      alert(t('scene3d.arExportError'))
+      setUyari(t('scene3d.arExportError'))
     } finally {
       setBusy(false)
     }
@@ -987,7 +997,7 @@ function useGlbAr() {
     setIosUrl(null)
   }, [viewerUrl, iosUrl])
 
-  return { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy }
+  return { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy, uyari, setUyari }
 }
 
 /** Alt bardaki arka plan düğmesi — kameradaki AracDugme ile aynı görünüm. */
@@ -1008,7 +1018,7 @@ function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
 
 export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, lYon = 'ice', screens, onOpenCamera, onSaved }) {
   const { t } = useLang()
-  const { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy } = useGlbAr()
+  const { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy, uyari, setUyari } = useGlbAr()
   /* Tasarımda köşe var mı: tek ekranın kendi türü ya da listedeki herhangi biri. */
   const koseliMi =
     (screenType || 'flat') === 'lshape' ||
@@ -1417,6 +1427,15 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
 
   return (
     <div className="fixed inset-0 z-[60] bg-[#0b0d12]">
+      {/* Tarayıcının uyarı penceresi yerine uygulamanın kendi kutusu. */}
+      <Onay
+        acik={!!uyari}
+        baslik={t('onay.bilgi')}
+        metin={uyari || ''}
+        onayEtiketi={t('common.ok')}
+        bilgi
+        onVazgec={() => setUyari(null)}
+      />
       {/* Arka plan görseli — 3D tuvali saydam olduğu için sahnenin arkasında kalır */}
       {arkaFoto && (
         <img src={arkaFoto} alt="" className="absolute inset-0 w-full h-full object-cover" />

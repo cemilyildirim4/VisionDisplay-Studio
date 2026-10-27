@@ -1038,7 +1038,8 @@ export default function AdminPanel() {
   }
 
   const deleteInvite = async (id) => {
-    if (!window.confirm('Bu davet kodu silinsin mi?')) return
+    /* Tarayıcının kendi penceresi kalmıştı; panelin onay kutusu zaten var. */
+    askConfirm('Davet kodunu sil', 'Kod bir daha kullanılamaz.', async () => {
     try {
       const res = await apiFetch(API_URL + "/api/invite-codes/" + id, { method: "DELETE", auth: true })
       if (res.status === 401) { oturumDustu(); return }
@@ -1047,6 +1048,7 @@ export default function AdminPanel() {
     } catch (e) {
       setInvitesError(e.message)
     }
+    })
   }
 
   const loadUsers = useCallback(async () => {

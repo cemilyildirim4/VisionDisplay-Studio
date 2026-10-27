@@ -40,6 +40,11 @@ export function computeSpecs(model, cols, rows) {
     area: W * H,
     diagIn: diagM / 0.0254,
     weight: total * (model.weightKg || 0),
+    /*
+     * KALINLIK — kabinin kendi derinliği, sayısıyla değişmiyor.
+     * Bilgi yoksa 0: yazan taraf satırı hiç çıkarmıyor, tahmin yok.
+     */
+    depthMm: model.depthMm > 0 ? model.depthMm : 0,
     resW: cols * (model.pixelWidth || 0),
     resH: rows * (model.pixelHeight || 0),
     pMax,

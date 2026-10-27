@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Onay from './Onay.jsx'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import html2canvas from 'html2canvas-pro'
 import { useLang } from './useLang.js'
@@ -119,6 +120,8 @@ export default function ExportModal({ open, onClose, summary }) {
   // Model seçimi onayı — zorunlu, yalnızca PDF'e not olarak geçer ('yes' | 'no')
   const [modelOnay, setModelOnay] = useState('')
   const [consent, setConsent] = useState(false)
+  /* Tarayıcının uyarı penceresi yerine uygulamanın kendi kutusu. */
+  const [uyari, setUyari] = useState(null)
   const [busy, setBusy] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [errors, setErrors] = useState({})
@@ -251,6 +254,8 @@ export default function ExportModal({ open, onClose, summary }) {
       [t('exp.pixels'), `${fmt(pikselW)} x ${fmt(pikselH)}`],
       [t('sp.totalCabinets'), toplamKabin],
       [t('sp.area'), `${fmt(toplamAlan, 2)} m2`],
+      /* Kalınlık bilgisi olmayan modelde satır yok: tahmin edilmiyor. */
+      ...(summary.model?.depthMm > 0 ? [[t('sp.depth'), `${fmt(summary.model.depthMm)} mm`]] : []),
       [t('sp.weight'), `${fmt(agirlik, 1)} kg`],
       [t('sp.viewingDistance'), izleme ? `${fmt(izleme, 1)} m` : ''],
       ...(isAdmin
@@ -279,16 +284,16 @@ export default function ExportModal({ open, onClose, summary }) {
     if (busy) return
     // Zorunlu alan: düğme zaten kilitli, bu ikinci koruma (klavye/otomasyon)
     if (!isAdmin && !modelOnay) {
-      alert(t('exp.modelSureMissing'))
+      setUyari(t('exp.modelSureMissing'))
       return
     }
     if (!isAuthenticated) {
-      alert(t('exp.needLogin'))
+      setUyari(t('exp.needLogin'))
       window.location.hash = '#hesap?tab=session'
       return
     }
     if (!model?.id) {
-      alert(t('exp.error'))
+      setUyari(t('exp.error'))
       return
     }
 
@@ -449,7 +454,7 @@ export default function ExportModal({ open, onClose, summary }) {
       onClose()
     } catch (err) {
       console.error('PDF oluşturulamadı:', err)
-      alert(err.message || t('exp.error'))
+      setUyari(err.message || t('exp.error'))
     } finally {
       setBusy(false)
     }
@@ -591,6 +596,15 @@ export default function ExportModal({ open, onClose, summary }) {
         </div>
         </form>
       </div>
+      {/* Tarayıcının uyarı penceresi yerine uygulamanın kendi kutusu. */}
+      <Onay
+        acik={!!uyari}
+        baslik={t('onay.bilgi')}
+        metin={uyari || ''}
+        onayEtiketi={t('common.ok')}
+        bilgi
+        onVazgec={() => setUyari(null)}
+      />
     </div>
   )
 }

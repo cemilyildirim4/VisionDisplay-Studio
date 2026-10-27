@@ -337,6 +337,10 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
         <Kart baslik={t('sp.screenSpecs')} genis>
           <Veri label={ekranBasina(t('sp.lengthHeight'))} value={has ? `${fmt(s.W, 3)} x ${fmt(s.H, 3)} m` : DASH} />
           <Veri label={t('sp.area')} value={has ? `${fmt(s.area, 3)} m²` : DASH} />
+          {/* Kalınlık bilgisi olmayan modelde satır yok: tahmin edilmiyor. */}
+          {has && s.depthMm > 0 && (
+            <Veri label={t('sp.depth')} value={`${fmt(s.depthMm)} mm`} />
+          )}
           <Veri label={ekranBasina(t('sp.diagonal'))} value={has ? `${fmt(s.diagIn, 1)} ${t('sp.inch')}` : DASH} />
           <Veri label={has ? birim('sp.weightCabinets') : t('sp.weight')} value={has ? `${fmt(s.weight, 1)} kg` : DASH} />
           {has && (

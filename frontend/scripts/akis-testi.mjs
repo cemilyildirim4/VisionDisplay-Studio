@@ -490,8 +490,20 @@ const dYol = await akis('D — SIFIRLA VE BAŞTAN KUR', async ({ s, bas, denetle
   if (!(await denetle('yerleştirme adımında (yarım bırakılacak)'))) return false
 
   if (!(await bas('Sıfırla', 1200))) return dus('"Sıfırla" düğmesi bulunamadı')
-  if (!(await icerir('tüm ayarları sıfırlar'))) return dus('sıfırlama onayı açılmadı')
-  if (!(await bas('Tamam', 3500))) return dus('sıfırlama onaylanamadı')
+  if (!(await icerir('Model seçimine kadar her şey silinecek'))) return dus('sıfırlama onayı açılmadı')
+  /*
+   * Onay KUTUNUN İÇİNDEN tıklanıyor: üst çubuktaki "Sıfırla" düğmesi de
+   * aynı yazıya sahip ve ilk eşleşeni tıklamak kutuyu yeniden açardı.
+   */
+  const onaylandi = await s.evaluate(() => {
+    const kutu = document.querySelector('[role="dialog"]')
+    const d2 = kutu && [...kutu.querySelectorAll('button')].find((b) => b.innerText.trim() === 'Sıfırla')
+    if (!d2) return false
+    d2.click()
+    return true
+  })
+  if (!onaylandi) return dus('sıfırlama onaylanamadı')
+  await s.waitForTimeout(3500)
   if (!(await denetle('sıfırlandı'))) return false
 
   /* Sıfırlama gerçekten baştan başlatmalı. */

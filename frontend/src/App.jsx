@@ -33,6 +33,7 @@ import { durusDortgeni, faredenDurus, durusaOturt, kutuGovdesi } from './durusKu
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
+import Onay from './Onay.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
 import EkEkranlar from './EkEkranlar.jsx'
 /* Sağ panelde ne görünüyor — tek yerden açma/kapama (hiçbiri silinmedi). */
@@ -401,6 +402,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [cols, setCols] = useState(1)
   const [rows, setRows] = useState(1)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  /*
+   * ONAY VE BİLGİ KUTULARI — tarayıcının kendi pencereleri yerine.
+   * Soru bir işi onaylatıyor, bilgi yalnızca söylüyor; ikisi de aynı
+   * bileşenle çiziliyor (bkz. Onay.jsx).
+   */
+  const [soru, setSoru] = useState(null)
+  const [bilgi, setBilgi] = useState(null)
+  /** window.alert'in yerine: uygulamanın kendi kutusunda tek cümle. */
+  const uyar = (metin) => setBilgi(metin)
   /* Shift ile tasarım alanından seçilen ekranlar. */
   const [secimKumesi, setSecimKumesi] = useState([])
   /* "Shift + tıkla" ipucu bir kez gösteriliyor. */
@@ -1631,11 +1641,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     e.target.value = '' // aynı dosya tekrar seçilebilsin
     if (!file) return
     if (!VIDEO_TYPES.includes(file.type)) {
-      alert(t('content.errVideoFormat'))
+      uyar(t('content.errVideoFormat'))
       return
     }
     if (file.size > VIDEO_MAX_MB * 1024 * 1024) {
-      alert(t('content.errVideoSize'))
+      uyar(t('content.errVideoSize'))
       return
     }
     /* Havuza giriyor: eski adres başka bir ekranda kullanılıyor olabilir. */
@@ -1654,11 +1664,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     e.target.value = '' // aynı dosya tekrar seçilebilsin
     if (!file) return
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      alert(t('content.errFormat'))
+      uyar(t('content.errFormat'))
       return
     }
     if (file.size > IMAGE_MAX_MB * 1024 * 1024) {
-      alert(t('content.errSize'))
+      uyar(t('content.errSize'))
       return
     }
     /*
@@ -1691,11 +1701,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     e.target.value = ''
     if (!dosya) return
     if (!MEKAN_TURLERI.includes(dosya.type)) {
-      alert(t('scene.customErr'))
+      uyar(t('scene.customErr'))
       return
     }
     if (dosya.size > MEKAN_EN_COK_MB * 1024 * 1024) {
-      alert(t('content.errSize'))
+      uyar(t('content.errSize'))
       return
     }
     const url = URL.createObjectURL(dosya)
@@ -5043,8 +5053,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   const ekranSil = (id) => {
-    if (!window.confirm(t('ekran.silOnay'))) return
-    setSabitEkranlar((l) => l.filter((e) => e.id !== id))
+    setSoru({
+      baslik: t('onay.silBaslik'),
+      metin: t('ekran.silOnay'),
+      onayEtiketi: t('onay.sil'),
+      tehlike: true,
+      yap: () => setSabitEkranlar((l) => l.filter((e) => e.id !== id)),
+    })
   }
 
   /*
@@ -5056,7 +5071,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * düşüyor. İki güncelleme de işlevsel olduğu için sıraları korunuyor.
    */
   const ekraniKaldir = (id) => {
-    if (!window.confirm(t('ekran.silOnay'))) return
+    setSoru({
+      baslik: t('onay.silBaslik'),
+      metin: t('ekran.silOnay'),
+      onayEtiketi: t('onay.sil'),
+      tehlike: true,
+      yap: () => ekraniKaldirUygula(id),
+    })
+  }
+
+  const ekraniKaldirUygula = (id) => {
     if (id !== aktifEkranId) {
       setSabitEkranlar((l) => l.filter((e) => e.id !== id))
       return
@@ -12442,43 +12466,47 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         </div>
       )}
 
-      {/* Sıfırlama onayı */}
-      {resetConfirmOpen && (
-        <div className="fixed inset-0 z-50 bg-[#001334]/45 flex items-center justify-center p-4" onClick={() => setResetConfirmOpen(false)}>
-          <div className="bg-white dark:bg-[#161a21] rounded-3xl px-10 py-9 w-full max-w-md relative shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              onClick={() => setResetConfirmOpen(false)}
-              aria-label="Kapat"
-              className="absolute top-5 right-5 text-neutral-500 dark:text-neutral-400 hover:text-brand"
-            >
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                <line x1="6" y1="6" x2="18" y2="18" />
-                <line x1="18" y1="6" x2="6" y2="18" />
-              </svg>
-            </button>
-            <p className="text-center text-lg text-neutral-700 dark:text-neutral-300 mt-2 mb-8">
-              {t('reset.body')}
-            </p>
-            <div className="flex gap-4 justify-center">
-              <button
-                type="button"
-                onClick={() => setResetConfirmOpen(false)}
-                className="rounded-full border border-neutral-300 dark:border-[#39414f] text-neutral-800 dark:text-neutral-200 font-medium px-10 py-3 hover:bg-neutral-50 dark:hover:bg-[#1b2029]"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={resetAll}
-                className="rounded-full bg-brand text-white font-semibold px-12 py-3 hover:bg-brand-dark"
-              >
-                {t('common.ok')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/*
+        ONAY KUTULARI — üçü de aynı bileşen.
+
+        Tarayıcının kendi penceresi uygulamanın dışında duruyordu; yazı
+        tipi, renk ve düğme dili onun. Hepsi artık uygulamanın parçası
+        (bkz. Onay.jsx): dışına tıklamak, Esc ve "Vazgeç" aynı kapı.
+      */}
+      <Onay
+        acik={resetConfirmOpen}
+        baslik={t('reset.title')}
+        metin={t('reset.body')}
+        onayEtiketi={t('onay.sifirla')}
+        vazgecEtiketi={t('onay.vazgec')}
+        tehlike
+        onOnay={resetAll}
+        onVazgec={() => setResetConfirmOpen(false)}
+      />
+
+      <Onay
+        acik={!!soru}
+        baslik={soru?.baslik}
+        metin={soru?.metin}
+        onayEtiketi={soru?.onayEtiketi}
+        vazgecEtiketi={t('onay.vazgec')}
+        tehlike={!!soru?.tehlike}
+        onOnay={() => {
+          const yap = soru?.yap
+          setSoru(null)
+          yap?.()
+        }}
+        onVazgec={() => setSoru(null)}
+      />
+
+      <Onay
+        acik={!!bilgi}
+        baslik={t('onay.bilgi')}
+        metin={bilgi || ''}
+        onayEtiketi={t('common.ok')}
+        bilgi
+        onVazgec={() => setBilgi(null)}
+      />
     </div>
   )
 }
