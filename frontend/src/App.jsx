@@ -10220,7 +10220,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {hasModel && (
             <div className="mb-1">
-              <h2 className="text-[20px] font-bold tracking-tight m-0 mb-1">{t('ekran.coklu')}</h2>
+              {/*
+                BAŞLIK VE EKLEME TEK SATIRDA.
+
+                Ekleme kutusu kutularla aynı boydaydı ve üç ekranda tek
+                başına bir satır kaplıyordu; ekranlardan daha çok yer
+                tutan bir "artı" anlamsız. Düğme başlığın yanında, normal
+                boyda ve marka renginde.
+              */}
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <h2 className="m-0 text-[20px] font-bold tracking-tight">{t('ekran.coklu')}</h2>
+                <span data-ekle="1" className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={ekranEkle}
+                    disabled={scene === 'ozel' && !koseMutlak}
+                    className="rounded-lg bg-brand px-3 py-1.5 text-[14px] font-semibold text-white transition-opacity enabled:hover:opacity-90 disabled:opacity-40"
+                  >
+                    + {t('ekran.ekle')}
+                  </button>
+                </span>
+              </div>
               {/*
                 KARELER — hangisinin hangisi olduğu tek bakışta.
                 Satıra sığmayan kutu alt satıra geçiyor; "+ Ekran ekle" de
@@ -10255,17 +10275,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     </li>
                   )
                 })}
-                <li data-ekle="1" className="m-0 p-0">
-                  <button
-                    type="button"
-                    onClick={ekranEkle}
-                    disabled={scene === 'ozel' && !koseMutlak}
-                    className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-neutral-300 text-neutral-500 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 dark:border-[#39414f] dark:text-neutral-400"
-                  >
-                    <span className="text-[22px] font-light leading-none">+</span>
-                    <span className="px-1 text-center text-[12px] leading-tight">{t('ekran.ekle')}</span>
-                  </button>
-                </li>
               </ul>
 
               {/*
