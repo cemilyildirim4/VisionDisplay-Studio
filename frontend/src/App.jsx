@@ -8276,9 +8276,44 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (Math.abs(sx - 1) < 1e-4 && Math.abs(sy - 1) < 1e-4) return
     const k = koseMutlak
     if (!Array.isArray(k) || k.length !== 4) return
-    const cx = k.reduce((t, q) => t + q.x, 0) / 4
-    const cy = k.reduce((t, q) => t + q.y, 0) / 4
-    elleKoseyeYaz(k.map((q) => ({ x: cx + (q.x - cx) * sx, y: cy + (q.y - cy) * sy })))
+    /*
+     * ÖLÇEĞİN DAYANAĞI ORTAK KÖŞE.
+     *
+     * Merkezden ölçeklemek komşuyla paylaşılan kenarı da kaydırıyor ve
+     * L birleşimi satır/sütun değişince görünürde ayrılıyordu. Dayanak,
+     * başka bir ekranın köşesine EN YAKIN köşe: ortak köşe yerinde
+     * kalıyor, ekran yalnızca öteki yöne doğru büyüyüp küçülüyor.
+     * Komşu yoksa eskisi gibi merkez.
+     */
+    const komsuKoseler = Object.entries(yerKoseRef.current)
+      .filter(([id]) => id !== String(aktifEkranId))
+      .flatMap(([, v]) => v || [])
+    let dayanak = {
+      x: k.reduce((t, q) => t + q.x, 0) / 4,
+      y: k.reduce((t, q) => t + q.y, 0) / 4,
+    }
+    if (komsuKoseler.length) {
+      let enYakin = Infinity
+      for (const q of k) {
+        for (const r of komsuKoseler) {
+          const u = Math.hypot(q.x - r.x, q.y - r.y)
+          if (u < enYakin) {
+            enYakin = u
+            dayanak = q
+          }
+        }
+      }
+      /* Çok uzaktaysa komşu sayılmıyor. */
+      if (!(enYakin < 40)) {
+        dayanak = {
+          x: k.reduce((t, q) => t + q.x, 0) / 4,
+          y: k.reduce((t, q) => t + q.y, 0) / 4,
+        }
+      }
+    }
+    elleKoseyeYaz(
+      k.map((q) => ({ x: dayanak.x + (q.x - dayanak.x) * sx, y: dayanak.y + (q.y - dayanak.y) * sy })),
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ekranWm, ekranHm])
 
