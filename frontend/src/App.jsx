@@ -4600,6 +4600,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     lYon,
     content,
     contentUrl: contentUrl || null,
+    /* Her ekranın kendi duvarı: ekran değiştirince geri gelsin. */
+    duvarW: width,
+    duvarH: height,
   })
 
   /*
@@ -4777,6 +4780,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
     /* Seçilen ekranın kendi alanı ve alan içindeki yeri de geri geliyor. */
     setAlanKipi(false)
+    /* Duvar da ekranın kendi kaydından. */
+    if (secilen.ayar?.duvarW > 0) setWidth(secilen.ayar.duvarW)
+    if (secilen.ayar?.duvarH > 0) setHeight(secilen.ayar.duvarH)
     setAlanNokta(Array.isArray(secilen.alan) && secilen.alan.length === 4 ? secilen.alan : [])
     setAlanCizgi(Array.isArray(secilen.cizgi) && secilen.cizgi.length === 8 ? secilen.cizgi : [])
     setAlanKonum(secilen.konum || { u: 0.5, v: 0.5 })
@@ -8238,13 +8244,51 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
 
   /*
+   * REFERANS ÖLÇEĞİ — TUVAL PİKSELİNDE.
+   *
+   * Referans kartındaki px/cm fotoğrafın KENDİ çözünürlüğüne ait;
+   * buradaki hesaplar tuval pikselinde yapılıyor. İkisini karıştırmak
+   * ekranı kat kat yanlış büyüklükte koyar.
+   */
+  const olcekTuvalPxCm = (() => {
+    const cm = Number(String(refUzunlukCm).replace(',', '.'))
+    if (refNokta.length !== 2 || !(cm > 0)) return 0
+    const a2 = oranTuvale(refNokta[0])
+    const b2 = oranTuvale(refNokta[1])
+    const o = Math.hypot(b2.x - a2.x, b2.y - a2.y) / cm
+    return Number.isFinite(o) && o > 0 ? o : 0
+  })()
+
+  /*
+   * İŞARETLENEN ALANIN GERÇEK ÖLÇÜSÜ DUVARA YAZILIYOR.
+   *
+   * Kenar uzunlukları referans ölçeğiyle santime çevriliyor; karşılıklı
+   * kenarların ortalaması alınıyor ki perspektif tek bir kenarı
+   * yanıltmasın. Santime yuvarlanıyor: panelde 0,01 m adımla okunuyor.
+   */
+  const alandanDuvar = (kose) => {
+    if (!Array.isArray(kose) || kose.length !== 4 || !(olcekTuvalPxCm > 0)) return
+    const uzak = (a2, b2) => Math.hypot(a2.x - b2.x, a2.y - b2.y)
+    const enPx = (uzak(kose[0], kose[1]) + uzak(kose[3], kose[2])) / 2
+    const boyPx = (uzak(kose[0], kose[3]) + uzak(kose[1], kose[2])) / 2
+    const enM = Math.round((enPx / olcekTuvalPxCm) * 1) / 100
+    const boyM = Math.round((boyPx / olcekTuvalPxCm) * 1) / 100
+    if (enM > 0.05) setWidth(enM)
+    if (boyM > 0.05) setHeight(boyM)
+  }
+
+  /*
    * DÖRT KÖŞE KONDUKTAN SONRA DÜZELTİLEBİLİR.
    *
    * Son köşeye tıklayınca sıradaki ekrana atlanmıyordu ve yanlış konan
    * bir köşe için baştan başlamak gerekiyordu. Köşeler sürüklenebilir
    * tutamak olarak duruyor; kullanıcı beğenince onaylıyor.
    */
-  const yerNoktaDegisti = (tuvalNoktalari) => setYerNokta(tuvalNoktalari)
+  const yerNoktaDegisti = (tuvalNoktalari) => {
+    setYerNokta(tuvalNoktalari)
+    /* Köşeler sürüklenirken duvar ölçüsü de anında güncelleniyor. */
+    if (tuvalNoktalari.length === 4) alandanDuvar(koseSirala(tuvalNoktalari))
+  }
 
   /*
    * BİR EKRANI YERLEŞTİRMEYE YA DA DÜZENLEMEYE AL.
@@ -8270,21 +8314,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   const yerEkraniOnayla = () => {
     if (yerNokta.length !== 4 || !yerEkran) return
-  /*
-   * REFERANS ÖLÇEĞİ — TUVAL PİKSELİNDE.
-   *
-   * Referans kartındaki px/cm fotoğrafın KENDİ çözünürlüğüne ait;
-   * buradaki hesaplar tuval pikselinde yapılıyor. İkisini karıştırmak
-   * ekranı kat kat yanlış büyüklükte koyar.
-   */
-  const olcekTuvalPxCm = (() => {
-    const cm = Number(String(refUzunlukCm).replace(',', '.'))
-    if (refNokta.length !== 2 || !(cm > 0)) return 0
-    const a2 = oranTuvale(refNokta[0])
-    const b2 = oranTuvale(refNokta[1])
-    const o = Math.hypot(b2.x - a2.x, b2.y - a2.y) / cm
-    return Number.isFinite(o) && o > 0 ? o : 0
-  })()
 
   /*
    * TIKLANAN DÖRTGEN PERSPEKTİFİ VERİYOR, ÖLÇÜYÜ DEĞİL.
@@ -8313,6 +8342,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return kose.map((q) => ({ x: cx + (q.x - cx) * sx, y: cy + (q.y - cy) * sy }))
   }
 
+
+
+    /* Alanın kendisi duvar; tasarım onun içine kendi ölçüsüyle oturuyor. */
+    alandanDuvar(koseSirala(yerNokta))
     const duzgun = gercegeOlcekle(koseSirala(yerNokta), yerEkran.wm, yerEkran.hm)
     yerKoseRef.current[yerEkran.id] = duzgun
     dortgeniYaz(yerEkran.id, duzgun)
