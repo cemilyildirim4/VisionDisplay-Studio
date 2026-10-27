@@ -4612,7 +4612,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * üretilmediğinde o ekran listeden sessizce düşüyordu — akordeonda
      * bir satıra tıklamak bütün bir ekranı siliyor demekti.
      */
-    const yerliKose = Array.isArray(koseMutlak) && koseMutlak.length === 4 ? koseMutlak.map(tuvalOrana) : null
+    /*
+     * Çizimden okunamıyorsa yerleştirmede saklanan köşeler kullanılıyor:
+     * ekran yer değiştirirken dörtgenini kaybetmiyor.
+     */
+    const hamKose =
+      Array.isArray(koseMutlak) && koseMutlak.length === 4
+        ? koseMutlak
+        : Array.isArray(yerKoseRef.current[aktifEkranId]) && yerKoseRef.current[aktifEkranId].length === 4
+          ? yerKoseRef.current[aktifEkranId]
+          : null
+    const yerliKose = hamKose ? hamKose.map(tuvalOrana) : null
     const oran =
       yerliKose && !yerliKose.some((q) => !Number.isFinite(q?.x) || !Number.isFinite(q?.y)) ? yerliKose : null
     if (scene !== 'ozel' || !oran) {
@@ -4777,7 +4787,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * Önceki ekranın köşeleri kalırsa yeri belli olmayan ekran yerleşmiş
      * gibi görünüyor ve bölünmüş içerikte kendine dilim alıyordu.
      */
-    if (Array.isArray(secilen.oran) && secilen.oran.length === 4) elleKoseyeYaz(secilen.oran.map(oranTuvale))
+    /*
+     * Dörtgen önce kayıttan, o yoksa yerleştirmede saklanan köşelerden.
+     * Böylece arada bir kayıt güncellemesi kaçsa bile ekran yerini
+     * kaybetmiyor.
+     */
+    if (Array.isArray(secilen.oran) && secilen.oran.length === 4) {
+      elleKoseyeYaz(secilen.oran.map(oranTuvale))
+    } else if (Array.isArray(yerKoseRef.current[id]) && yerKoseRef.current[id].length === 4) {
+      elleKoseyeYaz(yerKoseRef.current[id])
+    }
     else setElleKose(null)
     setAktifEkranId(secilen.id)
     setAktifSira(secilen.sira || 1)
@@ -4824,16 +4843,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return
     }
     setDuzenlemede(true)
-    if (Array.isArray(secilen.alan) && secilen.alan.length === 4) {
-      setRefKipi(false)
-      setSihirbazAdim(4)
-    } else if (refPxCm || refDuzlem) {
-      setRefKipi(false)
-      setAlanKipi(true)
-      setSihirbazAdim(0)
-    } else {
-      setSihirbazAdim(1)
-    }
+    /*
+     * TIKLAMAK YALNIZCA SEÇİYOR.
+     *
+     * Burada eskiden "kayıtta alan yoksa dört köşeyi yeniden işaretlet"
+     * vardı. Yeni yolda ekranın yeri dört köşesinde duruyor, ayrı bir
+     * alan kaydı yok; o yüzden her tıklama ölçümü baştan istiyor ve
+     * tasarım gizlendiği için ekran kayboluyordu.
+     *
+     * Ölçek yoksa (referans hiç alınmamış) tek yapılacak iş o: referans
+     * adımı açılıyor. Varsa hiçbir şey sorulmuyor.
+     */
+    setRefKipi(false)
+    setAlanKipi(false)
+    setSihirbazAdim(refPxCm || refDuzlem ? 0 : 1)
   }
 
   /*
