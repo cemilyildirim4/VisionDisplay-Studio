@@ -8235,7 +8235,50 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   const yerEkraniOnayla = () => {
     if (yerNokta.length !== 4 || !yerEkran) return
-    const duzgun = koseSirala(yerNokta)
+  /*
+   * REFERANS ÖLÇEĞİ — TUVAL PİKSELİNDE.
+   *
+   * Referans kartındaki px/cm fotoğrafın KENDİ çözünürlüğüne ait;
+   * buradaki hesaplar tuval pikselinde yapılıyor. İkisini karıştırmak
+   * ekranı kat kat yanlış büyüklükte koyar.
+   */
+  const olcekTuvalPxCm = (() => {
+    const cm = Number(String(refUzunlukCm).replace(',', '.'))
+    if (refNokta.length !== 2 || !(cm > 0)) return 0
+    const a2 = oranTuvale(refNokta[0])
+    const b2 = oranTuvale(refNokta[1])
+    const o = Math.hypot(b2.x - a2.x, b2.y - a2.y) / cm
+    return Number.isFinite(o) && o > 0 ? o : 0
+  })()
+
+  /*
+   * TIKLANAN DÖRTGEN PERSPEKTİFİ VERİYOR, ÖLÇÜYÜ DEĞİL.
+   *
+   * Kullanıcı dört köşeye tıklarken yüzeyin AÇISINI gösteriyor; ekranın
+   * büyüklüğü ise panelde kurulan gerçek ölçüden (sütun × kabin) ve
+   * referans ölçeğinden geliyor. İkisi ayrılmazsa 0,96 m lik bir ekran
+   * fotoğrafta kullanıcının çizdiği kutu kadar — yani çoğu zaman kat kat
+   * büyük — çiziliyordu.
+   *
+   * Dörtgen merkezinden ölçekleniyor: şekli ve eğimi korunuyor, yalnızca
+   * boyu gerçeğe oturuyor.
+   */
+  const gercegeOlcekle = (kose, enM, boyM) => {
+    if (!Array.isArray(kose) || kose.length !== 4) return kose
+    if (!(olcekTuvalPxCm > 0) || !(enM > 0) || !(boyM > 0)) return kose
+    const uzak = (a2, b2) => Math.hypot(a2.x - b2.x, a2.y - b2.y)
+    const enPx = (uzak(kose[0], kose[1]) + uzak(kose[3], kose[2])) / 2
+    const boyPx = (uzak(kose[0], kose[3]) + uzak(kose[1], kose[2])) / 2
+    if (!(enPx > 1) || !(boyPx > 1)) return kose
+    const sx = (enM * 100 * olcekTuvalPxCm) / enPx
+    const sy = (boyM * 100 * olcekTuvalPxCm) / boyPx
+    if (!(sx > 0) || !(sy > 0)) return kose
+    const cx = kose.reduce((t2, q) => t2 + q.x, 0) / 4
+    const cy = kose.reduce((t2, q) => t2 + q.y, 0) / 4
+    return kose.map((q) => ({ x: cx + (q.x - cx) * sx, y: cy + (q.y - cy) * sy }))
+  }
+
+    const duzgun = gercegeOlcekle(koseSirala(yerNokta), yerEkran.wm, yerEkran.hm)
     yerKoseRef.current[yerEkran.id] = duzgun
     dortgeniYaz(yerEkran.id, duzgun)
     const yeni = yerlesmisIdler.includes(yerEkran.id) ? yerlesmisIdler : [...yerlesmisIdler, yerEkran.id]
