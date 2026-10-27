@@ -23,6 +23,7 @@
  */
 
 import { fotoYerlesim, govdeOlculeri } from './sahneler.js'
+import KioskGovde from './KioskGovde.jsx'
 import { yonDonusumu } from './hooks/useYon.js'
 import DuvarDilim from './DuvarDilim.jsx'
 import DuvarKose from './DuvarKose.jsx'
@@ -104,7 +105,11 @@ export default function PanoFoto({
    * KIOSK TİPİ: duvar | dokunmatik | totem | masa | disMekan
    * Ürün ailesiyle aynı adlar; duvar dışındaki tipler yere basıyor.
    */
-  kioskTipi = 'duvar',
+  /*
+   * SEÇİLEN KİOSK MODELİ (bkz. kioskModelleri.js). Eski "kioskTipi"
+   * yerine geçti; tip adları katalogdaki ürünlerle örtüşmüyordu.
+   */
+  kioskModel = null,
 }) {
   const yer = fotoYerlesim(sahne, tuvalW, tuvalH)
   if (!yer) return null
@@ -207,18 +212,15 @@ export default function PanoFoto({
   })()
 
   /*
-   * TİPE GÖRE GÖVDE YÜKSEKLİKLERİ (metre).
-   *  • dokunmatik kabin: 0,95 m — işlem yüzeyi el hizasında olsun diye.
-   *  • dış mekân kabini: 0,80 m — kasa daha alçak, ağırlık merkezi aşağıda.
-   *  • masa ayağı: 0,75 m — standart masa yüksekliği.
-   * Ekran zaten kendi yüksekliğinde çizildiği için bunlar onun ALTINA
-   * ekleniyor; toplam yükseklik gerçeğe yakın kalıyor.
+   * ZEMİN, SEÇİLEN MODELİN KENDİ ORANINDAN.
+   *
+   * Eskiden gövde yükseklikleri elle yazılmış metrelerdi (0,95 / 0,80 /
+   * 0,75) ve hiçbiri katalogdaki bir ürünün ölçüsü değildi. Model
+   * tablosundaki taban değeri ekranın alt kenarından kaç ekran boyu aşağıda
+   * durduğunu söylüyor; gerçek santim ölçüsü geldiğinde yalnızca o
+   * tablo değişecek.
    */
-  const kabinM = kioskTipi === 'dokunmatik' ? 0.95 : kioskTipi === 'disMekan' ? 0.8 : kioskTipi === 'totem' ? 0.35 : 0
-  const kabinH = kabinM * pxPerM
-  const masaAyakH = kioskTipi === 'masa' ? 0.75 * pxPerM : 0
-
-  const tabanY = ekranAlt + kabinH + masaAyakH + kaideH
+  const tabanY = ekranAlt + (kioskModel?.zemin ? (kioskModel.taban || 0) * ekranHpx : 0)
   const metal = 'linear-gradient(180deg, #3a3f47 0%, #23272d 42%, #14171b 100%)'
   const yanDestek = ekranWpx / pxPerM > 2.5
 
@@ -449,141 +451,31 @@ export default function PanoFoto({
           />
 
           {/*
-            KIOSK TİPLERİ — ürün ailesiyle aynı adlar.
+            KİOSK GÖVDESİ — KATALOGDAKİ MODEL.
 
-              • dokunmatik — ekranın altında işlem/klavye kabini; sipariş,
-                bilet ve bilgi kioskları böyle. Kabin yüksekliği gerçek ölçüden
-                (0,95 m) hesaplanıyor.
-              • totem      — ekranı içine alan, zemine kadar inen dik kolon.
-              • masa       — yatay konumlanan masa; ekranın altında tabla eteği
-                ve iki yanda ayak. Masa yüksekliği 0,75 m.
-              • disMekan   — kalın koruma kasası + üstte güneşlik, sağlam ayak.
-              • duvar      — gövde yok; montaj ya da askı.
+            Burada elle çizilmiş beş tip vardı (dokunmatik, totem, masa,
+            dış mekân, duvar) ve hiçbiri katalogdaki bir ürüne
+            benzemiyordu: müşteriye giden teklifte olmayan bir ürünün
+            resmi çıkıyordu. Gövde artık kioskModelleri.js tablosundan
+            geliyor; şekil, oran ve ekranın gövdedeki yeri katalogdaki
+            görselden.
 
-            Ölçüler metreden geliyor (pxPerM), yani mekânın ölçeğiyle birlikte
-            büyüyüp küçülüyor. Zemine oturma yalnızca yere basan tiplerde.
+            ÖLÇEK EKRANDAN. Gerçek santim ölçüsü katalogda yok; gövde
+            ekranın kendi ölçüsüne göre büyüyüp küçülüyor (bkz.
+            kioskModelleri.js). Ölçüler geldiğinde tabloya yazılacak.
           */}
-          {(kioskTipi === 'dokunmatik' || kioskTipi === 'disMekan') && (
-            <>
-              {/* Gövde kabini: ekranın altında, ekranla aynı genişlikte */}
-              <div
-                style={{
-                  position: 'absolute',
-                  left: ayakX - ekranWpx * (kioskTipi === 'disMekan' ? 0.34 : 0.42),
-                  top: ekranAlt,
-                  width: ekranWpx * (kioskTipi === 'disMekan' ? 0.68 : 0.84),
-                  height: Math.max(6, kabinH),
-                  background: metal,
-                  borderRadius: Math.max(2, kasa * 0.4),
-                }}
-              />
-              {/* Dokunmatikte öne eğik işlem yüzeyi — kabinin üst kısmında */}
-              {kioskTipi === 'dokunmatik' && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: ayakX - ekranWpx * 0.32,
-                    top: ekranAlt + Math.max(3, kabinH * 0.12),
-                    width: ekranWpx * 0.64,
-                    height: Math.max(3, kabinH * 0.22),
-                    background: 'linear-gradient(180deg, #4a515b 0%, #2b3038 100%)',
-                    borderRadius: Math.max(1, kasa * 0.3),
-                    opacity: 0.95,
-                  }}
-                />
-              )}
-              {/* Dış mekânda üstte güneşlik/yağmurluk */}
-              {kioskTipi === 'disMekan' && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: tuvalW / 2 - ekranWpx / 2 - kasa * 2.2,
-                    top: tuvalH / 2 - ekranHpx / 2 - kasa * 2.6,
-                    width: ekranWpx + kasa * 4.4,
-                    height: Math.max(3, kasa * 1.6),
-                    background: 'linear-gradient(180deg, #454b55 0%, #22262c 100%)',
-                    borderRadius: Math.max(1, kasa * 0.4),
-                  }}
-                />
-              )}
-            </>
-          )}
-
-          {/* --- totem: ekranı içine alan dik kolon --- */}
-          {kioskTipi === 'totem' && (
+          {kioskModel && (
             <div
               style={{
                 position: 'absolute',
-                left: tuvalW / 2 - (ekranWpx * 1.18) / 2,
-                top: tuvalH / 2 - ekranHpx / 2 - kasa * 2.4,
-                width: ekranWpx * 1.18,
-                height: ekranHpx + kasa * 2.4 + kabinH,
-                background: metal,
-                borderRadius: Math.max(3, kasa * 0.9),
-                zIndex: -1,
+                left: tuvalW / 2 - ekranWpx / 2,
+                top: ekranAlt - ekranHpx,
+                width: ekranWpx,
+                height: ekranHpx,
               }}
-            />
-          )}
-
-          {/* --- masa tipi: tabla eteği ve iki yanda ayak --- */}
-          {kioskTipi === 'masa' && (
-            <>
-              <div
-                style={{
-                  position: 'absolute',
-                  left: ayakX - ekranWpx * 0.54,
-                  top: ekranAlt,
-                  width: ekranWpx * 1.08,
-                  height: Math.max(4, kasa * 1.4),
-                  background: 'linear-gradient(180deg, #3d434c 0%, #23272d 100%)',
-                  borderRadius: Math.max(2, kasa * 0.4),
-                }}
-              />
-              {[-0.42, 0.42].map((k) => (
-                <div
-                  key={k}
-                  style={{
-                    position: 'absolute',
-                    left: ayakX + k * ekranWpx - direkW * 0.3,
-                    top: ekranAlt + Math.max(4, kasa * 1.4),
-                    width: direkW * 0.6,
-                    height: Math.max(6, masaAyakH),
-                    background: metal,
-                  }}
-                />
-              ))}
-            </>
-          )}
-
-          {/* --- yere basan tiplerde kaide --- */}
-          {(kioskTipi === 'dokunmatik' || kioskTipi === 'totem' || kioskTipi === 'disMekan') && (
-            <div
-              style={{
-                position: 'absolute',
-                left: ayakX - (kioskTipi === 'totem' ? 0.66 : 0.5) * ekranWpx,
-                top: ekranAlt + kabinH,
-                width: (kioskTipi === 'totem' ? 1.32 : 1) * ekranWpx,
-                height: kaideH,
-                background: 'linear-gradient(180deg, #2a2e34 0%, #171a1e 60%, #0d0f12 100%)',
-                borderRadius: Math.max(1, kaideH * 0.15),
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
-              }}
-            />
-          )}
-
-          {/* --- zemin golgesi: yalnızca yere basan tiplerde --- */}
-          {kioskTipi !== 'duvar' && (
-          <div
-            style={{
-              position: 'absolute',
-              left: ayakX - ekranWpx * 0.62,
-              top: tabanY - Math.max(4, ekranWpx * 0.025),
-              width: ekranWpx * 1.24,
-              height: Math.max(8, ekranWpx * 0.05),
-              background:
-                'radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0) 74%)',
-            }}
-          />
+            >
+              <KioskGovde model={kioskModel} ekranW={ekranWpx} ekranH={ekranHpx} />
+            </div>
           )}
         </div>
       )}

@@ -254,6 +254,8 @@ export default function ExportModal({ open, onClose, summary }) {
       [t('exp.pixels'), `${fmt(pikselW)} x ${fmt(pikselH)}`],
       [t('sp.totalCabinets'), toplamKabin],
       [t('sp.area'), `${fmt(toplamAlan, 2)} m2`],
+      /* Kiosk gövdesi seçilmediyse satır yok. */
+      ...(summary.kioskKod ? [[t('kiosk.model'), summary.kioskKod]] : []),
       /* Kalınlık bilgisi olmayan modelde satır yok: tahmin edilmiyor. */
       ...(summary.model?.depthMm > 0 ? [[t('sp.depth'), `${fmt(summary.model.depthMm)} mm`]] : []),
       [t('sp.weight'), `${fmt(agirlik, 1)} kg`],

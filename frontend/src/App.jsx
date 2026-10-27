@@ -33,6 +33,8 @@ import { durusDortgeni, faredenDurus, durusaOturt, kutuGovdesi } from './durusKu
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
+import { KIOSK_GRUPLARI, KIOSK_MODELLERI, kioskModeli } from './kioskModelleri.js'
+import { KioskSimge } from './KioskGovde.jsx'
 import Onay from './Onay.jsx'
 import LKoseEkran from './LKoseEkran.jsx'
 import EkEkranlar from './EkEkranlar.jsx'
@@ -1427,7 +1429,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Varsayılan duvara monte — ekranların çoğu öyle kuruluyor ve gövde
    * çizmemek en az varsayım içeren seçenek.
    */
-  const [kioskTipi, setKioskTipi] = useState('duvar')
+  /*
+   * SEÇİLİ KİOSK MODELİ — katalogdaki ürün kodu.
+   *
+   * Eskiden beş uydurma "tip" vardı (dokunmatik, totem, masa, dış
+   * mekân, duvar); hiçbiri katalogdaki bir ürün değildi. Varsayılan en
+   * yalın totem.
+   */
+  const [kioskKod, setKioskKod] = useState('MB-T-300')
+  const kioskModel = kioskModeli(kioskKod)
   /*
    * KİOSK GÖVDESİ ÇİZİLSİN Mİ?
    *
@@ -1438,7 +1448,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Varsayılan: gövde YOK — ekranların çoğu duvara/panoya monteli. */
   const [kioskVar, setKioskVar] = useState(false)
   /* Yere basan tipler: dikey yerleşimde zemine oturma bunlara uygulanıyor. */
-  const ayakVar = kioskTipi !== 'duvar'
+  const ayakVar = !!kioskModel?.zemin
   /*
    * İZLEME MESAFESİ — mekânda ekrana kaç metreden bakıldığı.
    *
@@ -9310,7 +9320,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               yakinlik={sahneYakinlik}
               kayma={mekanKayma}
               ozelSahne={ozelSahne}
-              kioskTipi={kioskTipi}
+              kioskModel={kioskVar ? kioskModel : null}
             />
           )}
 
@@ -12094,34 +12104,56 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         ))}
                       </div>
                     </div>
+                    {/*
+                      MODEL KARTLARI — katalogdaki ürünler.
+
+                      Eskiden beş satır yazı vardı ve hiçbiri gerçek bir
+                      ürün değildi; kullanıcı neyi seçtiğini ancak mekâna
+                      bakınca görüyordu. Kartta modelin kendi çizimi ve
+                      kodu duruyor, çizim de mekândakiyle aynı tablodan
+                      geliyor (bkz. kioskModelleri.js).
+                    */}
                     {kioskVar && (
-                      <div className="text-[14px] text-neutral-600 dark:text-neutral-400 mb-1">
-                        {t('scene.kioskType')}
+                      <div className="mt-1">
+                        <div className="mb-1 text-[14px] text-neutral-600 dark:text-neutral-400">
+                          {t('kiosk.model')}
+                        </div>
+                        {KIOSK_GRUPLARI.map((g) => {
+                          const uyeler = KIOSK_MODELLERI.filter((m) => m.grup === g.anahtar)
+                          if (!uyeler.length) return null
+                          return (
+                            <div key={g.anahtar} className="mb-2">
+                              <div className="mb-1 text-[12.5px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
+                                {t(g.etiket)}
+                              </div>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {uyeler.map((m) => (
+                                  <button
+                                    key={m.kod}
+                                    type="button"
+                                    onClick={() => setKioskKod(m.kod)}
+                                    title={m.kod}
+                                    className={`flex flex-col items-center gap-1 rounded-lg border p-1.5 transition-colors ${
+                                      kioskKod === m.kod
+                                        ? 'border-2 border-brand bg-brand/5 dark:bg-brand/10'
+                                        : 'border-neutral-200 hover:border-brand dark:border-[#2c333f]'
+                                    }`}
+                                  >
+                                    <KioskSimge model={m} boy={46} />
+                                    <span className="w-full truncate text-center text-[11.5px] font-semibold tabular-nums text-neutral-700 dark:text-neutral-200">
+                                      {m.kod}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {/* Ölçü uydurulmuyor; durum açıkça yazıyor. */}
+                        <p className="m-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
+                          {t('kiosk.olcuNotu')}
+                        </p>
                       </div>
-                    )}
-                    {kioskVar && (
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {[
-                        ['duvar', 'scene.kioskWall'],
-                        ['dokunmatik', 'scene.kioskTouch'],
-                        ['totem', 'scene.kioskTotem'],
-                        ['masa', 'scene.kioskTable'],
-                        ['disMekan', 'scene.kioskOutdoor'],
-                      ].map(([tip, anahtar]) => (
-                        <button
-                          key={tip}
-                          type="button"
-                          onClick={() => setKioskTipi(tip)}
-                          className={`py-1.5 px-2 rounded-lg text-[13px] font-medium border transition-colors ${
-                            kioskTipi === tip
-                              ? 'btn-selected border-transparent'
-                              : 'border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand'
-                          }`}
-                        >
-                          {t(anahtar)}
-                        </button>
-                      ))}
-                    </div>
                     )}
                   </div>
                 )}
@@ -12218,6 +12250,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         screenType={screenType}
         isVideoWall={isVideoWall}
         ekranlar={raporEkranlari}
+        /* Kiosk gövdesi seçiliyse hangi model: teklifle aynı kod. */
+        kioskKod={kioskVar && surukleAktif ? kioskKod : null}
         toplam={tasarimToplami}
         /* Sol panelden taşındı: donanım seçeneği, tasarımın sayılarıyla birlikte. */
         onMiniPc={setHasMiniPc}
@@ -12329,6 +12363,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           screens: raporEkranlari,
           // Teknik özellik sayfası da aynı PDF'in içine giriyor; o sayfanın
           // ihtiyaç duyduğu iki alan yalnızca burada mevcut.
+          /* Kiosk gövdesi seçiliyse hangi model: teklifte ürün kodu yazsın. */
+          kioskKod: kioskVar && surukleAktif ? kioskKod : null,
           sboxRedundancy,
           hasMiniPc,
           isVideoWall,

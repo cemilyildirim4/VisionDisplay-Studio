@@ -53,7 +53,8 @@ export default function Scene({
   kayma = null,
   /* Kullanicinin kendi fotografi — sahneler.js listesinde yok, disaridan gelir */
   ozelSahne = null,
-  kioskTipi = 'duvar',
+  /* Seçilen kiosk modeli (bkz. kioskModelleri.js); yoksa gövde çizilmiyor. */
+  kioskModel = null,
   duvarWmEtiket = 0,
   duvarHmEtiket = 0,
 }) {
@@ -82,7 +83,7 @@ export default function Scene({
         cizimOlcek={pxPerM}
         olcuGoster={olcuGoster}
         kayma={kayma}
-        kioskTipi={kioskTipi}
+        kioskModel={kioskModel}
         duvarWmEtiket={duvarWmEtiket}
         duvarHmEtiket={duvarHmEtiket}
       />

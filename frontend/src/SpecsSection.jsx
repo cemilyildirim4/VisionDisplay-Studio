@@ -123,7 +123,7 @@ function Izgara({ children }) {
 /* ------------------------------------------------------------------ içerik */
 
 /** Pop-up içeriği (Teknik Özellikler + Bileşenler tek ızgarada). */
-function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null, ekranlar = [], toplam = null, onMiniPc = null }) {
+function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenType = 'flat', isVideoWall = false, hasMiniPc = false, preview = null, matchError = null, ekranlar = [], toplam = null, onMiniPc = null, kioskKod = null }) {
   const { t } = useLang()
   const { isAdmin } = useSession()
   const has = !!model
@@ -337,6 +337,8 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
         <Kart baslik={t('sp.screenSpecs')} genis>
           <Veri label={ekranBasina(t('sp.lengthHeight'))} value={has ? `${fmt(s.W, 3)} x ${fmt(s.H, 3)} m` : DASH} />
           <Veri label={t('sp.area')} value={has ? `${fmt(s.area, 3)} m²` : DASH} />
+          {/* Kiosk gövdesi seçilmediyse satır yok. */}
+          {kioskKod && <Veri label={t('kiosk.model')} value={kioskKod} />}
           {/* Kalınlık bilgisi olmayan modelde satır yok: tahmin edilmiyor. */}
           {has && s.depthMm > 0 && (
             <Veri label={t('sp.depth')} value={`${fmt(s.depthMm)} mm`} />
