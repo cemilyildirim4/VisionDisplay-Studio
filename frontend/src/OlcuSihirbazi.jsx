@@ -116,6 +116,9 @@ function SihirbazKart({
   /* Sıradaki ekranın yönergesi ve konan köşe sayısı — tuvalde değil burada. */
   yerYonerge = '',
   yerSayac = '',
+  /* Her ekran için bir düğme: yerleştir ya da düzenle. */
+  yerListe = [],
+  onYerSec = null,
   /* Alan zaten işaretliyse yeniden işaretlemeden yerleştirmeye dönülüyor. */
   onYerlesim = null,
   /* İKİNCİ REFERANS — odak tahmin ediliyorsa ölçümü kesinleştiriyor. */
@@ -815,6 +818,31 @@ function SihirbazKart({
               )}
               {yerSayac && (
                 <p className={`${kucuk} tabular-nums text-neutral-500 dark:text-neutral-400`}>{yerSayac}</p>
+              )}
+              {/*
+                EKRAN LİSTESİ — hangi ekranın yerleştiği tek bakışta.
+                Yerleşmiş olana basmak köşelerini düzeltmeye açıyor.
+              */}
+              {yerListe.length > 0 && onYerSec && (
+                <div className="mt-2 flex flex-col gap-1">
+                  {yerListe.map((x) => (
+                    <button
+                      key={x.id}
+                      type="button"
+                      onClick={() => onYerSec(x.sira)}
+                      className={`w-full rounded-lg px-3 py-2 text-left text-[14px] font-medium transition-colors ${
+                        x.aktif
+                          ? 'border-2 border-brand bg-brand/5 text-neutral-800 dark:bg-brand/10 dark:text-neutral-100'
+                          : 'border border-neutral-200 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400'
+                      }`}
+                    >
+                      {(x.yerlesti ? t('yer.ekraniDuzenle') : t('yer.ekraniYerlestir')).replace(
+                        '{0}',
+                        String(x.sira),
+                      )}
+                    </button>
+                  ))}
+                </div>
               )}
               {onYerOnayla && (
                 <button

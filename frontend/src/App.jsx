@@ -2499,6 +2499,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const sol = e.lSolCols ? Math.max(1, Math.min(c - 1, e.lSolCols)) : null
       return {
         id: e.id,
+        /* Sıra numarası: panelde ve yerleştirme listesinde aynı numara. */
+        sira: e.sira,
         cols: c,
         rows: r,
         type: e.screenType || 'flat',
@@ -8244,6 +8246,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const yerNoktaDegisti = (tuvalNoktalari) => setYerNokta(tuvalNoktalari)
 
+  /*
+   * BİR EKRANI YERLEŞTİRMEYE YA DA DÜZENLEMEYE AL.
+   *
+   * Yerleşmiş ekranda mevcut dört köşe tutamak olarak geliyor; kullanıcı
+   * sürükleyip onaylıyor. Yerleşmemişte boş başlıyor.
+   */
+  const yerEkraniSec = (sira) => {
+    const i = ekranParcalari.findIndex((x) => x.sira === sira)
+    if (i < 0) return
+    const id = ekranParcalari[i].id
+    const mevcut =
+      id === aktifEkranId
+        ? koseMutlak
+        : (() => {
+            const k = sabitEkranlar.find((e) => e.id === id)?.oran
+            return Array.isArray(k) && k.length === 4 ? k.map(oranTuvale) : null
+          })()
+    setYerNokta(Array.isArray(mevcut) && mevcut.length === 4 ? mevcut : [])
+    setYerSira(i)
+    setSihirbazAdim(3)
+  }
+
   const yerEkraniOnayla = () => {
     if (yerNokta.length !== 4 || !yerEkran) return
   /*
@@ -10955,6 +10979,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             yerOnayHazir={yerNokta.length === 4}
                             yerYonerge={yerAktif ? t('yer.ekran').replace('{0}', String(yerEkran?.sira ?? yerSira + 1)) : ''}
                             yerSayac={yerAktif ? t('yer.kose').replace('{0}', String(yerNokta.length)) : ''}
+                            yerListe={ekranParcalari.map((x, i) => ({
+                              id: x.id,
+                              sira: x.sira,
+                              yerlesti: yerlesmisIdler.includes(x.id),
+                              aktif: yerSira === i,
+                            }))}
+                            onYerSec={yerEkraniSec}
                             onIsaretle={() => {
                               setRefNokta([])
                               setRefKipi(true)
