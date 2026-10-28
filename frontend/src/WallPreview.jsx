@@ -2061,18 +2061,15 @@ export default function WallPreview({
                   Sahne zaten mesafe/ölçek hissini kendi veriyor; teknik
                   çizim öğeleri gerçekçi görünümü bozuyor. */}
               {/*
-                ÇİZGİ GERÇEK ÖLÇEKTE.
+                ÇİZGİ SABİT BOYDA, YALNIZCA SAYI DEĞİŞİYOR.
 
-                Uzunluğu sabitti (98 piksel) ve yalnızca yazı değişiyordu:
-                4 metre ile 12 metre aynı boyda görünüyordu. Artık boyu
-                mesafenin piksel karşılığı. Çok uzun mesafelerde tuvali
-                taşırmasın diye bir üst sınır var; o noktada çizgi
-                kısalıyor ama yazı gerçek değeri söylemeye devam ediyor.
+                Boyu bir süre gerçek ölçeğe bağlanmıştı; uzun mesafelerde
+                çizgi tuvalin dışına taşıp çalışma alanının altındaki
+                çubuğun üstüne biniyordu. Mesafeyi zaten yazı söylüyor,
+                çizgi yalnızca yönü gösteriyor.
               */}
               {!sahneVar && (() => {
-                const pxPerM = wallWm > 0 ? wallW / wallWm : 0
-                const ham = pxPerM > 0 ? viewDist * pxPerM : 0
-                const boy = Math.max(60, Math.min(420, ham))
+                const boy = 98
                 const aci = (31 * Math.PI) / 180
                 const ux = 6 + boy * Math.cos(aci)
                 const uy = boy * Math.sin(aci)
