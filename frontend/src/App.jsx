@@ -9047,41 +9047,50 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       {/* Masaüstü: tek ekran yüksekliği. Mobil: içerik alt alta dizilip sayfa kayar. */}
       <div className="yatay-sayfa min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
       {/* Başlık çubuğu — kurumsal logo + sayfa adı */}
-      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-6 py-3 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-6 py-2.5 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         {/*
           ALT BAŞLIK KALDIRILDI.
 
           Antette üç satır vardı ve üçü de kırpılıyordu. Slogan bilgi
           taşımıyor; kalkınca kalan iki satıra yetecek yer kalıyor.
         */}
-        <BrandMark title={t('app.title')} />
-
         {/*
-          MODEL ÇİPİ — hangi modelle çalışıldığı her ekranda görünsün.
-          Sol paneldeki kart en uzun bloktu ama tasarım boyunca bir kez
-          dokunuluyor. Seçilmemişken vurgulu: yapılacak ilk iş o.
+          SOL BLOK — antet ve model çipi alt alta.
+
+          Çip başlığın YANINDAYDI: dokuz denetimlik sağ şeride yer
+          kalmıyor, kullanıcı menüsü ikinci satıra kayıyordu. Çip
+          başlığın altına inince sağ şerit tek sırada kalıyor.
         */}
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          title={seriAdi(selectedModel?.series?.name, t) || t('model.heading')}
-          className={`shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors ${
-            hasModel
-              ? 'border border-neutral-300 text-neutral-700 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-200'
-              : 'bg-brand text-white hover:opacity-90'
-          }`}
-        >
-          <span>{hasModel ? selectedModel.modelCode : t('model.select')}</span>
-          {/* Tip etiketi ve ok yatay telefonda gizli: ad kesilmesin. */}
-          {hasModel && (
-            <span className="yatay-gizle inline-flex items-center gap-1.5">
-              <ProductTypeBadge productType={selectedModel.productType} />
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </span>
-          )}
-        </button>
+        <div className="flex shrink-0 flex-col items-start gap-1.5">
+          <BrandMark title={t('app.title')} />
+          {/*
+            MODEL ÇİPİ — hangi modelle çalışıldığı her ekranda görünsün.
+            Sol paneldeki kart en uzun bloktu ama tasarım boyunca bir kez
+            dokunuluyor. Seçilmemişken vurgulu: yapılacak ilk iş o.
+          */}
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            title={seriAdi(selectedModel?.series?.name, t) || t('model.heading')}
+            className={`w-auto sm:w-full shrink-0 inline-flex items-center justify-between gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-[12.5px] font-semibold transition-colors ${
+              hasModel
+                ? 'border border-neutral-300 text-neutral-700 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-200'
+                : 'bg-brand text-white hover:opacity-90'
+            }`}
+          >
+            <span>{hasModel ? selectedModel.modelCode : t('model.select')}</span>
+            {/* Tip etiketi ve ok yatay telefonda gizli: ad kesilmesin. */}
+            {hasModel && (
+              <span className="yatay-gizle inline-flex items-center gap-1.5">
+                <ProductTypeBadge productType={selectedModel.productType} />
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </span>
+            )}
+          </button>
+        </div>
+
 
         {/*
           Araç düğmeleri başlık çubuğunda. Önce solda dikey bir şeritteydi ama
@@ -9099,7 +9108,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           her şeyi (antet dâhil) sıfıra eziyordu. Düğmelerin kendisi
           değişmiyor — yalnızca dar masaüstünde ikinci satıra geçiyorlar.
         */}
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-start sm:justify-end">
+        <div className="flex min-w-0 flex-1 flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-start sm:justify-end">
 <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('tool.reset')} onClick={() => hasModel && setResetConfirmOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />
@@ -13236,7 +13245,7 @@ function IconButton({ children, label, active, onClick, sadeceIkon = false, pasi
       disabled={active === false}
       title={active === false && pasifNot ? pasifNot : label}
       aria-label={label}
-      className={`arac-dugme h-9 rounded-full px-2.5 lg:pl-2.5 lg:pr-3 inline-flex items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap transition-colors shrink-0 ${
+      className={`arac-dugme h-9 rounded-full px-2.5 xl:pl-2.5 xl:pr-3 inline-flex items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap transition-colors shrink-0 ${
         active
           ? 'btn-selected'
           : 'border border-neutral-300 dark:border-[#39414f] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
@@ -13244,7 +13253,8 @@ function IconButton({ children, label, active, onClick, sadeceIkon = false, pasi
     >
       <span className="shrink-0 flex items-center justify-center">{children}</span>
       {/* Yatay telefonda da görünür (bkz. .arac-etiket). */}
-      {!sadeceIkon && <span className="arac-etiket hidden lg:inline">{label}</span>}
+      {/* 1280 px altında yalnız ikon: şerit tek sırada kalsın, ad title ipucunda. */}
+      {!sadeceIkon && <span className="arac-etiket hidden xl:inline">{label}</span>}
     </button>
   )
 }
