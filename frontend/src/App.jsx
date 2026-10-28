@@ -4714,29 +4714,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kendi modeli var" izlenimi bırakıyordu.
    */
   /*
-   * DUVAR GRUBUN TAMAMINA AİT.
+   * DUVAR TEK VE ORTAK.
    *
-   * Birleşik bir grup tek bir duvarın önünde duruyor; üyelerin ayrı
-   * duvar ölçüsü olması, hangi üye seçiliyse kutuda başka bir sayı
-   * görünmesi demekti. Değer elde duran ekrana yazılıyor, grup varsa
-   * öteki üyelerin kaydına da işleniyor.
+   * Bir aralık her ekran kendi duvar ölçüsünü taşıdı; ekran değişince
+   * kutudaki sayı sessizce değişiyor, aynı tasarımın parçaları farklı
+   * duvarlarda duruyordu. Ölçü yeniden tek: bir kez giriliyor
+   * (width/height), bütün ekranlar aynı duvarda.
    */
-  const duvariGrubaYaz = (alan, deger) => {
-    const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : null
-    if (!uyeler || uyeler.length < 2) return
-    setSabitEkranlar((l) =>
-      l.map((e) => (uyeler.includes(e.id) ? { ...e, ayar: { ...(e.ayar || {}), [alan]: deger } } : e)),
-    )
-  }
-  const duvarEniniYaz = (v) => {
-    setWidth(v)
-    duvariGrubaYaz('duvarW', v)
-  }
-  const duvarBoyunuYaz = (v) => {
-    setHeight(v)
-    duvariGrubaYaz('duvarH', v)
-  }
-
   const ekranAyariAnlik = () => ({
     cols,
     rows,
@@ -4747,9 +4731,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     lYon,
     content,
     contentUrl: contentUrl || null,
-    /* Her ekranın kendi duvarı: ekran değiştirince geri gelsin. */
-    duvarW: width,
-    duvarH: height,
   })
 
   /*
@@ -4927,9 +4908,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
     /* Seçilen ekranın kendi alanı ve alan içindeki yeri de geri geliyor. */
     setAlanKipi(false)
-    /* Duvar da ekranın kendi kaydından. */
-    if (secilen.ayar?.duvarW > 0) setWidth(secilen.ayar.duvarW)
-    if (secilen.ayar?.duvarH > 0) setHeight(secilen.ayar.duvarH)
     setAlanNokta(Array.isArray(secilen.alan) && secilen.alan.length === 4 ? secilen.alan : [])
     setAlanCizgi(Array.isArray(secilen.cizgi) && secilen.cizgi.length === 8 ? secilen.cizgi : [])
     setAlanKonum(secilen.konum || { u: 0.5, v: 0.5 })
@@ -5055,20 +5033,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         aci: eski?.eklemler?.[j]?.aci ?? aci ?? 135,
       })),
     }))
-    /*
-     * DUVAR BİRLEŞİMİN TAMAMININ.
-     *
-     * Birleşik grup tek bir duvarın önünde duruyor. Üyeler kendi duvar
-     * ölçüsünü taşımayı sürdürseydi, hangi üye seçilirse kartta başka bir
-     * sayı görünecekti. Elde duran ekranın ölçüsü hepsine yazılıyor.
-     */
-    setSabitEkranlar((l) =>
-      l.map((e) =>
-        sirali.includes(e.id)
-          ? { ...e, ayar: { ...(e.ayar || {}), duvarW: width, duvarH: height } }
-          : e,
-      ),
-    )
   }
 
   /*
@@ -8481,51 +8445,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
 
   /*
-   * REFERANS ÖLÇEĞİ — TUVAL PİKSELİNDE.
-   *
-   * Referans kartındaki px/cm fotoğrafın KENDİ çözünürlüğüne ait;
-   * buradaki hesaplar tuval pikselinde yapılıyor. İkisini karıştırmak
-   * ekranı kat kat yanlış büyüklükte koyar.
-   */
-  const olcekTuvalPxCm = (() => {
-    const cm = Number(String(refUzunlukCm).replace(',', '.'))
-    if (refNokta.length !== 2 || !(cm > 0)) return 0
-    const a2 = oranTuvale(refNokta[0])
-    const b2 = oranTuvale(refNokta[1])
-    const o = Math.hypot(b2.x - a2.x, b2.y - a2.y) / cm
-    return Number.isFinite(o) && o > 0 ? o : 0
-  })()
-
-  /*
-   * İŞARETLENEN ALANIN GERÇEK ÖLÇÜSÜ DUVARA YAZILIYOR.
-   *
-   * Kenar uzunlukları referans ölçeğiyle santime çevriliyor; karşılıklı
-   * kenarların ortalaması alınıyor ki perspektif tek bir kenarı
-   * yanıltmasın. Santime yuvarlanıyor: panelde 0,01 m adımla okunuyor.
-   */
-  const alandanDuvar = (kose) => {
-    if (!Array.isArray(kose) || kose.length !== 4 || !(olcekTuvalPxCm > 0)) return
-    const uzak = (a2, b2) => Math.hypot(a2.x - b2.x, a2.y - b2.y)
-    const enPx = (uzak(kose[0], kose[1]) + uzak(kose[3], kose[2])) / 2
-    const boyPx = (uzak(kose[0], kose[3]) + uzak(kose[1], kose[2])) / 2
-    const enM = Math.round((enPx / olcekTuvalPxCm) * 1) / 100
-    const boyM = Math.round((boyPx / olcekTuvalPxCm) * 1) / 100
-    if (enM > 0.05) duvarEniniYaz(enM)
-    if (boyM > 0.05) duvarBoyunuYaz(boyM)
-  }
-
-  /*
    * DÖRT KÖŞE KONDUKTAN SONRA DÜZELTİLEBİLİR.
    *
    * Son köşeye tıklayınca sıradaki ekrana atlanmıyordu ve yanlış konan
    * bir köşe için baştan başlamak gerekiyordu. Köşeler sürüklenebilir
    * tutamak olarak duruyor; kullanıcı beğenince onaylıyor.
    */
-  const yerNoktaDegisti = (tuvalNoktalari) => {
-    setYerNokta(tuvalNoktalari)
-    /* Köşeler sürüklenirken duvar ölçüsü de anında güncelleniyor. */
-    if (tuvalNoktalari.length === 4) alandanDuvar(koseSirala(tuvalNoktalari))
-  }
+  const yerNoktaDegisti = (tuvalNoktalari) => setYerNokta(tuvalNoktalari)
 
   /*
    * BİR EKRANI YERLEŞTİRMEYE YA DA DÜZENLEMEYE AL.
@@ -8605,17 +8531,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
-   * TIKLANAN DÖRTGEN HEM PERSPEKTİFİ HEM ÖLÇÜYÜ VERİYOR.
+   * TIKLANAN DÖRTGEN ŞEKLİ DE ÖLÇÜYÜ DE VERİYOR.
    *
    * Dörtgen, ekranın kabin sayısından gelen ölçüye göre merkezinden
-   * yeniden ölçekleniyordu. Tek ekranda fark görünmüyordu: işaretlenen
-   * alan zaten o ekranın duvarı oluyor, ikisi aynı çıkıyordu. Çoklu
-   * ekranda duvar ölçüsü küme boyunca ORTAK olduğu için her ekran kendi
-   * alanından kayıyor, havada ve yanlış boyutta duruyordu.
-   *
-   * Ekran artık işaretlenen dört köşede duruyor; ölçü de o alandan
-   * (bkz. alandanDuvar) geliyor. Yerleştirme tek ekranda da çoklu
-   * ekranda da aynı yoldan geçiyor.
+   * yeniden ölçekleniyordu: ekran işaretlenen alandan kayıyor, havada ve
+   * yanlış boyutta duruyordu. Ekran artık tıklanan dört köşede duruyor.
+   * Duvar ölçüsüne dokunulmuyor — o tek ve ortak, kullanıcının girdiği
+   * değer.
    */
 
   /*
@@ -8626,8 +8548,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const yerKaydet = (ekran, nokta) => {
     if (!ekran || !Array.isArray(nokta) || nokta.length !== 4) return null
-    /* Alanın kendisi duvar; tasarım onun içine kendi ölçüsüyle oturuyor. */
-    alandanDuvar(koseSirala(nokta))
     const duzgun = koseSirala(nokta)
     yerKoseRef.current[ekran.id] = duzgun
     dortgeniYaz(ekran.id, duzgun)
@@ -10509,13 +10429,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/*
-            DUVAR BURADA DEĞİL, EKRANIN KARTINDA.
+            DUVAR EN ÜSTTE — kurulumun İLK kararı.
+            Ekranlar duvara göre diziliyor; ölçü panelin en altındayken
+            kullanıcı önce ekranı kurup sonra duvarı yazıyordu.
 
-            Panelin en üstünde genel bir "Duvar" kutusu duruyordu; oysa
-            duvar ölçüsü her ekranda ayrı tutuluyor (bkz. ayar.duvarW) ve
-            ekran değişince kutudaki sayı sessizce değişiyordu. Kullanıcı
-            genel bir ayar sanıp seçili ekranın duvarını değiştiriyordu.
+            Tek kutu: duvar bütün ekranlar için ortak. Bir aralık ölçü
+            ekran kartında, her ekranda ayrı tutuluyordu; ekran değişince
+            sayı sessizce değişiyordu.
           */}
+          {hasModel && (
+            <div className="mb-1">
+              <h2 className="text-[20px] font-bold tracking-tight m-0 mb-1">{t('wall.heading')}</h2>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                <SayiKutusu
+                  etiket={t('wall.width')}
+                  deger={width}
+                  onChange={setWidth}
+                  min={widthMin}
+                  max={40}
+                  adim={0.1}
+                  birim="m"
+                />
+                <SayiKutusu
+                  etiket={t('wall.height')}
+                  deger={height}
+                  onChange={setHeight}
+                  min={heightMin}
+                  max={20}
+                  adim={0.1}
+                  birim="m"
+                />
+              </div>
+            </div>
+          )}
 
           {/*
             EKRANLAR — TEK SİSTEM, AKORDEON.
@@ -10656,44 +10602,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             )}
                           </div>
                         )}
-
-                        {/*
-                          ---- Duvar ----
-                          Ekranın durduğu duvar: sütun/satır sınırı,
-                          "Duvara sığdır" ve mekân çizimi hep buradan
-                          besleniyor. Birleşik grupta tek duvar var;
-                          değişiklik bütün üyelere yazılıyor.
-                        */}
-                        <div>
-                          <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
-                            {t('wall.heading')}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                            <SayiKutusu
-                              etiket={t('wall.width')}
-                              deger={width}
-                              onChange={duvarEniniYaz}
-                              min={widthMin}
-                              max={40}
-                              adim={0.1}
-                              birim="m"
-                            />
-                            <SayiKutusu
-                              etiket={t('wall.height')}
-                              deger={height}
-                              onChange={duvarBoyunuYaz}
-                              min={heightMin}
-                              max={20}
-                              adim={0.1}
-                              birim="m"
-                            />
-                          </div>
-                          {grup && Array.isArray(grup.uyeler) && grup.uyeler.length > 1 && (
-                            <p className="mt-1 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
-                              {t('wall.grup')}
-                            </p>
-                          )}
-                        </div>
 
                         {/* ---- Boyut ---- */}
                         <div>

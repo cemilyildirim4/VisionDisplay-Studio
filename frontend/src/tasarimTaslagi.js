@@ -49,25 +49,10 @@ function temizAyar(ayar) {
  * açıldığında ekranları kaybolmasın.
  */
 export function taslakEkranlari(taslak) {
-  /*
-   * DUVAR ÖLÇÜSÜ ARTIK EKRANIN KENDİSİNDE.
-   *
-   * Eski taslaklarda duvar yalnızca genel alanda (taslak.width/height)
-   * duruyordu. Aktarılmazsa açılan bir teklifte duvar sıfır görünüyor ve
-   * kullanıcının girdiği ölçü kayboluyordu.
-   */
-  const devral = (liste) =>
-    liste.map((e) => {
-      const a = e?.ayar || {}
-      if (a.duvarW > 0 || a.duvarH > 0) return e
-      return {
-        ...e,
-        ayar: { ...a, duvarW: taslak?.width || 0, duvarH: taslak?.height || 0 },
-      }
-    })
-  if (Array.isArray(taslak?.ekranlar)) return devral(taslak.ekranlar)
+  /* Duvar ölçüsü ekranın değil tasarımın: taslak.width / taslak.height. */
+  if (Array.isArray(taslak?.ekranlar)) return taslak.ekranlar
   if (!Array.isArray(taslak?.screens)) return []
-  return devral(taslak.screens.map((s, i) => ({
+  return taslak.screens.map((s, i) => ({
     id: 'eski-' + i,
     sira: i + 1,
     oran: null,
@@ -79,7 +64,7 @@ export function taslakEkranlari(taslak) {
       content: 'led',
       contentUrl: null,
     },
-  })))
+  }))
 }
 
 /** Yapılandırma durumundan saklanabilir düz bir nesne üretir. */
