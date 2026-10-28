@@ -8499,6 +8499,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const yerEkraniSec = (sira) => {
     const i = ekranParcalari.findIndex((x) => x.sira === sira)
     if (i < 0) return
+    /*
+     * İŞARETLENEN ALAN KAYBOLMUYOR.
+     *
+     * Kaydetme yalnızca "Bu ekranı onayla" düğmesine bağlıydı: dört
+     * köşeyi işaretleyip listeden sıradaki ekrana geçen kullanıcı, bir
+     * önceki ekranın alanını kaybediyordu. Dört köşe tamamsa geçerken
+     * kendiliğinden kaydediliyor.
+     */
+    if (yerSira != null && yerSira !== i && yerNokta.length === 4) {
+      yerKaydet(ekranParcalari[yerSira], yerNokta)
+    }
     const id = ekranParcalari[i].id
     const mevcut =
       id === aktifEkranId
@@ -8512,45 +8523,42 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setSihirbazAdim(3)
   }
 
-  const yerEkraniOnayla = () => {
-    if (yerNokta.length !== 4 || !yerEkran) return
+  /*
+   * TIKLANAN DÖRTGEN HEM PERSPEKTİFİ HEM ÖLÇÜYÜ VERİYOR.
+   *
+   * Dörtgen, ekranın kabin sayısından gelen ölçüye göre merkezinden
+   * yeniden ölçekleniyordu. Tek ekranda fark görünmüyordu: işaretlenen
+   * alan zaten o ekranın duvarı oluyor, ikisi aynı çıkıyordu. Çoklu
+   * ekranda duvar ölçüsü küme boyunca ORTAK olduğu için her ekran kendi
+   * alanından kayıyor, havada ve yanlış boyutta duruyordu.
+   *
+   * Ekran artık işaretlenen dört köşede duruyor; ölçü de o alandan
+   * (bkz. alandanDuvar) geliyor. Yerleştirme tek ekranda da çoklu
+   * ekranda da aynı yoldan geçiyor.
+   */
 
   /*
-   * TIKLANAN DÖRTGEN PERSPEKTİFİ VERİYOR, ÖLÇÜYÜ DEĞİL.
+   * ALANI KAYDET — GEZİNMEDEN.
    *
-   * Kullanıcı dört köşeye tıklarken yüzeyin AÇISINI gösteriyor; ekranın
-   * büyüklüğü ise panelde kurulan gerçek ölçüden (sütun × kabin) ve
-   * referans ölçeğinden geliyor. İkisi ayrılmazsa 0,96 m lik bir ekran
-   * fotoğrafta kullanıcının çizdiği kutu kadar — yani çoğu zaman kat kat
-   * büyük — çiziliyordu.
-   *
-   * Dörtgen merkezinden ölçekleniyor: şekli ve eğimi korunuyor, yalnızca
-   * boyu gerçeğe oturuyor.
+   * Hem onay düğmesi hem de başka ekrana geçiş bu adımı kullanıyor;
+   * ikisi ayrı yazıldığında geçişte kaydetme unutulmuştu.
    */
-  const gercegeOlcekle = (kose, enM, boyM) => {
-    if (!Array.isArray(kose) || kose.length !== 4) return kose
-    if (!(olcekTuvalPxCm > 0) || !(enM > 0) || !(boyM > 0)) return kose
-    const uzak = (a2, b2) => Math.hypot(a2.x - b2.x, a2.y - b2.y)
-    const enPx = (uzak(kose[0], kose[1]) + uzak(kose[3], kose[2])) / 2
-    const boyPx = (uzak(kose[0], kose[3]) + uzak(kose[1], kose[2])) / 2
-    if (!(enPx > 1) || !(boyPx > 1)) return kose
-    const sx = (enM * 100 * olcekTuvalPxCm) / enPx
-    const sy = (boyM * 100 * olcekTuvalPxCm) / boyPx
-    if (!(sx > 0) || !(sy > 0)) return kose
-    const cx = kose.reduce((t2, q) => t2 + q.x, 0) / 4
-    const cy = kose.reduce((t2, q) => t2 + q.y, 0) / 4
-    return kose.map((q) => ({ x: cx + (q.x - cx) * sx, y: cy + (q.y - cy) * sy }))
+  const yerKaydet = (ekran, nokta) => {
+    if (!ekran || !Array.isArray(nokta) || nokta.length !== 4) return null
+    /* Alanın kendisi duvar; tasarım onun içine kendi ölçüsüyle oturuyor. */
+    alandanDuvar(koseSirala(nokta))
+    const duzgun = koseSirala(nokta)
+    yerKoseRef.current[ekran.id] = duzgun
+    dortgeniYaz(ekran.id, duzgun)
+    const yeni = yerlesmisIdler.includes(ekran.id) ? yerlesmisIdler : [...yerlesmisIdler, ekran.id]
+    setYerlesmisIdler(yeni)
+    return yeni
   }
 
-
-
-    /* Alanın kendisi duvar; tasarım onun içine kendi ölçüsüyle oturuyor. */
-    alandanDuvar(koseSirala(yerNokta))
-    const duzgun = gercegeOlcekle(koseSirala(yerNokta), yerEkran.wm, yerEkran.hm)
-    yerKoseRef.current[yerEkran.id] = duzgun
-    dortgeniYaz(yerEkran.id, duzgun)
-    const yeni = yerlesmisIdler.includes(yerEkran.id) ? yerlesmisIdler : [...yerlesmisIdler, yerEkran.id]
-    setYerlesmisIdler(yeni)
+  const yerEkraniOnayla = () => {
+    if (yerNokta.length !== 4 || !yerEkran) return
+    const yeni = yerKaydet(yerEkran, yerNokta)
+    if (!yeni) return
     setYerNokta([])
     /* Sıra, yerleşmemiş ilk ekrana geçiyor. */
     const sonraki = ekranParcalari.findIndex((x) => !yeni.includes(x.id))
@@ -9391,9 +9399,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               colsMax={colsMax}
               rowsMax={rowsMax}
               hideRegions={isVideoWall}
-              sahneVar={scene !== 'none'}
+              /*
+               * FOTOĞRAF GELENE KADAR NORMAL ÖNİZLEME.
+               *
+               * "Kendi fotoğrafım" seçilir seçilmez sahne kipine geçiliyordu:
+               * duvar kutusu saydamlaşıyor, tasarımın yerini de fotoğraf
+               * akışının dörtgeni belirliyordu. Ortada fotoğraf yokken o
+               * dörtgen boş olduğu için tasarım tuvalin sağ kenarına
+               * yapışıp yarısı panelin altında kalıyordu. Fotoğraf
+               * yüklenene kadar ekran eskisi gibi duvarıyla çiziliyor.
+               */
+              sahneVar={scene !== 'none' && !(scene === 'ozel' && !ozelSahne)}
               sahnePayPx={sahnePayPx}
-              kose={koseTuval}
+              kose={scene === 'ozel' && !ozelSahne ? null : koseTuval}
               /*
                * Dört köşe hedefi varken sürükleme ve açı kapalı: yerleşimi
                * artık dörtgen belirliyor, ikisi birbiriyle yarışmamalı.
