@@ -21,13 +21,25 @@
  */
 import { Screen } from './WallPreview.jsx'
 
-/** Eklem yuvarlaksa o kenardaki köşe yarıçapı; keskin kenar 0 kalıyor. */
-function yuvarlatma(p) {
-  const r = Math.min(p.w, p.h) * 0.12
-  const sol = p.e.solYuvarlak ? r : 0
-  const sag = p.e.sagYuvarlak ? r : 0
-  return `${sol}px ${sag}px ${sag}px ${sol}px`
-}
+/*
+ * YUVARLAK EKLEM = GERÇEK KAVİS.
+ *
+ * Yuvarlak seçilince eskiden yalnızca kutuların köşesi yumuşatılıyordu
+ * (border-radius): ekranlar yine keskin bir V yapıp birleşiyor, kavis
+ * hiç doğmuyordu. Artık eklemin iki yanından bir KAVİS BÖLGESİ ayrılıp
+ * ince dilimlere bölünüyor; her dilim toplam dönüşün bir parçası kadar
+ * dönüyor, yani köşe bir yay çizerek dönüyor.
+ *
+ * Dilim ekranın kendi görüntüsünü TAM eninde çizip yalnızca kendi payına
+ * düşen pencereyi gösteriyor: görüntü kavis boyunca kesintisiz akıyor,
+ * her dilimde baştan başlamıyor.
+ */
+/* Kavis bölgesi: eklemin iki yanında, dar olan kolun eninin bu kadarı. */
+const KAVIS_ORAN = 0.22
+/* Yayı kaç dilim anlatıyor (eklemin tamamında bunun iki katı). */
+const KAVIS_DILIM = 5
+/* Dönen dilimler kıl payı bindiriliyor: aralarında boşluk görünmesin. */
+const BINDIRME = 0.6
 
 export default function Birlesim2D({
   ekranlar = [],
@@ -60,10 +72,8 @@ export default function Birlesim2D({
   if (!Array.isArray(ekranlar) || ekranlar.length < 2) return null
   if (ekranlar.some((e) => !Number.isFinite(e?.yon))) return null
 
-  /* Üstten bakış: uç uca eklenen parçaların orta noktaları (piksel). */
-  let x = 0
-  let z = 0
-  const parcalar = ekranlar.map((e) => {
+  const parcalar = ekranlar.map((e) => ({
+    e,
     /*
      * GERÇEK EN, ŞERİDİN KISALTTIĞI EN DEĞİL.
      *
@@ -72,15 +82,72 @@ export default function Birlesim2D({
      * Burada perspektif gerçekten uygulandığı için o kısalma İKİNCİ KEZ
      * işleniyor ve kol olduğunun yüzde kırkına iniyordu.
      */
-    const w = (e.gercekWm ?? e.wm ?? 0) * pxPerM
-    const t = e.yon
+    w: (e.gercekWm ?? e.wm ?? 0) * pxPerM,
+    h: (e.hm || 0) * pxPerM,
+    t: e.yon,
+  }))
+  if (parcalar.some((p) => !(p.w > 0) || !(p.h > 0))) return null
+
+  /*
+   * ÜSTTEN BAKIŞ, DİLİM DİLİM.
+   *
+   * Köşeli eklemde parça tek dilim; yuvarlak eklemde kavis bölgesi
+   * KAVIS_DILIM parçaya bölünüyor ve her dilim yayın kendi açısını
+   * alıyor. Dilimler uç uca ekleniyor, yani yüzeyin uzunluğu değişmiyor.
+   */
+  const dilimler = []
+  parcalar.forEach((p, i) => {
+    const onceki = parcalar[i - 1]
+    const sonraki = parcalar[i + 1]
+    /* Kavis iki kolu da ilgilendiriyor: dar olana göre ölçülüyor. */
+    const enCok = p.w * 0.45
+    const sol = p.e.solYuvarlak && onceki ? Math.min(Math.min(p.w, onceki.w) * KAVIS_ORAN, enCok) : 0
+    const sag = p.e.sagYuvarlak && sonraki ? Math.min(Math.min(p.w, sonraki.w) * KAVIS_ORAN, enCok) : 0
+    const ekle = (genislik, aci, u0) => {
+      if (genislik <= 0.5) return
+      dilimler.push({ p, w: genislik, t: aci, u0, dilim: genislik < p.w - 0.5 })
+    }
+    let u = 0
+    if (sol > 0) {
+      /* Yayın İKİNCİ yarısı: eklem bu parçanın solunda kaldı. */
+      for (let m = 0; m < KAVIS_DILIM; m++) {
+        const oran = (KAVIS_DILIM + m + 0.5) / (2 * KAVIS_DILIM)
+        ekle(sol / KAVIS_DILIM, onceki.t + (p.t - onceki.t) * oran, u)
+        u += sol / KAVIS_DILIM
+      }
+    }
+    const orta = p.w - sol - sag
+    ekle(orta, p.t, u)
+    u += orta
+    if (sag > 0) {
+      /* Yayın İLK yarısı: eklem bu parçanın sağında. */
+      for (let m = 0; m < KAVIS_DILIM; m++) {
+        const oran = (m + 0.5) / (2 * KAVIS_DILIM)
+        ekle(sag / KAVIS_DILIM, p.t + (sonraki.t - p.t) * oran, u)
+        u += sag / KAVIS_DILIM
+      }
+    }
+  })
+  if (!dilimler.length) return null
+
+  let x = 0
+  let z = 0
+  for (const d of dilimler) {
     const ax = x
     const az = z
-    x += Math.cos(t) * w
-    z += Math.sin(t) * w
-    return { e, w, t, h: (e.hm || 0) * pxPerM, mx: (ax + x) / 2, mz: (az + z) / 2 }
+    x += Math.cos(d.t) * d.w
+    z += Math.sin(d.t) * d.w
+    d.mx = (ax + x) / 2
+    d.mz = (az + z) / 2
+  }
+
+  /* Parçanın orta noktası, kendi dilimlerinin eniyle ağırlıklı ortalaması. */
+  parcalar.forEach((p) => {
+    const kendi = dilimler.filter((d) => d.p === p)
+    const toplam = kendi.reduce((t, d) => t + d.w, 0) || 1
+    p.mx = kendi.reduce((t, d) => t + d.mx * d.w, 0) / toplam
+    p.mz = kendi.reduce((t, d) => t + d.mz * d.w, 0) / toplam
   })
-  if (parcalar.some((p) => !(p.w > 0) || !(p.h > 0))) return null
 
   /* Zincirin ortası orijine: tasarım tuvalin ortasında dursun. */
   const ortX = parcalar.reduce((t, p) => t + p.mx, 0) / parcalar.length
@@ -109,18 +176,13 @@ export default function Birlesim2D({
    */
   const yayilim = Math.max(...parcalar.map((p) => (Math.abs(p.mx - ortX) + p.w / 2) * 2), boyPx)
   /* Zincirin en öndeki ve en arkadaki noktası arasındaki fark. */
-  const derinlikler = parcalar.flatMap((p) => {
-    const cz = -(p.mz - ortZ)
-    const yari = (Math.sin(p.t) * p.w) / 2
+  const derinlikler = dilimler.flatMap((d) => {
+    const cz = -(d.mz - ortZ)
+    const yari = (Math.sin(d.t) * d.w) / 2
     return [cz - yari, cz + yari]
   })
   const derinlik = Math.max(...derinlikler) - Math.min(...derinlikler)
   const enYakin = Math.max(...derinlikler)
-  /*
-   * Uzaklık derinlikle orantılı: kol ne kadar derinse kamera o kadar
-   * geriden bakıyor. Tersi olsaydı (sabit uzaklık) sığ bir kol hiç
-   * görünmez, derin bir kol ise balıkgözü gibi açılırdı.
-   */
   /*
    * Uzaklık ağırlıkla DERİNLİKTEN geliyor. Yayılıma bağlanınca geniş bir
    * arka ekranın yanındaki sığ kol birkaç piksele iniyor ve U yine L gibi
@@ -132,23 +194,23 @@ export default function Birlesim2D({
    * KUTU İZDÜŞÜMDEN.
    *
    * Öne gelen kol perspektifte büyüyor; kutu yerleşimin ham ölçüsüne göre
-   * kurulsaydı kolun yakın kenarı dışarıda kalırdı. Sekiz köşe de
-   * izdüşürülüp sınırlar oradan alınıyor.
+   * kurulsaydı kolun yakın kenarı dışarıda kalırdı. Her dilimin dört
+   * köşesi de izdüşürülüp sınırlar oradan alınıyor.
    */
   let solEn = 0
   let sagEn = 0
   let ustY = 0
   let altY = 0
-  for (const p of parcalar) {
-    const cx = p.mx - ortX
-    const cz = -(p.mz - ortZ)
+  for (const d of dilimler) {
+    const cx = d.mx - ortX
+    const cz = -(d.mz - ortZ)
     /* Parçanın merkezi, gözden ölçülü: parçalar alttan hizalı duruyor. */
-    const cy = gozAlt - p.h / 2
-    for (const u of [-p.w / 2, p.w / 2]) {
-      const X = cx + Math.cos(p.t) * u
-      const Z = cz - Math.sin(p.t) * u
+    const cy = gozAlt - d.p.h / 2
+    for (const u of [-d.w / 2, d.w / 2]) {
+      const X = cx + Math.cos(d.t) * u
+      const Z = cz - Math.sin(d.t) * u
       const k = D / (D - Z)
-      for (const v of [-p.h / 2, p.h / 2]) {
+      for (const v of [-d.p.h / 2, d.p.h / 2]) {
         const px = X * k
         const py = (cy + v) * k
         if (px < solEn) solEn = px
@@ -234,53 +296,64 @@ export default function Birlesim2D({
             ),
           )}
 
-        {parcalar.map((p, i) => (
-          <div
-            key={p.e.id ?? i}
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: boyPx - p.h,
-              width: p.w,
-              height: p.h,
-              marginLeft: -p.w / 2,
-              /*
-               * rotateY(θ) ekranın en eksenini (cos θ, 0, −sin θ) yapıyor;
-               * üstten bakıştaki derinlik ekseni de eksi Z. İkisi aynı
-               * işaretle kurulduğu için açı doğrudan geçiyor.
-               */
-              transform: `translate3d(${p.mx - ortX}px, 0, ${-(p.mz - ortZ)}px) rotateY(${
-                (p.t * 180) / Math.PI
-              }deg)`,
-              /*
-                YUVARLAK KÖŞE — eklemin iki yanındaki kenar yumuşuyor.
-                Seçim açılı birleşimde eklem satırından geliyor
-                (bkz. App → birlesimGeometrisi).
-              */
-              borderRadius: p.e.solYuvarlak || p.e.sagYuvarlak ? yuvarlatma(p) : undefined,
-              overflow: p.e.solYuvarlak || p.e.sagYuvarlak ? 'hidden' : undefined,
-            }}
-          >
-            <Screen
-              wPx={p.w}
-              hPx={p.h}
-              cols={p.e.cols}
-              rows={p.e.rows}
-              type={p.e.type}
-              resolution={resolution}
-              model={model}
-              content={p.e.content || content}
-              contentUrl={p.e.content ? p.e.contentUrl || null : contentUrl}
-              hideRegions={hideRegions}
-              sade={sade}
-              curveAmount={curveAmount}
-              leftCols={p.e.leftCols}
-              rightCols={p.e.rightCols}
-              lYon={p.e.lYon}
-              {...(p.e.icerikProp || null)}
-            />
-          </div>
-        ))}
+        {dilimler.map((d, i) => {
+          const p = d.p
+          /* Kavis dilimi komşusunun altına kıl payı giriyor (bkz. BINDIRME). */
+          const pay = d.dilim ? BINDIRME : 0
+          const kutuW = d.w + pay * 2
+          return (
+            <div
+              key={(p.e.id ?? 'e') + '-' + i}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: boyPx - p.h,
+                width: kutuW,
+                height: p.h,
+                marginLeft: -kutuW / 2,
+                /*
+                 * rotateY(θ) ekranın en eksenini (cos θ, 0, −sin θ) yapıyor;
+                 * üstten bakıştaki derinlik ekseni de eksi Z. İkisi aynı
+                 * işaretle kurulduğu için açı doğrudan geçiyor.
+                 */
+                transform: `translate3d(${d.mx - ortX}px, 0, ${-(d.mz - ortZ)}px) rotateY(${
+                  (d.t * 180) / Math.PI
+                }deg)`,
+                overflow: d.dilim ? 'hidden' : undefined,
+              }}
+            >
+              {/* Ekran tam eninde çiziliyor; dilim kendi penceresini gösteriyor. */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: -(d.u0 - pay),
+                  top: 0,
+                  width: p.w,
+                  height: p.h,
+                }}
+              >
+                <Screen
+                  wPx={p.w}
+                  hPx={p.h}
+                  cols={p.e.cols}
+                  rows={p.e.rows}
+                  type={p.e.type}
+                  resolution={resolution}
+                  model={model}
+                  content={p.e.content || content}
+                  contentUrl={p.e.content ? p.e.contentUrl || null : contentUrl}
+                  hideRegions={hideRegions}
+                  sade={sade}
+                  curveAmount={curveAmount}
+                  leftCols={p.e.leftCols}
+                  rightCols={p.e.rightCols}
+                  lYon={p.e.lYon}
+                  {...(p.e.icerikProp || null)}
+                />
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
