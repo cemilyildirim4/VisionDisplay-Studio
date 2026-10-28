@@ -41,6 +41,14 @@ export default function Kup2D({
   sifirlaEtiketi = 'Yönü sıfırla',
   /* Sade kip: yüz kenarlıkları kalkıyor. */
   sade = false,
+  /*
+   * ÇİZİMİN SIĞACAĞI KUTU (duvarın içi).
+   *
+   * Küp ham ölçüsüyle kuruluyordu: eğim ve perspektifle büyüyen kutu
+   * duvarın üstüne taşıyor, taşan kısım kırpılıyordu.
+   */
+  enCokW = 0,
+  enCokH = 0,
 }) {
   const [aci, setAci] = useState(-28)
   const surukle = useRef(null)
@@ -70,6 +78,42 @@ export default function Kup2D({
   const D = derinlikM * pxPerM
   const H = boyM * pxPerM
   const kaide = Math.max(6, H * KAIDE_ORAN)
+
+  /*
+   * ÇİZİM DUVARA ORANTILI SIĞIYOR.
+   *
+   * Kutunun izdüşümü (eğim → dönüş → perspektif) hesaplanıyor ve çizim
+   * duvarın içine ÖLÇEKLENİYOR; şekil bozulmuyor, yalnızca küçülüyor.
+   * Ölçü etiketleri gerçek metreden geldiği için sayılar değişmiyor.
+   *
+   * Sınırlar en geniş dönüş açısına göre alınıyor: küp sürüklenirken
+   * boyutunun değişmemesi için.
+   */
+  const UZAK = 1400
+  const EGIM = (14 * Math.PI) / 180
+  const PAY = 8
+  /* "Yönü sıfırla" düğmesi kutunun altında duruyor; ona da yer kalsın. */
+  const DUGME = 38
+  const yariKose = Math.hypot(W, D) / 2
+  const kaideYari = (Math.hypot(Math.max(W, D), D) * 1.12) / 2
+  /* Kaide küpün tabanının hemen altında (bkz. KAİDE dönüşümü). */
+  const kaideY = H / 2 + kaide
+  const enYakin = (H / 2) * Math.sin(EGIM) + yariKose * Math.cos(EGIM)
+  const k = UZAK / Math.max(1, UZAK - enYakin)
+  const ustY = -((H / 2) * Math.cos(EGIM) + yariKose * Math.sin(EGIM)) * k
+  const altY = (kaideY * Math.cos(EGIM) + kaideYari * Math.sin(EGIM)) * k
+  const cizimEn = Math.max(yariKose, kaideYari) * 2 * k + PAY * 2
+  const cizimBoy = altY - ustY + PAY * 2
+  /* Göz hizası: bu noktadaki her şey olduğu yerde kalıyor (bkz. perspectiveOrigin). */
+  const gozY = -ustY + PAY
+  const olcek = Math.max(
+    0.05,
+    Math.min(
+      1,
+      enCokW > 0 ? enCokW / cizimEn : 1,
+      enCokH > DUGME ? (enCokH - DUGME) / cizimBoy : 1,
+    ),
+  )
 
   const bas = (e) => {
     e.preventDefault()
@@ -145,10 +189,24 @@ export default function Kup2D({
   }
 
   return (
-    <div className="relative flex flex-col items-center" style={{ width: Math.max(W, D) * 1.6 }}>
+    <div className="relative flex flex-col items-center" style={{ width: cizimEn * olcek }}>
+      {/* Küçültülen çizimin kapladığı yer: düğme hep kutunun altında kalsın. */}
+      <div style={{ position: 'relative', width: cizimEn * olcek, height: cizimBoy * olcek }}>
       <div
-        /* Kaide aşağı doğru izdüşüyor: altta yer bırakılmazsa düğmenin üstüne biniyor. */
-        style={{ perspective: 1400, width: '100%', height: H + kaide + D * 0.7 + 28, touchAction: 'none' }}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          bottom: 0,
+          marginLeft: (-cizimEn) / 2,
+          width: cizimEn,
+          height: cizimBoy,
+          perspective: UZAK,
+          /* Göz kutunun ortasında: üst ve alt aynı açıyla açılıyor. */
+          perspectiveOrigin: `50% ${gozY}px`,
+          transform: olcek < 1 ? `scale(${olcek})` : undefined,
+          transformOrigin: '50% 100%',
+          touchAction: 'none',
+        }}
         onPointerDown={bas}
         onPointerMove={hareket}
         onPointerUp={birak}
@@ -159,7 +217,8 @@ export default function Kup2D({
           style={{
             position: 'absolute',
             left: '50%',
-            top: 10,
+            /* Kutunun merkezi göz hizasında. */
+            top: gozY - H / 2,
             width: 0,
             height: H,
             transformStyle: 'preserve-3d',
@@ -209,12 +268,18 @@ export default function Kup2D({
               width: Math.max(W, D) * 1.12,
               height: D * 1.12,
               marginLeft: (-Math.max(W, D) * 1.12) / 2,
-              transform: `rotateX(90deg) translateZ(${-kaide}px)`,
+              /*
+               * Plaka kendi MERKEZİNDE yatıyor; merkezi küpün altından
+               * yarım derinlik aşağıda kalıyor ve kaide küpten kopuyordu.
+               * Yatırdıktan sonra o kadar yukarı alınıyor.
+               */
+              transform: `translateY(${-D * 0.56}px) rotateX(90deg) translateZ(${-kaide}px)`,
               background: 'linear-gradient(180deg, #3a4150, #232935)',
               borderRadius: 2,
             }}
           />
         </div>
+      </div>
       </div>
 
       <button

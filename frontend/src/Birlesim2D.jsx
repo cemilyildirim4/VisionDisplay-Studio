@@ -86,6 +86,19 @@ export default function Birlesim2D({
   const ortX = parcalar.reduce((t, p) => t + p.mx, 0) / parcalar.length
   const ortZ = parcalar.reduce((t, p) => t + p.mz, 0) / parcalar.length
   const boyPx = Math.max(...parcalar.map((p) => p.h))
+  /*
+   * GÖZ HİZASI GRUBUN DİKEY ORTASINDA.
+   *
+   * Grup duvara sığsın diye göz taban çizgisine indirilmişti: o
+   * yükseklikteki her nokta olduğu yerde kaldığı için bütün alt kenarlar
+   * tek DÜZ çizgiye oturuyor, perspektif yalnızca üst kenarlara
+   * uygulanıyordu — şekil tek taraflı eğilip gerçeğe uymuyordu.
+   *
+   * Taban çizgisinden ölçülen göz yüksekliği. Üst ve alt kenarlar aynı
+   * açıyla, simetrik açılıyor; sığmayan grup düzleştirilmiyor, orantılı
+   * küçülüyor (bkz. olcek).
+   */
+  const gozAlt = boyPx / 2
 
   /*
    * PERSPEKTİF UZAKLIĞI NESNEYE GÖRE.
@@ -129,18 +142,8 @@ export default function Birlesim2D({
   for (const p of parcalar) {
     const cx = p.mx - ortX
     const cz = -(p.mz - ortZ)
-    /*
-     * GÖZ HİZASI TABAN ÇİZGİSİNDE.
-     *
-     * Bakış ekranların dikey ortasındayken perspektif alt kenarları da
-     * kaydırıyordu: öne gelen kolun alt köşesi arka ekranın altına
-     * düşüyor, grup duvarın alt çizgisinin dışına taşıyordu. Taban
-     * yüksekliğinden bakılınca o yükseklikteki her nokta olduğu yerde
-     * kalıyor, yani bütün alt kenarlar TEK çizgide buluşuyor.
-     *
-     * y = 0 taban çizgisi; yukarısı eksi.
-     */
-    const cy = -p.h / 2
+    /* Parçanın merkezi, gözden ölçülü: parçalar alttan hizalı duruyor. */
+    const cy = gozAlt - p.h / 2
     for (const u of [-p.w / 2, p.w / 2]) {
       const X = cx + Math.cos(p.t) * u
       const Z = cz - Math.sin(p.t) * u
@@ -192,9 +195,8 @@ export default function Birlesim2D({
         style={{
           position: 'absolute',
           left: '50%',
-          /* Göz hizası ekranların dikey ortası: alt ve üst eşit açılıyor. */
-          /* Kutunun alt kenarı taban çizgisinde (bkz. cy). */
-          top: gozY - boyPx,
+          /* Taban çizgisi gözün gozAlt kadar altında (bkz. cy). */
+          top: gozY + gozAlt - boyPx,
           width: 0,
           height: boyPx,
           transformStyle: 'preserve-3d',

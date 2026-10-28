@@ -1398,6 +1398,9 @@ export default function WallPreview({
                     pxPerM={pxPerM}
                     model={model}
                     resolution={resolution}
+                    /* Küp de duvarın içine sığıyor: taşan kısım kırpılıyordu. */
+                    enCokW={wallW}
+                    enCokH={stripTop + maxHpx}
                     sifirlaEtiketi={t('kup.sifirla')}
                   />
                 </div>
