@@ -206,8 +206,22 @@ function ekranUclari(s, cabW, curveAmount) {
     }
   }
 
+  /*
+   * BİRLEŞİMDEKİ DÜZ EKRAN KENDİ AÇISIYLA DURUYOR.
+   *
+   * L, U ve açılı grupta her ekranın düzlemdeki açısı 'yon' alanında
+   * geliyor (bkz. App → birlesimGeometrisi). Burada okunmadığı için üç
+   * ekranlı bir U, 3D'de yan yana dizilmiş düz bir şerit oluyordu.
+   *
+   * rotateY(t) en eksenini (cos t, 0, −sin t) yapıyor; uçlar da aynı
+   * eksende, yani zincir kendiliğinden köşeden kırılıyor.
+   */
   const yari = (cols * cabW) / 2
-  return { sol: { x: -yari, z: 0, aci: 0 }, sag: { x: yari, z: 0, aci: 0 } }
+  const t = Number.isFinite(s.yon) ? s.yon : 0
+  return {
+    sol: { x: -yari * Math.cos(t), z: yari * Math.sin(t), aci: t },
+    sag: { x: yari * Math.cos(t), z: -yari * Math.sin(t), aci: t },
+  }
 }
 
 /**
@@ -505,16 +519,30 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
    * varsayılan görsel. Kaynak artık 2D tarafla (CurvedScreen) aynı kuralla
    * seçiliyor.
    */
+  /*
+   * İÇERİK EKRANIN KENDİ KAYDINDAN DA OKUNUYOR.
+   *
+   * Yalnızca GENEL içerik okunuyordu. Görsel ekranın kendi kartından
+   * (ya da birleşimin paylaşılan görselinden) seçilince genel içerik
+   * 'led' kalıyor ve 3D'de ekran bomboş görünüyordu.
+   */
+  const etkin = useMemo(() => {
+    const dolu = (c) => c && c !== 'led' && c !== 'none'
+    if (dolu(content)) return { content, contentUrl }
+    const k = (screens || []).find((x) => dolu(x?.content))
+    return k ? { content: k.content, contentUrl: k.contentUrl || null } : { content, contentUrl }
+  }, [content, contentUrl, screens])
+
   const src = useMemo(() => {
-    if (content === 'photo') return DEFAULT_CONTENT_SRC
-    if (content === 'upload' && contentUrl) return contentUrl
+    if (etkin.content === 'photo') return DEFAULT_CONTENT_SRC
+    if (etkin.content === 'upload' && etkin.contentUrl) return etkin.contentUrl
     // Geriye dönük: içerik türü bilinmiyorsa elde bir URL varsa o kullanılır
-    if (!content && contentUrl) return contentUrl
+    if (!etkin.content && etkin.contentUrl) return etkin.contentUrl
     return null
-  }, [content, contentUrl])
+  }, [etkin])
 
   // VİDEO içerik ('Örnek video' ve yüklenen video) — 2D tarafla aynı kural
-  const videoSrc = useMemo(() => videoSrcFor(content, contentUrl), [content, contentUrl])
+  const videoSrc = useMemo(() => videoSrcFor(etkin.content, etkin.contentUrl), [etkin])
 
   /*
    * VİDEO DA 3D'DE VE AR'DE GÖRÜNÜR.
@@ -650,6 +678,8 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
         x: konum[i].x - ortala,
         y: (h - enYuksek) / 2,
         z: konum[i].z,
+        /* Ekranın kendi dönüşü: düz ekran birleşimde açılı durabiliyor. */
+        rot: Number.isFinite(s.yon) ? s.yon : 0,
         uvOffset: dilimVar ? kumeOnceki.get(i) / kumeW : 0,
         uvRepeat: dilimVar ? gercekW[i] / kumeW : 1,
         payL: dikisPayi(cabD, oncekiDonus),
@@ -662,7 +692,7 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
     return (
       <group>
         {yerlesim.map((y) => (
-          <group key={y.key} position={[y.x, y.y, y.z]}>
+          <group key={y.key} position={[y.x, y.y, y.z]} rotation={[0, y.rot || 0, 0]}>
             <Duvar
               ortak={{ cabW, cabH, cabD, cols: y.s.cols, rows: y.s.rows, texture, showBezels }}
               screenType={y.s.type || 'flat'}

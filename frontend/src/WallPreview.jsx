@@ -1075,9 +1075,19 @@ export default function WallPreview({
       0,
     )
     const totalWm = list.reduce((a, s) => a + s.wm, 0) + ayrimSayisi * AYRIM_M
+    /*
+     * GRUBUN GERÇEK ENİ — çizimdeki kısalmış en değil.
+     *
+     * Birleşimde kol perspektifle duruyor ve 'wm' o kısalmış eni taşıyor.
+     * Duvarın büyüklüğü, kenar payları ve toplam etiketi kısalmış enden
+     * okununca duvarda hiçbir yerde olmayan bir sayı yazıyor, grup da
+     * duvardan taşıyordu.
+     */
+    const grupGercekWm = list.reduce((a, s) => a + (s.gercekWm || s.wm), 0) + ayrimSayisi * AYRIM_M
     const maxHm = Math.max(...list.map((s) => s.hm))
     // Sınırlayıcı duvar: en az ekranları içerecek kadar (Genişlik/Yükseklik'ten)
-    const wallWm = Math.max(0.1, Number(width) || 0, totalWm)
+    /* Duvar grubun TAMAMINI içeriyor: taşan bir parça kalmıyor. */
+    const wallWm = Math.max(0.1, Number(width) || 0, totalWm, grupGercekWm)
     const wallHm = Math.max(0.1, Number(height) || 0, maxHm)
     // Duvarın çevresindeki mutlak konumlu öğeler için sabit pay (tek ekran
     // dalındaki hesapla aynı mantık): kırpılmasınlar diye yer ayrılır.
@@ -1158,14 +1168,30 @@ export default function WallPreview({
     const humanH = HUMAN_HEIGHT_M * pxPerM
 
     let xAcc = 0
+    /* Gerçek enlerin dizilimi: ölçü etiketleri ve içerik dilimi buradan. */
+    let gAcc = 0
     const placed = list.map((s, i) => {
       /* Paylaşım değişiyorsa araya boşluk. */
-      if (i > 0 && (list[i - 1].paylasim || null) !== (s.paylasim || null)) xAcc += AYRIM_M * pxPerM
+      if (i > 0 && (list[i - 1].paylasim || null) !== (s.paylasim || null)) {
+        xAcc += AYRIM_M * pxPerM
+        gAcc += AYRIM_M * pxPerM
+      }
       const wPx = s.wm * pxPerM
-      const o = { ...s, wPx, hPx: s.hm * pxPerM, xStart: xAcc, center: xAcc + wPx / 2 }
+      const gercekWPx = (s.gercekWm || s.wm) * pxPerM
+      const o = {
+        ...s,
+        wPx,
+        gercekWPx,
+        hPx: s.hm * pxPerM,
+        xStart: xAcc,
+        gercekXStart: gAcc,
+        center: xAcc + wPx / 2,
+      }
       xAcc += wPx
+      gAcc += gercekWPx
       return o
     })
+    const grupGercekWpx = grupGercekWm * pxPerM
 
     /*
      * PAYLAŞIMDA DİLİM GERÇEK GENİŞLİKLERE GÖRE.
@@ -1192,12 +1218,21 @@ export default function WallPreview({
      * görsel" açıkken görsel sol koldan arkaya, arkadan sağ kola
      * kesintisiz akıyor. İki ayrı hesap olsaydı ikisi ayrışırdı.
      */
-    const icerikProplari = (s) => {
+    /*
+     * gercekCizim: ekran GERÇEK eninde çiziliyorsa (birleşim, küp) dilim
+     * de gerçek enle ölçeklenir. Şeridin kısalttığı en kullanılınca
+     * görsel her yüzde büyüyor ve birleşim çizgisinde ikiye katlanıyordu:
+     * ortadaki nesne iki ekranda birden görünüyor, ayna gibi duruyordu.
+     */
+    const icerikProplari = (s, gercekCizim = false) => {
+      const cizimW = gercekCizim ? s.gercekWPx ?? s.wPx : s.wPx
+      const cizimX = gercekCizim ? s.gercekXStart ?? s.xStart : s.xStart
+      const seritW = gercekCizim ? grupGercekWpx : totalWpx
       if (dilim) {
         return {
-          spanW: totalWpx * dilim.sw,
+          spanW: seritW * dilim.sw,
           spanH: maxHpx * dilim.sh,
-          offsetX: s.xStart + totalWpx * dilim.sx,
+          offsetX: cizimX + seritW * dilim.sx,
           offsetY: maxHpx - s.hPx + maxHpx * dilim.sy,
         }
       }
@@ -1207,8 +1242,8 @@ export default function WallPreview({
       */
       const alan = s.paylasim ? paylasimAlanlari.get(s.paylasim) : null
       const kendi = s.gercekWm || s.wm
-      if (!alan || !(kendi > 0)) return { spanW: s.wPx, spanH: s.hPx, offsetX: 0, offsetY: 0 }
-      const oran = s.wPx / kendi
+      if (!alan || !(kendi > 0)) return { spanW: cizimW, spanH: s.hPx, offsetX: 0, offsetY: 0 }
+      const oran = cizimW / kendi
       /*
        * DİKEYDE DE DİLİM — ekranlar farklı boyda olabiliyor.
        *
@@ -1276,6 +1311,21 @@ export default function WallPreview({
      * sağ kenardan aşağı, alt kenar boyunca sağdan sola geri. Ekranlar bitişik
      * ve alta hizalı olduğu için bu hat kesintisiz kapanır.
      */
+    /*
+     * ÖLÇÜ KUTUSU — çizim perspektifli, etiketler gerçek.
+     *
+     * Birleşimde kılavuz çizgileri ve kenar payları şeridin kısalmış
+     * kutusunu gösteriyordu: çizimle hiç örtüşmeyen, gerçekte de
+     * karşılığı olmayan sayılar çıkıyordu.
+     */
+    const olcuW = birlesimKipi ? grupGercekWpx : totalWpx
+    const olcuSol = Math.max(0, (wallW - olcuW) / 2)
+    const olcuToplamM = birlesimKipi ? grupGercekWm : totalWm
+    const olcuMarginM = Math.max(0, (wallWm - olcuToplamM) / 2)
+    const olcuXStart = (s) => (birlesimKipi ? s.gercekXStart ?? s.xStart : s.xStart)
+    const olcuCenter = (s) =>
+      birlesimKipi ? (s.gercekXStart ?? s.xStart) + (s.gercekWPx ?? s.wPx) / 2 : s.center
+
     const maskePolygon = seritMaskePolygon(placed, maxHpx)
 
     return (
@@ -1323,17 +1373,27 @@ export default function WallPreview({
               */}
               {kupKipi && (
                 <div
+                  /*
+                   * KÜP ZEMİNE OTURUYOR.
+                   *
+                   * Kutu stripTop'tan aşağı kuruluyordu: kaidesiyle
+                   * birlikte tasarım alanının altına taşıyor, mekânda da
+                   * havada duruyor gibi görünüyordu. Alt kenarı artık
+                   * duvarın tasarım alt çizgisinde.
+                   */
                   style={{
                     position: 'absolute',
                     left: 0,
                     right: 0,
-                    top: stripTop,
+                    top: 0,
+                    height: stripTop + maxHpx,
                     display: 'flex',
+                    alignItems: 'flex-end',
                     justifyContent: 'center',
                   }}
                 >
                   <Kup2D
-                    ekranlar={placed}
+                    ekranlar={placed.map((s) => ({ ...s, icerikProp: icerikProplari(s, true) }))}
                     sade={sade}
                     pxPerM={pxPerM}
                     model={model}
@@ -1352,18 +1412,31 @@ export default function WallPreview({
               {birlesimKipi && !kupKipi && (
                 <div
                   data-birlesim-yuz
+                  /*
+                   * ALT KENAR DUVARIN TASARIM ÇİZGİSİNDE.
+                   *
+                   * Kutu stripTop'tan AŞAĞI doğru kuruluyordu; perspektifle
+                   * öne gelen kol kutunun altına taşıyor, kısa ekran da
+                   * duvarın alt çizgisinin altına düşüyordu.
+                   */
                   style={{
                     position: 'absolute',
                     left: 0,
                     right: 0,
-                    top: stripTop,
+                    top: 0,
+                    height: stripTop + maxHpx,
                     display: 'flex',
+                    alignItems: 'flex-end',
                     justifyContent: 'center',
                     opacity: ekranGizle ? 0 : undefined,
                   }}
                 >
                   <Birlesim2D
-                    ekranlar={placed.map((s) => ({ ...s, icerikProp: icerikProplari(s) }))}
+                    /* Yan duvar yalnızca hazır mekânda: tasarım ekranında duvar tek düzlem. */
+                    yanDuvar={sahneVar}
+                    enCokW={wallW}
+                    enCokH={stripTop + maxHpx}
+                    ekranlar={placed.map((s) => ({ ...s, icerikProp: icerikProplari(s, true) }))}
                     sade={sade}
                     pxPerM={pxPerM}
                     model={model}
@@ -1523,9 +1596,9 @@ export default function WallPreview({
                 <VL left={0} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 <VL left={wallW} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 {placed.map((s, i) => (
-                  <VL key={`v${i}`} left={marginXpx + s.xStart} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
+                  <VL key={`v${i}`} left={olcuSol + olcuXStart(s)} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 ))}
-                <VL left={marginXpx + totalWpx} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
+                <VL left={olcuSol + olcuW} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
 
                 {/*
                   SOL/SAĞ KENAR PAYI — DAR BOŞLUKTA DA YAZILIYOR.
@@ -1540,27 +1613,27 @@ export default function WallPreview({
                   eskisi gibi ortalanıyor.
                 */}
                 {/* Köşeli tasarımda kenar payının karşılığı yok (bkz. gercekWm). */}
-                {!list.some((x) => x.type === 'lshape') && marginXpx > 2 && marginXm > 0.004 && (
+                {!list.some((x) => x.type === 'lshape') && olcuSol > 2 && olcuMarginM > 0.004 && (
                   <>
                     <div
                       className="absolute"
                       style={{
-                        left: marginXpx > 34 ? marginXpx / 2 : 0,
-                        top: (marginXpx > 34 ? -40 : -62) - bombePx,
-                        transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-8%)',
+                        left: olcuSol > 34 ? olcuSol / 2 : 0,
+                        top: (olcuSol > 34 ? -40 : -62) - bombePx,
+                        transform: olcuSol > 34 ? 'translateX(-50%)' : 'translateX(-8%)',
                       }}
                     >
-                      <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(marginXm)}</span>
+                      <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(olcuMarginM)}</span>
                     </div>
                     <div
                       className="absolute"
                       style={{
-                        left: marginXpx > 34 ? wallW - marginXpx / 2 : wallW,
-                        top: (marginXpx > 34 ? -40 : -62) - bombePx,
-                        transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-92%)',
+                        left: olcuSol > 34 ? wallW - olcuSol / 2 : wallW,
+                        top: (olcuSol > 34 ? -40 : -62) - bombePx,
+                        transform: olcuSol > 34 ? 'translateX(-50%)' : 'translateX(-92%)',
                       }}
                     >
-                      <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(marginXm)}</span>
+                      <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(olcuMarginM)}</span>
                     </div>
                   </>
                 )}
@@ -1575,7 +1648,7 @@ export default function WallPreview({
                     <div
                       key={`lbl${i}`}
                       className="absolute flex flex-col items-center gap-1 max-w-[70vw] pointer-events-none"
-                      style={{ left: marginXpx + s.center, transform: 'translateX(-50%)', top: isTop ? -34 - bombePx : wallH + 26 + bombePx }}
+                      style={{ left: olcuSol + olcuCenter(s), transform: 'translateX(-50%)', top: isTop ? -34 - bombePx : wallH + 26 + bombePx }}
                     >
                       {/*
                         GERÇEK ÖLÇÜ. Kutu genişliği çaprazdan görünen
@@ -1596,8 +1669,23 @@ export default function WallPreview({
                   <SegV h={maxHpx} label={fmtU(maxHm)} />
                   <SegV h={wallH - stripTop - maxHpx} label={fmtU(marginYm)} muted />
                 </div>
-                <HL top={stripTop} left={marginXpx + totalWpx} width={wallW - (marginXpx + totalWpx) + 40} />
-                <HL top={stripTop + maxHpx} left={marginXpx + totalWpx} width={wallW - (marginXpx + totalWpx) + 40} />
+                <HL top={stripTop} left={olcuSol + olcuW} width={wallW - (olcuSol + olcuW) + 40} />
+                <HL top={stripTop + maxHpx} left={olcuSol + olcuW} width={wallW - (olcuSol + olcuW) + 40} />
+
+                {/*
+                  GRUBUN TOPLAMI — tek tek ekranların eni yanıltıcı.
+                  Duvara sığıp sığmadığı ancak toplamdan anlaşılıyor.
+                */}
+                {placed.length > 1 && (
+                  <div
+                    className="absolute flex items-center pointer-events-none"
+                    style={{ left: olcuSol + olcuW / 2, transform: 'translateX(-50%)', top: wallH + 58 + bombePx }}
+                  >
+                    <span className="bg-neutral-900 text-white text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap">
+                      {t('olcu.grupToplam')}: {fmtU(olcuToplamM)} × {fmtU(maxHm)}
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </div>

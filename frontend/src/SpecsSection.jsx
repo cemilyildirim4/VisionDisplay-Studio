@@ -186,6 +186,15 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
    */
   if (s && cokEkran && toplam) {
     s.total = toplam.kabin
+    /*
+     * ÖLÇÜ DE GRUBUN — eldeki ekranınki değil.
+     *
+     * Çoklu tasarımda alan, ağırlık ve güç gruba göre yazılıyordu ama
+     * en/boy elde duran TEK ekranınki kalıyordu: teklifte grubun
+     * ölçüsü diye hiçbir yerde olmayan bir sayı görünüyordu.
+     */
+    if (toplam.enM > 0) s.W = toplam.enM
+    if (toplam.boyM > 0) s.H = toplam.boyM
     s.area = toplam.alan
     s.weight = toplam.agirlik
     s.pMax = toplam.gucMax
@@ -268,7 +277,15 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
                 <td className="py-1.5 pr-2" colSpan={2}>
                   {t('panel.toplam')}
                 </td>
-                <td className="py-1.5 pr-2">{fmt(toplam.alan, 2)} m²</td>
+                <td className="py-1.5 pr-2">
+                  {/* Grubun duvarda kapladığı gerçek dış ölçü. */}
+                  {toplam.enM > 0 ? fmt(toplam.enM, 2) + ' × ' + fmt(toplam.boyM, 2) + ' m' : fmt(toplam.alan, 2) + ' m²'}
+                  {toplam.enM > 0 && (
+                    <span className="block text-[11.5px] font-normal text-neutral-400 dark:text-neutral-500">
+                      {fmt(toplam.alan, 2)} m²
+                    </span>
+                  )}
+                </td>
                 <td className="py-1.5 pr-2">{fmt(toplam.kabin)}</td>
                 <td className="py-1.5 pr-2">
                   {fmt(toplam.resW)} × {fmt(toplam.resH)}

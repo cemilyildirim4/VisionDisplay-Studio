@@ -85,13 +85,31 @@ self.addEventListener('activate', (event) => {
          */
         skipWaiting: true,
         clientsClaim: true,
+        /*
+         * ESKİ ÖNBELLEK SİLİNİYOR.
+         *
+         * Yeni sürüm çıkınca eski service worker hâlâ kendi index.html'ini
+         * sunuyordu; o dosya artık var olmayan paket adlarını isteyince
+         * sayfa bembeyaz açılıyordu.
+         */
+        cleanupOutdatedCaches: true,
+        /*
+         * index.html HİÇBİR ZAMAN ÖNBELLEKTEN.
+         *
+         * Giriş sayfası önbellekte tutulduğu sürece eski paket adları da
+         * onunla birlikte yaşıyor. Gezinme istekleri artık önce ağa
+         * gidiyor; ağ yoksa son kopya kullanılıyor (çevrimdışı çalışma
+         * bozulmuyor).
+         */
+        navigateFallback: null,
         // Büyük video/görsel örnekleri VE isteğe bağlı yüklenen 3D/AR paketini
         // (three.js, drei, model-viewer — draco/basis decoder'ları da içeriyor)
         // önbellek manifestine dahil etme; bunlar yalnızca "3D Görünüm"
         // açıldığında ağdan çekilir ve runtimeCaching kuralıyla o an cache'e
         // girer. Böylece uygulamayı hiç açmayan/3D kullanmayan kullanıcı bu
         // ~1.3 MB'lık paketi hiç indirmez.
-        globPatterns: ['**/*.{js,css,html,svg,ico}'],
+        /* html önbelleğe girmiyor (bkz. navigateFallback). */
+        globPatterns: ['**/*.{js,css,svg,ico}'],
         globIgnores: [
           '**/sample-video.mp4',
           '**/model-viewer-*.js',
@@ -104,6 +122,16 @@ self.addEventListener('activate', (event) => {
           '**/onnxruntime*.js',
         ],
         runtimeCaching: [
+          {
+            /* Gezinme (index.html): önce ağ, sonra son kopya. */
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'sayfa-cache',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 4 },
+            },
+          },
           {
             // API: her zaman ağı tercih et; kısa süreli 503'lerde eski cache yanıltmasın.
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),

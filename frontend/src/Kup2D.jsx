@@ -137,6 +137,7 @@ export default function Kup2D({
             resolution={resolution}
             content={ekran?.content || 'led'}
             contentUrl={ekran?.contentUrl || null}
+            {...(ekran?.icerikProp || null)}
           />
         </div>
       </div>
@@ -192,6 +193,7 @@ export default function Kup2D({
                 resolution={resolution}
                 content={ustEkran.content || 'led'}
                 contentUrl={ustEkran.contentUrl || null}
+                {...(ustEkran.icerikProp || null)}
               />
             ) : (
               <div className="h-full w-full bg-[#2b313b]" />

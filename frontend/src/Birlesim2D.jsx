@@ -21,6 +21,14 @@
  */
 import { Screen } from './WallPreview.jsx'
 
+/** Eklem yuvarlaksa o kenardaki köşe yarıçapı; keskin kenar 0 kalıyor. */
+function yuvarlatma(p) {
+  const r = Math.min(p.w, p.h) * 0.12
+  const sol = p.e.solYuvarlak ? r : 0
+  const sag = p.e.sagYuvarlak ? r : 0
+  return `${sol}px ${sag}px ${sag}px ${sol}px`
+}
+
 export default function Birlesim2D({
   ekranlar = [],
   pxPerM = 200,
@@ -32,6 +40,22 @@ export default function Birlesim2D({
   curveAmount = 60,
   /* Sade kip: kenarlıklar ve ayrım çizgileri kalkıyor. */
   sade = false,
+  /*
+   * ÇİZİMİN SIĞACAĞI KUTU (duvarın içi).
+   *
+   * Perspektifle öne gelen kol kutuyu büyütüyor; sınır verilmediğinde
+   * çizim duvarın dışına taşıyor, taşan kısım da kırpılıyordu.
+   */
+  enCokW = 0,
+  enCokH = 0,
+  /*
+   * YAN DUVAR — yalnızca hazır mekânlarda.
+   *
+   * Tasarım ekranında duvar zaten tek düzlem; orada kolun arkasına
+   * ikinci bir yüzey koymak çizimi karıştırıyor. Mekânda ise kol
+   * dönüyor ve arkasında bir yüzey olmadan havada duruyor.
+   */
+  yanDuvar = false,
 }) {
   if (!Array.isArray(ekranlar) || ekranlar.length < 2) return null
   if (ekranlar.some((e) => !Number.isFinite(e?.yon))) return null
@@ -105,8 +129,18 @@ export default function Birlesim2D({
   for (const p of parcalar) {
     const cx = p.mx - ortX
     const cz = -(p.mz - ortZ)
-    /* Ekranlar zemine basıyor: alçak ekranın merkezi göz hizasının altında. */
-    const cy = boyPx / 2 - p.h / 2
+    /*
+     * GÖZ HİZASI TABAN ÇİZGİSİNDE.
+     *
+     * Bakış ekranların dikey ortasındayken perspektif alt kenarları da
+     * kaydırıyordu: öne gelen kolun alt köşesi arka ekranın altına
+     * düşüyor, grup duvarın alt çizgisinin dışına taşıyordu. Taban
+     * yüksekliğinden bakılınca o yükseklikteki her nokta olduğu yerde
+     * kalıyor, yani bütün alt kenarlar TEK çizgide buluşuyor.
+     *
+     * y = 0 taban çizgisi; yukarısı eksi.
+     */
+    const cy = -p.h / 2
     for (const u of [-p.w / 2, p.w / 2]) {
       const X = cx + Math.cos(p.t) * u
       const Z = cz - Math.sin(p.t) * u
@@ -127,14 +161,31 @@ export default function Birlesim2D({
   const gozY = -ustY + PAY
   const kutuBoy = altY - ustY + PAY * 2
 
+  /*
+   * DUVARIN İÇİNE SIĞIYOR.
+   *
+   * Küçültme yalnızca ÇİZİME: ölçü etiketleri gerçek değerlerden
+   * geliyor (bkz. WallPreview → olcuW), yani sayılar değişmiyor.
+   * Alt kenar sabit kalsın diye ölçek tabandan uygulanıyor; grup
+   * duvarın tasarım alt çizgisinde duruyor.
+   */
+  const kutuEn = yari * 2
+  const olcek = Math.min(
+    1,
+    enCokW > 0 ? enCokW / kutuEn : 1,
+    enCokH > 0 ? enCokH / kutuBoy : 1,
+  )
+
   return (
     <div
       style={{
         position: 'relative',
-        width: yari * 2,
+        width: kutuEn,
         height: kutuBoy,
         perspective: D,
         perspectiveOrigin: `50% ${gozY}px`,
+        transform: olcek < 1 ? `scale(${olcek})` : undefined,
+        transformOrigin: '50% 100%',
       }}
     >
       <div
@@ -142,12 +193,45 @@ export default function Birlesim2D({
           position: 'absolute',
           left: '50%',
           /* Göz hizası ekranların dikey ortası: alt ve üst eşit açılıyor. */
-          top: gozY - boyPx / 2,
+          /* Kutunun alt kenarı taban çizgisinde (bkz. cy). */
+          top: gozY - boyPx,
           width: 0,
           height: boyPx,
           transformStyle: 'preserve-3d',
         }}
       >
+        {/*
+          YAN DUVARLAR — dönen kolların arkasında.
+
+          Kolla AYNI dönüşümü kullanıyorlar: açı, derinlik ve sıra
+          kendiliğinden doğru çıkıyor. Yüzey kolun kendisinden biraz
+          geniş ve yüksek; zemine kadar iniyor.
+        */}
+        {yanDuvar &&
+          parcalar.map((p, i) =>
+            Math.abs(Math.sin(p.t)) < 0.26 ? null : (
+              <div
+                key={'yd' + (p.e.id ?? i)}
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: boyPx - p.h * 1.22,
+                  width: p.w * 1.1,
+                  height: p.h * 1.22,
+                  marginLeft: (-p.w * 1.1) / 2,
+                  transform: `translate3d(${p.mx - ortX}px, 0, ${-(p.mz - ortZ)}px) rotateY(${
+                    (p.t * 180) / Math.PI
+                  }deg) translateZ(-1px)`,
+                  background:
+                    /* Yarı saydam: mekânın kendi rengi ve ışığı yüzeye vuruyor. */
+                    'linear-gradient(180deg, rgba(250,251,252,0.58), rgba(214,220,228,0.66))',
+                  boxShadow: '0 10px 24px rgba(10,16,28,0.22)',
+                }}
+              />
+            ),
+          )}
+
         {parcalar.map((p, i) => (
           <div
             key={p.e.id ?? i}
@@ -166,6 +250,13 @@ export default function Birlesim2D({
               transform: `translate3d(${p.mx - ortX}px, 0, ${-(p.mz - ortZ)}px) rotateY(${
                 (p.t * 180) / Math.PI
               }deg)`,
+              /*
+                YUVARLAK KÖŞE — eklemin iki yanındaki kenar yumuşuyor.
+                Seçim açılı birleşimde eklem satırından geliyor
+                (bkz. App → birlesimGeometrisi).
+              */
+              borderRadius: p.e.solYuvarlak || p.e.sagYuvarlak ? yuvarlatma(p) : undefined,
+              overflow: p.e.solYuvarlak || p.e.sagYuvarlak ? 'hidden' : undefined,
             }}
           >
             <Screen

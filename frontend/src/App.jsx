@@ -2585,6 +2585,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * rahatça aşabiliyordu. Sığmayan bir tasarım ne üretilebilir ne de
    * doğru çizilir.
    */
+  /*
+   * GRUP DUVARDAN BÜYÜK MÜ — tek ekranın sınırı yetmiyor.
+   *
+   * Sınır yalnızca ELDEKİ ekranın büyütülmesini durduruyordu; grup
+   * başka bir ekran eklendikten sonra duvarı aştığında hiçbir uyarı
+   * çıkmıyor, kullanıcı sığmayan bir tasarımı sığıyor sanıyordu.
+   * Ölçüler gerçek enlerden (wm) geliyor, çizimdeki kısalmadan değil.
+   */
+  const grupToplamWm = ekranParcalari.reduce((t, x) => t + (x.wm || 0), 0)
+  const grupEnBuyukHm = ekranParcalari.reduce((t, x) => Math.max(t, x.hm || 0), 0)
+  const grupDuvariAsiyor =
+    (Number(width) > 0 && grupToplamWm > Number(width) + 1e-6) ||
+    (Number(height) > 0 && grupEnBuyukHm > Number(height) + 1e-6)
   const colsMax = Math.max(
     1,
     Math.min(EN_COK_KABIN_EKSEN, Math.floor(((width || 0) - digerlerininEni) / kabinEnM + 1e-6)),
@@ -2603,7 +2616,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Kosinüs sıfıra inince kanat çizgi hâline geliyor; alt sınır var ki
    * kullanıcı ekranın orada olduğunu görebilsin.
    */
-  const birlesimGeometrisi = (uyeParcalari, aciGirdi, yon) => {
+  const birlesimGeometrisi = (uyeParcalari, aciGirdi, yon, koseGirdi = null) => {
     const n = uyeParcalari.length
     if (n < 2) return new Map()
     const d = yon === 'disa' ? 1 : -1
@@ -2650,6 +2663,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         olcek: Math.max(0.4, Math.abs(Math.cos(acilar[k]))),
         solKirim: kirim(koseler[k].y),
         sagKirim: kirim(koseler[k + 1].y),
+        /*
+         * KÖŞE BİÇİMİ — eklemin iki yanındaki kenar.
+         *
+         * Açı köşenin kaç derece olduğunu söylüyor, nasıl bittiğini
+         * söylemiyordu: keskin bir kolon köşesi ile yumuşak bir dönüş
+         * aynı çiziliyordu.
+         */
+        solYuvarlak: k > 0 && (Array.isArray(koseGirdi) ? koseGirdi[k - 1] : null) === 'yuvarlak',
+        sagYuvarlak:
+          k < n - 1 && (Array.isArray(koseGirdi) ? koseGirdi[k] : null) === 'yuvarlak',
       })
     })
     return harita
@@ -2694,7 +2717,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               : 90
     const uyeParcalari = uyeler.map((id) => ekranParcalari.find((x) => x.id === id)).filter(Boolean)
     if (uyeParcalari.length < 2) return ekranParcalari
-    const geo = birlesimGeometrisi(uyeParcalari, aci, grup.lYon || 'ice')
+    /* Köşe biçimi yalnızca açılı birleşimde seçiliyor. */
+    const koseBicimleri =
+      grup.tip === 'acili' && Array.isArray(grup.eklemler)
+        ? grup.eklemler.map((e) => e?.kose || 'koseli')
+        : null
+    const geo = birlesimGeometrisi(uyeParcalari, aci, grup.lYon || 'ice', koseBicimleri)
     return ekranParcalari.map((x) => (geo.has(x.id) ? { ...x, ...geo.get(x.id) } : x))
   })()
 
@@ -6342,7 +6370,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     /* Burada da ham model: yatay/dikey mutlak kalsın (bkz. tasarimiAlanaSigdir). */
     const m = selectedModel || previewModel
-    const secenek = yerlesimSecenekleri(m, duvarOlcu.wm, duvarOlcu.hm)
+    /*
+     * GRUP BİR BÜTÜN OLARAK SIĞIYOR.
+     *
+     * Hesap duvarın TAMAMINI eldeki ekrana veriyordu; gruptaki öteki
+     * ekranlar yokmuş gibi davranıp duvarı birlikte aşıyorlardı.
+     * Ötekilerin gerçek eni düşülüyor, kalan yer bu ekranın.
+     */
+    const kalanWm = Math.max(0, duvarOlcu.wm - digerlerininEni)
+    const secenek = yerlesimSecenekleri(m, kalanWm > 0.01 ? kalanWm : duvarOlcu.wm, duvarOlcu.hm)
     if (!secenek) return
     const { yatay, dikey } = secenek
     const dikeySec = dikey.piksel > yatay.piksel
@@ -6356,7 +6392,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setCols(c)
     setRows(r)
     /* Duvar alanı da en az bu kadar olmalı, yoksa üst sınır kabinleri kırpar. */
-    setWidth((e) => Math.max(e, +(c * cwM2).toFixed(2)))
+    /* Duvar grubun TAMAMINI almalı: ötekiler de içeride. */
+    setWidth((e) => Math.max(e, +(c * cwM2 + digerlerininEni).toFixed(2)))
     setHeight((e) => Math.max(e, +(r * chM2).toFixed(2)))
     /*
      * SONUCU SÖYLE.
@@ -7948,8 +7985,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       agirlik: t.agirlik + (e.spec?.weight || 0),
       gucMax: t.gucMax + (e.spec?.pMax || 0),
       gucTip: t.gucTip + (e.spec?.pTyp || 0),
+      /*
+       * GRUBUN GERÇEK DIŞ ÖLÇÜSÜ.
+       *
+       * Tabloda yalnızca yüzey alanı vardı; birleşik grubun duvarda ne
+       * kadar yer kapladığı hiçbir yerde yazmıyordu. Enler gerçek
+       * ölçüden toplanıyor, boy en uzun ekranınki.
+       */
+      enM: t.enM + (e.enM || 0),
+      boyM: Math.max(t.boyM, e.boyM || 0),
     }),
-    { kabin: 0, resW: 0, resH: 0, alan: 0, agirlik: 0, gucMax: 0, gucTip: 0 },
+    { kabin: 0, resW: 0, resH: 0, alan: 0, agirlik: 0, gucMax: 0, gucTip: 0, enM: 0, boyM: 0 },
   )
 
   /*
@@ -9108,7 +9154,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           her şeyi (antet dâhil) sıfıra eziyordu. Düğmelerin kendisi
           değişmiyor — yalnızca dar masaüstünde ikinci satıra geçiyorlar.
         */}
-        <div className="flex min-w-0 flex-1 flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-start sm:justify-end">
+        <div className="flex min-w-0 flex-1 flex-wrap sm:flex-nowrap items-center gap-1.5 xl:gap-2 w-full sm:w-auto justify-start sm:justify-end">
 <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('tool.reset')} onClick={() => hasModel && setResetConfirmOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />
@@ -9149,7 +9195,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </svg>
           </IconButton>
 
-          <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 hidden sm:block" />
+          <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 hidden xl:block" />
 
           {/* Teknik Özellikler (Bileşenler de içinde) */}
           <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('sp.title')} onClick={() => hasModel && setSpecsOpen(true)}>
@@ -9158,7 +9204,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </svg>
           </IconButton>
 
-          <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 hidden sm:block" />
+          <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 hidden xl:block" />
 
           {/* Asistan — her zaman kullanılabilir, model gerekmez */}
           <IconButton active label={t('chat.button')} onClick={() => setChatOpen((o) => !o)}>
@@ -9168,7 +9214,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </svg>
           </IconButton>
 
-          <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 hidden sm:block" />
+          <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 hidden xl:block" />
 
           {/* Açık / koyu tema */}
           <button
@@ -9194,7 +9240,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           <LanguageSelect value={lang} onChange={setLang} />
 
-          <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 hidden sm:block" />
+          <span className="w-px h-6 bg-neutral-200 dark:bg-[#2c333f] mx-1 hidden xl:block" />
 
           {/* Profil / rol menüsü — eski dişli (ayarlar) ikonunun yerini alır */}
           <ProfileMenu />
@@ -10360,7 +10406,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
               {/* Sonraki adımlar: soluk ve tıklanamaz — yalnızca sırayı anlatıyor. */}
               <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-                {[t('ilk.adim2'), t('ilk.adim3'), t('ilk.adim4')].map((ad) => (
+                {/*
+                  DUVAR ÖLÇÜSÜ ADIMI KALKTI.
+
+                  Duvar artık ekranın kendi kartında (her ekranın ya da
+                  grubun kendi duvarı var); ayrı bir adım olarak sayılması
+                  kullanıcıyı olmayan bir ekranı aramaya gönderiyordu.
+                */}
+                {[t('ilk.adim3'), t('ilk.adim4')].map((ad) => (
                   <li
                     key={ad}
                     className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-neutral-400 dark:border-[#2c333f] dark:bg-[#161a21] dark:text-neutral-500"
@@ -10588,7 +10641,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             <SayiKutusu etiket={t('screen.colsShort')} deger={cols} onChange={setCols} min={1} max={colsMax} />
                             <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsMax} />
                             {/* Artış neden durdu: sessiz sınır yerine açık not. */}
-                            {(cols >= colsMax || rows >= rowsMax) && (
+                            {(cols >= colsMax || rows >= rowsMax || grupDuvariAsiyor) && (
                               <span className="w-full text-[13px] leading-snug text-amber-600 dark:text-amber-400">
                                 {t('olcu.duvarSiniri')}
                               </span>
@@ -10877,8 +10930,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     İkisi bambaşka görünür; hangisinin kurulacağını
                     ancak kullanıcı bilir.
                   */}
-                  {/* Açılı birleşim de yönü kullanıyor: düğmesi artık orada da var. */}
-                  {(grupTipi === 'l' || grupTipi === 'u' || grupTipi === 'kutu' || grupTipi === 'acili') && (
+                  {/*
+                    YALNIZCA L VE U'DA.
+
+                    Açıda yön zaten açının kendisinden geliyor (90°'nin
+                    altı içe, üstü dışa), küpte ise böyle bir seçim yok.
+                    İkisinde de düğmeler duruyor ama hiçbir şey yapmıyordu.
+                  */}
+                  {(grupTipi === 'l' || grupTipi === 'u') && (
                     <div className="mt-2 flex overflow-hidden rounded-lg border border-neutral-300 dark:border-[#39414f]">
                       {['ice', 'disa'].map((y) => (
                         <button
@@ -10934,15 +10993,52 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                     if (!g) return g
                                     const liste = Array.from(
                                       { length: Math.max(0, g.uyeler.length - 1) },
-                                      (_, k) => ({ aci: g.eklemler?.[k]?.aci ?? 135 }),
+                                      (_, k) => ({
+                                        aci: g.eklemler?.[k]?.aci ?? 135,
+                                        kose: g.eklemler?.[k]?.kose || 'koseli',
+                                      }),
                                     )
-                                    liste[j] = { aci: Number.isFinite(v) ? v : 135 }
+                                    liste[j] = {
+                                      aci: Number.isFinite(v) ? v : 135,
+                                      /* Köşe biçimi açı yazılırken kaybolmuyor. */
+                                      kose: g.eklemler?.[j]?.kose || 'koseli',
+                                    }
                                     return { ...g, eklemler: liste }
                                   })
                                 }}
                                 className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
                               />
                               <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
+                              {/* Köşe keskin mi bitiyor, yumuşak mı dönüyor. */}
+                              <div className="flex shrink-0 overflow-hidden rounded-md border border-neutral-300 dark:border-[#39414f]">
+                                {['koseli', 'yuvarlak'].map((kb) => (
+                                  <button
+                                    key={kb}
+                                    type="button"
+                                    onClick={() =>
+                                      setGrup((g) => {
+                                        if (!g) return g
+                                        const liste = Array.from(
+                                          { length: Math.max(0, g.uyeler.length - 1) },
+                                          (_, q) => ({
+                                            aci: g.eklemler?.[q]?.aci ?? 135,
+                                            kose: g.eklemler?.[q]?.kose || 'koseli',
+                                          }),
+                                        )
+                                        liste[j] = { ...liste[j], kose: kb }
+                                        return { ...g, eklemler: liste }
+                                      })
+                                    }
+                                    className={`px-2 py-1 text-[12.5px] ${
+                                      (grup.eklemler?.[j]?.kose || 'koseli') === kb
+                                        ? 'bg-brand text-white'
+                                        : 'text-neutral-600 dark:text-neutral-300'
+                                    }`}
+                                  >
+                                    {t('eklem.' + kb)}
+                                  </button>
+                                ))}
+                              </div>
                               {disinda && (
                                 <span className="text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
                                   {t('eklem.uyari')}
@@ -11918,7 +12014,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   aynı sayıyı iki yerde göstermek hangisinin geçerli olduğunu
                   belirsizleştiriyordu.
                 */}
-                {surukleAktif && mesafeKartiVar && !(sihirbazAdim > 0) && (
+                {/*
+                  BOŞ ÇERÇEVE KALMIYOR.
+
+                  Kutunun içindeki iki satır da kendi koşuluyla
+                  gizlenebiliyor; ikisi birden gizlenince geriye içi boş
+                  bir çerçeve kalıyordu (hazır mekânlarda her seferinde).
+                */}
+                {surukleAktif &&
+                  mesafeKartiVar &&
+                  !(sihirbazAdim > 0) &&
+                  ((!taslakKutu && PANEL.mesafe) ||
+                    !((scene === 'ozel' && ozelSahne) || izlemeBilgiSahnesi)) && (
                   <div className="mt-2 border border-neutral-200 dark:border-[#2c333f] rounded-lg p-2.5">
                     {/*
                       TASLAK KUTU VARKEN BU SATIR YOK.
@@ -13113,6 +13220,25 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
     'h-6 w-6 shrink-0 rounded border border-neutral-300 text-[15px] leading-none text-neutral-700 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-35 dark:border-[#39414f] dark:text-neutral-200'
   /* Ondalık adımda kayan nokta kalıntısı kalmasın (0,1+0,2). */
   const yuvarla = (v) => Number(v.toFixed(2))
+  /*
+   * DEĞER ELLE DE YAZILABİLİYOR.
+   *
+   * Kutu yalnızca +/- ile değişiyordu ve duvar adımı 10 cm: 1,00'dan
+   * 3,20'ye çıkmak yirmi iki tıklama ediyordu. Yazarken değer SERBEST
+   * (kutu boşaltılabiliyor); sınırlara ancak odaktan çıkınca çekiliyor,
+   * yoksa "3" yazarken sayı anında en küçük değere düşüyordu.
+   */
+  const [taslak, setTaslak] = useState(null)
+  const bicim = (v) => (adim < 1 ? (v || 0).toFixed(2).replace('.', ',') : String(v ?? ''))
+  /* Virgül de ondalık ayıracı: Türkçe klavyede yazılan budur. */
+  const sayiya = (m) => Number(String(m).replace(',', '.'))
+  const bitir = () => {
+    if (taslak == null) return
+    const v = sayiya(taslak)
+    setTaslak(null)
+    if (!Number.isFinite(v) || taslak.trim() === '') return
+    onChange(yuvarla(Math.min(max, Math.max(min, v))))
+  }
   return (
     <span className="flex min-w-0 items-center gap-1">
       <span className="shrink-0 text-[13.5px] text-neutral-600 dark:text-neutral-300">{etiket}</span>
@@ -13125,9 +13251,20 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
       >
         −
       </button>
-      <span className="min-w-[1.5rem] text-center text-[14.5px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
-        {adim < 1 ? (deger || 0).toFixed(2).replace('.', ',') : deger}
-      </span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={taslak ?? bicim(deger)}
+        onChange={(e) => setTaslak(e.target.value)}
+        onBlur={bitir}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+          if (e.key === 'Escape') setTaslak(null)
+        }}
+        onFocus={(e) => e.currentTarget.select()}
+        aria-label={etiket}
+        className="w-[3.4rem] min-w-0 rounded border border-transparent bg-transparent px-0.5 text-center text-[14.5px] font-semibold tabular-nums text-neutral-800 outline-none transition-colors hover:border-neutral-300 focus:border-brand dark:text-neutral-100 dark:hover:border-[#39414f]"
+      />
       <button
         type="button"
         aria-label="+"

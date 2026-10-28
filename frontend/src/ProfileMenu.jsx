@@ -116,7 +116,8 @@ export default function ProfileMenu() {
         <span className={`h-7 w-7 rounded-full ${style.avatar} inline-flex items-center justify-center text-[11px] font-bold tracking-wide ring-2 ${style.ring}`}>
           {initials}
         </span>
-        <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-300 max-w-[72px] truncate">
+        {/* Ad yalnızca 1280 px üstünde: dar tablette şerit başlığa biniyordu. */}
+        <span className="hidden xl:inline text-[11px] font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-300 max-w-[72px] truncate">
           {roleLabel}
         </span>
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className={`text-neutral-400 transition-transform ${open ? 'rotate-180' : ''}`}>

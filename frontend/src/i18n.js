@@ -271,6 +271,7 @@ const dict = {
   'model.defaultSeries': { tr: 'LED İç Mekan', en: 'LED Indoor', ar: 'LED داخلي' },
 
   // ---------- Duvar bölümü ----------
+  'olcu.grupToplam': { tr: 'Grup toplamı', en: 'Group total', ar: 'إجمالي المجموعة' },
   'olcu.duvarSiniri': { tr: 'Duvar ölçüsüne ulaşıldı', en: 'Wall size reached', ar: 'تم بلوغ مقاس الجدار' },
   'wall.heading': { tr: 'Duvar', en: 'Wall', ar: 'الجدار' },
   'wall.grup': { tr: 'Birleşik grupta duvar hepsi için ortak.', en: 'In a joined group the wall is shared.', ar: 'في المجموعة المدمجة، الجدار مشترك.' },
@@ -342,6 +343,8 @@ const dict = {
   'yerlesim.l': { tr: 'L tipi', en: 'L shape', ar: 'شكل L' },
   'yerlesim.u': { tr: 'U tipi', en: 'U shape', ar: 'شكل U' },
   'yerlesim.kutu': { tr: 'Küp', en: 'Box', ar: 'مكعب' },
+  'eklem.koseli': { tr: 'Köşeli', en: 'Sharp', ar: 'زاوية حادة' },
+  'eklem.yuvarlak': { tr: 'Yuvarlak', en: 'Rounded', ar: 'مستدير' },
   'yerlesim.acili': { tr: 'Açılı', en: 'Angled', ar: 'بزاوية' },
   'yerlesim.enAzUc': { tr: 'U tipi için en az 3 ekran seçin', en: 'U shape needs at least 3 screens', ar: 'شكل U يحتاج 3 شاشات على الأقل' },
   'yerlesim.enAzDort': { tr: 'Küp için en az 4 ekran seçin', en: 'Box needs at least 4 screens', ar: 'المكعب يحتاج 4 شاشات على الأقل' },
@@ -1697,8 +1700,8 @@ const dict = {
   'ilk.aciklama': { tr: 'Başlamak için LED modelini seçin.', en: 'Pick an LED model to get started.', ar: 'اختر طراز شاشة LED للبدء.' },
   'ilk.dugme': { tr: 'Model seç', en: 'Select model', ar: 'اختر الطراز' },
   'ilk.adim2': { tr: '2. Duvar ölçüsü', en: '2. Wall size', ar: '٢. مقاس الجدار' },
-  'ilk.adim3': { tr: '3. Ekranlar', en: '3. Screens', ar: '٣. الشاشات' },
-  'ilk.adim4': { tr: '4. Ekran yerleşimi', en: '4. Screen layout', ar: '٤. ترتيب الشاشات' },
+  'ilk.adim3': { tr: '2. Ekranlar', en: '2. Screens', ar: '٢. الشاشات' },
+  'ilk.adim4': { tr: '3. Ekran yerleşimi', en: '3. Screen layout', ar: '٣. ترتيب الشاشات' },
   'ilk.kilit': { tr: 'Önce model seçin', en: 'Select a model first', ar: 'اختر الطراز أولاً' },
 
   /* Duvar dibinden yerleştirme — adım yönergeleri. */
