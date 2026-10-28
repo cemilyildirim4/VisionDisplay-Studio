@@ -341,6 +341,22 @@ function cmYukari(metre) {
   return Math.ceil(Math.max(0, Number(metre) || 0) * 100 - 1e-6) / 100
 }
 
+/*
+ * EKLEMİN VARSAYILAN AÇISI — TİPİN KENDİ ŞEKLİ.
+ *
+ * Açı ve köşe biçimi yalnızca "Açılı" tipinde ayarlanabiliyordu; L ve U'da
+ * açılar koda gömülüydü. Şimdi üçü de aynı BİRLEŞİMLER satırlarını
+ * kullanıyor, yalnızca başlangıç değerleri tipten geliyor:
+ *   L — diziyi en dengeli bölen tek eklem 90°, ötekiler düz (180°),
+ *   U — baştaki ve sondaki eklem 90°, aradakiler düz,
+ *   Açılı — hepsi aynı açıyla başlıyor.
+ */
+function eklemVarsayilanAcisi(tip, j, uyeSayisi, aciliAci = 135) {
+  if (tip === 'l') return j === Math.max(0, Math.round(uyeSayisi / 2) - 1) ? 90 : 180
+  if (tip === 'u') return j === 0 || j === uyeSayisi - 2 ? 90 : 180
+  return aciliAci
+}
+
 function yerlesimSecenekleri(m, genislikM, yukseklikM) {
   if (!m) return null
   const EPSILON = 1e-9
@@ -2708,29 +2724,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      *
      * U'da iki uç eklem 90° dönüyor, aradakiler düz: arka ekran kaç
      * parçadan oluşursa oluşsun iki kol baştan ve sondan çıkıyor.
+     *
+     * Bu değerler artık BAŞLANGIÇ: L ve U da açılı gibi eklem eklem
+     * ayarlanabiliyor (bkz. eklemVarsayilanAcisi ve BİRLEŞİMLER satırları).
      */
+    const ayarlanir = grup.tip === 'acili' || grup.tip === 'l' || grup.tip === 'u'
     const aci =
       grup.tip === 'duz'
         ? 0
-        : grup.tip === 'acili'
-          ? Array.isArray(grup.eklemler)
-            ? grup.eklemler.map((e) => e?.aci ?? 135)
-            : grup.aci || 135
-          : grup.tip === 'l'
-            ? Array.from({ length: uyeSayisi - 1 }, (_, j) =>
-                j === Math.max(0, Math.round(uyeSayisi / 2) - 1) ? 90 : 180,
+        : ayarlanir
+          ? /* Eski kayıtlarda eklem listesi yoksa açılı tek sayıyla kuruluyor. */
+            !Array.isArray(grup.eklemler) && grup.tip === 'acili'
+            ? grup.aci || 135
+            : Array.from({ length: uyeSayisi - 1 }, (_, j) =>
+                grup.eklemler?.[j]?.aci ?? eklemVarsayilanAcisi(grup.tip, j, uyeSayisi),
               )
-            : grup.tip === 'u'
-              ? Array.from({ length: uyeSayisi - 1 }, (_, j) =>
-                  j === 0 || j === uyeSayisi - 2 ? 90 : 180,
-                )
-              : 90
+          : 90
     const uyeParcalari = uyeler.map((id) => ekranParcalari.find((x) => x.id === id)).filter(Boolean)
     if (uyeParcalari.length < 2) return ekranParcalari
-    /* Köşe biçimi yalnızca açılı birleşimde seçiliyor. */
+    /* Köşe biçimi (köşeli/yuvarlak) ayarlanabilir her birleşimde geçerli. */
     const koseBicimleri =
-      grup.tip === 'acili' && Array.isArray(grup.eklemler)
-        ? grup.eklemler.map((e) => e?.kose || 'koseli')
+      ayarlanir && Array.isArray(grup.eklemler)
+        ? Array.from({ length: uyeSayisi - 1 }, (_, j) => grup.eklemler[j]?.kose || 'koseli')
         : null
     const geo = birlesimGeometrisi(uyeParcalari, aci, grup.lYon || 'ice', koseBicimleri)
     /*
@@ -5061,11 +5076,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       lYon: yon,
       /*
        * EKLEMLER — her komşu çift için bir kayıt.
-       * Var olanlar korunuyor; yeni eklem varsayılanla doğuyor. Ekran
-       * eklenip çıkınca ötekilerin açısı bozulmuyor.
+       *
+       * Var olanlar korunuyor; yeni eklem tipin varsayılanıyla doğuyor.
+       * Ekran eklenip çıkınca ötekilerin açısı bozulmuyor.
+       *
+       * TİP DEĞİŞİNCE AÇILAR O TİPİN VARSAYILANINA DÖNÜYOR: açılıda 135°
+       * ayarlanan eklemler L'ye geçince de 135° kalsaydı L, L olmazdı.
+       * Köşe biçimi (köşeli/yuvarlak) tip değişse de korunuyor — eskiden
+       * her yeniden kurulumda sessizce "köşeli"ye düşüyordu.
        */
       eklemler: Array.from({ length: Math.max(0, sirali.length - 1) }, (_, j) => ({
-        aci: eski?.eklemler?.[j]?.aci ?? aci ?? 135,
+        aci:
+          (eski?.tip === tip ? eski?.eklemler?.[j]?.aci : undefined) ??
+          eklemVarsayilanAcisi(tip, j, sirali.length, aci ?? 135),
+        kose: eski?.eklemler?.[j]?.kose || 'koseli',
       })),
     }))
   }
@@ -8581,9 +8605,47 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Hem onay düğmesi hem de başka ekrana geçiş bu adımı kullanıyor;
    * ikisi ayrı yazıldığında geçişte kaydetme unutulmuştu.
    */
+  /*
+   * İŞARETLENEN ALAN PERSPEKTİFİ VERİYOR, ÖLÇÜYÜ DEĞİL.
+   *
+   * Dörtgen olduğu gibi yazılınca tasarım alanı DOLDURUYORDU: 0,96 m'lik
+   * bir ekran, kullanıcının çizdiği kutu ne kadarsa o kadar büyüyordu.
+   *
+   * Alanın gerçek ölçüsü referans ölçeğinden çıkıyor (alanOlcegiPxM);
+   * tasarım da kendi gerçek ölçüsüyle (kabin sayısı × kabin ölçüsü) o
+   * alanın ORTASINA oturuyor. Dörtgen merkezinden ölçekleniyor: eğim ve
+   * perspektif olduğu gibi kalıyor, yalnızca boy gerçeğe iniyor.
+   *
+   * Tasarım alandan büyükse küçültülmüyor — gerçek ölçü bu; taşan kısım
+   * görünüyor ve kısa bir uyarı çıkıyor. Alanı tamamen doldurmak ayrı bir
+   * iş: "Alana sığdır" düğmesi (bkz. tasarimiAlanaSigdir).
+   */
+  const gercegeOlcekle = (kose, enM, boyM) => {
+    const bos = { kose, tasti: false }
+    const olcekPxM = alanOlcegiPxM || cizimOlcek
+    if (!Array.isArray(kose) || kose.length !== 4) return bos
+    if (!(olcekPxM > 0) || !(enM > 0) || !(boyM > 0)) return bos
+    const uzak = (a, b) => Math.hypot(a.x - b.x, a.y - b.y)
+    /* Perspektifte karşılıklı kenarlar eşit değil: ortalaması alınıyor. */
+    const enPx = (uzak(kose[0], kose[1]) + uzak(kose[3], kose[2])) / 2
+    const boyPx = (uzak(kose[0], kose[3]) + uzak(kose[1], kose[2])) / 2
+    if (!(enPx > 1) || !(boyPx > 1)) return bos
+    const sx = (enM * olcekPxM) / enPx
+    const sy = (boyM * olcekPxM) / boyPx
+    if (!(sx > 0) || !(sy > 0)) return bos
+    const cx = kose.reduce((t2, q) => t2 + q.x, 0) / 4
+    const cy = kose.reduce((t2, q) => t2 + q.y, 0) / 4
+    return {
+      kose: kose.map((q) => ({ x: cx + (q.x - cx) * sx, y: cy + (q.y - cy) * sy })),
+      tasti: sx > 1.001 || sy > 1.001,
+    }
+  }
+
   const yerKaydet = (ekran, nokta) => {
     if (!ekran || !Array.isArray(nokta) || nokta.length !== 4) return null
-    const duzgun = koseSirala(nokta)
+    const olcekli = gercegeOlcekle(koseSirala(nokta), ekran.wm, ekran.hm)
+    const duzgun = olcekli.kose
+    setKutuMesaj(olcekli.tasti ? t('yer.tasma') : null)
     yerKoseRef.current[ekran.id] = duzgun
     dortgeniYaz(ekran.id, duzgun)
     const yeni = yerlesmisIdler.includes(ekran.id) ? yerlesmisIdler : [...yerlesmisIdler, ekran.id]
@@ -10974,8 +11036,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     Tek bir açı kutusu vardı ve hangi köşeye ait olduğu
                     belli değildi; üç ekranlı bir dizide iki köşeyi farklı
                     açıda kurmak da mümkün değildi.
+
+                    L VE U'DA DA VAR. Oralarda açılar koda gömülüydü;
+                    kullanıcı köşeyi yumuşatamıyor, açıyı değiştiremiyordu.
+                    Satırlar aynı, yalnızca başlangıç değerleri tipten
+                    geliyor (bkz. eklemVarsayilanAcisi).
                   */}
-                  {grupTipi === 'acili' && grup && Array.isArray(grup.uyeler) && grup.uyeler.length > 1 && (
+                  {['acili', 'l', 'u'].includes(grupTipi) && grup && Array.isArray(grup.uyeler) && grup.uyeler.length > 1 && (
                     <div className="mt-2">
                       <div className="mb-1 text-[13.5px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
                         {t('eklem.baslik')}
@@ -10985,7 +11052,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           const solSira = ekranParcalari.find((x) => x.id === id)?.sira ?? j + 1
                           const sagSira =
                             ekranParcalari.find((x) => x.id === grup.uyeler[j + 1])?.sira ?? j + 2
-                          const deger = grup.eklemler?.[j]?.aci ?? 135
+                          const deger =
+                            grup.eklemler?.[j]?.aci ??
+                            eklemVarsayilanAcisi(grupTipi, j, grup.uyeler.length)
                           const disinda = !(deger >= 90 && deger <= 180)
                           return (
                             <div key={id} className="flex items-center gap-2">
@@ -11005,12 +11074,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                     const liste = Array.from(
                                       { length: Math.max(0, g.uyeler.length - 1) },
                                       (_, k) => ({
-                                        aci: g.eklemler?.[k]?.aci ?? 135,
+                                        aci:
+                                          g.eklemler?.[k]?.aci ??
+                                          eklemVarsayilanAcisi(g.tip, k, g.uyeler.length),
                                         kose: g.eklemler?.[k]?.kose || 'koseli',
                                       }),
                                     )
                                     liste[j] = {
-                                      aci: Number.isFinite(v) ? v : 135,
+                                      aci: Number.isFinite(v)
+                                        ? v
+                                        : eklemVarsayilanAcisi(g.tip, j, g.uyeler.length),
                                       /* Köşe biçimi açı yazılırken kaybolmuyor. */
                                       kose: g.eklemler?.[j]?.kose || 'koseli',
                                     }
@@ -11032,7 +11105,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                         const liste = Array.from(
                                           { length: Math.max(0, g.uyeler.length - 1) },
                                           (_, q) => ({
-                                            aci: g.eklemler?.[q]?.aci ?? 135,
+                                            aci:
+                                              g.eklemler?.[q]?.aci ??
+                                              eklemVarsayilanAcisi(g.tip, q, g.uyeler.length),
                                             kose: g.eklemler?.[q]?.kose || 'koseli',
                                           }),
                                         )

@@ -753,6 +753,11 @@ const dict = {
   'yer.adimAciklama': { tr: 'Her ekranı sırayla, duracağı yerin dört köşesine tıklayarak yerleştirin.', en: 'Place each screen in turn by clicking the four corners where it will sit.', ar: 'ضع كل شاشة بدورها بالنقر على زوايا موضعها الأربع.' },
   'yer.ekran': { tr: '{0}. ekranı yerleştirin: ekranın duracağı yerin 4 köşesine tıklayın.', en: 'Place screen {0}: click the four corners where it will sit.', ar: 'ضع الشاشة {0}: انقر الزوايا الأربع لموضعها.' },
   'yer.kose': { tr: '{0} / 4 köşe', en: '{0} / 4 corners', ar: '{0} / ٤ زوايا' },
+  'yer.tasma': {
+    tr: 'Tasarım işaretlenen alandan büyük',
+    en: 'The design is larger than the marked area',
+    ar: 'التصميم أكبر من المنطقة المحددة',
+  },
   'yer.ekraniYerlestir': { tr: '{0}. ekranı yerleştir', en: 'Place screen {0}', ar: 'ضع الشاشة {0}' },
   'yer.ekraniDuzenle': { tr: '{0}. ekranı düzenle', en: 'Adjust screen {0}', ar: 'عدّل الشاشة {0}' },
   'yer.onayla': { tr: 'Bu ekranı onayla', en: 'Confirm this screen', ar: 'تأكيد هذه الشاشة' },
