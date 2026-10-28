@@ -476,6 +476,7 @@ const dict = {
     en: 'When off, video is driven by the processor only.',
     ar: 'عند الإيقاف يعمل الفيديو عبر المعالج فقط.',
   },
+  'minipc.title': { tr: 'Mini PC', en: 'Mini PC', ar: 'Mini PC' },
   'minipc.ask': { tr: 'Mini PC olsun mu?', en: 'Include a Mini PC?', ar: 'هل تريد Mini PC؟' },
   'minipc.yes': { tr: 'Evet, Mini PC istiyorum', en: 'Yes, I want a Mini PC', ar: 'نعم، أريد Mini PC' },
   'minipc.no': { tr: 'Hayır, istemiyorum', en: "No, I don't", ar: 'لا، لا أريد' },

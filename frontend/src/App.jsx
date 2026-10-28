@@ -11115,6 +11115,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               */}
 
               {/*
+                MİNİ PC — mekânın üstünde, PDF düğmesinin yanında değil.
+                Seçim yapılmadan rapor açılmıyor; soru modelden hemen sonra gelsin.
+              */}
+              <div className="mb-4">
+                <h2 className="text-[25px] font-bold tracking-tight m-0 mb-1">{t('minipc.title')}</h2>
+                <MiniPcSecimi deger={hasMiniPc} onChange={setHasMiniPc} />
+              </div>
+
+              {/*
                 MEKÂN — ekranın arkasına çizilen oda.
                 İçerik ekranın İÇİNE, mekân ekranın ARKASINA gider; ikisi
                 birbirinden bağımsız seçilir, o yüzden ayrı bir başlık altında.
