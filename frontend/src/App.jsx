@@ -945,6 +945,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yerleştirme bitmiş demektir. yerNokta: o ekran için konan köşeler.
    */
   const [yerSira, setYerSira] = useState(null)
+  /*
+   * KİLİTLİ KÖŞE SAYISI.
+   *
+   * Birleşik tipte ilk iki köşe önceki ekranın ortak kenarından geliyor
+   * ve sürüklenemiyor; kullanıcı yalnızca kalan ikisini koyuyor.
+   */
+  const [yerKilit, setYerKilit] = useState(0)
   const [yerNokta, setYerNokta] = useState([])
   /* Hangi ekranlar yerleşti — yerleşmemişin rozeti çizilmiyor. */
   const [yerlesmisIdler, setYerlesmisIdler] = useState([])
@@ -4604,6 +4611,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const basX = e.clientX
     const basY = e.clientY
     const bas = alanKonum
+    /*
+     * GRUP BİRLİKTE TAŞINIYOR.
+     *
+     * Taşıma yalnızca elde duran ekranı kaydırıyordu; gruptaki ötekiler
+     * yerinde kalınca birleşim köşesi ayrılıyordu. Üyelerin başlangıç
+     * dörtgeni ve bu ekranın başlangıç dörtgeni saklanıyor; her karede
+     * aradaki fark ötekilere de uygulanıyor.
+     */
+    const grupUyeleri =
+      Array.isArray(grup?.uyeler) && grup.uyeler.length > 1
+        ? grup.uyeler.filter((id) => id !== aktifEkranId)
+        : []
+    const tabanAktif = grupUyeleri.length ? alanaYerlestir(alanTuval, bas.u, bas.v, alanOlcek) : null
+    const tabanDigerleri = new Map()
+    if (tabanAktif) {
+      for (const id of grupUyeleri) {
+        const k = ekranKoseleri(id)
+        if (k) tabanDigerleri.set(id, k)
+      }
+    }
     const tasi = (ev) => {
       /*
        * SERBEST TAŞIMA — alanın dışına da çıkabiliyor.
@@ -4634,6 +4661,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       /* Ölçü KORUNUYOR: sürükleme yalnızca yeri değiştiriyor. */
       const yeni = alanaYerlestir(alanTuval, u, v, alanOlcek)
       if (yeni) elleKoseyeYaz(yeni)
+      /* Gruptaki öteki ekranlar aynı kadar kayıyor: köşe birleşik kalıyor. */
+      if (yeni && tabanAktif && tabanDigerleri.size) {
+        const dx = yeni[0].x - tabanAktif[0].x
+        const dy = yeni[0].y - tabanAktif[0].y
+        for (const [id, k] of tabanDigerleri) {
+          const tasinan = k.map((q) => ({ x: q.x + dx, y: q.y + dy }))
+          yerKoseRef.current[id] = tasinan
+          dortgeniYaz(id, tasinan)
+        }
+      }
     }
     const birak = () => {
       window.removeEventListener('pointermove', tasi)
@@ -8496,6 +8533,58 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Yerleşmiş ekranda mevcut dört köşe tutamak olarak geliyor; kullanıcı
    * sürükleyip onaylıyor. Yerleşmemişte boş başlıyor.
    */
+  /** Bir ekranın tuvaldeki dört köşesi (yoksa null). */
+  const ekranKoseleri = (id) => {
+    const taze = yerKoseRef.current[id]
+    if (Array.isArray(taze) && taze.length === 4) return taze
+    if (id === aktifEkranId && Array.isArray(koseMutlak) && koseMutlak.length === 4) return koseMutlak
+    const k = sabitEkranlar.find((e) => e.id === id)?.oran
+    return Array.isArray(k) && k.length === 4 ? k.map(oranTuvale) : null
+  }
+
+  /*
+   * ORTAK KENAR — ÖNCEKİ EKRANIN SAĞ KENARI.
+   *
+   * Yalnızca kullanıcının seçtiği tip birleşikse veriliyor; sistem
+   * hiçbir şey tahmin etmiyor. Sıralı dörtgende 1 = sağ üst, 2 = sağ
+   * alt; yeni ekranın sol kenarı tam olarak bu iki nokta.
+   */
+  const ortakKenar = (hedefId) => {
+    const tip = grup?.tip
+    if (tip !== 'l' && tip !== 'u' && tip !== 'acili' && tip !== 'kutu') return null
+    if (!Array.isArray(grup?.uyeler)) return null
+    const j = grup.uyeler.indexOf(hedefId)
+    if (j < 1) return null
+    const k = ekranKoseleri(grup.uyeler[j - 1])
+    if (!k) return null
+    return [k[1], k[2]]
+  }
+
+  /*
+   * FOTOĞRAFTA YERLEŞTİRİLECEK EKRANLAR.
+   *
+   * Küpte fotoğrafta yalnızca iki yüz görünüyor; arkadaki yüzler
+   * fotoğrafa işaretlenmiyor, 3D'de duruyorlar.
+   */
+  const yerlesecekIdler = (() => {
+    const hepsi = ekranParcalari.map((x) => x.id)
+    if (grup?.tip !== 'kutu' || !Array.isArray(grup.uyeler) || grup.uyeler.length < 3) return hepsi
+    const gizli = new Set(grup.uyeler.slice(2))
+    return hepsi.filter((id) => !gizli.has(id))
+  })()
+
+  /** Yerleştirmeye başlarken köşeler: varsa kendi dörtgeni, yoksa ortak kenar. */
+  const yerBaslangici = (id) => {
+    const mevcut = ekranKoseleri(id)
+    if (mevcut) {
+      setYerKilit(0)
+      return mevcut
+    }
+    const kenar = ortakKenar(id)
+    setYerKilit(kenar ? 2 : 0)
+    return kenar || []
+  }
+
   const yerEkraniSec = (sira) => {
     const i = ekranParcalari.findIndex((x) => x.sira === sira)
     if (i < 0) return
@@ -8510,15 +8599,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (yerSira != null && yerSira !== i && yerNokta.length === 4) {
       yerKaydet(ekranParcalari[yerSira], yerNokta)
     }
-    const id = ekranParcalari[i].id
-    const mevcut =
-      id === aktifEkranId
-        ? koseMutlak
-        : (() => {
-            const k = sabitEkranlar.find((e) => e.id === id)?.oran
-            return Array.isArray(k) && k.length === 4 ? k.map(oranTuvale) : null
-          })()
-    setYerNokta(Array.isArray(mevcut) && mevcut.length === 4 ? mevcut : [])
+    setYerNokta(yerBaslangici(ekranParcalari[i].id))
     setYerSira(i)
     setSihirbazAdim(3)
   }
@@ -8559,13 +8640,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (yerNokta.length !== 4 || !yerEkran) return
     const yeni = yerKaydet(yerEkran, yerNokta)
     if (!yeni) return
-    setYerNokta([])
-    /* Sıra, yerleşmemiş ilk ekrana geçiyor. */
-    const sonraki = ekranParcalari.findIndex((x) => !yeni.includes(x.id))
+    /* Sıra, yerleşmemiş ilk ekrana geçiyor (küpte arka yüzler atlanıyor). */
+    const sonraki = ekranParcalari.findIndex(
+      (x) => yerlesecekIdler.includes(x.id) && !yeni.includes(x.id),
+    )
     if (sonraki >= 0) {
       setYerSira(sonraki)
+      setYerNokta(yerBaslangici(ekranParcalari[sonraki].id))
       return
     }
+    setYerNokta([])
+    setYerKilit(0)
     /*
      * Hepsi bitti. Köşelere DOKUNULMUYOR: her ekran kullanıcının
      * tıkladığı dört köşede kalıyor.
@@ -9829,6 +9914,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   onKaydir={isaretKaydir}
                   noktalar={yerNokta}
                   onDegis={yerNoktaDegisti}
+                  /* Ortak kenar sürüklenmiyor: köşe birleşik kalsın. */
+                  kilitliSayisi={yerKilit}
                   enCokNokta={4}
                   tuvalW={tuvalBoyut.w}
                   tuvalH={tuvalBoyut.h}
@@ -11352,11 +11439,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             yerOnayHazir={yerNokta.length === 4}
                             yerYonerge={yerAktif ? t('yer.ekran').replace('{0}', String(yerEkran?.sira ?? yerSira + 1)) : ''}
                             yerSayac={yerAktif ? t('yer.kose').replace('{0}', String(yerNokta.length)) : ''}
-                            yerListe={ekranParcalari.map((x, i) => ({
+                            yerListe={ekranParcalari
+                              .filter((x) => yerlesecekIdler.includes(x.id))
+                              .map((x) => ({
                               id: x.id,
                               sira: x.sira,
                               yerlesti: yerlesmisIdler.includes(x.id),
-                              aktif: yerSira === i,
+                              aktif: ekranParcalari[yerSira]?.id === x.id,
                             }))}
                             onYerSec={yerEkraniSec}
                             onIsaretle={() => {

@@ -55,6 +55,13 @@ export default function ReferansSecici({
   /* Yapışılacak noktalar (tuval pikseli): başka ekranların köşeleri. */
   yapiskanNoktalar = [],
   /*
+   * BAŞTAKİ KAÇ NOKTA KİLİTLİ.
+   *
+   * Birleşik tipte ilk iki köşe önceki ekranın ortak kenarından geliyor;
+   * sürüklenirse köşe ayrılır ve iki ekran arasında boşluk kalır.
+   */
+  kilitliSayisi = 0,
+  /*
    * BÜYÜTEÇ KAYNAĞI — fotoğrafın adresi ve tuvaldeki dikdörtgeni.
    * {url, sol, ust, en, boy}. Yoksa büyüteç çizilmiyor.
    */
@@ -248,6 +255,8 @@ export default function ReferansSecici({
    * yalnızca farenin gittiği kadar gidiyor.
    */
   const noktayaBas = (i) => (e) => {
+    /* Ortak kenarın köşeleri yerinde kalıyor. */
+    if (i < kilitliSayisi) return
     e.preventDefault()
     e.stopPropagation()
     setSecili(i)
