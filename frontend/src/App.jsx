@@ -2,7 +2,7 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef, Suspense } from 
 import { guvenliLazy } from './guvenliLazy.js'
 import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
-import ExportModal from './ExportModal.jsx'
+import ExportModal, { MiniPcSecimi } from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import { useConfigurationPreview } from './useConfigurationPreview.js'
@@ -12308,11 +12308,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           <button
             type="button"
-            /* Mini PC kararı pencerenin ilk adımı: düğme yalnızca model bekliyor. */
-            disabled={!hasModel}
+            disabled={!hasModel || hasMiniPc === null}
             onClick={() => setExportOpen(true)}
             className={`flex-1 rounded-full text-[16px] font-semibold py-2.5 transition-colors ${
-              hasModel
+              hasModel && hasMiniPc !== null
                 ? 'btn-brand-primary cursor-pointer'
                 : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
@@ -12447,8 +12446,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        /* Mini PC kararı pencerenin ilk adımında veriliyor; cevap buraya yazılıyor. */
-        onMiniPc={setHasMiniPc}
         summary={{
           modelCode: selectedModel?.modelCode,
           // Rapordaki teknik özet (ağırlık, güç, ısı) modelin kendi

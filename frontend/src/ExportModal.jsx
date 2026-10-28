@@ -48,7 +48,7 @@ async function captureScreenPreview() {
   }
 }
 
-function MiniPcSecimi({ deger, onChange }) {
+export function MiniPcSecimi({ deger, onChange }) {
   const { t } = useLang()
   const grup = useId()
   const [acik, setAcik] = useState(false)
@@ -143,7 +143,7 @@ async function resolveMiniPcFields(hasMiniPc) {
   }
 }
 
-export default function ExportModal({ open, onClose, summary, onMiniPc }) {
+export default function ExportModal({ open, onClose, summary }) {
   const { t } = useLang()
   const { isAuthenticated, isAdmin, session, displayName, email: accountEmail } = useSession()
   /*
@@ -547,16 +547,6 @@ export default function ExportModal({ open, onClose, summary, onMiniPc }) {
             handleExport()
           }}
         >
-        {/*
-          MİNİ PC — RAPORUN İLK ADIMI.
-
-          Kararın sonucu bu rapor: donanım listesine ve fiyata buradan
-          giriyor. Cevaplanmadan alttaki düğmeler açılmıyor, eksik uyarısı
-          da neyin beklendiğini yazıyor.
-        */}
-        <div className="mb-4 rounded-xl border border-neutral-200 px-3.5 py-3 dark:border-[#2c333f]">
-          <MiniPcSecimi deger={summary.hasMiniPc ?? null} onChange={(v) => onMiniPc?.(v)} />
-        </div>
 
         {/*
           Firma bilgisi girişi kaldırıldı: değerler davet kodundan geliyor.
