@@ -84,7 +84,14 @@ export default function Birlesim2D({
      */
     w: (e.gercekWm ?? e.wm ?? 0) * pxPerM,
     h: (e.hm || 0) * pxPerM,
-    t: e.yon,
+    /*
+     * ÇİZİM AÇISI GERÇEK AÇIDAN AYRI OLABİLİYOR.
+     *
+     * Dışa dönük U'nun kanatları geriye bakıyor ve sabit önden görünüşte
+     * orta ekranın arkasında kalıyor. Orada çizim açısı veriliyor; 'yon'
+     * (gerçek duruş) 3B görünümde olduğu gibi kullanılıyor.
+     */
+    t: Number.isFinite(e.cizimYon) ? e.cizimYon : e.yon,
   }))
   if (parcalar.some((p) => !(p.w > 0) || !(p.h > 0))) return null
 

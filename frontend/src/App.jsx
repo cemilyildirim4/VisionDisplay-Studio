@@ -2251,7 +2251,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     if (!m) return
 
-    const { yatay, dikey } = yerlesimSecenekleri(m, width, height)
+    /*
+     * DUVARI PAYLAŞAN ÖTEKİ EKRANLARIN YERİ BU EKRANA KALMIYOR.
+     *
+     * Düğme ekranı duvarın TAMAMINA sığdırıyordu. Birden çok ekran varken
+     * sonuç şuydu: ekran tek başına duvar kadar genişliyor, toplam tasarım
+     * duvarı aşıyor, duvar da tasarımdan küçük kalamadığı için kendini
+     * büyütüyordu (bkz. widthMin). Her tıklamada hem duvar hem kabin
+     * sayısı büyüyordu — kullanıcının gördüğü buydu.
+     *
+     * Bu ekrana kalan genişlik: duvar eksi öteki ekranların enleri —
+     * sütun üst sınırının (colsMax) okuduğu payın aynısı.
+     */
+    const kalanEn = Math.max(0, (Number(width) || 0) - digerlerininEni)
+
+    const { yatay, dikey } = yerlesimSecenekleri(m, kalanEn, height)
 
     /*
      * EŞİTLİKTE YATAY KAZANIYOR.
@@ -2719,7 +2733,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         ? grup.eklemler.map((e) => e?.kose || 'koseli')
         : null
     const geo = birlesimGeometrisi(uyeParcalari, aci, grup.lYon || 'ice', koseBicimleri)
-    return ekranParcalari.map((x) => (geo.has(x.id) ? { ...x, ...geo.get(x.id) } : x))
+    /*
+     * U'DA KANATLAR TASARIM EKRANINDA HER ZAMAN GÖRÜNÜYOR.
+     *
+     * U'nun orta ekranı karşıdan düz duruyor, kanatları 90° dönük. "Dışa
+     * doğru"da kanatlar GERİYE dönüyor; karşıdan bakan göz onları orta
+     * ekranın arkasında görüyor, yani hiç göremiyor (ölçüldü: kanatların
+     * izdüşümü ortanın silüetinin içine düşüyor). Tasarım ekranı sabit
+     * önden baktığı için orada kanatlar iki yönde de öne açılıyor.
+     *
+     * YALNIZCA ÇİZİM AÇISI dönüyor: 'yon' olduğu gibi kalıyor, yani 3B
+     * görünüm ve kamera gerçek duruşu çiziyor — orada bakış açısı
+     * döndürülebildiği için kanatlar zaten görülebiliyor.
+     *
+     * L ve açılı birleşimde böyle bir sorun yok: zincir simetrik
+     * kurulduğu için iki yüz de her iki yönde görünüyor.
+     */
+    const kanatCevir = grup.tip === 'u' && (grup.lYon || 'ice') === 'disa'
+    return ekranParcalari.map((x) => {
+      if (!geo.has(x.id)) return x
+      const g = geo.get(x.id)
+      return { ...x, ...g, ...(kanatCevir ? { cizimYon: -g.yon } : null) }
+    })
   })()
 
   /*
