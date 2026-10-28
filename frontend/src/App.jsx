@@ -9100,50 +9100,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <div className="yatay-sayfa min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
       {/* Başlık çubuğu — kurumsal logo + sayfa adı */}
       <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-6 py-2.5 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
-        {/*
-          ALT BAŞLIK KALDIRILDI.
-
-          Antette üç satır vardı ve üçü de kırpılıyordu. Slogan bilgi
-          taşımıyor; kalkınca kalan iki satıra yetecek yer kalıyor.
-        */}
-        {/*
-          SOL BLOK — antet ve model çipi alt alta.
-
-          Çip başlığın YANINDAYDI: dokuz denetimlik sağ şeride yer
-          kalmıyor, kullanıcı menüsü ikinci satıra kayıyordu. Çip
-          başlığın altına inince sağ şerit tek sırada kalıyor.
-        */}
-        <div className="flex shrink-0 flex-col items-start gap-1.5">
-          <BrandMark title={t('app.title')} />
-          {/*
-            MODEL ÇİPİ — hangi modelle çalışıldığı her ekranda görünsün.
-            Sol paneldeki kart en uzun bloktu ama tasarım boyunca bir kez
-            dokunuluyor. Seçilmemişken vurgulu: yapılacak ilk iş o.
-          */}
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            title={seriAdi(selectedModel?.series?.name, t) || t('model.heading')}
-            className={`w-auto sm:w-full shrink-0 inline-flex items-center justify-between gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-[12.5px] font-semibold transition-colors ${
-              hasModel
-                ? 'border border-neutral-300 text-neutral-700 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-200'
-                : 'bg-brand text-white hover:opacity-90'
-            }`}
-          >
-            <span>{hasModel ? selectedModel.modelCode : t('model.select')}</span>
-            {/* Tip etiketi ve ok yatay telefonda gizli: ad kesilmesin. */}
-            {hasModel && (
-              <span className="yatay-gizle inline-flex items-center gap-1.5">
-                <ProductTypeBadge productType={selectedModel.productType} />
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </span>
-            )}
-          </button>
-        </div>
-
-
+        <BrandMark title={t('app.title')} />
         {/*
           Araç düğmeleri başlık çubuğunda. Önce solda dikey bir şeritteydi ama
           duvar büyüdükçe çizimin üstüne biniyordu; burada hiçbir zaman çakışmaz.
@@ -10679,6 +10636,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             {e.resW > 0 && ` · ${fmt(e.resW)} × ${fmt(e.resH)} piksel`}
                           </div>
                         </div>
+
+                        <MiniPcSecimi deger={hasMiniPc} onChange={setHasMiniPc} />
 
                         {/* ---- İçerik ---- */}
                         <div>
@@ -12312,15 +12271,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Ölçüm akışı sürerken gizli: teklif ve rapor, ölçü oturduktan
             sonraki işler (bkz. olcuAcik).
           */}
-          {hasModel && !olcuAcik && (
-            <div className="mt-3">
-              <MiniPcSecimi deger={hasMiniPc} onChange={setHasMiniPc} />
-              {hasMiniPc === null && (
-                <p className="mt-1.5 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">{t('minipc.need')}</p>
-              )}
-            </div>
-          )}
-
           {!olcuAcik && (
           <div className="mt-3 flex items-center gap-3">
             <button

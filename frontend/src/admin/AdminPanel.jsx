@@ -11,6 +11,7 @@ import HardwareCatalogSection from './HardwareCatalogSection.jsx'
 import LaborMultiplierSection from './LaborMultiplierSection.jsx'
 import { mmYazi } from '../birim.js'
 import { turkiyeTarihSaat } from '../turkiyeSaati.js'
+import { taslagiSil } from '../tasarimTaslagi.js'
 
 /**
  * Yönetim ekranı — pgAdmin'den elle veri girmeye alternatif.
@@ -389,7 +390,8 @@ function GirisEkrani() {
           <BrandMark title="Yönetim Paneli" subtitle={BRAND.companyShort} showCompany={false} />
         </div>
         <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0 mb-4">
-          Admin hesabınızla e-posta ve parola girin.
+          Yerel hesap <span className="font-semibold text-neutral-700 dark:text-neutral-200">admin@vision.local</span>.
+          Parola, proje klasöründeki .env dosyasındaki ADMIN_PASSWORD değeridir. Canlı sitedeki parola bu veritabanında geçerli değildir.
         </p>
 
         <form onSubmit={girisYap} className="flex flex-col gap-3">
@@ -1230,6 +1232,16 @@ export default function AdminPanel() {
             className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 min-h-[44px] inline-flex items-center"
           >
             Çıkış
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              taslagiSil()
+              goToConfigurator()
+            }}
+            className="rounded-full bg-brand px-4 text-sm font-semibold text-white min-h-[44px] inline-flex items-center justify-center hover:bg-brand-dark"
+          >
+            Yeni yapılandırma
           </button>
           <button
             type="button"
@@ -2110,6 +2122,16 @@ export default function AdminPanel() {
                 placeholder="Proje adı, müşteri, telefon veya e-posta ara…"
                 className="w-full md:flex-1 md:max-w-xs border border-neutral-300 dark:border-[#39414f] rounded-lg px-3 py-2 min-h-[44px] text-sm bg-transparent focus:outline-none focus:border-brand"
               />
+              <button
+                type="button"
+                onClick={() => {
+                  taslagiSil()
+                  goToConfigurator()
+                }}
+                className="rounded-full bg-brand px-4 text-sm font-semibold text-white min-h-[44px] inline-flex items-center justify-center hover:bg-brand-dark whitespace-nowrap"
+              >
+                Yeni yapılandırma
+              </button>
               <button type="button" onClick={() => loadConfigs(1, configsSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap min-h-[44px] inline-flex items-center">Ara</button>
               <button type="button" onClick={() => loadConfigs(configsPage, configsSearch)} className="text-sm text-brand dark:text-brand-light hover:underline whitespace-nowrap min-h-[44px] inline-flex items-center">Yenile</button>
             </div>

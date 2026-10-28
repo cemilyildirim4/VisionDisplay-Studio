@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
 using DisplayConfigurator.Application.Interfaces;
+using DisplayConfigurator.Application.Security;
 using DisplayConfigurator.Infrastructure.Data;
 using DisplayConfigurator.Infrastructure.Repositories;
 using DisplayConfigurator.Infrastructure.Services;
@@ -303,7 +304,23 @@ app.MapHealthChecks("/api/health").AllowAnonymous();
 // Dapper: EF Database.Migrate() yok. SQL betikleri schema_migrations ile izlenir.
 await SqlMigrationRunner.ApplyAsync(app);
 
+if (app.Environment.IsDevelopment())
+    await SyncLocalAdminPasswordAsync(app.Services);
+
 app.Run();
+
+static async Task SyncLocalAdminPasswordAsync(IServiceProvider services)
+{
+    var password = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+    if (string.IsNullOrWhiteSpace(password)) return;
+
+    using var scope = services.CreateScope();
+    var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+    var admin = await users.GetFirstAdminAsync();
+    if (admin == null || PasswordHasher.Verify(password, admin.PasswordHash)) return;
+
+    await users.UpdatePasswordHashAsync(admin.Id, PasswordHasher.Hash(password));
+}
 
 static string? FirstNonEmpty(params string?[] values)
 {

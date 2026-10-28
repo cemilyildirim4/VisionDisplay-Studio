@@ -264,12 +264,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
    * ("Maksimum kapasite" kalktı: aynı hesabı "Duvara sığdır" kendisi
    * yapıp uyguluyor, ayrıca sormaya gerek yok.)
    */
-  const secenekler =
-    onMiniPc ? (
-      <Kart baslik={t('sp.options')} genis>
-        {onMiniPc && <MiniPcSecimi deger={hasMiniPc} onChange={onMiniPc} />}
-      </Kart>
-    ) : null
+  const secenekler = null
 
   const ekranDokumu = cokEkran ? (
     <Kart baslik={t('sp.perScreen')} genis vurgulu>
