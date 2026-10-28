@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import Onay from './Onay.jsx'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import html2canvas from 'html2canvas-pro'
@@ -48,6 +48,60 @@ async function captureScreenPreview() {
   }
 }
 
+function MiniPcSecimi({ deger, onChange }) {
+  const { t } = useLang()
+  const grup = useId()
+  const [acik, setAcik] = useState(false)
+  const kart = (secili) =>
+    `flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[14px] font-medium leading-snug transition-colors ${
+      secili
+        ? 'border-brand bg-brand-tint text-neutral-900 dark:text-neutral-100'
+        : 'border-neutral-200 text-neutral-800 hover:border-brand/40 dark:border-[#2c333f] dark:text-neutral-100'
+    }`
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span className="text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">{t('minipc.ask')}</span>
+        <button
+          type="button"
+          aria-expanded={acik}
+          aria-label={t('minipc.info')}
+          title={t('minipc.info')}
+          onClick={() => setAcik((v) => !v)}
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-neutral-300 text-[12px] font-bold leading-none text-neutral-500 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+        >
+          ?
+        </button>
+      </div>
+      {acik && (
+        <p className="mb-2 text-[13px] leading-snug text-neutral-600 dark:text-neutral-300">{t('minipc.info')}</p>
+      )}
+      <div className="flex flex-col gap-1.5">
+        <label className={kart(deger === true)}>
+          <input
+            type="radio"
+            name={grup}
+            checked={deger === true}
+            onChange={() => onChange(true)}
+            className="h-4 w-4 shrink-0 accent-[#2962ad]"
+          />
+          {t('minipc.yes')}
+        </label>
+        <label className={kart(deger === false)}>
+          <input
+            type="radio"
+            name={grup}
+            checked={deger === false}
+            onChange={() => onChange(false)}
+            className="h-4 w-4 shrink-0 accent-[#2962ad]"
+          />
+          {t('minipc.no')}
+        </label>
+      </div>
+    </div>
+  )
+}
+
 function Field({ label, error, children }) {
   return (
     <label className="block mb-4 max-w-full">
@@ -89,7 +143,7 @@ async function resolveMiniPcFields(hasMiniPc) {
   }
 }
 
-export default function ExportModal({ open, onClose, summary }) {
+export default function ExportModal({ open, onClose, summary, onMiniPc }) {
   const { t } = useLang()
   const { isAuthenticated, isAdmin, session, displayName, email: accountEmail } = useSession()
   /*
@@ -125,6 +179,15 @@ export default function ExportModal({ open, onClose, summary }) {
   if (!open) return null
 
   const model = summary.model
+  /*
+   * MİNİ PC KARARI BU PENCERENİN İLK ADIMI.
+   *
+   * Soru sol paneldeki ekran kartındaydı: kart her ekran için bir kez
+   * çizildiğinden aynı soru ekran sayısınca tekrarlıyordu, oysa cevap
+   * tasarımın tamamı için tek. Kararın tek sonucu bu rapor — donanım
+   * listesine ve fiyata o giriyor — bu yüzden sorulduğu yer de burası.
+   */
+  const miniPcSecili = summary.hasMiniPc === true || summary.hasMiniPc === false
   const kabinW = (model?.widthMm || 0) / 1000
   const kabinH = (model?.heightMm || 0) / 1000
   const coklu = summary.screenMode === 'multi' && summary.screens?.length > 0
@@ -199,7 +262,7 @@ export default function ExportModal({ open, onClose, summary }) {
   const onayNotu = modelOnay ? `${t('exp.modelSureNote')}: ${modelOnay === 'yes' ? t('common.yes') : t('common.no')}` : ''
   const mesajNotlu = isAdmin ? message : [onayNotu, message.trim()].filter(Boolean).join('\n')
   // Admin raporu form beklemez. Bayi tarafında KVKK + model onayı + oturum gerekir.
-  const hazir = isAuthenticated && (isAdmin || (consent && !!modelOnay))
+  const hazir = isAuthenticated && miniPcSecili && (isAdmin || (consent && !!modelOnay))
   /*
    * NEDEN KAPALI OLDUĞUNU SÖYLE.
    *
@@ -208,8 +271,9 @@ export default function ExportModal({ open, onClose, summary }) {
    * Eksik olan ne varsa artık düğmenin hemen altında yazıyor.
    */
   const eksikler = isAdmin
-    ? [!isAuthenticated && t('exp.missingLogin')].filter(Boolean)
+    ? [!miniPcSecili && t('exp.missingMiniPc'), !isAuthenticated && t('exp.missingLogin')].filter(Boolean)
     : [
+        !miniPcSecili && t('exp.missingMiniPc'),
         !modelOnay && t('exp.missingModel'),
         !consent && t('exp.missingConsent'),
         !isAuthenticated && t('exp.missingLogin'),
@@ -277,6 +341,11 @@ export default function ExportModal({ open, onClose, summary }) {
 
   const handleExport = async () => {
     if (busy) return
+    /* Mini PC kararı donanım hesabına giriyor: cevapsız rapor üretilmiyor. */
+    if (!miniPcSecili) {
+      setUyari(t('minipc.need'))
+      return
+    }
     // Zorunlu alan: düğme zaten kilitli, bu ikinci koruma (klavye/otomasyon)
     if (!isAdmin && !modelOnay) {
       setUyari(t('exp.modelSureMissing'))
@@ -478,6 +547,17 @@ export default function ExportModal({ open, onClose, summary }) {
             handleExport()
           }}
         >
+        {/*
+          MİNİ PC — RAPORUN İLK ADIMI.
+
+          Kararın sonucu bu rapor: donanım listesine ve fiyata buradan
+          giriyor. Cevaplanmadan alttaki düğmeler açılmıyor, eksik uyarısı
+          da neyin beklendiğini yazıyor.
+        */}
+        <div className="mb-4 rounded-xl border border-neutral-200 px-3.5 py-3 dark:border-[#2c333f]">
+          <MiniPcSecimi deger={summary.hasMiniPc ?? null} onChange={(v) => onMiniPc?.(v)} />
+        </div>
+
         {/*
           Firma bilgisi girişi kaldırıldı: değerler davet kodundan geliyor.
           Kullanıcı kimin adına rapor aldığını görsün diye özet satır olarak

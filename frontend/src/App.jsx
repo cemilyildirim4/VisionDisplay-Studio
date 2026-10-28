@@ -4,7 +4,7 @@ import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
 import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
-import SpecsSection, { MiniPcSecimi } from './SpecsSection.jsx'
+import SpecsSection from './SpecsSection.jsx'
 import { useConfigurationPreview } from './useConfigurationPreview.js'
 import { computeSpecs, fmt } from './specsData.js'
 import ContactModal from './ContactModal.jsx'
@@ -10742,8 +10742,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           </div>
                         </div>
 
-                        <MiniPcSecimi deger={hasMiniPc} onChange={setHasMiniPc} />
-
                         {/* ---- İçerik ---- */}
                         <div>
                           <div className="mb-1 text-[14px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
@@ -12393,10 +12391,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           <button
             type="button"
-            disabled={!hasModel || hasMiniPc === null}
+            /* Mini PC kararı pencerenin ilk adımı: düğme yalnızca model bekliyor. */
+            disabled={!hasModel}
             onClick={() => setExportOpen(true)}
             className={`flex-1 rounded-full text-[16px] font-semibold py-2.5 transition-colors ${
-              hasModel && hasMiniPc !== null
+              hasModel
                 ? 'btn-brand-primary cursor-pointer'
                 : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
@@ -12441,8 +12440,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         /* Kiosk gövdesi seçiliyse hangi model: teklifle aynı kod. */
         kioskKod={kioskVar && surukleAktif ? kioskKod : null}
         toplam={tasarimToplami}
-        /* Sol panelden taşındı: donanım seçeneği, tasarımın sayılarıyla birlikte. */
-        onMiniPc={setHasMiniPc}
         preview={hwPreview}
         matchError={hwMatchError}
       />
@@ -12533,6 +12530,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
+        /* Mini PC kararı pencerenin ilk adımında veriliyor; cevap buraya yazılıyor. */
+        onMiniPc={setHasMiniPc}
         summary={{
           modelCode: selectedModel?.modelCode,
           // Rapordaki teknik özet (ağırlık, güç, ısı) modelin kendi

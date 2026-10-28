@@ -1813,6 +1813,7 @@ const dict = {
   'cc.quotes.status': { tr: 'Durum', en: 'Status', ar: 'الحالة' },
   'cc.quotes.date': { tr: 'Tarih', en: 'Date', ar: 'التاريخ' },
   'exp.missingIntro': { tr: 'Rapor için eksik:', en: 'Still needed:', ar: 'ما زال مطلوبًا:' },
+  'exp.missingMiniPc': { tr: 'Mini PC kararı', en: 'Mini PC choice', ar: 'قرار Mini PC' },
   'exp.missingModel': { tr: 'model onayı', en: 'model confirmation', ar: 'تأكيد الطراز' },
   'exp.missingConsent': { tr: 'aydınlatma metni onayı', en: 'privacy consent', ar: 'الموافقة على إشعار الخصوصية' },
   'exp.missingLogin': { tr: 'oturum açma', en: 'sign-in', ar: 'تسجيل الدخول' },
