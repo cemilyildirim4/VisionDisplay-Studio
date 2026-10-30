@@ -30,6 +30,7 @@ import {
   EN_AZ_PIKSEL,
 } from './referansOlcek.js'
 import { durusDortgeni, faredenDurus, durusaOturt, kutuGovdesi } from './durusKutusu.js'
+import { birlesimKapladigi } from './birlesimOlcu.js'
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
@@ -2619,11 +2620,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * çıkmıyor, kullanıcı sığmayan bir tasarımı sığıyor sanıyordu.
    * Ölçüler gerçek enlerden (wm) geliyor, çizimdeki kısalmadan değil.
    */
-  const grupToplamWm = ekranParcalari.reduce((t, x) => t + (x.wm || 0), 0)
-  const grupEnBuyukHm = ekranParcalari.reduce((t, x) => Math.max(t, x.hm || 0), 0)
-  const grupDuvariAsiyor =
-    (Number(width) > 0 && grupToplamWm > Number(width) + 1e-6) ||
-    (Number(height) > 0 && grupEnBuyukHm > Number(height) + 1e-6)
+  /*
+   * UYARININ KENDİSİ ŞERİTTEN SONRA (bkz. grupDuvariAsiyor).
+   *
+   * Kaplanan alan birleşimin geometrisinden çıkıyor, o da şeritten
+   * (ekranSeridi) geliyor. Buradan okunsaydı değişken henüz tanımlı
+   * olmaz ve uygulama açılışta hata ekranına düşerdi.
+   */
   const colsMax = Math.max(
     1,
     Math.min(EN_COK_KABIN_EKSEN, Math.floor(((width || 0) - digerlerininEni) / kabinEnM + 1e-6)),
@@ -2777,8 +2780,48 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * dörtgeniyle çiziliyor; şerit yalnızca fotoğrafsız sahnelerde anlamlı.
    */
   const cokluAktif = scene !== 'ozel' && ekranParcalari.length > 1
-  const tasarimWm = cokluAktif ? ekranParcalari.reduce((t, s) => t + s.wm, 0) : ekranWm
-  const tasarimHm = cokluAktif ? Math.max(...ekranParcalari.map((s) => s.hm)) : ekranHm
+
+  /*
+   * KAPLANAN ALAN — BİRLEŞİM TEK PARÇA GİBİ SAYILIYOR.
+   *
+   * Enler yan yana diziliyormuş gibi toplanıyordu: küpün dört yüzü ve U'nun
+   * kanatları duvarda yan yana yer kaplamadığı hâlde toplama giriyor, duvar
+   * kendiliğinden büyüyor ve yanlarda ekran yokken boşluk kalıyordu
+   * (bkz. birlesimKapladigi). Birleşim önden kapladığı kadar sayılıyor;
+   * birleşim dışındaki ekranlar gerçekten yan yana olduğu için toplanıyor.
+   */
+  const grupUyeId = Array.isArray(grup?.uyeler) && grup.uyeler.length > 1 ? grup.uyeler : null
+  const grupKapladigi = grupUyeId
+    ? birlesimKapladigi(
+        ekranSeridi.filter((x) => grupUyeId.includes(x.id)),
+        grup.tip === 'kutu',
+      )
+    : null
+  const tekDuranlar = ekranParcalari.filter((x) => !(grupKapladigi && grupUyeId.includes(x.id)))
+  const kaplananEn =
+    (grupKapladigi?.enM || 0) + tekDuranlar.reduce((t, x) => t + (x.wm || 0), 0)
+  const kaplananBoy = Math.max(
+    grupKapladigi?.boyM || 0,
+    ...tekDuranlar.map((x) => x.hm || 0),
+    0,
+  )
+
+  const tasarimWm = cokluAktif ? kaplananEn : ekranWm
+  const tasarimHm = cokluAktif ? kaplananBoy : ekranHm
+
+  /*
+   * GRUP DUVARDAN BÜYÜK MÜ — tek ekranın sınırı yetmiyor.
+   *
+   * Sınır yalnızca ELDEKİ ekranın büyütülmesini durduruyordu; grup başka
+   * bir ekran eklendikten sonra duvarı aştığında hiçbir uyarı çıkmıyor,
+   * kullanıcı sığmayan bir tasarımı sığıyor sanıyordu. Ölçü kaplanan
+   * alandan: birleşimde enler yan yana toplanmıyor.
+   */
+  const grupToplamWm = kaplananEn
+  const grupEnBuyukHm = kaplananBoy
+  const grupDuvariAsiyor =
+    (Number(width) > 0 && grupToplamWm > Number(width) + 1e-6) ||
+    (Number(height) > 0 && grupEnBuyukHm > Number(height) + 1e-6)
 
   /*
    * BU BLOK TASARIM ÖLÇÜSÜNÜN TANIMINDAN SONRA DURMAK ZORUNDA.
@@ -9158,8 +9201,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * sınır tasarımın KENDİ ölçüsü, bu yüzden sessiz bir değişiklik de
    * olmuyor.
    */
-  const tasarimToplamEn = ekranParcalari.reduce((t, x) => t + (x.wm || 0), 0)
-  const tasarimEnYuksek = Math.max(...ekranParcalari.map((x) => x.hm || 0), 0)
+  /* Duvarın alt sınırı da kaplanan alandan (bkz. kaplananEn). */
+  const tasarimToplamEn = kaplananEn
+  const tasarimEnYuksek = kaplananBoy
   const widthMin = hasModel ? Math.max(0.1, tasarimToplamEn) : 0
   const heightMin = hasModel ? Math.max(0.1, tasarimEnYuksek) : 0
 

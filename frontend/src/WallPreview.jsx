@@ -8,6 +8,7 @@ import { useLang } from './useLang.js'
 import { yonDonusumu } from './hooks/useYon.js'
 import Kup2D from './Kup2D.jsx'
 import Birlesim2D from './Birlesim2D.jsx'
+import { birlesimKapladigi } from './birlesimOlcu.js'
 import { koseDonusumu } from './homografi.js'
 
 /**
@@ -1083,11 +1084,24 @@ export default function WallPreview({
      * okununca duvarda hiçbir yerde olmayan bir sayı yazıyor, grup da
      * duvardan taşıyordu.
      */
-    const grupGercekWm = list.reduce((a, s) => a + (s.gercekWm || s.wm), 0) + ayrimSayisi * AYRIM_M
-    const maxHm = Math.max(...list.map((s) => s.hm))
+    /*
+     * BİRLEŞİMDE ENLER TOPLANMIYOR.
+     *
+     * Küpün dört yüzü ve U'nun kanatları duvarda yan yana yer kaplamıyor,
+     * bir kısmı derinliğe gidiyor. Toplanınca 6 ekranlı bir küp duvarda
+     * 4,69 m yer kaplıyor sanılıyor, duvar da kendiliğinden o ölçüye
+     * büyüyordu (bkz. birlesimKapladigi).
+     */
+    const kaplanan = birlesimKipi || kupKipi ? birlesimKapladigi(list, kupKipi) : null
+    /* İÇERİK ŞERİDİ ayrı: tek görsel bütün yüzlere yayılıyor, yan yana. */
+    const toplamGercekWm =
+      list.reduce((a, s) => a + (s.gercekWm || s.wm), 0) + ayrimSayisi * AYRIM_M
+    const grupGercekWm = kaplanan ? kaplanan.enM : toplamGercekWm
+    const maxHm = kaplanan ? kaplanan.boyM : Math.max(...list.map((s) => s.hm))
     // Sınırlayıcı duvar: en az ekranları içerecek kadar (Genişlik/Yükseklik'ten)
     /* Duvar grubun TAMAMINI içeriyor: taşan bir parça kalmıyor. */
-    const wallWm = Math.max(0.1, Number(width) || 0, totalWm, grupGercekWm)
+    /* Birleşimde şerit çizilmiyor; toplam en duvarı büyütmüyor. */
+    const wallWm = Math.max(0.1, Number(width) || 0, kaplanan ? 0 : totalWm, grupGercekWm)
     const wallHm = Math.max(0.1, Number(height) || 0, maxHm)
     // Duvarın çevresindeki mutlak konumlu öğeler için sabit pay (tek ekran
     // dalındaki hesapla aynı mantık): kırpılmasınlar diye yer ayrılır.
@@ -1192,6 +1206,8 @@ export default function WallPreview({
       return o
     })
     const grupGercekWpx = grupGercekWm * pxPerM
+    /* İçerik dilimi yüzlerin toplam eninden; kaplanan alandan değil. */
+    const seritGercekWpx = toplamGercekWm * pxPerM
 
     /*
      * PAYLAŞIMDA DİLİM GERÇEK GENİŞLİKLERE GÖRE.
@@ -1227,7 +1243,7 @@ export default function WallPreview({
     const icerikProplari = (s, gercekCizim = false) => {
       const cizimW = gercekCizim ? s.gercekWPx ?? s.wPx : s.wPx
       const cizimX = gercekCizim ? s.gercekXStart ?? s.xStart : s.xStart
-      const seritW = gercekCizim ? grupGercekWpx : totalWpx
+      const seritW = gercekCizim ? seritGercekWpx : totalWpx
       if (dilim) {
         return {
           spanW: seritW * dilim.sw,
@@ -1318,13 +1334,32 @@ export default function WallPreview({
      * kutusunu gösteriyordu: çizimle hiç örtüşmeyen, gerçekte de
      * karşılığı olmayan sayılar çıkıyordu.
      */
-    const olcuW = birlesimKipi ? grupGercekWpx : totalWpx
+    /* Ölçü etiketleri ve kenar payları kaplanan alandan. */
+    const olcuW = kaplanan || birlesimKipi ? grupGercekWpx : totalWpx
     const olcuSol = Math.max(0, (wallW - olcuW) / 2)
-    const olcuToplamM = birlesimKipi ? grupGercekWm : totalWm
+    const olcuToplamM = kaplanan || birlesimKipi ? grupGercekWm : totalWm
     const olcuMarginM = Math.max(0, (wallWm - olcuToplamM) / 2)
-    const olcuXStart = (s) => (birlesimKipi ? s.gercekXStart ?? s.xStart : s.xStart)
-    const olcuCenter = (s) =>
-      birlesimKipi ? (s.gercekXStart ?? s.xStart) + (s.gercekWPx ?? s.wPx) / 2 : s.center
+    /*
+     * PARÇA ÇİZGİLERİ KAPLANAN BANDIN İÇİNDE.
+     *
+     * Etiketler ve kılavuz çizgileri şeritteki yerlerinden okunuyordu;
+     * birleşimde şerit çizilmediği için kaplanan alanın dışına taşıyor,
+     * küpte de duvara dağılıyorlardı. Yerler artık izdüşümden
+     * (bkz. birlesimKapladigi → yerler); küpte parça çizgisi yok.
+     */
+    const yerler = kaplanan?.yerler || null
+    const parcaCizgisi = !kaplanan || !!yerler
+    const olcuXStart = (s) =>
+      yerler ? (yerler[placed.indexOf(s)]?.x0 ?? 0) * pxPerM
+        : birlesimKipi ? s.gercekXStart ?? s.xStart
+        : s.xStart
+    const olcuCenter = (s) => {
+      if (yerler) {
+        const y = yerler[placed.indexOf(s)]
+        return y ? ((y.x0 + y.x1) / 2) * pxPerM : 0
+      }
+      return birlesimKipi ? (s.gercekXStart ?? s.xStart) + (s.gercekWPx ?? s.wPx) / 2 : s.center
+    }
 
     const maskePolygon = seritMaskePolygon(placed, maxHpx)
 
@@ -1398,8 +1433,8 @@ export default function WallPreview({
                     pxPerM={pxPerM}
                     model={model}
                     resolution={resolution}
-                    /* Küp de duvarın içine sığıyor: taşan kısım kırpılıyordu. */
-                    enCokW={wallW}
+                    /* Küp kaplanan alanın içinde: çizim ölçüyle aynı yeri tutuyor. */
+                    enCokW={olcuW}
                     enCokH={stripTop + maxHpx}
                     sifirlaEtiketi={t('kup.sifirla')}
                   />
@@ -1437,7 +1472,8 @@ export default function WallPreview({
                   <Birlesim2D
                     /* Yan duvar yalnızca hazır mekânda: tasarım ekranında duvar tek düzlem. */
                     yanDuvar={sahneVar}
-                    enCokW={wallW}
+                    /* Çizim kaplanan alana sığıyor: etiketle aynı genişlik. */
+                    enCokW={olcuW}
                     enCokH={stripTop + maxHpx}
                     ekranlar={placed.map((s) => ({ ...s, icerikProp: icerikProplari(s, true) }))}
                     sade={sade}
@@ -1598,8 +1634,8 @@ export default function WallPreview({
                 {/* Dikey kılavuz çizgileri: duvar kenarları + ekran sınırları */}
                 <VL left={0} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 <VL left={wallW} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
-                {placed.map((s, i) => (
-                  <VL key={`v${i}`} left={olcuSol + olcuXStart(s)} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
+                {parcaCizgisi && placed.map((s, i) => (
+                  <VL key={`v`} left={olcuSol + olcuXStart(s)} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 ))}
                 <VL left={olcuSol + olcuW} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
 
@@ -1645,7 +1681,7 @@ export default function WallPreview({
                     "Ekran 01 · İç L Tipi" adı rozeti kaldırıldı: hangi ekranın
                     hangisi olduğu sol paneldeki listede zaten yazıyor, çizimin
                     üstünde ürünün parçasıymış gibi duruyordu. */}
-                {placed.map((s, i) => {
+                {parcaCizgisi && placed.map((s, i) => {
                   const isTop = i % 2 === 0
                   return (
                     <div
