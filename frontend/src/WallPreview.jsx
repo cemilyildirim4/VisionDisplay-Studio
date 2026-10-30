@@ -1470,8 +1470,6 @@ export default function WallPreview({
                   }}
                 >
                   <Birlesim2D
-                    /* Yan duvar yalnızca hazır mekânda: tasarım ekranında duvar tek düzlem. */
-                    yanDuvar={sahneVar}
                     /* Çizim kaplanan alana sığıyor: etiketle aynı genişlik. */
                     enCokW={olcuW}
                     enCokH={stripTop + maxHpx}

@@ -62,13 +62,15 @@ export default function Birlesim2D({
   enCokW = 0,
   enCokH = 0,
   /*
-   * YAN DUVAR — yalnızca hazır mekânlarda.
+   * YAN DUVAR KALDIRILDI.
    *
-   * Tasarım ekranında duvar zaten tek düzlem; orada kolun arkasına
-   * ikinci bir yüzey koymak çizimi karıştırıyor. Mekânda ise kol
-   * dönüyor ve arkasında bir yüzey olmadan havada duruyor.
+   * Mekânlarda dönen kolun arkasına yarı saydam beyaz birer yüzey
+   * konuyordu ("kol havada durmasın" diye). Sonuç tersiydi: ekranın
+   * iki yanında ve üstünde, mekânın kendi duvarına ait olmayan beyaz
+   * levhalar duruyordu. Düz ekranda mekânın arka planı nasıl
+   * görünüyorsa birleşik ekranda da öyle görünüyor; ekran mekânın
+   * duvarının önünde duruyor, arkasına başka bir yüzey eklenmiyor.
    */
-  yanDuvar = false,
 }) {
   if (!Array.isArray(ekranlar) || ekranlar.length < 2) return null
   if (ekranlar.some((e) => !Number.isFinite(e?.yon))) return null
@@ -267,38 +269,6 @@ export default function Birlesim2D({
           transformStyle: 'preserve-3d',
         }}
       >
-        {/*
-          YAN DUVARLAR — dönen kolların arkasında.
-
-          Kolla AYNI dönüşümü kullanıyorlar: açı, derinlik ve sıra
-          kendiliğinden doğru çıkıyor. Yüzey kolun kendisinden biraz
-          geniş ve yüksek; zemine kadar iniyor.
-        */}
-        {yanDuvar &&
-          parcalar.map((p, i) =>
-            Math.abs(Math.sin(p.t)) < 0.26 ? null : (
-              <div
-                key={'yd' + (p.e.id ?? i)}
-                aria-hidden="true"
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: boyPx - p.h * 1.22,
-                  width: p.w * 1.1,
-                  height: p.h * 1.22,
-                  marginLeft: (-p.w * 1.1) / 2,
-                  transform: `translate3d(${p.mx - ortX}px, 0, ${-(p.mz - ortZ)}px) rotateY(${
-                    (p.t * 180) / Math.PI
-                  }deg) translateZ(-1px)`,
-                  background:
-                    /* Yarı saydam: mekânın kendi rengi ve ışığı yüzeye vuruyor. */
-                    'linear-gradient(180deg, rgba(250,251,252,0.58), rgba(214,220,228,0.66))',
-                  boxShadow: '0 10px 24px rgba(10,16,28,0.22)',
-                }}
-              />
-            ),
-          )}
-
         {dilimler.map((d, i) => {
           const p = d.p
           /* Kavis dilimi komşusunun altına kıl payı giriyor (bkz. BINDIRME). */
