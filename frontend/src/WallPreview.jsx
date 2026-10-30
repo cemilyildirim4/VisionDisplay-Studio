@@ -692,19 +692,38 @@ function SegH({ w, label, muted, yazi = 11 }) {
   )
 }
 
-/** Dikey ölçü etiketi — kurallar SegH ile aynı. */
+/**
+ * Dikey ölçü etiketi.
+ *
+ * DAR PAY DA YAZILIYOR. Üst/alt duvar payı 50 pikselden inceyse etiket hiç
+ * çıkmıyordu; duvar 1,00 m, tasarım 0,96 m olunca kalan 2 cm'lik şeridin
+ * ölçüsü hiçbir yerde yazmıyordu. Oysa montajda merak edilen tam o sayı.
+ * İnce payda etiket şeridin İÇİNE sığmadığı için yatay yazılıp bandın
+ * sağına çıkıyor; geniş payda eskisi gibi dikey ve ortalanmış duruyor.
+ */
 function SegV({ h, label, muted, yazi = 11 }) {
   const dolgu = `${Math.round(yazi * 0.5)}px ${Math.round(yazi * 0.35)}px`
+  const dar = muted && h < ETIKET_EN_AZ
+  /* Pay yoksa (tasarım duvarı tam dolduruyor) yazılacak bir şey de yok. */
+  if (muted && h <= 0.5) return <div style={{ height: h }} className="shrink-0" />
   return (
-    <div style={{ height: h }} className="flex items-center justify-center shrink-0 overflow-visible">
-      {(!muted || h >= ETIKET_EN_AZ) && (
-        <span
-          style={{ writingMode: 'vertical-rl', fontSize: yazi, padding: dolgu }}
-          className={`leading-none rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}
-        >
-          {label}
-        </span>
-      )}
+    <div style={{ height: h }} className="relative flex items-center justify-center shrink-0 overflow-visible">
+      <span
+        style={
+          dar
+            ? {
+                position: 'absolute',
+                left: '100%',
+                marginLeft: 4,
+                fontSize: Math.max(9, yazi - 1),
+                padding: `${Math.round(yazi * 0.35)}px ${Math.round(yazi * 0.5)}px`,
+              }
+            : { writingMode: 'vertical-rl', fontSize: yazi, padding: dolgu }
+        }
+        className={`leading-none rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}
+      >
+        {label}
+      </span>
     </div>
   )
 }
@@ -1067,15 +1086,16 @@ export default function WallPreview({
       }
     })
     /*
-     * KÜME İLE TEK DURAN EKRAN ARASINDA BOŞLUK.
-     * Yapışık çizilince hangisinin birleşimde olduğu anlaşılmıyordu.
+     * KÜME İLE TEK DURAN EKRAN ARASINDA BOŞLUK YOK.
+     *
+     * Birleşimde olmayan ekranın yanına 8 cm pay konuyordu; hangisinin
+     * birleşik olduğu böyle anlaşılsın diye. Ama pay duvarda bir boşluk
+     * olarak görünüyor ve toplam eni 8 cm büyüttüğü için duvar da
+     * kullanıcının yazdığı ölçünün üstüne çıkıyordu (2,88 yazıp 2,96
+     * görmek gibi). Hangi ekranın birleşik olduğu sol paneldeki çiplerde
+     * zaten yazıyor; çizimde ekranlar yapışık duruyor.
      */
-    const AYRIM_M = 0.08
-    const ayrimSayisi = list.reduce(
-      (a, s, i) => a + (i > 0 && (list[i - 1].paylasim || null) !== (s.paylasim || null) ? 1 : 0),
-      0,
-    )
-    const totalWm = list.reduce((a, s) => a + s.wm, 0) + ayrimSayisi * AYRIM_M
+    const totalWm = list.reduce((a, s) => a + s.wm, 0)
     /*
      * GRUBUN GERÇEK ENİ — çizimdeki kısalmış en değil.
      *
@@ -1094,8 +1114,7 @@ export default function WallPreview({
      */
     const kaplanan = birlesimKipi || kupKipi ? birlesimKapladigi(list, kupKipi) : null
     /* İÇERİK ŞERİDİ ayrı: tek görsel bütün yüzlere yayılıyor, yan yana. */
-    const toplamGercekWm =
-      list.reduce((a, s) => a + (s.gercekWm || s.wm), 0) + ayrimSayisi * AYRIM_M
+    const toplamGercekWm = list.reduce((a, s) => a + (s.gercekWm || s.wm), 0)
     const grupGercekWm = kaplanan ? kaplanan.enM : toplamGercekWm
     const maxHm = kaplanan ? kaplanan.boyM : Math.max(...list.map((s) => s.hm))
     // Sınırlayıcı duvar: en az ekranları içerecek kadar (Genişlik/Yükseklik'ten)
@@ -1184,12 +1203,8 @@ export default function WallPreview({
     let xAcc = 0
     /* Gerçek enlerin dizilimi: ölçü etiketleri ve içerik dilimi buradan. */
     let gAcc = 0
-    const placed = list.map((s, i) => {
-      /* Paylaşım değişiyorsa araya boşluk. */
-      if (i > 0 && (list[i - 1].paylasim || null) !== (s.paylasim || null)) {
-        xAcc += AYRIM_M * pxPerM
-        gAcc += AYRIM_M * pxPerM
-      }
+    const placed = list.map((s) => {
+      /* Paylaşım değişse de araya pay girmiyor: ekranlar yapışık (bkz. totalWm). */
       const wPx = s.wm * pxPerM
       const gercekWPx = (s.gercekWm || s.wm) * pxPerM
       const o = {
@@ -1650,7 +1665,8 @@ export default function WallPreview({
                   eskisi gibi ortalanıyor.
                 */}
                 {/* Köşeli tasarımda kenar payının karşılığı yok (bkz. gercekWm). */}
-                {!list.some((x) => x.type === 'lshape') && olcuSol > 2 && olcuMarginM > 0.004 && (
+                {/* Eşik milimetrede: 1 cm'lik pay bile ölçüsüyle yazılıyor. */}
+                {!list.some((x) => x.type === 'lshape') && olcuMarginM > 0.0005 && (
                   <>
                     <div
                       className="absolute"
@@ -2080,7 +2096,8 @@ export default function WallPreview({
                 duvarın kenarına yaslanıyor. Geniş boşlukta eskisi gibi
                 boşluğun ortasında duruyor.
               */}
-              {!sahneVar && !kose && marginXpx > 1 && marginXpx / pxPerM > 0.004 && (
+              {/* Eşik milimetrede: 1 cm'lik pay bile ölçüsüyle yazılıyor. */}
+              {!sahneVar && !kose && marginXpx / pxPerM > 0.0005 && (
                 <>
                   <div
                     className="absolute"
@@ -2107,7 +2124,7 @@ export default function WallPreview({
 
               {/* Dikey boşluklar: üst ve alt pay (sağ şeritte, gri) */}
               {/* Dar üst/alt pay da yazılıyor — yatayla aynı kural. */}
-              {!sahneVar && !kose && marginYpx > 1 && marginYpx / pxPerM > 0.004 && (
+              {!sahneVar && !kose && marginYpx / pxPerM > 0.0005 && (
                 <>
                   <div
                     className="absolute"
