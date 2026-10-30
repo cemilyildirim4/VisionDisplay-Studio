@@ -10682,18 +10682,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   /* Birleşik ekranlar burada da bir arada görünsün. */
                   const grupta = !!grup && Array.isArray(grup.uyeler) && grup.uyeler.includes(e.id)
                   /*
-                   * ÖNİZLEME EKRANIN KENDİ ORANINDA, KUTU DA ONA GÖRE.
+                   * KUTU SABİT, ÖNİZLEME EKRANIN ORANINDA.
                    *
-                   * Kutu kareydi ve önizleme yüksekliğin %38'ine
-                   * sıkıştırılıyordu: 3×6 gibi geniş bir ekran ince bir
-                   * şerit olarak çiziliyor, kutunun kalanı boş kalıyordu.
-                   * Önizleme artık ekranın gerçek en-boy oranında ve
-                   * kutunun boyunu o belirliyor; boş alan kalmıyor.
+                   * Önce kutu kareydi ve önizleme yüksekliğin %38'ine
+                   * sıkıştırılıyordu: geniş bir ekran ince bir şerit olarak
+                   * çiziliyordu. Sonra kutunun boyunu ekranın oranı
+                   * belirledi; bu sefer 1×6 gibi uzun bir ekran kutuyu
+                   * boyuna uzatıp panelde kocaman yer kaplıyordu.
                    *
-                   * Oran sınırlı: tek sütunluk uzun bir ekran kutuyu panel
-                   * boyunca uzatmasın.
+                   * Kutu artık her ekranda AYNI: kare bir çerçeve. Ekranın
+                   * gerçek oranı onun içinde, ortalanmış olarak duruyor —
+                   * hangi ekranın geniş hangisinin uzun olduğu görünüyor
+                   * ama liste hep aynı yüksekliklerde kalıyor.
                    */
-                  const onizlemeOrani = Math.min(4, Math.max(0.5, (e.enM || 1) / (e.boyM || 1)))
+                  const onizlemeOrani = Math.min(6, Math.max(0.17, (e.enM || 1) / (e.boyM || 1)))
                   return (
                     <li key={e.id || 'aktif'} data-ekran={e.sira} className="relative m-0 p-0">
                       {/*
@@ -10725,11 +10727,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             : 'border border-neutral-200 hover:border-brand dark:border-[#2c333f]'
                         } ${grupta ? 'ring-2 ring-brand/35' : ''}`}
                       >
-                        <span
-                          className="relative block w-full shrink-0 overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]"
-                          style={{ aspectRatio: String(onizlemeOrani) }}
-                        >
-                          <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
+                        <span className="flex aspect-square w-full shrink-0 items-center justify-center">
+                          <span
+                            className="relative block overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]"
+                            style={{
+                              aspectRatio: String(onizlemeOrani),
+                              /* Geniş ekran enden, uzun ekran boydan sığıyor. */
+                              width: onizlemeOrani >= 1 ? '100%' : undefined,
+                              height: onizlemeOrani >= 1 ? undefined : '100%',
+                            }}
+                          >
+                            <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
+                          </span>
                         </span>
                         <span className="block truncate text-[15px] font-bold leading-tight text-neutral-900 dark:text-neutral-50">
                           {e.sira}. {t('ekran.tekil')}
