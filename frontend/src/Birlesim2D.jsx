@@ -22,22 +22,23 @@
 import { Screen } from './WallPreview.jsx'
 
 /*
- * YUVARLAK EKLEM = GERÇEK KAVİS.
+ * YUVARLAK EKLEM = ARAYA GİREN BÜKÜLMÜŞ KABİN.
  *
- * Yuvarlak seçilince eskiden yalnızca kutuların köşesi yumuşatılıyordu
- * (border-radius): ekranlar yine keskin bir V yapıp birleşiyor, kavis
- * hiç doğmuyordu. Artık eklemin iki yanından bir KAVİS BÖLGESİ ayrılıp
- * ince dilimlere bölünüyor; her dilim toplam dönüşün bir parçası kadar
- * dönüyor, yani köşe bir yay çizerek dönüyor.
+ * Yuvarlak seçilince önce yalnızca kutuların köşesi yumuşatılıyordu
+ * (border-radius), sonra dönüş komşu ekranların uçlarından çalındı:
+ * ekranların kendi eni değişmediği hâlde dönüş onların üstünde oluyordu.
+ * Gerçekte köşeyi BÜKÜLMÜŞ BİR KABİN döner.
+ *
+ * Şeritte o kabin ayrı bir parça olarak geliyor (bkz. App → kavisKabinleri)
+ * ve burada ince dilimlere bölünüyor; her dilim dönüşün bir parçası kadar
+ * dönüyor, yani kabin bir yay çiziyor. Komşu ekranlar tam eniyle duruyor.
  *
  * Dilim ekranın kendi görüntüsünü TAM eninde çizip yalnızca kendi payına
  * düşen pencereyi gösteriyor: görüntü kavis boyunca kesintisiz akıyor,
  * her dilimde baştan başlamıyor.
  */
-/* Kavis bölgesi: eklemin iki yanında, dar olan kolun eninin bu kadarı. */
-const KAVIS_ORAN = 0.22
-/* Yayı kaç dilim anlatıyor (eklemin tamamında bunun iki katı). */
-const KAVIS_DILIM = 5
+/* Bükülen kabini kaç dilim anlatıyor. */
+const KAVIS_DILIM = 8
 /* Dönen dilimler kıl payı bindiriliyor: aralarında boşluk görünmesin. */
 const BINDIRME = 0.6
 
@@ -98,41 +99,36 @@ export default function Birlesim2D({
   /*
    * ÜSTTEN BAKIŞ, DİLİM DİLİM.
    *
-   * Köşeli eklemde parça tek dilim; yuvarlak eklemde kavis bölgesi
-   * KAVIS_DILIM parçaya bölünüyor ve her dilim yayın kendi açısını
-   * alıyor. Dilimler uç uca ekleniyor, yani yüzeyin uzunluğu değişmiyor.
+   * Düz ekran tek dilim. Bükülen kabin KAVIS_DILIM dilime bölünüyor ve
+   * her dilim yayın kendi açısını alıyor; yay komşusunun açısından
+   * başlayıp öbür komşusunun açısında bitiyor, böylece iki uçta da
+   * basamak kalmıyor. Dilimler uç uca ekleniyor, yani yüzeyin uzunluğu
+   * değişmiyor.
    */
   const dilimler = []
   parcalar.forEach((p, i) => {
     const onceki = parcalar[i - 1]
     const sonraki = parcalar[i + 1]
-    /* Kavis iki kolu da ilgilendiriyor: dar olana göre ölçülüyor. */
-    const enCok = p.w * 0.45
-    const sol = p.e.solYuvarlak && onceki ? Math.min(Math.min(p.w, onceki.w) * KAVIS_ORAN, enCok) : 0
-    const sag = p.e.sagYuvarlak && sonraki ? Math.min(Math.min(p.w, sonraki.w) * KAVIS_ORAN, enCok) : 0
-    const ekle = (genislik, aci, u0) => {
-      if (genislik <= 0.5) return
-      dilimler.push({ p, w: genislik, t: aci, u0, dilim: genislik < p.w - 0.5 })
+    if (!p.e.kavis || !onceki || !sonraki) {
+      dilimler.push({ p, w: p.w, t: p.t, u0: 0, dilim: false })
+      return
     }
-    let u = 0
-    if (sol > 0) {
-      /* Yayın İKİNCİ yarısı: eklem bu parçanın solunda kaldı. */
-      for (let m = 0; m < KAVIS_DILIM; m++) {
-        const oran = (KAVIS_DILIM + m + 0.5) / (2 * KAVIS_DILIM)
-        ekle(sol / KAVIS_DILIM, onceki.t + (p.t - onceki.t) * oran, u)
-        u += sol / KAVIS_DILIM
-      }
-    }
-    const orta = p.w - sol - sag
-    ekle(orta, p.t, u)
-    u += orta
-    if (sag > 0) {
-      /* Yayın İLK yarısı: eklem bu parçanın sağında. */
-      for (let m = 0; m < KAVIS_DILIM; m++) {
-        const oran = (m + 0.5) / (2 * KAVIS_DILIM)
-        ekle(sag / KAVIS_DILIM, p.t + (sonraki.t - p.t) * oran, u)
-        u += sag / KAVIS_DILIM
-      }
+    const bas = onceki.t
+    const son = sonraki.t
+    const adim = p.w / KAVIS_DILIM
+    for (let m = 0; m < KAVIS_DILIM; m++) {
+      dilimler.push({
+        p,
+        w: adim,
+        /*
+         * İlk dilim soldaki ekranla, son dilim sağdaki ekranla AYNI
+         * açıda: uçlarda kırık bir kenar (ek yeri) kalmıyor, yüzey tek
+         * parça gibi akıyor.
+         */
+        t: bas + ((son - bas) * m) / (KAVIS_DILIM - 1),
+        u0: m * adim,
+        dilim: true,
+      })
     }
   })
   if (!dilimler.length) return null

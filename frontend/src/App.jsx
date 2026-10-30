@@ -2776,11 +2776,58 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * kurulduğu için iki yüz de her iki yönde görünüyor.
      */
     const kanatCevir = grup.tip === 'u' && (grup.lYon || 'ice') === 'disa'
-    return ekranParcalari.map((x) => {
+    const seritli = ekranParcalari.map((x) => {
       if (!geo.has(x.id)) return x
       const g = geo.get(x.id)
       return { ...x, ...g, ...(kanatCevir ? { cizimYon: -g.yon } : null) }
     })
+
+    /*
+     * YUVARLAK EKLEMDE ARAYA BÜKÜLMÜŞ BİR KABİN GİRİYOR.
+     *
+     * Yuvarlak seçilince dönüş komşu ekranların uçlarından çalınıyordu:
+     * ekranların kendi eni değişmiyor ama dönüş onların üstünde oluyor,
+     * yani gerçekte var olmayan bir şekil çiziliyordu. Gerçekte köşeyi
+     * bükülmüş bir kabin döner.
+     *
+     * Araya BİR KABİN genişliğinde, bükülmüş bir parça konuyor. Parça
+     * şeridin kendisine giriyor: ölçü, kabin sayısı, tek görselin
+     * bölünmesi, mekân ve 3B görünüm hepsi aynı listeden beslendiği için
+     * kendiliğinden doğru çıkıyor (bkz. kavisKabinleri).
+     */
+    if (!koseBicimleri || !koseBicimleri.some((k) => k === 'yuvarlak')) return seritli
+    const cikti = []
+    for (const p of seritli) {
+      cikti.push(p)
+      const j = uyeler.indexOf(p.id)
+      if (j < 0 || j >= uyeler.length - 1 || koseBicimleri[j] !== 'yuvarlak') continue
+      const sonraki = seritli.find((x) => x.id === uyeler[j + 1])
+      if (!sonraki) continue
+      const dikey = (p.orientation || orientation) === 'portrait'
+      const kw = ((dikey ? selectedModel?.heightMm : selectedModel?.widthMm) || 500) / 1000
+      cikti.push({
+        ...p,
+        id: `kavis-${p.id}`,
+        /* Bükülen parça: Birlesim2D onu dilimleyip yay hâline getiriyor. */
+        kavis: true,
+        sira: null,
+        cols: 1,
+        leftCols: undefined,
+        rightCols: undefined,
+        type: 'flat',
+        wm: kw,
+        gercekWm: kw,
+        /* Dönüşün ortası: şeritte ve 3B'de pah gibi duruyor. */
+        yon: (p.yon + sonraki.yon) / 2,
+        cizimYon: Number.isFinite(p.cizimYon)
+          ? (p.cizimYon + (sonraki.cizimYon ?? sonraki.yon)) / 2
+          : undefined,
+        olcek: Math.max(0.4, Math.abs(Math.cos((p.yon + sonraki.yon) / 2))),
+        solKirim: 0,
+        sagKirim: 0,
+      })
+    }
+    return cikti
   })()
 
   /*
@@ -2801,7 +2848,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const grupUyeId = Array.isArray(grup?.uyeler) && grup.uyeler.length > 1 ? grup.uyeler : null
   const grupKapladigi = grupUyeId
     ? birlesimKapladigi(
-        ekranSeridi.filter((x) => grupUyeId.includes(x.id)),
+        /* Bükülen kabinler de grubun parçası: yalnızca birleşimde doğuyorlar. */
+        ekranSeridi.filter((x) => x.kavis || grupUyeId.includes(x.id)),
         grup.tip === 'kutu',
       )
     : null
@@ -8093,7 +8141,36 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * TASARIMIN TOPLAMI — ekranlar yan yana duruyor kabulüyle.
    * Panel, Teknik Özellikler ve PDF bu tek kaynaktan okuyor.
    */
-  const tasarimToplami = ekranOzetleri.reduce(
+  /*
+   * BÜKÜLEN KABİNLER DE SAYILIYOR.
+   *
+   * Yuvarlak eklemde araya bir kabin genişliğinde bükülmüş bir parça
+   * giriyor (bkz. ekranSeridi). O parça sol panelde kendi kartı olmayan
+   * ama gerçekte kurulacak bir yüzey: kabin sayısına, çözünürlüğe,
+   * alana, ağırlığa ve güce dâhil.
+   */
+  const kavisOzetleri = ekranSeridi
+    .filter((x) => x.kavis)
+    .map((x) => {
+      const m = selectedModel
+      const dikey = x.orientation === 'portrait'
+      const kavisModeli =
+        m && dikey
+          ? { ...m, widthMm: m.heightMm, heightMm: m.widthMm, pixelWidth: m.pixelHeight, pixelHeight: m.pixelWidth }
+          : m
+      const sat = Math.max(1, x.rows || 1)
+      const spec = kavisModeli ? computeSpecs(kavisModeli, 1, sat) : null
+      return {
+        kabin: sat,
+        resW: spec?.resW || 0,
+        resH: spec?.resH || 0,
+        enM: spec?.W || 0,
+        boyM: spec?.H || 0,
+        spec,
+      }
+    })
+
+  const tasarimToplami = [...ekranOzetleri, ...kavisOzetleri].reduce(
     (t, e) => ({
       kabin: t.kabin + e.kabin,
       resW: t.resW + e.resW,
