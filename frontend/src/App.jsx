@@ -2834,7 +2834,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Fotoğraf akışında ekranlar tek tek yerleşiyor ve her biri kendi
    * dörtgeniyle çiziliyor; şerit yalnızca fotoğrafsız sahnelerde anlamlı.
    */
-  const cokluAktif = scene !== 'ozel' && ekranParcalari.length > 1
+  /*
+   * FOTOĞRAF GELENE KADAR TASARIM OLDUĞU GİBİ DURUYOR.
+   *
+   * Fotoğraf akışında ekranlar tek tek yerleştiriliyor, bu yüzden şerit
+   * kapanıyordu. Ama "Kendi fotoğrafım"a basmak akışı BAŞLATMIYOR:
+   * fotoğraf daha yüklenmemişken de şerit kapanıyor ve çok ekranlı bir
+   * tasarım tek ekrana düşüyordu — kullanıcı tasarımının bozulduğunu
+   * sanıyordu. Şerit ancak fotoğraf yüklendiğinde kapanıyor.
+   */
+  const cokluAktif = (scene !== 'ozel' || !ozelSahne) && ekranParcalari.length > 1
 
   /*
    * KAPLANAN ALAN — BİRLEŞİM TEK PARÇA GİBİ SAYILIYOR.
