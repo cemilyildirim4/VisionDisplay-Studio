@@ -28,7 +28,7 @@
  * çıkıyor — doğru olan da bu.
  */
 import { useRef, useState } from 'react'
-import { Screen } from './WallPreview.jsx'
+import { Screen, contentImage } from './WallPreview.jsx'
 
 /* Kaide: küpün altında durduğu yer. Boyu küpün yüksekliğinden türüyor. */
 const KAIDE_ORAN = 0.06
@@ -130,6 +130,52 @@ export default function Kup2D({
     surukle.current = null
     e.currentTarget.releasePointerCapture?.(e.pointerId)
   }
+
+  /*
+   * ÜST YÜZ — KÖŞEGENLERLE DÖRT ÜÇGEN.
+   *
+   * "Tek görsel" açıkken görsel dört yan yüze yatayda bölünüyor; üst yüz
+   * beşinci bir dilim alıyor ve yan yüzle arasındaki kenarda görüntü
+   * kopuyordu. Üst yüz artık köşegenlerle dört üçgene ayrılıyor: her
+   * üçgen, ALTINDAKİ yan yüzün görselinin üst kenardan yukarı doğru
+   * devamı. Dilim yüzün kendi diliminden geldiği için kenarda görüntü
+   * piksel piksel tutuyor.
+   *
+   * Üçgen, yan yüzün diliminden aynı ölçekte (1 px = 1 px) kesiliyor;
+   * tabanı kenarda, tepesi üst yüzün ortasında.
+   *
+   * ÜST YÜZÜN YÖNÜ. Bu kutu rotateX(90°) ile yatırılıyor: yerel +y ekseni
+   * dünyada ÖNE bakıyor. Yani kutunun alt kenarı ön yüzün, üst kenarı
+   * arka yüzün kenarı. Yan yüzlerin görsel yönü de kendi rotateY'lerinden
+   * geliyor (sağ yüz önden arkaya, sol yüz arkadan öne), üçgenler de o
+   * yüzden ayrı ayrı döndürülüyor.
+   */
+  const ucgenler = [
+    /* ÖN: taban altta, görsel dikeyde aynalanıyor (kenarda birebir tutsun). */
+    {
+      kirpma: 'polygon(0% 100%, 100% 100%, 50% 50%)',
+      kutu: { left: 0, top: D / 2, width: W, height: D / 2 },
+      donus: 'scaleY(-1)',
+    },
+    /* SAĞ: taban sağda; yüzün görseli önden arkaya akıyor. */
+    {
+      kirpma: 'polygon(100% 0%, 100% 100%, 50% 50%)',
+      kutu: { left: (3 * W) / 4 - D / 2, top: D / 2 - W / 4, width: D, height: W / 2 },
+      donus: 'rotate(-90deg) scaleY(-1)',
+    },
+    /* ARKA: taban üstte; yüz 180° dönük olduğu için görsel yatayda ters. */
+    {
+      kirpma: 'polygon(0% 0%, 100% 0%, 50% 50%)',
+      kutu: { left: 0, top: 0, width: W, height: D / 2 },
+      donus: 'scaleX(-1)',
+    },
+    /* SOL: taban solda; yüzün görseli arkadan öne akıyor. */
+    {
+      kirpma: 'polygon(0% 0%, 0% 100%, 50% 50%)',
+      kutu: { left: W / 4 - D / 2, top: D / 2 - W / 4, width: D, height: W / 2 },
+      donus: 'rotate(90deg) scaleY(-1)',
+    },
+  ]
 
   /* Yüzün kutudaki yeri: sırayla ön, sağ, arka, sol. */
   const yuzDonusumu = (i) =>
@@ -241,6 +287,7 @@ export default function Kup2D({
             }}
           >
             {ustEkran ? (
+              <>
               <Screen
                 wPx={W}
                 hPx={D}
@@ -254,6 +301,39 @@ export default function Kup2D({
                 contentUrl={ustEkran.contentUrl || null}
                 {...(ustEkran.icerikProp || null)}
               />
+              {/*
+                Dört üçgen üst yüzün ÜSTÜNE biniyor: alttaki ekran kabin
+                dokusunu ve zeminini veriyor, üçgenler yalnızca görüntüyü
+                taşıyor (bkz. ucgenler).
+              */}
+              {ucgenler.map((u, i) => {
+                const y = yanlar[i]
+                const ip = y?.icerikProp
+                const gorsel = contentImage(y?.content, y?.contentUrl)
+                /* Paylaşılan bir görsel yoksa devam ettirilecek bir şey de yok. */
+                if (!gorsel || !(ip?.spanW > 0) || !(ip?.spanH > 0)) return null
+                return (
+                  <div
+                    key={'ust' + i}
+                    aria-hidden="true"
+                    style={{ position: 'absolute', inset: 0, clipPath: u.kirpma, overflow: 'hidden' }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        ...u.kutu,
+                        transform: u.donus,
+                        transformOrigin: '50% 50%',
+                        backgroundImage: gorsel,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundSize: `${Math.ceil(ip.spanW)}px ${Math.ceil(ip.spanH)}px`,
+                        backgroundPosition: `${-(ip.offsetX || 0)}px ${-(ip.offsetY || 0)}px`,
+                      }}
+                    />
+                  </div>
+                )
+              })}
+              </>
             ) : (
               <div className="h-full w-full bg-[#2b313b]" />
             )}
