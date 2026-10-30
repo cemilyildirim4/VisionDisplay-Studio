@@ -352,6 +352,14 @@ function cmYukari(metre) {
  *   U — baştaki ve sondaki eklem 90°, aradakiler düz,
  *   Açılı — hepsi aynı açıyla başlıyor.
  */
+/*
+ * HER ŞEKLİN EN AZ EKRAN SAYISI — tek kaynak.
+ *
+ * U üç, küp dört yüzeyden oluşuyor. Tip düğmeleri de, ekran silinince
+ * grubun bozulup bozulmayacağı da buradan okuyor.
+ */
+const GRUP_EN_AZ = { duz: 2, l: 2, u: 3, kutu: 4, acili: 2 }
+
 function eklemVarsayilanAcisi(tip, j, uyeSayisi, aciliAci = 135) {
   if (tip === 'l') return j === Math.max(0, Math.round(uyeSayisi / 2) - 1) ? 90 : 180
   if (tip === 'u') return j === 0 || j === uyeSayisi - 2 ? 90 : 180
@@ -5211,6 +5219,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   const ekraniKaldirUygula = (id) => {
+    /*
+     * SİLİNEN EKRAN BİRLEŞİMDEN DE ÇIKIYOR.
+     *
+     * Grup üye listesini olduğu gibi tutuyordu: silinen ekranın kimliği
+     * listede kalıyor, geometri onu bulamıyor ve birleşim yarım kalıyordu.
+     * Üye listesinden düşüyor; grup o tipin en az ekran sayısının altına
+     * inerse şekil bozuluyor, kalan ekranlar düz diziliyor.
+     */
+    const g = grup
+    if (g && Array.isArray(g.uyeler) && g.uyeler.includes(id)) {
+      const kalan = g.uyeler.filter((x) => x !== id)
+      if (kalan.length < (GRUP_EN_AZ[g.tip] ?? 2)) {
+        setGrupTipi('duz')
+        setGrup(kalan.length >= 2 ? { ...g, tip: 'duz', uyeler: kalan, eklemler: [] } : null)
+      } else {
+        setGrup({
+          ...g,
+          uyeler: kalan,
+          /* Eklem sayısı üye sayısının bir eksiği: fazlası düşüyor. */
+          eklemler: (g.eklemler || []).slice(0, Math.max(0, kalan.length - 1)),
+        })
+      }
+      setGrupSecim((l) => l.filter((x) => x !== id))
+    }
     if (id !== aktifEkranId) {
       setSabitEkranlar((l) => l.filter((e) => e.id !== id))
       return
@@ -10649,23 +10681,54 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   const secili = icerikHavuzuTam.find((x) => x.id === e.havuzId)
                   /* Birleşik ekranlar burada da bir arada görünsün. */
                   const grupta = !!grup && Array.isArray(grup.uyeler) && grup.uyeler.includes(e.id)
+                  /*
+                   * ÖNİZLEME EKRANIN KENDİ ORANINDA, KUTU DA ONA GÖRE.
+                   *
+                   * Kutu kareydi ve önizleme yüksekliğin %38'ine
+                   * sıkıştırılıyordu: 3×6 gibi geniş bir ekran ince bir
+                   * şerit olarak çiziliyor, kutunun kalanı boş kalıyordu.
+                   * Önizleme artık ekranın gerçek en-boy oranında ve
+                   * kutunun boyunu o belirliyor; boş alan kalmıyor.
+                   *
+                   * Oran sınırlı: tek sütunluk uzun bir ekran kutuyu panel
+                   * boyunca uzatmasın.
+                   */
+                  const onizlemeOrani = Math.min(4, Math.max(0.5, (e.enM || 1) / (e.boyM || 1)))
                   return (
-                    <li key={e.id || 'aktif'} data-ekran={e.sira} className="m-0 p-0">
+                    <li key={e.id || 'aktif'} data-ekran={e.sira} className="relative m-0 p-0">
+                      {/*
+                        SİLME HER KUTUDA.
+
+                        Çöp kutusu yalnızca AÇIK ekranın başlığındaydı:
+                        başka bir ekranı silmek için önce onu açmak
+                        gerekiyordu. Düğme kutunun kendi köşesinde; kutu
+                        bir <button> olduğu için içine değil, üstüne
+                        konuyor (iç içe düğme geçersiz).
+                      */}
+                      {ekranOzetleri.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => ekraniKaldir(e.id)}
+                          aria-label={`${e.sira}. ${t('ekran.tekil')} — ${t('ekran.kaldir')}`}
+                          title={t('ekran.kaldir')}
+                          className="absolute right-1 top-1 z-10 rounded-md bg-white/85 p-1 text-neutral-600 transition-colors hover:bg-white hover:text-red-600 dark:bg-[#1b2029]/85 dark:text-neutral-300 dark:hover:bg-[#1b2029]"
+                        >
+                          <CopKutusu />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => !e.acik && ekraniDuzenle(e.id)}
-                        className={`flex aspect-square w-full flex-col gap-1 rounded-lg p-1.5 text-left transition-colors ${
+                        className={`flex h-full w-full flex-col gap-1 rounded-lg p-1.5 text-left transition-colors ${
                           e.acik
                             ? 'border-2 border-brand bg-brand/5 dark:bg-brand/10'
                             : 'border border-neutral-200 hover:border-brand dark:border-[#2c333f]'
                         } ${grupta ? 'ring-2 ring-brand/35' : ''}`}
                       >
-                        {/*
-                          Önizleme kutunun kalanını doldurmuyor, sabit bir
-                          paya oturuyor: artan yer yazılara gidiyor ve
-                          kutular derli toplu duruyor.
-                        */}
-                        <span className="relative block w-full shrink-0 basis-[38%] overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]">
+                        <span
+                          className="relative block w-full shrink-0 overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]"
+                          style={{ aspectRatio: String(onizlemeOrani) }}
+                        >
                           <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
                         </span>
                         <span className="block truncate text-[15px] font-bold leading-tight text-neutral-900 dark:text-neutral-50">
@@ -10993,13 +11056,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     yüzeyden oluşuyor.
                   */}
                   <div className="mt-2 grid grid-cols-5 gap-1">
-                    {[
-                      { tip: 'duz', enAz: 2 },
-                      { tip: 'l', enAz: 2 },
-                      { tip: 'u', enAz: 3 },
-                      { tip: 'kutu', enAz: 4 },
-                      { tip: 'acili', enAz: 2 },
-                    ].map(({ tip, enAz }) => (
+                    {Object.entries(GRUP_EN_AZ).map(([tip, enAz]) => (
                       <button
                         key={tip}
                         type="button"
