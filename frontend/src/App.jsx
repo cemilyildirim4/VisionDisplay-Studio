@@ -2798,15 +2798,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!koseBicimleri || !koseBicimleri.some((k) => k === 'yuvarlak')) return seritli
     const cikti = []
     for (const p of seritli) {
-      cikti.push(p)
       const j = uyeler.indexOf(p.id)
-      if (j < 0 || j >= uyeler.length - 1 || koseBicimleri[j] !== 'yuvarlak') continue
-      const sonraki = seritli.find((x) => x.id === uyeler[j + 1])
-      if (!sonraki) continue
+      const sonraki =
+        j >= 0 && j < uyeler.length - 1 && koseBicimleri[j] === 'yuvarlak'
+          ? seritli.find((x) => x.id === uyeler[j + 1])
+          : null
+      if (!sonraki) {
+        cikti.push(p)
+        continue
+      }
+      /*
+       * BÜKÜLEN KABİN KOMŞUSUNUN GÖRSELİNİ SÜRDÜRÜYOR.
+       *
+       * Parça komşusunun bütün alanlarını devraldığı için "Her ekran ayrı"
+       * kipinde görseli de devralıyor ve onu KENDİ kutusuna sığdırıyordu:
+       * iki ekranlı bir tasarımda üç tane resim görünüyordu. Oysa bükülen
+       * kabin ayrı bir ekran değil, solundaki ekranın köşeyi dönen devamı.
+       *
+       * Sol komşuyla aynı paylaşım anahtarını alıyor: görsel ikisinin
+       * toplam enine yayılıyor, kabin de kendi payına düşen dilimi
+       * gösteriyor (bkz. WallPreview → icerikProplari). "Tek görsel"
+       * kipinde anahtar zaten vardı, orada bir şey değişmiyor.
+       */
+      const paylasimAnahtari = p.paylasim || `kavis-${p.id}`
+      cikti.push({ ...p, paylasim: paylasimAnahtari })
       const dikey = (p.orientation || orientation) === 'portrait'
       const kw = ((dikey ? selectedModel?.heightMm : selectedModel?.widthMm) || 500) / 1000
       cikti.push({
         ...p,
+        paylasim: paylasimAnahtari,
         id: `kavis-${p.id}`,
         /* Bükülen parça: Birlesim2D onu dilimleyip yay hâline getiriyor. */
         kavis: true,

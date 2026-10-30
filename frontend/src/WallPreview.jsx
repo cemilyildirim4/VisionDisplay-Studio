@@ -1669,8 +1669,8 @@ export default function WallPreview({
                   eskisi gibi ortalanıyor.
                 */}
                 {/* Köşeli tasarımda kenar payının karşılığı yok (bkz. gercekWm). */}
-                {/* Eşik milimetrede: 1 cm'lik pay bile ölçüsüyle yazılıyor. */}
-                {!list.some((x) => x.type === 'lshape') && olcuMarginM > 0.0005 && (
+                {/* Eşik 5 mm: 1 cm'lik pay yazılıyor, yuvarlama artığı (0,001 m) yazılmıyor. */}
+                {!list.some((x) => x.type === 'lshape') && olcuMarginM > 0.0045 && (
                   <>
                     <div
                       className="absolute"
@@ -2100,8 +2100,8 @@ export default function WallPreview({
                 duvarın kenarına yaslanıyor. Geniş boşlukta eskisi gibi
                 boşluğun ortasında duruyor.
               */}
-              {/* Eşik milimetrede: 1 cm'lik pay bile ölçüsüyle yazılıyor. */}
-              {!sahneVar && !kose && marginXpx / pxPerM > 0.0005 && (
+              {/* Eşik 5 mm: 1 cm'lik pay yazılıyor, yuvarlama artığı (0,001 m) yazılmıyor. */}
+              {!sahneVar && !kose && marginXpx / pxPerM > 0.0045 && (
                 <>
                   <div
                     className="absolute"
@@ -2128,7 +2128,7 @@ export default function WallPreview({
 
               {/* Dikey boşluklar: üst ve alt pay (sağ şeritte, gri) */}
               {/* Dar üst/alt pay da yazılıyor — yatayla aynı kural. */}
-              {!sahneVar && !kose && marginYpx / pxPerM > 0.0005 && (
+              {!sahneVar && !kose && marginYpx / pxPerM > 0.0045 && (
                 <>
                   <div
                     className="absolute"
