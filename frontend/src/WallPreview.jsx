@@ -1355,19 +1355,15 @@ export default function WallPreview({
     const olcuToplamM = kaplanan || birlesimKipi ? grupGercekWm : totalWm
     const olcuMarginM = Math.max(0, (wallWm - olcuToplamM) / 2)
     /*
-     * PARÇA ÇİZGİLERİ KAPLANAN BANDIN İÇİNDE.
+     * PARÇA ETİKETLERİ KAPLANAN BANDIN İÇİNDE.
      *
-     * Etiketler ve kılavuz çizgileri şeritteki yerlerinden okunuyordu;
-     * birleşimde şerit çizilmediği için kaplanan alanın dışına taşıyor,
-     * küpte de duvara dağılıyorlardı. Yerler artık izdüşümden
-     * (bkz. birlesimKapladigi → yerler); küpte parça çizgisi yok.
+     * Etiketler şeritteki yerlerinden okunuyordu; birleşimde şerit
+     * çizilmediği için kaplanan alanın dışına taşıyor, küpte de duvara
+     * dağılıyorlardı. Yerler artık izdüşümden (bkz. birlesimKapladigi →
+     * yerler); küpte parça etiketi yok.
      */
     const yerler = kaplanan?.yerler || null
     const parcaCizgisi = !kaplanan || !!yerler
-    const olcuXStart = (s) =>
-      yerler ? (yerler[placed.indexOf(s)]?.x0 ?? 0) * pxPerM
-        : birlesimKipi ? s.gercekXStart ?? s.xStart
-        : s.xStart
     const olcuCenter = (s) => {
       if (yerler) {
         const y = yerler[placed.indexOf(s)]
@@ -1644,12 +1640,20 @@ export default function WallPreview({
 
             {showMeasurements && (
               <>
-                {/* Dikey kılavuz çizgileri: duvar kenarları + ekran sınırları */}
+                {/*
+                  DÖRT ÇİZGİ YETİYOR: duvarın iki kenarı, tasarımın iki kenarı.
+
+                  Her ekranın sınırına da birer çizgi iniyordu; altı ekranlı
+                  bir düzende tasarımın üstü baştan sona kesikli çizgiyle
+                  taranıyor, görsel bu çizgilerin altında kayboluyordu.
+                  Okunması gereken iki şey var: duvarda kalan boşluk ve
+                  tasarımın ölçüsü — ikisi de bu dört çizginin arasında.
+                  Ekranların kendi enleri etiket olarak yazılmaya devam
+                  ediyor (bkz. aşağıdaki parcaCizgisi haritası).
+                */}
                 <VL left={0} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 <VL left={wallW} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
-                {parcaCizgisi && placed.map((s, i) => (
-                  <VL key={`v`} left={olcuSol + olcuXStart(s)} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
-                ))}
+                <VL left={olcuSol} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
                 <VL left={olcuSol + olcuW} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
 
                 {/*
