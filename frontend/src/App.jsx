@@ -10906,12 +10906,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
                             <SayiKutusu etiket={t('screen.colsShort')} deger={cols} onChange={setCols} min={1} max={colsMax} />
                             <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsMax} />
-                            {/* Artış neden durdu: sessiz sınır yerine açık not. */}
-                            {(cols >= colsMax || rows >= rowsMax || grupDuvariAsiyor) && (
-                              <span className="w-full text-[13px] leading-snug text-amber-600 dark:text-amber-400">
-                                {t('olcu.duvarSiniri')}
-                              </span>
-                            )}
+                            {/*
+                              "Duvar ölçüsüne ulaşıldı" notu kaldırıldı:
+                              sütun/satır zaten sınırda duruyor, satır da
+                              ekranın ayarlarının ortasında yer kaplıyordu.
+                            */}
                           </div>
 
                           {/*
