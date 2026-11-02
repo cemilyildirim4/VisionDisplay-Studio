@@ -9171,6 +9171,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const mekanKayma = (() => {
     if (!surukleAktif) return null
     /*
+     * ESNEYEN DUVARLI SAHNELER — TASARIM DUVARIN ÜSTÜNDE KALIYOR.
+     *
+     * AVM koridoru ve şehir meydanında duvar tuvalin ortasında çiziliyor
+     * (bkz. DuvarDilim), yani sıfır kayma = duvarın tam ortası. Buraya
+     * öneri kayması ve aşağıdaki kadraj sınırı da ekleniyordu: ikisi de
+     * fotoğrafın tamamına göre hesaplandığı için tasarımı duvarın dışına
+     * itiyor, ekran duvardan kopmuş gibi, havada duruyordu.
+     *
+     * Bu iki sahnede kayma yalnızca kullanıcının elle taşımasından
+     * geliyor; o da duvarın içinde kalacak kadar sınırlanıyor — ekran
+     * duvardan ayrılmıyor, yalnızca duvarın üstünde kayıyor. Taşıma yoksa
+     * kayma sıfır: duvarın ortası.
+     */
+    if (fotoSahne?.duvarKutu) {
+      const olcek = cizimOlcek || 0
+      const payX = Math.max(0, ((mekanDuvarWm - tasarimWm) * olcek) / 2)
+      const payY = Math.max(0, ((mekanDuvarHm - tasarimHm) * olcek) / 2)
+      if (!mekanTasindi) return { x: 0, y: 0 }
+      return {
+        x: Math.max(-payX, Math.min(payX, elleKayma.x)),
+        y: Math.max(-payY, Math.min(payY, elleKayma.y)),
+      }
+    }
+    /*
      * ELLE TAŞIMADA İKİNCİ KISIT YOK.
      *
      * Aşağıdaki hesap ekranı fotoğrafın içinde tutuyor; otomatik yerleşim
