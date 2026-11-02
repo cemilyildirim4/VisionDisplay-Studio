@@ -8710,47 +8710,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Hem onay düğmesi hem de başka ekrana geçiş bu adımı kullanıyor;
    * ikisi ayrı yazıldığında geçişte kaydetme unutulmuştu.
    */
-  /*
-   * İŞARETLENEN ALAN PERSPEKTİFİ VERİYOR, ÖLÇÜYÜ DEĞİL.
-   *
-   * Dörtgen olduğu gibi yazılınca tasarım alanı DOLDURUYORDU: 0,96 m'lik
-   * bir ekran, kullanıcının çizdiği kutu ne kadarsa o kadar büyüyordu.
-   *
-   * Alanın gerçek ölçüsü referans ölçeğinden çıkıyor (alanOlcegiPxM);
-   * tasarım da kendi gerçek ölçüsüyle (kabin sayısı × kabin ölçüsü) o
-   * alanın ORTASINA oturuyor. Dörtgen merkezinden ölçekleniyor: eğim ve
-   * perspektif olduğu gibi kalıyor, yalnızca boy gerçeğe iniyor.
-   *
-   * Tasarım alandan büyükse küçültülmüyor — gerçek ölçü bu; taşan kısım
-   * görünüyor ve kısa bir uyarı çıkıyor. Alanı tamamen doldurmak ayrı bir
-   * iş: "Alana sığdır" düğmesi (bkz. tasarimiAlanaSigdir).
-   */
-  const gercegeOlcekle = (kose, enM, boyM) => {
-    const bos = { kose, tasti: false }
-    const olcekPxM = alanOlcegiPxM || cizimOlcek
-    if (!Array.isArray(kose) || kose.length !== 4) return bos
-    if (!(olcekPxM > 0) || !(enM > 0) || !(boyM > 0)) return bos
-    const uzak = (a, b) => Math.hypot(a.x - b.x, a.y - b.y)
-    /* Perspektifte karşılıklı kenarlar eşit değil: ortalaması alınıyor. */
-    const enPx = (uzak(kose[0], kose[1]) + uzak(kose[3], kose[2])) / 2
-    const boyPx = (uzak(kose[0], kose[3]) + uzak(kose[1], kose[2])) / 2
-    if (!(enPx > 1) || !(boyPx > 1)) return bos
-    const sx = (enM * olcekPxM) / enPx
-    const sy = (boyM * olcekPxM) / boyPx
-    if (!(sx > 0) || !(sy > 0)) return bos
-    const cx = kose.reduce((t2, q) => t2 + q.x, 0) / 4
-    const cy = kose.reduce((t2, q) => t2 + q.y, 0) / 4
-    return {
-      kose: kose.map((q) => ({ x: cx + (q.x - cx) * sx, y: cy + (q.y - cy) * sy })),
-      tasti: sx > 1.001 || sy > 1.001,
-    }
-  }
-
   const yerKaydet = (ekran, nokta) => {
     if (!ekran || !Array.isArray(nokta) || nokta.length !== 4) return null
-    const olcekli = gercegeOlcekle(koseSirala(nokta), ekran.wm, ekran.hm)
-    const duzgun = olcekli.kose
-    setKutuMesaj(olcekli.tasti ? t('yer.tasma') : null)
+    /*
+     * EKRAN İŞARETLENEN DÖRT KÖŞEDE DURUYOR.
+     *
+     * Bir ara dörtgen, ekranın kabin sayısından gelen ölçüye göre
+     * merkezinden yeniden ölçekleniyordu ("gerçek ölçüyle yerleştir").
+     * Tek ekranda bile alandan kayıyordu; birleşik tasarımda ekranın
+     * şeritteki eni açısının kosinüsüyle kısaldığı için 90°'ye yakın bir
+     * parça ince bir çizgiye iniyordu. Dörtgen artık olduğu gibi
+     * yazılıyor: perspektif de ölçü de kullanıcının işaretlediği alandan
+     * geliyor. Alanı doldurmak ayrı bir iş: "Alana sığdır".
+     */
+    const duzgun = koseSirala(nokta)
+    setKutuMesaj(null)
     yerKoseRef.current[ekran.id] = duzgun
     dortgeniYaz(ekran.id, duzgun)
     const yeni = yerlesmisIdler.includes(ekran.id) ? yerlesmisIdler : [...yerlesmisIdler, ekran.id]
