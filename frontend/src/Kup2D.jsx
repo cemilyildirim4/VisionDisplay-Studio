@@ -176,29 +176,34 @@ export default function Kup2D({
    * arka yüzün kenarı. Yan yüzlerin görsel yönü de kendi rotateY'lerinden
    * geliyor (sağ yüz önden arkaya, sol yüz arkadan öne), üçgenler de o
    * yüzden ayrı ayrı döndürülüyor.
+   *
+   * ÜÇGENLER %1 BİNDİRİLİYOR. Dörtgeni tam dörde bölen köşegenlerde
+   * tarayıcının kenar yumuşatması saç teli kadar bir boşluk bırakıyor ve
+   * köşegenler boyunca alttaki kapak sızıyordu. Kenarlar birer yüzde
+   * dışarı taşırılıyor: bindirme görünmüyor, boşluk kalmıyor.
    */
   const ucgenler = [
     /* ÖN: taban altta, görsel dikeyde aynalanıyor (kenarda birebir tutsun). */
     {
-      kirpma: 'polygon(0% 100%, 100% 100%, 50% 50%)',
+      kirpma: 'polygon(-1% 101%, 101% 101%, 50% 49%)',
       kutu: { left: 0, top: D / 2, width: W, height: D / 2 },
       donus: 'scaleY(-1)',
     },
     /* SAĞ: taban sağda; yüzün görseli önden arkaya akıyor. */
     {
-      kirpma: 'polygon(100% 0%, 100% 100%, 50% 50%)',
+      kirpma: 'polygon(101% -1%, 101% 101%, 51% 50%)',
       kutu: { left: (3 * W) / 4 - D / 2, top: D / 2 - W / 4, width: D, height: W / 2 },
       donus: 'rotate(-90deg) scaleY(-1)',
     },
     /* ARKA: taban üstte; yüz 180° dönük olduğu için görsel yatayda ters. */
     {
-      kirpma: 'polygon(0% 0%, 100% 0%, 50% 50%)',
+      kirpma: 'polygon(-1% -1%, 101% -1%, 50% 51%)',
       kutu: { left: 0, top: 0, width: W, height: D / 2 },
       donus: 'scaleX(-1)',
     },
     /* SOL: taban solda; yüzün görseli arkadan öne akıyor. */
     {
-      kirpma: 'polygon(0% 0%, 0% 100%, 50% 50%)',
+      kirpma: 'polygon(-1% -1%, -1% 101%, 49% 50%)',
       kutu: { left: W / 4 - D / 2, top: D / 2 - W / 4, width: D, height: W / 2 },
       donus: 'rotate(90deg) scaleY(-1)',
     },
@@ -214,6 +219,27 @@ export default function Kup2D({
     ][i]
 
   const yuzEni = (i) => (i % 2 === 0 ? W : D)
+
+  /*
+   * KAPAĞIN KABİN IZGARASI KUTUNUN ÜSTÜNE GÖRE.
+   *
+   * Kapak her zaman kutunun üstü kadar (W × D) çiziliyor ama kabin
+   * ızgarası beşinci ekranın kendi diziliminden geliyordu: üst ekran
+   * kutunun üstüyle aynı ölçüde değilse (ör. yanlar 3×6 iken üst 6×6)
+   * kabinler kapağa sıkışıp gerçek ölçüsünden başka görünüyordu.
+   *
+   * Kabin ölçüsü üst ekranın kendi ölçüsünden çıkarılıyor (en ÷ sütun,
+   * boy ÷ satır); kapağa kaç kabin sığıyorsa o kadar çiziliyor. Üst ekran
+   * zaten tam oturuyorsa sayı değişmiyor.
+   */
+  const ustKabinEn = gEn(ustEkran) / Math.max(1, ustEkran?.cols || 1)
+  const ustKabinBoy = (ustEkran?.hm || 0) / Math.max(1, ustEkran?.rows || 1)
+  const ustSutun =
+    ustKabinEn > 0 ? Math.max(1, Math.round(enM / ustKabinEn)) : Math.max(1, ustEkran?.cols || 1)
+  const ustSatir =
+    ustKabinBoy > 0
+      ? Math.max(1, Math.round(derinlikM / ustKabinBoy))
+      : Math.max(1, ustEkran?.rows || 1)
 
   /*
    * YÜZLER KENDİ ÖLÇÜSÜYLE, ALTTAN HİZALI.
@@ -333,8 +359,8 @@ export default function Kup2D({
               <Screen
                 wPx={W}
                 hPx={D}
-                cols={ustEkran.cols || 1}
-                rows={ustEkran.rows || 1}
+                cols={ustSutun}
+                rows={ustSatir}
                 type="flat"
                 sade={sade}
                 model={model}

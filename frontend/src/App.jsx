@@ -10788,6 +10788,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   /* Birleşik ekranlar burada da bir arada görünsün. */
                   const grupta = !!grup && Array.isArray(grup.uyeler) && grup.uyeler.includes(e.id)
                   /*
+                   * Küpte beşinci ekran üst yüz: kutucuk da kapağın
+                   * kendisini gösteriyor (bkz. KupUstOnizleme).
+                   */
+                  const kupUst =
+                    grup?.tip === 'kutu' && grup.uyeler?.[4] === e.id
+                      ? grup.uyeler.slice(0, 4).map((id) => {
+                          const y = ekranOzetleri.find((x) => x.id === id)
+                          return y
+                            ? { oge: icerikHavuzuTam.find((x) => x.id === y.havuzId), dilim: y.dilim, enM: y.enM }
+                            : null
+                        })
+                      : null
+                  /* Kapağın oranı kutudan: eni ön yüzden, derinliği yan yüzden. */
+                  const kapakEn = kupUst ? Math.max(kupUst[0]?.enM || 0, kupUst[2]?.enM || 0) : 0
+                  const kapakDerinlik = kupUst
+                    ? Math.max(kupUst[1]?.enM || 0, kupUst[3]?.enM || 0) || kapakEn
+                    : 0
+                  /*
                    * KUTU SABİT, ÖNİZLEME EKRANIN ORANINDA.
                    *
                    * Önce kutu kareydi ve önizleme yüksekliğin %38'ine
@@ -10801,7 +10819,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                    * hangi ekranın geniş hangisinin uzun olduğu görünüyor
                    * ama liste hep aynı yüksekliklerde kalıyor.
                    */
-                  const onizlemeOrani = Math.min(6, Math.max(0.17, (e.enM || 1) / (e.boyM || 1)))
+                  const onizlemeOrani = kupUst
+                    ? Math.min(6, Math.max(0.17, (kapakEn || 1) / (kapakDerinlik || 1)))
+                    : Math.min(6, Math.max(0.17, (e.enM || 1) / (e.boyM || 1)))
                   return (
                     <li key={e.id || 'aktif'} data-ekran={e.sira} className="relative m-0 p-0">
                       {/*
@@ -10843,7 +10863,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               height: onizlemeOrani >= 1 ? undefined : '100%',
                             }}
                           >
-                            <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
+                            {kupUst ? (
+                              <KupUstOnizleme yanlar={kupUst} en={kapakEn} derinlik={kapakDerinlik} />
+                            ) : (
+                              <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
+                            )}
                           </span>
                         </span>
                         <span className="block truncate text-[15px] font-bold leading-tight text-neutral-900 dark:text-neutral-50">
@@ -11190,6 +11214,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           setGrupTipi(tip)
                           setGrupSecim(secim)
                           birlesimiKur(tip, secim, grupAcisi, lYonSecim)
+                          /*
+                           * KÜPE BASMAK DUVARI KUTUNUN ÖLÇÜSÜNE GETİRİYOR.
+                           *
+                           * Duvar beş ekran yan yanaymış gibi kalıyor,
+                           * kutunun iki yanında kocaman boş duvar
+                           * duruyordu. Yalnızca bu ANDA ayarlanıyor:
+                           * kullanıcı sonra duvarı elle değiştirebilsin.
+                           */
+                          if (tip === 'kutu') {
+                            const kutu = birlesimKapladigi(
+                              ekranSeridi.filter((x) => secim.includes(x.id)),
+                              true,
+                            )
+                            if (kutu?.enM > 0 && kutu?.boyM > 0) {
+                              /* Yukarı yuvarlanıyor: kutu duvarın dışında kalmasın. */
+                              setWidth(Math.ceil(kutu.enM * 100) / 100)
+                              setHeight(Math.ceil(kutu.boyM * 100) / 100)
+                            }
+                          }
                         }}
                         title={t('yerlesim.' + tip)}
                         className={`rounded-md py-1.5 text-[13px] font-semibold leading-tight transition-colors disabled:opacity-40 ${
@@ -13604,6 +13647,54 @@ function Kalem() {
       <path d="M4 20h4l10-10-4-4L4 16v4z" />
       <path d="M13.5 6.5l4 4" />
     </svg>
+  )
+}
+
+/*
+ * KÜPÜN ÜST YÜZÜ — KUTUCUKTA DA KAPAĞIN KENDİSİ.
+ *
+ * Beşinci ekranın kutucuğunda tek görselin YAN YÜZ dilimi duruyordu:
+ * kullanıcı kapakta o dilimi arıyor, bulamıyordu. Kutucuk artık çizimdeki
+ * kompozisyonu gösteriyor: köşegenlerle dört üçgen, her üçgen altındaki yan
+ * yüzün devamı. Üçgenlerin yeri ve yönü Kup2D'deki `ucgenler` ile birebir
+ * aynı — ikisi ayrışırsa kutucuk yine çizimden başka bir şey gösterir.
+ */
+function KupUstOnizleme({ yanlar, en, derinlik }) {
+  const W = en > 0 ? en : 1
+  const D = derinlik > 0 ? derinlik : W
+  const yuzde = (a, b) => `${(a / b) * 100}%`
+  const ucgenler = [
+    { kirpma: 'polygon(-1% 101%, 101% 101%, 50% 49%)', kutu: { left: 0, top: D / 2, width: W, height: D / 2 }, donus: 'scaleY(-1)' },
+    { kirpma: 'polygon(101% -1%, 101% 101%, 51% 50%)', kutu: { left: (3 * W) / 4 - D / 2, top: D / 2 - W / 4, width: D, height: W / 2 }, donus: 'rotate(-90deg) scaleY(-1)' },
+    { kirpma: 'polygon(-1% -1%, 101% -1%, 50% 51%)', kutu: { left: 0, top: 0, width: W, height: D / 2 }, donus: 'scaleX(-1)' },
+    { kirpma: 'polygon(-1% -1%, -1% 101%, 49% 50%)', kutu: { left: W / 4 - D / 2, top: D / 2 - W / 4, width: D, height: W / 2 }, donus: 'rotate(90deg) scaleY(-1)' },
+  ]
+  return (
+    <>
+      {ucgenler.map((u, i) => {
+        const y = yanlar?.[i]
+        if (!y?.oge) return null
+        return (
+          <span key={i} style={{ position: 'absolute', inset: 0, clipPath: u.kirpma, overflow: 'hidden' }}>
+            <span
+              style={{
+                position: 'absolute',
+                left: yuzde(u.kutu.left, W),
+                top: yuzde(u.kutu.top, D),
+                width: yuzde(u.kutu.width, W),
+                height: yuzde(u.kutu.height, D),
+                transform: u.donus,
+                transformOrigin: '50% 50%',
+                display: 'block',
+                overflow: 'hidden',
+              }}
+            >
+              <IcerikOnizleme oge={y.oge} dilim={y.dilim} />
+            </span>
+          </span>
+        )
+      })}
+    </>
   )
 }
 
