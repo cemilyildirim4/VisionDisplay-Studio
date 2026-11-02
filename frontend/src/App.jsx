@@ -8588,8 +8588,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return [0, 1, 2, 3].map((i) => sirali[(bas + i) % 4])
   }
 
+  /*
+   * YERLEŞMİŞ = YERİNİ BELLİ ETMİŞ EKRAN.
+   *
+   * Liste (yerlesmisIdler) yalnızca DÖRT KÖŞE adımından doluyordu. Alanını
+   * işaretleyerek yerleşen ekran orada görünmediği için yerleşmemiş
+   * sayılıyordu: yeni ekran eklenince sıra ona dönüyor ve kullanıcıdan
+   * 2. ekranın değil, 1. ekranın ölçüsü yeniden isteniyordu.
+   *
+   * Kaydında dörtgeni ya da işaretlenmiş alanı olan ekran da yerleşmiş
+   * sayılıyor; sıra gerçekten yeri belli olmayan ilk ekrana gidiyor.
+   */
+  const ekranYerlesti = (x) => {
+    if (!x) return false
+    if (yerlesmisIdler.includes(x.id)) return true
+    const taze = yerKoseRef.current[x.id]
+    if (Array.isArray(taze) && taze.length === 4) return true
+    const kayit = sabitEkranlar.find((e) => e.id === x.id)
+    if (Array.isArray(kayit?.oran) && kayit.oran.length === 4) return true
+    if (Array.isArray(kayit?.alan) && kayit.alan.length === 4) return true
+    /* Elde duran ekran: dörtgeni ya da işaretlediği alanı varsa yerleşmiştir. */
+    if (x.id === aktifEkranId) {
+      if (Array.isArray(koseMutlak) && koseMutlak.length === 4) return true
+      if (alanNokta.length === 4) return true
+    }
+    return false
+  }
+
   /* Yerleşmemiş ilk ekranın sırası — ekleme yerleşimi bozmasın diye. */
-  const ilkYerlesmemis = () => ekranParcalari.findIndex((x) => !yerlesmisIdler.includes(x.id))
+  const ilkYerlesmemis = () => ekranParcalari.findIndex((x) => !ekranYerlesti(x))
 
   const yerAktif = yerSira != null && yerSira >= 0 && yerSira < ekranParcalari.length
   const yerEkran = yerAktif ? ekranParcalari[yerSira] : null
