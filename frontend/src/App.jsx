@@ -11230,7 +11230,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       <div className="mb-1 text-[13.5px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
                         {t('eklem.baslik')}
                       </div>
-                      <div className="flex flex-col gap-1.5">
+                      {/*
+                        İki sütun: dört eklem alt alta dizilince panelin
+                        yarısını yiyordu. Satırın kendisi değişmiyor,
+                        yalnızca yan yana ikişer diziliyor.
+                      */}
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
                         {grup.uyeler.slice(0, -1).map((id, j) => {
                           const solSira = ekranParcalari.find((x) => x.id === id)?.sira ?? j + 1
                           const sagSira =
@@ -11240,44 +11245,46 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             eklemVarsayilanAcisi(grupTipi, j, grup.uyeler.length)
                           const disinda = !(deger >= 90 && deger <= 180)
                           return (
-                            <div key={id} className="flex items-center gap-2">
-                              <span className="w-14 shrink-0 text-[14px] font-medium tabular-nums text-neutral-700 dark:text-neutral-200">
-                                {solSira} – {sagSira}
-                              </span>
-                              <input
-                                type="number"
-                                min="10"
-                                max="180"
-                                step="1"
-                                value={deger}
-                                onChange={(e) => {
-                                  const v = Number(e.target.value)
-                                  setGrup((g) => {
-                                    if (!g) return g
-                                    const liste = Array.from(
-                                      { length: Math.max(0, g.uyeler.length - 1) },
-                                      (_, k) => ({
-                                        aci:
-                                          g.eklemler?.[k]?.aci ??
-                                          eklemVarsayilanAcisi(g.tip, k, g.uyeler.length),
-                                        kose: g.eklemler?.[k]?.kose || 'koseli',
-                                      }),
-                                    )
-                                    liste[j] = {
-                                      aci: Number.isFinite(v)
-                                        ? v
-                                        : eklemVarsayilanAcisi(g.tip, j, g.uyeler.length),
-                                      /* Köşe biçimi açı yazılırken kaybolmuyor. */
-                                      kose: g.eklemler?.[j]?.kose || 'koseli',
-                                    }
-                                    return { ...g, eklemler: liste }
-                                  })
-                                }}
-                                className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-[16.5px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
-                              />
-                              <span className="text-[16.5px] text-neutral-500 dark:text-neutral-400">°</span>
-                              {/* Köşe keskin mi bitiyor, yumuşak mı dönüyor. */}
-                              <div className="flex shrink-0 overflow-hidden rounded-md border border-neutral-300 dark:border-[#39414f]">
+                            <div key={id} className="flex min-w-0 flex-col gap-1">
+                              <div className="flex min-w-0 items-center gap-1.5">
+                                <span className="shrink-0 text-[13.5px] font-medium tabular-nums text-neutral-700 dark:text-neutral-200">
+                                  {solSira} – {sagSira}
+                                </span>
+                                <input
+                                  type="number"
+                                  min="10"
+                                  max="180"
+                                  step="1"
+                                  value={deger}
+                                  onChange={(e) => {
+                                    const v = Number(e.target.value)
+                                    setGrup((g) => {
+                                      if (!g) return g
+                                      const liste = Array.from(
+                                        { length: Math.max(0, g.uyeler.length - 1) },
+                                        (_, k) => ({
+                                          aci:
+                                            g.eklemler?.[k]?.aci ??
+                                            eklemVarsayilanAcisi(g.tip, k, g.uyeler.length),
+                                          kose: g.eklemler?.[k]?.kose || 'koseli',
+                                        }),
+                                      )
+                                      liste[j] = {
+                                        aci: Number.isFinite(v)
+                                          ? v
+                                          : eklemVarsayilanAcisi(g.tip, j, g.uyeler.length),
+                                        /* Köşe biçimi açı yazılırken kaybolmuyor. */
+                                        kose: g.eklemler?.[j]?.kose || 'koseli',
+                                      }
+                                      return { ...g, eklemler: liste }
+                                    })
+                                  }}
+                                  className="w-14 shrink-0 rounded-md border border-neutral-300 bg-white px-1.5 py-1 text-[15px] text-neutral-800 outline-none focus:border-brand dark:border-[#39414f] dark:bg-[#232936] dark:text-neutral-200"
+                                />
+                                <span className="shrink-0 text-[15px] text-neutral-500 dark:text-neutral-400">°</span>
+                              </div>
+                              {/* Köşe keskin mi bitiyor, yumuşak mı dönüyor: hücrenin alt satırı. */}
+                              <div className="flex w-full overflow-hidden rounded-md border border-neutral-300 dark:border-[#39414f]">
                                 {['koseli', 'yuvarlak'].map((kb) => (
                                   <button
                                     key={kb}
@@ -11298,7 +11305,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                         return { ...g, eklemler: liste }
                                       })
                                     }
-                                    className={`px-2 py-1 text-[12.5px] ${
+                                    className={`flex-1 px-1 py-1 text-[12px] ${
                                       (grup.eklemler?.[j]?.kose || 'koseli') === kb
                                         ? 'bg-brand text-white'
                                         : 'text-neutral-600 dark:text-neutral-300'
@@ -13623,7 +13630,87 @@ function KupUstOnizleme({ yanlar, en, derinlik }) {
   )
 }
 
+/*
+ * KÜÇÜK RESİMDE VİDEO DEĞİL, İLK KARESİ.
+ *
+ * Her kutucuk kendi <video> öğesini kuruyordu: beş ekran kartı, beş
+ * yerleşim çipi ve içerik havuzuyla birlikte on bir video. Tarayıcının
+ * aynı anda çözebildiği video sayısı sınırlı — kutucukların çoğu hiç
+ * başlamıyor (boş görünüyor), tasarımdaki video da kasıyor ve ekranlar
+ * birbirinden kayıyordu.
+ *
+ * Kutucuk artık ilk kareyi gösteriyor: kare bir kez çizilip veri adresi
+ * olarak saklanıyor, aynı kaynağı kullanan bütün kutucuklar onu
+ * paylaşıyor. Kod çözücüler tasarımın kendisine kalıyor.
+ */
+const videoKareleri = new Map()
+
+function videoIlkKaresi(src) {
+  if (videoKareleri.has(src)) return Promise.resolve(videoKareleri.get(src))
+  const bekleyen = new Promise((coz) => {
+    const v = document.createElement('video')
+    v.muted = true
+    v.playsInline = true
+    v.preload = 'auto'
+    const bitir = (deger) => {
+      /* Kare alındı: öğe bırakılıyor, kod çözücü boşa tutulmasın. */
+      v.removeAttribute('src')
+      v.load()
+      videoKareleri.set(src, deger)
+      coz(deger)
+    }
+    v.addEventListener(
+      'loadeddata',
+      () => {
+        try {
+          const tuval = document.createElement('canvas')
+          const oran = v.videoHeight ? v.videoWidth / v.videoHeight : 16 / 9
+          tuval.width = 320
+          tuval.height = Math.max(1, Math.round(320 / (oran || 16 / 9)))
+          tuval.getContext('2d').drawImage(v, 0, 0, tuval.width, tuval.height)
+          bitir(tuval.toDataURL('image/jpeg', 0.72))
+        } catch {
+          bitir(null)
+        }
+      },
+      { once: true },
+    )
+    v.addEventListener('error', () => bitir(null), { once: true })
+    v.src = src
+  })
+  videoKareleri.set(src, bekleyen)
+  return bekleyen
+}
+
+function useVideoKaresi(src) {
+  const [kare, setKare] = useState(() => {
+    const hazir = src ? videoKareleri.get(src) : null
+    return typeof hazir === 'string' ? hazir : null
+  })
+  useEffect(() => {
+    if (!src) {
+      setKare(null)
+      return undefined
+    }
+    const hazir = videoKareleri.get(src)
+    if (typeof hazir === 'string') {
+      setKare(hazir)
+      return undefined
+    }
+    let iptal = false
+    videoIlkKaresi(src).then((d) => {
+      if (!iptal) setKare(d)
+    })
+    return () => {
+      iptal = true
+    }
+  }, [src])
+  return kare
+}
+
 function IcerikOnizleme({ oge, dilim = null, oynatImi = false }) {
+  /* Kanca koşulsuz çağrılıyor: öğe yokken de sıra bozulmasın. */
+  const videoKaresi = useVideoKaresi(oge?.tip === 'video' ? oge.url : null)
   if (!oge) return null
   /*
    * DİLİM YÜZDEYLE: kutunun kaç piksel olduğunu bilmeye gerek kalmıyor.
@@ -13654,23 +13741,22 @@ function IcerikOnizleme({ oge, dilim = null, oynatImi = false }) {
           VİDEO DA KENDİ DİLİMİNİ GÖSTERİYOR.
 
           Görselde dilim uygulanıyor, videoda uygulanmıyordu: aynı kutuda
-          görsel kendi parçasını, video tamamını gösteriyordu. Video
-          kutunun sw katı büyütülüp sx kadar sola kaydırılıyor; görseldeki
-          "kırpma yok" kuralıyla aynı olsun diye object-fit: fill.
+          görsel kendi parçasını, video tamamını gösteriyordu. İlk kare de
+          görsel gibi dilimleniyor (bkz. dilimStili).
         */}
-        <video
-          src={oge.url}
-          autoPlay
-          loop
-          muted
-          playsInline
+        <div
           style={{
             position: 'absolute',
-            width: `${(dilim?.sw || 1) * 100}%`,
-            height: `${(dilim?.sh || 1) * 100}%`,
-            left: `${-(dilim?.sx || 0) * 100}%`,
-            top: `${-(dilim?.sy || 0) * 100}%`,
-            objectFit: 'fill',
+            inset: 0,
+            backgroundColor: '#0a0a0a',
+            ...(videoKaresi
+              ? {
+                  backgroundImage: `url("${videoKaresi}")`,
+                  backgroundSize: '100% 100%',
+                  backgroundPosition: 'center',
+                  ...(dilimStili || {}),
+                }
+              : null),
           }}
         />
         {oynatImi && (

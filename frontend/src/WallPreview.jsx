@@ -1551,7 +1551,12 @@ export default function WallPreview({
                       filter: spanImg && spanLit ? LED_LIT_FILTER : undefined,
                     }}
                   >
-                    {spanVideo && (
+                    {/*
+                      Şerit gizliyken (küp, L/U/açılı) video kurulmuyor: çizimi
+                      Kup2D/Birlesim2D yapıyor, buradaki kopya yalnızca
+                      tarayıcının kod çözücülerini tüketiyordu.
+                    */}
+                    {spanVideo && !(kupKipi || birlesimKipi) && (
                       <VideoLayer
                         src={spanVideo}
                         gw={totalWpx * (dilim?.sw || 1)}
@@ -1617,6 +1622,8 @@ export default function WallPreview({
                       hideRegions={hideRegions}
                       sade={sade}
                       frameOnly={useSingle}
+                      /* Gizli şeritte video yok (bkz. yukarıdaki katman). */
+                      videoKapali={kupKipi || birlesimKipi}
                       curveAmount={curveAmount}
                       leftCols={s.leftCols}
                       rightCols={s.rightCols}
