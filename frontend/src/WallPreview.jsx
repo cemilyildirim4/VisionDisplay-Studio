@@ -1732,8 +1732,12 @@ export default function WallPreview({
                 {/*
                   GRUBUN TOPLAMI — tek tek ekranların eni yanıltıcı.
                   Duvara sığıp sığmadığı ancak toplamdan anlaşılıyor.
+
+                  KÜPTE YAZILMIYOR: orada sayı kutunun önden görünen
+                  izdüşümü oluyor ve duvarda karşılığı olan bir ölçü gibi
+                  okunuyordu. Küpün ölçüleri sol panelde yazıyor.
                 */}
-                {placed.length > 1 && (
+                {placed.length > 1 && !kupKipi && (
                   <div
                     className="absolute flex items-center pointer-events-none"
                     style={{ left: olcuSol + olcuW / 2, transform: 'translateX(-50%)', top: wallH + 58 + bombePx }}

@@ -283,7 +283,22 @@ export default function Kup2D({
               width: W,
               height: D,
               marginLeft: -W / 2,
-              transform: `rotateX(90deg) translateZ(${H / 2}px) translateY(${-D / 2 + H / 2}px)`,
+              /*
+               * KAPAK YAN YÜZLERİN ÜST KENARINA OTURUYOR.
+               *
+               * Eski dizilim `rotateX(90) translateZ(H/2) translateY(H/2 - D/2)`
+               * idi: ikinci ve üçüncü adım DÖNDÜKTEN sonraki eksenlerde
+               * çalıştığı için kapak yalnızca D = H olduğunda (tam küpte)
+               * yerine oturuyordu. 1×6 kabinlik yüzlerde (H = 3D) kapak
+               * kutunun epey üstünde, havada ince bir şerit gibi duruyordu.
+               *
+               * Ötelemeyi dönüşten ÖNCE yazmak gerekiyor: o anda yerel
+               * eksenler dünya eksenleriyle aynı. Kapağın merkezi duruşu
+               * gereği kutunun tepesinden D/2 aşağıda; o kadar yukarı
+               * alınıyor, sonra yatırılıyor. Dönüş aynı kaldığı için
+               * üçgenlerin yönü değişmiyor (bkz. ucgenler).
+               */
+              transform: `translateY(${-D / 2}px) rotateX(90deg)`,
             }}
           >
             {ustEkran ? (
