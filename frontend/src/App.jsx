@@ -366,6 +366,53 @@ function eklemVarsayilanAcisi(tip, j, uyeSayisi, aciliAci = 135) {
   return aciliAci
 }
 
+/*
+ * BİRLEŞECEK KENARLAR — ekranın solu komşunun sağına, sağı soluna.
+ *
+ * Köşe sırası: 0 sol üst, 1 sağ üst, 2 sağ alt, 3 sol alt. Sol kenar
+ * (0,3) komşunun sağ kenarıyla (1,2), sağ kenar (1,2) komşunun soluyla
+ * (0,3) birleşiyor.
+ */
+const KENAR_CIFTLERI = [
+  [0, 3, 1, 2],
+  [1, 2, 0, 3],
+]
+
+/*
+ * İKİ DÖRTGENİ KENARINDAN BİRLEŞTİREN KAYMA.
+ *
+ * Kenarın iki ucunun da aynı kadar kayması gerekiyor: uçlardan biri
+ * tutup öteki açık kalıyorsa (ekranlar farklı boyda ya da farklı
+ * perspektifte) yapışma anlamsız olur, o yüzden sapma da eşikle
+ * sınırlı. Dönen değer kaymanın kendisi ve kenarın hangi köşeler
+ * olduğu; yapışma yoksa null.
+ */
+function kenarKaymasi(kendi, komsu, esik) {
+  if (!Array.isArray(kendi) || kendi.length !== 4) return null
+  if (!Array.isArray(komsu) || komsu.length !== 4) return null
+  let enIyi = null
+  for (const [a1, a2, b1, b2] of KENAR_CIFTLERI) {
+    const dx1 = komsu[b1].x - kendi[a1].x
+    const dy1 = komsu[b1].y - kendi[a1].y
+    const dx2 = komsu[b2].x - kendi[a2].x
+    const dy2 = komsu[b2].y - kendi[a2].y
+    const dx = (dx1 + dx2) / 2
+    const dy = (dy1 + dy2) / 2
+    const sapma = Math.max(Math.hypot(dx1 - dx, dy1 - dy), Math.hypot(dx2 - dx, dy2 - dy))
+    if (sapma > esik) continue
+    const uzaklik = Math.hypot(dx, dy)
+    if (uzaklik <= esik && (!enIyi || uzaklik < enIyi.uzaklik)) {
+      enIyi = { dx, dy, uzaklik, a1, a2 }
+    }
+  }
+  return enIyi
+}
+
+/* Kenarlar bu kadar yaklaşınca mıknatıs gibi yapışıyor (tuval pikseli). */
+const KENAR_YAPISMA_PX = 18
+/* Yapışık sayılma payı: çizimdeki yuvarlama artığı kadar. */
+const KENAR_BITISIK_PX = 2.5
+
 function yerlesimSecenekleri(m, genislikM, yukseklikM) {
   if (!m) return null
   const EPSILON = 1e-9
@@ -4750,18 +4797,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * dörtgeni ve bu ekranın başlangıç dörtgeni saklanıyor; her karede
      * aradaki fark ötekilere de uygulanıyor.
      */
+    /*
+     * BİRLİKTE TAŞIMA YALNIZCA YAPIŞIKKEN.
+     *
+     * Grup kurulur kurulmaz ötekiler de taşınıyordu: kullanıcı iki ekranı
+     * birbirine getiremiyor, ikisi birlikte kaçıyordu. Birleşim tipine
+     * basmak fotoğrafta hiçbir ekranı yerinden oynatmıyor (bkz.
+     * grupKoseleri → scene 'ozel'); ekranlar elle köşeye getiriliyor.
+     *
+     * Kenarlar bitişikse ikisi tek parça gibi taşınıyor; değilse yalnızca
+     * eldeki ekran kayıyor ve komşusuna yaklaşınca kenarından yapışıyor.
+     */
     const grupUyeleri =
       Array.isArray(grup?.uyeler) && grup.uyeler.length > 1
         ? grup.uyeler.filter((id) => id !== aktifEkranId)
         : []
-    const tabanAktif = grupUyeleri.length ? alanaYerlestir(alanTuval, bas.u, bas.v, alanOlcek) : null
-    const tabanDigerleri = new Map()
-    if (tabanAktif) {
-      for (const id of grupUyeleri) {
-        const k = ekranKoseleri(id)
-        if (k) tabanDigerleri.set(id, k)
-      }
+    const baslangicKose = alanaYerlestir(alanTuval, bas.u, bas.v, alanOlcek)
+    const komsular = new Map()
+    for (const id of grupUyeleri) {
+      const k = ekranKoseleri(id)
+      if (k) komsular.set(id, k)
     }
+    const yapisik =
+      !!baslangicKose &&
+      [...komsular.values()].some((k) => kenarKaymasi(baslangicKose, k, KENAR_BITISIK_PX))
+    const tabanAktif = yapisik ? baslangicKose : null
+    const tabanDigerleri = new Map(yapisik ? komsular : [])
     const tasi = (ev) => {
       /*
        * SERBEST TAŞIMA — alanın dışına da çıkabiliyor.
@@ -4785,9 +4846,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * koordinatinda oldugu icin tasarim nereye giderse gitsin o duzlemin
        * perspektifine oturmaya devam ediyor.
        */
-      const u = bas.u + (ev.clientX - basX) / enPx
-      const v = bas.v + (ev.clientY - basY) / boyPx
+      let u = bas.u + (ev.clientX - basX) / enPx
+      let v = bas.v + (ev.clientY - basY) / boyPx
       if (!Number.isFinite(u) || !Number.isFinite(v)) return
+      /*
+       * KENARDAN YAPIŞMA.
+       *
+       * Yapışık olmayan ekran komşusunun kenarına yaklaşınca aradaki pay
+       * kapanıyor: birleşim göz kararıyla değil tam oturuyor. Kayma
+       * alanın kendi koordinatına çevrildiği için ekran yine o düzlemin
+       * perspektifinde duruyor, gerçek ölçüsü değişmiyor.
+       */
+      if (!yapisik && komsular.size) {
+        const deneme = alanaYerlestir(alanTuval, u, v, alanOlcek)
+        if (deneme) {
+          let enIyi = null
+          for (const k of komsular.values()) {
+            const y = kenarKaymasi(deneme, k, KENAR_YAPISMA_PX)
+            if (y && (!enIyi || y.uzaklik < enIyi.uzaklik)) enIyi = y
+          }
+          if (enIyi) {
+            u += enIyi.dx / enPx
+            v += enIyi.dy / boyPx
+          }
+        }
+      }
       setAlanKonum({ u, v })
       /* Ölçü KORUNUYOR: sürükleme yalnızca yeri değiştiriyor. */
       const yeni = alanaYerlestir(alanTuval, u, v, alanOlcek)
@@ -8683,6 +8766,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Küpte fotoğrafta yalnızca iki yüz görünüyor; arkadaki yüzler
    * fotoğrafa işaretlenmiyor, 3D'de duruyorlar.
    */
+  /*
+   * YAPIŞAN KENAR SARI YANIYOR.
+   *
+   * İki ekranın birleştiği fotoğraftan anlaşılmıyordu: kenarlar bitişik mi,
+   * bir iki piksel açık mı belli değildi. Birleşim üyelerinin dörtgenleri
+   * karşılaştırılıyor; kenarları bitişik olan çiftin ortak kenarı tuvalde
+   * sarı çiziliyor. Ayrıca o çift birlikte taşınıyor (bkz.
+   * alanIcindeSurukle → yapisik).
+   */
+  const ortakKenarlar = (() => {
+    if (scene !== 'ozel' || !ozelSahne) return []
+    const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : []
+    if (uyeler.length < 2) return []
+    const cizgiler = []
+    for (let i = 0; i < uyeler.length; i++) {
+      for (let j = i + 1; j < uyeler.length; j++) {
+        const a = ekranKoseleri(uyeler[i])
+        const b = ekranKoseleri(uyeler[j])
+        if (!a || !b) continue
+        const y = kenarKaymasi(a, b, KENAR_BITISIK_PX)
+        if (y) cizgiler.push([a[y.a1], a[y.a2]])
+      }
+    }
+    return cizgiler
+  })()
+
   const yerlesecekIdler = (() => {
     const hepsi = ekranParcalari.map((x) => x.id)
     if (grup?.tip !== 'kutu' || !Array.isArray(grup.uyeler) || grup.uyeler.length < 3) return hepsi
@@ -10180,6 +10289,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 strokeDasharray="7 5"
                 opacity="0.9"
               />
+            </svg>
+          )}
+
+          {/*
+            YAPIŞAN ORTAK KENAR — sarı.
+
+            İki ekranın kenarı bitiştiğinde oraya sarı bir çizgi geliyor;
+            kullanıcı birleşmenin gerçekleştiğini görüyor. Fareyi hiç
+            görmüyor (bkz. ortakKenarlar).
+          */}
+          {ortakKenarlar.length > 0 && scene === 'ozel' && ozelSahne && (
+            <svg
+              className="absolute inset-0"
+              width={tuvalBoyut.w}
+              height={tuvalBoyut.h}
+              style={{ pointerEvents: 'none', zIndex: 13 }}
+            >
+              {ortakKenarlar.map(([p1, p2], i) => (
+                <g key={'ortak' + i}>
+                  <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="rgba(0,0,0,0.45)" strokeWidth="6" strokeLinecap="round" />
+                  <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
+                </g>
+              ))}
             </svg>
           )}
 
