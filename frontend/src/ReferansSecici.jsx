@@ -31,17 +31,6 @@ import { cizgiyiUzat } from './alanKenar.js'
 const R = 4.5
 const R_SECILI = 6
 const VURUS = 18
-/*
- * YAPIŞMA YARIÇAPI.
- *
- * İki ekranı köşede uç uca getirmek demek, aslında AYNI iki noktayı iki
- * alanda da kullanmak demek. Göz kararıyla tıklamak birkaç piksel şaşıyor
- * ve çizimde açık bir dikiş ya da bindirme olarak görünüyor. İmleç var olan
- * bir köşeye bu kadar yaklaşınca tam ona oturuyor.
- *
- * 12 px: tutamağın vuruş alanından (18) küçük, göz farkından büyük.
- */
-const YAPIS = 12
 
 export default function ReferansSecici({
   noktalar = [],
@@ -52,8 +41,6 @@ export default function ReferansSecici({
   enCokNokta = 2,
   gorselCarpani = 1,
   sinir = null,
-  /* Yapışılacak noktalar (tuval pikseli): başka ekranların köşeleri. */
-  yapiskanNoktalar = [],
   /*
    * BAŞTAKİ KAÇ NOKTA KİLİTLİ.
    *
@@ -181,22 +168,17 @@ export default function ReferansSecici({
   const yakin = (p, kapali, kenarYapisAcik = false) => {
     if (kapali || !p) return null
     /*
-     * SIRA ÖNEMLİ: önce BAŞKA EKRANIN köşesi, sonra fotoğraftaki kenar.
+     * BAŞKA EKRANIN KÖŞESİNE YAPIŞMA KALDIRILDI.
      *
-     * İki ekranı uç uca getirmek kullanıcının açık isteği; fotoğraftaki
-     * kenar ise bir tahmin. Tahmin, açık isteğin önüne geçmemeli — yoksa
-     * dikiş noktası birkaç piksel yanındaki duvar çizgisine kaçar ve iki
-     * ekran arasında görünür bir boşluk kalır.
+     * Konan nokta, 12 piksel yakınındaki başka bir ekranın köşesine
+     * kendiliğinden atlıyordu. Hedefler artık çizilmediği için bu atlama
+     * sebepsiz bir sıçrama gibi görünüyordu: yerleşmiş bir ekranı
+     * düzenlerken köşe elin altından kaçıyor, kullanıcı tam istediği yeri
+     * işaretleyemiyordu. Nokta tıklandığı yere konuyor — ilk
+     * yerleştirmedeki hassasiyetin aynısı. İki ekranı uç uca getirmenin
+     * yolu ortak kenar (bkz. App → ortakKenar) ve taşırken kenardan
+     * yapışma (bkz. kenarKaymasi).
      */
-    let en = null
-    if (Array.isArray(yapiskanNoktalar)) {
-      for (const q of yapiskanNoktalar) {
-        if (!q || !Number.isFinite(q.x) || !Number.isFinite(q.y)) continue
-        const u = Math.hypot(q.x - p.x, q.y - p.y)
-        if (u <= YAPIS && (!en || u < en.u)) en = { q, u }
-      }
-    }
-    if (en) return en.q
     /*
      * FOTOĞRAFTAKİ KENARA YAPIŞMA ARTIK İSTEĞE BAĞLI.
      *

@@ -6248,28 +6248,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const alanGecerli = alanNokta.length !== 4 || !alanTuval ? true : dortgenGecerli(alanTuval)
 
 
-  /*
-   * ───────────────────────────────────────────────────────────────────────
-   * YAPIŞILACAK NOKTALAR — ekranları uç uca getirmek için.
-   *
-   * İki ekranın köşede birleşmesi, aslında aynı iki noktanın iki alanda da
-   * kullanılması demek. Göz kararıyla tıklamak birkaç piksel şaşıyor ve
-   * çizimde açık bir dikiş ya da bindirme oluyor (kullanıcı bunu "üst üste
-   * biniyor" diye bildirdi). Yeni bir alan işaretlenirken duran ekranların
-   * köşeleri ve onların işaretli alanlarının köşeleri hedef oluyor.
-   *
-   * Yalnızca İŞARETLEME kolaylığı: kayıtlara ya da ölçüme dokunmuyor.
-   * ───────────────────────────────────────────────────────────────────────
-   */
-  const yapiskanNoktalar = (() => {
-    if (!(fotoYer?.genislik > 0)) return []
-    const l = []
-    for (const e of sabitEkranlar) {
-      if (Array.isArray(e?.oran)) for (const k of e.oran) l.push(oranTuvale(k))
-      if (Array.isArray(e?.alan)) for (const k of e.alan) l.push(oranTuvale(k))
-    }
-    return l.filter((k) => k && Number.isFinite(k.x) && Number.isFinite(k.y))
-  })()
 
   /*
    * ───────────────────────────────────────────────────────────────────────
@@ -10260,7 +10238,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                    * üst üste binme kalıyordu. Konan köşeler yakındaki
                    * köşeye yapışıyor; hizalama elle uğraşmadan tutuyor.
                    */
-                  yapiskanNoktalar={Object.values(yerKoseRef.current).flat()}
                 />
               </div>
             </>
@@ -10454,7 +10431,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               kesisimNoktasi={kenarKesisimi}
               noktalar={alanCizgi.map(oranTuvale)}
               onDegis={kenarCizgileriDegisti}
-              yapiskanNoktalar={yapiskanNoktalar}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
             />
