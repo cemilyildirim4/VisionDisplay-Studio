@@ -360,10 +360,15 @@ export default function Kup2D({
                * alınıyor, sonra yatırılıyor.
                */
               transform: `translateY(${-D / 2}px) rotateX(90deg)`,
-              /* Ekranın kapatmadığı yer boş: kutunun içi görünmesin. */
-              background: '#2b313b',
-              /* Ekran kutunun üstünden büyükse taşan kısım kesiliyor. */
-              overflow: 'hidden',
+              /*
+               * KAPATILMAYAN YER AÇIK KALIYOR.
+               *
+               * Kapak düzlemine koyu bir zemin konuyor ve taşan kısım
+               * kesiliyordu: beşinci ekran küçükse kutu kapalıymış gibi,
+               * büyükse tam oturmuş gibi görünüyordu. İkisi de ölçünün
+               * tutmadığını gizliyordu. Zemin de kırpma da yok: küçük ekran
+               * kutunun üstünü açık bırakıyor, büyük ekran kenardan taşıyor.
+               */
             }}
           >
             {ustEkran ? (

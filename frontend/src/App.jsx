@@ -9408,25 +9408,72 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * etmeyebilir, o yüzden kaç kabin gerektiği kutucukların altında
    * yazıyor. Ölçü tutunca uyarı kendiliğinden kayboluyor.
    */
-  const kupUstUyari = (() => {
+  const kupUstGereken = (() => {
     if (grup?.tip !== 'kutu' || !Array.isArray(grup.uyeler) || grup.uyeler.length < 5) return null
     const ust = ekranOzetleri.find((x) => x.id === grup.uyeler[4])
     const yan = grup.uyeler.slice(0, 4).map((id) => ekranOzetleri.find((x) => x.id === id))
     if (!ust || yan.some((y) => !y)) return null
     const en = Math.max(yan[0].enM || 0, yan[2].enM || 0)
     const derinlik = Math.max(yan[1].enM || 0, yan[3].enM || 0) || en
-    const sutun = Math.max(1, ust.ayar.cols || 1)
-    const satir = Math.max(1, ust.ayar.rows || 1)
-    const kabinEn = (ust.enM || 0) / sutun
-    const kabinBoy = (ust.boyM || 0) / satir
-    if (!(kabinEn > 0) || !(kabinBoy > 0) || !(en > 0) || !(derinlik > 0)) return null
-    const gerekenSutun = Math.max(1, Math.round(en / kabinEn))
-    const gerekenSatir = Math.max(1, Math.round(derinlik / kabinBoy))
-    if (gerekenSutun === sutun && gerekenSatir === satir) return null
-    return t('kup.ustUyari')
-      .replace('{s}', String(gerekenSutun))
-      .replace('{r}', String(gerekenSatir))
+    /* Kabin ölçüsü modelden ve üst ekranın KENDİ yönünden; sütun/satırdan bağımsız. */
+    const m = selectedModel
+    if (!m || !(en > 0) || !(derinlik > 0)) return null
+    const dikey = ust.ayar.orientation === 'portrait'
+    const kabinEn = ((dikey ? m.heightMm : m.widthMm) || 500) / 1000
+    const kabinBoy = ((dikey ? m.widthMm : m.heightMm) || 500) / 1000
+    if (!(kabinEn > 0) || !(kabinBoy > 0)) return null
+    return {
+      id: ust.id,
+      sutun: Math.max(1, Math.round(en / kabinEn)),
+      satir: Math.max(1, Math.round(derinlik / kabinBoy)),
+      simdikiSutun: Math.max(1, ust.ayar.cols || 1),
+      simdikiSatir: Math.max(1, ust.ayar.rows || 1),
+      /* Yan yüzlerin ölçüsü: değişince üst yüz yeniden hesaplanıyor. */
+      yanImza: yan.map((y) => `${y.ayar.cols || 1}x${y.ayar.rows || 1}${y.ayar.orientation || ''}`).join('|'),
+    }
   })()
+
+  /*
+   * ÜST YÜZ KÜPE BASILINCA KENDİLİĞİNDEN ÖLÇÜLENİYOR.
+   *
+   * Beşinci ekran yan yüzlerle aynı dizilimle doğuyor ve kutunun üstünü
+   * kapatmıyordu; kullanıcı doğru sayıyı kendi bulmak zorundaydı. Küp
+   * seçilince ve YAN yüzlerin ölçüsü değişince üst yüz kutunun üstünü tam
+   * kapatacak sayıya getiriliyor (ör. 2 sütunluk yanlarda üst 2×4).
+   *
+   * Yalnızca yan yüzlerin imzasına bakılıyor: kullanıcı üst ekranın
+   * sayısını elle değiştirdiğinde bu etki çalışmıyor, eli tutulmuyor.
+   */
+  const kupUstImzaRef = useRef(null)
+  useEffect(() => {
+    if (!kupUstGereken) {
+      kupUstImzaRef.current = null
+      return
+    }
+    const imza = kupUstGereken.id + '|' + kupUstGereken.yanImza
+    if (kupUstImzaRef.current === imza) return
+    kupUstImzaRef.current = imza
+    const { id, sutun, satir, simdikiSutun, simdikiSatir } = kupUstGereken
+    if (sutun === simdikiSutun && satir === simdikiSatir) return
+    if (id === aktifEkranId) {
+      setCols(sutun)
+      setRows(satir)
+      return
+    }
+    setSabitEkranlar((l) =>
+      l.map((e) => (e.id === id ? { ...e, ayar: { ...e.ayar, cols: sutun, rows: satir } } : e)),
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kupUstGereken?.id, kupUstGereken?.yanImza])
+
+  const kupUstUyari =
+    kupUstGereken &&
+    (kupUstGereken.sutun !== kupUstGereken.simdikiSutun ||
+      kupUstGereken.satir !== kupUstGereken.simdikiSatir)
+      ? t('kup.ustUyari')
+          .replace('{s}', String(kupUstGereken.sutun))
+          .replace('{r}', String(kupUstGereken.satir))
+      : null
 
   const widthMin = hasModel ? Math.max(0.1, tasarimToplamEn) : 0
   const heightMin = hasModel ? Math.max(0.1, tasarimEnYuksek) : 0
