@@ -1447,7 +1447,6 @@ export default function WallPreview({
                     /* Küp kaplanan alanın içinde: çizim ölçüyle aynı yeri tutuyor. */
                     enCokW={olcuW}
                     enCokH={stripTop + maxHpx}
-                    sifirlaEtiketi={t('kup.sifirla')}
                   />
                 </div>
               )}

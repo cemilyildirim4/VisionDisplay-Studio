@@ -33,12 +33,22 @@ import { Screen, contentImage } from './WallPreview.jsx'
 /* Kaide: küpün altında durduğu yer. Boyu küpün yüksekliğinden türüyor. */
 const KAIDE_ORAN = 0.06
 
+/*
+ * BAKIŞ YÜKSEKLİĞİNİN SINIRI.
+ *
+ * Küp dikeyde de sürüklenebiliyor. Sınırsız bırakılsaydı kutu tepeden
+ * bakılan bir dikdörtgene ya da hiç yüzü görünmeyen bir çizgiye
+ * dönüşebilirdi; aralık kutunun hep kutu gibi okunduğu yere kadar.
+ */
+const EGIM_EN_AZ = -10
+const EGIM_EN_COK = 55
+const BASLANGIC_EGIM = 14
+
 export default function Kup2D({
   ekranlar = [],
   pxPerM = 200,
   model = null,
   resolution = null,
-  sifirlaEtiketi = 'Yönü sıfırla',
   /* Sade kip: yüz kenarlıkları kalkıyor. */
   sade = false,
   /*
@@ -51,6 +61,7 @@ export default function Kup2D({
   enCokH = 0,
 }) {
   const [aci, setAci] = useState(-28)
+  const [egim, setEgim] = useState(BASLANGIC_EGIM)
   const surukle = useRef(null)
 
   if (!Array.isArray(ekranlar) || ekranlar.length < 2) return null
@@ -90,41 +101,57 @@ export default function Kup2D({
    * boyutunun değişmemesi için.
    */
   const UZAK = 1400
-  const EGIM = (14 * Math.PI) / 180
   const PAY = 8
-  /* "Yönü sıfırla" düğmesi kutunun altında duruyor; ona da yer kalsın. */
-  const DUGME = 38
   const yariKose = Math.hypot(W, D) / 2
   const kaideYari = (Math.hypot(Math.max(W, D), D) * 1.12) / 2
   /* Kaide küpün tabanının hemen altında (bkz. KAİDE dönüşümü). */
   const kaideY = H / 2 + kaide
-  const enYakin = (H / 2) * Math.sin(EGIM) + yariKose * Math.cos(EGIM)
-  const k = UZAK / Math.max(1, UZAK - enYakin)
-  const ustY = -((H / 2) * Math.cos(EGIM) + yariKose * Math.sin(EGIM)) * k
-  const altY = (kaideY * Math.cos(EGIM) + kaideYari * Math.sin(EGIM)) * k
-  const cizimEn = Math.max(yariKose, kaideYari) * 2 * k + PAY * 2
+  /*
+   * ÇİZİM KUTUSU BÜTÜN EĞİM ARALIĞINA GÖRE.
+   *
+   * İzdüşüm eğimle değişiyor: tek bir açıya göre ölçülen kutu, dikey
+   * sürüklemede başka açılarda dar kalır ve küp duvarın dışına taşardı.
+   * Aralığın tamamı taranıp en uçtaki üst/alt/en değerleri alınıyor;
+   * kutu sabit kaldığı için küp sürüklenirken ne büyüyor ne de kayıyor.
+   */
+  let ustY = Infinity
+  let altY = -Infinity
+  let enGenis = 0
+  for (let d = EGIM_EN_AZ; d <= EGIM_EN_COK + 0.001; d += 2.5) {
+    const e = (Math.min(d, EGIM_EN_COK) * Math.PI) / 180
+    const yakin = (H / 2) * Math.sin(e) + yariKose * Math.cos(e)
+    const k = UZAK / Math.max(1, UZAK - yakin)
+    ustY = Math.min(ustY, -((H / 2) * Math.cos(e) + yariKose * Math.sin(e)) * k)
+    altY = Math.max(altY, (kaideY * Math.cos(e) + kaideYari * Math.sin(e)) * k)
+    enGenis = Math.max(enGenis, Math.max(yariKose, kaideYari) * 2 * k)
+  }
+  const cizimEn = enGenis + PAY * 2
   const cizimBoy = altY - ustY + PAY * 2
   /* Göz hizası: bu noktadaki her şey olduğu yerde kalıyor (bkz. perspectiveOrigin). */
   const gozY = -ustY + PAY
   const olcek = Math.max(
     0.05,
-    Math.min(
-      1,
-      enCokW > 0 ? enCokW / cizimEn : 1,
-      enCokH > DUGME ? (enCokH - DUGME) / cizimBoy : 1,
-    ),
+    Math.min(1, enCokW > 0 ? enCokW / cizimEn : 1, enCokH > 0 ? enCokH / cizimBoy : 1),
   )
 
   const bas = (e) => {
     e.preventDefault()
     e.currentTarget.setPointerCapture?.(e.pointerId)
-    surukle.current = { x: e.clientX, aci }
+    surukle.current = { x: e.clientX, y: e.clientY, aci, egim }
   }
   const hareket = (e) => {
     const s = surukle.current
     if (!s) return
     /* Yatay sürükleme küpü kendi ekseninde döndürüyor. */
     setAci(s.aci + (e.clientX - s.x) * 0.5)
+    /*
+     * Dikey sürükleme bakış yüksekliğini değiştiriyor: aşağı çekmek
+     * küpün üstünü öne yatırıyor (yukarıdan bakış), yukarı itmek göz
+     * hizasına indiriyor.
+     */
+    setEgim(
+      Math.min(EGIM_EN_COK, Math.max(EGIM_EN_AZ, s.egim + (e.clientY - s.y) * 0.3)),
+    )
   }
   const birak = (e) => {
     surukle.current = null
@@ -236,7 +263,7 @@ export default function Kup2D({
 
   return (
     <div className="relative flex flex-col items-center" style={{ width: cizimEn * olcek }}>
-      {/* Küçültülen çizimin kapladığı yer: düğme hep kutunun altında kalsın. */}
+      {/* Küçültülen çizimin kapladığı yer. */}
       <div style={{ position: 'relative', width: cizimEn * olcek, height: cizimBoy * olcek }}>
       <div
         style={{
@@ -257,7 +284,7 @@ export default function Kup2D({
         onPointerMove={hareket}
         onPointerUp={birak}
         onPointerCancel={birak}
-        className="cursor-ew-resize select-none"
+        className="cursor-move select-none"
       >
         <div
           style={{
@@ -268,8 +295,8 @@ export default function Kup2D({
             width: 0,
             height: H,
             transformStyle: 'preserve-3d',
-            /* Hafif yukarıdan bakış: üst yüz görünsün. */
-            transform: `rotateX(-14deg) rotateY(${aci}deg)`,
+            /* Bakış yüksekliği sürüklemeyle değişiyor (bkz. hareket). */
+            transform: `rotateX(${-egim}deg) rotateY(${aci}deg)`,
           }}
         >
           {yanlar.map((e, i) => yuz(e, i))}
@@ -376,14 +403,6 @@ export default function Kup2D({
         </div>
       </div>
       </div>
-
-      <button
-        type="button"
-        onClick={() => setAci(-28)}
-        className="mt-2 rounded-lg border border-neutral-300 px-3 py-1 text-[13px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
-      >
-        {sifirlaEtiketi}
-      </button>
     </div>
   )
 }
