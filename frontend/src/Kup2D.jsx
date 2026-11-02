@@ -250,6 +250,21 @@ export default function Kup2D({
    * ölçüsünde; kısa yüz kutunun alt kenarına oturuyor, üstte kalan
    * pay açık duruyor — gerçekte de öyle durur.
    */
+  /*
+   * ARKADAKİ YÜZE VİDEO KONMUYOR.
+   *
+   * Her yüz kendi <video> öğesini kuruyordu: beş ekranlı bir küpte beş
+   * video, üstüne bir de panelin küçük resimleri. Tarayıcının aynı anda
+   * çözebildiği video sayısı sınırlı; sıranın sonundaki yüzler hiç
+   * başlamıyor ve simsiyah kalıyordu (ölçüldü: iki yüz `readyState 1`).
+   *
+   * `backfaceVisibility: hidden` yüzünden arkaya bakan yüz zaten
+   * görünmüyor; ona video kurulmuyor (videoKapali), görüntüsü duruyor.
+   * Kalan kod çözücüler bakılan yüzlere kalıyor. Küp döndürülünce yüz
+   * görünür olur olmaz videosu kuruluyor.
+   */
+  const yuzGorunur = (i) => Math.cos(((aci + 90 * i) * Math.PI) / 180) > -0.02
+
   const yuz = (ekran, i) => {
     const kutuEni = yuzEni(i)
     const eni = Math.min(kutuEni, gEn(ekran) * pxPerM || kutuEni)
@@ -280,6 +295,8 @@ export default function Kup2D({
             resolution={resolution}
             content={ekran?.content || 'led'}
             contentUrl={ekran?.contentUrl || null}
+            /* Arkaya bakan yüz: video kurulmuyor (bkz. yuzGorunur). */
+            videoKapali={!yuzGorunur(i)}
             {...(ekran?.icerikProp || null)}
           />
         </div>

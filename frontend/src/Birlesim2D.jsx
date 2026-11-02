@@ -22,25 +22,16 @@
 import { Screen } from './WallPreview.jsx'
 
 /*
- * YUVARLAK EKLEM = ARAYA GİREN BÜKÜLMÜŞ KABİN.
+ * YUVARLAK EKLEM = YALNIZCA BİRLEŞEN KÖŞELER.
  *
- * Yuvarlak seçilince önce yalnızca kutuların köşesi yumuşatılıyordu
- * (border-radius), sonra dönüş komşu ekranların uçlarından çalındı:
- * ekranların kendi eni değişmediği hâlde dönüş onların üstünde oluyordu.
- * Gerçekte köşeyi BÜKÜLMÜŞ BİR KABİN döner.
- *
- * Şeritte o kabin ayrı bir parça olarak geliyor (bkz. App → kavisKabinleri)
- * ve burada ince dilimlere bölünüyor; her dilim dönüşün bir parçası kadar
- * dönüyor, yani kabin bir yay çiziyor. Komşu ekranlar tam eniyle duruyor.
- *
- * Dilim ekranın kendi görüntüsünü TAM eninde çizip yalnızca kendi payına
- * düşen pencereyi gösteriyor: görüntü kavis boyunca kesintisiz akıyor,
- * her dilimde baştan başlamıyor.
+ * Bir ara köşeye bükülmüş bir kabin konuyordu; tasarımda olmayan bir
+ * ekran parçası gibi duruyor ve kabin sayısını artırıyordu. Ekranlar
+ * artık kendi eniyle, kendi sayısıyla duruyor; yuvarlak eklemde yalnızca
+ * birleşen iki uç yumuşatılıyor (bkz. App → yuvarlakSol/yuvarlakSag).
  */
-/* Bükülen kabini kaç dilim anlatıyor. */
-const KAVIS_DILIM = 8
-/* Dönen dilimler kıl payı bindiriliyor: aralarında boşluk görünmesin. */
-const BINDIRME = 0.6
+/* Köşe yarıçapı ekranın boyuna oranlı: küçük ekranda da ölçülü duruyor. */
+const KOSE_ORANI = 0.1
+const KOSE_EN_COK = 26
 
 export default function Birlesim2D({
   ekranlar = [],
@@ -98,41 +89,8 @@ export default function Birlesim2D({
   }))
   if (parcalar.some((p) => !(p.w > 0) || !(p.h > 0))) return null
 
-  /*
-   * ÜSTTEN BAKIŞ, DİLİM DİLİM.
-   *
-   * Düz ekran tek dilim. Bükülen kabin KAVIS_DILIM dilime bölünüyor ve
-   * her dilim yayın kendi açısını alıyor; yay komşusunun açısından
-   * başlayıp öbür komşusunun açısında bitiyor, böylece iki uçta da
-   * basamak kalmıyor. Dilimler uç uca ekleniyor, yani yüzeyin uzunluğu
-   * değişmiyor.
-   */
-  const dilimler = []
-  parcalar.forEach((p, i) => {
-    const onceki = parcalar[i - 1]
-    const sonraki = parcalar[i + 1]
-    if (!p.e.kavis || !onceki || !sonraki) {
-      dilimler.push({ p, w: p.w, t: p.t, u0: 0, dilim: false })
-      return
-    }
-    const bas = onceki.t
-    const son = sonraki.t
-    const adim = p.w / KAVIS_DILIM
-    for (let m = 0; m < KAVIS_DILIM; m++) {
-      dilimler.push({
-        p,
-        w: adim,
-        /*
-         * İlk dilim soldaki ekranla, son dilim sağdaki ekranla AYNI
-         * açıda: uçlarda kırık bir kenar (ek yeri) kalmıyor, yüzey tek
-         * parça gibi akıyor.
-         */
-        t: bas + ((son - bas) * m) / (KAVIS_DILIM - 1),
-        u0: m * adim,
-        dilim: true,
-      })
-    }
-  })
+  /* Üstten bakışta her ekran tek bir doğru parçası. */
+  const dilimler = parcalar.map((p) => ({ p, w: p.w, t: p.t }))
   if (!dilimler.length) return null
 
   let x = 0
@@ -271,9 +229,21 @@ export default function Birlesim2D({
       >
         {dilimler.map((d, i) => {
           const p = d.p
-          /* Kavis dilimi komşusunun altına kıl payı giriyor (bkz. BINDIRME). */
-          const pay = d.dilim ? BINDIRME : 0
-          const kutuW = d.w + pay * 2
+          const kutuW = d.w
+          /*
+           * YUVARLAK EKLEMİN KÖŞESİ.
+           *
+           * Yalnızca birleşen uç yumuşuyor; ekranın öbür ucu köşeli
+           * kalıyor. Yarıçap boya oranlı ve bir tavanı var, yoksa uzun
+           * bir ekranda köşe bir yay hâline geliyor.
+           */
+          const r = Math.min(KOSE_EN_COK, p.h * KOSE_ORANI, kutuW / 2)
+          const kose =
+            p.e.yuvarlakSol || p.e.yuvarlakSag
+              ? `${p.e.yuvarlakSol ? r : 0}px ${p.e.yuvarlakSag ? r : 0}px ${
+                  p.e.yuvarlakSag ? r : 0
+                }px ${p.e.yuvarlakSol ? r : 0}px`
+              : undefined
           return (
             <div
               key={(p.e.id ?? 'e') + '-' + i}
@@ -284,6 +254,8 @@ export default function Birlesim2D({
                 width: kutuW,
                 height: p.h,
                 marginLeft: -kutuW / 2,
+                borderRadius: kose,
+                overflow: kose ? 'hidden' : undefined,
                 /*
                  * rotateY(θ) ekranın en eksenini (cos θ, 0, −sin θ) yapıyor;
                  * üstten bakıştaki derinlik ekseni de eksi Z. İkisi aynı
@@ -292,14 +264,12 @@ export default function Birlesim2D({
                 transform: `translate3d(${d.mx - ortX}px, 0, ${-(d.mz - ortZ)}px) rotateY(${
                   (d.t * 180) / Math.PI
                 }deg)`,
-                overflow: d.dilim ? 'hidden' : undefined,
               }}
             >
-              {/* Ekran tam eninde çiziliyor; dilim kendi penceresini gösteriyor. */}
               <div
                 style={{
                   position: 'absolute',
-                  left: -(d.u0 - pay),
+                  left: 0,
                   top: 0,
                   width: p.w,
                   height: p.h,

@@ -196,7 +196,7 @@ export function VideoLayer({ src, gw, gh, left, top, lit, senkron = false }) {
  */
 // AR/kamera ekranı da AYNI bileşeni kullanır: tasarım orada da birebir aynı
 // çizilsin, iki ayrı kod yolu birbirinden ayrı düşmesin diye dışa açıldı.
-export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, curveAmount = 60, leftCols, rightCols, lYon = 'ice', solKirim = 0, sagKirim = 0, sade = false }) {
+export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, videoKapali = false, curveAmount = 60, leftCols, rightCols, lYon = 'ice', solKirim = 0, sagKirim = 0, sade = false }) {
   const nCols = Math.max(1, cols)
   const nRows = Math.max(1, rows)
   const isNone = content === 'none'
@@ -215,7 +215,8 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
   const isL = type === 'lshape'
   const bgImage = contentImage(content, contentUrl)
   // Video içerik ise kaynağı; değilse null (o zaman CSS arka planı kullanılır)
-  const videoSrc = frameOnly ? null : videoSrcFor(content, contentUrl)
+  /* Arkaya bakan küp yüzü: görüntü dursun ama video kurulmasın (bkz. Kup2D). */
+  const videoSrc = frameOnly || videoKapali ? null : videoSrcFor(content, contentUrl)
   // Panel görüntü YAYINDA mı? Kapalı panel (led) ve boş çerçeve ışık saçmaz.
   const isLit = !isNone && content !== 'led'
   const gw = spanW || wPx
@@ -1171,12 +1172,22 @@ export default function WallPreview({
      * Tuvale sığdırma işini sahne kendisi yapıyor: sığmayan tasarımda kamera
      * geri çekiliyor, ölçek kırpılmıyor.
      */
+    /*
+     * KÜPTE ÇİZİM TUVALDE DAHA ÇOK YER KAPLIYOR.
+     *
+     * Ölçeğin 280 px/m tavanı küçük bir tasarımın tuvali kaplamaması için
+     * var. Küp duvarın tam ölçüsünde kurulduğu için (bkz. "Küp"e basınca
+     * duvar) bu tavan kutuyu tuvalin ortasında küçücük bırakıyordu. Tavan
+     * küpte iki katı: kutu da duvar da büyüyor, ÖLÇÜLER DEĞİŞMİYOR —
+     * etiketler gerçek metreden geliyor.
+     */
+    const olcekTavani = kupKipi ? 560 : 280
     const pxPerM = Number.isFinite(sahneOlcek)
       ? sahneOlcek
       : Math.min(
           availW / (wallWm + humanWmM),
           availH / (wallHm + kavisPayiM),
-          sahneVar ? Infinity : 280,
+          sahneVar ? Infinity : olcekTavani,
         )
     olcekRef.current = pxPerM
     const wallW = wallWm * pxPerM
