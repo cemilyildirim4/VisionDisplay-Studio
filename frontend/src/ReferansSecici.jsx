@@ -411,22 +411,18 @@ export default function ReferansSecici({
       <rect x="0" y="0" width={tuvalW} height={tuvalH} fill="rgba(0,0,0,0.001)" />
 
       {/*
-        YERLEŞMİŞ EKRANLARIN KÖŞELERİ GÖRÜNÜYOR.
+        YAPIŞMA HEDEFLERİ ÇİZİLMİYOR.
 
-        Yeni ekranı komşusunun kenarına denk getirmek için nereye
-        tıklanacağının görünmesi gerekiyor; nokta yalnızca yapışma
-        hedefi olarak var olduğunda kullanıcı göz kararıyla tıklıyor
-        ve arada boşluk kalıyordu.
+        Yerleşmiş ekranların ve eski alanların köşeleri birer mavi halka
+        olarak duruyordu. Amaç yeni ekranı komşusunun kenarına denk
+        getirmekti; sonuç, işaretleme sırasında tuvalde o an çizilen şeye
+        ait OLMAYAN, alakasız yerlerde duran tutamaklardı — kullanıcı
+        hangisinin kendi noktası olduğunu ayırt edemiyordu.
+
+        Yapışmanın kendisi duruyor: yakına konan nokta yine komşunun
+        köşesine oturuyor, yalnızca hedefler görünmüyor. Tuvalde o an
+        işaretlenen çizginin ya da alanın noktaları var, başka bir şey yok.
       */}
-      {yapiskanNoktalar.map((q, i) =>
-        q && Number.isFinite(q.x) && Number.isFinite(q.y) ? (
-          <g key={'yapis' + i} pointerEvents="none">
-            <circle cx={q.x} cy={q.y} r="5" fill="none" stroke="#ffffff" strokeWidth="2.5" opacity="0.9" />
-            <circle cx={q.x} cy={q.y} r="5" fill="none" stroke="#2962ad" strokeWidth="1.5" />
-            <circle cx={q.x} cy={q.y} r="1.6" fill="#2962ad" />
-          </g>
-        ) : null,
-      )}
 
       {/*
         ÇİZGİ KALIN VE KONTRASTLI.
