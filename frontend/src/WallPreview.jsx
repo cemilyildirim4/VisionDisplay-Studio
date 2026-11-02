@@ -1136,9 +1136,30 @@ export default function WallPreview({
     const sahnePayM = 150
     // Dar ekranda yan pay en az 152 (76 + 76): satır artır/azalt düğmesi ve ölçü
     // etiketleri telefonun dışına düşmesin — bkz. tek ekran dalındaki aynı hesap.
-    const yanPay = sahneVar ? (dar ? Math.max(sahnePayM, 152) : sahnePayM) : dar ? 152 : 180
+    /*
+     * KÜPTE PAYLAR DAHA DAR.
+     *
+     * Paylar ŞERİDİN etiketlerine göre ayrılmış: üstte genişlik, altta
+     * parça parça ölçüler, yanlarda satır düğmeleri. Küpte bunların çoğu
+     * yok (bkz. kupKipi dalları) ama pay yine ayrılıyordu: kısa bir
+     * pencerede 190 pikselden geriye neredeyse hiç yer kalmıyor ve kutu
+     * tuvalin ortasında pul gibi duruyordu. Küpte yalnızca duvar payı ve
+     * yükseklik etiketi var; pay onlara yetecek kadar.
+     */
+    const yanPay = kupKipi
+      ? dar
+        ? 110
+        : 120
+      : sahneVar
+        ? dar
+          ? Math.max(sahnePayM, 152)
+          : sahnePayM
+        : dar
+          ? 152
+          : 180
+    const dikeyPay = kupKipi ? (dar ? 70 : 84) : sahneVar ? sahnePayM : dar ? 92 : 190
     const availW = Math.max(dar ? 120 : 180, size.w - yanPay - (showHumanM ? 24 : 0))
-    const availH = Math.max(dar ? 110 : 140, size.h - (sahneVar ? sahnePayM : dar ? 92 : 190))
+    const availH = Math.max(dar ? 110 : 140, size.h - dikeyPay)
     /*
      * Sahne varsa ölçek mekânın duvarına sabitlenir (sahneOlcek). Ekran mekândan
      * büyükse sığdırma devreye girer — min() ikisinden küçüğünü seçtiği için
@@ -1181,7 +1202,7 @@ export default function WallPreview({
      * küpte iki katı: kutu da duvar da büyüyor, ÖLÇÜLER DEĞİŞMİYOR —
      * etiketler gerçek metreden geliyor.
      */
-    const olcekTavani = kupKipi ? 560 : 280
+    const olcekTavani = kupKipi ? 900 : 280
     const pxPerM = Number.isFinite(sahneOlcek)
       ? sahneOlcek
       : Math.min(
