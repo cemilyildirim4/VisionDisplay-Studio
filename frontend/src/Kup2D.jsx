@@ -172,17 +172,30 @@ export default function Kup2D({
   const cizimEni = (ekran, i) => Math.min(yuzEni(i), gEn(ekran) * pxPerM || yuzEni(i))
 
   /*
+   * KAPAK BEŞİNCİ EKRANIN GERÇEK ÖLÇÜSÜNDE.
+   *
+   * Kabin ızgarası kutunun üstüne göre yeniden hesaplanıyordu: ekran
+   * kutunun üstünü kapatmasa da kapatıyormuş gibi çiziliyor, kullanıcı
+   * ölçünün tutmadığını göremiyordu. Kapak artık ekranın kendi ölçüsünde;
+   * kapatmadığı yer boş (koyu) kalıyor ve sol panelde kaç kabin gerektiği
+   * yazıyor (bkz. App → kupUstUyari).
+   *
+   * Kapak ÖN kenara yaslı: şeridin alt kenarı ön yüzün üst kenarına
+   * bitişiyor, görüntü 1'den 5'e aynı yönde devam ediyor.
+   */
+  const kapakEni = ustEkran ? gEn(ustEkran) * pxPerM || W : W
+  /* Ekran kutunun üstünden büyükse taşan kısmı kutunun kenarında kesiliyor. */
+  const kapakBoyu = ustEkran ? (ustEkran.hm || 0) * pxPerM || D : D
+
+  /*
    * TEK GÖRSEL KUTUNUN AÇILIMI GİBİ BÖLÜNÜYOR.
    *
-   * Üst yüz, yan yüzlerin köşegen üçgenlerinden kuruluyordu: tepede
-   * gerçekte olmayan, tünel gibi duran bir kompozisyon çıkıyordu.
-   *
-   * Görsel artık açılım gibi bölünüyor. ALT kısmını dört yan yüz yan yana
-   * paylaşıyor; EN ÜSTTEN kapağın derinliği kadar yüksek bir şerit
-   * kesilip kapağa sığdırılıyor. Şerit yatayda sıkışıyor (dört yüzün eni
-   * tek kapağa giriyor) — oran korunmuyor, kapak tamamen doluyor.
-   * Kapağın ön kenarı ile ön yüzün üst kenarı görselin AYNI satırına
-   * denk geldiği için görüntü 1'den 5'e kopmadan geçiyor.
+   * Görsel açılım gibi bölünüyor: ALT kısmını dört yan yüz yan yana
+   * paylaşıyor; EN ÜSTTEN kapağın boyu kadar yüksek bir şerit kesilip
+   * kapağa sığdırılıyor. Şerit yatayda sıkışıyor (dört yüzün eni tek
+   * kapağa giriyor) — oran korunmuyor, kapakta siyah boşluk kalmıyor.
+   * Şeridin alt kenarı ile ön yüzün üst kenarı görselin AYNI satırına
+   * denk geliyor.
    *
    * Paylaşım yoksa (her ekran ayrı içerik) bölünecek tek bir görsel de
    * yok: ekranın kendi dilimi kullanılıyor.
@@ -199,7 +212,7 @@ export default function Kup2D({
             baslar.push(x)
             x += cizimEni(e, i)
           })
-          return { toplamEn: x, spanH: H + D, baslar }
+          return { toplamEn: x, spanH: H + kapakBoyu, baslar }
         })()
       : null
 
@@ -210,35 +223,15 @@ export default function Kup2D({
           spanW: acilim.toplamEn,
           spanH: acilim.spanH,
           offsetX: acilim.baslar[i],
-          offsetY: D + (H - yuzBoyu(ekran)),
+          offsetY: kapakBoyu + (H - yuzBoyu(ekran)),
         }
       : ekran?.icerikProp || null
 
   /* Kapak: en üstteki şerit, kapağın enine sıkıştırılmış. */
   const kapakIcerigi = acilim
-    ? { spanW: W, spanH: acilim.spanH, offsetX: 0, offsetY: 0 }
+    ? { spanW: kapakEni, spanH: acilim.spanH, offsetX: 0, offsetY: 0 }
     : ustEkran?.icerikProp || null
 
-  /*
-   * KAPAĞIN KABİN IZGARASI KUTUNUN ÜSTÜNE GÖRE.
-   *
-   * Kapak her zaman kutunun üstü kadar (W × D) çiziliyor ama kabin
-   * ızgarası beşinci ekranın kendi diziliminden geliyordu: üst ekran
-   * kutunun üstüyle aynı ölçüde değilse (ör. yanlar 3×6 iken üst 6×6)
-   * kabinler kapağa sıkışıp gerçek ölçüsünden başka görünüyordu.
-   *
-   * Kabin ölçüsü üst ekranın kendi ölçüsünden çıkarılıyor (en ÷ sütun,
-   * boy ÷ satır); kapağa kaç kabin sığıyorsa o kadar çiziliyor. Üst ekran
-   * zaten tam oturuyorsa sayı değişmiyor.
-   */
-  const ustKabinEn = gEn(ustEkran) / Math.max(1, ustEkran?.cols || 1)
-  const ustKabinBoy = (ustEkran?.hm || 0) / Math.max(1, ustEkran?.rows || 1)
-  const ustSutun =
-    ustKabinEn > 0 ? Math.max(1, Math.round(enM / ustKabinEn)) : Math.max(1, ustEkran?.cols || 1)
-  const ustSatir =
-    ustKabinBoy > 0
-      ? Math.max(1, Math.round(derinlikM / ustKabinBoy))
-      : Math.max(1, ustEkran?.rows || 1)
 
   /*
    * YÜZLER KENDİ ÖLÇÜSÜYLE, ALTTAN HİZALI.
@@ -367,25 +360,43 @@ export default function Kup2D({
                * alınıyor, sonra yatırılıyor.
                */
               transform: `translateY(${-D / 2}px) rotateX(90deg)`,
+              /* Ekranın kapatmadığı yer boş: kutunun içi görünmesin. */
+              background: '#2b313b',
+              /* Ekran kutunun üstünden büyükse taşan kısım kesiliyor. */
+              overflow: 'hidden',
             }}
           >
             {ustEkran ? (
-              <Screen
-                wPx={W}
-                hPx={D}
-                cols={ustSutun}
-                rows={ustSatir}
-                type="flat"
-                sade={sade}
-                model={model}
-                resolution={resolution}
-                content={ustEkran.content || 'led'}
-                contentUrl={ustEkran.contentUrl || null}
-                {...(kapakIcerigi || null)}
-              />
-            ) : (
-              <div className="h-full w-full bg-[#2b313b]" />
-            )}
+              /*
+               * Ekran kendi gerçek ölçüsünde ve ÖN kenara yaslı duruyor:
+               * bu kutunun yerel ALT kenarı, yatırıldıktan sonra kutunun
+               * ön kenarına denk geliyor (bkz. rotateX(90deg)).
+               */
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: 0,
+                  width: kapakEni,
+                  height: kapakBoyu,
+                  marginLeft: -kapakEni / 2,
+                }}
+              >
+                <Screen
+                  wPx={kapakEni}
+                  hPx={kapakBoyu}
+                  cols={ustEkran.cols || 1}
+                  rows={ustEkran.rows || 1}
+                  type="flat"
+                  sade={sade}
+                  model={model}
+                  resolution={resolution}
+                  content={ustEkran.content || 'led'}
+                  contentUrl={ustEkran.contentUrl || null}
+                  {...(kapakIcerigi || null)}
+                />
+              </div>
+            ) : null}
           </div>
 
           {/* KAİDE — küp zeminde duruyor, tavana asılı değil. */}

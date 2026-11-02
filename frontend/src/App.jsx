@@ -9240,6 +9240,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Duvarın alt sınırı da kaplanan alandan (bkz. kaplananEn). */
   const tasarimToplamEn = kaplananEn
   const tasarimEnYuksek = kaplananBoy
+  /*
+   * BEŞİNCİ EKRAN KUTUNUN ÜSTÜNÜ KAPATIYOR MU.
+   *
+   * Kapak ekranın kendi ölçüsünde çiziliyor (bkz. Kup2D): ölçü tutmazsa
+   * kutunun üstünde boş bir pay kalıyor. Kullanıcı bunu çizimde fark
+   * etmeyebilir, o yüzden kaç kabin gerektiği kutucukların altında
+   * yazıyor. Ölçü tutunca uyarı kendiliğinden kayboluyor.
+   */
+  const kupUstUyari = (() => {
+    if (grup?.tip !== 'kutu' || !Array.isArray(grup.uyeler) || grup.uyeler.length < 5) return null
+    const ust = ekranOzetleri.find((x) => x.id === grup.uyeler[4])
+    const yan = grup.uyeler.slice(0, 4).map((id) => ekranOzetleri.find((x) => x.id === id))
+    if (!ust || yan.some((y) => !y)) return null
+    const en = Math.max(yan[0].enM || 0, yan[2].enM || 0)
+    const derinlik = Math.max(yan[1].enM || 0, yan[3].enM || 0) || en
+    const sutun = Math.max(1, ust.ayar.cols || 1)
+    const satir = Math.max(1, ust.ayar.rows || 1)
+    const kabinEn = (ust.enM || 0) / sutun
+    const kabinBoy = (ust.boyM || 0) / satir
+    if (!(kabinEn > 0) || !(kabinBoy > 0) || !(en > 0) || !(derinlik > 0)) return null
+    const gerekenSutun = Math.max(1, Math.round(en / kabinEn))
+    const gerekenSatir = Math.max(1, Math.round(derinlik / kabinBoy))
+    if (gerekenSutun === sutun && gerekenSatir === satir) return null
+    return t('kup.ustUyari')
+      .replace('{s}', String(gerekenSutun))
+      .replace('{r}', String(gerekenSatir))
+  })()
+
   const widthMin = hasModel ? Math.max(0.1, tasarimToplamEn) : 0
   const heightMin = hasModel ? Math.max(0.1, tasarimEnYuksek) : 0
 
@@ -10701,11 +10729,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   const kapakDerinlik = kupUst
                     ? Math.max(kupUst[1]?.enM || 0, kupUst[3]?.enM || 0) || kapakEn
                     : 0
-                  const kapakBoy = kupUst ? Math.max(...kupUst.map((y) => y?.boyM || 0), 0) : 0
-                  /* Açılımın tamamı boy + derinlik; kutucuk onun en üstünü gösteriyor. */
+                  const yanBoy = kupUst ? Math.max(...kupUst.map((y) => y?.boyM || 0), 0) : 0
+                  /*
+                   * Şerit, beşinci ekranın KENDİ boyu kadar yüksek (kutunun
+                   * üstünü kapatmıyorsa kendi ölçüsü geçerli; bkz. Kup2D).
+                   * Açılımın tamamı yan yüz boyu + şerit boyu.
+                   */
+                  const seritBoy = kupUst ? e.boyM || 0 : 0
                   const kapakDilim =
-                    kapakDerinlik > 0
-                      ? { sw: 1, sh: (kapakBoy + kapakDerinlik) / kapakDerinlik, sx: 0, sy: 0 }
+                    seritBoy > 0
+                      ? { sw: 1, sh: (yanBoy + seritBoy) / seritBoy, sx: 0, sy: 0 }
                       : null
                   /*
                    * KUTU SABİT, ÖNİZLEME EKRANIN ORANINDA.
@@ -10721,9 +10754,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                    * hangi ekranın geniş hangisinin uzun olduğu görünüyor
                    * ama liste hep aynı yüksekliklerde kalıyor.
                    */
-                  const onizlemeOrani = kupUst
-                    ? Math.min(6, Math.max(0.17, (kapakEn || 1) / (kapakDerinlik || 1)))
-                    : Math.min(6, Math.max(0.17, (e.enM || 1) / (e.boyM || 1)))
+                  const onizlemeOrani = Math.min(6, Math.max(0.17, (e.enM || 1) / (e.boyM || 1)))
                   return (
                     <li key={e.id || 'aktif'} data-ekran={e.sira} className="relative m-0 p-0">
                       {/*
@@ -10783,6 +10814,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   )
                 })}
               </ul>
+
+              {/* Beşinci ekran kutunun üstünü kapatmıyorsa kaç kabin gerektiği yazıyor. */}
+              {kupUstUyari && (
+                <p className="mt-1 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
+                  {kupUstUyari}
+                </p>
+              )}
 
               {/*
                 AYARLAR — KUTULARIN ALTINDA, SEÇİLİ EKRANA AİT.

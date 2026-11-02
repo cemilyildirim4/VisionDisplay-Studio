@@ -353,6 +353,11 @@ const dict = {
   'eklem.baslik': { tr: 'Birleşimler', en: 'Joints', ar: 'الوصلات' },
   'eklem.uyari': { tr: 'Açı 90° ile 180° arasında olmalı.', en: 'The angle should be between 90° and 180°.', ar: 'يجب أن تكون الزاوية بين ٩٠° و١٨٠°.' },
   'kup.sifirla': { tr: 'Yönü sıfırla', en: 'Reset view', ar: 'إعادة الاتجاه' },
+  'kup.ustUyari': {
+    tr: '5. ekran küpün üstünü tam kapatmıyor, {s}×{r} olmalı',
+    en: 'Screen 5 does not fully cover the top of the cube; it should be {s}×{r}',
+    ar: 'الشاشة 5 لا تغطي أعلى المكعب بالكامل، يجب أن تكون {s}×{r}',
+  },
   'yerlesim.ayir': { tr: 'Ayır', en: 'Split', ar: 'فصل' },
   /* Soru başlıkta duruyor; gövde yalnızca sonucu yazıyor. */
   'ekran.silOnay': {
