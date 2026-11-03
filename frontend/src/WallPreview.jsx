@@ -39,6 +39,14 @@ const HUMAN_FIG_W_RATIO = 518 / 1215
 // Duvar YÜKSEKLİĞİ bundan azsa silüet gösterilmez. Eşik figürün kendi boyu:
 // duvar 1,80 m ise figür tam duvar kadardır, hâlâ doğru bir ölçek referansıdır.
 // (Eşik 2 m iken duvarı 1,80'e indirince silüet ortadan kayboluyordu.)
+/*
+ * DUVARIN TUVALDEKİ DOLULUĞU.
+ *
+ * Duvar her ölçüde tuvalin bu kadarını kaplıyor; kalan pay ölçü
+ * etiketlerine ve nefes payına ait.
+ */
+const DOLULUK = 0.75
+
 const HUMAN_MIN_WALL_M = HUMAN_HEIGHT_M
 // İç L Tipi: dikiş (köşe) kenarının üstten ve alttan içeri girme oranı (%).
 // Kanatlar trapez olur → köşenin geriye kaçtığı hissi. 0 = düz, büyüdükçe köşe
@@ -1194,22 +1202,24 @@ export default function WallPreview({
      * geri çekiliyor, ölçek kırpılmıyor.
      */
     /*
-     * KÜPTE ÇİZİM TUVALDE DAHA ÇOK YER KAPLIYOR.
+     * DUVAR TUVALİN YAKLAŞIK 3/4'ÜNÜ KAPLIYOR.
      *
-     * Ölçeğin 280 px/m tavanı küçük bir tasarımın tuvali kaplamaması için
-     * var. Küp duvarın tam ölçüsünde kurulduğu için (bkz. "Küp"e basınca
-     * duvar) bu tavan kutuyu tuvalin ortasında küçücük bırakıyordu. Tavan
-     * küpte iki katı: kutu da duvar da büyüyor, ÖLÇÜLER DEĞİŞMİYOR —
-     * etiketler gerçek metreden geliyor.
+     * Ölçeğin sabit bir tavanı vardı (280 px/m): küçük bir duvar — 0,64 ×
+     * 0,16 m gibi — tuvalin ortasında minicik kalıyor, kullanıcı tasarımı
+     * göremiyordu. Tavan kalktı; ölçek duvarın KENDİSİNDEN geliyor: duvar
+     * hangi eksende önce doluyorsa orada tuvalin DOLULUK kadarını kaplıyor.
+     * Duvarın ekrandaki boyu böylece sabit; metre ölçüsü değişse de duvar
+     * büyüyüp küçülmüyor, yalnızca içindeki tasarımın ona oranı değişiyor.
+     *
+     * Etiketlere ayrılan pay (availW/availH) yine üst sınır: dar bir
+     * pencerede 3/4 oraya sığmıyorsa ölçü yazıları kırpılmasın diye
+     * küçüğü alınıyor. Ölçü etiketlerinin yazı boyutu sabit.
      */
-    const olcekTavani = kupKipi ? 900 : 280
+    const kullanW = Math.min(size.w * DOLULUK, availW)
+    const kullanH = Math.min(size.h * DOLULUK, availH)
     const pxPerM = Number.isFinite(sahneOlcek)
       ? sahneOlcek
-      : Math.min(
-          availW / (wallWm + humanWmM),
-          availH / (wallHm + kavisPayiM),
-          sahneVar ? Infinity : olcekTavani,
-        )
+      : Math.min(kullanW / (wallWm + humanWmM), kullanH / (wallHm + kavisPayiM))
     olcekRef.current = pxPerM
     const wallW = wallWm * pxPerM
     const wallH = wallHm * pxPerM
@@ -1879,9 +1889,12 @@ export default function WallPreview({
    * tasarım kadraja sığmıyorsa kamera geri çekiliyor (bkz. App sahneYakinlik),
    * yani arka plan ve tasarım BİRLİKTE küçülüyor; oran hiç bozulmuyor.
    */
+  /* Duvar tuvalin yaklaşık 3/4'ünü kaplıyor (bkz. çoklu daldaki aynı kural). */
+  const tekKullanW = Math.min(size.w * DOLULUK, availW)
+  const tekKullanH = Math.min(size.h * DOLULUK, availH)
   const basePxPerM = Number.isFinite(sahneOlcek)
     ? sahneOlcek
-    : Math.min(availW / sigdirWm, availH / sigdirHm, sahneVar ? Infinity : 340)
+    : Math.min(tekKullanW / sigdirWm, tekKullanH / sigdirHm)
 
   const curveKPre =
     screenType === 'curved' || screenType === 'curvedIn'
