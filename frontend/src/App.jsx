@@ -6384,6 +6384,49 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return dortgenGercekOlcu(alanTuval, a, b, cm, asal, odak)
   })()
 
+  /*
+   * BİR DÖRTGENİN GERÇEK ÖLÇÜSÜ (cm).
+   *
+   * İşaretlenen dört köşe duvarın DÜZLEMİNİ veriyor, tasarımın boyunu
+   * değil. Düzlemin gerçek ölçüsü perspektiften çıkıyor: iki kaçış
+   * noktası, dik açı varsayımı ve asal nokta fotoğrafın ortası
+   * (bkz. alanOlcu.js → dortgenGercekOlcu). Metre karşılığı referans
+   * çizgisinden geliyor; referans da aynı düzlem üzerinde ölçülüyor.
+   *
+   * Yüzey neredeyse karşıdan görünüyorsa perspektif çözümü yok; orada
+   * piksel oranı yeterli (ölçek referanstan: alanOlcegiPxM).
+   */
+  const dortgenOlcusuCm = (koseler) => {
+    if (!Array.isArray(koseler) || koseler.length !== 4) return null
+    const cm = Number(String(refUzunlukCm).replace(',', '.'))
+    if (refNokta.length === 2 && cm > 0) {
+      const a = oranTuvale(refNokta[0])
+      const b = oranTuvale(refNokta[1])
+      const asal = oranTuvale({ x: 0.5, y: 0.5 })
+      const odak =
+        cozulenOdak > 1
+          ? cozulenOdak
+          : odakYazilandan > 1
+            ? odakYazilandan
+            : exifOdak > 1
+              ? exifOdak
+              : fotoOdak > 1
+                ? fotoOdak
+                : fotoYer?.genislik > 0
+                  ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785
+                  : 0
+      const g = dortgenGercekOlcu(koseler, a, b, cm, asal, odak)
+      if (g?.enCm > 0 && g?.boyCm > 0) return { enCm: g.enCm, boyCm: g.boyCm }
+    }
+    const olcekPxM = alanOlcegiPxM || cizimOlcek
+    if (!(olcekPxM > 0)) return null
+    const uzak = (p, q) => Math.hypot(p.x - q.x, p.y - q.y)
+    const enPx = (uzak(koseler[0], koseler[1]) + uzak(koseler[3], koseler[2])) / 2
+    const boyPx = (uzak(koseler[0], koseler[3]) + uzak(koseler[1], koseler[2])) / 2
+    if (!(enPx > 1) || !(boyPx > 1)) return null
+    return { enCm: (enPx / olcekPxM) * 100, boyCm: (boyPx / olcekPxM) * 100 }
+  }
+
   const sayiCm = (x) => {
     const n = Number(String(x).replace(',', '.'))
     return n > 0 ? n : null
@@ -8877,10 +8920,60 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * yazılıyor: perspektif de ölçü de kullanıcının işaretlediği alandan
      * geliyor. Alanı doldurmak ayrı bir iş: "Alana sığdır".
      */
-    const duzgun = koseSirala(nokta)
+    /*
+     * İŞARETLENEN DÖRTGEN DÜZLEM; TASARIM KENDİ ÖLÇÜSÜNDE.
+     *
+     * Dörtgen olduğu gibi ekranın yeri sayılıyordu: 0,32 × 0,16 m'lik tek
+     * panel, işaretlenen koca cepheyi kaplıyordu. Dört köşe artık yalnızca
+     * duvarın düzlemini (perspektifini) veriyor; tasarım o düzlemin içine
+     * KENDİ gerçek ölçüsüyle oturuyor (bkz. dortgenOlcusuCm,
+     * alanaYerlestir). Alandan küçükse küçük, büyükse taşmış duruyor;
+     * doldurmak ayrı bir iş ("Alana sığdır").
+     *
+     * KONUM: dikeyde düzlemin ÜST kenarına hizalı. Yatayda düz dizilimde
+     * ortada; birleşik tipte (L, U, küp, açılı) birleşim kenarına yaslı,
+     * yani komşusuyla aynı köşede.
+     */
+    const duzlem = koseSirala(nokta)
+    const olcu = dortgenOlcusuCm(duzlem)
+    const ozet = ekranOzetleri.find((x) => x.id === ekran.id)
+    const enM = ozet?.enM || 0
+    const boyM = ozet?.boyM || 0
+    let duzgun = duzlem
+    let merkez = null
+    if (olcu?.enCm > 0 && olcu?.boyCm > 0 && enM > 0 && boyM > 0) {
+      const u = Math.max(0.02, (enM * 100) / olcu.enCm)
+      const v = Math.max(0.02, (boyM * 100) / olcu.boyCm)
+      const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : []
+      const birlesik = ['l', 'u', 'acili', 'kutu'].includes(grup?.tip)
+      const j = uyeler.indexOf(ekran.id)
+      let u0 = (1 - u) / 2
+      if (birlesik && j === 0 && uyeler.length > 1) {
+        /* İlk ekran, komşusunun başladığı kenara yaslı. */
+        u0 = yerKenarSecim[uyeler[1]] === 'sol' ? 0 : 1 - u
+      } else if (birlesik && j > 0) {
+        u0 = yerKenarSecim[ekran.id] === 'sol' ? 1 - u : 0
+      }
+      const uM = u0 + u / 2
+      const vM = v / 2
+      const yerlesen = alanaYerlestir(duzlem, uM, vM, { u, v }, enM, boyM)
+      if (yerlesen) {
+        duzgun = yerlesen
+        merkez = { u: uM, v: vM }
+      }
+    }
     setKutuMesaj(null)
     yerKoseRef.current[ekran.id] = duzgun
     dortgeniYaz(ekran.id, duzgun)
+    /*
+     * Düzlem ekranın kendi ALANI olarak saklanıyor: ölçü, taşıma ve
+     * "Alana sığdır" hep oradan okuyor (bkz. alanIcindeSurukle).
+     */
+    if (merkez && ekran.id === aktifEkranId) {
+      setAlanNokta(duzlem.map(tuvalOrana))
+      setAlanKonum(merkez)
+      setAlanOlcek(null)
+    }
     const yeni = yerlesmisIdler.includes(ekran.id) ? yerlesmisIdler : [...yerlesmisIdler, ekran.id]
     setYerlesmisIdler(yeni)
     return yeni
