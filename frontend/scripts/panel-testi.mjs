@@ -7,7 +7,8 @@
  *      tur, sutun/satir, yon. 2. ve 3. ekranin ayari 1. ekrandan eksik
  *      kalamaz — ayar tek yerde yazili ama bu sartin kendisi burada.
  *   3. Kapali satirda icerik kucuk resmi var.
- *   4. 1440x900 ekranda sol panelde dikey kaydirma cubugu cikmiyor.
+ *   4. Panelin yazi boyutu SABIT: icerik uzayinca kuculmuyor, gerekirse
+ *      panel kayiyor (urun karari degisti; bkz. App -> Sigdir).
  *   5. Paneldeki TOPLAM kabin sayisi satirlarin toplamiyla ayni.
  *
  * Fotograf yuklenmiyor: ekranlar fotografsiz sahnede de eklenebiliyor.
@@ -183,9 +184,10 @@ console.log('  acik: yon secimi yok:', olcum.acikYonYok ? '✓' : 'VAR ✗')
 console.log('  kapali kucuk resim :', olcum.kapaliKucukResim ? '✓' : '✗')
 console.log('  kapali satirlar    :', JSON.stringify(olcum.kapaliMetinler))
 console.log('  toplam satiri      :', olcum.toplamSatiri || 'YOK ✗')
-console.log('  kaydirma           :', olcum.tasma.length ? 'VAR ✗ ' + JSON.stringify(olcum.tasma) : 'yok ✓')
+/* Kaydirma artik serbest: uzun icerik kuculmek yerine kayiyor. */
+console.log('  kaydirma           :', olcum.tasma.length ? 'var (serbest)' : 'yok')
 console.log('  icerik kesik mi    :', olcum.kesik ? 'EVET ✗' : 'hayir ✓')
-console.log('  sigdirma orani     :', olcum.oran.toFixed(2), olcum.oran >= 0.6 ? '✓' : '✗ (yazi cok kuculuyor)')
+console.log('  yazi olcegi        :', olcum.oran.toFixed(2), olcum.oran === 1 ? '✓ (sabit)' : '✗ (panel kuculmus)')
 console.log('  sayfa hatasi       :', hata.length ? JSON.stringify(hata.slice(0, 3)) : 'yok ✓')
 console.log('  panel kabin        :', panelKabin)
 console.log('  pencere toplam     :', pencere ? pencere.join(' | ') : 'YOK (tek ekranda dokum cikmaz)')
@@ -202,9 +204,8 @@ const gecti =
   olcum.acikOlcu &&
   olcum.acikYonYok &&
   olcum.kapaliKucukResim &&
-  olcum.tasma.length === 0 &&
   !olcum.kesik &&
-  olcum.oran >= 0.6 &&
+  olcum.oran === 1 &&
   kabinUyumlu &&
   hata.length === 0
 

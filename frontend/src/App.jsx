@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, Suspense } from 'react'
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import { guvenliLazy } from './guvenliLazy.js'
 import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
@@ -10851,8 +10851,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {hasModel && (
             <div className="mb-1">
               <h2 className="text-[20px] font-bold tracking-tight m-0 mb-1">{t('wall.heading')}</h2>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+              {/*
+                Genişlik ve yükseklik HER ZAMAN yan yana: satır sarması
+                açıkken panelin genişliğine göre bazen alt alta, bazen yan
+                yana diziliyordu (bkz. Sigdir). İkisi tek satırda; dar
+                panelde sayı kutuları birkaç piksel daralıyor, o kadar.
+              */}
+              <div className="flex items-center gap-x-3">
                 <SayiKutusu
+                  etiketUstte
                   etiket={t('wall.width')}
                   deger={width}
                   onChange={setWidth}
@@ -10862,6 +10869,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   birim="m"
                 />
                 <SayiKutusu
+                  etiketUstte
                   etiket={t('wall.height')}
                   deger={height}
                   onChange={setHeight}
@@ -13491,165 +13499,22 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
   )
 }
 
-/**
- * İÇERİĞİ KUTUYA SIĞDIRIR — kaydırma çubuğu yerine küçültme.
- *
- * Yan paneller taşınca kaydırma çubuğu çıkıyordu; istenmiyor. Burada içerik
- * ölçülüp gerekirse `transform: scale` ile küçültülüyor, böylece her ekran
- * yüksekliğinde tamamı görünüyor.
- *
- * İki ayrıntı önemli:
- *
- *  • transform YERLEŞİMİ değiştirmez, yalnızca çizimi etkiler. Bu yüzden
- *    küçültülen içerik hâlâ eski genişliğinde yerleşir ve sağda boşluk kalır.
- *    Telafi için genişlik 100/oran'a çıkarılıyor.
- *
- *  • Genişlik değişince satırlar yeniden sarılıyor ve gereken yükseklik de
- *    değişiyor — yani oran kendi kendini etkiliyor. Onun için tek hamlede
- *    değil, birkaç turda yakınsayana kadar hesaplanıyor.
- *
- * BÜYÜTME YOK, boşluk dağıtma var. Panel içeriğinden uzun kalınca altta boş bir
- * şerit kalıyordu. Bir ara oran 1'in üstüne çıkarılıp içerik büyütüldü ama
- * ters tepti: büyütünce genişlik telafisi kutuyu daraltıyor, yazılar alt
- * satıra kayıyor, gereken yükseklik artıyor ve döngü üst sınıra dayanıp
- * içeriği taşırıyordu. Onun yerine içerik kutusu panelin tam boyuna
- * uzatılıyor (`height: 100%`) ve artan boşluk `justify-between` ile bölümlerin
- * ARASINA dağıtılıyor — son satır panelin alt hizasına oturuyor.
- *
- * Alt sınır 0,5: oraya dayanırsa (çok kısa bir pencerede) kaydırma açılır;
- * içeriğin kırpılıp erişilemez kalmasındansa kaydırılabilir olması iyidir.
- */
 /*
- * PANEL KAYDIRILMIYOR — İÇERİK SIĞDIRILIYOR.
+ * PANELİN YAZI BOYUTU SABİT.
  *
- * Ürün kararı: sol panelde kaydırma olmayacak, içeriğin tamamı tek
- * ekranda görünecek. Bedeli yazının küçülmesi; kullanıcı bunu bilerek
- * istedi ("sığdır hepsini, yazıları küçült").
+ * Panel, içeriğin tamamı tek ekrana sığsın diye küçültülüyordu: beşinci
+ * ekran eklendiğinde içerik uzuyor, bütün panel (yazılar, kutular,
+ * düğmeler) orantılı olarak küçülüyordu. Kullanıcı aynı yazıyı her
+ * tasarımda aynı boyda görmek istiyor — küçültme kalktı.
  *
- * Taban, kaydırmanın hiç gerekmeyeceği kadar düşük: iki ekran kurulu bir
- * panelde içerik 1542, panel 795 piksel — yani oran 0,52'ye kadar
- * inebiliyor; alçak ekranlarda daha da aşağı.
+ * Küçültme kalkınca uzun içerik için tek seçenek kaydırma: panel kendi
+ * içinde kayıyor, yazı boyu hiç değişmiyor. Kutu ölçüsü de sabit olduğu
+ * için duvar ölçüsü gibi satırlar ekran sayısına göre yer değiştirmiyor.
  */
-const EN_KUCUK_ORAN = 0.35
-
 function Sigdir({ children, className = '' }) {
-  const disRef = useRef(null)
-  const icRef = useRef(null)
-
-  useLayoutEffect(() => {
-    const dis = disRef.current
-    const ic = icRef.current
-    if (!dis || !ic) return
-
-    const hesapla = () => {
-      /*
-       * Küçültme YALNIZCA masaüstünde (lg ve üstü) anlamlı: panel orada tek
-       * ekran boyuna sıkıştırılıyor. Dar pencerede panel sayfayla birlikte
-       * uzuyor; orada ölçekleme yapılırsa içerik kırpılıyor ve alttaki
-       * düğmelere hiç erişilemiyordu. Bu yüzden altında her şey sıfırlanıp
-       * doğal akışa bırakılıyor.
-       */
-      if (!window.matchMedia('(min-width: 1024px)').matches) {
-        ic.style.width = ''
-        ic.style.height = ''
-        ic.style.transform = ''
-        dis.style.overflowY = ''
-        return
-      }
-
-      const disH = dis.clientHeight
-      if (!disH) return
-      /*
-       * ÖLÇERKEN yükseklik serbest (auto) — içeriğin gerçekte ne kadar yer
-       * istediği ancak öyle okunur. Kutuya panel boyu verilmiş olsaydı
-       * scrollHeight hep o boyu döndürür, oran 1'de takılır ve küçültme hiç
-       * çalışmazdı.
-       */
-      ic.style.height = 'auto'
-      /*
-       * ÖLÇERKEN küçültme de kapalı. Ölçekli ölçüm alt kenarda kırpılmaya yol
-       * açıyordu; transform yerleşimi değiştirmediği için ölçüyü ölçeksiz alıp
-       * sonunda uygulamak hem daha doğru hem daha basit.
-       */
-      ic.style.transform = 'none'
-      let oran = 1
-      for (let i = 0; i < 12; i++) {
-        ic.style.width = `${100 / oran}%`
-        /*
-         * scrollHeight son çocuğun alt boşluğunu (margin) saymaz; bu yüzden
-         * birkaç piksel eksik ölçülüp içerik taşıyordu. Küçük bir pay ekleniyor.
-         */
-        const gerek = ic.scrollHeight + 6
-        if (!gerek) break
-        /*
-         * scrollHeight ÖLÇEKSİZ yerleşim yüksekliğidir; ekranda kapladığı yer
-         * gerek * oran eder. İstenen bunun panele eşit olması, yani doğrudan
-         * oran = disH / gerek. Bir ara buna bir de mevcut oran çarpılıyordu;
-         * her tur oranı katlayarak küçültüyor, birkaç turda alt sınıra dayanıp
-         * yazıları yarı boya düşürüyordu.
-         */
-        const yeni = Math.max(EN_KUCUK_ORAN, Math.min(1, disH / gerek))
-        const bitti = Math.abs(yeni - oran) < 0.004
-        oran = yeni
-        if (bitti) break
-      }
-      /*
-       * SON KONTROL: döngü salınıp biraz büyük bir oranda bitmiş olabilir.
-       * Ölçeksiz gereken boy hâlâ panele sığmıyorsa oran doğrudan sığacak
-       * değere çekilir — kaydırma yerine her zaman sığdırma.
-       */
-      ic.style.width = `${100 / oran}%`
-      const sonGerek = ic.scrollHeight + 6
-      if (sonGerek * oran > disH) {
-        oran = Math.max(EN_KUCUK_ORAN, disH / sonGerek)
-        ic.style.width = `${100 / oran}%`
-      }
-
-      ic.style.transform = `scale(${oran})`
-      /*
-       * ÖLÇTÜKTEN SONRA kutu panelin tam boyuna uzatılır. Küçültme yerleşimi
-       * değiştirmediği için boy da 100/oran olmalı: ekranda tam 100% eder.
-       * Artan boşluğu justify-between bölümlerin arasına dağıtır.
-       */
-      ic.style.height = `${100 / oran}%`
-      /*
-       * TABANDA DA SIĞMIYORSA KAYDIRILIYOR.
-       *
-       * Eskiden kaydırma hiç yoktu: içerik ne olursa olsun sığdırılıyordu,
-       * bedeli de okunmayan yazıydı. Artık küçültme okunur bir tabanda
-       * duruyor ve artan içerik kaydırmayla geziliyor.
-       */
-      /* Kaydırma yok: içerik her hâlükârda panele sığdırılıyor. */
-      dis.style.overflowY = 'hidden'
-    }
-
-    hesapla()
-    /*
-     * Yalnızca panelin boyu değil, içeriğin boyu da değişiyor (görsel yüklenmesi,
-     * yazı tipi, açılıp kapanan bölümler). İkisi de izleniyor; kendi yaptığımız
-     * ölçü değişikliği tekrar tetiklemesin diye basit bir kilit var.
-     */
-    let calisiyor = false
-    const gozcu = new ResizeObserver(() => {
-      if (calisiyor) return
-      calisiyor = true
-      hesapla()
-      requestAnimationFrame(() => { calisiyor = false })
-    })
-    gozcu.observe(dis)
-    gozcu.observe(ic)
-    return () => gozcu.disconnect()
-  })
-
   return (
-    <div ref={disRef} className="flex-1 min-h-0 lg:overflow-hidden">
-      <div
-        ref={icRef}
-        className={className}
-        style={{ transformOrigin: 'top left' }}
-      >
-        {children}
-      </div>
+    <div className="flex-1 min-h-0 lg:overflow-y-auto">
+      <div className={className}>{children}</div>
     </div>
   )
 }
@@ -13713,7 +13578,15 @@ function FieldLabel({ children, muted = false }) {
  * kırpılmıyor. (Stepper daraldıkça etiketle bitişip + düğmesini dışarı
  * düşürüyordu.)
  */
-function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null }) {
+/*
+ * `etiketUstte`: etiket denetimin ÜSTÜNDE duruyor.
+ *
+ * Duvar satırında genişlik ve yükseklik yan yana; etiketler denetimlerin
+ * yanında dururken ikisi tek satıra sığmıyor, sayı kutusu birkaç piksele
+ * iniyor ve değer kırpılıyordu. Etiket üste alınınca hücre daralıyor,
+ * yazı boyutu küçülmeden ikisi yan yana sığıyor.
+ */
+function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null, etiketUstte = false }) {
   const [taslak, setTaslak] = useState(null)
   const dugme =
     'h-6 w-6 shrink-0 rounded border border-neutral-300 text-[15px] leading-none text-neutral-700 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-35 dark:border-[#39414f] dark:text-neutral-200'
@@ -13734,9 +13607,20 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
     if (!Number.isFinite(v) || taslak.trim() === '') return
     onChange(yuvarla(Math.min(max, Math.max(min, v))))
   }
+  const Sarmal = ({ children: ic }) =>
+    etiketUstte ? (
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-[13.5px] text-neutral-600 dark:text-neutral-300">{etiket}</span>
+        <span className="flex min-w-0 items-center gap-1">{ic}</span>
+      </span>
+    ) : (
+      <span className="flex min-w-0 items-center gap-1">
+        <span className="shrink-0 text-[13.5px] text-neutral-600 dark:text-neutral-300">{etiket}</span>
+        {ic}
+      </span>
+    )
   return (
-    <span className="flex min-w-0 items-center gap-1">
-      <span className="shrink-0 text-[13.5px] text-neutral-600 dark:text-neutral-300">{etiket}</span>
+    <Sarmal>
       <button
         type="button"
         aria-label="−"
@@ -13770,7 +13654,7 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
         +
       </button>
       {birim && <span className="shrink-0 text-[13px] text-neutral-500 dark:text-neutral-400">{birim}</span>}
-    </span>
+    </Sarmal>
   )
 }
 
