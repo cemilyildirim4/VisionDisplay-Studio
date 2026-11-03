@@ -8744,31 +8744,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Küpte fotoğrafta yalnızca iki yüz görünüyor; arkadaki yüzler
    * fotoğrafa işaretlenmiyor, 3D'de duruyorlar.
    */
-  /*
-   * YAPIŞAN KENAR SARI YANIYOR.
-   *
-   * İki ekranın birleştiği fotoğraftan anlaşılmıyordu: kenarlar bitişik mi,
-   * bir iki piksel açık mı belli değildi. Birleşim üyelerinin dörtgenleri
-   * karşılaştırılıyor; kenarları bitişik olan çiftin ortak kenarı tuvalde
-   * sarı çiziliyor. Ayrıca o çift birlikte taşınıyor (bkz.
-   * alanIcindeSurukle → yapisik).
-   */
-  const ortakKenarlar = (() => {
-    if (scene !== 'ozel' || !ozelSahne) return []
-    const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : []
-    if (uyeler.length < 2) return []
-    const cizgiler = []
-    for (let i = 0; i < uyeler.length; i++) {
-      for (let j = i + 1; j < uyeler.length; j++) {
-        const a = ekranKoseleri(uyeler[i])
-        const b = ekranKoseleri(uyeler[j])
-        if (!a || !b) continue
-        const y = kenarKaymasi(a, b, KENAR_BITISIK_PX)
-        if (y) cizgiler.push([a[y.a1], a[y.a2]])
-      }
-    }
-    return cizgiler
-  })()
 
   const yerlesecekIdler = (() => {
     const hepsi = ekranParcalari.map((x) => x.id)
@@ -10317,27 +10292,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/*
-            YAPIŞAN ORTAK KENAR — sarı.
+            BİRLEŞME YERİNDE ÇİZGİ YOK.
 
-            İki ekranın kenarı bitiştiğinde oraya sarı bir çizgi geliyor;
-            kullanıcı birleşmenin gerçekleştiğini görüyor. Fareyi hiç
-            görmüyor (bkz. ortakKenarlar).
+            Kenarlar bitiştiğinde oraya sarı bir çizgi çiziliyordu
+            ("birleşti" işareti olsun diye); tasarımın ortasında olmayan bir
+            kenarlık gibi duruyordu. İki ekran arada hiçbir çizgi, kenarlık
+            ya da renkli şerit olmadan birleşik görünüyor. Yapışmanın
+            kendisi duruyor (bkz. alanIcindeSurukle → kenarKaymasi).
           */}
-          {ortakKenarlar.length > 0 && scene === 'ozel' && ozelSahne && (
-            <svg
-              className="absolute inset-0"
-              width={tuvalBoyut.w}
-              height={tuvalBoyut.h}
-              style={{ pointerEvents: 'none', zIndex: 13 }}
-            >
-              {ortakKenarlar.map(([p1, p2], i) => (
-                <g key={'ortak' + i}>
-                  <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="rgba(0,0,0,0.45)" strokeWidth="6" strokeLinecap="round" />
-                  <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
-                </g>
-              ))}
-            </svg>
-          )}
 
           {/*
             ALAN İÇİNDE TAŞIMA KATMANI.
