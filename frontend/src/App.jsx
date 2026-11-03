@@ -10928,24 +10928,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                    */
                   const kupUst =
                     grup?.tip === 'kutu' && grup.uyeler?.[4] === e.id
-                      ? grup.uyeler.slice(0, 4).map((id) => ekranOzetleri.find((x) => x.id === id) || null)
+                      ? grup.uyeler.slice(0, 4).map((id) => {
+                          const y = ekranOzetleri.find((x) => x.id === id)
+                          return y
+                            ? { oge: icerikHavuzuTam.find((x) => x.id === y.havuzId), dilim: y.dilim, enM: y.enM }
+                            : null
+                        })
                       : null
-                  /* Kapağın oranı kutudan: eni ön yüzden, derinliği yan yüzden. */
-                  const kapakEn = kupUst ? Math.max(kupUst[0]?.enM || 0, kupUst[2]?.enM || 0) : 0
-                  const kapakDerinlik = kupUst
-                    ? Math.max(kupUst[1]?.enM || 0, kupUst[3]?.enM || 0) || kapakEn
-                    : 0
-                  const yanBoy = kupUst ? Math.max(...kupUst.map((y) => y?.boyM || 0), 0) : 0
-                  /*
-                   * Şerit, beşinci ekranın KENDİ boyu kadar yüksek (kutunun
-                   * üstünü kapatmıyorsa kendi ölçüsü geçerli; bkz. Kup2D).
-                   * Açılımın tamamı yan yüz boyu + şerit boyu.
-                   */
-                  const seritBoy = kupUst ? e.boyM || 0 : 0
-                  const kapakDilim =
-                    seritBoy > 0
-                      ? { sw: 1, sh: (yanBoy + seritBoy) / seritBoy, sx: 0, sy: 0 }
-                      : null
+                  /* Kapağın oranı ekranın kendi ölçüsünden; üçgenler o kutuya kuruluyor. */
+                  const kapakEn = kupUst ? e.enM || 0 : 0
+                  const kapakDerinlik = kupUst ? e.boyM || 0 : 0
                   /*
                    * KUTU SABİT, ÖNİZLEME EKRANIN ORANINDA.
                    *
@@ -11002,11 +10994,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               height: onizlemeOrani >= 1 ? undefined : '100%',
                             }}
                           >
-                            <IcerikOnizleme
-                              oge={secili}
-                              dilim={kupUst && kapakDilim ? kapakDilim : e.dilim}
-                              oynatImi
-                            />
+                            {kupUst ? (
+                              <KupUstOnizleme yanlar={kupUst} en={kapakEn} derinlik={kapakDerinlik} />
+                            ) : (
+                              <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
+                            )}
                           </span>
                         </span>
                         <span className="block truncate text-[15px] font-bold leading-tight text-neutral-900 dark:text-neutral-50">
@@ -13879,6 +13871,54 @@ function useVideoKaresi(src) {
     }
   }, [src])
   return kare
+}
+
+/*
+ * KÜPÜN ÜST YÜZÜ — KUTUCUKTA DA DÖRT ÜÇGEN.
+ *
+ * Beşinci ekranın kutucuğu kapakta GERÇEKTEN görüneni göstersin diye
+ * çizimdeki kompozisyonun aynısını kuruyor: köşegenlerle dört üçgen, her
+ * üçgen altındaki yan yüzün devamı. Üçgenlerin yeri ve yönü Kup2D'deki
+ * `ucgenler` ile birebir aynı — ikisi ayrışırsa kutucuk yine çizimden
+ * başka bir şey gösterir.
+ */
+function KupUstOnizleme({ yanlar, en, derinlik }) {
+  const W = en > 0 ? en : 1
+  const D = derinlik > 0 ? derinlik : W
+  const yuzde = (a, b) => `${(a / b) * 100}%`
+  const ucgenler = [
+    { kirpma: 'polygon(-1% 101%, 101% 101%, 50% 49%)', kutu: { left: 0, top: D / 2, width: W, height: D / 2 }, donus: 'scaleY(-1)' },
+    { kirpma: 'polygon(101% -1%, 101% 101%, 51% 50%)', kutu: { left: (3 * W) / 4 - D / 2, top: D / 2 - W / 4, width: D, height: W / 2 }, donus: 'rotate(-90deg) scaleY(-1)' },
+    { kirpma: 'polygon(-1% -1%, 101% -1%, 50% 51%)', kutu: { left: 0, top: 0, width: W, height: D / 2 }, donus: 'scaleX(-1)' },
+    { kirpma: 'polygon(-1% -1%, -1% 101%, 49% 50%)', kutu: { left: W / 4 - D / 2, top: D / 2 - W / 4, width: D, height: W / 2 }, donus: 'rotate(90deg) scaleY(-1)' },
+  ]
+  return (
+    <>
+      {ucgenler.map((u, i) => {
+        const y = yanlar?.[i]
+        if (!y?.oge) return null
+        return (
+          <span key={i} style={{ position: 'absolute', inset: 0, clipPath: u.kirpma, overflow: 'hidden' }}>
+            <span
+              style={{
+                position: 'absolute',
+                left: yuzde(u.kutu.left, W),
+                top: yuzde(u.kutu.top, D),
+                width: yuzde(u.kutu.width, W),
+                height: yuzde(u.kutu.height, D),
+                transform: u.donus,
+                transformOrigin: '50% 50%',
+                display: 'block',
+                overflow: 'hidden',
+              }}
+            >
+              <IcerikOnizleme oge={y.oge} dilim={y.dilim} />
+            </span>
+          </span>
+        )
+      })}
+    </>
+  )
 }
 
 function IcerikOnizleme({ oge, dilim = null, oynatImi = false }) {

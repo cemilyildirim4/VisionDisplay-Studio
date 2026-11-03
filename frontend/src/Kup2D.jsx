@@ -28,7 +28,7 @@
  * çıkıyor — doğru olan da bu.
  */
 import { useRef, useState } from 'react'
-import { Screen } from './WallPreview.jsx'
+import { Screen, contentImage } from './WallPreview.jsx'
 
 /* Kaide: küpün altında durduğu yer. Boyu küpün yüksekliğinden türüyor. */
 const KAIDE_ORAN = 0.06
@@ -177,60 +177,81 @@ export default function Kup2D({
    * Kabin ızgarası kutunun üstüne göre yeniden hesaplanıyordu: ekran
    * kutunun üstünü kapatmasa da kapatıyormuş gibi çiziliyor, kullanıcı
    * ölçünün tutmadığını göremiyordu. Kapak artık ekranın kendi ölçüsünde;
-   * kapatmadığı yer boş (koyu) kalıyor ve sol panelde kaç kabin gerektiği
+   * kapatmadığı yer AÇIK kalıyor ve sol panelde kaç kabin gerektiği
    * yazıyor (bkz. App → kupUstUyari).
    *
-   * Kapak ÖN kenara yaslı: şeridin alt kenarı ön yüzün üst kenarına
-   * bitişiyor, görüntü 1'den 5'e aynı yönde devam ediyor.
+   * Kapak ÖN kenara yaslı: ön yüzün üst kenarına bitişiyor.
    */
   const kapakEni = ustEkran ? gEn(ustEkran) * pxPerM || W : W
-  /* Ekran kutunun üstünden büyükse taşan kısmı kutunun kenarında kesiliyor. */
   const kapakBoyu = ustEkran ? (ustEkran.hm || 0) * pxPerM || D : D
 
   /*
-   * TEK GÖRSEL KUTUNUN AÇILIMI GİBİ BÖLÜNÜYOR.
+   * ÜST YÜZ — KÖŞEGENLERLE DÖRT ÜÇGEN.
    *
-   * Görsel açılım gibi bölünüyor: ALT kısmını dört yan yüz yan yana
-   * paylaşıyor; EN ÜSTTEN kapağın boyu kadar yüksek bir şerit kesilip
-   * kapağa sığdırılıyor. Şerit yatayda sıkışıyor (dört yüzün eni tek
-   * kapağa giriyor) — oran korunmuyor, kapakta siyah boşluk kalmıyor.
-   * Şeridin alt kenarı ile ön yüzün üst kenarı görselin AYNI satırına
-   * denk geliyor.
+   * Bir ara üst yüze görselin en üstünden kesilen bir şerit sıkıştırılmıştı;
+   * o yöntem kapağı yan yüzlerden koparıyordu. Üst yüz yine köşegenlerle
+   * dört üçgene ayrılıyor: her üçgen ALTINDAKİ yan yüzün görselinin üst
+   * kenardan içeri doğru devamı, tabanı o yüzün üst kenarına bitişik.
+   * Hangi yandan bakılırsa bakılsın kenarda görüntü kopmuyor.
    *
-   * Paylaşım yoksa (her ekran ayrı içerik) bölünecek tek bir görsel de
-   * yok: ekranın kendi dilimi kullanılıyor.
+   * Üçgen, yan yüzün kendi diliminden aynı ölçekte (1 px = 1 px)
+   * kesiliyor; tabanı kenarda, tepesi üst yüzün ortasında.
+   *
+   * ÜST YÜZÜN YÖNÜ. Bu kutu rotateX(90°) ile yatırılıyor: yerel +y ekseni
+   * dünyada ÖNE bakıyor. Yani kutunun alt kenarı ön yüzün, üst kenarı
+   * arka yüzün kenarı. Yan yüzlerin görsel yönü de kendi rotateY'lerinden
+   * geliyor (sağ yüz önden arkaya, sol yüz arkadan öne), üçgenler de o
+   * yüzden ayrı ayrı döndürülüyor.
+   *
+   * ÖLÇÜ KAPAĞIN KENDİSİNDEN. Üçgenler ekranın çizildiği kutuya göre
+   * kuruluyor: ekran kutunun üstünü tam kapattığında (olağan durum, bkz.
+   * App → kupUstGereken) bu kutu zaten üst karenin kendisi.
+   *
+   * ÜÇGENLER %1 BİNDİRİLİYOR. Dörtgeni tam dörde bölen köşegenlerde
+   * tarayıcının kenar yumuşatması saç teli kadar bir boşluk bırakıyor ve
+   * köşegenler boyunca altı sızıyordu. Kenarlar birer yüzde dışarı
+   * taşırılıyor: bindirme görünmüyor, boşluk kalmıyor.
    */
-  const paylasimAnahtari = yanlar[0]?.paylasim
-  const acilim =
-    paylasimAnahtari &&
-    yanlar.every((e) => e?.paylasim === paylasimAnahtari) &&
-    (!ustEkran || ustEkran.paylasim === paylasimAnahtari)
-      ? (() => {
-          const baslar = []
-          let x = 0
-          yanlar.forEach((e, i) => {
-            baslar.push(x)
-            x += cizimEni(e, i)
-          })
-          return { toplamEn: x, spanH: H + kapakBoyu, baslar }
-        })()
-      : null
+  const ucgenler = [
+    /* ÖN: taban altta, görsel dikeyde aynalanıyor (kenarda birebir tutsun). */
+    {
+      kirpma: 'polygon(-1% 101%, 101% 101%, 50% 49%)',
+      kutu: { left: 0, top: kapakBoyu / 2, width: kapakEni, height: kapakBoyu / 2 },
+      donus: 'scaleY(-1)',
+    },
+    /* SAĞ: taban sağda; yüzün görseli önden arkaya akıyor. */
+    {
+      kirpma: 'polygon(101% -1%, 101% 101%, 51% 50%)',
+      kutu: {
+        left: (3 * kapakEni) / 4 - kapakBoyu / 2,
+        top: kapakBoyu / 2 - kapakEni / 4,
+        width: kapakBoyu,
+        height: kapakEni / 2,
+      },
+      donus: 'rotate(-90deg) scaleY(-1)',
+    },
+    /* ARKA: taban üstte; yüz 180° dönük olduğu için görsel yatayda ters. */
+    {
+      kirpma: 'polygon(-1% -1%, 101% -1%, 50% 51%)',
+      kutu: { left: 0, top: 0, width: kapakEni, height: kapakBoyu / 2 },
+      donus: 'scaleX(-1)',
+    },
+    /* SOL: taban solda; yüzün görseli arkadan öne akıyor. */
+    {
+      kirpma: 'polygon(-1% -1%, -1% 101%, 49% 50%)',
+      kutu: {
+        left: kapakEni / 4 - kapakBoyu / 2,
+        top: kapakBoyu / 2 - kapakEni / 4,
+        width: kapakBoyu,
+        height: kapakEni / 2,
+      },
+      donus: 'rotate(90deg) scaleY(-1)',
+    },
+  ]
 
-  /* Yan yüz: açılımın alt kısmından kendi payı. Kısa yüz alttan hizalı. */
-  const yuzIcerigi = (ekran, i) =>
-    acilim
-      ? {
-          spanW: acilim.toplamEn,
-          spanH: acilim.spanH,
-          offsetX: acilim.baslar[i],
-          offsetY: kapakBoyu + (H - yuzBoyu(ekran)),
-        }
-      : ekran?.icerikProp || null
-
-  /* Kapak: en üstteki şerit, kapağın enine sıkıştırılmış. */
-  const kapakIcerigi = acilim
-    ? { spanW: kapakEni, spanH: acilim.spanH, offsetX: 0, offsetY: 0 }
-    : ustEkran?.icerikProp || null
+  /* Yan yüz ve kapak kendi dilimlerini gösteriyor (şerit/sıkıştırma yok). */
+  const yuzIcerigi = (ekran) => ekran?.icerikProp || null
+  const kapakIcerigi = ustEkran?.icerikProp || null
 
 
   /*
@@ -289,7 +310,7 @@ export default function Kup2D({
             contentUrl={ekran?.contentUrl || null}
             /* Arkaya bakan yüz: video kurulmuyor (bkz. yuzGorunur). */
             videoKapali={!yuzGorunur(i)}
-            {...(yuzIcerigi(ekran, i) || null)}
+            {...(yuzIcerigi(ekran) || null)}
           />
         </div>
       </div>
@@ -400,6 +421,38 @@ export default function Kup2D({
                   contentUrl={ustEkran.contentUrl || null}
                   {...(kapakIcerigi || null)}
                 />
+                {/*
+                  Dört üçgen ekranın ÜSTÜNE biniyor: alttaki ekran kabin
+                  dokusunu ve zeminini veriyor, üçgenler yalnızca görüntüyü
+                  taşıyor (bkz. ucgenler).
+                */}
+                {ucgenler.map((u, i) => {
+                  const y = yanlar[i]
+                  const ip = y?.icerikProp
+                  const gorsel = contentImage(y?.content, y?.contentUrl)
+                  /* Paylaşılan bir görsel yoksa devam ettirilecek bir şey de yok. */
+                  if (!gorsel || !(ip?.spanW > 0) || !(ip?.spanH > 0)) return null
+                  return (
+                    <div
+                      key={'ust' + i}
+                      aria-hidden="true"
+                      style={{ position: 'absolute', inset: 0, clipPath: u.kirpma, overflow: 'hidden' }}
+                    >
+                      <div
+                        style={{
+                          position: 'absolute',
+                          ...u.kutu,
+                          transform: u.donus,
+                          transformOrigin: '50% 50%',
+                          backgroundImage: gorsel,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: `${Math.ceil(ip.spanW)}px ${Math.ceil(ip.spanH)}px`,
+                          backgroundPosition: `${-(ip.offsetX || 0)}px ${-(ip.offsetY || 0)}px`,
+                        }}
+                      />
+                    </div>
+                  )
+                })}
               </div>
             ) : null}
           </div>
