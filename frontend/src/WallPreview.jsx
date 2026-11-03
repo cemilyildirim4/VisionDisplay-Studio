@@ -1768,23 +1768,13 @@ export default function WallPreview({
                 <HL top={stripTop + maxHpx} left={olcuSol + olcuW} width={wallW - (olcuSol + olcuW) + 40} />
 
                 {/*
-                  GRUBUN TOPLAMI — tek tek ekranların eni yanıltıcı.
-                  Duvara sığıp sığmadığı ancak toplamdan anlaşılıyor.
+                  GRUP TOPLAMI ETİKETİ KALDIRILDI.
 
-                  KÜPTE YAZILMIYOR: orada sayı kutunun önden görünen
-                  izdüşümü oluyor ve duvarda karşılığı olan bir ölçü gibi
-                  okunuyordu. Küpün ölçüleri sol panelde yazıyor.
+                  Tasarımın altında "Grup toplamı: … m × … m" yazıyordu; aynı
+                  bilgi sol panelde zaten duruyor ve çizimin altında fazladan
+                  bir satır olarak kalabalık yapıyordu. Hiçbir tipte (düz, L,
+                  U, küp, açılı) yazılmıyor.
                 */}
-                {placed.length > 1 && !kupKipi && (
-                  <div
-                    className="absolute flex items-center pointer-events-none"
-                    style={{ left: olcuSol + olcuW / 2, transform: 'translateX(-50%)', top: wallH + 58 + bombePx }}
-                  >
-                    <span className="bg-neutral-900 text-white text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap">
-                      {t('olcu.grupToplam')}: {fmtU(olcuToplamM)} × {fmtU(maxHm)}
-                    </span>
-                  </div>
-                )}
               </>
             )}
           </div>

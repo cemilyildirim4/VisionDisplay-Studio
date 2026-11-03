@@ -17,6 +17,85 @@ export const ROLES = {
 }
 
 const SESSION_KEY = 'vds-session'
+
+/*
+ * OTURUM TARAYICI GENELİNDE.
+ *
+ * Oturum localStorage'da duruyor, yani aynı tarayıcıda açılan yeni sekme
+ * de girişli açılıyor. Ama localStorage her yerde yazılabilir değil:
+ * gizli pencerede ya da site verisi kısıtlıyken yazma hata atıyor, hata
+ * da sessizce yutuluyordu. O zaman oturum yalnızca React durumunda,
+ * yani YALNIZCA O SEKMEDE kalıyor; yeni sekme giriş ekranıyla açılıyordu.
+ *
+ * Yazma tutmazsa aynı kayıt çerezde tutuluyor: çerez de tarayıcı
+ * genelinde ve tarihli. Süre yenileme jetonuyla aynı (30 gün); "Çıkış"
+ * ikisini birden siliyor.
+ */
+const CEREZ_GUN = 30
+
+function cerezOku(ad) {
+  try {
+    const parcalar = document.cookie ? document.cookie.split('; ') : []
+    for (const p of parcalar) {
+      const esit = p.indexOf('=')
+      if (esit > 0 && p.slice(0, esit) === ad) return decodeURIComponent(p.slice(esit + 1))
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
+function cerezYaz(ad, deger) {
+  try {
+    const guvenli = location.protocol === 'https:' ? '; Secure' : ''
+    document.cookie = `${ad}=${encodeURIComponent(deger)}; Max-Age=${CEREZ_GUN * 24 * 60 * 60}; Path=/; SameSite=Lax${guvenli}`
+  } catch {
+    /* ignore */
+  }
+}
+
+function cerezSil(ad) {
+  try {
+    document.cookie = `${ad}=; Max-Age=0; Path=/; SameSite=Lax`
+  } catch {
+    /* ignore */
+  }
+}
+
+/* Kaydı yazar; localStorage tutmazsa çereze düşer. */
+function oturumuSakla(next) {
+  if (!next) {
+    try {
+      localStorage.removeItem(SESSION_KEY)
+    } catch {
+      /* ignore */
+    }
+    cerezSil(SESSION_KEY)
+    return
+  }
+  const metin = JSON.stringify(next)
+  let yazildi = false
+  try {
+    localStorage.setItem(SESSION_KEY, metin)
+    yazildi = localStorage.getItem(SESSION_KEY) === metin
+  } catch {
+    yazildi = false
+  }
+  if (yazildi) cerezSil(SESSION_KEY)
+  else cerezYaz(SESSION_KEY, metin)
+}
+
+/* Kayıt önce localStorage'dan, yoksa çerezden. */
+function oturumMetni() {
+  try {
+    const ham = localStorage.getItem(SESSION_KEY)
+    if (ham) return ham
+  } catch {
+    /* ignore */
+  }
+  return cerezOku(SESSION_KEY)
+}
 const LEGACY_DEMO_ROLE_KEY = 'vds-demo-role'
 const LEGACY_ADMIN_JWT = 'yonetim-jwt'
 const LEGACY_ADMIN_META = 'yonetim-jwt-meta'
@@ -51,7 +130,7 @@ function jetonBitisi(token) {
  */
 function readStoredSession() {
   try {
-    const raw = localStorage.getItem(SESSION_KEY)
+    const raw = oturumMetni()
     if (!raw) return null
     const parsed = JSON.parse(raw)
     // Eski demo oturumları (JWT yok) yok sayılır.
@@ -64,7 +143,7 @@ function readStoredSession() {
      * kodundan önceki misafir oturumları) kayıt işe yaramaz.
      */
     if (bitis != null && bitis <= Date.now() && !parsed.refreshToken) {
-      localStorage.removeItem(SESSION_KEY)
+      oturumuSakla(null)
       return null
     }
     return parsed
@@ -97,14 +176,29 @@ export function SessionProvider({ children }) {
       yaz: (next) => {
         oturumRef.current = next
         setSession(next)
-        try {
-          if (next) localStorage.setItem(SESSION_KEY, JSON.stringify(next))
-          else localStorage.removeItem(SESSION_KEY)
-        } catch {
-          /* ignore */
-        }
+        oturumuSakla(next)
       },
     })
+  }, [])
+
+  /*
+   * AÇIK SEKMELER DE AYNI OTURUMU GÖRÜYOR.
+   *
+   * localStorage sekmeler arasında ortak ama ZATEN AÇIK olan sekme
+   * kendiliğinden haberdar olmuyordu: bir sekmede giriş yapıldığında öteki
+   * sekme giriş ekranında kalıyor, çıkış yapıldığında da girişli
+   * görünmeye devam ediyordu. Tarayıcının storage olayı dinleniyor; kayıt
+   * değişince oturum olduğu gibi yeniden okunuyor.
+   */
+  useEffect(() => {
+    const dinle = (e) => {
+      if (e.key !== null && e.key !== SESSION_KEY) return
+      const yeni = readStoredSession()
+      oturumRef.current = yeni
+      setSession(yeni)
+    }
+    window.addEventListener('storage', dinle)
+    return () => window.removeEventListener('storage', dinle)
   }, [])
 
   // Eski çift oturum / demo anahtarlarını bir kez temizle.
@@ -138,12 +232,7 @@ export function SessionProvider({ children }) {
     const setSessionData = (next) => {
       oturumRef.current = next
       setSession(next)
-      try {
-        if (next) localStorage.setItem(SESSION_KEY, JSON.stringify(next))
-        else localStorage.removeItem(SESSION_KEY)
-      } catch {
-        /* ignore */
-      }
+      oturumuSakla(next)
     }
 
     const logout = () => {
