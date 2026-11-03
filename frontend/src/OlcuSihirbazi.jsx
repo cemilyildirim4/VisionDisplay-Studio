@@ -114,6 +114,8 @@ function SihirbazKart({
   onYerOnayla = null,
   yerOnayHazir = false,
   /* Sıradaki ekranın yönergesi ve konan köşe sayısı — tuvalde değil burada. */
+  /* Yerleşimi bitir: ölçüm katmanlarını kapatıyor (bkz. App → yerlesimBitti). */
+  onYerBitir = null,
   yerYonerge = '',
   yerSayac = '',
   /* Her ekran için bir düğme: yerleştir ya da düzenle. */
@@ -852,6 +854,17 @@ function SihirbazKart({
                   className={`mt-2 w-full ${ana} disabled:opacity-40`}
                 >
                   {t('yer.onayla')}
+                </button>
+              )}
+              {/*
+                YERLEŞİMİ BİTİR — ölçümle ilgili ne varsa gizleniyor.
+                Köşe noktaları, referans çizgisi, ölçü yazıları ve ekran
+                numaraları kalkıyor; geri dönüş sağ paneldeki
+                "Yerleşimi düzenle" düğmesiyle.
+              */}
+              {onYerBitir && (
+                <button type="button" onClick={onYerBitir} className={`mt-2 w-full ${yan}`}>
+                  {t('yer.bitir')}
                 </button>
               )}
               {kutuMesaj && (

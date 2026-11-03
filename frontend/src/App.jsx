@@ -1024,6 +1024,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ve sürüklenemiyor; kullanıcı yalnızca kalan ikisini koyuyor.
    */
   const [yerKilit, setYerKilit] = useState(0)
+  /* Yeni ekran önceki ekranın hangi kenarından başlıyor: id → 'sag' | 'sol'. */
+  const [yerKenarSecim, setYerKenarSecim] = useState({})
+  /*
+   * YERLEŞİM BİTTİ Mİ.
+   *
+   * Bitince ölçümle ilgili her şey gizleniyor: köşe noktaları, referans
+   * çizgisi, ölçü yazıları ve ekran numaraları. Geri dönüş aynı düğmeden
+   * ("Yerleşimi düzenle").
+   */
+  const [yerlesimBitti, setYerlesimBitti] = useState(false)
   const [yerNokta, setYerNokta] = useState([])
   /* Hangi ekranlar yerleşti — yerleşmemişin rozeti çizilmiyor. */
   const [yerlesmisIdler, setYerlesmisIdler] = useState([])
@@ -8721,11 +8731,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
-   * ORTAK KENAR — ÖNCEKİ EKRANIN SAĞ KENARI.
+   * ORTAK KENAR — ÖNCEKİ EKRANIN SEÇİLEN KENARI.
    *
    * Yalnızca kullanıcının seçtiği tip birleşikse veriliyor; sistem
-   * hiçbir şey tahmin etmiyor. Sıralı dörtgende 1 = sağ üst, 2 = sağ
-   * alt; yeni ekranın sol kenarı tam olarak bu iki nokta.
+   * hiçbir şey tahmin etmiyor. Yeni ekran bir öncekinin SAĞ ya da SOL
+   * kenarından başlıyor; hangisi olduğunu kullanıcı tuvalde o kenara
+   * tıklayarak seçiyor (bkz. kenarSecenekleri). Seçilmemişse sağ kenar:
+   * soldan sağa kurulum olağan hâli.
+   *
+   * Sıralı dörtgende 0 sol üst, 1 sağ üst, 2 sağ alt, 3 sol alt.
+   *
+   * KÜPÜN ÜST YÜZÜ ÜÇ KÖŞEYLE GELİYOR. Beşinci ekran iki yan yüzün üst
+   * kenarlarının devamı: ön yüzün iki üst köşesi ve sağ yüzün uzaktaki
+   * üst köşesi belli, kullanıcıya yalnızca en arkadaki köşe kalıyor.
    */
   const ortakKenar = (hedefId) => {
     const tip = grup?.tip
@@ -8733,22 +8751,68 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!Array.isArray(grup?.uyeler)) return null
     const j = grup.uyeler.indexOf(hedefId)
     if (j < 1) return null
+    if (tip === 'kutu' && j === 4) {
+      const on = ekranKoseleri(grup.uyeler[0])
+      const yan = ekranKoseleri(grup.uyeler[1])
+      if (!on || !yan) return null
+      return [on[0], on[1], yan[1]]
+    }
     const k = ekranKoseleri(grup.uyeler[j - 1])
     if (!k) return null
-    return [k[1], k[2]]
+    return yerKenarSecim[hedefId] === 'sol' ? [k[0], k[3]] : [k[1], k[2]]
+  }
+
+  /*
+   * SEÇİLEBİLİR KENARLAR — önceki ekranın sağı ve solu.
+   *
+   * Yeni ekranın nereden başlayacağını kullanıcı seçiyor: tuvalde önceki
+   * ekranın iki yan kenarı hafifçe vurgulanıyor, tıklanan kenar yeni
+   * ekranın kilitli iki köşesi oluyor. Küpün üst yüzünde seçim yok;
+   * orada üç köşe iki yan yüzden geliyor.
+   */
+  const kenarSecenekleri = (() => {
+    const tip = grup?.tip
+    if (scene !== 'ozel' || !ozelSahne || !yerAktif || !yerEkran) return []
+    if (tip !== 'l' && tip !== 'u' && tip !== 'acili' && tip !== 'kutu') return []
+    if (!Array.isArray(grup?.uyeler)) return []
+    const j = grup.uyeler.indexOf(yerEkran.id)
+    if (j < 1) return []
+    if (tip === 'kutu' && j === 4) return []
+    const k = ekranKoseleri(grup.uyeler[j - 1])
+    if (!k) return []
+    const secili = yerKenarSecim[yerEkran.id] === 'sol' ? 'sol' : 'sag'
+    return [
+      { yon: 'sag', secili: secili === 'sag', uc: [k[1], k[2]] },
+      { yon: 'sol', secili: secili === 'sol', uc: [k[0], k[3]] },
+    ]
+  })()
+
+  /** Kenara tıklamak: yeni ekran o kenardan başlıyor. */
+  const kenariSec = (yon) => {
+    if (!yerEkran) return
+    const yeni = { ...yerKenarSecim, [yerEkran.id]: yon }
+    setYerKenarSecim(yeni)
+    const tip = grup?.tip
+    const j = Array.isArray(grup?.uyeler) ? grup.uyeler.indexOf(yerEkran.id) : -1
+    if (j < 1) return
+    const k = ekranKoseleri(grup.uyeler[j - 1])
+    if (!k || tip === 'duz') return
+    const kenar = yon === 'sol' ? [k[0], k[3]] : [k[1], k[2]]
+    setYerKilit(kenar.length)
+    setYerNokta(kenar)
   }
 
   /*
    * FOTOĞRAFTA YERLEŞTİRİLECEK EKRANLAR.
    *
-   * Küpte fotoğrafta yalnızca iki yüz görünüyor; arkadaki yüzler
-   * fotoğrafa işaretlenmiyor, 3D'de duruyorlar.
+   * Küpte fotoğrafta yalnızca ön ve sağ yüz ile ÜST yüz görünüyor;
+   * arkadaki iki yüz (3 ve 4) fotoğrafa işaretlenmiyor, 3B'de duruyorlar.
    */
 
   const yerlesecekIdler = (() => {
     const hepsi = ekranParcalari.map((x) => x.id)
     if (grup?.tip !== 'kutu' || !Array.isArray(grup.uyeler) || grup.uyeler.length < 3) return hepsi
-    const gizli = new Set(grup.uyeler.slice(2))
+    const gizli = new Set(grup.uyeler.slice(2, 4))
     return hepsi.filter((id) => !gizli.has(id))
   })()
 
@@ -8760,7 +8824,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       return mevcut
     }
     const kenar = ortakKenar(id)
-    setYerKilit(kenar ? 2 : 0)
+    /* Küpün üst yüzünde üç köşe kilitli geliyor, ötekilerde iki. */
+    setYerKilit(kenar ? kenar.length : 0)
     return kenar || []
   }
 
@@ -10022,7 +10087,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Sabitlenenler kendi dörtgeninden, elde duran ekran koseMutlak'tan
             (grup varsa gruptaki yerinden) okunuyor.
           */}
-          {showMeasurements && scene === 'ozel' && !refKipi && !lKoseKipi && (
+          {showMeasurements && !yerlesimBitti && scene === 'ozel' && !refKipi && !lKoseKipi && (
             <EkranNumaralari
               aktifId={aktifEkranId}
               ekranlar={[
@@ -10215,6 +10280,52 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                    */
                 />
               </div>
+              {/*
+                BAŞLANGIÇ KENARI SEÇİMİ.
+
+                Birleşik tipte yeni ekran bir öncekinin kenarından başlıyor;
+                hangisi olduğunu kullanıcı seçiyor. İki yan kenar hafifçe
+                vurgulanıyor, tıklanan kenarın iki köşesi yeni ekrana kilitli
+                geliyor (bkz. kenariSec). Katman nokta koymayı engellemesin
+                diye yalnızca çizginin üstünde tıklanabilir.
+              */}
+              {kenarSecenekleri.length > 0 && (
+                <svg
+                  className="absolute inset-0"
+                  width={tuvalBoyut.w}
+                  height={tuvalBoyut.h}
+                  style={{ pointerEvents: 'none', zIndex: 19 }}
+                >
+                  {kenarSecenekleri.map((s) => (
+                    <g key={s.yon}>
+                      <line
+                        x1={s.uc[0].x}
+                        y1={s.uc[0].y}
+                        x2={s.uc[1].x}
+                        y2={s.uc[1].y}
+                        stroke={s.secili ? 'rgba(41,98,173,0.85)' : 'rgba(41,98,173,0.35)'}
+                        strokeWidth={s.secili ? 4 : 3}
+                        strokeLinecap="round"
+                      />
+                      <line
+                        x1={s.uc[0].x}
+                        y1={s.uc[0].y}
+                        x2={s.uc[1].x}
+                        y2={s.uc[1].y}
+                        stroke="transparent"
+                        strokeWidth="16"
+                        strokeLinecap="round"
+                        style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                        onPointerDown={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          kenariSec(s.yon)
+                        }}
+                      />
+                    </g>
+                  ))}
+                </svg>
+              )}
             </>
           )}
 
@@ -10270,6 +10381,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             !alanTutamaklari &&
             !refKipi &&
             !lKoseKipi &&
+            /* Yerleşim bitince işaretleme izi kalmıyor. */
+            !yerlesimBitti &&
             /* Gizlenmişse yalnızca düzenleme sırasında görünüyor. */
             (!cizgiGizli || olcuAcik) &&
             scene === 'ozel' &&
@@ -11759,6 +11872,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   Fotoğrafta alan işaretlendiği anda yapılacak ilk iş bu;
                   menü arkasında durunca kimse bulamıyordu.
                 */}
+                {/*
+                  YERLEŞİMİ DÜZENLE — bitirdikten sonra geri dönüş.
+
+                  "Yerleşimi bitir" dendiğinde ölçüm katmanları kapanıyor;
+                  kullanıcı bir köşeyi düzeltmek isterse buradan geri
+                  açıyor (bkz. yerlesimBitti).
+                */}
+                {yerlesimBitti && scene === 'ozel' && ozelSahne && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setYerlesimBitti(false)
+                      setYerSira(null)
+                      setSihirbazAdim(3)
+                    }}
+                    className="mt-2 w-full rounded-lg border border-brand px-4 py-2.5 text-[16px] font-semibold text-brand transition-colors hover:bg-brand-tint dark:hover:bg-[#1b2436]"
+                  >
+                    {t('yer.duzenle')}
+                  </button>
+                )}
+
                 {alanIsaretli && !olcuAcik && (
                   <button
                     type="button"
@@ -11835,6 +11969,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             /* Yerleştir adımının ana düğmesi. */
                             onYerOnayla={yerAktif ? yerEkraniOnayla : null}
                             yerOnayHazir={yerNokta.length === 4}
+                            onYerBitir={() => {
+                              /* Ölçüm katmanları kapanıyor; tasarım ve fotoğraf kalıyor. */
+                              if (yerSira != null && yerNokta.length === 4 && yerEkran) {
+                                yerKaydet(yerEkran, yerNokta)
+                              }
+                              setYerNokta([])
+                              setYerKilit(0)
+                              setYerSira(null)
+                              setSihirbazAdim(0)
+                              setYerlesimBitti(true)
+                            }}
                             yerYonerge={yerAktif ? t('yer.ekran').replace('{0}', String(yerEkran?.sira ?? yerSira + 1)) : ''}
                             yerSayac={yerAktif ? t('yer.kose').replace('{0}', String(yerNokta.length)) : ''}
                             yerListe={ekranParcalari
