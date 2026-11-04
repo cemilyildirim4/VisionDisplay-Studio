@@ -235,6 +235,8 @@ const dict = {
   'sp.totalNote': { tr: '(toplam)', en: '(total)', ar: '(الإجمالي)' },
   'sp.perScreen': { tr: 'Ekran dökümü', en: 'Per-screen breakdown', ar: 'تفصيل لكل شاشة' },
   'panel.toplam': { tr: 'Toplam', en: 'Total', ar: 'الإجمالي' },
+  'yatay.solPanel': { tr: 'Ekran ayarları', en: 'Screen settings', ar: 'إعدادات الشاشة' },
+  'yatay.sagPanel': { tr: 'Mekân ve rapor', en: 'Scene and report', ar: 'المكان والتقرير' },
   /* Sayılan şeyin adı — ürün tipine göre (bkz. birimSozcugu). */
   'birim.kabin': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
   'birim.panel': { tr: 'panel', en: 'panels', ar: 'لوحة' },

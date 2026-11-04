@@ -1553,6 +1553,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [scene3dOpen, setScene3dOpen] = useState(false)
   const [wizardOpen, setWizardOpen] = useState(false)
   /*
+   * TELEFON YATAY: hangi panel açık ('sol' | 'sag' | null).
+   * Yatay ve alçak ekranda paneller tasarımın üstüne açılıyor; başka
+   * boyutlarda bu durumun hiçbir etkisi yok (bkz. index.css .yatay-panel).
+   */
+  const [yatayPanel, setYatayPanel] = useState(null)
+  /*
    * Ekran, sahne seçiliyse mekânın DUVARI kadar yer kaplar; tuvalin tamamını
    * değil. Bunun için tuvalin canlı ölçüsü gerekiyor — pencere büyüyünce
    * duvarın yeri de değişiyor.
@@ -9984,6 +9990,39 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       {/* Gövde */}
       {/* yatay-kap: telefon yatayken iki sütun — bkz. index.css */}
       <div className="yatay-kap flex flex-col lg:flex-row flex-1 min-h-0 min-w-0 brand-page-enter">
+        {/*
+          TELEFON YATAY: PANEL AÇMA DÜĞMELERİ VE PERDE.
+
+          Yalnızca yatay ve alçak ekranda görünüyorlar (bkz. index.css —
+          .yatay-dugme / .yatay-perde başka her yerde display:none). Tasarım
+          ekranın tamamını kaplıyor, paneller bu düğmelerle üstüne açılıyor;
+          aynı düğmeye ya da perdeye basınca kapanıyor.
+        */}
+        {yatayPanel && (
+          <div className="yatay-perde" onClick={() => setYatayPanel(null)} aria-hidden="true" />
+        )}
+        <button
+          type="button"
+          className="yatay-dugme yatay-dugme-sol"
+          aria-label={t('yatay.solPanel')}
+          aria-expanded={yatayPanel === 'sol'}
+          onClick={() => setYatayPanel((a) => (a === 'sol' ? null : 'sol'))}
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+            <path d={yatayPanel === 'sol' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'} />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className="yatay-dugme yatay-dugme-sag"
+          aria-label={t('yatay.sagPanel')}
+          aria-expanded={yatayPanel === 'sag'}
+          onClick={() => setYatayPanel((a) => (a === 'sag' ? null : 'sag'))}
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+            <path d={yatayPanel === 'sag' ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'} />
+          </svg>
+        </button>
         {/* SOL: Çalışma Alanı */}
         {/*
           Mobilde önizlemeye KESİN bir yükseklik verilir (min-h değil, h).
@@ -11182,8 +11221,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           PDF bloğu sabit duruyor, panelle birlikte kaymıyordu.
         */}
         <div className="yatay-sag">
-        <aside className="yatay-panel yatay-panel-model w-full min-w-0 lg:w-[340px] shrink-0 order-2 lg:order-1 border-t lg:border-t-0 lg:border-r border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
-          <Sigdir className="flex flex-col gap-2">
+        <aside
+          className={`yatay-panel yatay-panel-model w-full min-w-0 lg:w-[340px] shrink-0 order-2 lg:order-1 border-t lg:border-t-0 lg:border-r border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden${
+            yatayPanel === 'sol' ? ' yatay-acik' : ''
+          }`}
+        >
+          {/* panel-kucuk: masaüstünde içerik bir tık küçülüyor (bkz. index.css). */}
+          <Sigdir className="panel-kucuk flex flex-col gap-2">
           {/*
             MODEL SEÇİLMEDEN PANEL BOŞ KALMIYOR.
 
@@ -12020,7 +12064,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
 
         {/* SAĞ: Panel */}
-        <aside className="yatay-panel yatay-panel-ayar w-full min-w-0 lg:w-[340px] shrink-0 order-3 lg:order-3 border-t lg:border-t-0 lg:border-l border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden">
+        <aside
+          className={`yatay-panel yatay-panel-ayar w-full min-w-0 lg:w-[340px] shrink-0 order-3 lg:order-3 border-t lg:border-t-0 lg:border-l border-neutral-200 dark:border-[#2c333f] px-4 sm:px-6 lg:px-5 py-5 flex flex-col lg:overflow-hidden${
+            yatayPanel === 'sag' ? ' yatay-acik' : ''
+          }`}
+        >
           <Sigdir className="flex flex-col gap-2">
 
           {/* ---- ADIM 4: İçerik ---- */}
