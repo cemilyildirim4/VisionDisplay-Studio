@@ -25,29 +25,42 @@
     <!--
       BEYAZ EKRAN KURTARMASI.
 
-      Uygulama bir servis çalışanıyla (PWA) önbelleğe alınıyor. Yeni bir
-      sürüm yayınlandığında tarayıcıda ESKİ index.html kalabiliyor; o dosya
-      artık var olmayan betik adreslerini çağırdığı için hiçbir şey
-      çizilmiyor ve sayfa bembeyaz kalıyor. Kullanıcının bunu anlaması ya da
-      önbelleği elle temizlemesi beklenemez.
+      Boş sayfanın iki ayrı sebebi var, çareleri birbirinin zıddı:
 
-      Kök öğe birkaç saniye sonra hâlâ boşsa servis çalışanları kaldırılıyor,
-      önbellekler siliniyor ve sayfa BİR KEZ yenileniyor. Bayrak sekmeye özel
-      (sessionStorage), dolayısıyla döngüye girme ihtimali yok; uygulama
-      açıldıysa bu kod hiçbir şey yapmıyor.
+      1) Eski önbellek: uygulama PWA olarak önbelleğe alınıyor, yeni sürüm
+         çıkınca tarayıcıda ESKİ index.html kalabiliyor; artık var olmayan
+         betik adreslerini çağırdığı için hiçbir şey çizilmiyor. Çaresi
+         önbelleği silip bir kez yenilemek.
+
+      2) Adrese ulaşılamıyor: sunucu erişime kapalıysa (ağ/operatör engeli)
+         betikler indirilemediği için sayfa yine bembeyaz kalıyor. Burada
+         önbelleği silmek ZARARLI olur — elde kalan tek kopya da gider.
+
+      Bu yüzden önce aynı adresten küçük bir dosya çekiliyor: iniyorsa (1),
+      inmiyorsa (2) kabul edilip kullanıcıya ne olduğu yazılıyor. Yenileme
+      sekmeye özel bir bayrakla bir kezle sınırlı, döngüye girmiyor.
     -->
     <script>
       ;(function () {
         var BAYRAK = 'vds-beyaz-kurtarma'
-        setTimeout(function () {
-          var kok = document.getElementById('root')
-          if (!kok || kok.childElementCount > 0) return
-          try {
-            if (sessionStorage.getItem(BAYRAK)) return
-            sessionStorage.setItem(BAYRAK, '1')
-          } catch (e) {
-            /* gizli sekmede sessionStorage kapalı olabilir */
-          }
+
+        function mesaj(baslik, metin) {
+          var k = document.createElement('div')
+          k.setAttribute(
+            'style',
+            'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;' +
+              'background:#0b0f16;color:#e7edf6;font:16px/1.6 system-ui,Segoe UI,Arial,sans-serif;padding:24px;text-align:center',
+          )
+          k.innerHTML =
+            '<div style="max-width:420px"><div style="font-size:20px;font-weight:600;margin-bottom:10px">' +
+            baslik +
+            '</div><div style="opacity:.8">' +
+            metin +
+            '</div></div>'
+          document.body.appendChild(k)
+        }
+
+        function onbellegiTemizle() {
           var isler = []
           try {
             if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
@@ -75,10 +88,38 @@
           } catch (e) {
             /* ignore */
           }
-          Promise.all(isler)
-            .catch(function () {})
-            .then(function () {
-              location.reload()
+          return Promise.all(isler).catch(function () {})
+        }
+
+        setTimeout(function () {
+          var kok = document.getElementById('root')
+          if (!kok || kok.childElementCount > 0) return
+
+          /* Sunucuya gerçekten ulaşılıyor mu? Önbellek devreye girmesin diye
+             hem no-store hem de her seferinde farklı bir adres. */
+          fetch('/logo-192.png?kontrol=' + Date.now(), { cache: 'no-store' })
+            .then(function (c) {
+              if (!c || !c.ok) throw new Error('yanit yok')
+              /* Sunucu ayakta: suçlu eski önbellek. Bir kez temizleyip yenile. */
+              try {
+                if (sessionStorage.getItem(BAYRAK)) {
+                  mesaj('Uygulama açılamadı', 'Tarayıcıyı tamamen kapatıp yeniden açmayı deneyin.')
+                  return
+                }
+                sessionStorage.setItem(BAYRAK, '1')
+              } catch (e) {
+                /* gizli sekmede sessionStorage kapalı olabilir */
+              }
+              return onbellegiTemizle().then(function () {
+                location.reload()
+              })
+            })
+            .catch(function () {
+              /* Sunucuya ulaşılamıyor: önbelleğe DOKUNMA, durumu yaz. */
+              mesaj(
+                'Siteye ulaşılamıyor',
+                'Bağlantınız bu adrese erişemiyor. Başka bir ağ (örneğin telefonun mobil verisi) deneyin; sorun sürerse adresin engellenmiş olup olmadığını kontrol ettirin.',
+              )
             })
         }, 6000)
       })()
