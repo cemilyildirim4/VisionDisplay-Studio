@@ -22,5 +22,66 @@
   <body class="notranslate">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <!--
+      BEYAZ EKRAN KURTARMASI.
+
+      Uygulama bir servis çalışanıyla (PWA) önbelleğe alınıyor. Yeni bir
+      sürüm yayınlandığında tarayıcıda ESKİ index.html kalabiliyor; o dosya
+      artık var olmayan betik adreslerini çağırdığı için hiçbir şey
+      çizilmiyor ve sayfa bembeyaz kalıyor. Kullanıcının bunu anlaması ya da
+      önbelleği elle temizlemesi beklenemez.
+
+      Kök öğe birkaç saniye sonra hâlâ boşsa servis çalışanları kaldırılıyor,
+      önbellekler siliniyor ve sayfa BİR KEZ yenileniyor. Bayrak sekmeye özel
+      (sessionStorage), dolayısıyla döngüye girme ihtimali yok; uygulama
+      açıldıysa bu kod hiçbir şey yapmıyor.
+    -->
+    <script>
+      ;(function () {
+        var BAYRAK = 'vds-beyaz-kurtarma'
+        setTimeout(function () {
+          var kok = document.getElementById('root')
+          if (!kok || kok.childElementCount > 0) return
+          try {
+            if (sessionStorage.getItem(BAYRAK)) return
+            sessionStorage.setItem(BAYRAK, '1')
+          } catch (e) {
+            /* gizli sekmede sessionStorage kapalı olabilir */
+          }
+          var isler = []
+          try {
+            if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+              isler.push(
+                navigator.serviceWorker.getRegistrations().then(function (liste) {
+                  return Promise.all(
+                    liste.map(function (r) {
+                      return r.unregister()
+                    }),
+                  )
+                }),
+              )
+            }
+            if (window.caches && caches.keys) {
+              isler.push(
+                caches.keys().then(function (adlar) {
+                  return Promise.all(
+                    adlar.map(function (ad) {
+                      return caches.delete(ad)
+                    }),
+                  )
+                }),
+              )
+            }
+          } catch (e) {
+            /* ignore */
+          }
+          Promise.all(isler)
+            .catch(function () {})
+            .then(function () {
+              location.reload()
+            })
+        }, 6000)
+      })()
+    </script>
   </body>
 </html>
