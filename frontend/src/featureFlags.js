@@ -21,3 +21,13 @@ export const OBSERVATION_WRITE_ENABLED = TESTER_ROLE_ENABLED
  * Kullanıcıya ait hiçbir kimlik bilgisi gönderilmez.
  */
 export const CHAT_LOG_ENABLED = true
+
+/**
+ * KIOSK GÖVDESİ GEÇİCİ OLARAK KAPALI.
+ *
+ * Gövde ölçüleri (ayak yüksekliği, kasa payı) henüz netleşmedi; seçenek
+ * açıkken müşteriye doğrulanmamış bir ölçüyle çizim gösteriliyor. Kod
+ * yerinde duruyor, yalnızca arayüzde görünmüyor: ölçüler oturunca bu
+ * bayrak true yapılacak.
+ */
+export const KIOSK_GOVDESI_ACIK = false

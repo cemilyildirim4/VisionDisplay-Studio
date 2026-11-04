@@ -70,10 +70,18 @@ function RecCard({ rec, badge, why, pickLabel, onPick }) {
     <button
       type="button"
       onClick={() => onPick(cab)}
-      className="w-full md:flex-1 text-left rounded-xl border border-neutral-200 dark:border-[#2c333f] p-4 md:p-6 hover:border-brand transition-colors max-w-full min-w-0"
+      /*
+       * KART TAM GENİŞLİKTE, SEÇ BAĞLANTISI ALTTA.
+       *
+       * İki kart yan yanaydı: 520 piksellik pencerede her birine ~240
+       * piksel düşüyor, kartın içinde de model adıyla "Bu modeli seç" aynı
+       * satırda duruyordu. Yazılar harf harf kırılıyor, düğme adın üstüne
+       * biniyordu. Kartlar alt alta, kartın içi de tek sütun.
+       */
+      className="w-full text-left rounded-xl border border-neutral-200 dark:border-[#2c333f] p-4 md:p-5 hover:border-brand transition-colors max-w-full min-w-0"
     >
-      <div className="flex flex-col md:flex-row items-start justify-between gap-3">
-        <div className="min-w-0 w-full md:w-auto max-w-full">
+      <div className="flex flex-col items-start gap-1">
+        <div className="min-w-0 w-full max-w-full">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400 mb-0.5">{badge}</div>
           <div className="font-bold text-brand text-sm md:text-base">{cab.modelCode}</div>
           {cab.series?.name ? (
@@ -87,7 +95,7 @@ function RecCard({ rec, badge, why, pickLabel, onPick }) {
           </div>
           <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 mb-0 leading-relaxed">{why}</p>
         </div>
-        <span className="text-xs font-semibold text-brand shrink-0 mt-1 md:mt-4 inline-flex items-center min-h-[44px]">{pickLabel} →</span>
+        <span className="text-xs font-semibold text-brand inline-flex items-center min-h-[44px]">{pickLabel} →</span>
       </div>
     </button>
   )
@@ -269,7 +277,8 @@ export default function RecommendationWizard({ open, onClose, cabinets, onChoose
                   className="mt-1 w-full max-w-full rounded-lg border border-neutral-200 dark:border-[#2c333f] bg-white dark:bg-[#12151c] px-3 py-2 min-h-[44px] text-sm md:text-base"
                 />
               </label>
-              <div className="flex flex-col md:flex-row flex-wrap gap-2.5">
+              {/* Kartlar alt alta: yan yana dizilince ikisi de daralıyordu. */}
+              <div className="flex flex-col gap-2.5">
                 {ranked.primary && (
                   <RecCard
                     rec={ranked.primary}

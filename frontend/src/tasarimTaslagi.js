@@ -97,6 +97,15 @@ export function taslakOlustur(durum) {
       id: e.id,
       sira: e.sira,
       oran: Array.isArray(e.oran) ? e.oran : null,
+      /*
+       * İŞARETLENEN ALAN DA TAŞINIYOR.
+       *
+       * `oran` ekranın çizildiği dörtgen, `alan` kullanıcının fotoğrafta
+       * işaretlediği düzlem. Komşu ekranın kilitli kenarı alandan geliyor
+       * (bkz. ekranDuzlemi); taşınmazsa geri yüklenen tasarımda kenar
+       * ekranın minik dörtgeninden okunur ve alan üçgene dönerdi.
+       */
+      alan: Array.isArray(e.alan) ? e.alan : null,
       ayar: temizAyar(e.ayar),
     })),
     /*

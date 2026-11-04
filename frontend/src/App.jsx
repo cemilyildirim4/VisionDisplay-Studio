@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import { guvenliLazy } from './guvenliLazy.js'
+import { KIOSK_GOVDESI_ACIK } from './featureFlags.js'
+import { mekaniKaydet, mekaniOku, mekaniSil } from './fotoDeposu.js'
 import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
 import ExportModal, { MiniPcSecimi } from './ExportModal.jsx'
@@ -195,6 +197,7 @@ import { birimSozcugu, seriAdi } from './productType.js'
 import {
   taslakEkranlari,
   taslakOlustur,
+  taslakDolu,
   taslagiSil,
   duzenlemeyiAl,
 } from './tasarimTaslagi.js'
@@ -667,6 +670,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [ozelInceleniyor, setOzelInceleniyor] = useState(false)
   /* Yüklenen fotoğrafın görüntü nesnesi — kenar iyileştirmesi bunu kullanıyor. */
   const ozelSahneGorsel = useRef(null)
+  /*
+   * Yüklenen dosyanın kendisi — tarayıcı kaydı için (bkz. fotoDeposu.js).
+   * blob: adresi sayfayla birlikte ölüyor, dosyanın kendisi ölmüyor.
+   */
+  const mekanBlobRef = useRef(null)
   /*
    * ÖLÇÜ SORUSU.
    *
@@ -1641,6 +1649,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
   }
   const [taslakUyari, setTaslakUyari] = useState(null)
+  /*
+   * TARAYICI KAYDINDAN GERİ YÜKLEME (bkz. fotoDeposu.js).
+   *
+   * IndexedDB okuması eşzamansız; taslak ilk çizimde hazır olmuyor. Kayıt
+   * gelince bekleyen taslağa yazılıp sayaç artırılıyor, böylece yukarıdaki
+   * efekt yeniden çalışıp tasarımı kuruyor. Fotoğrafın kendisi o işin
+   * sonunda geri yükleniyor.
+   */
+  const mekanGeriRef = useRef(null)
+  const mekaniGeriYukleRef = useRef(null)
+  const [taslakTetik, setTaslakTetik] = useState(0)
+  /* Köşeler oran olarak saklanıyor; tuval ölçüsü bilinince piksele çevriliyor. */
+  const elleKoseOranRef = useRef(null)
+  useEffect(() => {
+    let iptal = false
+    mekaniOku().then((k) => {
+      if (iptal || !k?.blob) return
+      mekanBlobRef.current = k.blob
+      if (k.taslak && taslakDolu(k.taslak)) {
+        /* Tasarım önce kurulacak; fotoğraf o efektin sonunda geliyor. */
+        mekanGeriRef.current = k
+        bekleyenTaslakRef.current = k.taslak
+        setTaslakTetik((n) => n + 1)
+        return
+      }
+      /* Tasarım yoksa yalnızca fotoğraf geri geliyor. */
+      mekaniGeriYukleRef.current?.(k)
+    })
+    return () => {
+      iptal = true
+    }
+  }, [])
 
   /*
    * Model NESNESİ taslakta durmuyor, yalnızca kodu duruyor: kabin listesi
@@ -1704,7 +1744,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setContent(t.content ?? 'led')
     // Yüklenen görsel/video geri gelemez (blob adresi ölmüştür) — söyle.
     if (t.icerikDustu) setTaslakUyari('Yüklediğiniz görsel/video geri yüklenemedi; içerik LED yüzeye alındı.')
-  }, [displayCabinets, cabinetsLoading])
+    /*
+     * TASARIM KURULDU, SIRA FOTOĞRAFTA.
+     *
+     * Tarayıcı kaydından geliniyorsa fotoğraf, referans ve yerleşim de
+     * geri yükleniyor — ama ancak ekranlar yerine oturduktan SONRA:
+     * yerleşim ekran kimliklerine bağlı (bkz. mekaniGeriYukleRef).
+     */
+    if (mekanGeriRef.current) {
+      const kayit = mekanGeriRef.current
+      mekanGeriRef.current = null
+      mekaniGeriYukleRef.current?.(kayit)
+    }
+  }, [displayCabinets, cabinetsLoading, taslakTetik])
 
 
   const handleChoose = (model) => {
@@ -1943,6 +1995,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         setOzelInceleniyor(false)
       }
       if (!kayit) return
+      /*
+       * FOTOĞRAFIN KENDİSİ TARAYICIDA SAKLANIYOR.
+       *
+       * blob: adresi sayfa yenilenince ölüyor; dosya IndexedDB'ye yazılıyor
+       * ki açılışta aynı fotoğraf (ve üzerindeki yerleşim) geri gelsin
+       * (bkz. fotoDeposu.js). İnceleme sonucu da saklanıyor: yeniden
+       * hesaplamak saniyeler sürüyor.
+       */
+      mekanBlobRef.current = dosya
+      mekaniKaydet({ blob: dosya, sahne: { ...kayit, dosya: null }, taslak: null, foto: null })
       /* Yeni fotoğraf, yeni sayfa: önceki fotoğrafın köşe ayarı taşınmıyor. */
       elleDuzenlemeyiBirak()
       // Önceki fotoğrafın adresi bellekte kalmasın
@@ -2219,6 +2281,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     kareleriTemizle()
     // Sıfırlama kalıcı olmalı: taslak durursa geri tuşuyla eski tasarım döner.
     taslagiSil()
+    /* Tarayıcıdaki fotoğraf kaydı da gidiyor, yoksa açılışta geri gelirdi. */
+    mekanBlobRef.current = null
+    mekanGeriRef.current = null
+    elleKoseOranRef.current = null
+    mekaniSil()
 
     /*
      * ───────────────────────────────────────────────────────────────────
@@ -4097,6 +4164,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const olculerGorunsun = showMeasurements && scene === 'none' && olcuKutusuHazir
 
   const koseTuval = (() => {
+    /*
+     * FOTOĞRAF DÖRTGENİ YALNIZCA FOTOĞRAFLI MEKÂNDA.
+     *
+     * Kullanıcının fotoğrafa işaretlediği köşeler o fotoğrafın
+     * koordinatları. "Mekân yok" ya da "İç mekân"a dönülünce de aynı
+     * dörtgen kullanılıyordu: 210 cm referansla ölçülen 0,32 m'lik ekran
+     * orada 28 × 14 piksel kalıyor, kullanıcı ekranları kaybolmuş
+     * sanıyordu. Dörtgen artık sahne değişince devre dışı; çizim duvar
+     * yerleşimine dönüyor. Fotoğraftaki yerleştirme SİLİNMİYOR, geri
+     * dönülünce olduğu gibi duruyor.
+     */
+    if (scene !== 'ozel' || !ozelSahne) {
+      beklenenKoseRef.current = null
+      return null
+    }
     /*
      * DÜZELTME YALNIZCA ÇİZİM VARKEN.
      *
@@ -9043,6 +9125,114 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
 
+  /*
+   * FOTOĞRAF, REFERANS VE YERLEŞİM TARAYICIDA KALICI.
+   *
+   * Sayfa yenilendiğinde (ya da sunucu bağlantısı kopup uygulama kendini
+   * tazelediğinde) blob: adresi ölüyor ve fotoğrafla birlikte bütün ölçüm
+   * gidiyordu. Durum IndexedDB'ye yazılıyor; açılışta aynı fotoğraf, aynı
+   * referans ve aynı yerleşim geri geliyor (bkz. fotoDeposu.js).
+   *
+   * Yazma geciktiriliyor: sürükleme sırasında saniyede onlarca kez
+   * değişen bir durumu her seferinde diske yazmak gereksiz.
+   */
+  useEffect(() => {
+    /*
+     * Mekân değişse de yazılıyor: kullanıcı "Mekân yok"a geçip sayfayı
+     * yenilediğinde fotoğraflı mekâna geri fırlatılmasın diye seçili mekân
+     * da kayıtta duruyor.
+     */
+    if (!ozelSahne || !mekanBlobRef.current) return undefined
+    const zamanlayici = setTimeout(() => {
+      mekaniKaydet({
+        blob: mekanBlobRef.current,
+        /* blob: adresi saklanmıyor; açılışta yenisi üretiliyor. */
+        sahne: { ...ozelSahne, dosya: null },
+        taslak: taslakOlustur({
+          selectedModel, width, height, cols, rows, screenType,
+          orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene,
+          ekranlar: sabitEkranlar, content,
+          lSolCols, lYon, aktifEkranId, aktifSira, grup, icerikGruplari,
+        }),
+        foto: {
+          refNokta,
+          refUzunlukCm,
+          refBoyCm,
+          refTur,
+          fotoOdak,
+          exif35,
+          alanNokta,
+          alanKonum,
+          alanOlcek,
+          /* Piksel değil ORAN: tuval boyu her açılışta aynı olmayabilir. */
+          elleKose: Array.isArray(elleKose) ? elleKose.map(tuvalOrana) : null,
+          elleYerlesti,
+          yerlesmisIdler,
+          yerKenarSecim,
+          yerlesimBitti,
+        },
+      })
+    }, 900)
+    return () => clearTimeout(zamanlayici)
+  }, [
+    scene, ozelSahne, selectedModel, width, height, cols, rows, screenType,
+    orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc,
+    sabitEkranlar, content, lSolCols, lYon, aktifEkranId, aktifSira, grup,
+    icerikGruplari, refNokta, refUzunlukCm, refBoyCm, refTur, fotoOdak, exif35,
+    alanNokta, alanKonum, alanOlcek, elleKose, elleYerlesti, yerlesmisIdler,
+    yerKenarSecim, yerlesimBitti,
+  ])
+
+  /*
+   * KAYITTAN GERİ YÜKLEME.
+   *
+   * Tasarım (model, ekranlar, birleşim) yukarıdaki taslak efektinde
+   * kuruluyor; burada fotoğrafın kendisi ve ona ait ölçüm geri geliyor.
+   * Ölçüm akışı KAPALI açılıyor: kullanıcı yarım kalmış bir adımın değil,
+   * bitmiş düzenin karşısına çıkıyor ("Yerleşimi düzenle" ile geri açabilir).
+   */
+  mekaniGeriYukleRef.current = (kayit) => {
+    if (!kayit?.blob) return
+    const url = URL.createObjectURL(kayit.blob)
+    const gorsel = new Image()
+    gorsel.onload = () => {
+      ozelSahneGorsel.current = gorsel
+      if (kayit.sahne) setOzelSahne({ ...kayit.sahne, dosya: url })
+      /* Kayıtta hangi mekân seçiliyse o: kullanıcı "Mekân yok"ta bıraktıysa
+         fotoğraflı mekâna fırlatılmıyor, fotoğraf yine elinin altında. */
+      if (!kayit.taslak?.scene || kayit.taslak.scene === 'ozel') setScene('ozel')
+      const f = kayit.foto || {}
+      setRefNokta(Array.isArray(f.refNokta) ? f.refNokta : [])
+      setRefUzunlukCm(f.refUzunlukCm ?? '')
+      setRefBoyCm(f.refBoyCm ?? '')
+      setRefTur(f.refTur || 'cizgi')
+      if (f.fotoOdak) setFotoOdak(f.fotoOdak)
+      if (f.exif35) setExif35(f.exif35)
+      setAlanNokta(Array.isArray(f.alanNokta) ? f.alanNokta : [])
+      if (f.alanKonum) setAlanKonum(f.alanKonum)
+      setAlanOlcek(f.alanOlcek ?? null)
+      setElleYerlesti(!!f.elleYerlesti)
+      setYerlesmisIdler(Array.isArray(f.yerlesmisIdler) ? f.yerlesmisIdler : [])
+      setYerKenarSecim(f.yerKenarSecim || {})
+      setYerlesimBitti(!!f.yerlesimBitti)
+      setSihirbazAdim(0)
+      setRefKipi(false)
+      setAlanKipi(false)
+      setYerSira(null)
+      /* Tuval ölçüsü bilinince orandan piksele çevriliyor. */
+      elleKoseOranRef.current = Array.isArray(f.elleKose) ? f.elleKose : null
+    }
+    gorsel.src = url
+  }
+
+  /* Geri yüklenen köşeler: tuval ölçülünce piksele çevriliyor. */
+  useEffect(() => {
+    const oran = elleKoseOranRef.current
+    if (!oran || !(tuvalBoyut.w > 0) || !(tuvalBoyut.h > 0)) return
+    elleKoseOranRef.current = null
+    elleKoseyeYaz(oran.map(oranTuvale))
+  }, [tuvalBoyut.w, tuvalBoyut.h])
+
   /* Referans bitince yerleştirme başlıyor. */
   useEffect(() => {
     if (scene !== 'ozel' || !ozelSahne) return
@@ -11881,11 +12071,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               */}
               <div className="mb-2">
                 {/*
-                  Mekân seçimi ölçü akışı sürerken gizli: akışın ortasında
-                  mekânı değiştirmek yapılan işi çöpe atardı.
+                  MEKÂN HER ZAMAN AÇIK.
+
+                  Ölçü akışı sürerken gizleniyordu ("akışın ortasında mekânı
+                  değiştirmek yapılan işi çöpe atar" diye). Sonuç tersine
+                  çıktı: akış yarıda kalınca ya da bağlantı kopunca mekân
+                  düğmeleri hiç geri gelmiyor, kullanıcı fotoğraftan
+                  çıkamıyordu. Mekân değiştirmek fotoğraftaki yerleştirmeyi
+                  silmiyor (bkz. koseTuval); geri dönülünce yerinde duruyor.
                 */}
-                {!olcuAcik && (
-                  <>
                   <h2 className="text-[25px] font-bold tracking-tight m-0 mb-1">{t('scene.heading')}</h2>
                   <p className="text-[14px] text-neutral-400 dark:text-neutral-500 m-0 mb-3">{t('scene.hint')}</p>
                   {/*
@@ -11929,8 +12123,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       </button>
                     ))}
                   </div>
-                  </>
-                )}
 
                 {/*
                   L KÖŞESİ — MEKÂN SEÇİMİNİN YANINDA.
@@ -12034,7 +12226,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   kullanıcı bir köşeyi düzeltmek isterse buradan geri
                   açıyor (bkz. yerlesimBitti).
                 */}
-                {yerlesimBitti && scene === 'ozel' && ozelSahne && (
+                {/*
+                  Ölçü akışı AÇIKKEN yazılmıyor: akış sürerken "Yerleşimi
+                  düzenle" ile referans kartı yan yana çıkıyor, panel iki
+                  adımı birden gösteriyordu.
+                */}
+                {yerlesimBitti && !olcuAcik && scene === 'ozel' && ozelSahne && (
                   <button
                     type="button"
                     onClick={() => {
@@ -12966,8 +13163,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   duvara monte: ekranların çoğu öyle kuruluyor ve gövde
                   çizmemek en az varsayım içeren seçenek.
                 */}
-                {/* Ölçüm akışı sürerken gizli: ekranın gövdesiyle ilgisi yok. */}
-                {surukleAktif && !olcuAcik && (
+                {/*
+                  Ölçüm akışı sürerken gizli: ekranın gövdesiyle ilgisi yok.
+                  KIOSK_GOVDESI_ACIK: gövde ölçüleri netleşene kadar seçenek
+                  arayüzde hiç görünmüyor (kod duruyor, bkz. featureFlags).
+                */}
+                {KIOSK_GOVDESI_ACIK && surukleAktif && !olcuAcik && (
                   <div className="mt-2">
                     <div className="flex items-center justify-between gap-3 mb-1.5">
                       <span className="text-[14px] text-neutral-600 dark:text-neutral-400">
@@ -13072,11 +13273,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/*
-            İletişim + PDF — yan yana.
-            Ölçüm akışı sürerken gizli: teklif ve rapor, ölçü oturduktan
-            sonraki işler (bkz. olcuAcik).
+            İLETİŞİM + PDF HER ZAMAN YERİNDE.
+
+            Ölçüm akışı sürerken gizleniyorlardı ("ölçü oturduktan sonraki
+            işler" diye). Akış yarıda kalınca ya da bağlantı kopunca panelde
+            hiçbir çıkış kalmıyor, kullanıcı sıkışıyordu. PDF kendi şartını
+            zaten pasiflikle ve altındaki notla söylüyor.
           */}
-          {!olcuAcik && (
           <div className="mt-3 flex items-center gap-3">
             <button
               type="button"
@@ -13102,7 +13305,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             {t('pdf.professional')}
           </button>
           </div>
-          )}
           {/*
             PASİF DÜĞME SEBEBİNİ SÖYLÜYOR.
 
@@ -13110,7 +13312,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             soluk duruyordu: kullanıcı neyi eksik bıraktığını bilmiyordu.
             Model yokken not yazılmıyor — o durumda zaten hiçbir şey seçilmemiş.
           */}
-          {!olcuAcik && hasModel && hasMiniPc === null && (
+          {hasModel && hasMiniPc === null && (
             <div className="mt-1.5 text-[13px] text-neutral-500 dark:text-neutral-400">{t('pdf.miniPcNot')}</div>
           )}
 
