@@ -44,6 +44,72 @@ const EGIM_EN_AZ = -10
 const EGIM_EN_COK = 55
 const BASLANGIC_EGIM = 14
 
+/* Şeridin kısalttığı en değil gerçek en (bkz. Birlesim2D). */
+const gEn = (e) => e?.gercekWm ?? e?.wm ?? 0
+
+/**
+ * KUTUNUN GERÇEK ÖLÇÜSÜ — karşılıklı yüzlerden.
+ *
+ * Ön ile arka aynı eni, sağ ile sol aynı derinliği paylaşıyor; kutu ancak
+ * böyle kapanır. Dışarıya da veriliyor: tuvalin ölçeği küpün çizim
+ * kutusuna göre seçiliyor (bkz. WallPreview), orada aynı sayılar gerek.
+ */
+export function kupOlculeri(ekranlar) {
+  const yanlar = (Array.isArray(ekranlar) ? ekranlar : []).slice(0, 4)
+  if (yanlar.length < 2) return null
+  const enM = Math.max(gEn(yanlar[0]), gEn(yanlar[2]))
+  const derinlikM = Math.max(gEn(yanlar[1]), gEn(yanlar[3])) || enM
+  const boyM = Math.max(...yanlar.map((x) => x.hm || 0), 0)
+  if (!(enM > 0) || !(derinlikM > 0) || !(boyM > 0)) return null
+  return { enM, derinlikM, boyM }
+}
+
+const UZAK = 1400
+const PAY = 8
+
+/**
+ * ÇİZİMİN KAPLADIĞI KUTU (piksel).
+ *
+ * İzdüşüm eğimle değişiyor: tek bir açıya göre ölçülen kutu, dikey
+ * sürüklemede başka açılarda dar kalır ve küp duvarın dışına taşardı.
+ * Aralığın tamamı taranıp en uçtaki üst/alt/en değerleri alınıyor; kutu
+ * sabit kaldığı için küp sürüklenirken ne büyüyor ne de kayıyor.
+ *
+ * Perspektif yüzünden kutu pxPerM ile DOĞRU ORANTILI DEĞİL; ölçek seçerken
+ * bu yüzden birkaç kez yaklaşılıyor (bkz. WallPreview).
+ */
+export function kupCizimKutusu({ enM, derinlikM, boyM, pxPerM }) {
+  const W = enM * pxPerM
+  const D = derinlikM * pxPerM
+  const H = boyM * pxPerM
+  const kaide = Math.max(6, H * KAIDE_ORAN)
+  const yariKose = Math.hypot(W, D) / 2
+  const kaideYari = (Math.hypot(Math.max(W, D), D) * 1.12) / 2
+  /* Kaide küpün tabanının hemen altında (bkz. KAİDE dönüşümü). */
+  const kaideY = H / 2 + kaide
+  let ustY = Infinity
+  let altY = -Infinity
+  let enGenis = 0
+  for (let d = EGIM_EN_AZ; d <= EGIM_EN_COK + 0.001; d += 2.5) {
+    const e = (Math.min(d, EGIM_EN_COK) * Math.PI) / 180
+    const yakin = (H / 2) * Math.sin(e) + yariKose * Math.cos(e)
+    const k = UZAK / Math.max(1, UZAK - yakin)
+    ustY = Math.min(ustY, -((H / 2) * Math.cos(e) + yariKose * Math.sin(e)) * k)
+    altY = Math.max(altY, (kaideY * Math.cos(e) + kaideYari * Math.sin(e)) * k)
+    enGenis = Math.max(enGenis, Math.max(yariKose, kaideYari) * 2 * k)
+  }
+  return {
+    cizimEn: enGenis + PAY * 2,
+    cizimBoy: altY - ustY + PAY * 2,
+    /* Göz hizası: bu noktadaki her şey olduğu yerde kalıyor (perspectiveOrigin). */
+    gozY: -ustY + PAY,
+    W,
+    D,
+    H,
+    kaide,
+  }
+}
+
 export default function Kup2D({
   ekranlar = [],
   pxPerM = 200,
@@ -78,57 +144,20 @@ export default function Kup2D({
    * büyüğü belirliyor; küçüğü kendi kutusunun içinde kendi eniyle
    * duruyor, zorla gerilmiyor.
    */
-  /* Şeridin kısalttığı en değil gerçek en (bkz. Birlesim2D). */
-  const gEn = (e) => e?.gercekWm ?? e?.wm ?? 0
-  const enM = Math.max(gEn(yanlar[0]), gEn(yanlar[2]))
-  const derinlikM = Math.max(gEn(yanlar[1]), gEn(yanlar[3])) || enM
-  const boyM = Math.max(...yanlar.map((x) => x.hm || 0), 0)
-  if (!(enM > 0) || !(derinlikM > 0) || !(boyM > 0)) return null
-
-  const W = enM * pxPerM
-  const D = derinlikM * pxPerM
-  const H = boyM * pxPerM
-  const kaide = Math.max(6, H * KAIDE_ORAN)
+  const olcu = kupOlculeri(ekranlar)
+  if (!olcu) return null
+  const { enM, derinlikM, boyM } = olcu
 
   /*
    * ÇİZİM DUVARA ORANTILI SIĞIYOR.
    *
-   * Kutunun izdüşümü (eğim → dönüş → perspektif) hesaplanıyor ve çizim
-   * duvarın içine ÖLÇEKLENİYOR; şekil bozulmuyor, yalnızca küçülüyor.
-   * Ölçü etiketleri gerçek metreden geldiği için sayılar değişmiyor.
-   *
-   * Sınırlar en geniş dönüş açısına göre alınıyor: küp sürüklenirken
-   * boyutunun değişmemesi için.
+   * Kutunun izdüşümü (eğim → dönüş → perspektif) hesaplanıyor; çizim
+   * sığmıyorsa ÖLÇEKLENİYOR, şekil bozulmuyor. Ölçek normalde 1: tuvalin
+   * ölçeği zaten küpün çizim kutusuna göre seçiliyor (bkz. WallPreview),
+   * yani küp duvarla AYNI metre-piksel oranında duruyor. Bu sınır yalnızca
+   * son bir güvenlik ağı.
    */
-  const UZAK = 1400
-  const PAY = 8
-  const yariKose = Math.hypot(W, D) / 2
-  const kaideYari = (Math.hypot(Math.max(W, D), D) * 1.12) / 2
-  /* Kaide küpün tabanının hemen altında (bkz. KAİDE dönüşümü). */
-  const kaideY = H / 2 + kaide
-  /*
-   * ÇİZİM KUTUSU BÜTÜN EĞİM ARALIĞINA GÖRE.
-   *
-   * İzdüşüm eğimle değişiyor: tek bir açıya göre ölçülen kutu, dikey
-   * sürüklemede başka açılarda dar kalır ve küp duvarın dışına taşardı.
-   * Aralığın tamamı taranıp en uçtaki üst/alt/en değerleri alınıyor;
-   * kutu sabit kaldığı için küp sürüklenirken ne büyüyor ne de kayıyor.
-   */
-  let ustY = Infinity
-  let altY = -Infinity
-  let enGenis = 0
-  for (let d = EGIM_EN_AZ; d <= EGIM_EN_COK + 0.001; d += 2.5) {
-    const e = (Math.min(d, EGIM_EN_COK) * Math.PI) / 180
-    const yakin = (H / 2) * Math.sin(e) + yariKose * Math.cos(e)
-    const k = UZAK / Math.max(1, UZAK - yakin)
-    ustY = Math.min(ustY, -((H / 2) * Math.cos(e) + yariKose * Math.sin(e)) * k)
-    altY = Math.max(altY, (kaideY * Math.cos(e) + kaideYari * Math.sin(e)) * k)
-    enGenis = Math.max(enGenis, Math.max(yariKose, kaideYari) * 2 * k)
-  }
-  const cizimEn = enGenis + PAY * 2
-  const cizimBoy = altY - ustY + PAY * 2
-  /* Göz hizası: bu noktadaki her şey olduğu yerde kalıyor (bkz. perspectiveOrigin). */
-  const gozY = -ustY + PAY
+  const { cizimEn, cizimBoy, gozY, W, D, H, kaide } = kupCizimKutusu({ enM, derinlikM, boyM, pxPerM })
   const olcek = Math.max(
     0.05,
     Math.min(1, enCokW > 0 ? enCokW / cizimEn : 1, enCokH > 0 ? enCokH / cizimBoy : 1),

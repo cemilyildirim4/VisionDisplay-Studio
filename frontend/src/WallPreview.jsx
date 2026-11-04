@@ -6,7 +6,7 @@ import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_S
 import { videoSrcFor, senkronaKatil } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { yonDonusumu } from './hooks/useYon.js'
-import Kup2D from './Kup2D.jsx'
+import Kup2D, { kupOlculeri, kupCizimKutusu } from './Kup2D.jsx'
 import Birlesim2D from './Birlesim2D.jsx'
 import { birlesimKapladigi } from './birlesimOlcu.js'
 import { koseDonusumu } from './homografi.js'
@@ -962,6 +962,16 @@ export default function WallPreview({
   sahneOlcekVarsayilan = null,
   // Kullanilan nihai olceği disari bildirir; sahne ayni olcekle cizilsin diye.
   onPxPerM,
+  /*
+   * ÇİZİM GİZLİ AMA YERİNDE.
+   *
+   * Kendi fotoğrafı kipinde ekran, YERLEŞTİRİLENE kadar görünmemeli:
+   * fotoğrafın ortasında düz ve yanlış ölçekte duran bir önizleme
+   * kullanıcıyı "ekran oraya mı gidecek?" diye yanıltıyordu. Bileşen
+   * sökülmüyor, yalnızca görünmez oluyor: ölçek (olcekRef/onPxPerM) ve
+   * tuval boyutu ölçümleri yerleştirme hesaplarının girdisi.
+   */
+  gizle = false,
 }) {
   const containerRef = useRef(null)
   const [size, setSize] = useState({ w: 900, h: 560 })
@@ -1217,9 +1227,35 @@ export default function WallPreview({
      */
     const kullanW = Math.min(size.w * DOLULUK, availW)
     const kullanH = Math.min(size.h * DOLULUK, availH)
-    const pxPerM = Number.isFinite(sahneOlcek)
+    const duvarOlcegi = Number.isFinite(sahneOlcek)
       ? sahneOlcek
       : Math.min(kullanW / (wallWm + humanWmM), kullanH / (wallHm + kavisPayiM))
+    /*
+     * KÜPTE ÖLÇEĞİ KÜPÜN ÇİZİM KUTUSU BELİRLİYOR.
+     *
+     * Ölçek duvara göre seçilip küp sonra duvarın içine KÜÇÜLTÜLÜYORDU:
+     * 0,32 m'lik bir küp, 0,44 m'lik duvarın dörtte birine iniyordu. Oysa
+     * küpün izdüşümü (dönüş + eğim + perspektif + kaide) kendi eninden
+     * geniş; sığdırılması gereken o kutu. Ölçek artık o kutudan geliyor,
+     * küp ölçeklenmiyor (olcek = 1) ve duvarla AYNI metre-piksel oranında
+     * duruyor: 0,32 m küp, 0,44 m duvarın gerçekten %73'ü kadar.
+     *
+     * Perspektif ölçekle doğrusal değil; ölçek birkaç adımda yaklaşılıyor.
+     */
+    let pxPerM = duvarOlcegi
+    if (kupKipi && !Number.isFinite(sahneOlcek)) {
+      const kupOlcu = kupOlculeri(list)
+      if (kupOlcu) {
+        for (let adim = 0; adim < 4; adim++) {
+          const kutu = kupCizimKutusu({ ...kupOlcu, pxPerM })
+          if (!(kutu.cizimEn > 0) || !(kutu.cizimBoy > 0)) break
+          const d = Math.min(kullanW / kutu.cizimEn, kullanH / kutu.cizimBoy)
+          if (!(d > 0) || !Number.isFinite(d)) break
+          pxPerM *= d
+          if (Math.abs(d - 1) < 0.002) break
+        }
+      }
+    }
     olcekRef.current = pxPerM
     const wallW = wallWm * pxPerM
     const wallH = wallHm * pxPerM
@@ -1422,6 +1458,7 @@ export default function WallPreview({
       /* Aday kareler açıkken bu katman soluyor; kareler fotoğrafın üstünde okunur kalıyor. */
       data-tasarim-katman
       className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0"
+      style={gizle ? { visibility: 'hidden' } : undefined}
     >
         <div dir="ltr" className="flex items-end gap-3 sm:gap-6 max-w-full">
          {showHumanM && (
@@ -1486,9 +1523,15 @@ export default function WallPreview({
                     pxPerM={pxPerM}
                     model={model}
                     resolution={resolution}
-                    /* Küp kaplanan alanın içinde: çizim ölçüyle aynı yeri tutuyor. */
-                    enCokW={olcuW}
-                    enCokH={stripTop + maxHpx}
+                    /*
+                      SINIR DUVAR DEĞİL TUVAL.
+                      Küpün izdüşümü kendi eninden geniş; duvarın içine
+                      sıkıştırılınca küp duvarın dörtte birine iniyordu.
+                      Ölçek zaten küpe göre seçildiği için burada küçülme
+                      olmuyor — bu yalnızca tuvalden taşmayı önlüyor.
+                    */
+                    enCokW={availW}
+                    enCokH={availH}
                   />
                 </div>
               )}
@@ -2000,7 +2043,11 @@ export default function WallPreview({
   const marginYm = Math.max(0, (wallHm - screenHm) / 2)
 
   return (
-    <div ref={containerRef} className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0">
+    <div
+      ref={containerRef}
+      className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0"
+      style={gizle ? { visibility: 'hidden' } : undefined}
+    >
       <div dir="ltr" className="flex items-end gap-3 sm:gap-6 max-w-full">
         {!sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005 && (
             <HumanSilhouette height={humanH} showMeasure={showMeasurements} />

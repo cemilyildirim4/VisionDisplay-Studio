@@ -232,6 +232,7 @@ const dict = {
   'diger.baslik': { tr: 'Diğer ayarlar', en: 'Other settings', ar: 'إعدادات أخرى' },
   'sp.options': { tr: 'Seçenekler ve kapasite', en: 'Options and capacity', ar: 'الخيارات والسعة' },
   'sp.perScreenNote': { tr: '(ekran başına)', en: '(per screen)', ar: '(لكل شاشة)' },
+  'sp.totalNote': { tr: '(toplam)', en: '(total)', ar: '(الإجمالي)' },
   'sp.perScreen': { tr: 'Ekran dökümü', en: 'Per-screen breakdown', ar: 'تفصيل لكل شاشة' },
   'panel.toplam': { tr: 'Toplam', en: 'Total', ar: 'الإجمالي' },
   /* Sayılan şeyin adı — ürün tipine göre (bkz. birimSozcugu). */
@@ -241,6 +242,7 @@ const dict = {
   'ekran.alanaSigdir': { tr: 'Alana sığdır', en: 'Fit to area', ar: 'ملاءمة المنطقة' },
   'ekran.alaniDuzenle': { tr: 'Alanı düzenle', en: 'Edit area', ar: 'تحرير المنطقة' },
   'screen.colsShort': { tr: 'Sütun', en: 'Cols', ar: 'أعمدة' },
+  'screen.duvarDoldu': { tr: 'Duvar ölçüsüne ulaşıldı, önce duvarı büyütün.', en: 'Wall size reached — enlarge the wall first.', ar: 'تم بلوغ مقاس الجدار، وسّع الجدار أولاً.' },
   'screen.rowsShort': { tr: 'Satır', en: 'Rows', ar: 'صفوف' },
   'secim.gorselEkle': { tr: 'Seçili ekranlara görsel ekle', en: 'Add image to selected screens', ar: 'إضافة صورة للشاشات المحددة' },
   'secim.kaldir': { tr: 'Seçimi kaldır', en: 'Clear selection', ar: 'إلغاء التحديد' },
@@ -1626,6 +1628,7 @@ const dict = {
   // ---------- PDF ----------
   'pdf.export': { tr: 'Profesyonel PDF Raporu İndir', en: 'Download professional PDF report', ar: 'تنزيل تقرير PDF احترافي' },
   'pdf.professional': { tr: 'PDF Raporu Al', en: 'Get PDF report', ar: 'الحصول على تقرير PDF' },
+  'pdf.miniPcNot': { tr: 'Rapor için Mini PC sorusunu cevaplayın.', en: 'Answer the Mini PC question to get the report.', ar: 'أجب عن سؤال Mini PC للحصول على التقرير.' },
 
   // ---------- Sıfırlama onayı ----------
   'onay.vazgec': { tr: 'Vazgeç', en: 'Cancel', ar: 'إلغاء' },

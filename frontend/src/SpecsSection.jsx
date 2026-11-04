@@ -58,10 +58,20 @@ function Veri({ label, value, buyuk = false }) {
  * `genis` = ızgarada iki sütun kaplar (uzun listeler için). Kart yüksekliği
  * içeriğe göre; `self-start` ile kısa kartlar boşuna uzamıyor.
  */
-function Kart({ baslik, genis = false, vurgulu = false, children }) {
+/*
+ * tamGenis: kart bütün satırı kaplar (dört sütunlu ızgarada da).
+ * duz: gövde ızgaraya girmez, tek blok kalır.
+ *
+ * Izgara gözü içeriğinden dar OLAMAZ (min-width:auto). Tablo ızgaranın
+ * içindeyken kutuyu şişiriyor, sarmalayıcıdaki yatay kaydırma hiç devreye
+ * girmiyor ve son sütun pencerenin dışında kalıyordu.
+ */
+function Kart({ baslik, genis = false, tamGenis = false, vurgulu = false, duz = false, children }) {
   return (
     <div
-      className={`flex h-full min-w-0 flex-col rounded-xl border px-4 py-3.5 ${genis ? 'sm:col-span-2' : ''} ${
+      className={`flex h-full min-w-0 flex-col rounded-xl border px-4 py-3.5 ${
+        tamGenis ? 'sm:col-span-2 xl:col-span-4' : genis ? 'sm:col-span-2' : ''
+      } ${
         vurgulu
           ? 'border-brand/25 bg-brand/[0.06] dark:bg-brand/10'
           : 'border-neutral-200 bg-white dark:border-[#2c333f] dark:bg-[#161a21]'
@@ -73,8 +83,14 @@ function Kart({ baslik, genis = false, vurgulu = false, children }) {
           {baslik}
         </h3>
       </div>
-      <div className="mt-2.5 flex-1 border-t border-neutral-100 pt-3 dark:border-[#242b36]">
-        <div className={`grid content-start gap-x-6 gap-y-3 ${genis ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>{children}</div>
+      <div className="mt-2.5 min-w-0 flex-1 border-t border-neutral-100 pt-3 dark:border-[#242b36]">
+        {duz ? (
+          <div className="min-w-0">{children}</div>
+        ) : (
+          <div className={`grid content-start gap-x-6 gap-y-3 ${genis ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
+            {children}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -175,6 +191,15 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
   const birimAdi = birimSozcugu(model?.productType, t)
   /* Tek ekrana ait değerler, birden çok ekran varken ne olduklarını söylesin. */
   const ekranBasina = (etiket) => (cokEkranVar ? etiket + ' ' + t('sp.perScreenNote') : etiket)
+  /*
+   * ÖLÇÜ VE KÖŞEGEN "EKRAN BAŞINA" DEĞİL, TOPLAM.
+   *
+   * Etiket "(ekran başına)" diyordu ama değer grubun tamamınınkiydi
+   * (bkz. aşağıdaki toplam ataması). Ekranlar farklı boyutlardayken tek
+   * bir "ekran başına" sayı zaten yazılamaz; ekran ekran döküm üstteki
+   * tabloda duruyor.
+   */
+  const toplamEtiket = (etiket) => (cokEkranVar ? etiket + ' ' + t('sp.totalNote') : etiket)
   const cokEkran = cokEkranVar
   /*
    * TOPLAM GEREKTİREN ALANLAR DÖKÜMLE AYNI.
@@ -195,6 +220,9 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
      */
     if (toplam.enM > 0) s.W = toplam.enM
     if (toplam.boyM > 0) s.H = toplam.boyM
+    /* Köşegen de grubun dış ölçüsünden: tek ekranınki yanında yazan
+       en/boy ile çelişiyordu. */
+    if (toplam.enM > 0 && toplam.boyM > 0) s.diagIn = Math.hypot(toplam.enM, toplam.boyM) / 0.0254
     s.area = toplam.alan
     s.weight = toplam.agirlik
     s.pMax = toplam.gucMax
@@ -213,9 +241,11 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
   const secenekler = null
 
   const ekranDokumu = cokEkran ? (
-    <Kart baslik={t('sp.perScreen')} genis vurgulu>
-      <div className="-mx-1 overflow-x-auto">
-        <table className="w-full border-collapse text-[13px] tabular-nums">
+    <Kart baslik={t('sp.perScreen')} tamGenis duz vurgulu>
+      {/* Dar pencerede sütunlar sıkışıp kesilmesin: tablo en az bu kadar
+          geniş kalıyor ve sığmazsa kutu YATAY KAYDIRILIYOR. */}
+      <div className="-mx-1 min-w-0 overflow-x-auto">
+        <table className="w-full min-w-[620px] border-collapse text-[13px] tabular-nums">
           <thead>
             <tr className="text-left text-[11.5px] uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">
               <th className="py-1 pr-2 font-medium">#</th>
@@ -332,7 +362,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           ediyordu. Ölçülerin yanında duruyor.
         */}
         <Kart baslik={t('sp.screenSpecs')} genis>
-          <Veri label={ekranBasina(t('sp.lengthHeight'))} value={has ? `${fmt(s.W, 3)} x ${fmt(s.H, 3)} m` : DASH} />
+          <Veri label={toplamEtiket(t('sp.lengthHeight'))} value={has ? `${fmt(s.W, 3)} x ${fmt(s.H, 3)} m` : DASH} />
           <Veri label={t('sp.area')} value={has ? `${fmt(s.area, 3)} m²` : DASH} />
           {/* Kiosk gövdesi seçilmediyse satır yok. */}
           {kioskKod && <Veri label={t('kiosk.model')} value={kioskKod} />}
@@ -340,7 +370,7 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
           {has && s.depthMm > 0 && (
             <Veri label={t('sp.depth')} value={`${fmt(s.depthMm)} mm`} />
           )}
-          <Veri label={ekranBasina(t('sp.diagonal'))} value={has ? `${fmt(s.diagIn, 1)} ${t('sp.inch')}` : DASH} />
+          <Veri label={toplamEtiket(t('sp.diagonal'))} value={has ? `${fmt(s.diagIn, 1)} ${t('sp.inch')}` : DASH} />
           <Veri label={has ? birim('sp.weightCabinets') : t('sp.weight')} value={has ? `${fmt(s.weight, 1)} kg` : DASH} />
           {has && (
             <Veri

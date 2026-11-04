@@ -1529,7 +1529,27 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           screens={screens}
         />
         <IlkKare onIlkKare={() => setSahneHazir(true)} />
-        <OrbitControls makeDefault enablePan={false} minDistance={0.8} maxDistance={Math.max(12, uzaklik * 3)} />
+        {/*
+          DÖNDÜRME YAVAŞ VE SINIRLI.
+
+          Varsayılan hızda bir ekran boyu sürükleme neredeyse yarım tur
+          döndürüyor: küçük bir el hareketinde sahne tepeden bakışa fırlıyor
+          ve kabinin 10 cm'lik derinliği koca bir kalınlık gibi görünüyordu.
+          Hız yarıya indi; dikey açı da insan bakışının aralığında tutuldu
+          (polar 0 = tam tepe, 90° = göz hizası): ne tepeden ne zeminin
+          altından bakılabiliyor.
+        */}
+        <OrbitControls
+          makeDefault
+          enablePan={false}
+          rotateSpeed={0.42}
+          enableDamping
+          dampingFactor={0.09}
+          minPolarAngle={Math.PI * 0.3}
+          maxPolarAngle={Math.PI * 0.54}
+          minDistance={0.8}
+          maxDistance={Math.max(12, uzaklik * 3)}
+        />
       </Canvas>
 
       {/* Sahne kurulana kadar: kapkara ekran "donmuş" izlenimi veriyordu. */}

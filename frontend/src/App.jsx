@@ -8674,6 +8674,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const yerKoseRef = useRef({})
   /*
+   * İŞARETLENEN DÜZLEMLER AYRI TUTULUYOR.
+   *
+   * yerKoseRef ekranın ÇİZİLDİĞİ (gerçek ölçüsündeki, çoğu zaman minik)
+   * dörtgeni taşıyor. Sıradaki ekranın kilitli kenarı oradan alınınca
+   * kenar birkaç pikselik bir çizgiye iniyor ve yeni alan üçgene
+   * dönüyordu. Komşuluk kullanıcının İŞARETLEDİĞİ alanın kenarından
+   * kurulmalı; işaretlenen dörtgen bu yüzden ayrıca saklanıyor.
+   */
+  const yerDuzlemRef = useRef({})
+  /*
    * KÖŞE SIRASI DÜZELTİLİYOR.
    *
    * Köşeler tıklama sırasıyla saklanıyordu; farklı sırayla tıklayan
@@ -8788,6 +8798,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kenarlarının devamı: ön yüzün iki üst köşesi ve sağ yüzün uzaktaki
    * üst köşesi belli, kullanıcıya yalnızca en arkadaki köşe kalıyor.
    */
+  /**
+   * Bir ekranın İŞARETLENEN alanı (düzlemi); yoksa çizilen dörtgeni.
+   *
+   * Komşuluk hep buradan kuruluyor: ekranın kendi dörtgeni gerçek ölçüsünde
+   * ve çoğu zaman alanın içinde minik kalıyor, onun kenarından başlayan yeni
+   * alan iğne gibi inceliyordu.
+   */
+  const ekranDuzlemi = (id) => {
+    const d = yerDuzlemRef.current[id]
+    if (Array.isArray(d) && d.length === 4) return d
+    const kayit = sabitEkranlar.find((e) => e.id === id)?.alan
+    if (Array.isArray(kayit) && kayit.length === 4) return kayit.map(oranTuvale)
+    if (id === aktifEkranId && alanNokta.length === 4) return alanNokta.map(oranTuvale)
+    return ekranKoseleri(id)
+  }
+
   const ortakKenar = (hedefId) => {
     const tip = grup?.tip
     if (tip !== 'l' && tip !== 'u' && tip !== 'acili' && tip !== 'kutu') return null
@@ -8795,14 +8821,24 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const j = grup.uyeler.indexOf(hedefId)
     if (j < 1) return null
     if (tip === 'kutu' && j === 4) {
-      const on = ekranKoseleri(grup.uyeler[0])
-      const yan = ekranKoseleri(grup.uyeler[1])
+      const on = ekranDuzlemi(grup.uyeler[0])
+      const yan = ekranDuzlemi(grup.uyeler[1])
       if (!on || !yan) return null
       return [on[0], on[1], yan[1]]
     }
-    const k = ekranKoseleri(grup.uyeler[j - 1])
+    const k = ekranDuzlemi(grup.uyeler[j - 1])
     if (!k) return null
-    return yerKenarSecim[hedefId] === 'sol' ? [k[0], k[3]] : [k[1], k[2]]
+    /*
+     * KENARI KULLANICI SEÇİYOR — varsayılan yok.
+     *
+     * Seçilmemişken sağ kenar alınıyordu: kullanıcı soldan devam etmek
+     * istediğinde yeni ekran yanlış köşeden başlıyor, düzeltmek için iki
+     * köşeyi elle sürüklemek gerekiyordu. Seçim yapılana kadar hiçbir köşe
+     * kilitlenmiyor; tuvalde iki kenar da vurgulu duruyor (kenarSecenekleri).
+     */
+    const secim = yerKenarSecim[hedefId]
+    if (secim !== 'sol' && secim !== 'sag') return null
+    return secim === 'sol' ? [k[0], k[3]] : [k[1], k[2]]
   }
 
   /*
@@ -8821,9 +8857,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const j = grup.uyeler.indexOf(yerEkran.id)
     if (j < 1) return []
     if (tip === 'kutu' && j === 4) return []
-    const k = ekranKoseleri(grup.uyeler[j - 1])
+    const k = ekranDuzlemi(grup.uyeler[j - 1])
     if (!k) return []
-    const secili = yerKenarSecim[yerEkran.id] === 'sol' ? 'sol' : 'sag'
+    /* Seçim yapılmadıysa hiçbiri seçili değil: ikisi de bekliyor. */
+    const secili = yerKenarSecim[yerEkran.id]
     return [
       { yon: 'sag', secili: secili === 'sag', uc: [k[1], k[2]] },
       { yon: 'sol', secili: secili === 'sol', uc: [k[0], k[3]] },
@@ -8838,7 +8875,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const tip = grup?.tip
     const j = Array.isArray(grup?.uyeler) ? grup.uyeler.indexOf(yerEkran.id) : -1
     if (j < 1) return
-    const k = ekranKoseleri(grup.uyeler[j - 1])
+    const k = ekranDuzlemi(grup.uyeler[j - 1])
     if (!k || tip === 'duz') return
     const kenar = yon === 'sol' ? [k[0], k[3]] : [k[1], k[2]]
     setYerKilit(kenar.length)
@@ -8963,6 +9000,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       }
     }
     setKutuMesaj(null)
+    /* Komşunun kilitli kenarı buradan geliyor (bkz. ekranDuzlemi). */
+    yerDuzlemRef.current[ekran.id] = duzlem
     yerKoseRef.current[ekran.id] = duzgun
     dortgeniYaz(ekran.id, duzgun)
     /*
@@ -9880,6 +9919,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
           {hasModel ? (
             <WallPreview
+              /*
+                Kendi fotoğrafı: ekran YERLEŞTİRİLENE kadar görünmüyor.
+                Önceden fotoğrafın ortasında düz ve yanlış ölçekte bir
+                önizleme duruyordu (bkz. gizle).
+              */
+              gizle={
+                scene === 'ozel' &&
+                !!ozelSahne &&
+                !yerlesimBitti &&
+                !yerlesmisIdler.includes(aktifEkranId)
+              }
               model={previewModel}
               width={width}
               height={height}
@@ -10212,6 +10262,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {scene === 'ozel' && !refKipi && !lKoseKipi && (
             <EkEkranlar
+              /*
+                Sabit ekranlar zaten yalnızca KENDİ dört köşesi (oran) olanlar
+                çiziliyor; yerleşmemiş olanın dörtgeni yok, hiç görünmüyor.
+              */
               ekranlar={
                 grupKoseleri
                   ? sabitEkranlar.map((e) =>
@@ -11273,12 +11327,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
                             <SayiKutusu etiket={t('screen.colsShort')} deger={cols} onChange={setCols} min={1} max={colsMax} />
                             <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsMax} />
-                            {/*
-                              "Duvar ölçüsüne ulaşıldı" notu kaldırıldı:
-                              sütun/satır zaten sınırda duruyor, satır da
-                              ekranın ayarlarının ortasında yer kaplıyordu.
-                            */}
                           </div>
+                          {/*
+                            PASİF "+" SEBEBİNİ SÖYLÜYOR.
+
+                            Duvar dolduğunda düğme sessizce soluklaşıyordu;
+                            kullanıcı kabin eklenmemesini arıza sanıyordu.
+                            Not yalnızca sınıra GERÇEKTEN ulaşıldığında var,
+                            yoksa ayarların ortasında boşuna yer kaplıyor.
+                          */}
+                          {(cols >= colsMax || rows >= rowsMax) && (
+                            <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
+                              {t('screen.duvarDoldu')}
+                            </div>
+                          )}
 
                           {/*
                             YÖN AYRI BİR KARAR DEĞİL.
@@ -13041,6 +13103,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           </button>
           </div>
           )}
+          {/*
+            PASİF DÜĞME SEBEBİNİ SÖYLÜYOR.
+
+            Mini PC sorusu cevaplanmadan rapor alınamıyor ama düğme sessizce
+            soluk duruyordu: kullanıcı neyi eksik bıraktığını bilmiyordu.
+            Model yokken not yazılmıyor — o durumda zaten hiçbir şey seçilmemiş.
+          */}
+          {!olcuAcik && hasModel && hasMiniPc === null && (
+            <div className="mt-1.5 text-[13px] text-neutral-500 dark:text-neutral-400">{t('pdf.miniPcNot')}</div>
+          )}
 
           {/*
             Gizlilik ve Güvenlik Notu — sağ panelin en altında, iletişim/PDF
@@ -13483,24 +13555,48 @@ function EkranNumaralari({ ekranlar, aktifId }) {
         const x = k.reduce((a, pt) => a + pt.x, 0) / 4
         const y = k.reduce((a, pt) => a + pt.y, 0) / 4
         const acik = e.id === aktifId
+        /*
+         * KÜÇÜK EKRANIN ROZETİ EKRANIN ÜSTÜNDE.
+         *
+         * Rozet her zaman dörtgenin ORTASINDAYDI. Fotoğrafa gerçek
+         * ölçüsüyle oturan 0,32 × 0,16 m'lik bir ekran tuvalde rozetten
+         * küçük kalıyor ve numara ekranı tamamen kapatıyordu. Ekran
+         * rozete yer vermiyorsa rozet küçülüp üst kenarın dışına çıkıyor.
+         */
+        const enPx = Math.min(
+          Math.hypot(k[1].x - k[0].x, k[1].y - k[0].y),
+          Math.hypot(k[2].x - k[3].x, k[2].y - k[3].y),
+        )
+        const boyPx = Math.min(
+          Math.hypot(k[3].x - k[0].x, k[3].y - k[0].y),
+          Math.hypot(k[2].x - k[1].x, k[2].y - k[1].y),
+        )
+        const cap = acik ? 30 : 24
+        const sigmiyor = Math.min(enPx, boyPx) < cap * 1.35
+        const kucukCap = 18
+        const capSon = sigmiyor ? kucukCap : cap
+        /* Üst kenarın ortası: rozet oraya, biraz da yukarı çıkıyor. */
+        const ustX = (k[0].x + k[1].x) / 2
+        const ustY = (k[0].y + k[1].y) / 2
         return (
           <span
             key={e.id ?? e.sira}
             style={{
               position: 'absolute',
-              left: x,
-              top: y,
+              left: sigmiyor ? ustX : x,
+              top: sigmiyor ? ustY - capSon * 0.75 : y,
               transform: 'translate(-50%, -50%)',
-              width: acik ? 30 : 24,
-              height: acik ? 30 : 24,
+              width: capSon,
+              height: capSon,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: acik ? 15 : 12.5,
+              fontSize: sigmiyor ? 11 : acik ? 15 : 12.5,
               fontWeight: 700,
               color: '#ffffff',
-              background: acik ? '#2962ad' : 'rgba(0,19,52,0.55)',
+              /* Ekranın dışına çıkan rozet fotoğrafın üstünde okunsun. */
+              background: acik ? '#2962ad' : sigmiyor ? 'rgba(0,19,52,0.8)' : 'rgba(0,19,52,0.55)',
               boxShadow: acik ? '0 0 0 3px rgba(41,98,173,0.35)' : 'none',
             }}
           >

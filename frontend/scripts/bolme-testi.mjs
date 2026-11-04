@@ -114,17 +114,34 @@ await s.waitForTimeout(800)
 await bas('Devam', 1500)
 
 /*
- * Üç ekran kuruluyor, sonra duvar dibi BİR KEZ işaretleniyor: yeni
- * yolda yerleştirme ekran ekran değil, tek adımda ve hepsi birden.
+ * ÜÇ EKRAN: HER BİRİ KURULUP YERİNE KONUYOR.
+ *
+ * İki şey değişti ve test eski yola göre yazılmıştı:
+ *  - "+ Ekran ekle" yerleştirme sürerken kapalı; önce eldeki ekran
+ *    yerine konuyor, sonra yenisi ekleniyor.
+ *  - Yerleştirilmemiş ekran fotoğrafta HİÇ çizilmiyor (yanlış ölçekli
+ *    önizleme yanıltıyordu). İçerik paylaşımını ölçmek için üçü de
+ *    yerleştirilmiş olmalı.
  */
 /* Ekran ekle artık kare bir kutu; veri niteliğinden tıklanıyor. */
 const ekranEkle = async () => {
   await s.evaluate(() => document.querySelector('[data-ekle] button')?.click())
   await s.waitForTimeout(2500)
 }
-await ekranEkle()
-await ekranEkle()
-console.log('3 ekran kuruldu (ilk ikisi sabit)')
+const mY = await tuval()
+const alanlar = [
+  [[0.22, 0.30], [0.38, 0.30], [0.38, 0.52], [0.22, 0.52]],
+  [[0.42, 0.30], [0.58, 0.30], [0.58, 0.52], [0.42, 0.52]],
+  [[0.62, 0.30], [0.78, 0.30], [0.78, 0.52], [0.62, 0.52]],
+]
+for (let i = 0; i < alanlar.length; i++) {
+  if (i > 0) await ekranEkle()
+  /* Birden çok ekran varken hangisinin yerleştirileceği listeden seçiliyor. */
+  await bas(`${i + 1}. ekranı yerleştir`, 1200)
+  await tikla(alanlar[i].map(([a, b]) => [mY.x + mY.w * a, mY.y + mY.h * b]))
+  await bas('Bu ekranı onayla', 1800)
+}
+console.log('3 ekran kuruldu ve yerleştirildi')
 await yerlesmeyiBekle()
 
 /*
@@ -194,7 +211,12 @@ const olcum = await s.evaluate(() => {
   for (const e of document.querySelectorAll('#pdf-onizleme div')) {
     const st = getComputedStyle(e)
     if (st.backgroundImage.indexOf('url(') < 0) continue
-    if (e.offsetWidth < 20 || e.offsetHeight < 20) continue
+    /*
+     * Eşik 20 pikseldi. Tasarım artık fotoğrafa GERÇEK ölçüsüyle oturuyor:
+     * 210 cm referansla 0,32 × 0,16 m'lik bir ekran ~28 × 14 piksel kalıyor
+     * ve yerleşmiş ekranların hepsi eşiğin altında eleniyordu.
+     */
+    if (e.offsetWidth < 10 || e.offsetHeight < 10) continue
     /* Hangi ekran: etkin tasarımın içinde mi, sabit katmanda mı. */
     let etkin = false
     for (let d = e; d; d = d.parentElement) if (d.hasAttribute && d.hasAttribute('data-tasarim-yuz')) { etkin = true; break }
