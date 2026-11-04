@@ -493,69 +493,34 @@ function Duvar({ ortak, screenType, curveAmount, leftCols, rightCols, lYon, uvOf
  * görseli şeridin tamamına yayılıp her ekranın genişlik payına düşen dilimi o
  * ekrana verilir. Her ekran kendi biçimini (düz / kavisli / iç L) korur.
  */
-/*
- * Kabin ızgarası dışarı da veriliyor: mekân fotoğrafının üstündeki yerinde
- * 3D katmanı (Mekan3D.jsx) aynı ekranı çiziyor. İki yerde iki ayrı ekran
- * geometrisi tutmak, birinde yapılan düzeltmenin ötekine geçmemesi demekti.
+/**
+ * BİR İÇERİĞİN DOKUSU.
+ *
+ * Görsel ve video aynı yoldan geçiyor: görselde doğrudan doku, videoda her
+ * karesi bir tuvale çizilen tuval dokusu (bkz. aşağıdaki açıklama). Kanca
+ * olarak ayrıldı ki HER EKRAN kendi dokusunu kurabilsin — "Her ekran ayrı"
+ * seçiliyken bütün ekranlar tek bir görseli gösteriyordu.
  */
-export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, screenType, curveAmount, leftCols, rightCols, lYon, screens }) {
-  const cabW = (model?.widthMm || 500) / 1000
-  const cabH = (model?.heightMm || 500) / 1000
-  /*
-   * KALINLIK BİLGİSİ YOKSA TAHMİN YOK.
-   *
-   * Eksik derinlik 100 mm sayılıyordu: kalınlığı girilmemiş bir model,
-   * girilmiş gibi kalın bir gövdeyle çiziliyordu. Bilinmeyen bir ölçüyü
-   * uydurmak, çizmemekten kötü — teklife giren bir sayı bu.
-   */
-  const cabD = model?.depthMm > 0 ? model.depthMm / 1000 : 0.01
-
-  /*
-   * İÇERİK KAYNAĞI
-   *
-   * Eskiden yalnızca `contentUrl` kullanılıyordu; o da sadece kullanıcı kendi
-   * görselini YÜKLEDİĞİNDE doluyor. "Örnek görüntü" seçiliyken tasarımda resim
-   * görünüyor ama 3D'de görünmüyordu, çünkü onun kaynağı `contentUrl` değil
-   * varsayılan görsel. Kaynak artık 2D tarafla (CurvedScreen) aynı kuralla
-   * seçiliyor.
-   */
-  /*
-   * İÇERİK EKRANIN KENDİ KAYDINDAN DA OKUNUYOR.
-   *
-   * Yalnızca GENEL içerik okunuyordu. Görsel ekranın kendi kartından
-   * (ya da birleşimin paylaşılan görselinden) seçilince genel içerik
-   * 'led' kalıyor ve 3D'de ekran bomboş görünüyordu.
-   */
-  const etkin = useMemo(() => {
-    const dolu = (c) => c && c !== 'led' && c !== 'none'
-    if (dolu(content)) return { content, contentUrl }
-    const k = (screens || []).find((x) => dolu(x?.content))
-    return k ? { content: k.content, contentUrl: k.contentUrl || null } : { content, contentUrl }
-  }, [content, contentUrl, screens])
-
+function useIcerikDokusu(content, contentUrl) {
   const src = useMemo(() => {
-    if (etkin.content === 'photo') return DEFAULT_CONTENT_SRC
-    if (etkin.content === 'upload' && etkin.contentUrl) return etkin.contentUrl
+    if (content === 'photo') return DEFAULT_CONTENT_SRC
+    if (content === 'upload' && contentUrl) return contentUrl
     // Geriye dönük: içerik türü bilinmiyorsa elde bir URL varsa o kullanılır
-    if (!etkin.content && etkin.contentUrl) return etkin.contentUrl
+    if (!content && contentUrl) return contentUrl
     return null
-  }, [etkin])
+  }, [content, contentUrl])
 
   // VİDEO içerik ('Örnek video' ve yüklenen video) — 2D tarafla aynı kural
-  const videoSrc = useMemo(() => videoSrcFor(etkin.content, etkin.contentUrl), [etkin])
+  const videoSrc = useMemo(() => videoSrcFor(content, contentUrl), [content, contentUrl])
 
   /*
    * VİDEO DA 3D'DE VE AR'DE GÖRÜNÜR.
    *
-   * Belirti: tasarımda video seçiliyken 3D görünümde ve oradan açılan AR'de
-   * panel simsiyah bir kutu olarak duruyordu — çünkü doku yalnızca GÖRSEL
-   * kaynaklardan üretiliyor, video hiç okunmuyordu.
-   *
    * Video doğrudan THREE.VideoTexture ile de verilebilirdi, ama AR için sahne
    * GLB dosyasına aktarılıyor ve GLTFExporter video dokusunu yazamıyor: AR'de
-   * panel yine boş kalırdı. Bunun yerine videonun kareleri bir tuvale
-   * çiziliyor ve tuval dokusu kullanılıyor. Tuval hem 3D'de canlı akar hem de
-   * dışa aktarımda o anki kare gömülü görsel olarak GLB'ye girer.
+   * panel boş kalırdı. Bunun yerine videonun kareleri bir tuvale çiziliyor ve
+   * tuval dokusu kullanılıyor. Tuval hem 3D'de canlı akar hem de dışa
+   * aktarımda o anki kare gömülü görsel olarak GLB'ye girer.
    */
   const texture = useMemo(() => {
     if (videoSrc) {
@@ -603,6 +568,188 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
     texture.needsUpdate = true
   })
 
+  return texture
+}
+
+/** İçerik gerçekten bir görsel/video mu (LED yüzey ve "yok" sayılmıyor). */
+const icerikDolu = (c) => c && c !== 'led' && c !== 'none'
+
+/**
+ * ŞERİTTEKİ TEK EKRAN — kendi içeriğiyle.
+ *
+ * Ekranın kendi kaydında içerik varsa o kullanılıyor ("Her ekran ayrı");
+ * yoksa tasarımın geneli. Paylaşılan tek görselde her ekran aynı kaynağı
+ * alıyor ve uv dilimiyle kendi payını gösteriyor (bkz. uvOffset/uvRepeat).
+ */
+function EkranYuzeyi({ y, ortak, curveAmount, genel }) {
+  const kendi = icerikDolu(y.s.content)
+    ? { content: y.s.content, contentUrl: y.s.contentUrl || null }
+    : genel
+  const texture = useIcerikDokusu(kendi.content, kendi.contentUrl)
+  return (
+    <Duvar
+      ortak={{ ...ortak, cols: y.s.cols, rows: y.s.rows, texture }}
+      screenType={y.s.type || 'flat'}
+      curveAmount={curveAmount}
+      leftCols={y.s.leftCols}
+      lYon={y.s.lYon}
+      rightCols={y.s.rightCols}
+      uvOffset={y.uvOffset}
+      uvRepeat={y.uvRepeat}
+      payL={y.payL}
+      payR={y.payR}
+    />
+  )
+}
+
+/**
+ * KÜPÜN ÜST YÜZÜ — TEK PARÇA KAPAK, İÇERİĞİ DÖRT ÜÇGEN.
+ *
+ * 2D'de kapak tek bir görselin kutunun açılımı gibi dört üçgene bölünmüş
+ * hâli (bkz. Kup2D). Aynı görüntü burada bir tuvale çiziliyor ve kapak
+ * düzlemine doku olarak veriliyor: her üçgen görselin kendi payını dış
+ * kenardan merkeze doğru gösteriyor. Tuval dokusu GLB'ye de gömülebiliyor,
+ * yani AR'de de aynı kapak görünüyor.
+ */
+function kapakTuvali(gorsel) {
+  const S = 1024
+  const c = document.createElement('canvas')
+  c.width = S
+  c.height = S
+  const ctx = c.getContext('2d')
+  ctx.fillStyle = '#0a0a0a'
+  ctx.fillRect(0, 0, S, S)
+  /* kirp: üçgenin köşeleri (0–1). don: görseli o üçgene oturtan dönüşüm. */
+  const ucgenler = [
+    {
+      kirp: [[0, 1], [1, 1], [0.5, 0.5]],
+      don: (x) => { x.translate(0, S); x.scale(1, -1) },
+    },
+    {
+      kirp: [[1, 0], [1, 1], [0.5, 0.5]],
+      don: (x) => { x.translate(S, 0); x.rotate(Math.PI / 2) },
+    },
+    {
+      kirp: [[0, 0], [1, 0], [0.5, 0.5]],
+      don: (x) => { x.translate(S, 0); x.scale(-1, 1) },
+    },
+    {
+      kirp: [[0, 0], [0, 1], [0.5, 0.5]],
+      don: (x) => { x.translate(0, S); x.rotate(-Math.PI / 2) },
+    },
+  ]
+  for (const u of ucgenler) {
+    ctx.save()
+    ctx.beginPath()
+    u.kirp.forEach(([x, y], i) => (i ? ctx.lineTo(x * S, y * S) : ctx.moveTo(x * S, y * S)))
+    ctx.closePath()
+    ctx.clip()
+    u.don(ctx)
+    ctx.drawImage(gorsel, 0, 0, S, S / 2)
+    ctx.restore()
+  }
+  return c
+}
+
+function KupKapak({ kup, cabD, genel }) {
+  const ust = kup.ust
+  const icerik = icerikDolu(ust?.content)
+    ? { content: ust.content, contentUrl: ust.contentUrl || null }
+    : genel
+  const src =
+    icerik?.content === 'photo'
+      ? DEFAULT_CONTENT_SRC
+      : icerik?.content === 'upload' && icerik.contentUrl
+        ? icerik.contentUrl
+        : null
+  const [doku, setDoku] = useState(null)
+  useEffect(() => {
+    if (!src) {
+      setDoku(null)
+      return undefined
+    }
+    let birakildi = false
+    const g = new Image()
+    g.crossOrigin = 'anonymous'
+    g.onload = () => {
+      if (birakildi) return
+      const tex = new THREE.CanvasTexture(kapakTuvali(g))
+      tex.colorSpace = THREE.SRGBColorSpace
+      tex.anisotropy = 4
+      setDoku(tex)
+    }
+    g.src = src
+    return () => {
+      birakildi = true
+    }
+  }, [src])
+  useEffect(() => () => doku?.dispose?.(), [doku])
+
+  /* Kapak kutunun tam üstünde; ölçüsü 5. ekran varsa onun, yoksa kutunun. */
+  const en = ust?.wm > 0 ? Math.min(ust.wm, kup.en) : kup.en
+  const derin = ust?.hm > 0 ? Math.min(ust.hm, kup.derin) : kup.derin
+  return (
+    <group position={[0, kup.boy / 2, 0]}>
+      {/* Gövde: kapağın kendi kalınlığı, kutunun kasasıyla aynı koyu renk. */}
+      <mesh position={[0, -cabD / 2, 0]}>
+        <boxGeometry args={[kup.en, cabD, kup.derin]} />
+        <meshStandardMaterial roughness={0.55} metalness={0.15} color="#12151c" />
+      </mesh>
+      {/* Yüzey: yukarı bakan düzlem, içeriği dört üçgen. */}
+      <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[en, derin]} />
+        {doku ? (
+          <meshBasicMaterial map={doku} toneMapped={false} />
+        ) : (
+          <meshStandardMaterial color="#0a0a0a" roughness={0.6} />
+        )}
+      </mesh>
+    </group>
+  )
+}
+
+/*
+ * Kabin ızgarası dışarı da veriliyor: mekân fotoğrafının üstündeki yerinde
+ * 3D katmanı (Mekan3D.jsx) aynı ekranı çiziyor. İki yerde iki ayrı ekran
+ * geometrisi tutmak, birinde yapılan düzeltmenin ötekine geçmemesi demekti.
+ */
+export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLevel, screenType, curveAmount, leftCols, rightCols, lYon, screens, grupTipi = null }) {
+  const cabW = (model?.widthMm || 500) / 1000
+  const cabH = (model?.heightMm || 500) / 1000
+  /*
+   * KALINLIK BİLGİSİ YOKSA TAHMİN YOK.
+   *
+   * Eksik derinlik 100 mm sayılıyordu: kalınlığı girilmemiş bir model,
+   * girilmiş gibi kalın bir gövdeyle çiziliyordu. Bilinmeyen bir ölçüyü
+   * uydurmak, çizmemekten kötü — teklife giren bir sayı bu.
+   */
+  const cabD = model?.depthMm > 0 ? model.depthMm / 1000 : 0.01
+
+  /*
+   * İÇERİK KAYNAĞI
+   *
+   * Eskiden yalnızca `contentUrl` kullanılıyordu; o da sadece kullanıcı kendi
+   * görselini YÜKLEDİĞİNDE doluyor. "Örnek görüntü" seçiliyken tasarımda resim
+   * görünüyor ama 3D'de görünmüyordu, çünkü onun kaynağı `contentUrl` değil
+   * varsayılan görsel. Kaynak artık 2D tarafla (CurvedScreen) aynı kuralla
+   * seçiliyor.
+   */
+  /*
+   * İÇERİK EKRANIN KENDİ KAYDINDAN DA OKUNUYOR.
+   *
+   * Yalnızca GENEL içerik okunuyordu. Görsel ekranın kendi kartından
+   * (ya da birleşimin paylaşılan görselinden) seçilince genel içerik
+   * 'led' kalıyor ve 3D'de ekran bomboş görünüyordu.
+   */
+  const etkin = useMemo(() => {
+    if (icerikDolu(content)) return { content, contentUrl }
+    const k = (screens || []).find((x) => icerikDolu(x?.content))
+    return k ? { content: k.content, contentUrl: k.contentUrl || null } : { content, contentUrl }
+  }, [content, contentUrl, screens])
+
+  /* Tek ekran dalının dokusu; çoklu ekranda her ekran kendisininkini kuruyor. */
+  const texture = useIcerikDokusu(etkin.content, etkin.contentUrl)
+
   /*
    * Kabin araligi 3D'de de cizilmiyor: govde tek parca gorunsun.
    * Yuksek detayda kabinler arasinda 3 mm bosluk birakiliyordu ve ekranin
@@ -610,9 +757,65 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
    */
   const showBezels = false
 
+  /*
+   * KÜP: GERÇEK KAPALI KUTU.
+   *
+   * Küp birleşimi şerit kuralıyla diziliyordu; zincir dört yüzü yan yana
+   * koyuyor, kutu kapanmıyordu. Burada dört yan yüz kutunun kenarlarına
+   * oturuyor (ön, sağ, arka, sol) ve beşinci ekran varsa üste kapak olarak
+   * yatıyor. Ölçüler 2D ile aynı kuraldan: en = karşılıklı ön/arka,
+   * derinlik = karşılıklı sağ/sol, yükseklik = en uzun yüz.
+   */
+  const kup = useMemo(() => {
+    if (grupTipi !== 'kutu' || !screens?.length || screens.length < 4) return null
+    const yan = screens.slice(0, 4).map((s) => ({
+      ...s,
+      cols: Math.max(1, s.cols || 1),
+      rows: Math.max(1, s.rows || 1),
+    }))
+    const gEn = (s) => (s.wm > 0 ? s.wm : s.cols * cabW)
+    const en = Math.max(gEn(yan[0]), gEn(yan[2]))
+    const derin = Math.max(gEn(yan[1]), gEn(yan[3])) || en
+    const boy = Math.max(...yan.map((s) => s.rows * cabH))
+    if (!(en > 0) || !(derin > 0) || !(boy > 0)) return null
+    /* Paylaşılan tek görsel yüzlere sırayla bölünüyor (2D ile aynı kural). */
+    const gercekW = yan.map(gEn)
+    const kumeToplam = new Map()
+    const kumeOnceki = new Map()
+    yan.forEach((e, i) => {
+      if (!e.paylasim) return
+      kumeOnceki.set(i, kumeToplam.get(e.paylasim) || 0)
+      kumeToplam.set(e.paylasim, (kumeToplam.get(e.paylasim) || 0) + gercekW[i])
+    })
+    /* Ön +z, sağ +x, arka −z, sol −x; her yüz dışarı bakıyor. */
+    const yerler = [
+      { x: 0, z: derin / 2, rot: 0 },
+      { x: en / 2, z: 0, rot: -Math.PI / 2 },
+      { x: 0, z: -derin / 2, rot: Math.PI },
+      { x: -en / 2, z: 0, rot: Math.PI / 2 },
+    ]
+    const yuzler = yan.map((s, i) => {
+      const kumeW = s.paylasim ? kumeToplam.get(s.paylasim) : 0
+      const dilimVar = kumeW > 0 && gercekW[i] > 0
+      return {
+        key: i,
+        s,
+        x: yerler[i].x,
+        y: (s.rows * cabH - boy) / 2,
+        z: yerler[i].z,
+        rot: yerler[i].rot,
+        uvOffset: dilimVar ? kumeOnceki.get(i) / kumeW : 0,
+        uvRepeat: dilimVar ? gercekW[i] / kumeW : 1,
+        payL: 0,
+        payR: 0,
+      }
+    })
+    return { yuzler, ust: screens[4] || null, en, derin, boy }
+  }, [screens, cabW, cabH, grupTipi])
+
   // Çoklu ekran: şerit üzerinde konumlar
   const yerlesim = useMemo(() => {
-    if (!screens?.length) return null
+    if (!screens?.length || grupTipi === 'kutu') return null
     const list = screens.map((s) => ({
       ...s,
       cols: Math.max(1, s.cols || 1),
@@ -688,22 +891,34 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
     })
   }, [screens, cabW, cabH, cabD, curveAmount])
 
+  if (kup) {
+    return (
+      <group>
+        {kup.yuzler.map((y) => (
+          <group key={y.key} position={[y.x, y.y, y.z]} rotation={[0, y.rot, 0]}>
+            <EkranYuzeyi
+              y={y}
+              ortak={{ cabW, cabH, cabD, showBezels }}
+              curveAmount={curveAmount}
+              genel={etkin}
+            />
+          </group>
+        ))}
+        <KupKapak kup={kup} cabD={cabD} genel={etkin} />
+      </group>
+    )
+  }
+
   if (yerlesim) {
     return (
       <group>
         {yerlesim.map((y) => (
           <group key={y.key} position={[y.x, y.y, y.z]} rotation={[0, y.rot || 0, 0]}>
-            <Duvar
-              ortak={{ cabW, cabH, cabD, cols: y.s.cols, rows: y.s.rows, texture, showBezels }}
-              screenType={y.s.type || 'flat'}
+            <EkranYuzeyi
+              y={y}
+              ortak={{ cabW, cabH, cabD, showBezels }}
               curveAmount={curveAmount}
-              leftCols={y.s.leftCols}
-              lYon={y.s.lYon}
-              rightCols={y.s.rightCols}
-              uvOffset={y.uvOffset}
-              uvRepeat={y.uvRepeat}
-              payL={y.payL}
-              payR={y.payR}
+              genel={etkin}
             />
           </group>
         ))}
@@ -723,7 +938,7 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
   )
 }
 
-function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenType, curveAmount, leftCols, rightCols, lYon, screens }) {
+function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenType, curveAmount, leftCols, rightCols, lYon, screens, grupTipi }) {
   const { camera } = useThree()
   const cabinetCount = screens?.length
     ? screens.reduce((acc, s) => acc + Math.max(1, s.cols || 1) * Math.max(1, s.rows || 1), 0)
@@ -777,6 +992,7 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
           rightCols={rightCols}
           lYon={lYon}
           screens={screens}
+          grupTipi={grupTipi}
         />
       </group>
 
@@ -1031,13 +1247,18 @@ function useGlbAr() {
 }
 
 /** Alt bardaki arka plan düğmesi — kameradaki AracDugme ile aynı görünüm. */
-function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
+function ArkaPlanDugme({ onClick, etiket, deger, aktif = false, pasif = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={pasif}
       className={`flex flex-col items-center justify-center gap-0.5 px-3 py-3 min-h-[44px] min-w-[64px] rounded-lg transition-colors ${
-        aktif ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
+        pasif
+          ? 'text-white/30 cursor-not-allowed'
+          : aktif
+            ? 'bg-white/20 text-white'
+            : 'text-white/70 hover:text-white'
       }`}
     >
       <span className="text-[10px] uppercase tracking-wide">{etiket}</span>
@@ -1046,7 +1267,7 @@ function ArkaPlanDugme({ onClick, etiket, deger, aktif = false }) {
   )
 }
 
-export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, lYon = 'ice', screens, onOpenCamera, onSaved }) {
+export default function Scene3D({ open, onClose, model, cols, rows, content, contentUrl, screenType = 'flat', curveAmount = 60, leftCols, rightCols, lYon = 'ice', screens, grupTipi = null, sahneFoto = null, kullaniciFoto = null, onOpenCamera, onSaved }) {
   const { t } = useLang()
   const { onReady, exportAndOpen, close, viewerUrl, iosUrl, busy, uyari, setUyari } = useGlbAr()
   /* Tasarımda köşe var mı: tek ekranın kendi türü ya da listedeki herhangi biri. */
@@ -1394,6 +1615,40 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
   const [ornekAcik, setOrnekAcik] = useState(false)
   const fotoRef = useRef(null)
 
+  /*
+   * 3B, 2D'DEKİ MEKÂNLA AÇILIYOR.
+   *
+   * Arka plan bomboş (koyu stüdyo) başlıyordu; kullanıcı 2D'de bir mekân
+   * seçmiş olsa bile 3B'de onu görmüyordu. Fotoğraflı mekân varsa o,
+   * yoksa 2D'deki örnek mekânın arka planı alınıyor.
+   */
+  useEffect(() => {
+    if (!open) return
+    setArkaFoto(kullaniciFoto || sahneFoto || null)
+  }, [open, kullaniciFoto, sahneFoto])
+
+  /*
+   * AR AÇILAMAYACAKSA SEBEBİ BAŞTAN BELLİ.
+   *
+   * AR'ı açan şey platformun kendi görüntüleyicisi: Android'de Scene
+   * Viewer, iOS'ta Quick Look (bağlantının `ar` ilişkisini desteklemesi),
+   * ya da WebXR. Masaüstü tarayıcıda bunların hiçbiri yok; düğmeye basmak
+   * dosya üretip hiçbir şey açmamak demekti.
+   */
+  const arEngeli = useMemo(() => {
+    if (typeof navigator === 'undefined') return null
+    const mobil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+    let quickLook = false
+    try {
+      quickLook = !!document.createElement('a').relList?.supports?.('ar')
+    } catch {
+      quickLook = false
+    }
+    const webxr = !!navigator.xr
+    if (mobil || quickLook || webxr) return null
+    return t('scene3d.arMasaustu')
+  }, [t])
+
   /** Kendi fotoğrafını arka plan yap. */
   const fotoSecildi = (e) => {
     const f = e.target.files?.[0]
@@ -1437,23 +1692,60 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
    */
   const cabW = (model?.widthMm || 500) / 1000
   const cabH = (model?.heightMm || 500) / 1000
-  const toplamW = cokluVar
-    ? screens.reduce((acc, s) => {
-        const u = ekranUclari(s, cabW, curveAmount)
-        return acc + (u.sag.x - u.sol.x)
-      }, 0)
-    : Math.max(1, cols) * cabW
-  const toplamH = cokluVar
-    ? Math.max(...screens.map((s) => Math.max(1, s.rows || 1))) * cabH
-    : Math.max(1, rows) * cabH
   /*
-   * İLK AÇILIŞTA HER ŞEY KADRAJDA.
+   * KÜPÜN ÖLÇÜSÜ ZİNCİRDEN OKUNAMAZ.
    *
-   * 45° görüş açısıyla genişliğin 0,95 katı uzaklık, kenarları kadraj
-   * dışında bırakıyordu. Yarısının tanjantından türeyen asgari uzaklık
-   * genişliğin ~1,2 katı; üstüne biraz pay konuyor.
+   * Şerit kuralı yüzlerin izdüşümünü topluyor; küpte yüzler 90° dönük
+   * olduğu için toplam neredeyse sıfıra iniyor ve kamera kutunun İÇİNDE
+   * açılıyordu. Küpte ölçü kutunun kendisinden: kadraja girmesi gereken
+   * genişlik köşegeni, yükseklik de yüz boyu.
    */
-  const uzaklik = Math.max(1.6, toplamW * 1.25, toplamH * 2)
+  const kupOlcu = (() => {
+    if (grupTipi !== 'kutu' || !Array.isArray(screens) || screens.length < 4) return null
+    const gEn = (s) => (s?.wm > 0 ? s.wm : Math.max(1, s?.cols || 1) * cabW)
+    const en = Math.max(gEn(screens[0]), gEn(screens[2]))
+    const derin = Math.max(gEn(screens[1]), gEn(screens[3])) || en
+    const boy = Math.max(...screens.slice(0, 4).map((s) => Math.max(1, s.rows || 1) * cabH))
+    return en > 0 && derin > 0 && boy > 0 ? { en, derin, boy } : null
+  })()
+  const toplamW = kupOlcu
+    ? Math.hypot(kupOlcu.en, kupOlcu.derin)
+    : cokluVar
+      ? screens.reduce((acc, s) => {
+          const u = ekranUclari(s, cabW, curveAmount)
+          return acc + (u.sag.x - u.sol.x)
+        }, 0)
+      : Math.max(1, cols) * cabW
+  const toplamH = kupOlcu
+    ? kupOlcu.boy
+    : cokluVar
+      ? Math.max(...screens.map((s) => Math.max(1, s.rows || 1))) * cabH
+      : Math.max(1, rows) * cabH
+  /*
+   * İLK AÇILIŞTA DÜZ ÖNDEN BAKIŞ, TASARIM KADRAJI DOLDURUYOR.
+   *
+   * Kamera köşeli tasarımlarda yana kaydırılıyor, ayrıca hep biraz
+   * yukarıdan bakıyordu; 3B açılır açılmaz tasarım eğri görünüyordu.
+   * Açılış artık tam karşıdan (x = 0, y = 0). Uzaklık kadrajdan geliyor:
+   * dikeyde görüş açısının yarısının tanjantı, yatayda aynı açının en/boy
+   * oranıyla genişletilmiş hâli; hangi eksen önce doluyorsa o belirliyor.
+   * %12 pay kenarların kadraja yapışmasını önlüyor.
+   */
+  const GORUS_ACISI = 45
+  const yariFov = ((GORUS_ACISI / 2) * Math.PI) / 180
+  const enBoy =
+    typeof window !== 'undefined' && window.innerHeight > 0
+      ? Math.max(0.5, window.innerWidth / window.innerHeight)
+      : 1.6
+  const yatayYari = Math.atan(Math.tan(yariFov) * enBoy)
+  const uzaklik =
+    Math.max(
+      1.2,
+      (toplamH / 2 / Math.tan(yariFov)) * 1.12,
+      (toplamW / 2 / Math.tan(yatayYari)) * 1.12,
+    ) +
+    /* Küpte kamera kutunun ön yüzüne değil, kutunun tamamına bakıyor. */
+    (kupOlcu ? kupOlcu.derin / 2 : 0)
 
   return (
     <div className="fixed inset-0 z-[60] bg-[#0b0d12]">
@@ -1482,15 +1774,24 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
         <span className="text-white/50 text-[11px] min-w-0 max-w-full">
           {cabinetCount > MAX_DETAILED_CABINETS ? t('scene3d.lodLow') : t('scene3d.lodHigh')}
         </span>
-        <div className="ml-auto w-full sm:w-auto flex justify-end">
+        <div className="ml-auto w-full sm:w-auto flex flex-col items-stretch sm:items-end">
           <button
             type="button"
             onClick={exportAndOpen}
-            disabled={busy}
+            disabled={busy || !!arEngeli}
             className="rounded-full px-4 py-3 min-h-[44px] text-[13px] font-semibold bg-brand text-white hover:bg-brand-dark disabled:opacity-50 transition-colors w-full sm:w-auto"
           >
             {busy ? t('scene3d.exporting') : t('scene3d.viewInAr')}
           </button>
+          {/*
+            SEBEBİ DÜĞMENİN ALTINDA.
+            AR'ı açamayan cihazda düğmeye basılıyor, dosya üretiliyor ve
+            hiçbir şey olmuyordu. Engel baştan biliniyorsa (masaüstü
+            tarayıcı) düğme pasif ve altında tek satır sebep yazıyor.
+          */}
+          {arEngeli && (
+            <span className="mt-1 text-[11px] text-white/55 text-center sm:text-right">{arEngeli}</span>
+          )}
         </div>
       </div>
 
@@ -1502,14 +1803,10 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
       <Canvas
         shadows
         gl={{ preserveDrawingBuffer: true }}
-        /*
-          Köşe varsa kamera baştan biraz yana: karşıdan bakınca köşeli
-          tasarım düz bir şerit gibi görünüyor, köşe ancak döndürünce
-          anlaşılıyordu.
-        */
+        /* Açılış: tam karşıdan, tasarım kadrajı dolduracak uzaklıkta. */
         camera={{
-          position: [koseliMi ? uzaklik * 0.38 : 0, toplamH * 0.12, koseliMi ? uzaklik * 0.95 : uzaklik],
-          fov: 45,
+          position: [0, 0, uzaklik],
+          fov: GORUS_ACISI,
           far: Math.max(100, uzaklik * 10),
         }}
         dpr={[1, 2]}
@@ -1527,6 +1824,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           rightCols={rightCols}
           lYon={lYon}
           screens={screens}
+          grupTipi={grupTipi}
         />
         <IlkKare onIlkKare={() => setSahneHazir(true)} />
         {/*
@@ -1545,10 +1843,16 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           rotateSpeed={0.42}
           enableDamping
           dampingFactor={0.09}
-          minPolarAngle={Math.PI * 0.3}
+          minPolarAngle={Math.PI * 0.18}
           maxPolarAngle={Math.PI * 0.54}
-          minDistance={0.8}
-          maxDistance={Math.max(12, uzaklik * 3)}
+          /*
+            YAKINLAŞMANIN DA SINIRI VAR.
+            Alt sınır sabit 0,8 m idi: küçük bir tasarımda kamera kabinin
+            içine girebiliyordu. İki sınır da açılış uzaklığına oranlı,
+            yani tasarım büyüdükçe birlikte büyüyor.
+          */
+          minDistance={Math.max(0.4, uzaklik * 0.35)}
+          maxDistance={uzaklik * 3}
         />
       </Canvas>
 
@@ -1590,17 +1894,31 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
       {/* ---------------------------------------------------------- ALT BAR */}
       <div className="absolute bottom-2 left-2 right-2 sm:bottom-0 sm:inset-x-0 pb-3 sm:pb-4 pt-6 sm:pt-8 bg-gradient-to-t from-black/80 to-transparent">
         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-2 sm:px-4">
+          {/*
+            ÖRNEK MEKÂN: 2D'DE SEÇİLİ OLAN.
+            Tasarım ekranında bir mekân seçiliyse (AVM koridoru, şehir
+            meydanı gibi) 3B de onun arka planını kullanıyor; çizimle
+            yapılan mekânlarda (İç/Dış mekân) fotoğraf olmadığı için
+            buradaki örnek şeridi açılıyor.
+          */}
           <ArkaPlanDugme
-            onClick={() => setOrnekAcik((a) => !a)}
+            onClick={() => (sahneFoto ? setArkaFoto(sahneFoto) : setOrnekAcik((a) => !a))}
             etiket={t('ar.background')}
             deger={t('ar.samples')}
-            aktif={ornekAcik}
+            aktif={ornekAcik || (!!sahneFoto && arkaFoto === sahneFoto)}
           />
+          {/*
+            FOTOĞRAF: KULLANICININ 2D'DE YÜKLEDİĞİ.
+            Burada ayrı bir dosya seçtirmek iki ayrı fotoğraf demekti;
+            2D'de yüklenen fotoğraf neyse 3B'de de o. Fotoğraf yoksa
+            seçenek pasif ve altında sebebi yazıyor.
+          */}
           <ArkaPlanDugme
-            onClick={() => fotoRef.current?.click()}
+            onClick={() => kullaniciFoto && setArkaFoto(kullaniciFoto)}
             etiket={t('ar.background')}
             deger={t('ar.photo')}
-            aktif={!!arkaFoto && !ORNEK_MEKANLAR.some((o) => o.yol === arkaFoto)}
+            pasif={!kullaniciFoto}
+            aktif={!!kullaniciFoto && arkaFoto === kullaniciFoto}
           />
           {/* Vazgeçme yolu: arka planı kaldırıp koyu stüdyo zeminine döner */}
           {arkaFoto && (
@@ -1611,6 +1929,12 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
             />
           )}
         </div>
+        {/* Pasif seçeneğin sebebi: kullanıcı neden basamadığını bilsin. */}
+        {!kullaniciFoto && (
+          <p className="mt-1.5 text-center text-[11px] text-white/45 px-4 sm:px-8 m-0 pointer-events-none max-w-full">
+            {t('scene3d.fotoYok')}
+          </p>
+        )}
         <p className="mt-2 text-center text-[11px] text-white/50 px-4 sm:px-8 m-0 pointer-events-none max-w-full">
           {t('scene3d.hint')}
         </p>

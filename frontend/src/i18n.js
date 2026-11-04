@@ -1716,6 +1716,8 @@ const dict = {
   'scene3d.takePhoto': { tr: 'Fotoğraf çek', en: 'Take a photo', ar: 'التقاط صورة' },
   'scene3d.arHint': { tr: 'Kamerayı zemine doğrultun, ekranı sürükleyerek yerleştirin; iki parmakla döndürün ve boyutlandırın.', en: 'Point the camera at the floor, drag to place the screen; pinch to rotate and resize.', ar: 'وجّه الكاميرا نحو الأرض، اسحب لوضع الشاشة؛ استخدم إصبعين للتدوير وتغيير الحجم.' },
   'scene3d.arUnsupported': { tr: 'Bu cihazda AR açılamıyor. Telefonunuzun kamerasıyla denemek için sayfayı telefondan açın.', en: 'AR is not available on this device. Open the page on your phone to try it with the camera.', ar: 'الواقع المعزز غير متاح على هذا الجهاز. افتح الصفحة على هاتفك لتجربته بالكاميرا.' },
+  'scene3d.arMasaustu': { tr: 'AR yalnızca telefon ve tablette açılır.', en: 'AR opens on phones and tablets only.', ar: 'يفتح الواقع المعزز على الهواتف والأجهزة اللوحية فقط.' },
+  'scene3d.fotoYok': { tr: 'Fotoğraf için önce "Kendi fotoğrafım" ile bir fotoğraf yükleyin.', en: 'Upload a photo with "My photo" first.', ar: 'حمّل صورة عبر "صورتي" أولاً.' },
   'scene3d.arReady': { tr: 'Model hazır — telefonda AR düğmesine dokunun', en: 'Model ready — tap the AR button on your phone', ar: 'النموذج جاهز — انقر على زر الواقع المعزز على هاتفك' },
   /* Kısa tutuldu: dar panelde üç satıra taşıp gereğinden çok yer kaplıyordu. */
   'wiz.entry': { tr: 'Hangi modeli seçeceğinizi bilmiyor musunuz?', en: 'Not sure which model to pick?', ar: 'لا تعرف أي طراز تختار؟' },

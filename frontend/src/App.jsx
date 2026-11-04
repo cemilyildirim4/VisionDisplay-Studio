@@ -13474,6 +13474,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             lYon={lYon}
             curveAmount={curveAmount}
             screens={cokluAktif ? ekranSeridi : null}
+            /* Küp gerçek kutu olarak çizilsin: birleşim tipi 3B'ye de gidiyor. */
+            grupTipi={cokluAktif ? grup?.tip || null : null}
+            /*
+             * ARKA PLAN 2D İLE AYNI.
+             * Seçili mekânın kendi fotoğrafı varsa (AVM koridoru, şehir
+             * meydanı) o; "Kendi fotoğrafım"da kullanıcının yüklediği.
+             */
+            sahneFoto={scene !== 'ozel' ? sahneBul(scene)?.dosya || null : null}
+            kullaniciFoto={ozelSahne?.dosya || null}
             /* AR'de "Kaydet" denen kare de rapora girsin */
             onSaved={kareKaydedildi}
           />
