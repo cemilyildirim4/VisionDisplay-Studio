@@ -11227,7 +11227,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           }`}
         >
           {/* panel-kucuk: masaüstünde içerik bir tık küçülüyor (bkz. index.css). */}
-          <Sigdir className="panel-kucuk flex flex-col gap-2">
+          {/*
+            ALTTAKİ YATAY ÇUBUK KAPALI.
+
+            Dikey kaydırma açık olunca tarayıcı yatayı da "auto" yapıyor:
+            içerik tam sığsa bile bir pikselik yuvarlama (zoom kesirli
+            ölçü üretiyor) ya da beliren dikey çubuğun yediği genişlik
+            panelin altında bir yatay çubuk çıkarıyordu. Panelde yatayda
+            gidilecek bir yer yok — ölçtüm, taşan öğe yok — çubuk da
+            kapatıldı.
+          */}
+          <Sigdir sarmal="lg:overflow-x-hidden" className="panel-kucuk flex flex-col gap-2">
           {/*
             MODEL SEÇİLMEDEN PANEL BOŞ KALMIYOR.
 
@@ -14082,9 +14092,9 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
  * içinde kayıyor, yazı boyu hiç değişmiyor. Kutu ölçüsü de sabit olduğu
  * için duvar ölçüsü gibi satırlar ekran sayısına göre yer değiştirmiyor.
  */
-function Sigdir({ children, className = '' }) {
+function Sigdir({ children, className = '', sarmal = '' }) {
   return (
-    <div className="flex-1 min-h-0 lg:overflow-y-auto">
+    <div className={`flex-1 min-h-0 lg:overflow-y-auto ${sarmal}`}>
       <div className={className}>{children}</div>
     </div>
   )
