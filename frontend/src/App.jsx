@@ -11325,7 +11325,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 (flex-nowrap), dar panelde sayı kutusu birkaç piksel
                 daralıyor ama alt alta düşmüyor.
               */}
-              <div className="flex flex-nowrap items-center gap-x-1.5">
+              <div className="flex flex-nowrap items-center gap-x-5">
                 <SayiKutusu
                   sik
                   etiket={t('wall.width')}
@@ -13766,12 +13766,13 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [icbukey])
   return (
-    <div className="mt-3">
+    <div className="mt-2">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[16px] font-semibold tracking-[0.06em] uppercase text-neutral-600 dark:text-neutral-400">
+        {/* EKRAN TÜRÜ / BOYUT / İÇERİK başlıklarıyla birebir aynı stil. */}
+        <span className="text-[12.5px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
           {t('screen.curveAmount')}
         </span>
-        <span className="text-[16px] font-semibold text-brand">{acilar[durak]}°</span>
+        <span className="text-[12.5px] font-semibold text-brand">{acilar[durak]}°</span>
       </div>
       {/*
         KAYDIRICI YERİNE İKİ AÇI.
@@ -13780,13 +13781,13 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 
         gidip geliyor, hangi değerde olduğunu da ayrı bir yazıdan okumak
         gerekiyordu. Düğmeler seçeneği doğrudan gösteriyor.
       */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-1.5">
         {[32, 64].map((a) => (
           <button
             key={a}
             type="button"
             onClick={() => onChange(acidanYuzde(a))}
-            className={`rounded-lg py-2 text-[15px] font-semibold transition-colors ${
+            className={`rounded-md px-2 py-1.5 text-[12px] font-semibold transition-colors ${
               acilar[durak] === a
                 ? 'bg-brand text-white'
                 : 'border border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300'
