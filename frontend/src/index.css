@@ -354,13 +354,18 @@ html, body {
    boşlukları da aynı oranda indiriyor, satır kaymıyor) ve panelin üst/alt
    payı biraz daralıyor.
 
-   NOT: ekran sayısı arttıkça liste uzuyor; 3–5 ekranlı bir tasarım hiçbir
-   yazı boyutunda sığmaz, orada kaydırma kalıyor. Daha fazla küçültmek yazıyı
-   okunmaz yapardı.
+   KAYDIRMA ÇUBUĞU YATAY TAŞMAYA YOL AÇIYORDU. Beş ekranda panel dikey
+   kayıyor, kaydırma çubuğu içeriden 15 piksel yiyor ve duvar satırının "m"
+   birimi dışarı taşıyordu; panelin altında bir de yatay kaydırma çubuğu
+   çıkıyordu. Küçültme oranı artınca satır o 15 pikseli kaldırıyor.
+
+   NOT: ekran sayısı arttıkça liste uzuyor; kısa bir pencerede (768 piksel
+   boy) beş ekran hiçbir OKUNUR yazı boyutunda sığmaz, orada dikey kaydırma
+   kalıyor. Daha fazla küçültmek yazıyı okunmaz yapardı.
    --------------------------------------------------------------------------- */
 @media (min-width: 1024px) {
   .panel-kucuk {
-    zoom: 0.88;
+    zoom: 0.8;
   }
   .yatay-panel-model {
     padding-top: 0.85rem;
