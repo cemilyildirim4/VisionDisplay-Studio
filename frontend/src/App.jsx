@@ -11315,7 +11315,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 (flex-nowrap), dar panelde sayı kutusu birkaç piksel
                 daralıyor ama alt alta düşmüyor.
               */}
-              <div className="flex flex-nowrap items-center gap-x-2">
+              <div className="flex flex-nowrap items-center gap-x-1.5">
                 <SayiKutusu
                   sik
                   etiket={t('wall.width')}
@@ -11471,7 +11471,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           {e.sira}. {t('ekran.tekil')}
                         </span>
                         <span className="block truncate text-[11.5px] font-medium leading-tight tabular-nums text-neutral-700 dark:text-neutral-200">
-                          {t(`screen.${e.ayar.screenType || 'flat'}`)} · {e.ayar.cols || 1}×{e.ayar.rows || 1}
+                          {e.ayar.cols || 1}×{e.ayar.rows || 1}
                         </span>
                       </button>
                     </li>
@@ -11750,8 +11750,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 Birleştirecek ikinci bir ekran yoksa bölümün de işi yok.
               */}
               {hasModel && ekranOzetleri.length > 1 && (
-                <div className="mt-2 rounded-lg border border-neutral-200 dark:border-[#2c333f] p-2">
-                  <div className="text-[15px] font-semibold text-neutral-700 dark:text-neutral-200">
+                /*
+                  BÖLÜM TEK SATIRA İNDİ.
+
+                  Başlık, şekil düğmeleri, çipler ve alttaki iki denetim alt
+                  alta duruyordu: 245 piksel. Hiçbiri kalkmadı, yalnızca
+                  sarmal "flex-wrap" oldu ve her öğeye sıra (order) verildi:
+                  başlık + şekiller bir satır, çipler bir satır, "tek görsel"
+                  ile "Ayır" bir satır. JSX sırası değişmediği için okuma
+                  sırası (ekran okuyucu, sekme) aynı kaldı.
+                */
+                <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg border border-neutral-200 dark:border-[#2c333f] p-1.5">
+                  <div className="order-1 shrink-0 text-[12px] font-semibold text-neutral-700 dark:text-neutral-200">
                     {t('yerlesim.baslik')}
                   </div>
 
@@ -11767,7 +11777,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     Seçim durumu çipin KENDİSİNDE (dolu mavi), ayrı bir
                     kutucuğa gerek yok.
                   */}
-                  <div className="mt-1 grid grid-cols-2 gap-1">
+                  <div
+                    className="order-2 grid w-full gap-0.5"
+                    /* Kaç ekran varsa o kadar sütun: liste hep tek satır. */
+                    style={{ gridTemplateColumns: `repeat(${ekranOzetleri.length}, minmax(0, 1fr))` }}
+                  >
                     {ekranOzetleri.map((e) => {
                       const secili = grupSecim.includes(e.id)
                       return (
@@ -11779,13 +11793,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             setGrupSecim(yeni)
                             birlesimiKur(grupTipi, yeni, grupAcisi, lYonSecim)
                           }}
-                          className={`flex min-w-0 items-center gap-1 rounded-lg border px-1 py-0.5 text-[12.5px] transition-colors ${
+                          className={`flex min-w-0 items-center gap-0.5 rounded-md border px-0.5 py-0.5 text-[10.5px] leading-tight transition-colors ${
                             secili
                               ? 'border-brand bg-brand text-white'
                               : 'border-neutral-300 text-neutral-600 hover:border-brand dark:border-[#39414f] dark:text-neutral-300'
                           }`}
                         >
-                          <span className="relative h-4 w-6 shrink-0 overflow-hidden rounded border border-black/15">
+                          <span className="relative h-3 w-4 shrink-0 overflow-hidden rounded-sm border border-black/15">
                             <IcerikOnizleme
                               oge={icerikHavuzuTam.find((x) => x.id === e.havuzId)}
                               dilim={e.dilim}
@@ -11805,7 +11819,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     Her şeklin kendi en az ekran sayısı var: U üç, küp dört
                     yüzeyden oluşuyor.
                   */}
-                  <div className="mt-2 grid grid-cols-5 gap-1">
+                  <div className="order-1 grid min-w-0 flex-1 grid-cols-5 gap-0.5">
                     {Object.entries(GRUP_EN_AZ).map(([tip, enAz]) => (
                       <button
                         key={tip}
@@ -11847,7 +11861,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           }
                         }}
                         title={t('yerlesim.' + tip)}
-                        className={`rounded-md py-1 text-[12px] font-semibold leading-tight transition-colors disabled:opacity-40 ${
+                        className={`rounded-md px-0.5 py-0.5 text-[10.5px] font-semibold leading-tight transition-colors disabled:opacity-40 ${
                           grup && grupTipi === tip
                             ? 'bg-brand text-white'
                             : 'border border-neutral-300 text-neutral-600 enabled:hover:border-brand enabled:hover:text-brand dark:border-[#39414f] dark:text-neutral-400'
@@ -11859,7 +11873,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </div>
                   {/* Eksik olan ne, düğmenin altında yazıyor. */}
                   {grupSecim.length < 4 && (
-                    <p className="mt-1.5 mb-0 text-[13px] leading-snug text-red-600 dark:text-red-400">
+                    <p className="order-3 m-0 w-full text-[11px] leading-snug text-red-600 dark:text-red-400">
                       {grupSecim.length < 2
                         ? t('yerlesim.enAzIki')
                         : grupSecim.length < 3
@@ -11881,7 +11895,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     İkisinde de düğmeler duruyor ama hiçbir şey yapmıyordu.
                   */}
                   {(grupTipi === 'l' || grupTipi === 'u') && (
-                    <div className="mt-2 flex overflow-hidden rounded-lg border border-neutral-300 dark:border-[#39414f]">
+                    <div className="order-4 flex w-full overflow-hidden rounded-lg border border-neutral-300 dark:border-[#39414f]">
                       {['ice', 'disa'].map((y) => (
                         <button
                           key={y}
@@ -11913,8 +11927,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     geliyor (bkz. eklemVarsayilanAcisi).
                   */}
                   {['acili', 'l', 'u'].includes(grupTipi) && grup && Array.isArray(grup.uyeler) && grup.uyeler.length > 1 && (
-                    <div className="mt-2">
-                      <div className="mb-1 text-[13.5px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
+                    <div className="order-5 w-full">
+                      <div className="mb-1 text-[12px] font-semibold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
                         {t('eklem.baslik')}
                       </div>
                       {/*
@@ -12022,14 +12036,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     öğreniyordu. Ekran tipi düğmeleri gibi hep duruyorlar,
                     birleşim yokken sönük ve tıklanamaz.
                   */}
-                  <div className="mt-2 flex w-full overflow-hidden rounded-lg border border-neutral-200 dark:border-[#2c333f]">
+                  <div className="order-6 flex min-w-0 flex-1 overflow-hidden rounded-lg border border-neutral-200 dark:border-[#2c333f]">
                     {[true, false].map((v) => (
                       <button
                         key={String(v)}
                         type="button"
                         disabled={!grup}
                         onClick={() => setGrup((g) => (g ? { ...g, tekGorsel: v } : g))}
-                        className={`flex-1 px-1 py-1 text-[13.5px] disabled:opacity-40 ${
+                        className={`flex-1 px-0.5 py-0.5 text-[11px] leading-tight disabled:opacity-40 ${
                           grup && (grup.tekGorsel !== false) === v
                             ? 'bg-brand text-white'
                             : 'text-neutral-600 dark:text-neutral-300'
@@ -12043,7 +12057,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     type="button"
                     disabled={!grup}
                     onClick={grubuAyir}
-                    className="mt-1.5 w-full rounded-lg border border-neutral-200 py-1 text-[13.5px] font-medium text-neutral-600 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 dark:border-[#2c333f] dark:text-neutral-400"
+                    className="order-6 shrink-0 rounded-lg border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-neutral-600 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 dark:border-[#2c333f] dark:text-neutral-400"
                   >
                     {t('yerlesim.ayir')}
                   </button>
@@ -14146,7 +14160,7 @@ function FieldLabel({ children, muted = false }) {
 function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null, etiketUstte = false, sik = false }) {
   const [taslak, setTaslak] = useState(null)
   const dugme =
-    (sik ? 'h-6 w-5 ' : 'h-6 w-6 ') +
+    (sik ? 'h-[22px] w-[17px] ' : 'h-6 w-6 ') +
     'shrink-0 rounded border border-neutral-300 text-[15px] leading-none text-neutral-700 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-35 dark:border-[#39414f] dark:text-neutral-200'
   /* Ondalık adımda kayan nokta kalıntısı kalmasın (0,1+0,2). */
   const yuvarla = (v) => Number(v.toFixed(2))
@@ -14172,9 +14186,9 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
         <span className="flex min-w-0 items-center gap-1">{ic}</span>
       </span>
     ) : (
-      <span className="flex min-w-0 items-center gap-1">
+      <span className={`flex min-w-0 items-center ${sik ? 'gap-0.5' : 'gap-1'}`}>
         <span
-          className={`shrink-0 text-neutral-600 dark:text-neutral-300 ${sik ? 'text-[13px]' : 'text-[13.5px]'}`}
+          className={`shrink-0 text-neutral-600 dark:text-neutral-300 ${sik ? 'text-[12px]' : 'text-[13.5px]'}`}
         >
           {etiket}
         </span>
@@ -14205,7 +14219,7 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
         onFocus={(e) => e.currentTarget.select()}
         aria-label={etiket}
         className={`min-w-0 rounded border border-transparent bg-transparent px-0.5 text-center font-semibold tabular-nums text-neutral-800 outline-none transition-colors hover:border-neutral-300 focus:border-brand dark:text-neutral-100 dark:hover:border-[#39414f] ${
-          sik ? 'w-[2.5rem] shrink-0 text-[14px]' : 'w-[3.4rem] text-[14.5px]'
+          sik ? 'w-[2.2rem] shrink-0 text-[13px]' : 'w-[3.4rem] text-[14.5px]'
         }`}
       />
       <button
@@ -14217,7 +14231,13 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
       >
         +
       </button>
-      {birim && <span className="shrink-0 text-[13px] text-neutral-500 dark:text-neutral-400">{birim}</span>}
+      {birim && (
+        <span
+          className={`shrink-0 text-neutral-500 dark:text-neutral-400 ${sik ? 'text-[12px]' : 'text-[13px]'}`}
+        >
+          {birim}
+        </span>
+      )}
     </Sarmal>
   )
 }
