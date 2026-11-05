@@ -20,27 +20,26 @@
  * sayısından; kollar birbirinden farklı olabilir.
  */
 import { Screen } from './WallPreview.jsx'
+import { birlesimDilimleri } from './birlesimOlcu.js'
 
 /*
- * YUVARLAK EKLEM = EKRANIN KENDİ SON KABİNİ BÜKÜLÜYOR.
+ * YUVARLAK EKLEM = İKİ EKRAN TEK YAY.
  *
  * Önce köşeye ayrı bir kabin konuyordu (tasarımda olmayan bir parça gibi
- * duruyor, kabin sayısını artırıyordu), sonra kutuların köşeleri
- * yuvarlatıldı (border-radius): köşenin üstünde ve altında mantar gibi
- * şişkinlik çıkıyor, kenarlar bombeli görünüyordu.
+ * duruyordu), sonra yalnızca soldaki ekranın SON KABİNİ bükülüyordu: iki
+ * yanı düz, ortasında kısa bir dönüş olan bu biçim hâlâ köşe gibi, hatta
+ * araya sıkışmış ek bir parça gibi okunuyordu.
  *
- * Gerçekte bükülebilen bir LED panelde köşeyi EKRANIN KENDİ son kabini
- * döner. Soldaki ekranın son kabin genişliği ince dilimlere bölünüyor ve
- * her dilim yayın bir parçası kadar dönüyor: üstten bakınca köşe yumuşak
- * bir yay, önden bakınca üst ve alt kenar düz. Ekranın eni, kabin sayısı
- * ve toplam ölçü değişmiyor — bükülen kısım onun kendi parçası.
+ * Artık dönüş, yuvarlak eklemle bağlanan ekranların TAMAMINA dağılıyor:
+ * iki ekran kavisli tek bir ekran gibi birleşiyor, bütün eklemler
+ * yuvarlaksa grup baştan sona pürüzsüz bir yay oluyor. Dilimleri ölçüyle
+ * ortak hesap veriyor (bkz. birlesimOlcu → birlesimDilimleri), yani
+ * duvarda yazan genişlik çizilenle birebir aynı.
  *
  * Dilim, ekranın görüntüsünü TAM eninde çizip yalnızca kendi payına düşen
- * pencereyi gösteriyor: görüntü kavis boyunca kesintisiz akıyor, dilim
+ * pencereyi gösteriyor: görüntü yay boyunca kesintisiz akıyor, dilim
  * sınırında ayırıcı çizgi ya da çerçeve oluşmuyor.
  */
-/* Bükülen kabini kaç dilim anlatıyor. */
-const KAVIS_DILIM = 10
 /* Dönen dilimler kıl payı bindiriliyor: aralarında boşluk görünmesin. */
 const BINDIRME = 0.6
 
@@ -103,35 +102,14 @@ export default function Birlesim2D({
   /*
    * ÜSTTEN BAKIŞ, DİLİM DİLİM.
    *
-   * Düz duran ekran tek parça. Yuvarlak eklemin SOLUNDAKİ ekranın son
-   * kabini KAVIS_DILIM dilime bölünüyor; dilimler ekranın kendi açısından
-   * başlayıp komşusunun açısında bitiyor, yani kabin bir yay çiziyor.
-   * Dilimler uç uca eklendiği için yüzeyin uzunluğu değişmiyor.
+   * Köşeli eklemle biten ekran tek parça. Yuvarlak eklemle bağlı ekranlar
+   * tek bir yay: dönüş zincirin tamamına dağılıyor, araya kabin ya da köşe
+   * parçası girmiyor. Dilimler uç uca eklendiği için yüzeyin uzunluğu
+   * değişmiyor (bkz. birlesimOlcu → birlesimDilimleri).
    */
-  const dilimler = []
-  parcalar.forEach((p, i) => {
-    const sonraki = parcalar[i + 1]
-    const bukum = p.e.yuvarlakSag && sonraki && Math.abs(sonraki.t - p.t) > 0.001
-    if (!bukum) {
-      dilimler.push({ p, w: p.w, t: p.t, u0: 0, dilim: false })
-      return
-    }
-    /* Bükülen yer tam bir kabin: ekranın eni ve kabin sayısı değişmiyor. */
-    const kabin = Math.min(p.w, p.w / Math.max(1, p.e.cols || 1))
-    const duz = p.w - kabin
-    if (duz > 0.5) dilimler.push({ p, w: duz, t: p.t, u0: 0, dilim: false })
-    const adim = kabin / KAVIS_DILIM
-    for (let m = 0; m < KAVIS_DILIM; m++) {
-      dilimler.push({
-        p,
-        w: adim,
-        /* İlk dilim ekranın kendi açısında, son dilim komşusunun açısında. */
-        t: p.t + ((sonraki.t - p.t) * m) / (KAVIS_DILIM - 1),
-        u0: duz + m * adim,
-        dilim: true,
-      })
-    }
-  })
+  const dilimler = birlesimDilimleri(
+    parcalar.map((p) => ({ w: p.w, t: p.t, yuvarlak: !!p.e.yuvarlakSag })),
+  ).map((d) => ({ ...d, p: parcalar[d.i], dilim: d.yay }))
   if (!dilimler.length) return null
 
   let x = 0

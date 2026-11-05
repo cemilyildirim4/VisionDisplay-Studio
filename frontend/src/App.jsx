@@ -2913,16 +2913,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     })
 
     /*
-     * YUVARLAK EKLEM = YALNIZCA BİRLEŞEN KÖŞELER YUMUŞUYOR.
+     * YUVARLAK EKLEM = BİRLEŞEN EKRANLAR TEK YAY.
      *
-     * Bir ara köşeye bükülmüş bir kabin konuyordu ("gerçekte köşeyi
-     * bükülmüş bir kabin döner" diye). Tasarımda bu, olmayan bir ekran
-     * parçası gibi duruyordu: kabin sayısı artıyor, şeritte fazladan bir
-     * yüzey beliriyordu. İstenen bu değil — ekranlar kendi eniyle
-     * kalıyor, yalnızca BİRLEŞTİKLERİ köşeler yuvarlanıyor.
+     * Bir ara köşeye bükülmüş ayrı bir kabin konuyordu, sonra yalnızca
+     * soldaki ekranın son kabini bükülüyordu; ikisi de tasarımda araya
+     * sıkışmış fazladan bir parça gibi duruyordu. Artık dönüş, yuvarlak
+     * eklemle bağlanan ekranların tamamına dağılıyor: köşe kalmıyor,
+     * ekranlar kavisli tek bir ekran gibi birleşiyor.
      *
-     * Hangi uçların yuvarlanacağı burada işaretleniyor; çizimi Birlesim2D
-     * yapıyor. Ölçü, kabin sayısı ve içerik bölünmesi değişmiyor.
+     * Hangi eklemin yuvarlak olduğu burada işaretleniyor; çizimi
+     * Birlesim2D, duvardaki genişliği ve ölçü etiketlerini birlesimOlcu
+     * aynı dilimlerden hesaplıyor. Ekranların eni, kabin sayısı ve içerik
+     * bölünmesi değişmiyor.
      */
     if (!koseBicimleri || !koseBicimleri.some((k) => k === 'yuvarlak')) return seritli
     return seritli.map((p) => {
