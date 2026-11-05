@@ -11308,14 +11308,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             <div className="mb-1">
               <h2 className="text-[20px] font-bold tracking-tight m-0 mb-1">{t('wall.heading')}</h2>
               {/*
-                Genişlik ve yükseklik HER ZAMAN yan yana: satır sarması
-                açıkken panelin genişliğine göre bazen alt alta, bazen yan
-                yana diziliyordu (bkz. Sigdir). İkisi tek satırda; dar
-                panelde sayı kutuları birkaç piksel daralıyor, o kadar.
+                GENİŞLİK VE YÜKSEKLİK TEK SATIRDA.
+
+                Etiketler denetimin ÜSTÜNDEYDİ, yani iki satır kaplıyordu.
+                İkisi de kendi etiketiyle aynı hizada; satır sarması kapalı
+                (flex-nowrap), dar panelde sayı kutusu birkaç piksel
+                daralıyor ama alt alta düşmüyor.
               */}
-              <div className="flex items-center gap-x-3">
+              <div className="flex flex-nowrap items-center gap-x-2">
                 <SayiKutusu
-                  etiketUstte
+                  sik
                   etiket={t('wall.width')}
                   deger={width}
                   onChange={setWidth}
@@ -11325,7 +11327,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   birim="m"
                 />
                 <SayiKutusu
-                  etiketUstte
+                  sik
                   etiket={t('wall.height')}
                   deger={height}
                   onChange={setHeight}
@@ -14141,10 +14143,11 @@ function FieldLabel({ children, muted = false }) {
  * iniyor ve değer kırpılıyordu. Etiket üste alınınca hücre daralıyor,
  * yazı boyutu küçülmeden ikisi yan yana sığıyor.
  */
-function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null, etiketUstte = false }) {
+function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null, etiketUstte = false, sik = false }) {
   const [taslak, setTaslak] = useState(null)
   const dugme =
-    'h-6 w-6 shrink-0 rounded border border-neutral-300 text-[15px] leading-none text-neutral-700 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-35 dark:border-[#39414f] dark:text-neutral-200'
+    (sik ? 'h-6 w-5 ' : 'h-6 w-6 ') +
+    'shrink-0 rounded border border-neutral-300 text-[15px] leading-none text-neutral-700 transition-colors enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-35 dark:border-[#39414f] dark:text-neutral-200'
   /* Ondalık adımda kayan nokta kalıntısı kalmasın (0,1+0,2). */
   const yuvarla = (v) => Number(v.toFixed(2))
   /*
@@ -14170,7 +14173,11 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
       </span>
     ) : (
       <span className="flex min-w-0 items-center gap-1">
-        <span className="shrink-0 text-[13.5px] text-neutral-600 dark:text-neutral-300">{etiket}</span>
+        <span
+          className={`shrink-0 text-neutral-600 dark:text-neutral-300 ${sik ? 'text-[13px]' : 'text-[13.5px]'}`}
+        >
+          {etiket}
+        </span>
         {ic}
       </span>
     )
@@ -14197,7 +14204,9 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
         }}
         onFocus={(e) => e.currentTarget.select()}
         aria-label={etiket}
-        className="w-[3.4rem] min-w-0 rounded border border-transparent bg-transparent px-0.5 text-center text-[14.5px] font-semibold tabular-nums text-neutral-800 outline-none transition-colors hover:border-neutral-300 focus:border-brand dark:text-neutral-100 dark:hover:border-[#39414f]"
+        className={`min-w-0 rounded border border-transparent bg-transparent px-0.5 text-center font-semibold tabular-nums text-neutral-800 outline-none transition-colors hover:border-neutral-300 focus:border-brand dark:text-neutral-100 dark:hover:border-[#39414f] ${
+          sik ? 'w-[2.5rem] shrink-0 text-[14px]' : 'w-[3.4rem] text-[14.5px]'
+        }`}
       />
       <button
         type="button"
