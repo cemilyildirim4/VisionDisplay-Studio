@@ -46,6 +46,18 @@ const HUMAN_FIG_W_RATIO = 518 / 1215
  * etiketlerine ve nefes payına ait.
  */
 const DOLULUK = 0.75
+/*
+ * MEKÂN YOKKEN ÇOK EKRANLI TASARIMDA DUVAR DAHA BÜYÜK.
+ *
+ * Boş tuvalde iki ya da daha çok ekran yan yana dizilince tasarımın her
+ * ekrana düşen payı küçülüyor ve çevredeki boşluk gereğinden geniş
+ * kalıyordu. Yalnızca bu durumda duvar tuvalin %90'ına kadar çıkıyor.
+ *
+ * Etiketler yine kesilmiyor: availW/availH üst sınır olarak duruyor
+ * (tuvalin kenarlarında ölçü yazılarına ayrılmış sabit pay), min() ikisinden
+ * küçüğünü alıyor. Tek ekranda ve mekânlı sahnelerde DOLULUK aynı.
+ */
+const DOLULUK_COK = 0.9
 
 const HUMAN_MIN_WALL_M = HUMAN_HEIGHT_M
 // İç L Tipi: dikiş (köşe) kenarının üstten ve alttan içeri girme oranı (%).
@@ -1176,8 +1188,22 @@ export default function WallPreview({
           ? 152
           : 180
     const dikeyPay = kupKipi ? (dar ? 70 : 84) : sahneVar ? sahnePayM : dar ? 92 : 190
-    const availW = Math.max(dar ? 120 : 180, size.w - yanPay - (showHumanM ? 24 : 0))
-    const availH = Math.max(dar ? 110 : 140, size.h - dikeyPay)
+    /*
+     * MEKÂN YOKKEN ÇOK EKRANDA PAY DARALIYOR.
+     *
+     * 180 / 190 piksellik pay, duvarın tuvalde kaplayabileceği en büyük
+     * ölçüyü doluluk oranından ÖNCE kesiyordu: %90 istendiğinde bile
+     * duvar %80'de kalıyordu. Pay yalnızca bu durumda (mekân yok, iki ya
+     * da daha çok ekran, geniş pencere, küp değil) etiketlerin gerçekten
+     * ihtiyacı kadarına iniyor: yanda sağdaki ölçü sütunu ve köşe
+     * yazıları, altta genişlik yazısı. Telefonda (dar) ve mekânlı
+     * sahnelerde pay aynı kalıyor.
+     */
+    const cokDuvarKip = !sahneVar && !kupKipi && !dar && list.length > 1
+    const yanPaySon = cokDuvarKip ? 120 : yanPay
+    const dikeyPaySon = cokDuvarKip ? 150 : dikeyPay
+    const availW = Math.max(dar ? 120 : 180, size.w - yanPaySon - (showHumanM ? 24 : 0))
+    const availH = Math.max(dar ? 110 : 140, size.h - dikeyPaySon)
     /*
      * Sahne varsa ölçek mekânın duvarına sabitlenir (sahneOlcek). Ekran mekândan
      * büyükse sığdırma devreye girer — min() ikisinden küçüğünü seçtiği için
@@ -1225,8 +1251,10 @@ export default function WallPreview({
      * pencerede 3/4 oraya sığmıyorsa ölçü yazıları kırpılmasın diye
      * küçüğü alınıyor. Ölçü etiketlerinin yazı boyutu sabit.
      */
-    const kullanW = Math.min(size.w * DOLULUK, availW)
-    const kullanH = Math.min(size.h * DOLULUK, availH)
+    /* Mekân yokken 2+ ekranda duvar tuvalin %90'ına çıkıyor (bkz. DOLULUK_COK). */
+    const doluluk = !sahneVar && list.length > 1 ? DOLULUK_COK : DOLULUK
+    const kullanW = Math.min(size.w * doluluk, availW)
+    const kullanH = Math.min(size.h * doluluk, availH)
     const duvarOlcegi = Number.isFinite(sahneOlcek)
       ? sahneOlcek
       : Math.min(kullanW / (wallWm + humanWmM), kullanH / (wallHm + kavisPayiM))
