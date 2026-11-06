@@ -363,9 +363,32 @@ function cmYukari(metre) {
  */
 const GRUP_EN_AZ = { duz: 2, l: 2, u: 3, kutu: 4, acili: 2 }
 
+/*
+ * ŞEKLİN TAM EKRAN SAYISI.
+ *
+ * L, U ve küp "en az" değil TAM sayıyla kuruluyor: L iki, U üç, küp dört
+ * ekran. Eskiden beş ekranla da U kurulabiliyordu; üç yüzeyli bir şekle
+ * beşinci ekranın nereye gireceği belli olmadığı için arka yüz ikiye
+ * bölünüyor, kullanıcı da neyi kurduğunu göremiyordu. Küpün beşinci
+ * ekranı (üst yüz) bu sayının dışında, kendiliğinden ekleniyor.
+ *
+ * Düz ve açılı serbest: iki ve daha çok ekranla kurulurlar.
+ */
+const GRUP_TAM_SAYI = { l: 2, u: 3, kutu: 4 }
+const tipUygunMu = (tip, sayi) =>
+  GRUP_TAM_SAYI[tip] ? sayi === GRUP_TAM_SAYI[tip] : sayi >= 2
+
+/*
+ * VARSAYILAN AÇI — TİPİN KENDİ ŞEKLİ.
+ *
+ * L, U ve küpte her eklem 90°: bu şekiller artık tam sayıyla kurulduğu
+ * için (L 2, U 3, küp 4) düz kalacak bir eklem de kalmıyor. Eskiden
+ * aradaki eklemler 180° (düz) geliyordu ve beş ekranlı bir U, üç yüz
+ * yerine dört yüz gibi duruyordu.
+ */
 function eklemVarsayilanAcisi(tip, j, uyeSayisi, aciliAci = 135) {
-  if (tip === 'l') return j === Math.max(0, Math.round(uyeSayisi / 2) - 1) ? 90 : 180
-  if (tip === 'u') return j === 0 || j === uyeSayisi - 2 ? 90 : 180
+  if (tip === 'l' || tip === 'u' || tip === 'kutu') return 90
+  if (tip === 'duz') return 180
   return aciliAci
 }
 
@@ -5322,17 +5345,40 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * beklemek yerine çağıran ne verdiyse onunla kuruluyor.
    */
   const birlesimiKur = (tip, secim, aci, yon) => {
-    const sirali = [...sabitEkranlar, { id: aktifEkranId, sira: aktifSira }]
-      .filter((e) => secim.includes(e.id))
-      .sort((a, b) => (a.sira || 0) - (b.sira || 0))
-      .map((e) => e.id)
+    const hepsi = [...sabitEkranlar, { id: aktifEkranId, sira: aktifSira }].sort(
+      (a, b) => (a.sira || 0) - (b.sira || 0),
+    )
+    const sirali = hepsi.filter((e) => secim.includes(e.id)).map((e) => e.id)
     /* İki ekrandan azı birleşim değildir. */
     if (sirali.length < 2) {
       setGrup(null)
       return
     }
+    /*
+     * SAYI ŞEKLE UYMUYORSA AÇILI.
+     *
+     * L seçiliyken üçüncü ekran gruba eklenince şekil L kalamaz; eskiden
+     * üye listesi büyüyor ama tip L kalıyordu ve fazladan ekran düz bir
+     * kuyruk gibi takılıyordu. Grup o anda Açılı'ya geçiyor: açılı her
+     * sayıda kurulabiliyor ve kullanıcı eklemleri tek tek ayarlayabiliyor.
+     */
+    const sonTip = tipUygunMu(tip, sirali.length) ? tip : 'acili'
+    if (sonTip !== tip) setGrupTipi(sonTip)
+    /*
+     * KÜPÜN ÜST YÜZÜ SEÇİME GİRMİYOR.
+     *
+     * Küp DÖRT yan ekranla kuruluyor; üst yüz seçilenlerin dışında kalan
+     * ilk ekrandan kendiliğinden geliyor ve sona ekleniyor (Kup2D beşinci
+     * üyeyi üst yüz sayıyor). Ölçüsü de kendiliğinden kutunun üstünü
+     * kapatacak sayıya geliyor (bkz. kupUstGereken). Elde yedek ekran
+     * yoksa kutunun üstü açık kalıyor — eskiden de öyleydi.
+     */
+    if (sonTip === 'kutu') {
+      const ust = hepsi.find((e) => !sirali.includes(e.id))
+      if (ust) sirali.push(ust.id)
+    }
     setGrup((eski) => ({
-      tip,
+      tip: sonTip,
       aci,
       uyeler: sirali,
       /* Görsel paylaşımı kullanıcının kararı; şekil değişince sıfırlanmıyor. */
@@ -5351,9 +5397,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        */
       eklemler: Array.from({ length: Math.max(0, sirali.length - 1) }, (_, j) => ({
         aci:
-          (eski?.tip === tip ? eski?.eklemler?.[j]?.aci : undefined) ??
-          eklemVarsayilanAcisi(tip, j, sirali.length, aci ?? 135),
-        kose: eski?.eklemler?.[j]?.kose || 'koseli',
+          (eski?.tip === sonTip ? eski?.eklemler?.[j]?.aci : undefined) ??
+          eklemVarsayilanAcisi(sonTip, j, sirali.length, aci ?? 135),
+        /*
+         * L, U ve küp KÖŞELİ doğuyor: köşesi yuvarlatılmış bir L artık
+         * L gibi okunmuyor. Aynı tip içinde kullanıcının seçimi korunuyor.
+         */
+        kose:
+          GRUP_TAM_SAYI[sonTip] && eski?.tip !== sonTip
+            ? 'koseli'
+            : eski?.eklemler?.[j]?.kose || 'koseli',
       })),
     }))
   }
@@ -5443,9 +5496,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const g = grup
     if (g && Array.isArray(g.uyeler) && g.uyeler.includes(id)) {
       const kalan = g.uyeler.filter((x) => x !== id)
-      if (kalan.length < (GRUP_EN_AZ[g.tip] ?? 2)) {
+      if (kalan.length < 2) {
         setGrupTipi('duz')
-        setGrup(kalan.length >= 2 ? { ...g, tip: 'duz', uyeler: kalan, eklemler: [] } : null)
+        setGrup(null)
+      } else if (!tipUygunMu(g.tip, kalan.length)) {
+        /* Kalan sayı bu şekle uymuyor: grup Açılı'ya geçiyor (bkz. tipUygunMu). */
+        setGrupTipi('acili')
+        setGrup({
+          ...g,
+          tip: 'acili',
+          uyeler: kalan,
+          eklemler: Array.from({ length: kalan.length - 1 }, (_, j) => ({
+            aci: eklemVarsayilanAcisi('acili', j, kalan.length, g.aci ?? 135),
+            kose: g.eklemler?.[j]?.kose || 'koseli',
+          })),
+        })
       } else {
         setGrup({
           ...g,
@@ -11832,7 +11897,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     yüzeyden oluşuyor.
                   */}
                   <div className="order-1 grid min-w-0 flex-1 grid-cols-5 gap-0.5">
-                    {Object.entries(GRUP_EN_AZ).map(([tip, enAz]) => (
+                    {Object.keys(GRUP_EN_AZ).map((tip) => (
                       <button
                         key={tip}
                         type="button"
@@ -11845,10 +11910,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           Çip seçilmemişse BÜTÜN ekranlar birleşiyor;
                           seçim varsa yalnızca seçilenler.
                         */
-                        disabled={ekranOzetleri.length < enAz}
+                        /*
+                          SEÇİLİ EKRAN SAYISI TUTMUYORSA DÜĞME PASİF.
+
+                          L iki, U üç, küp dört ekranla kurulur; düz ve
+                          açılı her sayıda. Hiç çip seçilmemişse sayı
+                          bütün ekranlardan okunuyor — düğmeye basmak da
+                          hepsini birleştiriyor.
+                        */
+                        disabled={!tipUygunMu(tip, grupSecim.length || ekranOzetleri.length)}
                         onClick={() => {
                           const secim =
-                            grupSecim.length >= enAz ? grupSecim : ekranOzetleri.map((x) => x.id)
+                            grupSecim.length >= 2 ? grupSecim : ekranOzetleri.map((x) => x.id)
                           setGrupTipi(tip)
                           setGrupSecim(secim)
                           birlesimiKur(tip, secim, grupAcisi, lYonSecim)
@@ -11883,16 +11956,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       </button>
                     ))}
                   </div>
-                  {/* Eksik olan ne, düğmenin altında yazıyor. */}
-                  {grupSecim.length < 4 && (
-                    <p className="order-3 m-0 w-full text-[11px] leading-snug text-red-600 dark:text-red-400">
-                      {grupSecim.length < 2
-                        ? t('yerlesim.enAzIki')
-                        : grupSecim.length < 3
-                          ? t('yerlesim.enAzUc') + ' · ' + t('yerlesim.enAzDort')
-                          : t('yerlesim.enAzDort')}
-                    </p>
-                  )}
+                  {/* Hangi şeklin kaç ekran istediği, düğmelerin altında yazıyor. */}
+                  {(() => {
+                    const sayi = grupSecim.length || ekranOzetleri.length
+                    if (sayi >= 2 && ['l', 'u', 'kutu'].every((x) => tipUygunMu(x, sayi))) return null
+                    return (
+                      <p className="order-3 m-0 w-full text-[11px] leading-snug text-red-600 dark:text-red-400">
+                        {sayi < 2 ? t('yerlesim.enAzIki') : t('yerlesim.sayiKurali')}
+                      </p>
+                    )
+                  })()}
 
                   {/*
                     KÖŞE YÖNÜ — oda köşesi mi kolon köşesi mi.
