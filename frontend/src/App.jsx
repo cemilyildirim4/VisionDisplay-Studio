@@ -148,6 +148,7 @@ import {
 import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
 import TaslakKutu from './TaslakKutu.jsx'
+import FotoYerlesim3D from './FotoYerlesim3D.jsx'
 import AdaySecici from './AdaySecici.jsx'
 import DavetKapisi from './DavetKapisi.jsx'
 import { kenarlaraOturt } from './ekranYuzeyi.js'
@@ -1065,6 +1066,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ("Yerleşimi düzenle").
    */
   const [yerlesimBitti, setYerlesimBitti] = useState(false)
+  /*
+   * TASARIMI EKRANA GETİR — fotoğrafın üstünde 3B yerleşim.
+   *
+   * null iken özellik kapalı ve fotoğraf akışı (dört köşe işaretleme)
+   * olduğu gibi çalışıyor. Açıkken { ux, uy, yaw, egim, kilit }: yer
+   * tuvalin 0..1'i olarak tutuluyor ki tuval ölçüsü değişince tasarım
+   * kaymasın. 'kilit' "Yerleşimi bitir" demek.
+   */
+  const [yer3d, setYer3d] = useState(null)
   const [yerNokta, setYerNokta] = useState([])
   /* Hangi ekranlar yerleşti — yerleşmemişin rozeti çizilmiyor. */
   const [yerlesmisIdler, setYerlesmisIdler] = useState([])
@@ -7054,6 +7064,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const kutuKurulabilir = !!((refPxCm || refDuzlem) && ozelSahne?.kaynak?.w > 0)
 
   /*
+   * 3B YERLEŞİMİN ÖLÇEĞİ — REFERANSTAN, KİLİTLİ.
+   *
+   * refPxCm fotoğrafın KENDİ pikselinde px/cm veriyor. Fotoğraf tuvale
+   * başka bir ölçekte çiziliyor (fotoYer) ve sahne ayrıca
+   * yakınlaştırılabiliyor (sahneYakinlik); üçü çarpılınca tuval
+   * pikselinde metre karşılığı çıkıyor. Kullanıcıya büyütme/küçültme
+   * verilmiyor: tasarım fotoğrafta her zaman gerçek boyutunda duruyor.
+   */
+  const yer3dOlcek = (() => {
+    const kw = ozelSahne?.kaynak?.w
+    if (!(refPxCm?.x > 0) || !(kw > 0) || !(fotoYer?.genislik > 0)) return 0
+    return refPxCm.x * 100 * (fotoYer.genislik / kw) * (sahneYakinlik || 1)
+  })()
+  /* Referans yoksa ölçek de yok: düğme pasif kalıyor. */
+  const yer3dHazir = yer3dOlcek > 0
+  const yer3dAcik = scene === 'ozel' && !!ozelSahne && !!yer3d && yer3dHazir
+  /* Grup varsa grubun tamamı, yoksa eldeki ekran(lar). */
+  const yer3dEkranlar = grupUyeId
+    ? ekranSeridi.filter((x) => grupUyeId.includes(x.id))
+    : ekranSeridi
+
+  /*
    * ÖLÇÜ KUTUSU — TEK KURUCU.
    *
    * Mutlak piksel büyüklüğü doğrudan fiziksel hesaptan:
@@ -9243,6 +9275,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           yerlesmisIdler,
           yerKenarSecim,
           yerlesimBitti,
+          /* 3B yerleşim: yer, bakış açısı ve kilit (bkz. yer3d). */
+          yer3d,
         },
       })
     }, 900)
@@ -9253,7 +9287,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     sabitEkranlar, content, lSolCols, lYon, aktifEkranId, aktifSira, grup,
     icerikGruplari, refNokta, refUzunlukCm, refBoyCm, refTur, fotoOdak, exif35,
     alanNokta, alanKonum, alanOlcek, elleKose, elleYerlesti, yerlesmisIdler,
-    yerKenarSecim, yerlesimBitti,
+    yerKenarSecim, yerlesimBitti, yer3d,
   ])
 
   /*
@@ -9288,6 +9322,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setYerlesmisIdler(Array.isArray(f.yerlesmisIdler) ? f.yerlesmisIdler : [])
       setYerKenarSecim(f.yerKenarSecim || {})
       setYerlesimBitti(!!f.yerlesimBitti)
+      /* 3B yerleşim kayıttan geri geliyor: sayfa yenilenince kaybolmuyor. */
+      setYer3d(f.yer3d && Number.isFinite(f.yer3d.ux) ? f.yer3d : null)
       setSihirbazAdim(0)
       setRefKipi(false)
       setAlanKipi(false)
@@ -10220,11 +10256,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 Önceden fotoğrafın ortasında düz ve yanlış ölçekte bir
                 önizleme duruyordu (bkz. gizle).
               */
+              /* 3B yerleşim açıkken düz önizleme kapanıyor: aynı tasarım iki kez çizilmesin. */
               gizle={
-                scene === 'ozel' &&
-                !!ozelSahne &&
-                !yerlesimBitti &&
-                !yerlesmisIdler.includes(aktifEkranId)
+                yer3dAcik ||
+                (scene === 'ozel' &&
+                  !!ozelSahne &&
+                  !yerlesimBitti &&
+                  !yerlesmisIdler.includes(aktifEkranId))
               }
               model={previewModel}
               width={width}
@@ -10688,6 +10726,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               on={kabinYuzleri.on}
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
+            />
+          )}
+
+          {/*
+            TASARIM FOTOĞRAFIN ÜSTÜNDE — 3B.
+
+            Grubun tamamı gerçek açıları, köşeli/yuvarlak birleşimleri ve
+            görselleriyle çiziliyor; ölçü referanstan geliyor ve kilitli
+            (bkz. FotoYerlesim3D). Kapalıyken aşağıdaki dört köşe akışı
+            olduğu gibi çalışıyor.
+          */}
+          {yer3dAcik && (
+            <FotoYerlesim3D
+              ekranlar={yer3dEkranlar}
+              pxPerM={yer3dOlcek}
+              model={previewModel}
+              resolution={resolution}
+              curveAmount={curveAmount}
+              tuvalW={tuvalBoyut.w}
+              tuvalH={tuvalBoyut.h}
+              durum={yer3d}
+              kilitli={!!yer3d.kilit}
+              onDegis={(y) => setYer3d((eski) => ({ ...eski, ...y }))}
             />
           )}
 
@@ -12380,6 +12441,60 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   düzenle" ile referans kartı yan yana çıkıyor, panel iki
                   adımı birden gösteriyordu.
                 */}
+                {/*
+                  TASARIMI EKRANA GETİR.
+
+                  Dört köşe işaretleme tek ekranı tek düzleme oturtuyor;
+                  birleşik bir tasarımın açıları orada anlatılamıyordu.
+                  Bu düğme grubun TAMAMINI fotoğrafın üstüne koyuyor.
+                  Referans yoksa ölçek de yok: düğme pasif ve altında
+                  önce ne yapılacağı yazıyor.
+                */}
+                {/*
+                  Alan işaretlenirken yazılmıyor (tıklamalar oraya gidiyor);
+                  referans adımlarında duruyor ama PASİF: kullanıcı özelliğin
+                  var olduğunu ve önce neyi yapması gerektiğini orada görüyor.
+                */}
+                {scene === 'ozel' && ozelSahne && !alanKipi && (
+                  <div className="mt-2">
+                    {!yer3d ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={!yer3dHazir}
+                          onClick={() => {
+                            /* Dört köşe akışı kapanıyor: iki katman aynı tıklamayı beklemesin. */
+                            setSihirbazAdim(0)
+                            setYerSira(null)
+                            setYer3d({ ux: 0.5, uy: 0.5, yaw: 0, egim: 0, kilit: false })
+                          }}
+                          className="w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {t('yer3d.getir')}
+                        </button>
+                        {!yer3dHazir && (
+                          <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                            {t('yer3d.refYok')}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setYer3d((y) => ({ ...y, kilit: !y.kilit }))}
+                          className="w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90"
+                        >
+                          {yer3d.kilit ? t('yer3d.duzenle') : t('yer3d.bitir')}
+                        </button>
+                        <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                          {yer3d.kilit ? t('yer3d.sabit') : t('yer3d.ipucu')}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {yerlesimBitti && !olcuAcik && scene === 'ozel' && ozelSahne && (
                   <button
                     type="button"
