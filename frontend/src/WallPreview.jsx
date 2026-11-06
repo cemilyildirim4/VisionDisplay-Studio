@@ -1539,9 +1539,18 @@ export default function WallPreview({
                     left: 0,
                     right: 0,
                     top: 0,
-                    height: stripTop + maxHpx,
+                    /*
+                     * KÜP DUVARIN ORTASINDA.
+                     *
+                     * Çizim tasarım şeridinin ALT çizgisine yaslanıyordu; küpün
+                     * izdüşümü (eğim + perspektif) kendi boyundan uzun olduğu için
+                     * üst yüz duvarın tepesinden taşıp kırpılıyor, altta ise koca
+                     * bir boşluk kalıyordu. Şerit zaten duvarın ortasında, yani
+                     * duvara ortalamak küpü tasarım şeridinin ortasına oturtuyor.
+                     */
+                    bottom: 0,
                     display: 'flex',
-                    alignItems: 'flex-end',
+                    alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >

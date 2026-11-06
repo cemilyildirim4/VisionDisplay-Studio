@@ -30,9 +30,6 @@
 import { useRef, useState } from 'react'
 import { Screen, contentImage } from './WallPreview.jsx'
 
-/* Kaide: küpün altında durduğu yer. Boyu küpün yüksekliğinden türüyor. */
-const KAIDE_ORAN = 0.06
-
 /*
  * BAKIŞ YÜKSEKLİĞİNİN SINIRI.
  *
@@ -64,7 +61,17 @@ export function kupOlculeri(ekranlar) {
   return { enM, derinlikM, boyM }
 }
 
-const UZAK = 1400
+/*
+ * BAKIŞ UZAKLIĞI KUTUNUN KENDİ BOYUNDAN.
+ *
+ * Perspektif sabit 1400 pikselden hesaplanıyordu. Küçük bir küpte bu
+ * doğal duruyor, büyük bir küpte aşırı: yakın yüz üçte bir büyüyor,
+ * çizim gerçek ölçüsünün çok üstüne çıkıyor, duvara sığmıyor ve ÜST YÜZ
+ * duvarın dışında kalıp kırpılıyordu. Uzaklık artık kutunun köşegeninden
+ * türüyor: perspektif her ölçüde aynı güçte, çizim de gerçek ölçüye
+ * yakın kalıyor.
+ */
+const bakisUzakligi = (W, D, H) => Math.max(600, Math.hypot(W, D, H) * 4)
 const PAY = 8
 
 /**
@@ -78,35 +85,39 @@ const PAY = 8
  * Perspektif yüzünden kutu pxPerM ile DOĞRU ORANTILI DEĞİL; ölçek seçerken
  * bu yüzden birkaç kez yaklaşılıyor (bkz. WallPreview).
  */
-export function kupCizimKutusu({ enM, derinlikM, boyM, pxPerM }) {
+export function kupCizimKutusu({ enM, derinlikM, boyM, pxPerM, egim = BASLANGIC_EGIM }) {
   const W = enM * pxPerM
   const D = derinlikM * pxPerM
   const H = boyM * pxPerM
-  const kaide = Math.max(6, H * KAIDE_ORAN)
   const yariKose = Math.hypot(W, D) / 2
-  const kaideYari = (Math.hypot(Math.max(W, D), D) * 1.12) / 2
-  /* Kaide küpün tabanının hemen altında (bkz. KAİDE dönüşümü). */
-  const kaideY = H / 2 + kaide
-  let ustY = Infinity
-  let altY = -Infinity
-  let enGenis = 0
-  for (let d = EGIM_EN_AZ; d <= EGIM_EN_COK + 0.001; d += 2.5) {
-    const e = (Math.min(d, EGIM_EN_COK) * Math.PI) / 180
-    const yakin = (H / 2) * Math.sin(e) + yariKose * Math.cos(e)
-    const k = UZAK / Math.max(1, UZAK - yakin)
-    ustY = Math.min(ustY, -((H / 2) * Math.cos(e) + yariKose * Math.sin(e)) * k)
-    altY = Math.max(altY, (kaideY * Math.cos(e) + kaideYari * Math.sin(e)) * k)
-    enGenis = Math.max(enGenis, Math.max(yariKose, kaideYari) * 2 * k)
-  }
+  /*
+   * KUTU BAKILAN AÇIDAN ÖLÇÜLÜYOR.
+   *
+   * Eskiden bütün eğim aralığı (−10° … 55°) taranıp en uçtaki değerler
+   * alınıyordu. 55°'deki izdüşüm, başlangıçtaki 14°'lik görünüşün üç
+   * katı: kutu o yüzden çizimin çok üstünde çıkıyor, küp hem duvarın
+   * üstüne taşıp KIRPILIYOR hem de ölçek düşürüldüğü için duvarın
+   * ortasında havada asılı duran küçük bir kutuya dönüşüyordu.
+   *
+   * Kutu artık bakılan açıya göre: küp duvarın içinde, tasarım alt
+   * çizgisinin üstünde duruyor. Yatay sürüklemede (aci) kutu değişmiyor;
+   * genişlik ve yükseklik köşegen yarıçapından, yani en geniş duruştan
+   * alınıyor.
+   */
+  const uzak = bakisUzakligi(W, D, H)
+  const e = (Math.min(EGIM_EN_COK, Math.max(EGIM_EN_AZ, Number(egim) || 0)) * Math.PI) / 180
+  const yakin = (H / 2) * Math.abs(Math.sin(e)) + yariKose * Math.cos(e)
+  const k = uzak / Math.max(1, uzak - yakin)
+  const yari = ((H / 2) * Math.cos(e) + yariKose * Math.abs(Math.sin(e))) * k
   return {
-    cizimEn: enGenis + PAY * 2,
-    cizimBoy: altY - ustY + PAY * 2,
+    cizimEn: yariKose * 2 * k + PAY * 2,
+    cizimBoy: yari * 2 + PAY * 2,
     /* Göz hizası: bu noktadaki her şey olduğu yerde kalıyor (perspectiveOrigin). */
-    gozY: -ustY + PAY,
+    gozY: yari + PAY,
     W,
     D,
     H,
-    kaide,
+    uzak,
   }
 }
 
@@ -157,7 +168,7 @@ export default function Kup2D({
    * yani küp duvarla AYNI metre-piksel oranında duruyor. Bu sınır yalnızca
    * son bir güvenlik ağı.
    */
-  const { cizimEn, cizimBoy, gozY, W, D, H, kaide } = kupCizimKutusu({ enM, derinlikM, boyM, pxPerM })
+  const { cizimEn, cizimBoy, gozY, W, D, H, uzak } = kupCizimKutusu({ enM, derinlikM, boyM, pxPerM, egim })
   const olcek = Math.max(
     0.05,
     Math.min(1, enCokW > 0 ? enCokW / cizimEn : 1, enCokH > 0 ? enCokH / cizimBoy : 1),
@@ -236,21 +247,30 @@ export default function Kup2D({
    * kuruluyor: ekran kutunun üstünü tam kapattığında (olağan durum, bkz.
    * App → kupUstGereken) bu kutu zaten üst karenin kendisi.
    *
-   * ÜÇGENLER %1 BİNDİRİLİYOR. Dörtgeni tam dörde bölen köşegenlerde
-   * tarayıcının kenar yumuşatması saç teli kadar bir boşluk bırakıyor ve
-   * köşegenler boyunca altı sızıyordu. Kenarlar birer yüzde dışarı
-   * taşırılıyor: bindirme görünmüyor, boşluk kalmıyor.
+   * DÖRDÜ DE TAM ORTADA BİRLEŞİYOR. Tepe noktaları bir ara birer yüzde
+   * kaydırılmıştı (%49 / %51); dört üçgen ortada tek noktada buluşmuyor,
+   * aralarında kalan küçük alandan alttaki ekranın kendi görseli
+   * sızıyordu — ortada iç içe küçülen bir tünel beliriyordu. Tepe artık
+   * dördünde de tam %50, %50. Bindirme yalnızca DIŞ köşelerde: kenar
+   * yumuşatmasının saç teli kadar boşluğu orada kalıyor.
+   *
+   * GÖRSEL KENARDAN ORTAYA SIKIŞIYOR. Üçgen eskiden yan yüzün görselini
+   * 1:1 gösteriyordu: dört üçgendeki aynı yatay bantlar (ufuk çizgisi,
+   * deniz) ortada iç içe dikdörtgenler oluşturuyordu. Yüzün görseli
+   * artık üçgenin TAMAMINA yayılıyor — tabanda yüzün üst kenarı, tepede
+   * alt kenarı — yani bantlar ortadaki tek noktada buluşuyor.
    */
   const ucgenler = [
-    /* ÖN: taban altta, görsel dikeyde aynalanıyor (kenarda birebir tutsun). */
+    /* ÖN: taban altta (yatırılmış kutuda alt kenar ön kenardır). */
     {
-      kirpma: 'polygon(-1% 101%, 101% 101%, 50% 49%)',
+      kirpma: 'polygon(-1% 101%, 101% 101%, 50% 50%)',
       kutu: { left: 0, top: kapakBoyu / 2, width: kapakEni, height: kapakBoyu / 2 },
       donus: 'scaleY(-1)',
+      derinlik: kapakBoyu / 2,
     },
     /* SAĞ: taban sağda; yüzün görseli önden arkaya akıyor. */
     {
-      kirpma: 'polygon(101% -1%, 101% 101%, 51% 50%)',
+      kirpma: 'polygon(101% -1%, 101% 101%, 50% 50%)',
       kutu: {
         left: (3 * kapakEni) / 4 - kapakBoyu / 2,
         top: kapakBoyu / 2 - kapakEni / 4,
@@ -258,16 +278,18 @@ export default function Kup2D({
         height: kapakEni / 2,
       },
       donus: 'rotate(-90deg) scaleY(-1)',
+      derinlik: kapakEni / 2,
     },
     /* ARKA: taban üstte; yüz 180° dönük olduğu için görsel yatayda ters. */
     {
-      kirpma: 'polygon(-1% -1%, 101% -1%, 50% 51%)',
+      kirpma: 'polygon(-1% -1%, 101% -1%, 50% 50%)',
       kutu: { left: 0, top: 0, width: kapakEni, height: kapakBoyu / 2 },
       donus: 'scaleX(-1)',
+      derinlik: kapakBoyu / 2,
     },
     /* SOL: taban solda; yüzün görseli arkadan öne akıyor. */
     {
-      kirpma: 'polygon(-1% -1%, -1% 101%, 49% 50%)',
+      kirpma: 'polygon(-1% -1%, -1% 101%, 50% 50%)',
       kutu: {
         left: kapakEni / 4 - kapakBoyu / 2,
         top: kapakBoyu / 2 - kapakEni / 4,
@@ -275,6 +297,7 @@ export default function Kup2D({
         height: kapakEni / 2,
       },
       donus: 'rotate(90deg) scaleY(-1)',
+      derinlik: kapakEni / 2,
     },
   ]
 
@@ -358,7 +381,7 @@ export default function Kup2D({
           marginLeft: (-cizimEn) / 2,
           width: cizimEn,
           height: cizimBoy,
-          perspective: UZAK,
+          perspective: uzak,
           /* Göz kutunun ortasında: üst ve alt aynı açıyla açılıyor. */
           perspectiveOrigin: `50% ${gozY}px`,
           transform: olcek < 1 ? `scale(${olcek})` : undefined,
@@ -461,6 +484,13 @@ export default function Kup2D({
                   const gorsel = contentImage(y?.content, y?.contentUrl)
                   /* Paylaşılan bir görsel yoksa devam ettirilecek bir şey de yok. */
                   if (!gorsel || !(ip?.spanW > 0) || !(ip?.spanH > 0)) return null
+                  /*
+                   * Yüzün boyu üçgenin derinliğine sıkışıyor: tabanda yüzün
+                   * ÜST kenarı (yan yüzle birebir tutuyor), tepede alt kenarı.
+                   * Yatayda 1:1, yani kenarda görüntü kopmuyor.
+                   */
+                  const yuzH = yuzBoyu(y)
+                  const f = yuzH > 0 ? u.derinlik / yuzH : 1
                   return (
                     <div
                       key={'ust' + i}
@@ -475,8 +505,8 @@ export default function Kup2D({
                           transformOrigin: '50% 50%',
                           backgroundImage: gorsel,
                           backgroundRepeat: 'no-repeat',
-                          backgroundSize: `${Math.ceil(ip.spanW)}px ${Math.ceil(ip.spanH)}px`,
-                          backgroundPosition: `${-(ip.offsetX || 0)}px ${-(ip.offsetY || 0)}px`,
+                          backgroundSize: `${Math.ceil(ip.spanW)}px ${Math.ceil(ip.spanH * f)}px`,
+                          backgroundPosition: `${-(ip.offsetX || 0)}px ${-(ip.offsetY || 0) * f}px`,
                         }}
                       />
                     </div>
@@ -486,25 +516,15 @@ export default function Kup2D({
             ) : null}
           </div>
 
-          {/* KAİDE — küp zeminde duruyor, tavana asılı değil. */}
-          <div
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: H,
-              width: Math.max(W, D) * 1.12,
-              height: D * 1.12,
-              marginLeft: (-Math.max(W, D) * 1.12) / 2,
-              /*
-               * Plaka kendi MERKEZİNDE yatıyor; merkezi küpün altından
-               * yarım derinlik aşağıda kalıyor ve kaide küpten kopuyordu.
-               * Yatırdıktan sonra o kadar yukarı alınıyor.
-               */
-              transform: `translateY(${-D * 0.56}px) rotateX(90deg) translateZ(${-kaide}px)`,
-              background: 'linear-gradient(180deg, #3a4150, #232935)',
-              borderRadius: 2,
-            }}
-          />
+          {/*
+            KAİDE KALDIRILDI.
+
+            Küpün altına koyu bir plaka konuyordu ("küp zeminde dursun"
+            diye). Kutudan her yöne taşıdığı için tasarım alanının alt
+            çizgisinin altında, ön ekranın altında koyu bir yamuk olarak
+            duruyordu: duvarda karşılığı olmayan, ölçüsü de yazmayan bir
+            şekil. Küp artık yalnızca ekranlardan oluşuyor.
+          */}
         </div>
       </div>
       </div>
