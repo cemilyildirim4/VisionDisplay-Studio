@@ -354,8 +354,6 @@ const dict = {
   'eklem.koseli': { tr: 'Köşeli', en: 'Sharp', ar: 'زاوية حادة' },
   'eklem.yuvarlak': { tr: 'Yuvarlak', en: 'Rounded', ar: 'مستدير' },
   'yerlesim.acili': { tr: 'Açılı', en: 'Angled', ar: 'بزاوية' },
-  'yerlesim.sayiKurali': { tr: 'L 2, U 3, Küp 4 ekranla kurulur.', en: 'L needs 2, U needs 3, Box needs 4 screens.', ar: 'يحتاج L شاشتين وU ثلاث شاشات والمكعب أربع شاشات.' },
-  'yerlesim.enAzIki': { tr: 'En az 2 ekran seçin', en: 'Select at least 2 screens', ar: 'اختر شاشتين على الأقل' },
   'yerlesim.ice': { tr: 'İçe doğru', en: 'Inward', ar: 'إلى الداخل' },
   'yerlesim.disa': { tr: 'Dışa doğru', en: 'Outward', ar: 'إلى الخارج' },
   'yerlesim.birlestir': { tr: 'Birleştir', en: 'Join', ar: 'دمج' },

@@ -12044,16 +12044,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       </button>
                     ))}
                   </div>
-                  {/* Hangi şeklin kaç ekran istediği, düğmelerin altında yazıyor. */}
-                  {(() => {
-                    const sayi = grupSecim.length || ekranOzetleri.length
-                    if (sayi >= 2 && ['l', 'u', 'kutu'].every((x) => tipUygunMu(x, sayi))) return null
-                    return (
-                      <p className="order-3 m-0 w-full text-[11px] leading-snug text-red-600 dark:text-red-400">
-                        {sayi < 2 ? t('yerlesim.enAzIki') : t('yerlesim.sayiKurali')}
-                      </p>
-                    )
-                  })()}
+                  {/*
+                    KAÇ EKRAN GEREKTİĞİ YAZILMIYOR.
+
+                    Düğmelerin altında kırmızı bir satır duruyordu (örn.
+                    "Küp için 4 ekran seçin"). Uymayan düğme zaten soluk ve
+                    tıklanamaz; aynı şeyi bir de yazıyla söylemek paneli
+                    gereksiz kalabalıklaştırıyordu.
+                  */}
 
                   {/*
                     KÖŞE YÖNÜ — oda köşesi mi kolon köşesi mi.
