@@ -5422,6 +5422,69 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
+   * GRUPTAKİ EKRANLAR AYNI YÜKSEKLİKTE.
+   *
+   * "Tek görsel" tek bir görseli bütün gruba yayıyor; satır sayıları
+   * farklı olunca görsel kısa ekranda kırpılıyor, uzununda boşluk
+   * kalıyordu. Grup üyelerinin SATIR sayısı eşit tutuluyor:
+   *
+   *   • eldeki ekranın satırı değişince ötekiler onu izliyor (artırmada
+   *     da azaltmada da),
+   *   • satırları farklı ekranlar gruplanınca hepsi EN ÇOK satırlıya
+   *     çıkıyor (kimsenin tasarımı küçülmesin),
+   *   • sütunlar serbest (Düz, L, U, Açılı); küpte kutu ancak bütün
+   *     yüzler aynı olunca kapandığı için orada sütun da eşitleniyor.
+   *
+   * "Her ekran ayrı" seçiliyse ya da ekran grupta değilse eşitleme yok.
+   */
+  const satirEsitRef = useRef({ imza: '' })
+  useEffect(() => {
+    const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : null
+    if (!uyeler || uyeler.length < 2 || grup.tekGorsel === false) {
+      satirEsitRef.current = { imza: '' }
+      return
+    }
+    /* Paylaşım da imzada: 'Tek görsel'e dönmek yeni bir gruplama sayılıyor. */
+    const imza = (grup.tip || '') + '|' + uyeler.join(',') + '|' + (grup.tekGorsel === false ? 'a' : 't')
+    const kutuKip = grup.tip === 'kutu'
+    const oku = (id) => {
+      if (id === aktifEkranId) return { r: Math.max(1, rows), c: Math.max(1, cols) }
+      const ayar = sabitEkranlar.find((e) => e.id === id)?.ayar || {}
+      return { r: Math.max(1, ayar.rows || 1), c: Math.max(1, ayar.cols || 1) }
+    }
+    const degerler = uyeler.map(oku)
+    const aktifUye = uyeler.includes(aktifEkranId)
+    /* Grup yeni kurulduysa en çok satır; sonrasında eldeki ekranın satırı. */
+    const yeniGrup = satirEsitRef.current.imza !== imza
+    const hedefSatir =
+      yeniGrup || !aktifUye ? Math.max(...degerler.map((x) => x.r)) : Math.max(1, rows)
+    const hedefSutun = !kutuKip
+      ? null
+      : yeniGrup || !aktifUye
+        ? Math.max(...degerler.map((x) => x.c))
+        : Math.max(1, cols)
+    satirEsitRef.current = { imza }
+    setSabitEkranlar((l) => {
+      let degisti = false
+      const yeni = l.map((e) => {
+        if (!uyeler.includes(e.id)) return e
+        const ayar = e.ayar || {}
+        const s2 = Math.max(1, ayar.rows || 1)
+        const c2 = Math.max(1, ayar.cols || 1)
+        if (s2 === hedefSatir && (!hedefSutun || c2 === hedefSutun)) return e
+        degisti = true
+        return { ...e, ayar: { ...ayar, rows: hedefSatir, ...(hedefSutun ? { cols: hedefSutun } : null) } }
+      })
+      return degisti ? yeni : l
+    })
+    if (aktifUye) {
+      if (rows !== hedefSatir) setRows(hedefSatir)
+      if (hedefSutun && cols !== hedefSutun) setCols(hedefSutun)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grup, rows, cols, aktifEkranId])
+
+  /*
    * DÜZ BİRLEŞİM VARSAYILAN.
    *
    * İkinci ekran eklenince hiçbir tip seçili olmuyordu: "Düz" bile
