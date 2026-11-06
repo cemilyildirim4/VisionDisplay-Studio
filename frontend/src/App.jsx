@@ -33,6 +33,7 @@ import {
 } from './referansOlcek.js'
 import { durusDortgeni, faredenDurus, durusaOturt, kutuGovdesi } from './durusKutusu.js'
 import { birlesimKapladigi } from './birlesimOlcu.js'
+import { kupOlculeri, kupCizimKutusu } from './Kup2D.jsx'
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
@@ -5437,7 +5438,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const satirEsitRef = useRef({ imza: '' })
   useEffect(() => {
-    const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : null
+    const hepsiUye = Array.isArray(grup?.uyeler) ? grup.uyeler : null
+    /*
+     * KÜPTE BEŞİNCİ EKRAN DIŞARIDA.
+     *
+     * Üst yüzün ölçüsü kutunun üstünü kapatacak sayıdan geliyor
+     * (bkz. kupUstGereken); yan yüzlere eşitlenirse o hesapla çakışıyor
+     * ve kapak kutuya oturmuyor. Eşitleme dört YAN yüze uygulanıyor.
+     */
+    const uyeler = hepsiUye && grup.tip === 'kutu' ? hepsiUye.slice(0, 4) : hepsiUye
     if (!uyeler || uyeler.length < 2 || grup.tekGorsel === false) {
       satirEsitRef.current = { imza: '' }
       return
@@ -9940,6 +9949,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Yalnızca yan yüzlerin imzasına bakılıyor: kullanıcı üst ekranın
    * sayısını elle değiştirdiğinde bu etki çalışmıyor, eli tutulmuyor.
    */
+  /*
+   * KÜPTE DUVAR KUTUSU ÇİZİMLE TUTUYOR.
+   *
+   * Duvar yalnızca ÇİZİM sırasında küpün kutusunu alacak kadar
+   * büyütülüyordu: Yükseklik kutusunda 0,32 m yazarken tuvalde 0,086 +
+   * 0,32 + 0,086 m görünüyor, beyaz duvar da yazan ölçüde olmuyordu.
+   * Değer artık kutuya da yazılıyor; kutudaki sayı, çizilen duvar ve
+   * etiketler aynı şeyi söylüyor.
+   *
+   * Yalnızca BÜYÜTÜYOR: kullanıcı daha büyük bir duvar yazdıysa ona
+   * dokunulmuyor. Küpün çizim kutusu ölçekten bağımsız olduğu için
+   * (bkz. bakisUzakligi) 1000 px/m ile hesaplanıp bine bölünüyor.
+   */
+  useEffect(() => {
+    if (grup?.tip !== 'kutu' || !Array.isArray(grup.uyeler)) return
+    const uyeler = grup.uyeler
+    const olcu = kupOlculeri(ekranSeridi.filter((x) => uyeler.includes(x.id)))
+    if (!olcu) return
+    const kutu = kupCizimKutusu({ ...olcu, pxPerM: 1000 })
+    const enM = cmYukari(kutu.cizimEn / 1000)
+    const boyM = cmYukari(kutu.cizimBoy / 1000)
+    if (!(enM > 0) || !(boyM > 0)) return
+    if ((Number(width) || 0) < enM - 1e-6) setWidth(enM)
+    if ((Number(height) || 0) < boyM - 1e-6) setHeight(boyM)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grup?.tip, grup?.uyeler, ekranSeridi, width, height])
+
   const kupUstImzaRef = useRef(null)
   useEffect(() => {
     if (!kupUstGereken) {

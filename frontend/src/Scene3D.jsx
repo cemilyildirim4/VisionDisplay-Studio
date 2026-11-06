@@ -252,7 +252,7 @@ function dikisPayi(cabD, donus) {
 }
 
 /** Düz bir kabin duvarı + önüne gerilen içerik düzlemi. */
-function DuzDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, uvOffset = 0, uvRepeat = 1, payL = 0, payR = 0 }) {
+function DuzDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, uvOffset = 0, uvRepeat = 1, uvOffsetY = 0, uvRepeatY = 1, payL = 0, payR = 0 }) {
   const totalW = cols * cabW
   const totalH = rows * cabH
 
@@ -276,7 +276,13 @@ function DuzDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, uvOffset 
 
       <mesh position={[(payR - payL) / 2, 0, cabD / 2 + 0.002]}>
         <planeGeometry args={[totalW + payL + payR, totalH]} />
-        <IcerikMalzemesi texture={texture} uvOffset={uvOffset} uvRepeat={uvRepeat} />
+        <IcerikMalzemesi
+          texture={texture}
+          uvOffset={uvOffset}
+          uvRepeat={uvRepeat}
+          uvOffsetY={uvOffsetY}
+          uvRepeatY={uvRepeatY}
+        />
       </mesh>
     </group>
   )
@@ -430,16 +436,17 @@ function LDuvar({ cabW, cabH, cabD, cols, rows, texture, showBezels, leftCols, r
  * tek bir görseli paylaşması için gerekli. Doku paylaşıldığı için her dilim
  * kendi klonunu kullanır (repeat/offset dokunun kendi özelliği).
  */
-function IcerikMalzemesi({ texture, uvOffset = 0, uvRepeat = 1 }) {
+function IcerikMalzemesi({ texture, uvOffset = 0, uvRepeat = 1, uvOffsetY = 0, uvRepeatY = 1 }) {
   const dilim = useMemo(() => {
     if (!texture) return null
-    if (uvOffset === 0 && uvRepeat === 1) return texture
+    if (uvOffset === 0 && uvRepeat === 1 && uvOffsetY === 0 && uvRepeatY === 1) return texture
     const t = texture.clone()
     t.needsUpdate = true
-    t.offset.set(uvOffset, 0)
-    t.repeat.set(uvRepeat, 1)
+    /* UV'nin dikey sıfırı ALTTA: görselin alt yarısı offset 0, repeat 0,5. */
+    t.offset.set(uvOffset, uvOffsetY)
+    t.repeat.set(uvRepeat, uvRepeatY)
     return t
-  }, [texture, uvOffset, uvRepeat])
+  }, [texture, uvOffset, uvRepeat, uvOffsetY, uvRepeatY])
 
   useEffect(() => {
     if (dilim && dilim !== texture) return () => dilim.dispose()
@@ -475,8 +482,8 @@ function IlkKare({ onIlkKare }) {
 }
 
 /** Tek bir ekranı, biçimine göre doğru duvar bileşeniyle çizer. */
-function Duvar({ ortak, screenType, curveAmount, leftCols, rightCols, lYon, uvOffset, uvRepeat, payL, payR }) {
-  const uv = { uvOffset, uvRepeat, payL, payR }
+function Duvar({ ortak, screenType, curveAmount, leftCols, rightCols, lYon, uvOffset, uvRepeat, uvOffsetY, uvRepeatY, payL, payR }) {
+  const uv = { uvOffset, uvRepeat, uvOffsetY, uvRepeatY, payL, payR }
   if (screenType === 'lshape') {
     return <LDuvar {...ortak} {...uv} leftCols={leftCols} rightCols={rightCols} lYon={lYon} />
   }
@@ -608,6 +615,8 @@ function EkranYuzeyi({ y, dilimler, ortak, curveAmount, genel }) {
       rightCols={d.s.rightCols}
       uvOffset={d.uvOffset}
       uvRepeat={d.uvRepeat}
+      uvOffsetY={d.uvOffsetY}
+      uvRepeatY={d.uvRepeatY}
       payL={d.payL}
       payR={d.payR}
     />
@@ -641,33 +650,38 @@ function kapakTuvali(gorsel) {
   const ctx = c.getContext('2d')
   ctx.fillStyle = '#0a0a0a'
   ctx.fillRect(0, 0, S, S)
-  /* kirp: üçgenin köşeleri (0–1). don: görseli o üçgene oturtan dönüşüm. */
-  const ucgenler = [
-    {
-      kirp: [[0, 1], [1, 1], [0.5, 0.5]],
-      don: (x) => { x.translate(0, S); x.scale(1, -1) },
-    },
-    {
-      kirp: [[1, 0], [1, 1], [0.5, 0.5]],
-      don: (x) => { x.translate(S, 0); x.rotate(Math.PI / 2) },
-    },
-    {
-      kirp: [[0, 0], [1, 0], [0.5, 0.5]],
-      don: (x) => { x.translate(S, 0); x.scale(-1, 1) },
-    },
-    {
-      kirp: [[0, 0], [0, 1], [0.5, 0.5]],
-      don: (x) => { x.translate(0, S); x.rotate(-Math.PI / 2) },
-    },
-  ]
-  for (const u of ucgenler) {
+  /*
+   * ÜST YÜZ — 2D TUVALDEKİ AÇILIMIN AYNISI.
+   *
+   * Görselin ÜST yarısı dört eşit parça; her parçadan tabanı parçanın alt
+   * kenarı, ucu üst ortası olan bir üçgen kesiliyor ve o üçgen kendi yan
+   * yüzünün kenarına oturuyor, ucu ortaya bakıyor. Yan yüz görselin ALT
+   * yarısının aynı çeyreğini gösterdiği için ikisi birleşim çizgisinde
+   * aynı satırda buluşuyor: görüntü kopmadan devam ediyor.
+   *
+   * Eskiden her üçgene görselin TAMAMI çiziliyor, üstelik kimi üçgende
+   * aynalanıyordu: ortada iç içe geçen bir tünel çıkıyordu. Burada yalnızca
+   * DÖNME var (ayna yok), o yüzden görüntü hiçbir yerde ters düşmüyor.
+   *
+   * Tuvalin ön kenarı alt, arka kenarı üst. Tuval, tabanı alt kenara gelen
+   * bir yerel çerçeveye döndürülüyor; üçgen de o çerçevede hep "alt üçgen".
+   */
+  const W = gorsel.naturalWidth || gorsel.width
+  const H = gorsel.naturalHeight || gorsel.height
+  const donmeler = [0, -Math.PI / 2, Math.PI, Math.PI / 2]
+  for (let i = 0; i < 4; i++) {
     ctx.save()
+    ctx.translate(S / 2, S / 2)
+    ctx.rotate(donmeler[i])
+    ctx.translate(-S / 2, -S / 2)
     ctx.beginPath()
-    u.kirp.forEach(([x, y], i) => (i ? ctx.lineTo(x * S, y * S) : ctx.moveTo(x * S, y * S)))
+    ctx.moveTo(0, S)
+    ctx.lineTo(S, S)
+    ctx.lineTo(S / 2, S / 2)
     ctx.closePath()
     ctx.clip()
-    u.don(ctx)
-    ctx.drawImage(gorsel, 0, 0, S, S / 2)
+    /* Kaynak: görselin üst yarısının i. çeyreği. Hedef: alt yarı kutusu. */
+    ctx.drawImage(gorsel, (i * W) / 4, 0, W / 4, H / 2, 0, S / 2, S, S / 2)
     ctx.restore()
   }
   return c
@@ -809,13 +823,35 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
       kumeOnceki.set(i, kumeToplam.get(e.paylasim) || 0)
       kumeToplam.set(e.paylasim, (kumeToplam.get(e.paylasim) || 0) + gercekW[i])
     })
-    /* Ön +z, sağ +x, arka −z, sol −x; her yüz dışarı bakıyor. */
+    /*
+     * YÜZLER DIŞARI BAKIYOR VE KÖŞELERDE BULUŞUYOR.
+     *
+     * Sağ ve sol yüzün dönüşleri terstti: rotateY(θ) yüzün normalini
+     * (sinθ, 0, cosθ) yapıyor, yani sağ yüz için +90°, sol için −90°
+     * gerekiyor. Ters dönen yüzün ön yüzeyi kutunun İÇİNE bakıyordu ve
+     * dışarıdan siyah görünüyordu (en belirgini sol yüz).
+     *
+     * İçerik düzlemi gövdenin cabD/2 kadar ÖNÜNDE duruyor (bkz. DuzDuvar).
+     * Yüz kutunun tam kenarına konunca o düzlem kenardan dışarı taşıyor ve
+     * komşusuyla arasında kayma kalıyordu. Yüzler o kadar İÇERİ alınıyor:
+     * görüntü yüzeyleri kutunun kenarında, köşelerde uç uca buluşuyor.
+     */
+    const onYuz = cabD / 2 + 0.002
     const yerler = [
-      { x: 0, z: derin / 2, rot: 0 },
-      { x: en / 2, z: 0, rot: -Math.PI / 2 },
-      { x: 0, z: -derin / 2, rot: Math.PI },
-      { x: -en / 2, z: 0, rot: Math.PI / 2 },
+      { x: 0, z: derin / 2 - onYuz, rot: 0 },
+      { x: en / 2 - onYuz, z: 0, rot: Math.PI / 2 },
+      { x: 0, z: -derin / 2 + onYuz, rot: Math.PI },
+      { x: -en / 2 + onYuz, z: 0, rot: -Math.PI / 2 },
     ]
+    /*
+     * GÖRSEL 2D'DEKİ AÇILIMLA AYNI BÖLÜNÜYOR.
+     *
+     * Görsel yatayda iki eşit yarı: ALT yarı dört eşit parça (1-2-3-4 yan
+     * yüzler), ÜST yarı üst kapağın dört üçgeni (bkz. kapakTuvali). Eskiden
+     * yan yüzler görselin TAMAMINI gösteriyordu ve üst kapakla hiçbir yerde
+     * tutmuyordu. UV'nin dikey sıfırı altta olduğu için alt yarı
+     * offset 0 / repeat 0,5.
+     */
     const yuzler = yan.map((s, i) => {
       const kumeW = s.paylasim ? kumeToplam.get(s.paylasim) : 0
       const dilimVar = kumeW > 0 && gercekW[i] > 0
@@ -826,8 +862,10 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
         y: (s.rows * cabH - boy) / 2,
         z: yerler[i].z,
         rot: yerler[i].rot,
-        uvOffset: dilimVar ? kumeOnceki.get(i) / kumeW : 0,
-        uvRepeat: dilimVar ? gercekW[i] / kumeW : 1,
+        uvOffset: dilimVar ? i / 4 : 0,
+        uvRepeat: dilimVar ? 1 / 4 : 1,
+        uvOffsetY: dilimVar ? 0 : 0,
+        uvRepeatY: dilimVar ? 0.5 : 1,
         payL: 0,
         payR: 0,
       }
