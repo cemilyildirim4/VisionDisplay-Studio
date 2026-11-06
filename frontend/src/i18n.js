@@ -1637,6 +1637,10 @@ const dict = {
   'pdf.professional': { tr: 'PDF Raporu Al', en: 'Get PDF report', ar: 'الحصول على تقرير PDF' },
 
   // ---------- Sıfırlama onayı ----------
+  'model.degistir': { tr: 'Değiştir', en: 'Change', ar: 'تغيير' },
+  'model.onayBaslik': { tr: 'Model değiştirilsin mi?', en: 'Change the model?', ar: 'تغيير الطراز؟' },
+  'model.onayMetin': { tr: 'Model değişince ekranlar sıfırlanacak. Devam edilsin mi?', en: 'Changing the model resets the screens. Continue?', ar: 'تغيير الطراز سيعيد ضبط الشاشات. هل تريد المتابعة؟' },
+  'model.devam': { tr: 'Devam', en: 'Continue', ar: 'متابعة' },
   'onay.vazgec': { tr: 'Vazgeç', en: 'Cancel', ar: 'إلغاء' },
   'onay.sil': { tr: 'Sil', en: 'Delete', ar: 'حذف' },
   'onay.silBaslik': { tr: 'Ekran silinsin mi?', en: 'Delete this screen?', ar: 'حذف هذه الشاشة؟' },

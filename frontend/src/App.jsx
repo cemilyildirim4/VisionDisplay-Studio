@@ -1797,11 +1797,43 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }, [displayCabinets, cabinetsLoading, taslakTetik])
 
 
+  /*
+   * DEĞİŞTİR = ÖNCE ONAY, SONRA PENCERE.
+   *
+   * Ekranların silineceği, pencere açılmadan ÖNCE söyleniyor: kullanıcı
+   * listeyi gezip bir model seçtikten sonra "ekranlarım gitti" demesin.
+   * Vazgeçilirse hiçbir şeye dokunulmuyor.
+   */
+  const modeliDegistir = () => {
+    setSoru({
+      baslik: t('model.onayBaslik'),
+      metin: t('model.onayMetin'),
+      onayEtiketi: t('model.devam'),
+      yap: () => setModalOpen(true),
+    })
+  }
+
   const handleChoose = (model) => {
     // Başka bir modele geçmek, tasarımı baştan kurmak demek: eldeki kareler
     // artık gösterilmeyen bir ürünün fotoğrafı. Aynı model yeniden seçilirse
     // kareler durur (yanlışlıkla aynı satıra tıklamak çalışmayı silmesin).
-    if (model?.id !== selectedModel?.id) kareleriTemizle()
+    if (model?.id !== selectedModel?.id) {
+      kareleriTemizle()
+      /*
+       * EKRANLAR DA SIFIRLANIYOR, DUVAR ÖLÇÜSÜ KALIYOR.
+       *
+       * Kabin başka bir ürünün kabini: eldeki ekranların sütun/satır
+       * sayısı, birleşimi ve grubu o eski kabine göre kurulmuştu ve yeni
+       * modelde başka bir ölçüye denk geliyordu. Ekranlar ve gruplar
+       * temizleniyor, DUVARIN eni ve boyu olduğu gibi duruyor: duvar
+       * modelden bağımsız, mekânın kendi ölçüsü.
+       */
+      setSabitEkranlar([])
+      setAktifEkranId(null)
+      setAktifSira(1)
+      setGrup(null)
+      setGrupSecim([])
+    }
     setSelectedModel(model)
     setWidth((w) => w || 1)
     setHeight((h) => h || 1)
@@ -2557,6 +2589,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   const hasModel = !!selectedModel
+  /*
+   * SEÇİLİ MODEL ANTETTE GÖRÜNÜYOR.
+   *
+   * Hangi kabinle çalışıldığı hiçbir yerde yazmıyordu; modeli değiştirmenin
+   * tek yolu "Sıfırla" idi, o da bütün tasarımı siliyordu. Ad, model kodu ve
+   * piksel aralığı (yoksa köşegen) ile yazılıyor — listede de böyle arandığı
+   * için tanıdık geliyor.
+   */
+  const modelEtiketi = (() => {
+    const m = selectedModel
+    if (!m) return ''
+    const ikinci = m.pixelPitchMm > 0 ? `P${m.pixelPitchMm}` : m.sizeInch ? `${m.sizeInch}"` : ''
+    return ikinci ? `${m.modelCode} · ${ikinci}` : String(m.modelCode || '')
+  })()
 
   /*
    * SAYFADAN AYRILMA UYARISI.
@@ -10094,7 +10140,44 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <div className="yatay-sayfa min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
       {/* Başlık çubuğu — kurumsal logo + sayfa adı */}
       <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-6 py-2.5 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
-        <BrandMark title={t('app.title')} />
+        {/*
+          ANTET VE MODEL YAN YANA.
+
+          Model, sayfa adının devamı: hangi üründe çalışıldığı başlıkla
+          aynı yerde okunuyor. Model seçilmeden önce burada hiçbir şey
+          yok — seçim ekranında gösterilecek bir model de yok.
+        */}
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <BrandMark title={t('app.title')} />
+          {hasModel && (
+            <div className="flex min-w-0 items-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1 dark:border-[#2c333f] dark:bg-[#161d28]">
+              <span
+                className="truncate text-[13px] font-semibold text-neutral-700 dark:text-neutral-200"
+                title={modelEtiketi}
+              >
+                {modelEtiketi}
+              </span>
+              {/*
+                Telefonda yalnızca kalem ikonu kalıyor: ad ile düğme tek
+                satıra ancak böyle sığıyor, ikonun kendisi 44 px'lik
+                dokunma alanını koruyor.
+              */}
+              <button
+                type="button"
+                onClick={modeliDegistir}
+                title={t('model.degistir')}
+                aria-label={t('model.degistir')}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-[13px] font-medium text-brand transition-colors hover:bg-brand-tint dark:hover:bg-[#1b2436]"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                </svg>
+                <span className="hidden sm:inline">{t('model.degistir')}</span>
+              </button>
+            </div>
+          )}
+        </div>
         {/*
           Araç düğmeleri başlık çubuğunda. Önce solda dikey bir şeritteydi ama
           duvar büyüdükçe çizimin üstüne biniyordu; burada hiçbir zaman çakışmaz.
