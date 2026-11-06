@@ -10,6 +10,7 @@ import { useLang } from './useLang.js'
 import { curveDepthFor, DEFAULT_CONTENT_SRC } from './content.js'
 import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
 import { videoSrcFor, createVideoElement } from './videoContent.js'
+import { birlesimDilimleri } from './birlesimOlcu.js'
 /* AR yerleştirme akışının görünen parçaları kamera ekranıyla ORTAK — bkz. ArYerlestirme.jsx */
 import {
   YerlestirKatmani,
@@ -581,24 +582,45 @@ const icerikDolu = (c) => c && c !== 'led' && c !== 'none'
  * yoksa tasarımın geneli. Paylaşılan tek görselde her ekran aynı kaynağı
  * alıyor ve uv dilimiyle kendi payını gösteriyor (bkz. uvOffset/uvRepeat).
  */
-function EkranYuzeyi({ y, ortak, curveAmount, genel }) {
-  const kendi = icerikDolu(y.s.content)
-    ? { content: y.s.content, contentUrl: y.s.contentUrl || null }
+/*
+ * DOKU EKRAN BAŞINA BİR KEZ.
+ *
+ * Yay dilimlere bölünüyor; her dilim ayrı bir bileşen olsaydı aynı görsel
+ * dilim sayısı kadar kurulur, VİDEO içerikte de dilim sayısı kadar <video>
+ * açılırdı. Bileşen bu yüzden ekranın BÜTÜN dilimlerini çiziyor: doku tek.
+ * Küp yüzü tek parça geliyor ve dışarıda konumlandığı için eski yoldan
+ * (yalnızca 'y') çizilmeye devam ediyor.
+ */
+function EkranYuzeyi({ y, dilimler, ortak, curveAmount, genel }) {
+  const parcalar = dilimler || [y]
+  const s = parcalar[0].s
+  const kendi = icerikDolu(s.content)
+    ? { content: s.content, contentUrl: s.contentUrl || null }
     : genel
   const texture = useIcerikDokusu(kendi.content, kendi.contentUrl)
-  return (
+  const yuzey = (d) => (
     <Duvar
-      ortak={{ ...ortak, cols: y.s.cols, rows: y.s.rows, texture }}
-      screenType={y.s.type || 'flat'}
+      ortak={{ ...ortak, cols: d.cols ?? d.s.cols, rows: d.s.rows, texture }}
+      screenType={d.s.type || 'flat'}
       curveAmount={curveAmount}
-      leftCols={y.s.leftCols}
-      lYon={y.s.lYon}
-      rightCols={y.s.rightCols}
-      uvOffset={y.uvOffset}
-      uvRepeat={y.uvRepeat}
-      payL={y.payL}
-      payR={y.payR}
+      leftCols={d.s.leftCols}
+      lYon={d.s.lYon}
+      rightCols={d.s.rightCols}
+      uvOffset={d.uvOffset}
+      uvRepeat={d.uvRepeat}
+      payL={d.payL}
+      payR={d.payR}
     />
+  )
+  if (!dilimler) return yuzey(y)
+  return (
+    <group>
+      {parcalar.map((d) => (
+        <group key={d.key} position={[d.x, d.y, d.z]} rotation={[0, d.rot || 0, 0]}>
+          {yuzey(d)}
+        </group>
+      ))}
+    </group>
   )
 }
 
@@ -834,19 +856,6 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
      */
     const uclar = list.map((s) => ekranUclari(s, cabW, curveAmount))
     const enYuksek = Math.max(...list.map((s) => s.rows * cabH))
-
-    let x = 0
-    let z = 0
-    const konum = list.map((s, i) => {
-      // Ekranın merkezi: sol ucu mevcut zincir ucuna denk gelecek şekilde
-      const p = { x: x - uclar[i].sol.x, z: z - uclar[i].sol.z }
-      x = p.x + uclar[i].sag.x
-      z = p.z + uclar[i].sag.z
-      return p
-    })
-
-    // Zinciri yatayda ortala (ilk sol uç ile son sağ uç arasının ortası orijine)
-    const ortala = (konum[0].x + uclar[0].sol.x + x) / 2
     /*
      * DİLİM GERÇEK GENİŞLİKLERE GÖRE, 2D ile birebir aynı kural.
      *
@@ -855,6 +864,71 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
      * görünüşünü değiştiriyor, dilimin içeriğini değil.
      */
     const gercekW = list.map((e) => (e.wm > 0 ? e.wm : e.cols * cabW))
+
+    /*
+     * YUVARLAK BİRLEŞİM 3D'DE DE TEK YAY.
+     *
+     * Yuvarlak seçilen eklem 3D'de köşeli çiziliyordu: 2D tuvalde yumuşak
+     * bir yay görünen tasarım, 3D görünümde keskin bir köşeye dönüyordu.
+     * Dönüş artık yuvarlak eklemle bağlanan ekranların TAMAMINA dağılıyor;
+     * ekran ince dilimlere bölünüp yayı çiziyor. Dilimleri 2D ile AYNI
+     * hesap veriyor (bkz. birlesimOlcu → birlesimDilimleri), yani yay,
+     * açı ve en iki görünümde birebir aynı.
+     *
+     * Dilim ekranın KENDİ parçası: eni, kabin sayısı ve ölçüsü değişmiyor,
+     * içerik de dilim dilim (uvOffset/uvRepeat) yay boyunca kesintisiz
+     * akıyor.
+     *
+     * Köşeli eklem zinciri bölüyor, yani köşe olduğu gibi kalıyor. Kavisli
+     * ve L tipi ekran kendi geometrisiyle duruyor, bölünmüyor.
+     */
+    const dilimler = birlesimDilimleri(
+      list.map((s, i) => ({
+        w: gercekW[i],
+        t: Number.isFinite(s.yon) ? s.yon : 0,
+        yuvarlak: !!s.yuvarlakSag,
+      })),
+    )
+    /* Zincirin halkaları: ya bütün bir ekran ya da yayın bir dilimi. */
+    const birimler = []
+    for (let d = 0; d < dilimler.length; d++) {
+      const dl = dilimler[d]
+      const duz = !list[dl.i].type || list[dl.i].type === 'flat'
+      if (!dl.yay || !duz) {
+        birimler.push({
+          i: dl.i,
+          uc: uclar[dl.i],
+          rot: Number.isFinite(list[dl.i].yon) ? list[dl.i].yon : 0,
+        })
+        /* Bölünmeyen ekranın öteki dilimleri atlanıyor. */
+        while (d + 1 < dilimler.length && dilimler[d + 1].i === dl.i) d++
+        continue
+      }
+      const yari = dl.w / 2
+      birimler.push({
+        i: dl.i,
+        uc: {
+          sol: { x: -yari * Math.cos(dl.t), z: yari * Math.sin(dl.t), aci: dl.t },
+          sag: { x: yari * Math.cos(dl.t), z: -yari * Math.sin(dl.t), aci: dl.t },
+        },
+        rot: dl.t,
+        dilimW: dl.w,
+        u0: dl.u0,
+      })
+    }
+
+    let x = 0
+    let z = 0
+    const konum = birimler.map((b) => {
+      // Halkanın merkezi: sol ucu mevcut zincir ucuna denk gelecek şekilde
+      const p = { x: x - b.uc.sol.x, z: z - b.uc.sol.z }
+      x = p.x + b.uc.sag.x
+      z = p.z + b.uc.sag.z
+      return p
+    })
+
+    // Zinciri yatayda ortala (ilk sol uç ile son sağ uç arasının ortası orijine)
+    const ortala = (konum[0].x + birimler[0].uc.sol.x + x) / 2
     const kumeToplam = new Map()
     const kumeOnceki = new Map()
     list.forEach((e, i) => {
@@ -863,28 +937,38 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
       kumeToplam.set(e.paylasim, (kumeToplam.get(e.paylasim) || 0) + gercekW[i])
     })
 
-    return list.map((s, i) => {
+    return birimler.map((b, k) => {
+      const s = list[b.i]
       const h = s.rows * cabH
       /*
        * Dikiş payı komşuyla arasındaki DÖNÜŞE göre: iki yüzey dışa dönerek
        * birleşiyorsa (ör. iki iç L'nin sırt sırta gelen uçları) aradan kabin
-       * kalınlığı görünmesin diye yüzey uzatılır.
+       * kalınlığı görünmesin diye yüzey uzatılır. Yay dilimleri arasındaki
+       * küçük dönüş de buradan kapanıyor.
        */
-      const oncekiDonus = i > 0 ? uclar[i].sol.aci - uclar[i - 1].sag.aci : 0
-      const sonrakiDonus = i < list.length - 1 ? uclar[i + 1].sol.aci - uclar[i].sag.aci : 0
+      const oncekiDonus = k > 0 ? b.uc.sol.aci - birimler[k - 1].uc.sag.aci : 0
+      const sonrakiDonus = k < birimler.length - 1 ? birimler[k + 1].uc.sol.aci - b.uc.sag.aci : 0
       /* Kümede olmayan ekran görselin tamamını kendi yüzeyinde gösteriyor. */
       const kumeW = s.paylasim ? kumeToplam.get(s.paylasim) : 0
-      const dilimVar = kumeW > 0 && gercekW[i] > 0
+      const dilimVar = kumeW > 0 && gercekW[b.i] > 0
+      /* Dilim, ekranın payının İÇİNDE kendi penceresini gösteriyor. */
+      const yuzeyW = dilimVar ? kumeW : gercekW[b.i]
+      const bas = (dilimVar ? kumeOnceki.get(b.i) || 0 : 0) + (b.u0 || 0)
+      const genislik = b.dilimW ?? gercekW[b.i]
       return {
-        key: i,
+        key: k,
         s,
-        x: konum[i].x - ortala,
+        /* Hangi ekranın dilimi: doku ekran başına bir kez kuruluyor. */
+        ekran: b.i,
+        /* Yay dilimi ekranın bir parçası: kutusu da o kadar dar. */
+        cols: b.dilimW != null ? b.dilimW / cabW : s.cols,
+        x: konum[k].x - ortala,
         y: (h - enYuksek) / 2,
-        z: konum[i].z,
+        z: konum[k].z,
         /* Ekranın kendi dönüşü: düz ekran birleşimde açılı durabiliyor. */
-        rot: Number.isFinite(s.yon) ? s.yon : 0,
-        uvOffset: dilimVar ? kumeOnceki.get(i) / kumeW : 0,
-        uvRepeat: dilimVar ? gercekW[i] / kumeW : 1,
+        rot: b.rot,
+        uvOffset: yuzeyW > 0 ? bas / yuzeyW : 0,
+        uvRepeat: yuzeyW > 0 ? genislik / yuzeyW : 1,
         payL: dikisPayi(cabD, oncekiDonus),
         payR: dikisPayi(cabD, sonrakiDonus),
       }
@@ -910,17 +994,23 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
   }
 
   if (yerlesim) {
+    /* Aynı ekranın dilimleri tek bileşende: doku (ve video) bir kez kuruluyor. */
+    const gruplar = []
+    for (const y of yerlesim) {
+      const son = gruplar[gruplar.length - 1]
+      if (son && son.ekran === y.ekran) son.dilimler.push(y)
+      else gruplar.push({ ekran: y.ekran, dilimler: [y] })
+    }
     return (
       <group>
-        {yerlesim.map((y) => (
-          <group key={y.key} position={[y.x, y.y, y.z]} rotation={[0, y.rot || 0, 0]}>
-            <EkranYuzeyi
-              y={y}
-              ortak={{ cabW, cabH, cabD, showBezels }}
-              curveAmount={curveAmount}
-              genel={etkin}
-            />
-          </group>
+        {gruplar.map((g) => (
+          <EkranYuzeyi
+            key={g.dilimler[0].key}
+            dilimler={g.dilimler}
+            ortak={{ cabW, cabH, cabD, showBezels }}
+            curveAmount={curveAmount}
+            genel={etkin}
+          />
         ))}
       </group>
     )
