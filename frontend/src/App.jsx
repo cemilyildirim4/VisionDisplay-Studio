@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import { guvenliLazy } from './guvenliLazy.js'
 import { KIOSK_GOVDESI_ACIK } from './featureFlags.js'
-import { mekaniKaydet, mekaniOku, mekaniSil } from './fotoDeposu.js'
+import { mekaniSil } from './fotoDeposu.js'
 import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
 import ExportModal from './ExportModal.jsx'
@@ -198,7 +198,6 @@ import { birimSozcugu, seriAdi } from './productType.js'
 import {
   taslakEkranlari,
   taslakOlustur,
-  taslakDolu,
   taslagiSil,
   duzenlemeyiAl,
 } from './tasarimTaslagi.js'
@@ -1701,24 +1700,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [taslakTetik, setTaslakTetik] = useState(0)
   /* Köşeler oran olarak saklanıyor; tuval ölçüsü bilinince piksele çevriliyor. */
   const elleKoseOranRef = useRef(null)
+  /*
+   * AÇILIŞTA TASARIM GERİ GELMİYOR, ESKİ KAYIT SİLİNİYOR.
+   *
+   * Fotoğraf, referans, yerleşim ve tasarımın tamamı tarayıcı kaydında
+   * (IndexedDB) duruyor ve sayfa her açılışta geri yükleniyordu: kullanıcı
+   * yeni bir işe başlamak istediğinde önceki tasarımın karşısına çıkıyor,
+   * temizlemek için "Sıfırla" demek zorunda kalıyordu. Sayfa artık her
+   * zaman BOŞ tasarımla açılıyor; daha önce yazılmış kayıt da bir kereye
+   * mahsus siliniyor.
+   *
+   * Giriş oturumu, tema ve dil ayrı anahtarlarda (localStorage) duruyor,
+   * onlara dokunulmuyor. "Tekliflerim → Düzenle" de etkilenmiyor: o
+   * tasarımı kayıttan değil, açıkça verilen kutudan alıyor
+   * (bkz. duzenlemeyiAl).
+   */
   useEffect(() => {
-    let iptal = false
-    mekaniOku().then((k) => {
-      if (iptal || !k?.blob) return
-      mekanBlobRef.current = k.blob
-      if (k.taslak && taslakDolu(k.taslak)) {
-        /* Tasarım önce kurulacak; fotoğraf o efektin sonunda geliyor. */
-        mekanGeriRef.current = k
-        bekleyenTaslakRef.current = k.taslak
-        setTaslakTetik((n) => n + 1)
-        return
-      }
-      /* Tasarım yoksa yalnızca fotoğraf geri geliyor. */
-      mekaniGeriYukleRef.current?.(k)
-    })
-    return () => {
-      iptal = true
-    }
+    mekaniSil()
   }, [])
 
   /*
@@ -2042,8 +2040,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * (bkz. fotoDeposu.js). İnceleme sonucu da saklanıyor: yeniden
        * hesaplamak saniyeler sürüyor.
        */
+      /* Fotoğraf yalnızca bu oturumda duruyor; tarayıcı kaydına yazılmıyor. */
       mekanBlobRef.current = dosya
-      mekaniKaydet({ blob: dosya, sahne: { ...kayit, dosya: null }, taslak: null, foto: null })
       /* Yeni fotoğraf, yeni sayfa: önceki fotoğrafın köşe ayarı taşınmıyor. */
       elleDuzenlemeyiBirak()
       // Önceki fotoğrafın adresi bellekte kalmasın
@@ -9331,55 +9329,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Yazma geciktiriliyor: sürükleme sırasında saniyede onlarca kez
    * değişen bir durumu her seferinde diske yazmak gereksiz.
    */
-  useEffect(() => {
-    /*
-     * Mekân değişse de yazılıyor: kullanıcı "Mekân yok"a geçip sayfayı
-     * yenilediğinde fotoğraflı mekâna geri fırlatılmasın diye seçili mekân
-     * da kayıtta duruyor.
-     */
-    if (!ozelSahne || !mekanBlobRef.current) return undefined
-    const zamanlayici = setTimeout(() => {
-      mekaniKaydet({
-        blob: mekanBlobRef.current,
-        /* blob: adresi saklanmıyor; açılışta yenisi üretiliyor. */
-        sahne: { ...ozelSahne, dosya: null },
-        taslak: taslakOlustur({
-          selectedModel, width, height, cols, rows, screenType,
-          orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc, scene,
-          ekranlar: sabitEkranlar, content,
-          lSolCols, lYon, aktifEkranId, aktifSira, grup, icerikGruplari,
-        }),
-        foto: {
-          refNokta,
-          refUzunlukCm,
-          refBoyCm,
-          refTur,
-          fotoOdak,
-          exif35,
-          alanNokta,
-          alanKonum,
-          alanOlcek,
-          /* Piksel değil ORAN: tuval boyu her açılışta aynı olmayabilir. */
-          elleKose: Array.isArray(elleKose) ? elleKose.map(tuvalOrana) : null,
-          elleYerlesti,
-          yerlesmisIdler,
-          yerKenarSecim,
-          yerlesimBitti,
-          /* 3B yerleşim: yer, bakış açısı ve kilit (bkz. yer3d). */
-          yer3d,
-        },
-      })
-    }, 900)
-    return () => clearTimeout(zamanlayici)
-  }, [
-    scene, ozelSahne, selectedModel, width, height, cols, rows, screenType,
-    orientation, curveAmount, resolution, sboxRedundancy, hasMiniPc,
-    sabitEkranlar, content, lSolCols, lYon, aktifEkranId, aktifSira, grup,
-    icerikGruplari, refNokta, refUzunlukCm, refBoyCm, refTur, fotoOdak, exif35,
-    alanNokta, alanKonum, alanOlcek, elleKose, elleYerlesti, yerlesmisIdler,
-    yerKenarSecim, yerlesimBitti, yer3d,
-  ])
-
+  /*
+   * TASARIM TARAYICIYA KAYDEDİLMİYOR.
+   *
+   * Burada fotoğraf, ölçüm ve tasarımın tamamı IndexedDB'ye yazılıyordu;
+   * açılışta geri yüklenen de buydu. Kayıt kalktığı için yazma da kalktı
+   * (bkz. yukarıdaki mekaniSil). "Sıfırla" ve ayrılma uyarısı aynen
+   * çalışıyor.
+   */
   /*
    * KAYITTAN GERİ YÜKLEME.
    *
