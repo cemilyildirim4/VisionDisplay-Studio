@@ -8953,7 +8953,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * bir köşe için baştan başlamak gerekiyordu. Köşeler sürüklenebilir
    * tutamak olarak duruyor; kullanıcı beğenince onaylıyor.
    */
-  const yerNoktaDegisti = (tuvalNoktalari) => setYerNokta(tuvalNoktalari)
+  /*
+   * DÜZENLERKEN EKRAN TUTAMAĞI ANINDA İZLİYOR.
+   *
+   * Köşeler sürüklenirken yalnızca yeşil kesik çizgi oynuyor, ekran
+   * onaylanana kadar eski yerinde duruyordu: kullanıcı duvarı nereye
+   * oturttuğunu ancak onaydan sonra görebiliyordu. Yerleşmiş bir ekranın
+   * alanı değiştikçe ekran da o düzlemin içinde yeniden hesaplanıyor —
+   * perspektifi ve yeri değişiyor, ÖLÇÜSÜ değişmiyor (bkz. yerKaydet →
+   * alanaYerlestir).
+   */
+  const yerNoktaDegisti = (tuvalNoktalari) => {
+    setYerNokta(tuvalNoktalari)
+    if (tuvalNoktalari.length !== 4) return
+    const e = yerEkran
+    if (e && yerlesmisIdler.includes(e.id)) yerKaydet(e, tuvalNoktalari)
+  }
 
   /*
    * BİR EKRANI YERLEŞTİRMEYE YA DA DÜZENLEMEYE AL.
@@ -9084,8 +9099,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })()
 
   /** Yerleştirmeye başlarken köşeler: varsa kendi dörtgeni, yoksa ortak kenar. */
+  /*
+   * DÜZENLEMEYE EKRANIN KENDİ KÖŞELERİ DEĞİL, DUVARIN KÖŞELERİ GELİYOR.
+   *
+   * Yerleşmiş bir ekrana dönünce tutamaklar ekranın KENDİ dörtgenine
+   * konuyordu. Ekran o duvarın içinde gerçek ölçüsüyle duruyor ve çoğu
+   * zaman alandan küçük; kullanıcı böylece duvarı değil minik dikdörtgeni
+   * düzeltiyor, perspektifi veren düzlem elinden kaçıyordu. Düzenlemeye
+   * artık o ekran için işaretlenen DUVAR ALANI geliyor (bkz.
+   * ekranDuzlemi); ekran onun içinde kendi ölçüsüyle duruyor.
+   */
   const yerBaslangici = (id) => {
-    const mevcut = ekranKoseleri(id)
+    const duzlem = yerlesmisIdler.includes(id) ? ekranDuzlemi(id) : null
+    const mevcut =
+      (Array.isArray(duzlem) && duzlem.length === 4 ? duzlem : null) || ekranKoseleri(id)
     if (mevcut) {
       setYerKilit(0)
       return mevcut
