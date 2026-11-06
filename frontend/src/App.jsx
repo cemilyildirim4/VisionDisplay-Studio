@@ -4,7 +4,7 @@ import { KIOSK_GOVDESI_ACIK } from './featureFlags.js'
 import { mekaniKaydet, mekaniOku, mekaniSil } from './fotoDeposu.js'
 import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
-import ExportModal, { MiniPcSecimi } from './ExportModal.jsx'
+import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import { useConfigurationPreview } from './useConfigurationPreview.js'
@@ -12291,13 +12291,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               */}
 
               {/*
-                MİNİ PC — mekânın üstünde, PDF düğmesinin yanında değil.
-                Seçim yapılmadan rapor açılmıyor; soru modelden hemen sonra gelsin.
+                MİNİ PC SORUSU BURADAN KALKTI.
+
+                Soru artık "PDF Raporu Al" penceresinin en üstünde (bkz.
+                ExportModal): kararın tek sonucu o rapor, paneldeki yeri de
+                tasarımla ilgisi olmayan bir blok olarak duruyordu.
               */}
-              <div className="mb-4">
-                <h2 className="text-[25px] font-bold tracking-tight m-0 mb-1">{t('minipc.title')}</h2>
-                <MiniPcSecimi deger={hasMiniPc} onChange={setHasMiniPc} />
-              </div>
 
               {/*
                 MEKÂN — ekranın arkasına çizilen oda.
@@ -13581,12 +13580,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               {t('contact.heading')}
             </button>
 
+          {/*
+            DÜĞME MODEL SEÇİLİYSE HEP AÇIK.
+
+            Mini PC sorusu cevaplanmadan düğme soluk kalıyor ve altında
+            "önce şu soruyu cevaplayın" notu duruyordu. Soru artık pencerenin
+            kendi içinde (bkz. ExportModal): düğme pencereyi açıyor, indirme
+            düğmeleri orada cevaba bağlı.
+          */}
           <button
             type="button"
-            disabled={!hasModel || hasMiniPc === null}
+            disabled={!hasModel}
             onClick={() => setExportOpen(true)}
             className={`flex-1 rounded-full text-[16px] font-semibold py-2.5 transition-colors ${
-              hasModel && hasMiniPc !== null
+              hasModel
                 ? 'btn-brand-primary cursor-pointer'
                 : 'bg-neutral-100 dark:bg-[#222833] text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
             }`}
@@ -13594,16 +13601,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             {t('pdf.professional')}
           </button>
           </div>
-          {/*
-            PASİF DÜĞME SEBEBİNİ SÖYLÜYOR.
-
-            Mini PC sorusu cevaplanmadan rapor alınamıyor ama düğme sessizce
-            soluk duruyordu: kullanıcı neyi eksik bıraktığını bilmiyordu.
-            Model yokken not yazılmıyor — o durumda zaten hiçbir şey seçilmemiş.
-          */}
-          {hasModel && hasMiniPc === null && (
-            <div className="mt-1.5 text-[13px] text-neutral-500 dark:text-neutral-400">{t('pdf.miniPcNot')}</div>
-          )}
 
           {/*
             Gizlilik ve Güvenlik Notu — sağ panelin en altında, iletişim/PDF
@@ -13739,6 +13736,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
+        /* Mini PC kararı pencerenin içinde veriliyor; cevap buraya dönüyor. */
+        onMiniPc={setHasMiniPc}
         summary={{
           modelCode: selectedModel?.modelCode,
           // Rapordaki teknik özet (ağırlık, güç, ısı) modelin kendi

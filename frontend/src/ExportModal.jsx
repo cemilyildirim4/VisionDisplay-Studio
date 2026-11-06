@@ -143,7 +143,7 @@ async function resolveMiniPcFields(hasMiniPc) {
   }
 }
 
-export default function ExportModal({ open, onClose, summary }) {
+export default function ExportModal({ open, onClose, summary, onMiniPc }) {
   const { t } = useLang()
   const { isAuthenticated, isAdmin, session, displayName, email: accountEmail } = useSession()
   /*
@@ -539,6 +539,22 @@ export default function ExportModal({ open, onClose, summary }) {
             </svg>
           </button>
         </div>
+
+        {/*
+          MİNİ PC SORUSU PENCERENİN EN ÜSTÜNDE.
+
+          Soru sağ panelde, mekân seçiminin üstünde duruyordu: tasarımla
+          ilgisi olmayan bir karar orada yer kaplıyor, cevaplanmadığında da
+          "PDF Raporu Al" düğmesi sessizce soluk kalıyordu. Kararın tek
+          sonucu bu rapor (donanım listesi ve fiyat) — sorulduğu yer de
+          artık burası. Cevaplanmadan aşağıdaki iki indirme düğmesi açılmıyor
+          (bkz. hazir → miniPcSecili).
+        */}
+        {onMiniPc && (
+          <div className="mb-4 rounded-xl border border-neutral-200 dark:border-[#2c333f] px-3.5 py-3">
+            <MiniPcSecimi deger={summary.hasMiniPc} onChange={onMiniPc} />
+          </div>
+        )}
 
         <form
           noValidate

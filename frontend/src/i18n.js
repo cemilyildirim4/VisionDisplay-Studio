@@ -1633,7 +1633,6 @@ const dict = {
   // ---------- PDF ----------
   'pdf.export': { tr: 'Profesyonel PDF Raporu İndir', en: 'Download professional PDF report', ar: 'تنزيل تقرير PDF احترافي' },
   'pdf.professional': { tr: 'PDF Raporu Al', en: 'Get PDF report', ar: 'الحصول على تقرير PDF' },
-  'pdf.miniPcNot': { tr: 'Rapor için Mini PC sorusunu cevaplayın.', en: 'Answer the Mini PC question to get the report.', ar: 'أجب عن سؤال Mini PC للحصول على التقرير.' },
 
   // ---------- Sıfırlama onayı ----------
   'onay.vazgec': { tr: 'Vazgeç', en: 'Cancel', ar: 'إلغاء' },
