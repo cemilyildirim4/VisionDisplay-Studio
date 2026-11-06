@@ -350,6 +350,8 @@ const dict = {
   'yer3d.bitir': { tr: 'Yerleşimi bitir', en: 'Finish placement', ar: 'إنهاء الوضع' },
   'yer3d.duzenle': { tr: 'Yerleşimi düzenle', en: 'Edit placement', ar: 'تعديل الوضع' },
   'yer3d.ipucu': { tr: 'Tasarımın üstünden sürükleyin: taşınır. Boş alandan sürükleyin: döner. Ölçü referanstan gelir, değişmez.', en: 'Drag on the design to move it, drag the empty area to rotate. The size comes from the reference and stays fixed.', ar: 'اسحب فوق التصميم لتحريكه، واسحب المساحة الفارغة لتدويره. يأتي الحجم من المرجع ولا يتغير.' },
+  'yer3d.dortKose': { tr: '4 köşe ile yerleştir', en: 'Place with 4 corners', ar: 'ضع باستخدام 4 زوايا' },
+  'yer3d.dortKoseNot': { tr: 'Ekranları tek tek, dört köşesini işaretleyerek yerleştirir.', en: 'Places the screens one by one by marking their four corners.', ar: 'يضع الشاشات واحدة تلو الأخرى بتحديد زواياها الأربع.' },
   'yer3d.sabit': { tr: 'Yerleşim sabitlendi.', en: 'Placement is locked.', ar: 'تم تثبيت الوضع.' },
   'eklem.koseli': { tr: 'Köşeli', en: 'Sharp', ar: 'زاوية حادة' },
   'eklem.yuvarlak': { tr: 'Yuvarlak', en: 'Rounded', ar: 'مستدير' },

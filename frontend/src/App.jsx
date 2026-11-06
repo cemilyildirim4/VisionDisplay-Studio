@@ -9213,6 +9213,43 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
 
   /*
+   * DÖRT KÖŞE AKIŞINA DÖNÜŞ — HER ZAMAN AÇIK BİR KAPI.
+   *
+   * "Tasarımı ekrana getir" dört köşe adımlarını kapatıyor (iki katman
+   * aynı tıklamayı bekleyemez) ve panelde geri dönecek bir yer
+   * kalmıyordu: kullanıcı tek tek yerleştirmeye dönmek isteyince
+   * fotoğrafı değiştirmekten başka yolu yoktu.
+   *
+   * Burası o dönüşü yapıyor: 3B yerleşim kalkıyor, ekranların eski
+   * yerleri siliniyor ve sıra 1. ekrana dönüyor. REFERANS ÖLÇÜYE
+   * DOKUNULMUYOR — fotoğrafın ölçeği ikisinin de ortak zemini.
+   */
+  const dortKoseyeGec = () => {
+    setYer3d(null)
+    setYerlesimBitti(false)
+    /* Eski yerler siliniyor: adımlar 1. ekrandan başlasın. */
+    setYerlesmisIdler([])
+    yerKoseRef.current = {}
+    yerDuzlemRef.current = {}
+    setSabitEkranlar((l) => l.map((x) => ({ ...x, oran: null, alan: null })))
+    setElleKose(null)
+    setElleYerlesti(false)
+    setAlanNokta([])
+    setAlanKipi(false)
+    setRefKipi(false)
+    setRef2Kipi(false)
+    setLKoseKipi(false)
+    setDuzenlemede(false)
+    setKutuDuzen(null)
+    setTasarimAcik(true)
+    /* Sıra doğrudan veriliyor: adım zaten 3 ise efekt yeniden işlemez. */
+    setYerNokta([])
+    setYerKilit(0)
+    setYerSira(0)
+    setSihirbazAdim(3)
+  }
+
+  /*
    * TIKLANAN DÖRTGEN ŞEKLİ DE ÖLÇÜYÜ DE VERİYOR.
    *
    * Dörtgen, ekranın kabin sayısından gelen ölçüye göre merkezinden
@@ -12572,6 +12609,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         </p>
                       </>
                     )}
+                    {/*
+                      DÖRT KÖŞE SEÇENEĞİ PANELDEN KALKMIYOR.
+
+                      İki yerleştirme yolu var ve ikisi de her zaman
+                      seçilebilir olmalı: tasarımı bütün hâlinde fotoğrafa
+                      koymak, ya da ekranları tek tek dört köşesinden
+                      yerleştirmek. Önceden 3B yerleşime geçildiğinde
+                      ikincisi panelden tamamen kayboluyordu.
+                    */}
+                    <button
+                      type="button"
+                      onClick={dortKoseyeGec}
+                      className="mt-1.5 w-full rounded-lg border border-neutral-200 px-4 py-2 text-[14.5px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
+                    >
+                      {t('yer3d.dortKose')}
+                    </button>
+                    <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                      {t('yer3d.dortKoseNot')}
+                    </p>
                   </div>
                 )}
 
