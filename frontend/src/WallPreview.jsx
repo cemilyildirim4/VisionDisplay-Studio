@@ -1151,8 +1151,31 @@ export default function WallPreview({
     // Sınırlayıcı duvar: en az ekranları içerecek kadar (Genişlik/Yükseklik'ten)
     /* Duvar grubun TAMAMINI içeriyor: taşan bir parça kalmıyor. */
     /* Birleşimde şerit çizilmiyor; toplam en duvarı büyütmüyor. */
-    const wallWm = Math.max(0.1, Number(width) || 0, kaplanan ? 0 : totalWm, grupGercekWm)
-    const wallHm = Math.max(0.1, Number(height) || 0, maxHm)
+    /*
+     * DUVAR KÜPÜ İÇİNE ALIYOR.
+     *
+     * Duvar kutunun ÖNDEN kapladığı kadar büyüyordu; oysa küpün çizimi
+     * (köşeden bakış + perspektif) o enden geniş ve uzun. Küp duvarın
+     * tepesinden taşıp kırpılıyordu. Duvar artık çizim kutusunu da içine
+     * alıyor. Kutu metre cinsinden isteniyor: bakış uzaklığı kutunun kendi
+     * boyundan türediği için (bkz. bakisUzakligi) oran ölçekten bağımsız,
+     * yani 1000 px/m ile hesaplayıp bine bölmek yeterli.
+     */
+    const kupDuvarOlcu = kupKipi ? kupOlculeri(list) : null
+    const kupKutuM = kupDuvarOlcu
+      ? (() => {
+          const k = kupCizimKutusu({ ...kupDuvarOlcu, pxPerM: 1000 })
+          return { enM: k.cizimEn / 1000, boyM: k.cizimBoy / 1000 }
+        })()
+      : null
+    const wallWm = Math.max(
+      0.1,
+      Number(width) || 0,
+      kaplanan ? 0 : totalWm,
+      grupGercekWm,
+      kupKutuM?.enM || 0,
+    )
+    const wallHm = Math.max(0.1, Number(height) || 0, maxHm, kupKutuM?.boyM || 0)
     // Duvarın çevresindeki mutlak konumlu öğeler için sabit pay (tek ekran
     // dalındaki hesapla aynı mantık): kırpılmasınlar diye yer ayrılır.
     // Silüet duvarla aynı satırda olduğu için genişliği de hesaba katılır.
