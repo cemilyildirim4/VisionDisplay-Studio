@@ -183,8 +183,9 @@ export function VideoLayer({ src, gw, gh, left, top, lit, senkron = false }) {
          * boşluk kalıp panelin siyah zemini ince bir şerit olarak sızıyordu
          * (görsel içerikte de aynı sebep vardı — bkz. bgFor).
          */
-        width: Math.ceil(gw),
-        height: Math.ceil(gh),
+        /* Görselde olduğu gibi bir piksel büyük: alt/sağ kenarda şerit kalmasın. */
+        width: Math.ceil(gw) + 1,
+        height: Math.ceil(gh) + 1,
         /*
          * maxWidth/maxHeight SIFIRLANMALI. Tailwind'in preflight'ı
          * `video { max-width: 100% }` uyguluyor ve videoyu kapsayıcısına
@@ -266,8 +267,23 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
    * kenarda siyah bant yok. (Bir ara sığdırmaya geçilmişti; o da
    * kenarlarda bant bırakıyordu.)
    */
-  const bgW = Math.ceil(gw)
-  const bgH = Math.ceil(gh)
+  /*
+   * ALT KENARDAKİ KOYU ŞERİT — AYNI YUVARLAMA, DİKEYDE.
+   *
+   * Yukarıdaki yuvarlama sağ kenarı kapatıyordu; altta hâlâ 1-2 piksellik
+   * koyu bir şerit kalıyordu (en belirgini U'nun ortasındaki alçak
+   * ekranlarda). Sebebi aynı: paylaşılan yüzeyin boyu tam sayıya
+   * yuvarlanınca görselin ALT kenarı kutunun alt kenarıyla birebir
+   * çakışıyor, kutunun kendi boyu kesirli olduğu için de son satır
+   * yumuşatılıyor ve altından panelin zemin rengi (#0a0a0a) sızıyordu.
+   *
+   * Görsel iki eksende de bir piksel BÜYÜK çiziliyor; taşan kısmı
+   * overflow-hidden zaten kırpıyor. Esneme bütün yüzeyde 1 pikselden
+   * az, yani gözle görülmüyor ve komşu ekranlar aynı yüzeyi (gw/gh)
+   * kullandığı için hizalama da bozulmuyor.
+   */
+  const bgW = Math.ceil(gw) + 1
+  const bgH = Math.ceil(gh) + 1
   const bgFor = (leftGlobal) => ({
     backgroundImage: bgImage || undefined,
     backgroundSize: `${bgW}px ${bgH}px`,
@@ -646,6 +662,24 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
       {/* Cam parlaması — yayın yaparken ekranın camlı yüzeyinde ışık yansıması */}
       {!frameOnly && isLit && (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: LED_SHEEN }} />
+      )}
+
+      {/*
+        EKRANIN KENARI — "Ölçüleri gizle" ile birlikte kalkıyor.
+
+        Yan yana iki ekranın arasındaki ince dikey çizgi, görselin
+        kapatamadığı zemin şeridinden geliyordu: yani kusurdu, ama aynı
+        zamanda ekranların nerede bittiğini gösteren tek işaretti. Zemin
+        sızıntısı kapandı (bkz. bgW/bgH); kenar çizgisi artık BİLEREK
+        çiziliyor ve sade kipte (ölçüler gizliyken) hiç çizilmiyor —
+        tasarım orada tek bir görsel gibi duruyor. Aynı çizgi iç L tipinde
+        de var (bkz. yukarıdaki aynı blok).
+      */}
+      {!frameOnly && !isNone && !sade && (
+        <>
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02))', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))', pointerEvents: 'none' }} />
+        </>
       )}
       </div>
 
