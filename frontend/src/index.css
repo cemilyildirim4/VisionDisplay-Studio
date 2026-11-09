@@ -487,3 +487,25 @@ html, body {
     transition: none;
   }
 }
+
+
+/*
+ * AÇIK/KAPALI DÜĞMEDE GENİŞLİK SABİT.
+ *
+ * "Ölçüleri gizle" / "Ölçüleri göster" aynı düğmenin iki yazısı ve aynı
+ * uzunlukta değiller: düğme basılınca daralıp şeridi alt satıra
+ * sarıyordu. İkinci yazı ::after ile AYNI hücreye konuyor, görünmüyor
+ * ama yer kaplıyor — düğme her zaman uzun yazının eninde duruyor.
+ */
+.vds-esli {
+  display: inline-grid;
+  justify-items: start;
+}
+.vds-esli > span {
+  grid-area: 1 / 1;
+}
+.vds-esli::after {
+  grid-area: 1 / 1;
+  content: attr(data-es);
+  visibility: hidden;
+}

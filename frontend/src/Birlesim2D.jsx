@@ -248,9 +248,27 @@ export default function Birlesim2D({
       >
         {dilimler.map((d, i) => {
           const p = d.p
-          /* Kavis dilimi komşusunun altına kıl payı giriyor (bkz. BINDIRME). */
-          const pay = d.dilim ? BINDIRME : 0
-          const kutuW = d.w + pay * 2
+          /*
+           * BİNDİRME YALNIZCA AYNI EKRANIN DİLİMLERİ ARASINDA.
+           *
+           * Her dilim iki yanından kıl payı büyüyor, içeriği de o kadar
+           * kaydırılıyordu. Ekranın İLK diliminde kaydıracak içerik yok:
+           * kutunun sol kenarında ekranın görüntüsünün başlamadığı ince
+           * bir şerit kalıyor, arkadaki duvar oradan görünüyordu. Son
+           * dilimde aynısı sağda. Dilimler ekran ekran dizildiği için bu
+           * şeritler tam EKLEM yerlerinde buluşuyor ve yayın ortasında
+           * açık renkli dikey bir çizgi — yani köşe — çiziyordu.
+           *
+           * Pay artık yalnızca komşusu AYNI ekranda olan kenara veriliyor;
+           * iki ekranın buluştuğu yerde kutular uç uca geliyor. Yay sürekli
+           * olduğu için o kenarda iki dilimin açısı birkaç derece fark
+           * ediyor, yani bindirmeye de gerek yok.
+           */
+          const ilkDilim = d.dilim && d.u0 <= 1e-6
+          const sonDilim = d.dilim && (i === dilimler.length - 1 || dilimler[i + 1].i !== d.i)
+          const payL = d.dilim && !ilkDilim ? BINDIRME : 0
+          const payR = d.dilim && !sonDilim ? BINDIRME : 0
+          const kutuW = d.w + payL + payR
           return (
             <div
               key={(p.e.id ?? 'e') + '-' + i}
@@ -260,7 +278,7 @@ export default function Birlesim2D({
                 top: boyPx - p.h,
                 width: kutuW,
                 height: p.h,
-                marginLeft: -kutuW / 2,
+                marginLeft: -(d.w / 2 + payL),
                 overflow: d.dilim ? 'hidden' : undefined,
                 /*
                  * rotateY(θ) ekranın en eksenini (cos θ, 0, −sin θ) yapıyor;
@@ -276,7 +294,7 @@ export default function Birlesim2D({
               <div
                 style={{
                   position: 'absolute',
-                  left: -(d.u0 - pay),
+                  left: -(d.u0 - payL),
                   top: 0,
                   width: p.w,
                   height: p.h,
@@ -294,6 +312,8 @@ export default function Birlesim2D({
                   contentUrl={p.e.content ? p.e.contentUrl || null : contentUrl}
                   hideRegions={hideRegions}
                   sade={sade}
+                  /* Yayın dilimiyse ekranın kenar çizgisi çizilmiyor. */
+                  kenarsiz={!!d.dilim}
                   curveAmount={curveAmount}
                   leftCols={p.e.leftCols}
                   rightCols={p.e.rightCols}

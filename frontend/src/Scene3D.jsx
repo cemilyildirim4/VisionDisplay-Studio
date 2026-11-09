@@ -721,18 +721,27 @@ function KupKapak({ kup, cabD, genel }) {
   }, [src])
   useEffect(() => () => doku?.dispose?.(), [doku])
 
-  /* Kapak kutunun tam üstünde; ölçüsü 5. ekran varsa onun, yoksa kutunun. */
-  const en = ust?.wm > 0 ? Math.min(ust.wm, kup.en) : kup.en
-  const derin = ust?.hm > 0 ? Math.min(ust.hm, kup.derin) : kup.derin
+  /*
+   * KAPAK KUTUNUN ÜSTÜNÜ TAMAMEN KAPLIYOR.
+   *
+   * Yüzey 5. ekranın kendi ölçüsünde çiziliyordu; o ölçü kutunun üstünden
+   * küçük kaldığında çevresinde kasanın koyu rengi kalıyor, üstten bakışta
+   * iç içe küçülen kareler (koyu çerçeve → açık yüzey → koyu gövde) bir
+   * tünel gibi görünüyordu. Yan yüzlerin görüntü düzlemi gövdenin cabD/2
+   * kadar ÖNÜNDE durduğu için kapak da o dış yüzeye kadar uzuyor: kenarlar
+   * yan yüzlerin dış yüzüyle hizalı, arada koyu şerit kalmıyor.
+   */
+  const en = kup.en + cabD
+  const derin = kup.derin + cabD
   return (
     <group position={[0, kup.boy / 2, 0]}>
       {/* Gövde: kapağın kendi kalınlığı, kutunun kasasıyla aynı koyu renk. */}
       <mesh position={[0, -cabD / 2, 0]}>
-        <boxGeometry args={[kup.en, cabD, kup.derin]} />
+        <boxGeometry args={[en, cabD, derin]} />
         <meshStandardMaterial roughness={0.55} metalness={0.15} color="#12151c" />
       </mesh>
       {/* Yüzey: yukarı bakan düzlem, içeriği dört üçgen. */}
-      <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, cabD / 2 + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[en, derin]} />
         {doku ? (
           <meshBasicMaterial map={doku} toneMapped={false} />

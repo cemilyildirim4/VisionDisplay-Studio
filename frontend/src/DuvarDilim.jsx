@@ -97,5 +97,31 @@ export default function DuvarDilim({ sahne, kutu, tuvalW, tuvalH, duvarWpx, duva
     })
   })
 
+  /*
+   * DUVARIN SINIRI (bkz. sahneler.js duvarYuzeyi).
+   *
+   * Dilimler duvarı gerçek ölçüsünde esnetiyor ama kenarı belli olmuyordu.
+   * Bu katman yalnızca duvarın dikdörtgenini işaretliyor: ince bir kenar
+   * çizgisi ve dışa düşen gölge. Tıklamaya kapalı, ekranın altında kalıyor.
+   */
+  if (sahne.duvarYuzeyi) {
+    dilimler.push(
+      <div
+        key="duvar-sinir"
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: duvarSol,
+          top: duvarUst,
+          width: duvarWpx,
+          height: duvarHpx,
+          pointerEvents: 'none',
+          border: '1px solid rgba(255,255,255,0.45)',
+          boxShadow: '0 10px 26px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(0,0,0,0.06)',
+        }}
+      />,
+    )
+  }
+
   return <>{dilimler}</>
 }

@@ -218,7 +218,7 @@ export function VideoLayer({ src, gw, gh, left, top, lit, senkron = false }) {
  */
 // AR/kamera ekranı da AYNI bileşeni kullanır: tasarım orada da birebir aynı
 // çizilsin, iki ayrı kod yolu birbirinden ayrı düşmesin diye dışa açıldı.
-export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, videoKapali = false, curveAmount = 60, leftCols, rightCols, lYon = 'ice', solKirim = 0, sagKirim = 0, sade = false }) {
+export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content, contentUrl, spanW, spanH, offsetX = 0, offsetY = 0, hideRegions = false, frameOnly = false, videoKapali = false, curveAmount = 60, leftCols, rightCols, lYon = 'ice', solKirim = 0, sagKirim = 0, sade = false, kenarsiz = false }) {
   const nCols = Math.max(1, cols)
   const nRows = Math.max(1, rows)
   const isNone = content === 'none'
@@ -567,7 +567,7 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
             ince bir açık şerit, gövdeye hacim kazandırır.
             Sade kipte yok: yan yana iki ekranın arasında ikisi birleşip
             tek bir ayrım çizgisi oluşturuyordu. */}
-        {!isNone && !sade && (
+        {!isNone && !sade && !kenarsiz && (
           <>
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02))', pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))', pointerEvents: 'none' }} />
@@ -676,7 +676,17 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         tasarım orada tek bir görsel gibi duruyor. Aynı çizgi iç L tipinde
         de var (bkz. yukarıdaki aynı blok).
       */}
-      {!frameOnly && !isNone && !sade && (
+      {/*
+        YAYDA KENAR ÇİZGİSİ YOK (kenarsiz).
+
+        Yuvarlak eklemle birleşen ekranlar tek bir yay çiziyor; yayın
+        geometrisi pürüzsüz ama her ekranın KENDİ kenar çizgisi eklem
+        yerinde duruyor ve göz onu köşe olarak okuyordu: "bütün eklemler
+        yuvarlak" seçili bir grupta bile tasarım dört ayrı panel gibi
+        görünüyordu. Yayın dilimlerinde bu çizgi hiç çizilmiyor, yay tek
+        bir kavisli ekran gibi duruyor (bkz. Birlesim2D).
+      */}
+      {!frameOnly && !isNone && !sade && !kenarsiz && (
         <>
           <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02))', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))', pointerEvents: 'none' }} />

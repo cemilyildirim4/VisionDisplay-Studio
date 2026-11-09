@@ -5491,6 +5491,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const sonTip = tipUygunMu(tip, sirali.length) ? tip : 'acili'
     if (sonTip !== tip) setGrupTipi(sonTip)
     /*
+     * KÜPTEN ÇIKINCA ÜST EKRAN GİDİYOR.
+     *
+     * Beşinci ekranı kullanıcı eklemedi, küp açtı (bkz. kupUstu). Başka bir
+     * yerleşime geçilince o ekran tasarımda kalıyor, kabin sayısına ve
+     * fiyata da giriyordu: kullanıcı hiç istemediği bir ekranı elle silmek
+     * zorundaydı. Küpün kendi parçası, küple birlikte kalkıyor.
+     */
+    if (sonTip !== 'kutu') {
+      const kupUstIdleri = hepsi.filter((e) => e.kupUstu).map((e) => e.id)
+      if (kupUstIdleri.length) {
+        setSabitEkranlar((l) => l.filter((e) => !kupUstIdleri.includes(e.id)))
+        setGrupSecim((s) => s.filter((id) => !kupUstIdleri.includes(id)))
+        for (let k = sirali.length - 1; k >= 0; k--) {
+          if (kupUstIdleri.includes(sirali[k])) sirali.splice(k, 1)
+        }
+        if (sirali.length < 2) {
+          setGrup(null)
+          return
+        }
+      }
+    }
+    /*
      * KÜPÜN ÜST YÜZÜ SEÇİME GİRMİYOR.
      *
      * Küp DÖRT yan ekranla kuruluyor; üst yüz seçilenlerin dışında kalan
@@ -5515,8 +5537,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         const kimlik = yeniEkranKimligi()
         const sira = Math.max(0, ...hepsi.map((e) => e.sira || 0)) + 1
         const ayar = { ...ekranAyariAnlik(), content: 'led', contentUrl: null }
-        setSabitEkranlar((l) => [...l, { id: kimlik, sira, oran: null, ayar }])
-        ust = { id: kimlik, sira }
+        /* kupUstu: bu ekranı kullanıcı değil küp açtı; küp kapanınca gidiyor. */
+        setSabitEkranlar((l) => [...l, { id: kimlik, sira, oran: null, ayar, kupUstu: true }])
+        ust = { id: kimlik, sira, kupUstu: true }
       }
       sirali.push(ust.id)
     }
@@ -5667,6 +5690,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         ),
       )
     }
+    /* Grup ayrılınca küpün kendi üst ekranı da kalkıyor (bkz. kupUstu). */
+    setSabitEkranlar((l) => l.filter((e) => !e.kupUstu))
+    setGrupSecim((s) => {
+      const silinen = sabitEkranlar.filter((e) => e.kupUstu).map((e) => e.id)
+      return silinen.length ? s.filter((id) => !silinen.includes(id)) : s
+    })
     setGrup(null)
   }
 
@@ -10335,6 +10364,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             active={hasModel}
             pasifNot={t('tool.modelGerek')}
             label={showMeasurements ? t('tool.hideMeasures') : t('tool.showMeasures')}
+            /* Öteki durumun yazısı: düğme basılınca daralıp genişlemiyor. */
+            esEtiket={showMeasurements ? t('tool.showMeasures') : t('tool.hideMeasures')}
             onClick={() => hasModel && setShowMeasurements((m) => !m)}
           >
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -15106,7 +15137,16 @@ function IcerikOnizleme({ oge, dilim = null, oynatImi = false }) {
   )
 }
 
-function IconButton({ children, label, active, onClick, sadeceIkon = false, pasifNot = null }) {
+/*
+ * AÇIK/KAPALI DÜĞMEDE GENİŞLİK SABİT (esEtiket).
+ *
+ * "Ölçüleri gizle" basılınca yazı "Ölçüleri göster"e dönüyor; iki yazı aynı
+ * uzunlukta olmadığı için şerit bir durumda sığıyor, ötekinde sığmayıp alt
+ * satıra sarıyordu (ADMİN aşağı kayıyordu). esEtiket ÖTEKİ durumun yazısı:
+ * ikisi aynı hücreye konup görünmeyeni yer kaplıyor, yani düğme her zaman
+ * UZUN yazının eninde duruyor ve basmak şeridin düzenini değiştirmiyor.
+ */
+function IconButton({ children, label, active, onClick, sadeceIkon = false, pasifNot = null, esEtiket = null }) {
   return (
     <button
       type="button"
@@ -15123,7 +15163,22 @@ function IconButton({ children, label, active, onClick, sadeceIkon = false, pasi
       <span className="shrink-0 flex items-center justify-center">{children}</span>
       {/* Yatay telefonda da görünür (bkz. .arac-etiket). */}
       {/* 1280 px altında yalnız ikon: şerit tek sırada kalsın, ad title ipucunda. */}
-      {!sadeceIkon && <span className="arac-etiket hidden xl:inline">{label}</span>}
+      {!sadeceIkon && (
+        <span className="arac-etiket hidden xl:inline">
+          {/*
+            Öteki yazı sözde öğeye (::after) konuyor: yer kaplıyor ama
+            düğmenin metnine karışmıyor — aria-label, title ve testler
+            hâlâ tek bir yazı görüyor (bkz. index.css .vds-esli).
+          */}
+          {esEtiket ? (
+            <span className="vds-esli" data-es={esEtiket}>
+              <span>{label}</span>
+            </span>
+          ) : (
+            label
+          )}
+        </span>
+      )}
     </button>
   )
 }

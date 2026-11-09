@@ -130,6 +130,17 @@ export const SAHNELER = [
      * duvarın ortasına göre sola kaymış görünüyordu.
      */
     duvarKutu: { x0: 372, y0: 178, x1: 1320, y1: 520 },
+    /*
+     * DUVAR AYRI BİR YÜZEY OLARAK GÖRÜNÜYOR.
+     *
+     * Koridorda duvar dokusu tavana, zemine ve iki yandaki kolonlara
+     * karışıyor: kullanıcının girdiği duvarın NEREDE bittiği görünmüyordu.
+     * Şehir meydanında duvar gökyüzüne karşı duran ayrı bir blok, iç
+     * mekânda da yan duvarlarla sınırlı — burada o sınır yoktu. İnce bir
+     * kenar ve dışa düşen yumuşak gölge duvarı mekândan ayırıyor; ölçü
+     * duvarın kendi ölçüsü, çizim değişmiyor.
+     */
+    duvarYuzeyi: true,
     maskeli: false, // fotografta kendi LED yuzeyi yok
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).
