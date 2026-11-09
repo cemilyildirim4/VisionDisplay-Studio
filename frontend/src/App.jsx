@@ -2616,6 +2616,66 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   })()
 
   /*
+   * "DEĞİŞTİR" YAZISI ÖLÇÜLEREK GÖSTERİLİYOR.
+   *
+   * Önce ekran genişliğine (lg) bakılıyordu: 1536 px'lik masaüstünde
+   * yazı açılıyor ama araç şeridiyle birlikte satıra sığmıyordu —
+   * şerit alt satıra sarıyor, yazı da kutunun kenarında "Değişt" diye
+   * kesiliyordu. Türkçe "Değiştir" İngilizce "Change"ten uzun olduğu
+   * için eşik dile göre de değişiyor. Artık varsayım yok: antetin boş
+   * genişliği ile yazının gerçek genişliği ölçülüyor, yalnızca
+   * gerçekten sığıyorsa açılıyor. Ölçüm her zaman "yazı yokmuş gibi"
+   * yapılıyor — açılıp kapanıp titremesin diye.
+   */
+  const antetRef = useRef(null)
+  const solRef = useRef(null)
+  const seritRef = useRef(null)
+  const olcuRef = useRef(null)
+  const modelAdRef = useRef(null)
+  const [degistirYazisi, setDegistirYazisi] = useState(false)
+  const yaziAcikRef = useRef(false)
+  yaziAcikRef.current = degistirYazisi
+
+  useEffect(() => {
+    if (!hasModel) {
+      setDegistirYazisi(false)
+      return undefined
+    }
+    const olc = () => {
+      const antet = antetRef.current
+      const sol = solRef.current
+      const serit = seritRef.current
+      const olcu = olcuRef.current
+      const ad = modelAdRef.current
+      if (!antet || !sol || !serit || !olcu || !ad) return
+      const yaziEni = olcu.offsetWidth + 4 /* ikonla arasındaki boşluk */
+      /* Şerit alt satıra sarabildiği için eni düğmelerden toplanıyor. */
+      const seritAra = parseFloat(getComputedStyle(serit).columnGap) || 0
+      let seritEni = 0
+      for (const d of serit.children) seritEni += d.offsetWidth
+      seritEni += seritAra * Math.max(0, serit.children.length - 1)
+      const bicim = getComputedStyle(antet)
+      const icEn =
+        antet.clientWidth - (parseFloat(bicim.paddingLeft) || 0) - (parseFloat(bicim.paddingRight) || 0)
+      const antetAra = parseFloat(bicim.columnGap) || 0
+      const solEni = sol.scrollWidth - (yaziAcikRef.current ? yaziEni : 0)
+      /* Model adı zaten kısalıyorsa yazıya hiç yer yok demektir. */
+      const adTam = ad.scrollWidth <= ad.clientWidth + 1
+      const bosluk = icEn - solEni - seritEni - antetAra
+      setDegistirYazisi(adTam && bosluk >= yaziEni + 8)
+    }
+    olc()
+    const izle = new ResizeObserver(olc)
+    if (antetRef.current) izle.observe(antetRef.current)
+    if (seritRef.current) izle.observe(seritRef.current)
+    window.addEventListener('resize', olc)
+    return () => {
+      izle.disconnect()
+      window.removeEventListener('resize', olc)
+    }
+  }, [hasModel, modelEtiketi, lang])
+
+  /*
    * SAYFADAN AYRILMA UYARISI.
    *
    * Tasarım hiçbir yere kaydedilmiyor; sayfa kapanınca ya da yenilenince
@@ -10195,7 +10255,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       {/* Masaüstü: tek ekran yüksekliği. Mobil: içerik alt alta dizilip sayfa kayar. */}
       <div className="yatay-sayfa min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
       {/* Başlık çubuğu — kurumsal logo + sayfa adı */}
-      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-6 py-2.5 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+      <header ref={antetRef} className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-6 py-2.5 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
         {/*
           ANTET VE MODEL YAN YANA.
 
@@ -10203,12 +10263,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           aynı yerde okunuyor. Model seçilmeden önce burada hiçbir şey
           yok — seçim ekranında gösterilecek bir model de yok.
         */}
-        <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3">
+        <div ref={solRef} className="flex min-w-0 shrink items-center gap-2 sm:gap-3">
           <BrandMark title={t('app.title')} />
+          {/* Yazının gerçek genişliği: görünmez, akışın dışında, hep ölçülebilir. */}
+          <span
+            ref={olcuRef}
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-[9999px] top-0 whitespace-nowrap text-[13px] font-medium"
+          >
+            {t('model.degistir')}
+          </span>
           {hasModel && (
-            <div className="flex min-w-0 max-w-[15rem] items-center gap-1 whitespace-nowrap rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1 dark:border-[#2c333f] dark:bg-[#161d28]">
+            <div className="flex min-w-0 max-w-[24rem] items-center gap-1 whitespace-nowrap rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1 dark:border-[#2c333f] dark:bg-[#161d28]">
               <span
-                className="truncate text-[13px] font-semibold text-neutral-700 dark:text-neutral-200"
+                ref={modelAdRef}
+                className="min-w-0 truncate text-[13px] font-semibold text-neutral-700 dark:text-neutral-200"
                 title={modelEtiketi}
               >
                 {modelEtiketi}
@@ -10229,7 +10298,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   <path d="M12 20h9" />
                   <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
                 </svg>
-                <span className="hidden lg:inline">{t('model.degistir')}</span>
+                {degistirYazisi && <span>{t('model.degistir')}</span>}
               </button>
             </div>
           )}
@@ -10249,8 +10318,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           Eskiden shrink-0 + flex-nowrap'ti: şerit hiç daralmıyor, kalan
           her şeyi (antet dâhil) sıfıra eziyordu. Düğmelerin kendisi
           değişmiyor — yalnızca dar masaüstünde ikinci satıra geçiyorlar.
+
+          min-w-max: şerit min-w-0 ile içeriğinin altına kadar daralabiliyor,
+          sağa yaslı düğmeler de kutunun SOLUNA taşıp model alanının üstüne
+          biniyordu (1280-1440 px arası). Artık şerit kendi eninin altına
+          inmiyor; daralan taraf model alanı oluyor, adı kısalarak sığıyor.
         */}
-        <div className="flex min-w-0 flex-1 flex-wrap sm:flex-nowrap items-center gap-1.5 xl:gap-2 w-full sm:w-auto justify-start sm:justify-end">
+        <div ref={seritRef} className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 xl:gap-2 w-full sm:w-auto justify-start sm:justify-end">
 <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('tool.reset')} onClick={() => hasModel && setResetConfirmOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />
