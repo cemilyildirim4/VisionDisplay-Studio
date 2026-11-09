@@ -359,6 +359,18 @@ const dict = {
   'yer3d.ipucu': { tr: 'Tasarımın üstünden sürükleyin: taşınır. Boş alandan sürükleyin: döner. Ölçü referanstan gelir, değişmez.', en: 'Drag on the design to move it, drag the empty area to rotate. The size comes from the reference and stays fixed.', ar: 'اسحب فوق التصميم لتحريكه، واسحب المساحة الفارغة لتدويره. يأتي الحجم من المرجع ولا يتغير.' },
   'yer3d.dortKose': { tr: '4 köşe ile yerleştir', en: 'Place with 4 corners', ar: 'ضع باستخدام 4 زوايا' },
   'yer3d.dortKoseNot': { tr: 'Ekranları tek tek, dört köşesini işaretleyerek yerleştirir.', en: 'Places the screens one by one by marking their four corners.', ar: 'يضع الشاشات واحدة تلو الأخرى بتحديد زواياها الأربع.' },
+  'duvar.yontem': { tr: 'Duvarları işaretle', en: 'Mark the walls', ar: 'حدّد الجدران' },
+  'duvar.yontemNot': {
+    tr: 'Fotoğraftaki her duvarın dört köşesine tıklayın; tasarım kendiliğinden oturur.',
+    en: 'Click the four corners of each wall in the photo; the design places itself.',
+    ar: 'انقر على الزوايا الأربع لكل جدار في الصورة؛ يستقر التصميم تلقائيًا.',
+  },
+  'duvar.adim': { tr: 'Duvar {0}: {1}/4 köşe', en: 'Wall {0}: {1}/4 corners', ar: 'الجدار {0}: {1}/4 زوايا' },
+  'duvar.ipucu': {
+    tr: 'Sürükleyerek tasarımı duvarlar boyunca kaydırın; döndürme yok. Köşeleri sürükleyerek duvarı düzeltebilirsiniz. Ölçü referanstan gelir, değişmez.',
+    en: 'Drag to slide the design along the walls; there is no rotation. Drag the corners to correct a wall. The size comes from the reference and stays fixed.',
+    ar: 'اسحب لتحريك التصميم على امتداد الجدران؛ لا يوجد تدوير. اسحب الزوايا لتصحيح الجدار. يأتي الحجم من المرجع ولا يتغير.',
+  },
   'yer3d.sabit': { tr: 'Yerleşim sabitlendi.', en: 'Placement is locked.', ar: 'تم تثبيت الوضع.' },
   'eklem.koseli': { tr: 'Köşeli', en: 'Sharp', ar: 'زاوية حادة' },
   'eklem.yuvarlak': { tr: 'Yuvarlak', en: 'Rounded', ar: 'مستدير' },

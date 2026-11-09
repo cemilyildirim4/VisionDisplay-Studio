@@ -1,8 +1,8 @@
 /**
-import { sayiYeri } from './sayiBicimi.js'
  * Duvara sığan yatay / dikey dizilim kartları.
  * Tıklanınca oryantasyon + sütun/satır güncellenir; tuval anında yeniden hesaplanır.
  */
+import { sayiYeri } from './sayiBicimi.js'
 export default function YerlesimKartlari({ t, secenekler, orientation, onSelect }) {
   if (!secenekler) return null
 
