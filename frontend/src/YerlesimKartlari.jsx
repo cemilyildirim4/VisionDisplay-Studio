@@ -1,4 +1,5 @@
 /**
+import { sayiYeri } from './sayiBicimi.js'
  * Duvara sığan yatay / dikey dizilim kartları.
  * Tıklanınca oryantasyon + sütun/satır güncellenir; tuval anında yeniden hesaplanır.
  */
@@ -22,7 +23,7 @@ export default function YerlesimKartlari({ t, secenekler, orientation, onSelect 
             key={id}
             type="button"
             aria-pressed={secili}
-            aria-label={`${etiket}: ${veri.cols}×${veri.rows} ${t('conf.layoutGrid')} · ${veri.piksel.toLocaleString('tr-TR')} ${t('conf.layoutPixels')}`}
+            aria-label={`${etiket}: ${veri.cols}×${veri.rows} ${t('conf.layoutGrid')} · ${veri.piksel.toLocaleString(sayiYeri())} ${t('conf.layoutPixels')}`}
             onClick={() => onSelect(id, veri)}
             className={`relative flex-1 text-left rounded-xl border-2 px-4 py-3.5 min-h-[72px] transition-all duration-200 ${
               secili
@@ -45,7 +46,7 @@ export default function YerlesimKartlari({ t, secenekler, orientation, onSelect 
                   {etiket}: {veri.cols}×{veri.rows} {t('conf.layoutGrid')}
                 </div>
                 <div className={`mt-1 text-[13px] leading-snug tabular-nums ${secili ? 'text-white/90' : 'text-neutral-500 dark:text-neutral-400'}`}>
-                  {veri.piksel.toLocaleString('tr-TR')} {t('conf.layoutPixels')}
+                  {veri.piksel.toLocaleString(sayiYeri())} {t('conf.layoutPixels')}
                 </div>
               </div>
               {secili && (

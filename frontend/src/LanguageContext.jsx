@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DEFAULT_LANG, dirOf, translate } from './i18n.js'
 import { LanguageContext } from './useLang.js'
+import { sayiYeriniKur } from './sayiBicimi.js'
 
 /**
  * Dil durumu tüm uygulamada paylaşılır.
@@ -22,6 +23,8 @@ export function LanguageProvider({ children }) {
   })
 
   const dir = dirOf(lang)
+  /* Ölçüler ve toplamlar da seçilen dile göre yazılsın (bkz. sayiBicimi.js). */
+  sayiYeriniKur(lang)
 
   // Sayfanın dil ve yön bilgisini HTML'e yaz (tarayıcı çevirisi ve rtl için)
   useEffect(() => {

@@ -832,16 +832,22 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
      * dışarıdan siyah görünüyordu (en belirgini sol yüz).
      *
      * İçerik düzlemi gövdenin cabD/2 kadar ÖNÜNDE duruyor (bkz. DuzDuvar).
-     * Yüz kutunun tam kenarına konunca o düzlem kenardan dışarı taşıyor ve
-     * komşusuyla arasında kayma kalıyordu. Yüzler o kadar İÇERİ alınıyor:
-     * görüntü yüzeyleri kutunun kenarında, köşelerde uç uca buluşuyor.
+     * Yüzler bir ara o kadar İÇERİ alınmıştı; o zaman da dört düzlem
+     * küçülen bir kareye oturuyor ama enleri değişmediği için KÖŞELERDE
+     * BULUŞMUYOR, her köşede kama biçiminde bir delik kalıyordu — arkadaki
+     * mekân oradan görünüyor, ekran görüntüsündeki açık gri kamalar bunlar.
+     *
+     * Doğrusu yüzü kutunun kenarında bırakıp içerik düzlemine DİKİŞ PAYI
+     * vermek: 90°'lik köşede pay tam olarak ön yüz mesafesine eşit
+     * (bkz. dikisPayi) ve iki düzlem köşede uç uca geliyor. Kutu kapalı,
+     * görüntü köşeden köşeye kesintisiz.
      */
-    const onYuz = cabD / 2 + 0.002
+    const onYuz = onYuzMesafesi(cabD)
     const yerler = [
-      { x: 0, z: derin / 2 - onYuz, rot: 0 },
-      { x: en / 2 - onYuz, z: 0, rot: Math.PI / 2 },
-      { x: 0, z: -derin / 2 + onYuz, rot: Math.PI },
-      { x: -en / 2 + onYuz, z: 0, rot: -Math.PI / 2 },
+      { x: 0, z: derin / 2, rot: 0 },
+      { x: en / 2, z: 0, rot: Math.PI / 2 },
+      { x: 0, z: -derin / 2, rot: Math.PI },
+      { x: -en / 2, z: 0, rot: -Math.PI / 2 },
     ]
     /*
      * GÖRSEL 2D'DEKİ AÇILIMLA AYNI BÖLÜNÜYOR.
@@ -866,8 +872,9 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
         uvRepeat: dilimVar ? 1 / 4 : 1,
         uvOffsetY: dilimVar ? 0 : 0,
         uvRepeatY: dilimVar ? 0.5 : 1,
-        payL: 0,
-        payR: 0,
+        /* Köşeler kapansın: her iki kenarda 90°'lik dikiş payı. */
+        payL: onYuz,
+        payR: onYuz,
       }
     })
     return { yuzler, ust: screens[4] || null, en, derin, boy }

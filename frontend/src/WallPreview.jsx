@@ -8,6 +8,7 @@ import { useLang } from './useLang.js'
 import { yonDonusumu } from './hooks/useYon.js'
 import Kup2D, { kupOlculeri, kupCizimKutusu } from './Kup2D.jsx'
 import Birlesim2D from './Birlesim2D.jsx'
+import { sayiYeri } from './sayiBicimi.js'
 import { birlesimKapladigi } from './birlesimOlcu.js'
 import { koseDonusumu } from './homografi.js'
 
@@ -575,8 +576,8 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
         {/* Kanat başına metre ölçüsü */}
         {!hideRegions && (
           <div style={{ position: 'absolute', left: 0, top: hPx + 8, width: wPx, display: 'flex', justifyContent: 'space-between', pointerEvents: 'none' }}>
-            <span className="bg-neutral-800 text-white text-[10px] px-1.5 py-0.5 rounded-lg whitespace-nowrap max-w-[45%] overflow-hidden text-ellipsis">{(lCols * cw).toLocaleString('tr-TR', { maximumFractionDigits: 3 })} m</span>
-            <span className="bg-neutral-800 text-white text-[10px] px-1.5 py-0.5 rounded-lg whitespace-nowrap max-w-[45%] overflow-hidden text-ellipsis">{(rCols * cw).toLocaleString('tr-TR', { maximumFractionDigits: 3 })} m</span>
+            <span className="bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 text-[10px] px-1.5 py-0.5 rounded-lg whitespace-nowrap max-w-[45%] overflow-hidden text-ellipsis">{(lCols * cw).toLocaleString('tr-TR', { maximumFractionDigits: 3 })} m</span>
+            <span className="bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 text-[10px] px-1.5 py-0.5 rounded-lg whitespace-nowrap max-w-[45%] overflow-hidden text-ellipsis">{(rCols * cw).toLocaleString('tr-TR', { maximumFractionDigits: 3 })} m</span>
           </div>
         )}
       </div>
@@ -738,7 +739,7 @@ function SegH({ w, label, muted, yazi = 11 }) {
       {(!muted || w >= ETIKET_EN_AZ) && (
         <span
           style={{ fontSize: yazi, padding: dolgu }}
-          className={`leading-none rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}
+          className={`leading-none rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white dark:bg-neutral-200 dark:text-neutral-900' : 'bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900'}`}
         >
           {label}
         </span>
@@ -775,7 +776,7 @@ function SegV({ h, label, muted, yazi = 11 }) {
               }
             : { writingMode: 'vertical-rl', fontSize: yazi, padding: dolgu }
         }
-        className={`leading-none rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white' : 'bg-neutral-800 text-white'}`}
+        className={`leading-none rounded-lg whitespace-nowrap ${muted ? 'bg-neutral-400 text-white dark:bg-neutral-200 dark:text-neutral-900' : 'bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900'}`}
       >
         {label}
       </span>
@@ -1077,7 +1078,7 @@ export default function WallPreview({
   const cw = (model.widthMm || 500) / 1000
   const ch = (model.heightMm || 500) / 1000
   // Ölçü etiketi (tüm ölçüler metre)
-  const fmtU = (m) => `${Number(m).toLocaleString('tr-TR', { maximumFractionDigits: 3 })} m`
+  const fmtU = (m) => `${Number(m).toLocaleString(sayiYeri(), { maximumFractionDigits: 3 })} m`
   // İzleme mesafesi: kısa etiket (1 ondalık) — diyagonal çizgide taşmasın
   const fmtDist = (m) => `${Number(m).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} m`
 
@@ -1865,7 +1866,7 @@ export default function WallPreview({
                         transform: olcuSol > 34 ? 'translateX(-50%)' : 'translateX(-8%)',
                       }}
                     >
-                      <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(olcuMarginM)}</span>
+                      <span className="bg-neutral-400 text-white dark:bg-neutral-200 dark:text-neutral-900 text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(olcuMarginM)}</span>
                     </div>
                     <div
                       className="absolute"
@@ -1875,7 +1876,7 @@ export default function WallPreview({
                         transform: olcuSol > 34 ? 'translateX(-50%)' : 'translateX(-92%)',
                       }}
                     >
-                      <span className="bg-neutral-400 text-white text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(olcuMarginM)}</span>
+                      <span className="bg-neutral-400 text-white dark:bg-neutral-200 dark:text-neutral-900 text-[10px] sm:text-[11px] px-1.5 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">{fmtU(olcuMarginM)}</span>
                     </div>
                   </>
                 )}
@@ -1898,7 +1899,7 @@ export default function WallPreview({
                         sayı üretiyordu. Kanatlı tasarımda her yüzeyin
                         kendi ölçüsü yazılıyor.
                       */}
-                      <span className="bg-neutral-800 text-white text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">
+                      <span className="bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">
                         {fmtU(s.gercekWm ?? s.wm)}
                       </span>
                     </div>
@@ -2297,7 +2298,7 @@ export default function WallPreview({
                       transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-8%)',
                     }}
                   >
-                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginXpx / pxPerM)}</span>
+                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white dark:bg-neutral-200 dark:text-neutral-900 px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginXpx / pxPerM)}</span>
                   </div>
                   <div
                     className="absolute"
@@ -2307,7 +2308,7 @@ export default function WallPreview({
                       transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-92%)',
                     }}
                   >
-                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginXpx / pxPerM)}</span>
+                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white dark:bg-neutral-200 dark:text-neutral-900 px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginXpx / pxPerM)}</span>
                   </div>
                 </>
               )}
@@ -2324,7 +2325,7 @@ export default function WallPreview({
                       transform: marginYpx > 34 ? 'translateY(-50%)' : 'translateY(-8%)',
                     }}
                   >
-                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginYpx / pxPerM)}</span>
+                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white dark:bg-neutral-200 dark:text-neutral-900 px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginYpx / pxPerM)}</span>
                   </div>
                   <div
                     className="absolute"
@@ -2334,7 +2335,7 @@ export default function WallPreview({
                       transform: marginYpx > 34 ? 'translateY(-50%)' : 'translateY(-92%)',
                     }}
                   >
-                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginYpx / pxPerM)}</span>
+                    <span style={{ fontSize: olcuYazi }} className="bg-neutral-400 text-white dark:bg-neutral-200 dark:text-neutral-900 px-1.5 py-1 rounded-lg whitespace-nowrap leading-none">{fmtU(marginYpx / pxPerM)}</span>
                   </div>
                 </>
               )}

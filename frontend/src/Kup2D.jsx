@@ -91,7 +91,13 @@ export function kupOlculeri(ekranlar) {
 }
 
 /*
- * BAKIŞ UZAKLIĞI KUTUNUN KENDİ BOYUNDAN.
+ * BAKIŞ UZAKLIĞI KUTUNUN KENDİ BOYUNDAN — VE UZAK.
+ *
+ * Perspektif güçlüyken yakın köşe büyüyor: kutunun çizimdeki eni gerçek
+ * köşegeninden (kenar × √2) yüzde onlarca büyük çıkıyor, duvar da o
+ * büyümeyi kapatmak için şişiyordu — kullanıcı kenarlarda 13,6 cm boşluk
+ * görüyordu. Uzaklık köşegenin kırk katı: kutu hâlâ üç boyutlu okunuyor
+ * ama izdüşüm neredeyse dik, yani çizimdeki en gerçek köşegene eşit.
  *
  * Perspektif sabit 1400 pikselden hesaplanıyordu. Küçük bir küpte bu
  * doğal duruyor, büyük bir küpte aşırı: yakın yüz üçte bir büyüyor,
@@ -100,8 +106,10 @@ export function kupOlculeri(ekranlar) {
  * türüyor: perspektif her ölçüde aynı güçte, çizim de gerçek ölçüye
  * yakın kalıyor.
  */
-const bakisUzakligi = (W, D, H) => Math.max(600, Math.hypot(W, D, H) * 4)
-const PAY = 8
+const bakisUzakligi = (W, D, H) => Math.max(2000, Math.hypot(W, D, H) * 40)
+/* Çizimin kendi iç payı (px). Duvar hesabı bunu dışarıda tutuyor. */
+export const KUP_CIZIM_PAYI = 8
+const PAY = KUP_CIZIM_PAYI
 
 /**
  * ÇİZİMİN KAPLADIĞI KUTU (piksel).
@@ -166,7 +174,8 @@ export default function Kup2D({
   enCokW = 0,
   enCokH = 0,
 }) {
-  const [aci, setAci] = useState(-28)
+  /* Kutu çaprazdan: iki yan yüz eşit görünüyor (bkz. KUP_DURUS_ACISI). */
+  const [aci, setAci] = useState(-45)
   const [egim, setEgim] = useState(BASLANGIC_EGIM)
   const surukle = useRef(null)
   /*

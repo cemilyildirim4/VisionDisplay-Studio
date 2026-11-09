@@ -279,6 +279,7 @@ const dict = {
   // ---------- Duvar bölümü ----------
   'olcu.grupToplam': { tr: 'Grup toplamı', en: 'Group total', ar: 'إجمالي المجموعة' },
   'wall.heading': { tr: 'Duvar', en: 'Wall', ar: 'الجدار' },
+  'wall.enAz': { tr: 'En az {0} m olabilir.', en: 'Minimum is {0} m.', ar: 'الحد الأدنى {0} م.' },
   'wall.width': { tr: 'Genişlik', en: 'Width', ar: 'العرض' },
   'wall.height': { tr: 'Yükseklik', en: 'Height', ar: 'الارتفاع' },
 
@@ -324,6 +325,10 @@ const dict = {
   'screen.lEgimSaga': { tr: 'Sağa eğ', en: 'Tilt right', ar: 'إمالة لليمين' },
   'ekran.coklu': { tr: 'Ekranlar', en: 'Screens', ar: 'الشاشات' },
   'ekran.tekil': { tr: 'ekran', en: 'screen', ar: 'شاشة' },
+  /* Çoğul ve sıra: İngilizcede "2 screen" ve "1. screen" yanlış. */
+  'ekran.cogul': { tr: 'ekran', en: 'screens', ar: 'شاشات' },
+  'ekran.no': { tr: '{0}. ekran', en: 'Screen {0}', ar: 'الشاشة {0}' },
+  'birim.piksel': { tr: 'piksel', en: 'pixels', ar: 'بكسل' },
   'ekran.oncelikOlcu': {
     tr: 'Önce ölçeklendirmeyi tamamlayın: ekranın fotoğraftaki yeri ve ölçüsü oradan geliyor.',
     en: 'Finish the scaling first: the screen gets its place and size from it.',
@@ -529,7 +534,7 @@ const dict = {
   'scene.salon': { tr: 'İç mekân', en: 'Indoor', ar: 'داخلي' },
   'scene.cephe': { tr: 'Dış mekân', en: 'Outdoor', ar: 'خارجي' },
   'scene.pano': { tr: 'Açık hava panosu', en: 'Outdoor billboard', ar: 'لوحة خارجية' },
-  'scene.customOff': { tr: 'Mekân yok', en: 'No space', ar: 'بدون مكان' },
+  'scene.customOff': { tr: 'Mekân yok', en: 'No scene', ar: 'بدون مكان' },
   'scene.custom': { tr: 'Kendi fotoğrafım', en: 'My photo', ar: 'صورتي' },
   'scene.viewDist': { tr: 'Mesafe', en: 'Distance', ar: 'المسافة' },
   'scene.viewDistHint': {
@@ -1701,6 +1706,9 @@ const dict = {
   'scene3d.title': { tr: '3D Görünüm (Beta)', en: '3D View (Beta)', ar: 'عرض ثلاثي الأبعاد (بيتا)' },
   'scene3d.lodLow': { tr: '· Büyük duvar: sadeleştirilmiş detay', en: '· Large wall: simplified detail', ar: '· جدار كبير: تفاصيل مبسطة' },
   'scene3d.lodHigh': { tr: '· Yüksek detay', en: '· High detail', ar: '· تفاصيل عالية' },
+  'onay.kapat': { tr: 'Kapat', en: 'Close', ar: 'إغلاق' },
+  'scene3d.acilamadi': { tr: '3D görünüm açılamadı. Bağlantı sorunu olabilir.', en: 'The 3D view could not be opened. This may be a connection problem.', ar: 'تعذّر فتح العرض ثلاثي الأبعاد. قد تكون مشكلة اتصال.' },
+  'scene3d.tekrar': { tr: 'Tekrar dene', en: 'Try again', ar: 'حاول مرة أخرى' },
   'scene3d.exporting': { tr: 'Hazırlanıyor…', en: 'Preparing…', ar: 'جارٍ التحضير…' },
   'scene3d.viewInAr': { tr: "AR'da Gör", en: 'View in AR', ar: 'عرض بالواقع المعزز' },
   'scene3d.hint': { tr: 'Sürükleyerek döndürün, tekerlek/iki parmakla yakınlaştırın.', en: 'Drag to rotate, scroll/pinch to zoom.', ar: 'اسحب للتدوير، قرّب بالتمرير أو بإصبعين.' },

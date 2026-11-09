@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import { guvenliLazy } from './guvenliLazy.js'
+import { sayiYeri, sayiYaz } from './sayiBicimi.js'
 import { KIOSK_GOVDESI_ACIK } from './featureFlags.js'
 import { mekaniSil } from './fotoDeposu.js'
 import ModelSelectModal from './ModelSelectModal.jsx'
@@ -33,7 +34,7 @@ import {
 } from './referansOlcek.js'
 import { durusDortgeni, faredenDurus, durusaOturt, kutuGovdesi } from './durusKutusu.js'
 import { birlesimKapladigi } from './birlesimOlcu.js'
-import { kupOlculeri, kupCizimKutusu } from './Kup2D.jsx'
+import { kupOlculeri, kupCizimKutusu, KUP_CIZIM_PAYI } from './Kup2D.jsx'
 import ReferansSecici from './ReferansSecici.jsx'
 import OlcuSihirbazi from './OlcuSihirbazi.jsx'
 import KalinlikKatmani from './KalinlikKatmani.jsx'
@@ -150,6 +151,7 @@ import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
 import TaslakKutu from './TaslakKutu.jsx'
 import FotoYerlesim3D from './FotoYerlesim3D.jsx'
+import Sahne3DKapi from './Sahne3DKapi.jsx'
 import AdaySecici from './AdaySecici.jsx'
 import DavetKapisi from './DavetKapisi.jsx'
 import { kenarlaraOturt } from './ekranYuzeyi.js'
@@ -169,7 +171,11 @@ import ArView from './ArView.jsx'
 // three.js/react-three-fiber/drei/model-viewer tek başına ~1.8 MB — ana pakete
 // gömülürse ilk yükleme herkes için ağırlaşır. Bu yüzden "3D Görünüm" düğmesine
 // basılana kadar hiç indirilmez (kod bölme / code-splitting).
-const Scene3D = guvenliLazy(() => import('./Scene3D.jsx'))
+/*
+ * 3D sahne guvenliLazy ile değil kendi kapısıyla yükleniyor: yükleme
+ * düşerse sayfayı yenilemek (ve tasarımı silmek) yerine tekrar deniyor,
+ * kullanıcıya kapatma ve yeniden deneme veriyor (bkz. Sahne3DKapi).
+ */
 /* Fotograflı mekânda tasarımı yerinde 3B çizen katman — yalnızca gerekince yüklenir. */
 const Mekan3D = guvenliLazy(() => import('./Mekan3D.jsx'))
 const DuvarIzgara = guvenliLazy(() => import('./DuvarIzgara.jsx'))
@@ -435,6 +441,9 @@ function kenarKaymasi(kendi, komsu, esik) {
   return enIyi
 }
 
+/* Yerleşim tipi seçilince duvarın her kenarında kalan pay (metre). */
+const DUVAR_PAYI = 0.05
+
 /* Kenarlar bu kadar yaklaşınca mıknatıs gibi yapışıyor (tuval pikseli). */
 const KENAR_YAPISMA_PX = 18
 /* Yapışık sayılma payı: çizimdeki yuvarlama artığı kadar. */
@@ -496,6 +505,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [cols, setCols] = useState(1)
   const [rows, setRows] = useState(1)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  /* Duvar kutusuna sığmayan ölçü yazıldığında çıkan kırmızı not. */
+  const [duvarUyari, setDuvarUyari] = useState(null)
   /*
    * ONAY VE BİLGİ KUTULARI — tarayıcının kendi pencereleri yerine.
    * Soru bir işi onaylatıyor, bilgi yalnızca söylüyor; ikisi de aynı
@@ -5429,8 +5440,25 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * yoksa kutunun üstü açık kalıyor — eskiden de öyleydi.
      */
     if (sonTip === 'kutu') {
-      const ust = hepsi.find((e) => !sirali.includes(e.id))
-      if (ust) sirali.push(ust.id)
+      let ust = hepsi.find((e) => !sirali.includes(e.id))
+      /*
+       * YEDEK EKRAN YOKSA ÜST YÜZ KENDİLİĞİNDEN DOĞUYOR.
+       *
+       * Eskiden elde beşinci bir ekran yoksa kutunun üstü açık kalıyordu:
+       * kullanıcı küpü seçiyor, üst yüzü ayrıca eklemesi gerektiğini
+       * hiçbir yerde görmüyordu. Küp dört yan yüzle seçiliyor, beşincisi
+       * burada kuruluyor; ölçüsü kutunun üstünü kapatacak sayıya
+       * kendiliğinden geliyor (bkz. kupUstGereken) ve normal bir ekran
+       * olduğu için kabin sayısına, fiyata ve PDF'e giriyor.
+       */
+      if (!ust) {
+        const kimlik = yeniEkranKimligi()
+        const sira = Math.max(0, ...hepsi.map((e) => e.sira || 0)) + 1
+        const ayar = { ...ekranAyariAnlik(), content: 'led', contentUrl: null }
+        setSabitEkranlar((l) => [...l, { id: kimlik, sira, oran: null, ayar }])
+        ust = { id: kimlik, sira }
+      }
+      sirali.push(ust.id)
     }
     setGrup((eski) => ({
       tip: sonTip,
@@ -8411,7 +8439,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const icerikGrubunuAyir = (id) => setIcerikGruplari((l) => l.filter((k) => !k.includes(id)))
 
   /* Metre yazımı: "2,88". Panelde ve özet satırında aynı biçim. */
-  const mYazi = (v) => (v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const mYazi = (v) => (v || 0).toLocaleString(sayiYeri(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   /*
    * TASARIMDAKİ DİLİMLER — fotoğraf olmadan da.
@@ -10045,19 +10073,47 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * dokunulmuyor. Küpün çizim kutusu ölçekten bağımsız olduğu için
    * (bkz. bakisUzakligi) 1000 px/m ile hesaplanıp bine bölünüyor.
    */
+  /*
+   * TİP SEÇİLİNCE DUVAR TASARIMA OTURUYOR — HER KENARDA 5 CM.
+   *
+   * Duvar yalnızca "ekrandan küçük kalmasın" diye büyütülüyordu; yerleşim
+   * tipi değişince eski ölçü olduğu gibi kalıyor, tasarımın çevresinde
+   * kocaman bir boşluk duruyordu (küpte yanlarda 13,6, altta üstte 20,5 cm).
+   * Tip ya da üyeler değişince duvar bir kez tasarımın kapladığı yere
+   * oturuyor: her kenarda tam 5 cm pay.
+   *
+   * Küpte tasarımın eni kutunun KÖŞEGENİ (kenar × √2); kutu çaprazdan
+   * görünüyor. Yükseklik de eğimli duruştan geliyor (bkz. kupCizimKutusu).
+   *
+   * Bir kez: imza (tip + üyeler) değişmedikçe tekrar yazılmıyor, yoksa
+   * kullanıcının elle büyüttüğü duvar her çizimde geri alınırdı.
+   */
+  const duvarOturImzaRef = useRef(null)
   useEffect(() => {
-    if (grup?.tip !== 'kutu' || !Array.isArray(grup.uyeler)) return
-    const uyeler = grup.uyeler
-    const olcu = kupOlculeri(ekranSeridi.filter((x) => uyeler.includes(x.id)))
-    if (!olcu) return
-    const kutu = kupCizimKutusu({ ...olcu, pxPerM: 1000 })
-    const enM = cmYukari(kutu.cizimEn / 1000)
-    const boyM = cmYukari(kutu.cizimBoy / 1000)
+    if (!grup?.tip || !Array.isArray(grup.uyeler) || grup.uyeler.length < 2) {
+      duvarOturImzaRef.current = null
+      return
+    }
+    const imza = grup.tip + '|' + grup.uyeler.join(',')
+    if (duvarOturImzaRef.current === imza) return
+    let enM = 0
+    let boyM = 0
+    if (grup.tip === 'kutu') {
+      const olcu = kupOlculeri(ekranSeridi.filter((x) => grup.uyeler.includes(x.id)))
+      if (!olcu) return
+      const kutu = kupCizimKutusu({ ...olcu, pxPerM: 1000 })
+      enM = (kutu.cizimEn - KUP_CIZIM_PAYI * 2) / 1000
+      boyM = (kutu.cizimBoy - KUP_CIZIM_PAYI * 2) / 1000
+    } else {
+      enM = tasarimWm
+      boyM = tasarimHm
+    }
     if (!(enM > 0) || !(boyM > 0)) return
-    if ((Number(width) || 0) < enM - 1e-6) setWidth(enM)
-    if ((Number(height) || 0) < boyM - 1e-6) setHeight(boyM)
+    duvarOturImzaRef.current = imza
+    setWidth(cmYukari(enM + DUVAR_PAYI * 2))
+    setHeight(cmYukari(boyM + DUVAR_PAYI * 2))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grup?.tip, grup?.uyeler, ekranSeridi, width, height])
+  }, [grup?.tip, grup?.uyeler, ekranSeridi, tasarimWm, tasarimHm])
 
   const kupUstImzaRef = useRef(null)
   useEffect(() => {
@@ -10139,7 +10195,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       {/* Masaüstü: tek ekran yüksekliği. Mobil: içerik alt alta dizilip sayfa kayar. */}
       <div className="yatay-sayfa min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
       {/* Başlık çubuğu — kurumsal logo + sayfa adı */}
-      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-6 py-2.5 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+      <header className="bg-white dark:bg-[#121821] border-b border-neutral-200/80 dark:border-[#2a3342] px-4 sm:px-6 lg:px-6 py-2.5 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
         {/*
           ANTET VE MODEL YAN YANA.
 
@@ -10147,10 +10203,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           aynı yerde okunuyor. Model seçilmeden önce burada hiçbir şey
           yok — seçim ekranında gösterilecek bir model de yok.
         */}
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3">
           <BrandMark title={t('app.title')} />
           {hasModel && (
-            <div className="flex min-w-0 items-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1 dark:border-[#2c333f] dark:bg-[#161d28]">
+            <div className="flex min-w-0 max-w-[15rem] items-center gap-1 whitespace-nowrap rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1 dark:border-[#2c333f] dark:bg-[#161d28]">
               <span
                 className="truncate text-[13px] font-semibold text-neutral-700 dark:text-neutral-200"
                 title={modelEtiketi}
@@ -10173,7 +10229,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   <path d="M12 20h9" />
                   <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
                 </svg>
-                <span className="hidden sm:inline">{t('model.degistir')}</span>
+                <span className="hidden lg:inline">{t('model.degistir')}</span>
               </button>
             </div>
           )}
@@ -11661,7 +11717,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   sik
                   etiket={t('wall.width')}
                   deger={width}
-                  onChange={setWidth}
+                  onChange={(v) => {
+                    setDuvarUyari(null)
+                    setWidth(v)
+                  }}
+                  onAltSinir={(enAz) => setDuvarUyari(enAz == null ? null : { yon: 'en', enAz })}
                   min={widthMin}
                   max={40}
                   adim={0.1}
@@ -11671,13 +11731,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   sik
                   etiket={t('wall.height')}
                   deger={height}
-                  onChange={setHeight}
+                  onChange={(v) => {
+                    setDuvarUyari(null)
+                    setHeight(v)
+                  }}
+                  onAltSinir={(enAz) => setDuvarUyari(enAz == null ? null : { yon: 'boy', enAz })}
                   min={heightMin}
                   max={20}
                   adim={0.1}
                   birim="m"
                 />
               </div>
+              {/*
+                YAZILAN DEĞER NEDEN GİRMEDİ.
+
+                Ekranların sığmayacağı bir ölçü yazılınca kutu eski değerine
+                dönüyor; sebebi burada yazıyor. Tek satır, iki kutu için
+                ortak: aynı anda ikisinden biri yazılabiliyor.
+              */}
+              {duvarUyari && (
+                <p className="m-0 mt-0.5 text-[12.5px] leading-snug text-red-600 dark:text-red-400">
+                  {t('wall.enAz').replace('{0}', sayiYaz(duvarUyari.enAz, 2))}
+                </p>
+              )}
             </div>
           )}
 
@@ -11695,6 +11771,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {hasModel && (
             <div className="mb-1">
+              {/*
+                KÜÇÜK RESİM EKRANIN ŞEKLİNİ GÖSTERİYOR.
+
+                Kartlardaki kutucuk her ekranda aynı dikdörtgendi: listeye
+                bakan, hangisinin kavisli olduğunu göremiyordu. Kutucuk artık
+                ekranın biçimine kırpılıyor — dışa kavisli yukarı kemer,
+                içe kavisli aşağı çukur, düz dümdüz. Yazı eklenmedi; şekil
+                zaten söylüyor. Yollar oran (0–1) cinsinden, yani kutucuğun
+                her ölçüsünde aynı duruyor.
+              */}
+              <svg width="0" height="0" aria-hidden="true" className="absolute">
+                <defs>
+                  <clipPath id="vds-kavis-dis" clipPathUnits="objectBoundingBox">
+                    <path d="M0,0.16 Q0.5,0 1,0.16 L1,1 Q0.5,0.84 0,1 Z" />
+                  </clipPath>
+                  <clipPath id="vds-kavis-ic" clipPathUnits="objectBoundingBox">
+                    <path d="M0,0 Q0.5,0.16 1,0 L1,0.84 Q0.5,1 0,0.84 Z" />
+                  </clipPath>
+                </defs>
+              </svg>
               {/*
                 BAŞLIK VE EKLEME TEK SATIRDA.
 
@@ -11760,6 +11856,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                    * ama liste hep aynı yüksekliklerde kalıyor.
                    */
                   const onizlemeOrani = Math.min(6, Math.max(0.17, (e.enM || 1) / (e.boyM || 1)))
+                  /* Ekranın biçimi: düz, dışa kavisli (kemer), içe kavisli (çukur). */
+                  const kavisKirp =
+                    e.ayar?.screenType === 'curved'
+                      ? 'url(#vds-kavis-dis)'
+                      : e.ayar?.screenType === 'curvedIn'
+                        ? 'url(#vds-kavis-ic)'
+                        : null
                   return (
                     <li key={e.id || 'aktif'} data-ekran={e.sira} className="relative m-0 p-0">
                       {/*
@@ -11775,7 +11878,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         <button
                           type="button"
                           onClick={() => ekraniKaldir(e.id)}
-                          aria-label={`${e.sira}. ${t('ekran.tekil')} — ${t('ekran.kaldir')}`}
+                          aria-label={`${t('ekran.no').replace('{0}', String(e.sira))} — ${t('ekran.kaldir')}`}
                           title={t('ekran.kaldir')}
                           className="absolute right-0.5 top-0.5 z-10 rounded-md bg-white/85 p-0.5 text-neutral-600 transition-colors hover:bg-white hover:text-red-600 dark:bg-[#1b2029]/85 dark:text-neutral-300 dark:hover:bg-[#1b2029]"
                         >
@@ -11793,12 +11896,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       >
                         <span className="flex aspect-square w-full shrink-0 items-center justify-center">
                           <span
-                            className="relative block overflow-hidden rounded border border-neutral-200 dark:border-[#2c333f]"
+                            className={`relative block overflow-hidden ${
+                              kavisKirp ? '' : 'rounded border border-neutral-200 dark:border-[#2c333f]'
+                            }`}
                             style={{
                               aspectRatio: String(onizlemeOrani),
                               /* Geniş ekran enden, uzun ekran boydan sığıyor. */
                               width: onizlemeOrani >= 1 ? '100%' : undefined,
                               height: onizlemeOrani >= 1 ? undefined : '100%',
+                              /* Kavisli ekranda kenarlık kırpmayı takip edemiyor: yalnızca şekil. */
+                              clipPath: kavisKirp || undefined,
                             }}
                           >
                             {kupUst ? (
@@ -11809,7 +11916,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           </span>
                         </span>
                         <span className="block truncate text-[13px] font-bold leading-tight text-neutral-900 dark:text-neutral-50">
-                          {e.sira}. {t('ekran.tekil')}
+                          {t('ekran.no').replace('{0}', String(e.sira))}
                         </span>
                         <span className="block truncate text-[11.5px] font-medium leading-tight tabular-nums text-neutral-700 dark:text-neutral-200">
                           {e.ayar.cols || 1}×{e.ayar.rows || 1}
@@ -11847,7 +11954,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   >
                     <div className="flex items-center gap-2 bg-brand px-2 py-1 text-white">
                       <span className="flex-1 text-[15px] font-semibold">
-                        {acik.sira}. {t('ekran.tekil')}
+                        {t('ekran.no').replace('{0}', String(acik.sira))}
                       </span>
                       {/* Son ekran kaldırılamaz: tasarımda hiç ekran kalmaması demekti. */}
                       {ekranOzetleri.length > 1 && (
@@ -11950,7 +12057,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           */}
                           <div className="mt-1 text-[13.5px] tabular-nums text-neutral-600 dark:text-neutral-300">
                             {mYazi(e.enM)} × {mYazi(e.boyM)} m
-                            {e.resW > 0 && ` · ${fmt(e.resW)} × ${fmt(e.resH)} piksel`}
+                            {e.resW > 0 && ` · ${fmt(e.resW)} × ${fmt(e.resH)} ${t('birim.piksel')}`}
                           </div>
                         </div>
 
@@ -12427,8 +12534,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {hasModel && (
             <div className="rounded-lg border border-neutral-200 dark:border-[#2c333f] px-2.5 py-1.5 text-[13.5px] tabular-nums text-neutral-700 dark:text-neutral-200">
-              <span className="font-semibold">{t('panel.toplam')}:</span> {ekranOzetleri.length} {t('ekran.tekil')} ·{' '}
-              {fmt(tasarimToplami.kabin)} {birimSozcugu(selectedModel?.productType, t)} · {fmt(tasarimToplami.resW)} × {fmt(tasarimToplami.resH)} piksel
+              <span className="font-semibold">{t('panel.toplam')}:</span> {ekranOzetleri.length}{' '}
+              {t(ekranOzetleri.length === 1 ? 'ekran.tekil' : 'ekran.cogul')} ·{' '}
+              {fmt(tasarimToplami.kabin)} {birimSozcugu(selectedModel?.productType, t)} · {fmt(tasarimToplami.resW)} × {fmt(tasarimToplami.resH)} {t('birim.piksel')}
             </div>
           )}
           </Sigdir>
@@ -13898,7 +14006,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       {/* Gerçek 3D sahne — HDRI ışıklandırma, serbest kamera, GLB dışa aktarma ile
           WebXR/Scene Viewer/Quick Look AR. Yalnızca açıldığında yüklenir (lazy). */}
       {scene3dOpen && hasModel && (
-        <Suspense fallback={<div className="fixed inset-0 z-[60] bg-[#0b0d12] flex items-center justify-center text-white/60 text-sm">{t('scene3d.exporting')}</div>}>
+        <Sahne3DKapi t={t} onClose={() => setScene3dOpen(false)} cizim={(Scene3D) => (
           <Scene3D
             open={scene3dOpen && hasModel}
             onClose={() => setScene3dOpen(false)}
@@ -13928,7 +14036,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             /* AR'de "Kaydet" denen kare de rapora girsin */
             onSaved={kareKaydedildi}
           />
-        </Suspense>
+        )} />
       )}
 
       <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
@@ -14586,7 +14694,38 @@ function FieldLabel({ children, muted = false }) {
  * iniyor ve değer kırpılıyordu. Etiket üste alınınca hücre daralıyor,
  * yazı boyutu küçülmeden ikisi yan yana sığıyor.
  */
-function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null, etiketUstte = false, sik = false }) {
+/*
+ * ETİKET SARMALI BİLEŞENİN DIŞINDA.
+ *
+ * Bu sarmal SayiKutusu'nun İÇİNDE tanımlıydı: her çizimde yeni bir bileşen
+ * türü doğuyor, React de eskisini söküp yenisini kuruyordu. Yani kutuya
+ * yazılan her karakterde <input> DOM'dan çıkıp yeniden doğuyor, odak
+ * kayboluyordu: ardından basılan Enter kutuya hiç ulaşmıyor, odak da hiç
+ * çıkmadığı için değer UYGULANMIYORDU — kutuda "3" yazarken duvar 1,00
+ * kalıyordu. Dışarı alındı: kutu artık aynı kutu olarak kalıyor.
+ */
+function KutuSarmali({ etiket, etiketUstte, sik, children }) {
+  if (etiketUstte) {
+    return (
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-[13.5px] text-neutral-600 dark:text-neutral-300">{etiket}</span>
+        <span className="flex min-w-0 items-center gap-1">{children}</span>
+      </span>
+    )
+  }
+  return (
+    <span className={`flex min-w-0 items-center ${sik ? 'gap-0.5' : 'gap-1'}`}>
+      <span
+        className={`shrink-0 text-neutral-600 dark:text-neutral-300 ${sik ? 'text-[12px]' : 'text-[13.5px]'}`}
+      >
+        {etiket}
+      </span>
+      {children}
+    </span>
+  )
+}
+
+function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null, etiketUstte = false, sik = false, onAltSinir = null }) {
   const [taslak, setTaslak] = useState(null)
   const dugme =
     (sik ? 'h-[22px] w-[17px] ' : 'h-6 w-6 ') +
@@ -14599,33 +14738,33 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
    * Yazarken değer serbest (kutu boşaltılabiliyor); sınırlara ancak odaktan
    * çıkınca çekiliyor, yoksa "3" yazarken sayı anında en küçük değere düşer.
    */
-  const bicim = (v) => (adim < 1 ? (v || 0).toFixed(2).replace('.', ',') : String(v ?? ''))
+  /* Kutu her zaman ÇİZİLEN değeri gösteriyor; dile göre nokta ya da virgül. */
+  const bicim = (v) => (adim < 1 ? sayiYaz(v || 0, 2) : String(v ?? ''))
+  /* Virgül de nokta da kabul: kullanıcı hangisini yazarsa. */
   const sayiya = (m) => Number(String(m).replace(',', '.'))
+  /*
+   * SINIRIN ALTI SESSİZCE DÜZELTİLMİYOR.
+   *
+   * Küçük bir değer en küçük değere çekiliyordu: kullanıcı 1 yazıyor,
+   * kutuda bambaşka bir sayı beliriyor ve neden olduğu yazmıyordu. Artık
+   * değer OLDUĞU GİBİ kalıyor, kutu eski değerine dönüyor ve altında en az
+   * ne olabileceği yazıyor (bkz. duvarUyari).
+   */
   const bitir = () => {
     if (taslak == null) return
     const v = sayiya(taslak)
+    const bos = taslak.trim() === ''
     setTaslak(null)
-    if (!Number.isFinite(v) || taslak.trim() === '') return
-    onChange(yuvarla(Math.min(max, Math.max(min, v))))
+    if (!Number.isFinite(v) || bos) return
+    if (v < min - 1e-9) {
+      onAltSinir?.(min)
+      return
+    }
+    onAltSinir?.(null)
+    onChange(yuvarla(Math.min(max, v)))
   }
-  const Sarmal = ({ children: ic }) =>
-    etiketUstte ? (
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-[13.5px] text-neutral-600 dark:text-neutral-300">{etiket}</span>
-        <span className="flex min-w-0 items-center gap-1">{ic}</span>
-      </span>
-    ) : (
-      <span className={`flex min-w-0 items-center ${sik ? 'gap-0.5' : 'gap-1'}`}>
-        <span
-          className={`shrink-0 text-neutral-600 dark:text-neutral-300 ${sik ? 'text-[12px]' : 'text-[13.5px]'}`}
-        >
-          {etiket}
-        </span>
-        {ic}
-      </span>
-    )
   return (
-    <Sarmal>
+    <KutuSarmali etiket={etiket} etiketUstte={etiketUstte} sik={sik}>
       <button
         type="button"
         aria-label="−"
@@ -14667,7 +14806,7 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
           {birim}
         </span>
       )}
-    </Sarmal>
+    </KutuSarmali>
   )
 }
 

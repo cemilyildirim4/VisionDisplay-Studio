@@ -7,10 +7,11 @@
  */
 
 import { baseViewingDistance, viewingDistanceFor } from './viewingDistance.js'
+import { sayiYeri } from './sayiBicimi.js'
 
 export const DASH = '-'
 export const fmt = (n, d = 0) =>
-  Number(n).toLocaleString('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d })
+  Number(n).toLocaleString(sayiYeri(), { minimumFractionDigits: d, maximumFractionDigits: d })
 
 // Devre başına kabin sayısı ve devre sayısı (basitleştirilmiş, %80 güvenlik payı)
 function circuit(volts, amps, perCabMax, total) {

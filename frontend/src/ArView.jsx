@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { sayiYeri } from './sayiBicimi.js'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import html2canvas from 'html2canvas-pro'
 import { egimDonusumu, egimKis, egimliCiz, FARE_VAR } from './egim.js'
@@ -59,7 +60,7 @@ const kis = (v, en, boy) => Math.max(en, Math.min(boy, v))
 function metre(v) {
   if (!isFinite(v)) return '—'
   if (Math.abs(v) < 1) return `${Math.round(v * 100)} cm`
-  return `${v.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} m`
+  return `${v.toLocaleString(sayiYeri(), { maximumFractionDigits: 2 })} m`
 }
 
 /** Ölçü baloncuğu */

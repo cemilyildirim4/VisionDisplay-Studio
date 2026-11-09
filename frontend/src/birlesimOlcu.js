@@ -15,7 +15,14 @@
  */
 
 /* Kup2D kutuyu bu açıyla duruyor; önden genişlik buradan çıkıyor. */
-export const KUP_DURUS_ACISI = -28
+/*
+ * KUTU TAM ÇAPRAZDAN GÖRÜNÜYOR (45°).
+ *
+ * Duruş 28°'ydi: iki yan yüz eşit görünmüyor, kutunun çizimdeki eni de
+ * köşegeninden (kenar × √2) kısa çıkıyordu. 45°'de iki yüz eşit, en de
+ * tam köşegen — duvar payı da bu yüzden kenardan kenara 5 cm tutuyor.
+ */
+export const KUP_DURUS_ACISI = -45
 
 const enOf = (p) => Number(p?.gercekWm ?? p?.wm) || 0
 const boyOf = (p) => Number(p?.hm) || 0
