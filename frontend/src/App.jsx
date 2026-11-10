@@ -15274,6 +15274,8 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
  * değer yazılmıyor.
  */
 const SIGDIR_EN_AZ = 0.62
+/* Ölçek bu adımlara oturuyor: komşu iki değer arasında gidip gelme olmuyor. */
+const SIGDIR_ADIM = 0.02
 
 function Sigdir({ children, className = '', sarmal = '' }) {
   const disRef = useRef(null)
@@ -15286,6 +15288,21 @@ function Sigdir({ children, className = '', sarmal = '' }) {
     const dis = disRef.current
     const ic = icRef.current
     if (!dis || !ic) return undefined
+    let sira = 0
+    /*
+     * TİTREME NEDEN OLUYORDU.
+     *
+     * Küçültme (zoom) yerleşimi yeniden hesaplıyor, yani içeriğin kendi
+     * yüksekliği de değişiyor. Yeni yükseklikten hesaplanan ölçek bir tık
+     * büyük çıkıyor, büyüyünce içerik yine taşıyor ve döngü iki değer
+     * arasında salınıyordu — panel gözle görülür biçimde titriyordu.
+     *
+     * İki önlem: ölçek 0,02'lik adımlara OTURUYOR (aradaki küçük farklar
+     * yeni bir çizime yol açmıyor) ve BÜYÜME isteksiz — küçülme hemen,
+     * büyüme ancak belirgin bir boşluk varken (%6) oluyor. Ölçüm de
+     * çizimden sonraya bırakılıyor (rAF), yoksa yarım kalmış yerleşim
+     * okunuyordu.
+     */
     const olc = () => {
       /* Dar ekranda (mobil) panel zaten alt alta akıyor: küçültme yok. */
       if (window.innerWidth < 1024) {
@@ -15296,22 +15313,43 @@ function Sigdir({ children, className = '', sarmal = '' }) {
       const gerek = ic.scrollHeight
       if (!(bos > 0) || !(gerek > 0)) return
       /* 2 px pay: yuvarlama yüzünden son satır bir piksel taşıyordu. */
-      const istenen = Math.min(1, Math.max(SIGDIR_EN_AZ, (bos - 2) / gerek))
-      if (Math.abs(istenen - olcekRef.current) > 0.012) setOlcek(istenen)
+      const ham = Math.min(1, Math.max(SIGDIR_EN_AZ, (bos - 2) / gerek))
+      const basamakli = Math.max(SIGDIR_EN_AZ, Math.floor(ham / SIGDIR_ADIM) * SIGDIR_ADIM)
+      const simdi = olcekRef.current
+      const kucul = basamakli < simdi - 1e-6
+      const buyu = basamakli > simdi + 0.06
+      if (kucul || buyu) setOlcek(Math.min(1, basamakli))
     }
-    olc()
-    const izle = new ResizeObserver(olc)
+    const sonra = () => {
+      cancelAnimationFrame(sira)
+      sira = requestAnimationFrame(olc)
+    }
+    sonra()
+    const izle = new ResizeObserver(sonra)
     izle.observe(dis)
     izle.observe(ic)
-    window.addEventListener('resize', olc)
+    window.addEventListener('resize', sonra)
     return () => {
+      cancelAnimationFrame(sira)
       izle.disconnect()
-      window.removeEventListener('resize', olc)
+      window.removeEventListener('resize', sonra)
     }
   }, [])
 
   return (
-    <div ref={disRef} className={`flex-1 min-h-0 lg:overflow-hidden ${sarmal}`}>
+    <div
+      ref={disRef}
+      className={`flex-1 min-h-0 lg:overflow-hidden ${sarmal}`}
+      /*
+       * KAYDIRMA DENEMESİ DE KALKIYOR.
+       *
+       * Çubuk çıkmıyordu ama bir öğeye odaklanınca tarayıcı kutuyu
+       * kaydırmaya çalışıyor, panel birkaç piksel yukarı kayıp geri
+       * geliyordu. İçerik zaten sığdığı için kaydıracak yer yok;
+       * tarayıcıya da bunu söylüyoruz.
+       */
+      style={{ overscrollBehavior: 'contain' }}
+    >
       <div ref={icRef} className={className} style={{ zoom: olcek < 1 ? olcek : undefined }}>
         {children}
       </div>
