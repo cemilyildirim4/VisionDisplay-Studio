@@ -63,7 +63,17 @@ const ISARET_EKSI = 'M5 12h14'
  * bölüm açılıyor, tekrar basılınca kapanıyor. Hepsi aynı anda açık dururken
  * panel okunmuyordu ve hangi ayarın hangi işe yaradığı kayboluyordu.
  */
-function PanelBolum({ baslik, acik, onAc, ozet = null, children }) {
+/*
+ * GÖRÜNÜRLÜK VE SÖKÜLMEME.
+ *
+ * gorunur: bölümün o bağlamda bir karşılığı yoksa hiç çizilmiyor
+ * (ör. hazır mekânda "Ölçüm").
+ *
+ * Kapalı bölüm SÖKÜLMÜYOR, gizleniyor: ölçü sihirbazı kendi adımını
+ * kendi tutuyor, bileşen sökülseydi yarım kalan adım sıfırlanırdı.
+ */
+function PanelBolum({ baslik, acik, onAc, ozet = null, gorunur = true, children }) {
+  if (!gorunur) return null
   return (
     <div className="mt-2 rounded-xl border border-neutral-200 dark:border-[#2c333f] overflow-hidden">
       <button
@@ -76,7 +86,7 @@ function PanelBolum({ baslik, acik, onAc, ozet = null, children }) {
             : 'text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-[#222833]'
         }`}
       >
-        <span className="flex-1 text-[14.5px] font-semibold">{baslik}</span>
+        <span className="min-w-0 flex-1 truncate text-[16px] font-bold tracking-tight">{baslik}</span>
         {ozet && (
           <span className="text-[13px] font-medium text-neutral-500 dark:text-neutral-400">{ozet}</span>
         )}
@@ -94,7 +104,9 @@ function PanelBolum({ baslik, acik, onAc, ozet = null, children }) {
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-      {acik && <div className="px-3 pb-3">{children}</div>}
+      <div className="px-3 pb-3" style={{ display: acik ? undefined : 'none' }}>
+        {children}
+      </div>
     </div>
   )
 }
@@ -1114,6 +1126,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [duvarlar, setDuvarlar] = useState([])
   const [duvarIsaretKipi, setDuvarIsaretKipi] = useState(false)
   const [duvarKaydirma, setDuvarKaydirma] = useState({ u: 0, v: 0 })
+  /* Sağ panelde açık olan bölüm: 'mekan' ya da 'olcum' (aynı anda biri). */
+  const [sagBolum, setSagBolum] = useState('mekan')
   const [refUzunlukCm, setRefUzunlukCm] = useState('')
   /*
    * REFERANS TÜRÜ.
@@ -7349,6 +7363,29 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return refPxCm.x * 100 * (fotoYer.genislik / kw) * (sahneYakinlik || 1)
   })()
   /* Referans yoksa ölçek de yok: düğme pasif kalıyor. */
+  /*
+   * KAPALI BAŞLIKLARIN YAZISI.
+   *
+   * Mekân kapalıyken hangi mekânın seçili olduğu, Ölçüm kapalıyken
+   * referansın kaç santim olduğu başlıkta duruyor: kullanıcı bölümü
+   * açmadan nerede olduğunu görüyor.
+   */
+  const mekanAdi = (() => {
+    const adlar = {
+      [SALON_ID]: 'scene.salon',
+      [CEPHE_ID]: 'scene.cephe',
+      avm: 'avm.title',
+      'meydan-gece': 'dis.title',
+      ozel: 'scene.custom',
+      none: 'scene.customOff',
+    }
+    return adlar[scene] ? t(adlar[scene]) : t('scene.custom')
+  })()
+  const olcumOzeti = (() => {
+    const cm = Number(String(refUzunlukCm).replace(',', '.'))
+    return cm > 0 ? `✓ ${sayiYaz(cm, 0)} cm` : null
+  })()
+
   const yer3dHazir = yer3dOlcek > 0
   const yer3dAcik = scene === 'ozel' && !!ozelSahne && !!yer3d && yer3dHazir
   /* Grup varsa grubun tamamı, yoksa eldeki ekran(lar). */
@@ -9870,6 +9907,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     elleKoseOranRef.current = null
     elleKoseyeYaz(oran.map(oranTuvale))
   }, [tuvalBoyut.w, tuvalBoyut.h])
+
+  /*
+   * FOTOĞRAFA GEÇİNCE ÖLÇÜM BÖLÜMÜ AÇILIYOR.
+   *
+   * Ölçüm yapılırken panelde görünmesi gereken şey ölçüm; mekân listesi
+   * o sırada kapalı duruyor ve başlığında hangi mekânın seçili olduğu
+   * yazıyor. Başka bir mekâna geçilince tersi oluyor.
+   */
+  useEffect(() => {
+    setSagBolum(scene === 'ozel' ? 'olcum' : 'mekan')
+  }, [scene])
 
   /* Referans bitince yerleştirme başlıyor. */
   useEffect(() => {
@@ -13055,7 +13103,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   çıkamıyordu. Mekân değiştirmek fotoğraftaki yerleştirmeyi
                   silmiyor (bkz. koseTuval); geri dönülünce yerinde duruyor.
                 */}
-                  <h2 className="text-[25px] font-bold tracking-tight m-0 mb-1">{t('scene.heading')}</h2>
+                <PanelBolum
+                  baslik={
+                    sagBolum === 'mekan'
+                      ? t('scene.heading')
+                      : `${t('scene.heading')}: ${mekanAdi}`
+                  }
+                  acik={sagBolum === 'mekan'}
+                  onAc={() => setSagBolum('mekan')}
+                >
                   <p className="text-[14px] text-neutral-400 dark:text-neutral-500 m-0 mb-3">{t('scene.hint')}</p>
                   {/*
                     İki mekân: iç mekân (Salon.jsx) ve dış mekân (Cephe.jsx).
@@ -13188,6 +13244,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {ozelSahne ? t('scene.customChange') : t('scene.customAdd')}
                 </button>
                 )}
+                </PanelBolum>
+
+                {/*
+                  ÖLÇÜM — yalnızca "Kendi fotoğrafım" seçiliyken.
+
+                  Hazır mekânda ölçülecek bir şey yok: ölçek fotoğrafın
+                  kendi kaydından geliyor. Bölümün içeriği ve adımları
+                  değişmedi, yalnızca tek bir başlığın altına girdi.
+                */}
+                <PanelBolum
+                  gorunur={scene === 'ozel'}
+                  baslik={t('bolum.olcum')}
+                  ozet={olcumOzeti}
+                  acik={sagBolum === 'olcum'}
+                  onAc={() => setSagBolum('olcum')}
+                >
 
                 {/*
                   TASARIMI ALANA SIĞDIR — bir adımın içinde saklı değil.
@@ -14406,10 +14478,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     {t('scene.recenter')}
                   </button>
                 )}
+
+                {/*
+                  ÖLÇÜMÜ BİTİR — bölümü kapatıp Mekân'ı açıyor.
+
+                  Ölçümün adımlarına dokunmuyor: yerleştirme, referans ve
+                  yerleşim durumu olduğu gibi kalıyor. Yalnızca panelde
+                  hangi bölümün açık olduğunu değiştiriyor; kapalı başlıkta
+                  referansın kaç santim olduğu yazıyor.
+                */}
+                <button
+                  type="button"
+                  onClick={() => setSagBolum('mekan')}
+                  className="mt-3 w-full rounded-lg border border-brand px-4 py-2 text-[15px] font-semibold text-brand transition-colors hover:bg-brand-tint dark:hover:bg-[#1b2436]"
+                >
+                  {t('bolum.olcumBitir')}
+                </button>
+                </PanelBolum>
               </div>
             </>
           )}
 
+          </Sigdir>
+
+          {/*
+            İLETİŞİM + PDF PANELİN EN ALTINDA SABİT.
+
+            Düğmeler küçülen alanın içindeydi: içerik uzadıkça onlar da
+            küçülüyor ve panelin ortasında bir yerde kalıyorlardı. Artık
+            sığdırma kutusunun DIŞINDA, panelin dibinde duruyorlar — her
+            tasarımda aynı yerde ve aynı boyda.
+          */}
           {/*
             İLETİŞİM + PDF HER ZAMAN YERİNDE.
 
@@ -14466,7 +14565,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           >
             {t('privacy.footerLink')}
           </button>
-          </Sigdir>
         </aside>
         </div>
       </div>
@@ -15146,24 +15244,70 @@ function Segmented({ options, value, onChange, cols, buyuk = false }) {
 }
 
 /*
- * PANELİN YAZI BOYUTU SABİT.
+ * PANELDE KAYDIRMA YOK — İÇERİK KÜÇÜLEREK SIĞIYOR.
  *
- * Panel, içeriğin tamamı tek ekrana sığsın diye küçültülüyordu: beşinci
- * ekran eklendiğinde içerik uzuyor, bütün panel (yazılar, kutular,
- * düğmeler) orantılı olarak küçülüyordu. Kullanıcı aynı yazıyı her
- * tasarımda aynı boyda görmek istiyor — küçültme kalktı.
+ * Panel bir ara kaydırılıyordu: yazı boyu sabit kalıyor ama uzun içerikte
+ * (beş ekran, Açılı, Birleşimler açık) alt kısım görünmüyor, kullanıcı
+ * tasarımın yarısını kaydırmadan göremiyordu. İki ayrı kaydırılan kutu
+ * (sol ve sağ panel) aynı anda da kafa karıştırıyordu.
  *
- * Küçültme kalkınca uzun içerik için tek seçenek kaydırma: panel kendi
- * içinde kayıyor, yazı boyu hiç değişmiyor. Kutu ölçüsü de sabit olduğu
- * için duvar ölçüsü gibi satırlar ekran sayısına göre yer değiştirmiyor.
+ * Artık hiçbir şey gizlenmiyor ve hiçbir şey kaydırılmıyor: içerik sığmaz
+ * olduğunda panelin TAMAMI (yazı, düğme, aralık) orantılı olarak
+ * küçülüyor. Küçültme CSS 'zoom' ile: transform scale'in aksine zoom
+ * yerleşimi yeniden hesaplıyor, yani panel darken genişliğin tamamını
+ * kullanmaya devam ediyor, yanlarda boşluk kalmıyor.
+ *
+ * Ölçüm döngüye girmesin diye: içeriğin kendi yüksekliği (scrollHeight)
+ * zoom'dan etkilenmiyor, kutunun yüksekliği ise etkileniyor; ikisi aynı
+ * birime çevrilip karşılaştırılıyor ve değişim eşiğin altındaysa yeni
+ * değer yazılmıyor.
  */
+const SIGDIR_EN_AZ = 0.62
+
 function Sigdir({ children, className = '', sarmal = '' }) {
+  const disRef = useRef(null)
+  const icRef = useRef(null)
+  const [olcek, setOlcek] = useState(1)
+  const olcekRef = useRef(1)
+  olcekRef.current = olcek
+
+  useEffect(() => {
+    const dis = disRef.current
+    const ic = icRef.current
+    if (!dis || !ic) return undefined
+    const olc = () => {
+      /* Dar ekranda (mobil) panel zaten alt alta akıyor: küçültme yok. */
+      if (window.innerWidth < 1024) {
+        if (olcekRef.current !== 1) setOlcek(1)
+        return
+      }
+      const bos = dis.clientHeight
+      const gerek = ic.scrollHeight
+      if (!(bos > 0) || !(gerek > 0)) return
+      /* 2 px pay: yuvarlama yüzünden son satır bir piksel taşıyordu. */
+      const istenen = Math.min(1, Math.max(SIGDIR_EN_AZ, (bos - 2) / gerek))
+      if (Math.abs(istenen - olcekRef.current) > 0.012) setOlcek(istenen)
+    }
+    olc()
+    const izle = new ResizeObserver(olc)
+    izle.observe(dis)
+    izle.observe(ic)
+    window.addEventListener('resize', olc)
+    return () => {
+      izle.disconnect()
+      window.removeEventListener('resize', olc)
+    }
+  }, [])
+
   return (
-    <div className={`flex-1 min-h-0 lg:overflow-y-auto ${sarmal}`}>
-      <div className={className}>{children}</div>
+    <div ref={disRef} className={`flex-1 min-h-0 lg:overflow-hidden ${sarmal}`}>
+      <div ref={icRef} className={className} style={{ zoom: olcek < 1 ? olcek : undefined }}>
+        {children}
+      </div>
     </div>
   )
 }
+
 
 function Card({ title, children, className = '' }) {
   return (

@@ -359,6 +359,8 @@ const dict = {
   'yer3d.ipucu': { tr: 'Tasarımın üstünden sürükleyin: taşınır. Boş alandan sürükleyin: döner. Ölçü referanstan gelir, değişmez.', en: 'Drag on the design to move it, drag the empty area to rotate. The size comes from the reference and stays fixed.', ar: 'اسحب فوق التصميم لتحريكه، واسحب المساحة الفارغة لتدويره. يأتي الحجم من المرجع ولا يتغير.' },
   'yer3d.dortKose': { tr: '4 köşe ile yerleştir', en: 'Place with 4 corners', ar: 'ضع باستخدام 4 زوايا' },
   'yer3d.dortKoseNot': { tr: 'Ekranları tek tek, dört köşesini işaretleyerek yerleştirir.', en: 'Places the screens one by one by marking their four corners.', ar: 'يضع الشاشات واحدة تلو الأخرى بتحديد زواياها الأربع.' },
+  'bolum.olcum': { tr: 'Ölçüm', en: 'Measurement', ar: 'القياس' },
+  'bolum.olcumBitir': { tr: 'Ölçümü bitir', en: 'Finish measuring', ar: 'إنهاء القياس' },
   'duvar.yontem': { tr: 'Duvarları işaretle', en: 'Mark the walls', ar: 'حدّد الجدران' },
   'duvar.yontemNot': {
     tr: 'Fotoğraftaki her duvarın dört köşesine tıklayın; tasarım kendiliğinden oturur.',
