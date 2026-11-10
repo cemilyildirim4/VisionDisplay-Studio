@@ -173,10 +173,24 @@ export default function Kup2D({
    */
   enCokW = 0,
   enCokH = 0,
+  /*
+   * BAKIŞ AÇISI DIŞARIDAN DA VERİLEBİLİYOR.
+   *
+   * Fotoğraflı mekânda küp, tasarımın tamamını fotoğrafın üstüne koyan
+   * katmanın içinde duruyor (bkz. FotoYerlesim3D): döndürme orada, tek
+   * bir sürükleme modeliyle yapılıyor. İkisi birden kendi açısını
+   * tutsaydı aynı sürükleme iki kez işlenirdi. Değer verilmediğinde
+   * (2D tuval) küp eskisi gibi kendi açısını kendi tutuyor.
+   */
+  disAci = null,
+  disEgim = null,
 }) {
   /* Kutu çaprazdan: iki yan yüz eşit görünüyor (bkz. KUP_DURUS_ACISI). */
-  const [aci, setAci] = useState(-45)
-  const [egim, setEgim] = useState(BASLANGIC_EGIM)
+  const [iciAci, setAci] = useState(-45)
+  const [iciEgim, setEgim] = useState(BASLANGIC_EGIM)
+  const disardan = Number.isFinite(disAci) || Number.isFinite(disEgim)
+  const aci = Number.isFinite(disAci) ? disAci : iciAci
+  const egim = Number.isFinite(disEgim) ? disEgim : iciEgim
   const surukle = useRef(null)
   /*
    * PAYLAŞILAN GÖRSEL — kancalar erken dönüşlerden ÖNCE çağrılıyor.
@@ -478,11 +492,11 @@ export default function Kup2D({
           transformOrigin: '50% 100%',
           touchAction: 'none',
         }}
-        onPointerDown={bas}
-        onPointerMove={hareket}
-        onPointerUp={birak}
-        onPointerCancel={birak}
-        className="cursor-move select-none"
+        onPointerDown={disardan ? undefined : bas}
+        onPointerMove={disardan ? undefined : hareket}
+        onPointerUp={disardan ? undefined : birak}
+        onPointerCancel={disardan ? undefined : birak}
+        className={disardan ? 'select-none' : 'cursor-move select-none'}
       >
         <div
           style={{

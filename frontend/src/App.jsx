@@ -9878,6 +9878,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (yerSira !== null) return
     if (duvarIsaretKipi) return
     /*
+     * KÜP KENDİLİĞİNDEN GELİYOR.
+     *
+     * Küp kapalı bir kutu: yüzleri tek tek dört köşesinden yerleştirmek
+     * ne mümkün ne de anlamlı (arka yüzler hiç görünmüyor, üst kapak da
+     * öyle). Referans ölçü bitince kutu bütün yüzleri ve üst ekranıyla
+     * fotoğrafın ortasına geliyor; ölçüsü referanstan ve kilitli.
+     * Kullanıcıya kalan iş yerini ve bakış açısını seçmek.
+     */
+    if (grup?.tip === 'kutu' && !yer3d) {
+      setYerSira(null)
+      setSihirbazAdim(0)
+      /* Hafif yukarıdan: kutunun üst kapağı da görünüyor (bkz. Kup2D BASLANGIC_EGIM). */
+      setYer3d({ ux: 0.5, uy: 0.5, yaw: 0, egim: 14, kilit: false })
+      return
+    }
+    /*
      * ÇOKLU EKRANDA ANA YÖNTEM DUVAR İŞARETLEME.
      *
      * Tek ekranda dört köşe zaten "duvarı işaretle" demek: aynı dörtgen,
@@ -11398,6 +11414,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               tuvalW={tuvalBoyut.w}
               tuvalH={tuvalBoyut.h}
               durum={yer3d}
+              grupTipi={grup?.tip || null}
               kilitli={!!yer3d.kilit}
               onDegis={(y) => setYer3d((eski) => ({ ...eski, ...y }))}
             />
@@ -13326,16 +13343,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       yerleştirmek. Önceden 3B yerleşime geçildiğinde
                       ikincisi panelden tamamen kayboluyordu.
                     */}
-                    <button
-                      type="button"
-                      onClick={dortKoseyeGec}
-                      className="mt-1.5 w-full rounded-lg border border-neutral-200 px-4 py-2 text-[14.5px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
-                    >
-                      {t('yer3d.dortKose')}
-                    </button>
-                    <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                      {t('yer3d.dortKoseNot')}
-                    </p>
+                    {/*
+                      KÜPTE TEK TEK YERLEŞTİRME YOK.
+
+                      Kutunun arka yüzleri ve üst kapağı fotoğrafta hiç
+                      görünmüyor; dört köşesini işaretlemek için bakılacak
+                      bir yüzey de yok. Küp bütün hâlinde geliyor, seçenek
+                      de karıştırmasın diye gizleniyor.
+                    */}
+                    {grup?.tip !== 'kutu' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={dortKoseyeGec}
+                          className="mt-1.5 w-full rounded-lg border border-neutral-200 px-4 py-2 text-[14.5px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
+                        >
+                          {t('yer3d.dortKose')}
+                        </button>
+                        <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                          {t('yer3d.dortKoseNot')}
+                        </p>
+                      </>
+                    )}
                   </div>
                 )}
 

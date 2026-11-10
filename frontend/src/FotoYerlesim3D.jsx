@@ -23,6 +23,7 @@
  */
 import { useRef } from 'react'
 import { Screen } from './WallPreview.jsx'
+import Kup2D from './Kup2D.jsx'
 import { birlesimDilimleri } from './birlesimOlcu.js'
 
 /* Dönen dilimler kıl payı bindiriliyor: aralarında boşluk görünmesin. */
@@ -44,6 +45,8 @@ export default function FotoYerlesim3D({
   durum,
   onDegis,
   kilitli = false,
+  /* Birleşim tipi: küp kapalı bir kutu, zincir kuralıyla dizilemiyor. */
+  grupTipi = null,
 }) {
   const surukle = useRef(null)
   const tasarimRef = useRef(null)
@@ -56,6 +59,20 @@ export default function FotoYerlesim3D({
     ...(durum || null),
   }
 
+  /*
+   * KÜP KAPALI BİR KUTU — ZİNCİR DEĞİL.
+   *
+   * Dört yan yüz üstten bakışta yan yana dizilen bir zincir değil,
+   * kutunun dört kenarı; beşinci ekran da üst kapak. Kutuyu zaten Kup2D
+   * kuruyor (yüzler, kapak, görselin açılımı, alt kapak); burada aynı
+   * çizim fotoğrafın üstünde, referanstan gelen ölçekle duruyor ve
+   * döndürmesi bu katmanın sürüklemesinden geliyor.
+   *
+   * ÖLÇÜ KİLİTLİ: Kup2D'ye sığdırma sınırı verilmiyor (enCokW/enCokH 0),
+   * yani çizim küçültülmüyor — fotoğrafta gerçek ölçüsünde duruyor.
+   */
+  const kutuKipi = grupTipi === 'kutu' && ekranlar.length >= 4
+
   const parcalar = ekranlar
     .map((e) => ({
       e,
@@ -66,6 +83,7 @@ export default function FotoYerlesim3D({
     }))
     .filter((p) => p.w > 0 && p.h > 0)
   if (!parcalar.length || !(tuvalW > 0) || !(tuvalH > 0)) return null
+  const kutuBoyPx = kutuKipi ? Math.max(...parcalar.slice(0, 4).map((p) => p.h)) : 0
 
   /*
    * GÖRSEL PAYLAŞIMI — "Tek görsel" açıkken.
@@ -115,7 +133,7 @@ export default function FotoYerlesim3D({
    * BAKIŞ UZAKLIĞI TASARIMIN BOYUNDAN (bkz. Kup2D → bakisUzakligi).
    * Sabit bir uzaklık küçük tasarımda doğal, büyüğünde aşırı kaçıyor.
    */
-  const uzak = Math.max(600, Math.hypot(toplamW, boyPx) * 4)
+  const uzak = Math.max(600, Math.hypot(toplamW, kutuKipi ? kutuBoyPx : boyPx) * 4)
 
   const yaz = (yeni) => onDegis?.({ ...d, ...yeni })
 
@@ -170,9 +188,31 @@ export default function FotoYerlesim3D({
           top: d.uy * tuvalH,
           width: 0,
           height: 0,
-          perspective: uzak,
+          /* Küpte perspektifi Kup2D kendi uzaklığıyla kuruyor. */
+          perspective: kutuKipi ? undefined : uzak,
         }}
       >
+        {kutuKipi ? (
+          /*
+           * Kutu, tutamağın üstünde ORTALI duruyor: taşıma noktası
+           * kutunun merkezi, tıpkı zincirde olduğu gibi.
+           */
+          <div
+            ref={tasarimRef}
+            style={{ position: 'absolute', left: 0, top: 0, transform: 'translate(-50%, -50%)' }}
+          >
+            <Kup2D
+              ekranlar={ekranlar}
+              pxPerM={pxPerM}
+              model={model}
+              resolution={resolution}
+              sade={sade}
+              /* Başlangıçta çaprazdan: iki yan yüz eşit görünüyor. */
+              disAci={-45 + d.yaw}
+              disEgim={d.egim}
+            />
+          </div>
+        ) : (
         <div
           ref={tasarimRef}
           style={{
@@ -239,6 +279,7 @@ export default function FotoYerlesim3D({
             )
           })}
         </div>
+        )}
       </div>
     </div>
   )
