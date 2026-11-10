@@ -4989,8 +4989,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setOrientation(dikeySec ? 'portrait' : 'landscape')
     setCols(c)
     setRows(r)
-    /* Duvar, ekranın altında kalmasın. Aşağı yuvarlamak son kabini düşürür. */
-    setWidth((e) => Math.max(e, cmYukari(yeniWm)))
+    /*
+     * DUVAR ÖTEKİ EKRANLARI DA BARINDIRIYOR.
+     *
+     * Duvar yalnızca sığdırılan ekranın yeni enine büyütülüyordu. Oysa
+     * sütun üst sınırı (colsMax) duvardan ÖTEKİ ekranların enini düşerek
+     * hesaplanıyor: yan yana duran bir ekran varken hesaplanan sütun
+     * sayısı o sınıra takılıp sessizce geri kırpılıyor, tasarım da
+     * işaretlenen alanı dolduramıyordu. Ölçülen örnek: alan 1,89 m,
+     * hesap 11 sütun (16 cm kabinle 1,76 m), duvar 1,76 m'ye büyüyor,
+     * sınır (1,76 − 0,32) / 0,16 = 9 çıkıyor ve ekran 9 sütunda kalıyordu.
+     * Duvar artık öteki ekranların enini de kapsıyor.
+     *
+     * Aşağı yuvarlamak son kabini düşürür; bu yüzden cmYukari.
+     */
+    setWidth((e) => Math.max(e, cmYukari(yeniWm + digerlerininEni)))
     setHeight((e) => Math.max(e, cmYukari(yeniHm)))
     /*
      * Çizim YENİ gerçek ölçüyle, alanın ortasına. Ölçü dışarıdan veriliyor
