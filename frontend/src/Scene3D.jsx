@@ -1042,6 +1042,18 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
             />
           </group>
         ))}
+        {/*
+          ALT KAPAK — KUTU ALTTAN BOŞ KALMIYOR.
+
+          Üstte kapak vardı, altta hiçbir şey yoktu: sahne biraz aşağıdan
+          döndürülünce kutunun içi görünüyor, küp yarım bir kasa gibi
+          duruyordu. Ekran değil, kasanın kendi yüzeyi — yan yüzlerin dış
+          yüzeyiyle hizalı, üst kapakla aynı ölçüde.
+        */}
+        <mesh position={[0, -kup.boy / 2 - cabD / 2, 0]}>
+          <boxGeometry args={[kup.en + cabD, cabD, kup.derin + cabD]} />
+          <meshStandardMaterial roughness={0.6} metalness={0.12} color="#12151c" />
+        </mesh>
         <KupKapak kup={kup} cabD={cabD} genel={etkin} />
       </group>
     )

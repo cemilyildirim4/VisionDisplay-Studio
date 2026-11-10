@@ -623,6 +623,31 @@ export default function Kup2D({
           </div>
 
           {/*
+            ALT KAPAK — KUTU ALTTAN DA KAPALI.
+
+            Kutunun üstünde kapak vardı, altında hiçbir şey yoktu: ön
+            yüzlerin alt kenarları bir "V" çiziyor ve kutu altı açık, yarım
+            bir kasa gibi duruyordu. Kapak kutunun TAM ölçüsünde (W × D),
+            taşma yok — eski kaide bundan kaldırılmıştı (aşağıdaki not).
+            Ekran değil, kasanın kendi yüzeyi: üstünde görüntü yok.
+          */}
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: 0,
+              width: W,
+              height: D,
+              marginLeft: -W / 2,
+              /* Üst kapağın aynası: kutunun dibine indirilip yatırılıyor. */
+              transform: `translateY(${H - D / 2}px) rotateX(90deg)`,
+              background: 'linear-gradient(180deg, #1b212c, #11161f)',
+              border: sade ? 'none' : '1px solid rgba(255,255,255,0.06)',
+              boxSizing: 'border-box',
+            }}
+          />
+
+          {/*
             KAİDE KALDIRILDI.
 
             Küpün altına koyu bir plaka konuyordu ("küp zeminde dursun"

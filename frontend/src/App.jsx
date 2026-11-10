@@ -12265,23 +12265,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   /* Birleşik ekranlar burada da bir arada görünsün. */
                   const grupta = !!grup && Array.isArray(grup.uyeler) && grup.uyeler.includes(e.id)
                   /*
-                   * Küpte beşinci ekran üst yüz: kutucuk kapakta GERÇEKTEN
-                   * görünen şeridi gösteriyor — görselin en üstünden
-                   * kapağın derinliği kadar yüksek, kapağın enine
-                   * sıkıştırılmış bir şerit (bkz. Kup2D → acilim).
+                   * ÜST EKRANIN KUTUCUĞU DA ÖTEKİLER GİBİ.
+                   *
+                   * Beşinci ekranın kutucuğunda dört yan ekranın görseli
+                   * dört üçgen olarak çiziliyordu. İçerik LED'ken geriye
+                   * yalnızca köşegenlerden oluşan bir X kalıyor, üstelik
+                   * üçgenlerin ikisi AYNALANIYORDU (scaleX/scaleY) — yani
+                   * kutucuk ne üst ekranı ne de tuvaldeki kapağı
+                   * gösteriyordu. Kutucuk artık ekranın KENDİ içeriğini
+                   * gösteriyor, öteki dört kartla aynı kuralla; kapağın
+                   * açılımı tuvalde ve 3B'de zaten görünüyor.
                    */
-                  const kupUst =
-                    grup?.tip === 'kutu' && grup.uyeler?.[4] === e.id
-                      ? grup.uyeler.slice(0, 4).map((id) => {
-                          const y = ekranOzetleri.find((x) => x.id === id)
-                          return y
-                            ? { oge: icerikHavuzuTam.find((x) => x.id === y.havuzId), dilim: y.dilim, enM: y.enM }
-                            : null
-                        })
-                      : null
-                  /* Kapağın oranı ekranın kendi ölçüsünden; üçgenler o kutuya kuruluyor. */
-                  const kapakEn = kupUst ? e.enM || 0 : 0
-                  const kapakDerinlik = kupUst ? e.boyM || 0 : 0
                   /*
                    * KUTU SABİT, ÖNİZLEME EKRANIN ORANINDA.
                    *
@@ -12349,11 +12343,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               clipPath: kavisKirp || undefined,
                             }}
                           >
-                            {kupUst ? (
-                              <KupUstOnizleme yanlar={kupUst} en={kapakEn} derinlik={kapakDerinlik} />
-                            ) : (
-                              <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
-                            )}
+                            <IcerikOnizleme oge={secili} dilim={e.dilim} oynatImi />
                           </span>
                         </span>
                         <span className="block truncate text-[13px] font-bold leading-tight text-neutral-900 dark:text-neutral-50">
@@ -15437,45 +15427,6 @@ function useVideoKaresi(src) {
  * `ucgenler` ile birebir aynı — ikisi ayrışırsa kutucuk yine çizimden
  * başka bir şey gösterir.
  */
-function KupUstOnizleme({ yanlar, en, derinlik }) {
-  const W = en > 0 ? en : 1
-  const D = derinlik > 0 ? derinlik : W
-  const yuzde = (a, b) => `${(a / b) * 100}%`
-  const ucgenler = [
-    { kirpma: 'polygon(-1% 101%, 101% 101%, 50% 49%)', kutu: { left: 0, top: D / 2, width: W, height: D / 2 }, donus: 'scaleY(-1)' },
-    { kirpma: 'polygon(101% -1%, 101% 101%, 51% 50%)', kutu: { left: (3 * W) / 4 - D / 2, top: D / 2 - W / 4, width: D, height: W / 2 }, donus: 'rotate(-90deg) scaleY(-1)' },
-    { kirpma: 'polygon(-1% -1%, 101% -1%, 50% 51%)', kutu: { left: 0, top: 0, width: W, height: D / 2 }, donus: 'scaleX(-1)' },
-    { kirpma: 'polygon(-1% -1%, -1% 101%, 49% 50%)', kutu: { left: W / 4 - D / 2, top: D / 2 - W / 4, width: D, height: W / 2 }, donus: 'rotate(90deg) scaleY(-1)' },
-  ]
-  return (
-    <>
-      {ucgenler.map((u, i) => {
-        const y = yanlar?.[i]
-        if (!y?.oge) return null
-        return (
-          <span key={i} style={{ position: 'absolute', inset: 0, clipPath: u.kirpma, overflow: 'hidden' }}>
-            <span
-              style={{
-                position: 'absolute',
-                left: yuzde(u.kutu.left, W),
-                top: yuzde(u.kutu.top, D),
-                width: yuzde(u.kutu.width, W),
-                height: yuzde(u.kutu.height, D),
-                transform: u.donus,
-                transformOrigin: '50% 50%',
-                display: 'block',
-                overflow: 'hidden',
-              }}
-            >
-              <IcerikOnizleme oge={y.oge} dilim={y.dilim} />
-            </span>
-          </span>
-        )
-      })}
-    </>
-  )
-}
-
 function IcerikOnizleme({ oge, dilim = null, oynatImi = false }) {
   /* Kanca koşulsuz çağrılıyor: öğe yokken de sıra bozulmasın. */
   const videoKaresi = useVideoKaresi(oge?.tip === 'video' ? oge.url : null)
