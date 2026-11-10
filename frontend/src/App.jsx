@@ -13416,6 +13416,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       ikincisi panelden tamamen kayboluyordu.
                     */}
                     {/*
+                      "4 KÖŞE İLE YERLEŞTİR" YALNIZCA GERİ DÖNÜŞ OLARAK.
+
+                      Düğme her zaman duruyordu; oysa dört köşe akışı ZATEN
+                      varsayılan: referans bitince kendiliğinden başlıyor ve
+                      panelde "1. ekranı yerleştirin" adımı açık duruyor.
+                      O sırada düğme çalışan yöntemi yeniden başlatmaktan
+                      başka bir şey yapmıyor, üstelik kullanıcıya iki ayrı
+                      yöntem varmış gibi görünüyordu. Artık yalnızca BAŞKA
+                      bir yöntem açıkken (tasarım bütün hâlinde fotoğrafta,
+                      yani yer3d) görünüyor: oradan dört köşeye dönüş yolu.
+
                       KÜPTE TEK TEK YERLEŞTİRME YOK.
 
                       Kutunun arka yüzleri ve üst kapağı fotoğrafta hiç
@@ -13423,7 +13434,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       bir yüzey de yok. Küp bütün hâlinde geliyor, seçenek
                       de karıştırmasın diye gizleniyor.
                     */}
-                    {grup?.tip !== 'kutu' && (
+                    {!!yer3d && grup?.tip !== 'kutu' && (
                       <>
                         <button
                           type="button"
