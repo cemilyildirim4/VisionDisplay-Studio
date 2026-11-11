@@ -5034,6 +5034,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      */
     const n = alanaYerlestir(alanTuval, 0.5, 0.5, null, yeniWm, yeniHm)
     if (n) elleKoseyeYaz(n)
+    /*
+     * SIĞDIRMANIN SONUCU EZİLMİYOR.
+     *
+     * Sığdırma sütun/satır da değiştiriyor; ölçü değişince devreye giren
+     * perspektif düzeltmesi (bkz. sonOlcuRef) tasarımı ESKİ konumuna göre
+     * yeniden kuruyor ve buradaki dörtgeni hemen eziyordu. Ölçülen örnek:
+     * sığdırma (195, 236)-(639, 609) hesaplıyor, çizilen ise
+     * (339, 200)-(915, 507) oluyordu — işaretlenen alanın tamamen dışında.
+     *
+     * Yeni ölçü burada kaydediliyor: düzeltme "ölçü değişmedi" görüp
+     * karışmıyor, dörtgen sığdırmanın bıraktığı gibi kalıyor.
+     */
+    sonOlcuRef.current = { w: yeniWm, h: yeniHm }
     setAlanOlcek(null)
     setAlanKonum({ u: 0.5, v: 0.5 })
     /* Sığdırma aynı zamanda tasarımın göründüğü an. */
