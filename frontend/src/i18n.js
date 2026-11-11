@@ -242,6 +242,11 @@ const dict = {
   'birim.panel': { tr: 'panel', en: 'panels', ar: 'لوحة' },
   'ekran.kaldir': { tr: 'Kaldır', en: 'Remove', ar: 'إزالة' },
   'ekran.alanaSigdir': { tr: 'Alana sığdır', en: 'Fit to area', ar: 'ملاءمة المنطقة' },
+  'ekran.alanaSigdirNot': {
+    tr: 'Önce fotoğrafta ekranın duracağı alanı işaretleyin.',
+    en: 'First mark the area on the photo where the screen will go.',
+    ar: 'حدّد أولًا المنطقة التي ستوضع فيها الشاشة في الصورة.',
+  },
   'ekran.alaniDuzenle': { tr: 'Alanı düzenle', en: 'Edit area', ar: 'تحرير المنطقة' },
   'screen.colsShort': { tr: 'Sütun', en: 'Cols', ar: 'أعمدة' },
   /* Sınır yöne göre doluyor: sütun ile satır ayrı ayrı söyleniyor. */
@@ -361,18 +366,6 @@ const dict = {
   'yer3d.dortKoseNot': { tr: 'Ekranları tek tek, dört köşesini işaretleyerek yerleştirir.', en: 'Places the screens one by one by marking their four corners.', ar: 'يضع الشاشات واحدة تلو الأخرى بتحديد زواياها الأربع.' },
   'bolum.olcum': { tr: 'Ölçüm', en: 'Measurement', ar: 'القياس' },
   'bolum.olcumBitir': { tr: 'Ölçümü bitir', en: 'Finish measuring', ar: 'إنهاء القياس' },
-  'duvar.yontem': { tr: 'Duvarları işaretle', en: 'Mark the walls', ar: 'حدّد الجدران' },
-  'duvar.yontemNot': {
-    tr: 'Fotoğraftaki her duvarın dört köşesine tıklayın; tasarım kendiliğinden oturur.',
-    en: 'Click the four corners of each wall in the photo; the design places itself.',
-    ar: 'انقر على الزوايا الأربع لكل جدار في الصورة؛ يستقر التصميم تلقائيًا.',
-  },
-  'duvar.adim': { tr: 'Duvar {0}: {1}/4 köşe', en: 'Wall {0}: {1}/4 corners', ar: 'الجدار {0}: {1}/4 زوايا' },
-  'duvar.ipucu': {
-    tr: 'Sürükleyerek tasarımı duvarlar boyunca kaydırın; döndürme yok. Köşeleri sürükleyerek duvarı düzeltebilirsiniz. Ölçü referanstan gelir, değişmez.',
-    en: 'Drag to slide the design along the walls; there is no rotation. Drag the corners to correct a wall. The size comes from the reference and stays fixed.',
-    ar: 'اسحب لتحريك التصميم على امتداد الجدران؛ لا يوجد تدوير. اسحب الزوايا لتصحيح الجدار. يأتي الحجم من المرجع ولا يتغير.',
-  },
   'yer3d.sabit': { tr: 'Yerleşim sabitlendi.', en: 'Placement is locked.', ar: 'تم تثبيت الوضع.' },
   'eklem.koseli': { tr: 'Köşeli', en: 'Sharp', ar: 'زاوية حادة' },
   'eklem.yuvarlak': { tr: 'Yuvarlak', en: 'Rounded', ar: 'مستدير' },

@@ -161,7 +161,6 @@ import {
 } from './ozelMekan.js'
 import { SINIF_ADLARI } from './nesneBul.js'
 import KoseSecici from './KoseSecici.jsx'
-import DuvarIsaret from './DuvarIsaret.jsx'
 import TaslakKutu from './TaslakKutu.jsx'
 import FotoYerlesim3D from './FotoYerlesim3D.jsx'
 import Sahne3DKapi from './Sahne3DKapi.jsx'
@@ -395,9 +394,6 @@ const GRUP_EN_AZ = { duz: 2, l: 2, u: 3, kutu: 4, acili: 2 }
  * Düz ve açılı serbest: iki ve daha çok ekranla kurulurlar.
  */
 const GRUP_TAM_SAYI = { l: 2, u: 3, kutu: 4 }
-/* İşaretlenen duvarların renkleri: panelde ve tuvalde aynı sıra. */
-const DUVAR_RENKLERI = ['#2962ad', '#d97706', '#0f9d58']
-
 const tipUygunMu = (tip, sayi) =>
   GRUP_TAM_SAYI[tip] ? sayi === GRUP_TAM_SAYI[tip] : sayi >= 2
 
@@ -1105,27 +1101,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [yerNokta, setYerNokta] = useState([])
   /* Hangi ekranlar yerleşti — yerleşmemişin rozeti çizilmiyor. */
   const [yerlesmisIdler, setYerlesmisIdler] = useState([])
-  /*
-   * DUVARLARI İŞARETLE — FOTOĞRAFTA ÇOKLU EKRANIN ANA YOLU.
-   *
-   * Tasarımı fareyle döndürerek köşeye ve perspektife oturtmak zordu: üç
-   * serbestlik derecesi (taşı, döndür, eğ) aynı anda elle ayarlanıyor ve
-   * hiçbiri fotoğraftaki gerçek duvarla ilişkili değildi.
-   *
-   * Yeni yol kullanıcıdan yalnızca BİLDİĞİ şeyi istiyor: fotoğraftaki
-   * duvarların köşeleri. Düz için bir, L için iki, U için üç duvar. İki
-   * duvarın ortak kenarı bina köşesi sayılıyor; grubun birleşimi oraya
-   * yapışıyor ve her ekran kendi duvarının perspektifini (homografisini)
-   * alıyor. Ölçü referanstan geliyor ve kilitli — tasarımın gerçek ölçüsü
-   * hiçbir adımda bozulmuyor.
-   *
-   * duvarlar: her duvar için tuvalde 0–4 köşe. duvarKaydirma: tasarımın
-   * duvar üzerindeki yeri (0–1 oranlı); fare yalnızca bunu değiştiriyor,
-   * döndürme yok.
-   */
-  const [duvarlar, setDuvarlar] = useState([])
-  const [duvarIsaretKipi, setDuvarIsaretKipi] = useState(false)
-  const [duvarKaydirma, setDuvarKaydirma] = useState({ u: 0, v: 0 })
   /* Sağ panelde açık olan bölüm: 'mekan' ya da 'olcum' (aynı anda biri). */
   const [sagBolum, setSagBolum] = useState('mekan')
   const [refUzunlukCm, setRefUzunlukCm] = useState('')
@@ -9359,15 +9334,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ekranın kilitli iki köşesi oluyor. Küpün üst yüzünde seçim yok;
    * orada üç köşe iki yan yüzden geliyor.
    */
-  const kenarSecenekleri = (() => {
+  /*
+   * SIRADAKİ EKRANIN DEVAM EDECEĞİ EKRAN.
+   *
+   * Birleşik tipte (L, U, açılı, küp) bir önceki ÜYE; grup yokken de
+   * sıradaki ekran bir öncekinin kenarından devam ediyor. Eskiden yalnızca
+   * birleşik tipte çalışıyordu: tek tek yerleştirmede ikinci ekranı
+   * birincinin kenarına denk getirmek tamamen göz kararıydı, "ekranın
+   * devamı nereden başlıyor" sorusunun tuvalde bir karşılığı yoktu.
+   */
+  const devamEttigiEkran = () => {
+    if (!yerEkran) return null
     const tip = grup?.tip
+    if (Array.isArray(grup?.uyeler) && ['l', 'u', 'acili', 'kutu'].includes(tip)) {
+      const j = grup.uyeler.indexOf(yerEkran.id)
+      if (j < 1) return null
+      /* Küpün üst yüzü iki yan yüzün kenarlarından geliyor, tek kenardan değil. */
+      if (tip === 'kutu' && j === 4) return null
+      return grup.uyeler[j - 1]
+    }
+    const j = ekranParcalari.findIndex((x) => x.id === yerEkran.id)
+    if (j < 1) return null
+    const onceki = ekranParcalari[j - 1]
+    /* Yeri henüz belli olmayan ekranın kenarı da belli değil. */
+    return onceki && ekranYerlesti(onceki) ? onceki.id : null
+  }
+
+  const kenarSecenekleri = (() => {
     if (scene !== 'ozel' || !ozelSahne || !yerAktif || !yerEkran) return []
-    if (tip !== 'l' && tip !== 'u' && tip !== 'acili' && tip !== 'kutu') return []
-    if (!Array.isArray(grup?.uyeler)) return []
-    const j = grup.uyeler.indexOf(yerEkran.id)
-    if (j < 1) return []
-    if (tip === 'kutu' && j === 4) return []
-    const k = ekranDuzlemi(grup.uyeler[j - 1])
+    const oncekiId = devamEttigiEkran()
+    if (!oncekiId) return []
+    const k = ekranDuzlemi(oncekiId)
     if (!k) return []
     /* Seçim yapılmadıysa hiçbiri seçili değil: ikisi de bekliyor. */
     const secili = yerKenarSecim[yerEkran.id]
@@ -9382,11 +9379,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (!yerEkran) return
     const yeni = { ...yerKenarSecim, [yerEkran.id]: yon }
     setYerKenarSecim(yeni)
-    const tip = grup?.tip
-    const j = Array.isArray(grup?.uyeler) ? grup.uyeler.indexOf(yerEkran.id) : -1
-    if (j < 1) return
-    const k = ekranDuzlemi(grup.uyeler[j - 1])
-    if (!k || tip === 'duz') return
+    const oncekiId = devamEttigiEkran()
+    if (!oncekiId) return
+    const k = ekranDuzlemi(oncekiId)
+    if (!k) return
+    /*
+     * İKİ KÖŞE KİLİTLİ GELİYOR: yeni ekran komşusunun tam kenarından
+     * başlıyor, arada boşluk ya da üst üste binme kalmıyor. Kullanıcıya
+     * yalnızca öteki iki köşe kalıyor.
+     */
     const kenar = yon === 'sol' ? [k[0], k[3]] : [k[1], k[2]]
     setYerKilit(kenar.length)
     setYerNokta(kenar)
@@ -9464,9 +9465,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const dortKoseyeGec = () => {
     setYer3d(null)
-    /* Öteki yöntemin işareti siliniyor; referans duruyor. */
-    setDuvarIsaretKipi(false)
-    setDuvarlar([])
     setYerlesimBitti(false)
     /* Eski yerler siliniyor: adımlar 1. ekrandan başlasın. */
     setYerlesmisIdler([])
@@ -9488,238 +9486,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setYerKilit(0)
     setYerSira(0)
     setSihirbazAdim(3)
-  }
-
-  /*
-   * DUVAR SAYISI TİPTEN GELİYOR: düz 1, L 2, U 3.
-   *
-   * Açılı dışarıda: eklem açıları 90° olmayabildiği için iki duvarın
-   * ortak kenarı bina köşesi sayılamıyor. Orada eski yol ("Tasarımı
-   * ekrana getir" + taşı/döndür) duruyor.
-   */
-  const duvarYontemliTip = ['duz', 'l', 'u'].includes(grup?.tip || 'duz')
-  const duvarSayisi = grup?.tip === 'l' ? 2 : grup?.tip === 'u' ? 3 : 1
-  const duvarYontemiVar = scene === 'ozel' && !!ozelSahne && duvarYontemliTip
-  /* Sıradaki duvar: dördü tamamlanmamış ilk duvar. -1 ise hepsi tam. */
-  const duvarSirasi = duvarlar.findIndex((d) => !Array.isArray(d) || d.length < 4)
-  const duvarlarTam =
-    duvarlar.length === duvarSayisi && duvarlar.every((d) => Array.isArray(d) && d.length === 4)
-  /* Düz tek duvar: yatayda da kaydırılabiliyor. L ve U'da yalnızca dikey. */
-  const duvarYatayKayar = duvarSayisi === 1
-
-  /*
-   * DUVARLARA YERLEŞTİR.
-   *
-   * Her ekran kendi duvarının düzleminde, KENDİ gerçek ölçüsüyle duruyor:
-   * duvarın gerçek santimi referanstan (bkz. dortgenOlcusuCm), ekranın
-   * ölçüsü kabin sayısından geliyor; ikisinin oranı da ekranın duvardaki
-   * payı. Dörtgen homografiyle çiziliyor (bkz. alanaYerlestir), yani
-   * perspektif duvarın perspektifi.
-   *
-   * BİRLEŞİM BİNA KÖŞESİNE YAPIŞIYOR. Komşu duvar sağdaysa ekran kendi
-   * duvarının SAĞ kenarına, soldaysa SOL kenarına yaslanıyor; iki duvarın
-   * ortak kenarı da o köşe. L'de 1–2, U'da 1–2 ve 2–3 böyle buluşuyor.
-   * (U'nun ortadaki ekranı iki köşeye birden ancak eni duvarın enine eşitse
-   * yetişir; ölçü kilitli olduğu için yaslanma 1–2 köşesinden yapılıyor.)
-   */
-  const duvarlaraYerlestir = (liste, kaydir) => {
-    if (!Array.isArray(liste) || liste.length < 1) return false
-    const duvarKose = liste.map((d) => (Array.isArray(d) && d.length === 4 ? koseSirala(d) : null))
-    if (duvarKose.some((d) => !d)) return false
-    const uyeler =
-      Array.isArray(grup?.uyeler) && grup.uyeler.length > 1
-        ? grup.uyeler
-        : ekranParcalari.map((e) => e.id)
-    if (!uyeler.length) return false
-    const merkezX = (d) => d.reduce((t, p) => t + p.x, 0) / 4
-    /*
-     * DİKEY ÖLÇEK BÜTÜN DUVARLARDA ORTAK.
-     *
-     * Her duvarın gerçek ölçüsü kendi dörtgeninden ayrı ayrı çözülüyor;
-     * yükseklikte bu ayrışma göze batıyordu: iki duvarın ORTAK kenarı
-     * aynı kenar olduğu hâlde iki ekran o köşede farklı boyda düşüyordu
-     * (ölçülen örnekte 25 px ve 40 px). Kullanıcı duvarları aynı üst ve
-     * alt hizadan işaretliyor, yani yükseklik tek bir sayı: birinci
-     * duvarınki hepsi için geçerli. Genişlik duvardan duvara gerçekten
-     * değişiyor, o ayrı kalıyor.
-     */
-    const ilkOlcu = dortgenOlcusuCm(duvarKose[0])
-    const ortakBoyCm = ilkOlcu?.boyCm > 0 ? ilkOlcu.boyCm : 0
-    const sonuc = []
-    for (let i = 0; i < uyeler.length; i++) {
-      /* Düz'de hepsi tek duvarda; L ve U'da ekran i duvar i'de. */
-      const di = duvarKose.length === 1 ? 0 : Math.min(i, duvarKose.length - 1)
-      const duvar = duvarKose[di]
-      const olcu = dortgenOlcusuCm(duvar)
-      if (!olcu || !(olcu.enCm > 0) || !(olcu.boyCm > 0)) return false
-      const ozet = ekranOzetleri.find((x) => x.id === uyeler[i])
-      const enM = ozet?.enM || 0
-      const boyM = ozet?.boyM || 0
-      if (!(enM > 0) || !(boyM > 0)) return false
-      const u = (enM * 100) / olcu.enCm
-      const v = (boyM * 100) / (ortakBoyCm || olcu.boyCm)
-      let u0
-      if (duvarKose.length === 1) {
-        /* Tek duvar: ekranlar soldan sağa uç uca, tamamı birlikte kayıyor. */
-        const onceki = sonuc
-          .filter((s) => s.di === di)
-          .reduce((t, s) => t + s.u, 0)
-        const toplam = uyeler.reduce((t, id) => {
-          const o = ekranOzetleri.find((x) => x.id === id)
-          return t + ((o?.enM || 0) * 100) / olcu.enCm
-        }, 0)
-        const bas = Math.max(0, Math.min(Math.max(0, 1 - toplam), kaydir.u))
-        u0 = bas + onceki
-      } else {
-        /* Yaslanacak köşeyi veren komşu duvar: ilk ekranda sonraki, ötekilerde önceki. */
-        const komsu = i === 0 ? 1 : i - 1
-        const sagda = merkezX(duvarKose[Math.min(komsu, duvarKose.length - 1)]) > merkezX(duvar)
-        u0 = sagda ? Math.max(0, 1 - u) : 0
-      }
-      const v0 = Math.max(0, Math.min(Math.max(0, 1 - v), kaydir.v))
-      const dortgen = alanaYerlestir(duvar, u0 + u / 2, v0 + v / 2, { u, v }, enM, boyM)
-      if (!dortgen) return false
-      sonuc.push({ id: uyeler[i], di, u, dortgen, duvar })
-    }
-    for (const s of sonuc) {
-      yerDuzlemRef.current[s.id] = s.duvar
-      yerKoseRef.current[s.id] = s.dortgen
-      dortgeniYaz(s.id, s.dortgen)
-    }
-    setYerlesmisIdler(sonuc.map((s) => s.id))
-    return true
-  }
-
-  /*
-   * İŞARET DEĞİŞİNCE TASARIM KENDİLİĞİNDEN OTURUYOR.
-   *
-   * Köşe sürüklenirken de yeniden hesaplanıyor: kullanıcı duvarı nereye
-   * oturttuğunu onaydan önce görüyor. İmza, aynı girdiyle ikinci kez
-   * hesaplamayı (ve setSabitEkranlar → yeniden çizim → efekt döngüsünü)
-   * engelliyor.
-   */
-  const duvarImzaRef = useRef(null)
-  useEffect(() => {
-    if (!duvarYontemiVar || !duvarlarTam) {
-      duvarImzaRef.current = null
-      return
-    }
-    const imza = JSON.stringify([
-      duvarlar.map((d) => d.map((p) => [Math.round(p.x), Math.round(p.y)])),
-      duvarKaydirma,
-      ekranOzetleri.map((x) => [x.id, x.enM, x.boyM]),
-    ])
-    if (duvarImzaRef.current === imza) return
-    duvarImzaRef.current = imza
-    duvarlaraYerlestir(duvarlar, duvarKaydirma)
-    /* Hesap saf; bağımlılığı girdiler veriyor. */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duvarYontemiVar, duvarlarTam, duvarlar, duvarKaydirma, ekranOzetleri])
-
-  /*
-   * DUVAR İŞARETLEMEYE GEÇ.
-   *
-   * Öteki yöntemin yerleşimi siliniyor (iki katman aynı tıklamayı
-   * bekleyemez), REFERANS ÖLÇÜ duruyor: fotoğrafın ölçeği ikisinin de
-   * ortak zemini.
-   */
-  const duvarlariIsaretle = () => {
-    setYer3d(null)
-    setYerlesimBitti(false)
-    setYerlesmisIdler([])
-    yerKoseRef.current = {}
-    yerDuzlemRef.current = {}
-    setSabitEkranlar((l) => l.map((x) => ({ ...x, oran: null, alan: null })))
-    setElleKose(null)
-    setElleYerlesti(false)
-    setAlanNokta([])
-    setAlanKipi(false)
-    setRefKipi(false)
-    setRef2Kipi(false)
-    setLKoseKipi(false)
-    setDuzenlemede(false)
-    setKutuDuzen(null)
-    setTasarimAcik(true)
-    setYerNokta([])
-    setYerKilit(0)
-    setYerSira(null)
-    setSihirbazAdim(0)
-    duvarImzaRef.current = null
-    setDuvarKaydirma({ u: 0, v: 0 })
-    setDuvarlar(Array.from({ length: duvarSayisi }, () => []))
-    setDuvarIsaretKipi(true)
-  }
-
-  /* Sıradaki duvarın köşeleri; dördüncüden sonra sıra kendiliğinden geçiyor. */
-  const duvarNoktaDegisti = (noktalar) => {
-    if (duvarSirasi < 0) return
-    /*
-     * ORTAK KENAR = BİNA KÖŞESİ.
-     *
-     * İkinci duvarın başladığı köşe birincinin bittiği köşe. Göz kararıyla
-     * tıklanınca arada birkaç piksel kalıyor ve 'bina köşesi' kayıyordu:
-     * yeni konan köşe, konmuş duvarların köşelerinden birine yakınsa ona
-     * YAPIŞIYOR. Yalnızca YENİ köşede; sürüklenen köşe serbest kalıyor.
-     */
-    let liste = noktalar
-    const mevcut = (duvarlar[duvarSirasi] || []).length
-    if (noktalar.length === mevcut + 1 && noktalar.length > 0) {
-      const son = noktalar[noktalar.length - 1]
-      let enYakin = null
-      let enKisa = 18
-      duvarlar.forEach((d, i) => {
-        if (i === duvarSirasi || !Array.isArray(d)) return
-        d.forEach((p) => {
-          const uz = Math.hypot(p.x - son.x, p.y - son.y)
-          if (uz < enKisa) {
-            enKisa = uz
-            enYakin = p
-          }
-        })
-      })
-      if (enYakin) liste = [...noktalar.slice(0, -1), { x: enYakin.x, y: enYakin.y }]
-    }
-    setDuvarlar((l) => l.map((d, i) => (i === duvarSirasi ? liste : d)))
-  }
-  const duvarKosesiDegisti = (di, ki, nokta) => {
-    setDuvarlar((l) => l.map((d, i) => (i === di ? d.map((p, k) => (k === ki ? nokta : p)) : d)))
-  }
-
-  /*
-   * KAYDIRMA — SADECE DUVAR BOYUNCA.
-   *
-   * Fare tasarımı duvarların üstünde gezdiriyor: yukarı/aşağı her zaman,
-   * sağa/sola yalnızca tek duvarlı (Düz) yerleşimde. Döndürme yok; açı
-   * duvarın kendi perspektifinden geliyor.
-   */
-  const duvarKaydirRef = useRef(null)
-  const duvarKaydirBasla = (e) => {
-    const d = Array.isArray(duvarlar[0]) && duvarlar[0].length === 4 ? koseSirala(duvarlar[0]) : null
-    if (!d) return
-    const uzak = (p, q) => Math.hypot(p.x - q.x, p.y - q.y)
-    const enPx = (uzak(d[0], d[1]) + uzak(d[3], d[2])) / 2
-    const boyPx = (uzak(d[0], d[3]) + uzak(d[1], d[2])) / 2
-    if (!(enPx > 1) || !(boyPx > 1)) return
-    duvarKaydirRef.current = {
-      fx: e.clientX,
-      fy: e.clientY,
-      u: duvarKaydirma.u,
-      v: duvarKaydirma.v,
-      enPx,
-      boyPx,
-    }
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-  }
-  const duvarKaydirDevam = (e) => {
-    const b = duvarKaydirRef.current
-    if (!b) return
-    setDuvarKaydirma({
-      u: duvarYatayKayar ? b.u + (e.clientX - b.fx) / b.enPx : b.u,
-      v: b.v + (e.clientY - b.fy) / b.boyPx,
-    })
-  }
-  const duvarKaydirBitir = () => {
-    duvarKaydirRef.current = null
   }
 
   /*
@@ -9924,34 +9690,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (scene !== 'ozel' || !ozelSahne) return
     if (sihirbazAdim !== 3) return
     if (yerSira !== null) return
-    if (duvarIsaretKipi) return
     /*
-     * KÜP KENDİLİĞİNDEN GELİYOR.
+     * YERLEŞİM TİPİ SEÇİLİYSE TASARIM BÜTÜN HÂLİNDE GELİYOR.
      *
-     * Küp kapalı bir kutu: yüzleri tek tek dört köşesinden yerleştirmek
-     * ne mümkün ne de anlamlı (arka yüzler hiç görünmüyor, üst kapak da
-     * öyle). Referans ölçü bitince kutu bütün yüzleri ve üst ekranıyla
-     * fotoğrafın ortasına geliyor; ölçüsü referanstan ve kilitli.
-     * Kullanıcıya kalan iş yerini ve bakış açısını seçmek.
+     * L, U, küp ve açılı birer ŞEKİL: ekranların birbirine göre açısı ve
+     * sırası baştan belli. Böyle bir tasarımı ekran ekran yerleştirmek,
+     * kullanıcıdan zaten bildiğimiz bir şeyi yeniden çizmesini istemek
+     * olurdu — üstelik küpte imkânsız (arka yüzler ve üst kapak fotoğrafta
+     * hiç görünmüyor). Referans bitince tasarım bütün hâlinde fotoğrafın
+     * ortasına geliyor; ölçüsü referanstan ve kilitli, kullanıcıya kalan
+     * iş yerini ve bakış açısını seçmek.
+     *
+     * Tip SEÇİLİ DEĞİLKEN (tek ekran ya da düz dizilim) eski yol duruyor:
+     * her ekran kendi dört köşesinden yerleşiyor ve sıradaki ekran bir
+     * öncekinin kenarından devam ediyor (bkz. kenarSecenekleri).
      */
-    if (grup?.tip === 'kutu' && !yer3d) {
+    if (['l', 'u', 'kutu', 'acili'].includes(grup?.tip) && !yer3d) {
       setYerSira(null)
       setSihirbazAdim(0)
       /* Hafif yukarıdan: kutunun üst kapağı da görünüyor (bkz. Kup2D BASLANGIC_EGIM). */
       setYer3d({ ux: 0.5, uy: 0.5, yaw: 0, egim: 14, kilit: false })
-      return
-    }
-    /*
-     * ÇOKLU EKRANDA ANA YÖNTEM DUVAR İŞARETLEME.
-     *
-     * Tek ekranda dört köşe zaten "duvarı işaretle" demek: aynı dörtgen,
-     * aynı perspektif. Zor olan ÇOKLU yerleşim — tasarımı fareyle
-     * döndürerek köşeye oturtmak. Birden çok ekran varken akış doğrudan
-     * duvar işaretlemeye giriyor; dört köşe panelde yedek seçenek olarak
-     * duruyor (bkz. duvarlariIsaretle, dortKoseyeGec).
-     */
-    if (duvarYontemiVar && !yer3d && ekranParcalari.length > 1 && !ekranParcalari.some((x) => ekranYerlesti(x))) {
-      duvarlariIsaretle()
       return
     }
     /*
@@ -11469,55 +11227,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {/*
-            DUVAR İŞARETLEME KATMANI.
-
-            Sıradaki duvarın dört köşesi tıklanıyor; konulan duvarlar
-            renkli dörtgen olarak duruyor ve köşeleri sürüklenebiliyor.
-            "Yerleşimi bitir" dendiğinde (yerlesimBitti) çizgiler ve
-            noktalar gizleniyor.
-          */}
-          {duvarIsaretKipi && !yerlesimBitti && scene === 'ozel' && ozelSahne && fotoYer?.genislik > 0 && (
-            <>
-              {duvarSirasi >= 0 && (
-                <div style={{ position: 'absolute', inset: 0, zIndex: 18 }}>
-                  <ReferansSecici
-                    foto={isaretFoto}
-                    olcek={isaretZoom}
-                    onKaydir={isaretKaydir}
-                    noktalar={duvarlar[duvarSirasi] || []}
-                    onDegis={duvarNoktaDegisti}
-                    enCokNokta={4}
-                    tuvalW={tuvalBoyut.w}
-                    tuvalH={tuvalBoyut.h}
-                    sinir={fotoSinir}
-                  />
-                </div>
-              )}
-              {/* Kaydırma katmanı tutamakların ALTINDA: köşe sürükleme öncelikli. */}
-              {duvarlarTam && (
-                <div
-                  style={{ position: 'absolute', inset: 0, zIndex: 16, cursor: 'grab', touchAction: 'none' }}
-                  onPointerDown={duvarKaydirBasla}
-                  onPointerMove={duvarKaydirDevam}
-                  onPointerUp={duvarKaydirBitir}
-                  onPointerCancel={duvarKaydirBitir}
-                />
-              )}
-              <div style={{ position: 'absolute', inset: 0, zIndex: 19, pointerEvents: 'none' }}>
-                <DuvarIsaret
-                  duvarlar={duvarSirasi >= 0 ? duvarlar.slice(0, duvarSirasi) : duvarlar}
-                  renkler={DUVAR_RENKLERI}
-                  tuvalW={tuvalBoyut.w}
-                  tuvalH={tuvalBoyut.h}
-                  onDegis={duvarKosesiDegisti}
-                  sinir={fotoSinir}
-                  surukleAcik={duvarSirasi < 0}
-                />
-              </div>
-            </>
-          )}
-
-          {/*
             EKRANI YERLEŞTİRME — DÖRT KÖŞE.
 
             Sıradaki ekranın duracağı yerin dört köşesi tıklanıyor;
@@ -12655,12 +12364,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           için gizli.
                         */}
                         {/* Sığdırılacak bir alan yoksa düğmenin yapacağı iş de yok. */}
-                        {alanIsaretli && (
+                        {/* Sağ paneldeki ile aynı kural: hep görünür, yoksa pasif. */}
+                        {scene === 'ozel' && ozelSahne && (
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               type="button"
-                              onClick={() => tasarimiAlanaSigdir()}
-                              className="w-full rounded-lg border border-neutral-300 py-1 text-[13.5px] font-medium text-neutral-700 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+                              disabled={!alanIsaretli}
+                              title={alanIsaretli ? undefined : t('ekran.alanaSigdirNot')}
+                              onClick={() => alanIsaretli && tasarimiAlanaSigdir()}
+                              className={`w-full rounded-lg border py-1 text-[13.5px] font-medium transition-colors ${
+                                alanIsaretli
+                                  ? 'border-neutral-300 text-neutral-700 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300'
+                                  : 'cursor-not-allowed border-neutral-200 text-neutral-400 dark:border-[#2c333f] dark:text-neutral-600'
+                              }`}
                             >
                               {t('ekran.alanaSigdir')}
                             </button>
@@ -13292,85 +13008,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   referans adımlarında duruyor ama PASİF: kullanıcı özelliğin
                   var olduğunu ve önce neyi yapması gerektiğini orada görüyor.
                 */}
-                {/*
-                  DUVARLARI İŞARETLE — DÜZ, L VE U'DA ANA YÖNTEM.
-
-                  Panelde sırayla hangi duvarın kaç köşesinin konduğu
-                  yazıyor; tasarım son köşeden sonra kendiliğinden oturuyor.
-                */}
-                {duvarYontemiVar && !alanKipi && (
-                  <div className="mt-2">
-                    {!duvarIsaretKipi ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={!yer3dHazir}
-                          onClick={duvarlariIsaretle}
-                          className="w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          {t('duvar.yontem')}
-                        </button>
-                        <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {yer3dHazir ? t('duvar.yontemNot') : t('yer3d.refYok')}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="mb-1.5 flex flex-col gap-1">
-                          {Array.from({ length: duvarSayisi }, (_, i) => (
-                            <div
-                              key={i}
-                              className={`flex items-center gap-2 text-[13.5px] ${
-                                i === duvarSirasi
-                                  ? 'font-semibold text-neutral-800 dark:text-neutral-100'
-                                  : 'text-neutral-500 dark:text-neutral-400'
-                              }`}
-                            >
-                              <span
-                                className="inline-block h-3 w-3 shrink-0 rounded-sm"
-                                style={{ background: DUVAR_RENKLERI[i % DUVAR_RENKLERI.length] }}
-                              />
-                              {t('duvar.adim')
-                                .replace('{0}', String(i + 1))
-                                .replace('{1}', String((duvarlar[i] || []).length))}
-                            </div>
-                          ))}
-                        </div>
-                        {duvarlarTam && (
-                          <button
-                            type="button"
-                            onClick={() => setYerlesimBitti((b) => !b)}
-                            className="w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90"
-                          >
-                            {yerlesimBitti ? t('yer3d.duzenle') : t('yer3d.bitir')}
-                          </button>
-                        )}
-                        <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {duvarlarTam
-                            ? yerlesimBitti
-                              ? t('yer3d.sabit')
-                              : t('duvar.ipucu')
-                            : t('duvar.yontemNot')}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {scene === 'ozel' && ozelSahne && !alanKipi && !duvarIsaretKipi && (
+                {scene === 'ozel' && ozelSahne && !alanKipi && (
                   <div className="mt-2">
                     {/*
                       "TASARIMI EKRANA GETİR" AÇILI GRUBUN YÖNTEMİ.
 
-                      Düz, L ve U artık duvar işaretleyerek yerleşiyor; iki
-                      ana yöntem yan yana durunca hangisinin kullanılacağı
-                      belirsiz kalıyordu. Açılıda eklem açıları 90° olmak
-                      zorunda olmadığı için duvar köşesi kurulamıyor, bu
-                      yüzden orada eski yol duruyor. Bir kez başlatılmışsa
-                      düğme her tipte görünüyor: bitir/düzenle oradan.
+                      Bir yerleşim tipi seçiliyse (L, U, küp, açılı) tasarım
+                      zaten bütün hâlinde geliyor, bu düğmeye gerek kalmıyor.
+                      Tip seçili değilken ekranlar tek tek yerleşiyor ve bütün
+                      hâlinde getirmek bir seçenek olarak duruyor. Bir kez
+                      başlatılmışsa düğme her durumda görünüyor: bitir ve
+                      düzenle oradan yapılıyor.
                     */}
                     {!yer3d ? (
-                      duvarYontemiVar ? null : (
+                      ['l', 'u', 'kutu', 'acili'].includes(grup?.tip) ? null : (
                       <>
                         <button
                           type="button"
@@ -13451,8 +13102,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </div>
                 )}
 
-                {/* Duvar yönteminin kendi bitir/düzenle düğmesi var: ikisi birden çıkmasın. */}
-                {yerlesimBitti && !olcuAcik && !duvarIsaretKipi && scene === 'ozel' && ozelSahne && (
+                {yerlesimBitti && !olcuAcik && scene === 'ozel' && ozelSahne && (
                   <button
                     type="button"
                     onClick={() => {
@@ -13466,14 +13116,35 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </button>
                 )}
 
-                {alanIsaretli && !olcuAcik && (
-                  <button
-                    type="button"
-                    onClick={() => tasarimiAlanaSigdir()}
-                    className="mt-2 w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90"
-                  >
-                    {t('ekran.alanaSigdir')}
-                  </button>
+                {/*
+                  "ALANA SIĞDIR" HİÇ KAYBOLMUYOR.
+
+                  Düğme yalnızca işaretli bir alan varken çiziliyordu: alan
+                  henüz yokken panelde hiç görünmüyor, kullanıcı böyle bir
+                  şeyin var olduğunu bilmiyordu. Artık her zaman duruyor;
+                  sığdırılacak alan yokken PASİF ve altında ne yapılması
+                  gerektiği yazıyor. Kaybolan düğme, pasif düğmeden kötü.
+                */}
+                {scene === 'ozel' && ozelSahne && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={!alanIsaretli}
+                      onClick={() => alanIsaretli && tasarimiAlanaSigdir()}
+                      className={`mt-2 w-full rounded-lg px-4 py-2.5 text-[16px] font-semibold transition-opacity ${
+                        alanIsaretli
+                          ? 'bg-brand text-white hover:opacity-90'
+                          : 'cursor-not-allowed bg-neutral-100 text-neutral-400 dark:bg-[#222833] dark:text-neutral-500'
+                      }`}
+                    >
+                      {t('ekran.alanaSigdir')}
+                    </button>
+                    {!alanIsaretli && (
+                      <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('ekran.alanaSigdirNot')}
+                      </p>
+                    )}
+                  </>
                 )}
 
                 {/*
