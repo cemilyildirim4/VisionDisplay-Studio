@@ -2928,9 +2928,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * (ekranSeridi) geliyor. Buradan okunsaydı değişken henüz tanımlı
    * olmaz ve uygulama açılışta hata ekranına düşerdi.
    */
+  /*
+   * BİRLEŞİK GRUPTA SINIR, ÖTEKİ EKRANLARIN ENİNİ DÜŞMÜYOR.
+   *
+   * Sınır duvardan öteki ekranların enini düşerek hesaplanıyor; bu düz
+   * dizilimde doğru (ekranlar yan yana), ama L, U, açılı ve küpte DEĞİL:
+   * orada ekranlar birbirine açıyla bağlanıyor ve duvarda kapladıkları
+   * yer enlerinin toplamı değil, çok daha azı.
+   *
+   * Sonucu ağırdı: yerleşim tipi seçilince duvar tasarımın kapladığı
+   * alana oturuyor (ölçüldü: 2,02 m → 1,01 m), sonra bu sınır o dar
+   * duvara göre hesaplanıp ELDEKİ EKRANI KIRPIYORDU — 3×6 kurulmuş bir
+   * ekran sessizce 1×6'ya düşüyordu. Kullanıcı kabinlerinin nereye
+   * gittiğini göremiyordu.
+   *
+   * Birleşik grupta sınır yalnızca duvarın kendi eninden: tek bir yüz
+   * duvardan geniş olamaz, ama komşusunun eni ondan düşülmez. Grubun
+   * tamamı duvarı aşarsa uyarı zaten ayrı veriliyor (grupDuvariAsiyor).
+   */
+  const birlesikGrupta =
+    ['l', 'u', 'acili', 'kutu'].includes(grup?.tip) &&
+    Array.isArray(grup?.uyeler) &&
+    grup.uyeler.includes(aktifEkranId)
   const colsMax = Math.max(
     1,
-    Math.min(EN_COK_KABIN_EKSEN, Math.floor(((width || 0) - digerlerininEni) / kabinEnM + 1e-6)),
+    Math.min(
+      EN_COK_KABIN_EKSEN,
+      Math.floor(((width || 0) - (birlesikGrupta ? 0 : digerlerininEni)) / kabinEnM + 1e-6),
+    ),
   )
   /*
    * BİRLEŞİMİN DÜZLEMDEKİ GEOMETRİSİ.
