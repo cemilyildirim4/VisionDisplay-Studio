@@ -12344,29 +12344,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsMax} />
                           </div>
                           {/*
-                            PASİF "+" SEBEBİNİ SÖYLÜYOR.
-
-                            Duvar dolduğunda düğme sessizce soluklaşıyordu;
-                            kullanıcı kabin eklenmemesini arıza sanıyordu.
-                            Not yalnızca sınıra GERÇEKTEN ulaşıldığında var,
-                            yoksa ayarların ortasında boşuna yer kaplıyor.
-
-                            NOT YÖNE GÖRE AYRI.
-
-                            Tek bir "duvar doldu" yazısı vardı: sütun sınıra
-                            gelince satır hâlâ artırılabilirken de çıkıyor ve
-                            kullanıcı iki + düğmesinin de kilitlendiğini
-                            sanıyordu. Dolan KENARIN kendi satırı yazılıyor;
-                            ikisi de dolduysa iki satır alt alta duruyor.
-                          */}
-                          {(cols >= colsMax || rows >= rowsMax) && (
-                            <div className="mt-1 text-[13px] text-neutral-500 dark:text-neutral-400">
-                              {cols >= colsMax && <div>{t('screen.enDoldu')}</div>}
-                              {rows >= rowsMax && <div>{t('screen.boyDoldu')}</div>}
-                            </div>
-                          )}
-
-                          {/*
                             YÖN AYRI BİR KARAR DEĞİL.
 
                             Yatay/dikey, duvara sığdırmanın SONUCU: hangi

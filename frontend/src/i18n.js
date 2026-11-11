@@ -250,8 +250,6 @@ const dict = {
   'ekran.alaniDuzenle': { tr: 'Alanı düzenle', en: 'Edit area', ar: 'تحرير المنطقة' },
   'screen.colsShort': { tr: 'Sütun', en: 'Cols', ar: 'أعمدة' },
   /* Sınır yöne göre doluyor: sütun ile satır ayrı ayrı söyleniyor. */
-  'screen.enDoldu': { tr: 'Duvar genişliği doldu, sütun eklenemez.', en: 'Wall width is full — no more columns.', ar: 'عرض الجدار ممتلئ، لا يمكن إضافة أعمدة.' },
-  'screen.boyDoldu': { tr: 'Duvar yüksekliği doldu, satır eklenemez.', en: 'Wall height is full — no more rows.', ar: 'ارتفاع الجدار ممتلئ، لا يمكن إضافة صفوف.' },
   'screen.rowsShort': { tr: 'Satır', en: 'Rows', ar: 'صفوف' },
   'secim.gorselEkle': { tr: 'Seçili ekranlara görsel ekle', en: 'Add image to selected screens', ar: 'إضافة صورة للشاشات المحددة' },
   'secim.kaldir': { tr: 'Seçimi kaldır', en: 'Clear selection', ar: 'إلغاء التحديد' },
