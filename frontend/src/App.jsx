@@ -9728,14 +9728,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }, [sihirbazAdim, scene, ozelSahne])
 
   /*
-   * ÖLÇÜ DEĞİŞİNCE FOTOĞRAFTAKİ EKRAN DA DEĞİŞİYOR.
+   * ÖLÇÜ DEĞİŞİNCE EKRAN DUVARIN DÜZLEMİNDE BÜYÜYOR.
    *
    * Sütun/satır değiştirince fotoğraftaki ekran olduğu gibi kalıyordu.
-   * Dörtgen artık merkezi ve perspektifi korunarak yeni gerçek ölçünün
-   * oranında büyüyüp küçülüyor; ekran aynı duvarda, aynı açıda kalıyor.
+   * Sonra dörtgen ekranda (iki boyutta) ölçekleniyordu: bu, perspektifi
+   * KORUMUYOR. Perspektifte uzak kenar yakın kenardan kısadır; dörtgeni
+   * olduğu gibi büyütmek o oranı dondurup şekli yamultuyor — büyüdükçe
+   * ekran duvardan kopuk, eğri bir levha gibi duruyordu.
    *
-   * Oran BİR ÖNCEKİ ölçüye göre alınıyor: üst üste değişiklikler
-   * birikmiyor ve dörtgenin şekli bozulmuyor.
+   * İşaretlenen alan bir DUVAR DÜZLEMİ: ekran o düzlemin içine, yeni
+   * gerçek ölçüsüyle yeniden konuyor (homografi, bkz. alanaYerlestir).
+   * Perspektif duvarın perspektifi olduğu için her ölçüde doğru kalıyor;
+   * gerçek ölçü de referanstan geldiği gibi duruyor.
+   *
+   * Düzlem yoksa (serbest yerleştirme) eski iki boyutlu ölçek yedek.
    */
   const sonOlcuRef = useRef(null)
   useEffect(() => {
@@ -9749,6 +9755,63 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (Math.abs(sx - 1) < 1e-4 && Math.abs(sy - 1) < 1e-4) return
     const k = koseMutlak
     if (!Array.isArray(k) || k.length !== 4) return
+
+    /*
+     * DÜZLEMİN İÇİNDE YENİDEN YERLEŞTİRME.
+     *
+     * Yeri korunuyor: ekran hangi kenara yaslıysa o kenar yerinde kalıyor,
+     * büyüme öteki yöne doğru oluyor. Komşusu olan kenar (devam çizgisiyle
+     * kurulan ortak kenar) böylece ayrılmıyor.
+     */
+    const duzlem = alanTuval
+    const olcu = duzlem ? dortgenOlcusuCm(duzlem) : null
+    if (duzlem && olcu?.enCm > 0 && olcu?.boyCm > 0) {
+      const uEski = (onceki.w * 100) / olcu.enCm
+      const vEski = (onceki.h * 100) / olcu.boyCm
+      const uYeni = (ekranWm * 100) / olcu.enCm
+      const vYeni = (ekranHm * 100) / olcu.boyCm
+      const u0Eski = (alanKonum?.u ?? 0.5) - uEski / 2
+      const v0Eski = (alanKonum?.v ?? 0.5) - vEski / 2
+      /* Hangi kenar komşuya yaslı: ona en yakın köşe yerinde kalıyor. */
+      const komsu = Object.entries(yerKoseRef.current)
+        .filter(([id]) => id !== String(aktifEkranId))
+        .flatMap(([, v]) => v || [])
+      let sagaYasli = false
+      let altaYasli = false
+      if (komsu.length) {
+        let enYakin = Infinity
+        let hangi = -1
+        k.forEach((q, i) => {
+          for (const r of komsu) {
+            const uz = Math.hypot(q.x - r.x, q.y - r.y)
+            if (uz < enYakin) {
+              enYakin = uz
+              hangi = i
+            }
+          }
+        })
+        if (enYakin < 40 && hangi >= 0) {
+          /* Sıralı dörtgen: 0 sol üst, 1 sağ üst, 2 sağ alt, 3 sol alt. */
+          sagaYasli = hangi === 1 || hangi === 2
+          altaYasli = hangi === 2 || hangi === 3
+        }
+      }
+      const u0 = sagaYasli ? u0Eski + uEski - uYeni : u0Eski
+      const v0 = altaYasli ? v0Eski + vEski - vYeni : v0Eski
+      const yeni = alanaYerlestir(
+        duzlem,
+        u0 + uYeni / 2,
+        v0 + vYeni / 2,
+        { u: uYeni, v: vYeni },
+        ekranWm,
+        ekranHm,
+      )
+      if (yeni) {
+        elleKoseyeYaz(yeni)
+        setAlanKonum({ u: u0 + uYeni / 2, v: v0 + vYeni / 2 })
+        return
+      }
+    }
     /*
      * ÖLÇEĞİN DAYANAĞI ORTAK KÖŞE.
      *
@@ -10858,17 +10921,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * böyleydi, referans adımı için de aynısı geçerli.
                */
               /* Ölçü aracı açıkken tasarım çizilmiyor (bkz. olcuAraciAcik). */
-              /* Düz çizim yalnızca 3B GERÇEKTEN çiziliyorken gizleniyor. */
+              /*
+                DÜZ ÇİZİM 3B YÜZÜNDEN ARTIK HİÇ GİZLENMİYOR.
+
+                Gövde (ince yan yüz + gölge) açılınca düz çizim gizleniyor,
+                3B katman da her zaman çizemiyordu: WebGL kapalıysa, katman
+                yüklenemezse ya da yerleşim ikinci kurulumda kurulamazsa
+                ekranda HİÇBİR ŞEY kalmıyordu — özelliğin 27 Ekim'de geri
+                kapatılma sebebi buydu.
+
+                Gövdenin ÖN yüzü zaten tasarımın dörtgeniyle birebir aynı
+                yerde (ölçüldü: 0,000 piksel fark). Yani düz çizimi
+                gizlemeye gerek yok: 3B katman ARKADA duruyor, görünen tek
+                katkısı kenardaki yan yüz ve gölge. Çizemezse de tasarım
+                yerinde kalıyor, yalnızca kalınlık görünmüyor.
+              */
               /*
                 Ölçü bitince tasarım çıkıyor: ayrıca bir düğmeye basılması
                 beklenmiyor (o düğme akış yenilenirken kalkmıştı ve
                 tasarimAcik'ı yazan kimse kalmamıştı).
               */
-              ekranGizle={
-                (uc3dHazir && uc3dKatmanVar && !duvarDunya) ||
-                (tasarimGizli && !olcuTamam) ||
-                olcuAraciAcik
-              }
+              ekranGizle={(tasarimGizli && !olcuTamam) || olcuAraciAcik}
               uc3dKatman={
                 uc3dKatmanVar
                   ? ({ koseler, genislik, yukseklik }) => (

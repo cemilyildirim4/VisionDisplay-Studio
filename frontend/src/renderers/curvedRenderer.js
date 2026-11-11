@@ -198,7 +198,21 @@ export function drawCurvedScreen(ctx, o) {
 
   // Düz yüzey bir kez hazırlanır; hedefe yalnızca dilimleri kopyalanır.
   const bs = Math.max(1, bufferScale)
-  const yuzey = yuzeyiCiz(Math.ceil(w * bs), Math.ceil(h * bs), o)
+  /*
+   * ARA TUVAL DİKEYDE EN ÇOK GERİLEN DİLİME GÖRE HAZIRLANIYOR.
+   *
+   * Dışa kavisli ekranda ortadaki dilim izleyiciye yakın, yani daha UZUN
+   * görünüyor: h yüksekliğindeki yüzeyden kesilen parça hedefte h + amp
+   * kadar yer kaplıyor. Ara tuval h yüksekliğinde hazırlandığı için o
+   * dilim BÜYÜTÜLEREK kopyalanıyor ve görüntü bulanıklaşıyordu —
+   * kavis arttıkça daha çok.
+   *
+   * Tuval artık en çok gerilen dilim kadar yüksek hazırlanıyor: kopyalama
+   * her dilimde küçültme oluyor, büyütme hiç olmuyor. Kenarlardaki
+   * dilimler zaten küçülüyordu, onlar değişmiyor.
+   */
+  const esneme = h > 0 ? Math.min(3, (h + Math.max(0, amp)) / h) : 1
+  const yuzey = yuzeyiCiz(Math.ceil(w * bs), Math.ceil(h * bs * esneme), o)
   const yuzeyH = yuzey.height
 
   // Kenarların pürüzsüz çıkması için tüm panel çizimi dış hatla kırpılır.

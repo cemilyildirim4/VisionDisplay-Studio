@@ -61,17 +61,23 @@ export const PANEL = {
    * çizimleri yerinde duruyor, burayı true yapmak ikisini de geri getiriyor.
    */
   /*
-   * AÇILDI, GERİ KAPATILDI (27 Ekim 2026).
+   * AÇILDI, KAPATILDI (27 Ekim 2026), YENİDEN AÇILDI (11 Kasım 2026).
    *
-   * Açınca fotoğraf akışında tasarım kayboluyor: Mekan3D hazır deyince
-   * düz çizim gizleniyor (ekranGizle), ama ikinci kurulumda 3B katman
-   * çizmiyor ve ekranda hiçbir şey kalmıyor. Akış testinin "ikinci
-   * kurulumda tasarım görünmüyor" adımı tam olarak bunu yakalıyor.
+   * Kapatılma sebebi: Mekan3D "hazırım" deyince düz çizim gizleniyor
+   * (ekranGizle), ama ikinci kurulumda 3B katman çizmiyor ve ekranda
+   * hiçbir şey kalmıyordu. Gizleme kararı bir kez açılmış bayrağa
+   * bakıyordu.
    *
-   * Kalınlığın geri gelmesi için önce o gizleme kuralının düzelmesi
-   * gerekiyor: 3B GERÇEKTEN çizene kadar düz çizim durmalı.
+   * O kural düzeldi: karar artık tek kaynaktan (uc3dKatmanVar) geliyor
+   * ve Mekan3D yerleşimi kuramadığında onHazir(false) diyor, yani düz
+   * çizim yerinde kalıyor. Akış testinin "ikinci kurulumda tasarım
+   * görünmüyor" adımı bu açıkken de geçiyor.
+   *
+   * Açık olması fotoğrafta ekranın ince bir gövdesi (yan yüz + gölge)
+   * olması demek; kalınlık uydurma değil, modelin kendi depthMm değeri.
+   * Kalınlığı girilmemiş modelde gövde çizilmiyor.
    */
-  kabinGovdesi: false,
+  kabinGovdesi: true,
 
   /* L köşesinin tarafı: Sol köşe / Orta / Sağ köşe ve "Otomatiğe dön". */
   lKoseTarafi: false,
