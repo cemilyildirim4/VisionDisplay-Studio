@@ -2929,34 +2929,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * olmaz ve uygulama açılışta hata ekranına düşerdi.
    */
   /*
-   * BİRLEŞİK GRUPTA SINIR, ÖTEKİ EKRANLARIN ENİNİ DÜŞMÜYOR.
+   * HER EKRANIN SINIRI KENDİ DUVARINDAN.
    *
-   * Sınır duvardan öteki ekranların enini düşerek hesaplanıyor; bu düz
-   * dizilimde doğru (ekranlar yan yana), ama L, U, açılı ve küpte DEĞİL:
-   * orada ekranlar birbirine açıyla bağlanıyor ve duvarda kapladıkları
-   * yer enlerinin toplamı değil, çok daha azı.
+   * Sütun üst sınırı duvardan ÖTEKİ ekranların enini düşüyordu: bir ekran
+   * büyüdükçe komşusunun büyüyebileceği sınır daralıyor, kullanıcı da
+   * "sütun eklenemez" yazısının nereden geldiğini göremiyordu. Üstelik
+   * yerleşim tipi seçilince duvar tasarıma oturduğu için sınır bir anda
+   * düşüyor ve eldeki ekranı KIRPIYORDU: ölçüldü, 3×6 kurulmuş bir ekran
+   * birkaç adımda 1×6'ya iniyordu.
    *
-   * Sonucu ağırdı: yerleşim tipi seçilince duvar tasarımın kapladığı
-   * alana oturuyor (ölçüldü: 2,02 m → 1,01 m), sonra bu sınır o dar
-   * duvara göre hesaplanıp ELDEKİ EKRANI KIRPIYORDU — 3×6 kurulmuş bir
-   * ekran sessizce 1×6'ya düşüyordu. Kullanıcı kabinlerinin nereye
-   * gittiğini göremiyordu.
-   *
-   * Birleşik grupta sınır yalnızca duvarın kendi eninden: tek bir yüz
-   * duvardan geniş olamaz, ama komşusunun eni ondan düşülmez. Grubun
-   * tamamı duvarı aşarsa uyarı zaten ayrı veriliyor (grupDuvariAsiyor).
+   * Artık her ekranın ölçüsü kendisinin: sınır yalnızca duvarın kendi
+   * eninden geliyor, komşunun eni düşülmüyor. Yeni eklenen ekran da bu
+   * yüzden eldekiyle AYNI ölçüde doğuyor — eskiden sınır yetmediği için
+   * 1×1'e düşüyordu. Tasarımın tamamı duvarı aşarsa uyarı ayrıca
+   * veriliyor (bkz. grupDuvariAsiyor).
    */
-  const birlesikGrupta =
-    ['l', 'u', 'acili', 'kutu'].includes(grup?.tip) &&
-    Array.isArray(grup?.uyeler) &&
-    grup.uyeler.includes(aktifEkranId)
   const colsMax = Math.max(
     1,
-    Math.min(
-      EN_COK_KABIN_EKSEN,
-      Math.floor(((width || 0) - (birlesikGrupta ? 0 : digerlerininEni)) / kabinEnM + 1e-6),
-    ),
+    Math.min(EN_COK_KABIN_EKSEN, Math.floor((width || 0) / kabinEnM + 1e-6)),
   )
+
   /*
    * BİRLEŞİMİN DÜZLEMDEKİ GEOMETRİSİ.
    *
@@ -10393,8 +10385,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       duvarOturImzaRef.current = null
       return
     }
-    const imza = grup.tip + '|' + grup.uyeler.join(',')
+    /*
+     * DUVAR YALNIZCA TİP DEĞİŞİNCE OTURUYOR.
+     *
+     * İmza üye listesini de kapsıyordu: ekran eklemek ya da çıkarmak
+     * duvarı yeniden hesaplatıyor, kullanıcının elle yazdığı ölçüyü
+     * eziyordu (ölçüldü: 6,00 × 3,00 m girilmiş duvar, ikinci ekran
+     * eklenince 2,02 × 0,58 oluyordu). Duvar artık yalnızca yerleşim
+     * TİPİ seçilince tasarıma oturuyor; ekran ekleyip çıkarmak girilen
+     * ölçüye dokunmuyor.
+     */
+    const imza = String(grup.tip)
     if (duvarOturImzaRef.current === imza) return
+    /*
+     * İLK KURULUMDA DUVARA DOKUNULMUYOR.
+     *
+     * İkinci ekran eklenince grup kendiliğinden kuruluyor (tip 'duz');
+     * kullanıcı bir tip SEÇMİŞ değil. O anda duvarı tasarıma oturtmak,
+     * kullanıcının elle yazdığı ölçüyü sebepsiz siliyordu. İlk imza
+     * yalnızca kaydediliyor; duvar ancak tip gerçekten DEĞİŞİNCE
+     * oturuyor.
+     */
+    if (duvarOturImzaRef.current === null) {
+      duvarOturImzaRef.current = imza
+      return
+    }
     let enM = 0
     let boyM = 0
     if (grup.tip === 'kutu') {
