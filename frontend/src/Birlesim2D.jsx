@@ -19,6 +19,7 @@
  * ÖLÇÜ GERÇEK. Her kolun eni kendi sütun sayısından, boyu kendi satır
  * sayısından; kollar birbirinden farklı olabilir.
  */
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Screen } from './WallPreview.jsx'
 import { birlesimDilimleri } from './birlesimOlcu.js'
 
@@ -43,6 +44,21 @@ import { birlesimDilimleri } from './birlesimOlcu.js'
 /* Dönen dilimler kıl payı bindiriliyor: aralarında boşluk görünmesin. */
 const BINDIRME = 0.6
 
+/*
+ * ÇİZİMİN GERÇEK SINIRI ÖLÇÜLEREK BULUNUYOR.
+ *
+ * Kutu, perspektif izdüşümü elle hesaplanarak kuruluyordu. O hesap
+ * tarayıcının kendi 3B dönüşümüyle birebir tutmuyor (dilim kutuları,
+ * bindirme payı, yuvarlama): ölçüldü, gerçek çizim hesaplanandan %30
+ * daha geniş çıkabiliyor. Kutu dar kalınca tasarım kutusunun dışına
+ * taşıyor, kutu duvarda ortalandığı için de tasarım duvarda YANA
+ * kaymış görünüyordu.
+ *
+ * Çizildikten sonra dilimlerin kapladığı gerçek alan ölçülüyor ve kutu
+ * ona göre kuruluyor. Ölçü ÖLÇEKSİZ birime çevriliyor (olcek'e
+ * bölünüyor), yoksa kutu büyüdükçe ölçek değişir ve hesap kendi
+ * kuyruğunu kovalardı.
+ */
 export default function Birlesim2D({
   ekranlar = [],
   pxPerM = 200,
@@ -73,6 +89,24 @@ export default function Birlesim2D({
    * duvarının önünde duruyor, arkasına başka bir yüzey eklenmiyor.
    */
 }) {
+  const icRef = useRef(null)
+  const olcekRef = useRef(1)
+  const [gercekKenar, setGercekKenar] = useState(null)
+  useLayoutEffect(() => {
+    const ic = icRef.current
+    if (!ic || !ic.children.length) return
+    const o = olcekRef.current || 1
+    if (!(o > 0)) return
+    const orijin = ic.getBoundingClientRect().left
+    const kutular = [...ic.children].map((c) => c.getBoundingClientRect())
+    const sol = (Math.min(...kutular.map((r) => r.left)) - orijin) / o
+    const sag = (Math.max(...kutular.map((r) => r.right)) - orijin) / o
+    if (!Number.isFinite(sol) || !Number.isFinite(sag) || sag <= sol) return
+    if (!gercekKenar || Math.abs(gercekKenar.sol - sol) > 1 || Math.abs(gercekKenar.sag - sag) > 1) {
+      setGercekKenar({ sol, sag })
+    }
+  })
+
   if (!Array.isArray(ekranlar) || ekranlar.length < 2) return null
   if (ekranlar.some((e) => !Number.isFinite(e?.yon))) return null
 
@@ -204,7 +238,29 @@ export default function Birlesim2D({
   }
 
   const PAY = 8
-  const yari = Math.max(-solEn, sagEn) + PAY
+  /*
+   * ÇİZİM KUTUSU İÇERİĞİNİ TAM SARIYOR.
+   *
+   * Kutu bir ara zincirin merkezine göre SİMETRİK kuruluyordu:
+   * yarı = max(sol taşma, sağ taşma). Simetrik olmayan bir grupta
+   * (örneğin 2+2+2+1 kabinlik açılı dizilim) zincirin merkezi
+   * ortasında değil; kutu geniş olan tarafa göre kuruluyor, dar
+   * tarafta kutunun içinde boş bir şerit kalıyordu. Kutu duvarın
+   * ortasına yerleştiği için tasarım da duvarda yana kaymış
+   * görünüyordu: solda 0,07 m kalırken sağda 0,21 m kalıyor, üstelik
+   * ölçü etiketleri (simetrik hesaplandığı için) ikisine de aynı
+   * sayıyı yazıyordu.
+   *
+   * Kutu artık gerçek taşmaları sarıyor ve zincirin başlangıcı kutunun
+   * içinde kendi yerine konuyor. Kutu duvarda ortalanınca tasarım da
+   * ortalanıyor; iki yandaki boşluk gerçekten eşit oluyor.
+   */
+  /* Ölçülen sınır varsa o geçerli; ilk çizimde hesap yedek. */
+  const solKenar = gercekKenar ? gercekKenar.sol : solEn
+  const sagKenar = gercekKenar ? gercekKenar.sag : sagEn
+  const kutuEn = sagKenar - solKenar + PAY * 2
+  /* Zincirin orijini kutunun içinde: sol taşma kadar sağda. */
+  const orijinX = -solKenar + PAY
   const gozY = -ustY + PAY
   const kutuBoy = altY - ustY + PAY * 2
 
@@ -216,29 +272,45 @@ export default function Birlesim2D({
    * Alt kenar sabit kalsın diye ölçek tabandan uygulanıyor; grup
    * duvarın tasarım alt çizgisinde duruyor.
    */
-  const kutuEn = yari * 2
   const olcek = Math.min(
     1,
     enCokW > 0 ? enCokW / kutuEn : 1,
     enCokH > 0 ? enCokH / kutuBoy : 1,
   )
+  /* Ölçüm bu ölçeği geri çeviriyor (bkz. yukarıdaki useLayoutEffect). */
+  olcekRef.current = olcek
 
   return (
     <div
       style={{
         position: 'relative',
+        /*
+         * KUTU DARALTILMIYOR.
+         *
+         * Kutu esnek bir kapsayıcının (data-birlesim-yuz, justify-center)
+         * içinde duruyor ve flex-shrink varsayılanı 1: duvardan genişse
+         * tarayıcı onu SESSİZCE daraltıyordu. İçerideki zincir ise
+         * daraltılmamış ölçüye göre konumlandığı için tasarım kutunun
+         * içinde kayıyor, duvarda da yana kaymış görünüyordu (ölçüldü:
+         * solda 125 px boşluk, sağda 61 px taşma).
+         *
+         * Küçültmeyi zaten olcek yapıyor ve ölçü etiketlerini bozmuyor;
+         * tarayıcının ayrıca daraltması yalnızca hizayı bozuyordu.
+         */
+        flexShrink: 0,
         width: kutuEn,
         height: kutuBoy,
         perspective: D,
-        perspectiveOrigin: `50% ${gozY}px`,
+        perspectiveOrigin: `${orijinX}px ${gozY}px`,
         transform: olcek < 1 ? `scale(${olcek})` : undefined,
         transformOrigin: '50% 100%',
       }}
     >
       <div
+        ref={icRef}
         style={{
           position: 'absolute',
-          left: '50%',
+          left: orijinX,
           /* Taban çizgisi gözün gozAlt kadar altında (bkz. cy). */
           top: gozY + gozAlt - boyPx,
           width: 0,
