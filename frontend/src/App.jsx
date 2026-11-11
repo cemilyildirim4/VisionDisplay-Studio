@@ -2896,12 +2896,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     )
   })()
 
-  /*
-   * KABİN ÖLÇÜSÜ — ekranın duruşuna göre.
-   * Dikey duran ekranda kabinin eni ile boyu takas oluyor.
-   */
-  const kabinEnM = ((orientation === 'portrait' ? selectedModel?.heightMm : selectedModel?.widthMm) || 500) / 1000
-  const kabinBoyM = ((orientation === 'portrait' ? selectedModel?.widthMm : selectedModel?.heightMm) || 500) / 1000
   /* Yan yana duran öteki ekranlar duvardan yer kaplıyor. */
   const digerlerininEni = ekranParcalari
     .filter((x) => x.id !== aktifEkranId)
@@ -2929,25 +2923,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * olmaz ve uygulama açılışta hata ekranına düşerdi.
    */
   /*
-   * HER EKRANIN SINIRI KENDİ DUVARINDAN.
+   * DUVAR KABİN SAYISINI SINIRLAMIYOR.
    *
-   * Sütun üst sınırı duvardan ÖTEKİ ekranların enini düşüyordu: bir ekran
-   * büyüdükçe komşusunun büyüyebileceği sınır daralıyor, kullanıcı da
-   * "sütun eklenemez" yazısının nereden geldiğini göremiyordu. Üstelik
-   * yerleşim tipi seçilince duvar tasarıma oturduğu için sınır bir anda
-   * düşüyor ve eldeki ekranı KIRPIYORDU: ölçüldü, 3×6 kurulmuş bir ekran
-   * birkaç adımda 1×6'ya iniyordu.
+   * Sütun/satır üst sınırı duvar ölçüsünden geliyordu. Duvar ise yerleşim
+   * tipi seçilince tasarıma oturduğu için bir anda küçülüyor ve eldeki
+   * tasarımı kilitliyordu: ölçüldü, iki ekran "L tipi" yapılınca duvar
+   * 0,56 × 0,26 m'ye düşüyor, ardından 3 sütun 6 satır yazmak hiç
+   * işlemiyordu — kutular 1 × 1'de kalıyordu.
    *
-   * Artık her ekranın ölçüsü kendisinin: sınır yalnızca duvarın kendi
-   * eninden geliyor, komşunun eni düşülmüyor. Yeni eklenen ekran da bu
-   * yüzden eldekiyle AYNI ölçüde doğuyor — eskiden sınır yetmediği için
-   * 1×1'e düşüyordu. Tasarımın tamamı duvarı aşarsa uyarı ayrıca
-   * veriliyor (bkz. grupDuvariAsiyor).
+   * Sıra tersine çevrildi: önce tasarım, sonra duvar. Kabin sayısının tek
+   * sınırı donanım sınırı; duvar tasarımdan küçük kalırsa kendisi büyüyor
+   * (bkz. aşağıdaki "duvar ekrandan küçük kalamaz" etkisi). Böylece
+   * kullanıcı ne yazarsa o oluyor, duvar da ona göre kuruluyor.
    */
-  const colsMax = Math.max(
-    1,
-    Math.min(EN_COK_KABIN_EKSEN, Math.floor((width || 0) / kabinEnM + 1e-6)),
-  )
+  const colsMax = EN_COK_KABIN_EKSEN
 
   /*
    * BİRLEŞİMİN DÜZLEMDEKİ GEOMETRİSİ.
@@ -10279,7 +10268,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * (Bir ara şişkinliğe yer bırakıp satır azaltmayı denedik: sayılar kendiliğinden
    * değiştiği için kafa karıştırıcı bulundu.)
    */
-  const rowsMax = Math.max(1, Math.min(EN_COK_KABIN_EKSEN, Math.floor((height || 0) / kabinBoyM + 1e-6)))
+  /* Satır sınırı da duvardan değil, donanımdan (bkz. colsMax). */
+  const rowsMax = EN_COK_KABIN_EKSEN
   /*
    * DUVARIN ALT SINIRI TASARIMA BAĞLI DEĞİL.
    *
