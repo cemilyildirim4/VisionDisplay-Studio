@@ -767,24 +767,33 @@ function SegH({ w, label, muted, yazi = 11 }) {
  * İnce payda etiket şeridin İÇİNE sığmadığı için yatay yazılıp bandın
  * sağına çıkıyor; geniş payda eskisi gibi dikey ve ortalanmış duruyor.
  */
-function SegV({ h, label, muted, yazi = 11 }) {
+function SegV({ h, label, muted, yazi = 11, kacis = null }) {
   const dolgu = `${Math.round(yazi * 0.5)}px ${Math.round(yazi * 0.35)}px`
   const dar = muted && h < ETIKET_EN_AZ
   /*
-   * DAR PAYIN ETİKETİ TUVALDEN TAŞMIYOR.
+   * DAR PAYIN ETİKETİ TASARIMIN ÜSTÜNE BİNMİYOR.
    *
    * Dar payda etiket bandın SAĞINA çıkıyor (şeridin içine sığmıyor).
-   * Tasarım büyüyüp duvar tuvalin kenarına yaklaşınca o etiket tuvalin
-   * dışına düşüyor ve kırpılıyordu: ekran eklendikçe sağdaki "0,05 m"
-   * yazıları yarım görünüyordu (ölçüldü: tuval 920 px, etiketin sağ
-   * kenarı 946 px). Çizimden sonra bakılıyor; sağda yer yoksa etiket
-   * bandın SOLUNA geçiyor.
+   * Tasarım tuvalin sağ kenarına dayandığında orada yer kalmıyor; etiket
+   * önce tuvalin dışına taşıp kırpılıyordu, sonra bandın SOLUNA alındı ve
+   * bu kez doğrudan tasarımın üstüne biniyordu (ölçüldü: 0,02 m etiketleri
+   * görselin sağ üst ve sağ alt köşesinin üzerinde).
+   *
+   * Sağda yer yoksa etiket artık duvarın DIŞINA kaçıyor: üst pay duvarın
+   * üst çizgisinin üstüne, alt pay alt çizgisinin altına. Orası her zaman
+   * boş (çizimin çevresindeki pay), yani etiket ne kırpılıyor ne de
+   * tasarımı örtüyor. 'kacis' verilmemiş çağrılarda eski davranış (sola
+   * geçme) sürüyor.
    */
   const etiketRef = useRef(null)
-  const [sola, setSola] = useState(false)
+  const [yer, setYer] = useState('sag')
+  /* Ölçü değişince yeniden karar veriliyor; yoksa bir kez kaçan hep kaçık kalır. */
+  useLayoutEffect(() => {
+    setYer('sag')
+  }, [h, label, yazi, dar])
   useLayoutEffect(() => {
     if (!dar) {
-      if (sola) setSola(false)
+      if (yer !== 'sag') setYer('sag')
       return undefined
     }
     const bak = () => {
@@ -794,14 +803,23 @@ function SegV({ h, label, muted, yazi = 11 }) {
       if (!kap) return
       const e = el.getBoundingClientRect()
       const k = kap.getBoundingClientRect()
-      /* Sağda taşıyorsa sola; solda da yer yoksa sağda kalıyor. */
-      if (!sola && e.right > k.right - 1) setSola(e.width + 6 <= e.left - k.left)
-      else if (sola && e.left < k.left + 1) setSola(false)
+      if (yer !== 'sag' || e.right <= k.right - 1) return
+      if (kacis === 'ust' || kacis === 'alt') setYer(kacis)
+      else if (e.width + 6 <= e.left - k.left) setYer('sol')
     }
     bak()
     window.addEventListener('resize', bak)
     return () => window.removeEventListener('resize', bak)
-  }, [dar, sola, h, label, yazi])
+  }, [dar, yer, h, label, yazi, kacis])
+  /* Dar etiketin konumu: sağ (olağan), duvarın üstü/altı ya da sol. */
+  const darKonum =
+    yer === 'ust'
+      ? { bottom: '100%', right: 0, marginBottom: 3 }
+      : yer === 'alt'
+        ? { top: '100%', right: 0, marginTop: 3 }
+        : yer === 'sol'
+          ? { right: '100%', marginRight: 4 }
+          : { left: '100%', marginLeft: 4 }
   /* Pay yoksa (tasarım duvarı tam dolduruyor) yazılacak bir şey de yok. */
   if (muted && h <= 0.5) return <div style={{ height: h }} className="shrink-0" />
   return (
@@ -812,7 +830,7 @@ function SegV({ h, label, muted, yazi = 11 }) {
           dar
             ? {
                 position: 'absolute',
-                ...(sola ? { right: '100%', marginRight: 4 } : { left: '100%', marginLeft: 4 }),
+                ...darKonum,
                 fontSize: Math.max(9, yazi - 1),
                 padding: `${Math.round(yazi * 0.35)}px ${Math.round(yazi * 0.5)}px`,
               }
@@ -1950,9 +1968,9 @@ export default function WallPreview({
 
                 {/* Sağ kenar: üst boşluk | ekran yüksekliği | alt boşluk */}
                 <div style={{ position: 'absolute', left: Math.min(wallW + 10 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
-                  <SegV h={stripTop} label={fmtU(marginYm)} muted />
+                  <SegV h={stripTop} label={fmtU(marginYm)} muted kacis="ust" />
                   <SegV h={maxHpx} label={fmtU(maxHm)} />
-                  <SegV h={wallH - stripTop - maxHpx} label={fmtU(marginYm)} muted />
+                  <SegV h={wallH - stripTop - maxHpx} label={fmtU(marginYm)} muted kacis="alt" />
                 </div>
                 <HL top={stripTop} left={olcuSol + olcuW} width={wallW - (olcuSol + olcuW) + 40} />
                 <HL top={stripTop + maxHpx} left={olcuSol + olcuW} width={wallW - (olcuSol + olcuW) + 40} />
