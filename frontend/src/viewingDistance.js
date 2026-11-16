@@ -15,8 +15,15 @@
  * ekranla orantılı büyür.
  */
 
-/** Piksel aralığı → mesafe katsayısı (pitch mm × bu değer = metre) */
-export const VIEW_DIST_PITCH_FACTOR = 2.5
+/*
+ * PİKSEL ARALIĞI → MESAFE KATSAYISI (pitch mm × bu değer = metre).
+ *
+ * 2,5 idi: P1.25 bir panel için 3,1 m çıkıyordu. Sektördeki kural birebir —
+ * "en yakın izleme mesafesi, piksel aralığı kaç mm ise o kadar metre"
+ * (P2.5 → 2,5 m). Modelin yönetim panelinde değeri girilmişse zaten o
+ * kullanılıyor; bu yalnızca girilmemiş modellerin karşılığı.
+ */
+export const VIEW_DIST_PITCH_FACTOR = 1.0
 
 /** Köşegen → mesafe katsayısı. 1,0 = ekranın köşegeni kadar uzaklık. */
 export const VIEW_DIST_DIAGONAL_FACTOR = 1.0

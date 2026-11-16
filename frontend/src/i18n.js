@@ -482,6 +482,14 @@ const dict = {
   // ---------- Yapılandırma ----------
   'conf.heading': { tr: 'Yapılandırma', en: 'Configuration', ar: 'التهيئة' },
   'conf.fitToWall': { tr: 'Duvara sığdır', en: 'Fit to wall', ar: 'ملاءمة الجدار' },
+  /* Donanım uyarı bandı — sebebi sunucu yazıyor, başlık ve yönerge burada. */
+  'uyari.donanim': { tr: 'Donanım uyarısı:', en: 'Hardware warning:', ar: 'تنبيه الأجهزة:' },
+  'uyari.donanimNeYap': {
+    tr: 'Kabin sayısını değiştirin ya da başka bir model seçin.',
+    en: 'Change the cabinet count or pick another model.',
+    ar: 'غيّر عدد الخزائن أو اختر طرازًا آخر.',
+  },
+  'uyari.kapat': { tr: 'Uyarıyı kapat', en: 'Dismiss warning', ar: 'إغلاق التنبيه' },
   'conf.layoutHorizontal': { tr: 'Yatay', en: 'Landscape', ar: 'أفقي' },
   'conf.layoutVertical': { tr: 'Dikey', en: 'Portrait', ar: 'عمودي' },
   'conf.layoutGrid': { tr: 'Dizilim', en: 'Layout', ar: 'تخطيط' },

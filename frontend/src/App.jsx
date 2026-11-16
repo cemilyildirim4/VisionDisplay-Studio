@@ -2485,48 +2485,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * ekranın o duvardaki en verimli hâlini görüyor. Eşitlikte o anki yerleşim
    * korunuyor — sebepsiz yere ekranı çevirmek şaşırtıcı olurdu.
    */
-  const fitToWall = () => {
-    const m = selectedModel
-    /*
-     * Model yoksa kabin ölçüsü de yok, sığdırılacak bir şey yok. Eskiden
-     * burada üst sınıra atlanıyordu; sınır duvardan geldiği için bu "duvarı
-     * doldur" anlamına geliyordu. Sınır artık donanım sınırı (200), ona
-     * atlamak saçma olurdu.
-     */
-    if (!m) return
-
-    /*
-     * DUVARI PAYLAŞAN ÖTEKİ EKRANLARIN YERİ BU EKRANA KALMIYOR.
-     *
-     * Düğme ekranı duvarın TAMAMINA sığdırıyordu. Birden çok ekran varken
-     * sonuç şuydu: ekran tek başına duvar kadar genişliyor, toplam tasarım
-     * duvarı aşıyor, duvar da tasarımdan küçük kalamadığı için kendini
-     * büyütüyordu (bkz. widthMin). Her tıklamada hem duvar hem kabin
-     * sayısı büyüyordu — kullanıcının gördüğü buydu.
-     *
-     * Bu ekrana kalan genişlik: duvar eksi öteki ekranların enleri —
-     * sütun üst sınırının (colsMax) okuduğu payın aynısı.
-     */
-    const kalanEn = Math.max(0, (Number(width) || 0) - digerlerininEni)
-
-    const { yatay, dikey } = yerlesimSecenekleri(m, kalanEn, height)
-
-    /*
-     * EŞİTLİKTE YATAY KAZANIYOR.
-     *
-     * Kabin döndüğünde piksel sayısı değişmiyor, yalnızca yer değiştiriyor;
-     * bu yüzden iki dizilim sık sık BİREBİR aynı çıkıyor. Eşitlikte seçim
-     * kullanıcının o anki yön ayarına bırakılmıştı ve tasarım sebepsiz yere
-     * dikeye dönebiliyordu. Eşitlik bir üstünlük değil: yatay varsayılan
-     * kalıyor, dikeye geçmek isteyen YAPILANDIRMA kartından seçiyor.
-     */
-    const dikeySec = dikey.piksel > yatay.piksel
-    const kazanan = dikeySec ? dikey : yatay
-
-    setOrientation(dikeySec ? 'portrait' : 'landscape')
-    setCols(kazanan.cols)
-    setRows(kazanan.rows)
-  }
+  /*
+   * fitToWall KALDIRILDI — düğmesi de kaldırıldı (bkz. sağ panel).
+   *
+   * Aynı hesap "en çok LED" önerisinde ve ölçü sihirbazında duruyor
+   * (bkz. yerlesimSecenekleri); burada ikinci bir kopya kalmasına gerek yok.
+   */
 
 
   /*
@@ -2735,6 +2699,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   // Duvar–ekran dengesi: ekran duvardan büyük olamaz (Samsung mantığı)
   // Ekranın gerçek piksel çözünürlüğü (Teknik Özellikler ile aynı kaynak).
   const ekranCozunurlugu = computeSpecs(previewModel, cols, rows)
+  /* Kullanıcının kapattığı donanım uyarısının METNİ (bkz. sarı bant). */
+  const [kapatilanUyari, setKapatilanUyari] = useState(null)
   const { preview: hwPreview, error: hwMatchError } = useConfigurationPreview({
     cabinId: selectedModel?.id,
     cols,
@@ -2835,7 +2801,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * elde duran ekran, kartında görsel seçili olmasına rağmen tasarım
      * alanında simsiyah çiziliyordu.
      */
-    { id: aktifEkranId, sira: aktifSira, cols, rows, orientation, screenType, lSolCols, lYon, content, contentUrl },
+    { id: aktifEkranId, sira: aktifSira, cols, rows, orientation, screenType, curveAmount, lSolCols, lYon, content, contentUrl },
   ]
     .sort((a, b) => (a.sira || 0) - (b.sira || 0))
     .map((e) => {
@@ -2845,13 +2811,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       const c = Math.max(1, e.cols || 1)
       const r = Math.max(1, e.rows || 1)
       const sol = e.lSolCols ? Math.max(1, Math.min(c - 1, e.lSolCols)) : null
+      /*
+       * L, U VE KÜP'TE KAVİS YOK.
+       *
+       * Kavisli bir ekran köşeli bir şekle girince ortaya ne kavis ne köşe
+       * çıkıyordu: yay, eklemin açısıyla çakışıp ekranı komşusunun içine
+       * sokuyordu. Bu şekiller düz yüzeylerden kuruluyor; kavis yalnızca
+       * Düz ve Açılı birleşimlerde (ve tek ekranda) anlamlı.
+       *
+       * Ekranın KENDİ ayarı silinmiyor: gruptan çıkınca kavisi geri geliyor.
+       */
+      const hamTip = e.screenType || 'flat'
+      const kavisli = hamTip === 'curved' || hamTip === 'curvedIn'
+      const katiSekil =
+        !!grup && ['l', 'u', 'kutu'].includes(grup.tip) && (grup.uyeler || []).includes(e.id)
+      const tip = kavisli && katiSekil ? 'flat' : hamTip
       return {
         id: e.id,
         /* Sıra numarası: panelde ve yerleştirme listesinde aynı numara. */
         sira: e.sira,
         cols: c,
         rows: r,
-        type: e.screenType || 'flat',
+        type: tip,
+        /*
+         * KAVİS MİKTARI DA EKRANIN KENDİ BİLGİSİ.
+         *
+         * Tek bir genel değer bütün ekranlara uygulanıyordu: bir ekranın
+         * kavisini değiştirmek yanındakini de büküyordu. Ayar zaten ekran
+         * başına saklanıyordu (bkz. ekranAyariAnlik), yalnızca çizime
+         * taşınmıyordu.
+         */
+        curveAmount: e.curveAmount ?? 60,
         leftCols: sol || undefined,
         rightCols: sol ? c - sol : undefined,
         lYon: e.lYon || 'ice',
@@ -5716,6 +5706,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     birlesimiKur('duz', idler, grupAcisi, lYonSecim)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grup, ekranParcalari.length])
+
+  /*
+   * KULLANICININ GRUPTAN ÇIKARDIĞI EKRANLAR.
+   *
+   * Aşağıdaki etki yeni ekranları kendiliğinden gruba alıyor; çipe basıp
+   * çıkarılan ekran da hemen geri alınsaydı çip çalışmaz olurdu. Çıkarma
+   * kararı burada saklanıyor, yeniden eklenince siliniyor.
+   */
+  const grupDisiRef = useRef(new Set())
+
+  /*
+   * YENİ EKRAN KENDİLİĞİNDEN GRUBA GİRİYOR.
+   *
+   * Grup kurulduktan sonra eklenen ekran dışarıda kalıyordu. Sonucu
+   * kullanıcı şöyle görüyordu: üçüncü ekran simsiyah çiziliyor (paylaşılan
+   * görselden pay almıyor, bkz. paylasimKumesi) ve tasarımın yanına düz
+   * yapışıyordu — "3. ekran bozuk" denen şey buydu.
+   *
+   * YALNIZCA SERBEST ŞEKİLLERDE. L iki, U üç, küp dört ekranla kuruluyor
+   * (bkz. GRUP_TAM_SAYI); oraya beşinci ekranı sokmak şekli bozar, üstelik
+   * grup her seferinde Açılı'ya düşerdi. O şekillerde yeni ekran dışarıda
+   * kalıyor, kullanıcı çiple ya da başka bir tiple istediğini kuruyor.
+   */
+  useEffect(() => {
+    if (!grup || !['duz', 'acili'].includes(grup.tip)) return
+    const uyeler = grup.uyeler || []
+    const eksik = ekranParcalari
+      .map((x) => x.id)
+      .filter((id) => !uyeler.includes(id) && !grupDisiRef.current.has(id))
+    if (!eksik.length) return
+    const yeni = [...uyeler, ...eksik]
+    setGrupSecim(yeni)
+    birlesimiKur(grup.tip, yeni, grupAcisi, lYonSecim)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grup, ekranParcalari])
 
   /*
    * AYIR — grup bozuluyor, ekranlar BULUNDUKLARI yerde kalıyor.
@@ -10568,7 +10593,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           biniyordu (1280-1440 px arası). Artık şerit kendi eninin altına
           inmiyor; daralan taraf model alanı oluyor, adı kısalarak sığıyor.
         */}
-        <div ref={seritRef} className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 xl:gap-2 w-full sm:w-auto justify-start sm:justify-end">
+        {/*
+          MASAÜSTÜNDE ŞERİT İKİ SATIRA İNMİYOR.
+
+          flex-wrap her genişlikte açıktı: 1536 px'te düğme yazıları
+          açıldığı an şerit ikinci satıra taşıyor, ADMIN menüsü antetin
+          altına düşüyordu (ölçüldü). Sarma yalnızca telefonda kalıyor —
+          orada zaten gerekli. Masaüstünde yazılar ancak GERÇEKTEN yer
+          olduğunda (1700 px ve üstü) açılıyor; altında düğmeler yalnız
+          ikon ve adları ipucunda duruyor.
+        */}
+        <div ref={seritRef} className="flex min-w-0 flex-1 flex-wrap sm:flex-nowrap items-center gap-1.5 xl:gap-2 w-full sm:w-auto justify-start sm:justify-end">
 <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('tool.reset')} onClick={() => hasModel && setResetConfirmOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />
@@ -10663,9 +10698,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
         </div>
       </header>
       <BrandStripe />
-      {hasModel && hwMatchError && (
-        <div className="px-4 sm:px-6 lg:px-10 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900 text-sm text-amber-900 dark:text-amber-200">
-          {hwMatchError}
+      {/*
+        BANT KAPATILABİLİYOR.
+
+        Sebep okunduktan sonra bant sayfanın üstünde kalıcı olarak
+        duruyordu. Kapatma kararı MESAJA bağlı: başka bir sorun çıkarsa
+        bant yeniden açılıyor, aynı sorun için ikinci kez açılmıyor.
+      */}
+      {hasModel && hwMatchError && hwMatchError !== kapatilanUyari && (
+        <div className="flex items-start gap-3 px-4 sm:px-6 lg:px-10 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900 text-sm text-amber-900 dark:text-amber-200">
+          <div className="min-w-0 flex-1">
+            <strong className="font-semibold">{t('uyari.donanim')}</strong> {hwMatchError}{' '}
+            <span className="opacity-80">{t('uyari.donanimNeYap')}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setKapatilanUyari(hwMatchError)}
+            title={t('uyari.kapat')}
+            aria-label={t('uyari.kapat')}
+            className="shrink-0 rounded-md px-1.5 leading-none text-[18px] opacity-70 transition-opacity hover:opacity-100"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -12334,20 +12388,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsMax} />
                           </div>
                           {/*
-                            YÖN AYRI BİR KARAR DEĞİL.
+                            "DUVARA SIĞDIR" KALDIRILDI.
 
-                            Yatay/dikey, duvara sığdırmanın SONUCU: hangi
-                            dizilim boşluksuz sığıp daha çok piksel veriyorsa
-                            o seçiliyor (bkz. fitToWall). İki ayrı karar
-                            bırakıldığında biri ötekini bozuyordu.
+                            Düğme duvarın tamamını değil ELDEKİ ekrana kalan
+                            payı dolduruyordu; çoklu tasarımda seçili ekranın
+                            satırını artırıp gruptaki öteki ekranı da
+                            büyütüyor, sonucun neye göre çıktığı
+                            anlaşılmıyordu. Kabin sayısı zaten yandaki
+                            sütun/satır kutularından yazılıyor.
                           */}
-                          <button
-                            type="button"
-                            onClick={fitToWall}
-                            className="mt-1.5 w-full rounded-lg border border-neutral-300 py-1 text-[13.5px] font-medium text-neutral-700 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
-                          >
-                            {t('conf.fitToWall')}
-                          </button>
 
                           {/*
                             Metre ve piksel ALTTA tek satırda: kullanıcı kabin
@@ -12552,6 +12601,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           type="button"
                           onClick={() => {
                             const yeni = secili ? grupSecim.filter((x) => x !== e.id) : [...grupSecim, e.id]
+                            /* Çıkarma kararı saklanıyor; yoksa otomatik ekleme geri alırdı. */
+                            if (secili) grupDisiRef.current.add(e.id)
+                            else grupDisiRef.current.delete(e.id)
                             setGrupSecim(yeni)
                             birlesimiKur(grupTipi, yeni, grupAcisi, lYonSecim)
                           }}
@@ -12603,10 +12655,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           bütün ekranlardan okunuyor — düğmeye basmak da
                           hepsini birleştiriyor.
                         */
-                        disabled={!tipUygunMu(tip, grupSecim.length || ekranOzetleri.length)}
+                        /*
+                          DÜĞME SAYI TUTMUYOR DİYE KAPANMIYOR.
+
+                          L iki, U üç, küp dört ekranla kurulur; eldeki ekran
+                          sayısı bunlardan biri değilse düğme pasif oluyordu.
+                          Beş ekranla Açılı dışında hepsi soluktu ve HİÇBİR
+                          YERDE sebebi yazmıyordu (ölçüldü). Artık şeklin
+                          istediği kadar ekran SIRAYLA alınıyor, kalanlar ayrı
+                          duruyor; hangi ekranların gireceğini kullanıcı
+                          çiplerden seçebiliyor.
+                        */
+                        disabled={ekranOzetleri.length < (GRUP_EN_AZ[tip] || 2)}
                         onClick={() => {
-                          const secim =
-                            grupSecim.length >= 2 ? grupSecim : ekranOzetleri.map((x) => x.id)
+                          /* Sıra ekran numarasından geliyor, tıklama sırasından değil. */
+                          const sirali = ekranOzetleri.map((x) => x.id)
+                          const taban =
+                            grupSecim.length >= 2 ? sirali.filter((id) => grupSecim.includes(id)) : sirali
+                          const tamSayi = GRUP_TAM_SAYI[tip]
+                          const secim = tamSayi ? taban.slice(0, tamSayi) : taban
+                          /* Tipe basmak "bunlar birleşsin" demek: eski çıkarma kararları siliniyor. */
+                          grupDisiRef.current = new Set(sirali.filter((id) => !secim.includes(id)))
                           setGrupTipi(tip)
                           setGrupSecim(secim)
                           birlesimiKur(tip, secim, grupAcisi, lYonSecim)
@@ -14719,7 +14788,17 @@ function KavisAyari({ t, deger, onChange, icbukey, coklu = false, genislikM = 0 
         gerekiyordu. Düğmeler seçeneği doğrudan gösteriyor.
       */}
       <div className="grid grid-cols-2 gap-1.5">
-        {[32, 64].map((a) => (
+        {/*
+          DÜĞMELER LİSTEDEN GELİYOR, ELLE YAZILMIYOR.
+
+          Seçenekler [32, 64] diye koda gömülüydü ama kurulabilir açılar
+          kavis derinliğinden türüyor. İçe kavisin derinlik oranı farklı
+          olduğu için listesi 58°'de bitiyordu: 64° düğmesi görünüyor,
+          basınca çizim değişiyor, vurgu ve yazı 32°'de kalıyordu. İki
+          tip artık aynı derinlik modelini kullanıyor (bkz. content.js)
+          ve düğmeler o listeden doğuyor — bir daha ayrışamazlar.
+        */}
+        {acilar.filter((a) => a > 0).map((a) => (
           <button
             key={a}
             type="button"
@@ -15515,7 +15594,7 @@ function IconButton({ children, label, active, onClick, sadeceIkon = false, pasi
       {/* Yatay telefonda da görünür (bkz. .arac-etiket). */}
       {/* 1280 px altında yalnız ikon: şerit tek sırada kalsın, ad title ipucunda. */}
       {!sadeceIkon && (
-        <span className="arac-etiket hidden xl:inline">
+        <span className="arac-etiket hidden min-[1700px]:inline">
           {/*
             Öteki yazı sözde öğeye (::after) konuyor: yer kaplıyor ama
             düğmenin metnine karışmıyor — aria-label, title ve testler

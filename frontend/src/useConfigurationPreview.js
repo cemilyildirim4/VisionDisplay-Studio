@@ -34,7 +34,22 @@ export function useConfigurationPreview({ cabinId, cols, rows, hasMiniPc, enable
         if (ac.signal.aborted) return
         if (!res.ok) {
           setPreview(null)
-          setError(body.detail || body.message || body.title || 'Donanım eşleşmedi.')
+          /*
+           * "DONANIM EŞLEŞMEDİ." ARTIK UYDURULMUYOR.
+           *
+           * Her başarısız yanıt bu cümleye çevriliyordu. Uç nokta
+           * bulunamadığında (404) ya da sunucu hata verdiğinde de aynı
+           * sarı bant çıkıyor, model seçilir seçilmez beliriyor ve bir
+           * daha kapanmıyordu — ölçüldü. Oysa gerçek eşleşme sorunu
+           * sunucudan 400 + AÇIKLAMA olarak geliyor (bkz. API
+           * ConfigurationsController.Preview → ArgumentException).
+           *
+           * Kural: yalnızca sunucunun KENDİ yazdığı sebep gösteriliyor.
+           * Servise ulaşılamıyorsa bu bir donanım sorunu değil; önizleme
+           * sessizce boş kalıyor, kullanıcı tasarımına devam ediyor.
+           */
+          const sebep = body.detail || body.message || body.title
+          setError(res.status === 400 && sebep ? sebep : null)
           return
         }
         setPreview(body)
@@ -42,7 +57,9 @@ export function useConfigurationPreview({ cabinId, cols, rows, hasMiniPc, enable
       } catch (e) {
         if (ac.signal.aborted) return
         setPreview(null)
-        setError(e.message === 'Failed to fetch' ? 'API bağlantısı yok.' : e.message)
+        /* Ağ/sunucu sorunu da donanım sorunu değil: bant çıkmıyor. */
+        void e
+        setError(null)
       } finally {
         if (!ac.signal.aborted) setLoading(false)
       }

@@ -386,7 +386,8 @@ export default function Birlesim2D({
                   sade={sade}
                   /* Yayın dilimiyse ekranın kenar çizgisi çizilmiyor. */
                   kenarsiz={!!d.dilim}
-                  curveAmount={curveAmount}
+                  /* Her ekran kendi kavisiyle; tek genel değer hepsini büküyordu. */
+                  curveAmount={p.e.curveAmount ?? curveAmount}
                   leftCols={p.e.leftCols}
                   rightCols={p.e.rightCols}
                   lYon={p.e.lYon}

@@ -13,25 +13,64 @@ export const IMAGE_MAX_MB = 60
 export const DEFAULT_CONTENT_SRC = '/default-content.jpg'
 
 /*
- * KAVİS DERİNLİĞİ
+ * KAVİS DERİNLİĞİ — TEK GERÇEK HESAP, İKİ YÖN.
  *
- * Dikey taşma payı = (kavis miktarı 0–1) × ekran genişliği × buradaki oran.
- * Hem çizim (CurvedScreen) hem ölçekleme (WallPreview) AYNI değeri kullanmalı,
- * yoksa kavis panelin dışına taşar ya da kırpılır.
+ * Eskiden iki tipin AYRI derinlik oranı vardı (içe 0,13 · dışa 0,16) ve bu
+ * "görsel denge" gerekçesiyle konmuştu. İki sonucu oldu:
+ *   • Aynı açıda iki tip farklı derinlikte çiziliyordu, yani içe kavisli
+ *     dışa kavislinin aynadaki görüntüsü değildi.
+ *   • Açı listesi derinlikten türediği için içe kavisde en çok 58° çıkıyordu;
+ *     64° düğmesi vardı ama seçilemiyordu — basınca çizim değişiyor, yazı
+ *     32°'de kalıyordu (ölçüldü).
  *
- * İki tip için ayrı oran var, çünkü aynı derinlikte çizildiklerinde eşit
- * belirginlikte görünmüyorlar:
- *   • İçe kavisde orta kısalır, kenarlar öne çıkar — göz bunu kolay yakalar.
- *   • Dışa kavisde orta uzar — aynı miktar daha az fark edilir.
- * Bu yüzden dışa kavis biraz daha derin. Fiziksel bir iddia değil, görsel denge.
+ * Artık tek fiziksel model var. LED kabinleri bükülünce YÜZEY UZUNLUĞU
+ * değişmiyor, yani ekranın genişliği yayın uzunluğudur:
  *
- * Kavisi az/çok bulursanız değiştireceğiniz yer burasıdır.
+ *   R = W / θ                (θ radyan)
+ *   d = R · (1 − cos(θ/2))   (sagitta — yayın derinliği)
+ *
+ * İki tip aynı d'yi kullanıyor; fark yalnızca yönde (bkz. curvedRenderer →
+ * edgeAt: konkavda orta KISALIR, konveksde UZAR).
  */
-export const CONCAVE_DEPTH_RATIO = 0.13 // içe kavisli (konkav)
-export const CONVEX_DEPTH_RATIO = 0.16 // dışa kavisli (konveks)
 
-/** Ekran tipine göre kavis derinliği oranı. */
-export const curveDepthFor = (concave) => (concave ? CONCAVE_DEPTH_RATIO : CONVEX_DEPTH_RATIO)
+/** Kurulabilen en büyük yay açısı (derece) — kavis yüzdesi 100 bunu verir. */
+export const KAVIS_EN_COK_ACI = 64
+
+/** Yay açısının (derece) karşılığı olan derinlik / genişlik oranı. */
+function yayDerinlikOrani(aciDerece) {
+  const t = (Number(aciDerece) || 0) * (Math.PI / 180)
+  if (!(t > 0)) return 0
+  const R = 1 / t // W = 1 alınmış hâli
+  return R * (1 - Math.cos(t / 2))
+}
+
+/** %100 kavisin derinlik oranı (≈ 0,136). İki tip için de aynı. */
+export const KAVIS_DERINLIK_ORANI = yayDerinlikOrani(KAVIS_EN_COK_ACI)
+
+/**
+ * Ekran tipine göre kavis derinliği oranı.
+ * Parametre, çağıranların imzası bozulmasın diye duruyor; iki yön de aynı.
+ */
+export const curveDepthFor = () => KAVIS_DERINLIK_ORANI
+
+/** Kavis yüzdesinin karşılığı olan yay açısı (radyan). */
+function yayAcisiRad(curveAmount) {
+  const p = Math.max(0, Math.min(100, Number(curveAmount) || 0)) / 100
+  const hedef = p * KAVIS_DERINLIK_ORANI
+  if (!(hedef > 0)) return 0
+  /*
+   * d(θ) kapalı biçimde ters çevrilemiyor ama θ arttıkça d de sürekli
+   * artıyor; 40 adım ikiye bölme mikron altı hassasiyet veriyor.
+   */
+  let alt = 0
+  let ust = KAVIS_EN_COK_ACI * (Math.PI / 180)
+  for (let i = 0; i < 40; i++) {
+    const orta = (alt + ust) / 2
+    if ((1 - Math.cos(orta / 2)) / orta < hedef) alt = orta
+    else ust = orta
+  }
+  return (alt + ust) / 2
+}
 
 /**
  * Kavis yüzdesinin karşılığı olan TOPLAM YAY AÇISI (derece).
@@ -45,12 +84,8 @@ export const curveDepthFor = (concave) => (concave ? CONCAVE_DEPTH_RATIO : CONVE
  * Bu, Scene3D'deki `yayOlculeri` ile AYNI formül; burada yalnızca kullanıcıya
  * gösterilecek sayıyı üretiyor (W = 1 alınmış hâli).
  */
-export function curveArcDegrees(curveAmount, concave) {
-  const p = Math.max(0, Math.min(100, curveAmount)) / 100
-  const d = p * curveDepthFor(concave)
-  if (d <= 0) return 0
-  const R = 1 / (8 * d) + d / 2
-  return Math.round((2 * Math.asin(Math.min(1, 1 / (2 * R))) * 180) / Math.PI)
+export function curveArcDegrees(curveAmount) {
+  return Math.round((yayAcisiRad(curveAmount) * 180) / Math.PI)
 }
 
 /**
@@ -68,11 +103,9 @@ export function curveArcDegrees(curveAmount, concave) {
 /** Verilen kavis yüzdesinin karşılığı olan çap (metre). */
 export function curveDiameterM(curveAmount, concave, genislikM) {
   const W = Number(genislikM) || 0
-  const p = Math.max(0, Math.min(100, curveAmount)) / 100
-  const d = p * curveDepthFor(concave) * W
-  if (!(W > 0) || d <= 0) return null
-  const R = (W * W) / (8 * d) + d / 2
-  return 2 * R
+  const t = yayAcisiRad(curveAmount)
+  if (!(W > 0) || !(t > 0)) return null
+  return (2 * W) / t
 }
 
 /** Verilen çapın karşılığı olan kavis yüzdesi (0–100). */
@@ -80,11 +113,9 @@ export function curveAmountForDiameter(capM, concave, genislikM) {
   const W = Number(genislikM) || 0
   const R = (Number(capM) || 0) / 2
   if (!(W > 0) || !(R > 0)) return 0
-  /* Çap ekran genişliğinden küçük olamaz: yarım daireden fazlası eğrilemez. */
-  const Rg = Math.max(W / 2, R)
-  const d = Rg - Math.sqrt(Math.max(0, Rg * Rg - (W * W) / 4))
-  const p = d / (curveDepthFor(concave) * W)
-  return Math.max(0, Math.min(100, Math.round(p * 100)))
+  /* θ = W / R — yay uzunluğu ekran genişliği olduğu için doğrudan. */
+  const aci = (W / R) * (180 / Math.PI)
+  return Math.round(curveAmountForArc(aci))
 }
 
 /**
@@ -218,28 +249,25 @@ export const L_KACIS_ORANI = 0.71
 export const KAVIS_ACI_ADIMI = 32
 
 /** Verilen yay açısının (derece) karşılığı olan kavis yüzdesi. */
-export function curveAmountForArc(aci, concave) {
-  const a = (Number(aci) || 0) * (Math.PI / 180)
-  if (!(a > 0)) return 0
-  /* R = W / (2·sin(θ/2)), W = 1 alınmış hâli. */
-  const R = 1 / (2 * Math.sin(a / 2))
-  const d = R - Math.sqrt(Math.max(0, R * R - 0.25))
-  return Math.max(0, Math.min(100, (d / curveDepthFor(concave)) * 100))
+export function curveAmountForArc(aci) {
+  const d = yayDerinlikOrani(aci)
+  if (!(d > 0)) return 0
+  return Math.max(0, Math.min(100, (d / KAVIS_DERINLIK_ORANI) * 100))
 }
 
 /** Bu kavis türünde kurulabilen yay açıları: 0, 32, 64 … (dereceler). */
-export function kavisAciSecenekleri(concave) {
-  const enCok = curveArcDegrees(100, concave)
+export function kavisAciSecenekleri() {
+  /* İki tip aynı derinlik modelini kullandığı için liste de aynı: 0 · 32 · 64. */
   const liste = []
-  for (let a = 0; a <= enCok; a += KAVIS_ACI_ADIMI) liste.push(a)
+  for (let a = 0; a <= KAVIS_EN_COK_ACI; a += KAVIS_ACI_ADIMI) liste.push(a)
   return liste
 }
 
 /** Yüzdeyi, en yakın kurulabilir açının yüzdesine oturtur. */
 export function kavisYuzdesiniOturt(curveAmount, concave) {
   const aci = curveArcDegrees(curveAmount, concave)
-  const secenekler = kavisAciSecenekleri(concave)
+  const secenekler = kavisAciSecenekleri()
   let enYakin = secenekler[0]
   for (const a of secenekler) if (Math.abs(a - aci) < Math.abs(enYakin - aci)) enYakin = a
-  return Math.round(curveAmountForArc(enYakin, concave))
+  return Math.round(curveAmountForArc(enYakin))
 }

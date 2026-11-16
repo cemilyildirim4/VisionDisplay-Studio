@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
-import { viewingDistanceFor } from './viewingDistance.js'
+import { baseViewingDistance } from './viewingDistance.js'
 import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, L_KIRILMA_PCT, L_KACIS_ORANI } from './content.js'
 import { videoSrcFor, senkronaKatil } from './videoContent.js'
 import { useLang } from './useLang.js'
@@ -1344,7 +1344,7 @@ export default function WallPreview({
     const kavisPayiM = list.reduce((enBuyuk, s) => {
       if (s.type !== 'curved' && s.type !== 'curvedIn') return enBuyuk
       const derinlik =
-        (Math.max(0, Math.min(100, curveAmount)) / 100) *
+        (Math.max(0, Math.min(100, s.curveAmount ?? curveAmount)) / 100) *
         curveDepthFor(s.type === 'curvedIn') *
         s.wm
       return Math.max(enBuyuk, derinlik)
@@ -1853,7 +1853,8 @@ export default function WallPreview({
                       frameOnly={useSingle}
                       /* Gizli şeritte video yok (bkz. yukarıdaki katman). */
                       videoKapali={kupKipi || birlesimKipi}
-                      curveAmount={curveAmount}
+                      /* Kavis miktarı ekranın kendi bilgisi (bkz. App → ekranParcalari). */
+                      curveAmount={s.curveAmount ?? curveAmount}
                       leftCols={s.leftCols}
                       rightCols={s.rightCols}
                       lYon={s.lYon}
@@ -1920,9 +1921,19 @@ export default function WallPreview({
                   <>
                     <div
                       className="absolute"
+                      /*
+                        PAY ETİKETİ KENDİ SATIRINDA.
+
+                        Geniş payda etiket -40'a, ekranların eni ise -34'e
+                        yazılıyordu: iki satır 6 piksel arayla üst üste
+                        biniyor, gri pay yazısı koyu en yazısının altında
+                        kalıyordu (ölçüldü: "0,05 m" ile "0,32 m" çakışık).
+                        Pay etiketi artık her iki durumda da bir satır
+                        yukarıda duruyor.
+                      */
                       style={{
                         left: olcuSol > 34 ? olcuSol / 2 : 0,
-                        top: (olcuSol > 34 ? -40 : -62) - bombePx,
+                        top: -62 - bombePx,
                         transform: olcuSol > 34 ? 'translateX(-50%)' : 'translateX(-8%)',
                       }}
                     >
@@ -1932,7 +1943,7 @@ export default function WallPreview({
                       className="absolute"
                       style={{
                         left: olcuSol > 34 ? wallW - olcuSol / 2 : wallW,
-                        top: (olcuSol > 34 ? -40 : -62) - bombePx,
+                        top: -62 - bombePx,
                         transform: olcuSol > 34 ? 'translateX(-50%)' : 'translateX(-92%)',
                       }}
                     >
@@ -2142,8 +2153,16 @@ export default function WallPreview({
   const screenW = nativeW * fitScale
   const screenH = nativeH * fitScale
 
-  // Ekran boyutuna göre değişir: sütun/satır arttıkça mesafe de artar
-  const viewDist = viewingDistanceFor(model, nCols, nRows)
+  /*
+   * ÇİZİMDEKİ MESAFE = MODEL LİSTESİNDEKİ MESAFE.
+   *
+   * Burada kabin sayısına göre büyüyen değer (viewingDistanceFor)
+   * kullanılıyordu; model listesi ve öneri sihirbazı ise modelin kendi
+   * değerini gösteriyordu. Aynı model için iki ayrı sayı görünüyordu.
+   * İkisi de artık modelin kendi izleme mesafesini okuyor: yönetim
+   * panelinde girilen değer, yoksa piksel aralığının karşılığı.
+   */
+  const viewDist = baseViewingDistance(model)
 
   /*
    * Ekranın fiziksel ölçüsü doğrudan kabin sayısından geliyor; duvara
@@ -2194,6 +2213,12 @@ export default function WallPreview({
   const dugmeBoy = 28
   /* Etiket puntosu da tasarımla birlikte: düğme boyunun ~%38'i. */
   const olcuYazi = Math.max(7, Math.min(10, Math.round(olcuBoy * 0.34)))
+  /*
+   * KAVİSİN TASARIM KUTUSUNUN ÜSTÜNE TAŞAN YARISI (piksel).
+   * Üstteki ölçü etiketleri bu kadar daha yukarı çıkıyor ki yayın
+   * tepesine binmesinler (bkz. aşağıdaki üst ölçü etiketleri).
+   */
+  const bombeUstPx = (bulgeM * pxPerM) / 2
   const marginXm = Math.max(0, (wallWm - screenWm) / 2)
   const marginYm = Math.max(0, (wallHm - screenHm) / 2)
 
@@ -2305,11 +2330,20 @@ export default function WallPreview({
               <HL top={marginYpx + screenH} left={marginXpx + screenW} width={wallW - (marginXpx + screenW) + 40} />
               <HL top={wallH} left={wallW} width={40} />
 
-              {/* Üst ölçü etiketleri */}
+              {/*
+                ÜST ÖLÇÜ ETİKETLERİ — KAVİSİN ÜSTÜNDE.
+
+                Kavisli ekranda yay, tasarım kutusunun üstüne bulgeM/2 kadar
+                taşıyor (bkz. CurvedScreen: tuval kutudan maxD uzun ve
+                -maxD/2 ile ortalanıyor). Etiketin konumu bu taşmayı
+                hesaba katmıyordu, yani genişlik yazısı doğrudan kavisin
+                tepesine biniyordu (ölçüldü). Pay artık çıkarılıyor; düz
+                ekranda bulgeM 0 olduğu için hiçbir şey değişmiyor.
+              */}
               <div
                 style={{
                   position: 'absolute',
-                  top: gorunenKutu.y - olcuYazi * 2.2 - sahnePayPx,
+                  top: gorunenKutu.y - olcuYazi * 2.2 - sahnePayPx - bombeUstPx,
                   left: gorunenKutu.x,
                   width: gorunenKutu.w,
                   display: 'flex',
@@ -2354,7 +2388,8 @@ export default function WallPreview({
                     className="absolute"
                     style={{
                       left: marginXpx > 34 ? marginXpx / 2 : 0,
-                      top: (marginXpx > 34 ? -olcuYazi * 2.2 : -olcuYazi * 3.6) - sahnePayPx,
+                      /* Pay etiketi her zaman bir üst satırda: en etiketiyle çakışmıyor. */
+                      top: -olcuYazi * 4.2 - sahnePayPx - bombeUstPx,
                       transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-8%)',
                     }}
                   >
@@ -2364,7 +2399,7 @@ export default function WallPreview({
                     className="absolute"
                     style={{
                       left: marginXpx > 34 ? wallW - marginXpx / 2 : wallW,
-                      top: (marginXpx > 34 ? -olcuYazi * 2.2 : -olcuYazi * 3.6) - sahnePayPx,
+                      top: -olcuYazi * 4.2 - sahnePayPx - bombeUstPx,
                       transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-92%)',
                     }}
                   >
@@ -2450,43 +2485,36 @@ export default function WallPreview({
                 <StepBtn boy={dugmeBoy} dir="plus" onClick={() => onRowsChange?.(Math.min(rowsMax, nRows + 1))} disabled={nRows >= rowsMax} />
               </div>
 
-              {/* İzleme mesafesi çizgisi — mekân sahnesi açıkken gizlenir.
-                  Sahne zaten mesafe/ölçek hissini kendi veriyor; teknik
-                  çizim öğeleri gerçekçi görünümü bozuyor. */}
               {/*
-                ÇİZGİ SABİT BOYDA, YALNIZCA SAYI DEĞİŞİYOR.
+                İZLEME MESAFESİ — DÜZ, OKUNUR BİR ETİKET.
 
-                Boyu bir süre gerçek ölçeğe bağlanmıştı; uzun mesafelerde
-                çizgi tuvalin dışına taşıp çalışma alanının altındaki
-                çubuğun üstüne biniyordu. Mesafeyi zaten yazı söylüyor,
-                çizgi yalnızca yönü gösteriyor.
+                Eskiden duvarın sol alt köşesinden çapraz inen kesik bir
+                çizgi vardı ve sayı 31° döndürülmüş hâlde onun ortasına
+                yazılıyordu: hem eğik olduğu için zor okunuyor hem de
+                tuvalin kenarına denk gelince yarım kalıyordu. Çizginin
+                kendisi hiçbir ölçüyü göstermiyordu — boyu sabitti.
+
+                Yerine duvarın altında yatay bir etiket var: iki uçlu kısa
+                bir ok "mesafe" olduğunu söylüyor, sayı düz yazılıyor.
+                Mekân sahnesi açıkken gizleniyor: orada ölçek hissini
+                sahnenin kendisi veriyor.
               */}
-              {!sahneVar && (() => {
-                const boy = 98
-                const aci = (31 * Math.PI) / 180
-                const ux = 6 + boy * Math.cos(aci)
-                const uy = boy * Math.sin(aci)
-                return (
-                  <svg
-                    width={Math.ceil(ux + 26)}
-                    height={Math.ceil(uy + 12)}
-                    className="absolute"
-                    style={{ left: -6, top: wallH - 2, overflow: 'visible' }}
-                  >
-                    <line x1="6" y1="0" x2={ux} y2={uy} stroke="#9aa0a8" strokeWidth="1" strokeDasharray="4 4" />
-                    <text
-                      x={(6 + ux) / 2}
-                      y={uy / 2}
-                      fill={koyuTema() ? '#9aa4b2' : '#6b7280'}
-                      fontSize="11"
-                      transform={`rotate(31 ${(6 + ux) / 2} ${uy / 2})`}
-                      textAnchor="middle"
-                    >
-                      {fmtDist(viewDist)}
-                    </text>
+              {!sahneVar && (
+                <div
+                  className="absolute flex items-center gap-1.5 whitespace-nowrap"
+                  style={{ left: 0, top: wallH + 10 }}
+                >
+                  <svg width="30" height="9" style={{ overflow: 'visible' }} aria-hidden="true">
+                    <line x1="1" y1="4.5" x2="29" y2="4.5" stroke="#9aa0a8" strokeWidth="1" strokeDasharray="4 3" />
+                    <polyline points="5,1 1,4.5 5,8" fill="none" stroke="#9aa0a8" strokeWidth="1" strokeLinecap="round" />
+                    <polyline points="25,1 29,4.5 25,8" fill="none" stroke="#9aa0a8" strokeWidth="1" strokeLinecap="round" />
                   </svg>
-                )
-              })()}
+                  <span className="text-[11px] leading-none text-neutral-500 dark:text-neutral-400">
+                    {t('fit.distance')}:{' '}
+                    <strong className="font-semibold tabular-nums">{fmtDist(viewDist)}</strong>
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
