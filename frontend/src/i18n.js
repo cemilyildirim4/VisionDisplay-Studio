@@ -577,9 +577,24 @@ const dict = {
   },
   'scene.analysingTitle': { tr: 'Fotoğraf inceleniyor', en: 'Analysing the photo', ar: 'يتم تحليل الصورة' },
   'scene.analysingHint': {
-    tr: 'Nesneler ve derinlik çıkarılıyor. İlk fotoğrafta modeller indirildiği için biraz uzun sürer; sonrakiler daha hızlı.',
-    en: 'Detecting objects and depth. The first photo takes longer because the models are downloaded; later ones are faster.',
-    ar: 'يتم اكتشاف الأجسام والعمق. الصورة الأولى تستغرق وقتًا أطول بسبب تنزيل النماذج.',
+    tr: 'Zemin çizgisi ve bakış açısı ölçülüyor. Beklemek zorunda değilsiniz.',
+    en: 'Measuring the floor line and the viewing angle. You do not have to wait.',
+    ar: 'يتم قياس خط الأرضية وزاوية الرؤية. لست مضطرًا للانتظار.',
+  },
+  'scene.asama.zemin': {
+    tr: 'Zemin çizgisi aranıyor…',
+    en: 'Looking for the floor line…',
+    ar: 'يتم البحث عن خط الأرضية…',
+  },
+  'scene.asama.aci': {
+    tr: 'Bakış açısı ölçülüyor…',
+    en: 'Measuring the viewing angle…',
+    ar: 'يتم قياس زاوية الرؤية…',
+  },
+  'scene.asama.yuzey': {
+    tr: 'Uygun yüzey aranıyor…',
+    en: 'Looking for a suitable surface…',
+    ar: 'يتم البحث عن سطح مناسب…',
   },
   'scene.analysingPrivacy': {
     tr: 'Fotoğraf cihazınızdan çıkmıyor; işlem tarayıcıda yapılıyor.',

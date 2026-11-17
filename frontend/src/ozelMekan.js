@@ -134,10 +134,36 @@ function gorselAnahtari(gorsel) {
  *
  * Taslak kipinde modeller hiç indirilmiyor: fotoğraf anında açılıyor.
  */
-export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MESAFE_M, tasarimWm = 0, taslakKipi = false) {
+/* Tarayıcıya nefes aldıran duraklama: arayüz boyanabilsin, tıklama işlensin. */
+const bekle = () => new Promise((c) => setTimeout(c, 0))
+
+/**
+ * İNCELEME KARESİNİN EN BÜYÜK KENARI (piksel).
+ *
+ * İnceleme adımlarının hepsi sonucu 0–1 ORANINDA veriyor (zemin çizgisi,
+ * kaçış noktası, önerilen yüzeyin köşeleri); yani kaçtan kaça baktıkları
+ * sonucu değiştirmiyor, yalnızca ne kadar sürdüğünü. Telefon fotoğrafı
+ * 4000 × 3000 piksel geliyor ve her adım 12 milyon pikseli tarıyordu —
+ * bekleme buradan çıkıyordu. 1600 piksellik kopya aynı cevabı veriyor,
+ * taranan piksel 7 kat azalıyor.
+ */
+const INCELEME_EN_COK = 1600
+
+export async function ozelMekanKaydi(
+  url,
+  gorsel,
+  oran,
+  mesafeM = VARSAYILAN_MESAFE_M,
+  tasarimWm = 0,
+  taslakKipi = false,
+  secenek = {},
+) {
   const W = gorsel.naturalWidth
   const H = gorsel.naturalHeight
   if (!W || !H) return null
+  /* Hangi adımda olunduğu ve vazgeçildi mi — arayüz ikisini de gösteriyor. */
+  const asama = typeof secenek.asama === 'function' ? secenek.asama : () => {}
+  const iptal = typeof secenek.iptal === 'function' ? secenek.iptal : () => false
 
   /*
    * Yüzey bulucu videoWidth/width okuyor; <img> öğesinin `width`i sayfadaki
@@ -147,10 +173,11 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
   const anahtar = gorselAnahtari(gorsel)
   const onbellek = anahtar ? cozumlemeOnbellek.get(anahtar) : null
 
+  const kucult = Math.min(1, INCELEME_EN_COK / Math.max(W, H))
   const tuval = document.createElement('canvas')
-  tuval.width = W
-  tuval.height = H
-  tuval.getContext('2d').drawImage(gorsel, 0, 0)
+  tuval.width = Math.max(1, Math.round(W * kucult))
+  tuval.height = Math.max(1, Math.round(H * kucult))
+  tuval.getContext('2d').drawImage(gorsel, 0, 0, tuval.width, tuval.height)
 
   const enBoy = oran > 0 ? oran : 16 / 9
 
@@ -161,6 +188,8 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    */
   let zeminOran = onbellek ? onbellek.zeminOran : null
   if (!onbellek) {
+    asama('zemin')
+    await bekle()
     try {
       zeminOran = zeminCizgisiBul(tuval)
     } catch {
@@ -186,8 +215,17 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    * olduğunu' söylüyor. Yerleştirmenin asıl ölçütü ikincisi: düz bir yüzey
    * mi, önünde bir şey var mı. İkisi de olmazsa eski sezgisel ölçütler.
    */
+  /*
+   * DERİNLİK MODELİ TASLAK KİPİNDE ÇALIŞMIYOR.
+   *
+   * Derinlik haritasının tek işi aday yerleşim karelerini ve mekân
+   * haritasını beslemekti; ikisi de taslak kipinde zaten üretilmiyor
+   * (tasarımın yerini kullanıcı sürükleyerek veriyor). Buna rağmen model
+   * her fotoğrafta indiriliyor ve çalışıyordu: beklemenin büyük kısmı
+   * buydu ve karşılığında hiçbir şey hesaplanmıyordu.
+   */
   let derinlik = onbellek ? onbellek.derinlik : null
-  if (!onbellek) {
+  if (!onbellek && !taslakKipi) {
     try {
       derinlik = await derinlikHaritasi(tuval)
     } catch {
@@ -229,8 +267,12 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    * MEKÂN HARİTASI — her pikselin ne olduğu (duvar, zemin, tavan, gökyüzü,
    * cam, ekran, kapı, nesne). Yerleştirme kararları buna dayanıyor.
    */
+  /*
+   * MEKÂN HARİTASI DA TASLAK KİPİNDE ÇIKARILMIYOR: tek tüketicisi aday
+   * kareler ve onlar üretilmiyor (bkz. derinlik notu).
+   */
   let harita = onbellek ? onbellek.harita : null
-  if (!onbellek) {
+  if (!onbellek && !taslakKipi) {
   try {
     harita = mekanHaritasi(tuval, {
       nesneler,
@@ -249,7 +291,9 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
    * açı ölçümü de her seferinde koşardı; oysa o da yalnızca fotoğrafa bağlı.
    */
   let aci = onbellek ? onbellek.aci : null
-  if (!onbellek) {
+  if (!onbellek && !iptal()) {
+    asama('aci')
+    await bekle()
     try {
       aci = aciOlc(tuval)
     } catch {
@@ -296,7 +340,12 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
   }
 
   let yer = null
+  if (!iptal()) {
+    asama('yuzey')
+    await bekle()
+  }
   try {
+    if (iptal()) throw new Error('iptal')
     /*
      * KAMERA OTURTMA İLE BİREBİR AYNI ÇAĞRI (bkz. Oturtma.jsx):
      * uygunYuzeyBul(kare, tasarım oranı) — fazladan ölçüt yok.
@@ -376,7 +425,13 @@ export async function ozelMekanKaydi(url, gorsel, oran, mesafeM = VARSAYILAN_MES
      * Öneri uygulanınca ekran bu açıya çevriliyor; kullanıcı isterse elle
      * değiştirebiliyor. Bkz. aciBul.js.
      */
-    aci: aciOlc(tuval),
+    /*
+     * ÖLÇÜLEN AÇI — yeniden hesaplanmıyor.
+     *
+     * Yukarıda aciOlc bir kez koşuyor ve önbelleğe giriyordu; burada ikinci
+     * kez çağrılıyordu. Aynı fotoğraf, aynı sonuç, iki kat süre.
+     */
+    aci,
     /** Modelin fotoğrafta gördüğü nesneler — arayüz bunu kullanıcıya yazıyor. */
     nesneSayimi: nesneler ? nesneler.sayim : null,
     modelCalisti: !!nesneler,

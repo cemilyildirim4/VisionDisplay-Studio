@@ -716,6 +716,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [ozelUyari, setOzelUyari] = useState(null)
   /* Model çalışırken kullanıcı beklediğini bilsin — birkaç saniye sürüyor. */
   const [ozelInceleniyor, setOzelInceleniyor] = useState(false)
+  /* İncelemenin hangi adımda olduğu — kullanıcı neyin beklendiğini görüyor. */
+  const [ozelAsama, setOzelAsama] = useState(null)
+  /* "Vazgeç" basıldı mı: inceleme adımları arasında okunuyor. */
+  const incelemeIptalRef = useRef(false)
   /* Yüklenen fotoğrafın görüntü nesnesi — kenar iyileştirmesi bunu kullanıyor. */
   const ozelSahneGorsel = useRef(null)
   /*
@@ -2087,10 +2091,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       setLKoseKipi(lTipiVar)
       setSihirbazAdim(1)
       let kayit = null
+      incelemeIptalRef.current = false
+      setOzelAsama('zemin')
       try {
-        kayit = await ozelMekanKaydi(url, gorsel, tasarimWm / tasarimHm, ozelMesafeM, tasarimWm, TASLAK_KIPI)
+        kayit = await ozelMekanKaydi(
+          url,
+          gorsel,
+          tasarimWm / tasarimHm,
+          ozelMesafeM,
+          tasarimWm,
+          TASLAK_KIPI,
+          {
+            asama: setOzelAsama,
+            /*
+             * VAZGEÇME ADIMLAR ARASINDA OKUNUYOR.
+             *
+             * Adımlar tarayıcıyı kilitleyen döngüler; aralarına bırakılan
+             * duraklamalar (bkz. ozelMekan.js bekle) hem ekranın boyanmasını
+             * hem de bu tıklamanın işlenmesini sağlıyor. Vazgeçildiğinde
+             * kalan adımlar atlanıyor ve fotoğraf öneri olmadan açılıyor —
+             * öneri zaten yalnızca kioskun oturacağı yeri etkiliyor.
+             */
+            iptal: () => incelemeIptalRef.current,
+          },
+        )
       } finally {
         setOzelInceleniyor(false)
+        setOzelAsama(null)
       }
       if (!kayit) return
       /*
@@ -7706,6 +7733,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setDuzenlemede(false)
     setGrup(null)
     setGrupSecim([])
+    /*
+     * YERLEŞİM DE SİLİNİYOR.
+     *
+     * "Baştan başla" ölçümü sıfırlıyor ama tasarımın fotoğraftaki yerini,
+     * bakış açısını, işaretlenen alanın kenar çizgilerini ve yerleşmiş
+     * ekranların köşelerini bırakıyordu: kullanıcı baştan başladığını
+     * sanarken eski fotoğrafa ait bir yerleşimle devam ediyordu. Düğmenin
+     * adı ne diyorsa onu yapması gerekiyor.
+     */
+    setYer3d(null)
+    setAlanCizgi([])
+    setYerNokta([])
+    setYerSira(null)
+    setYerKilit(0)
+    setYerlesimBitti(false)
+    setOzelUyari(null)
+    yerKoseRef.current = {}
     /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
     if (lYerlesimKipi) {
       setRefKipi(false)
@@ -10822,12 +10866,30 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 <div className="text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">
                   {t('scene.analysingTitle')}
                 </div>
+                {/* Hangi adımda olunduğu yazıyor: bekleme sessiz değil. */}
                 <p className="m-0 text-[12.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                  {t('scene.analysingHint')}
+                  {ozelAsama ? t('scene.asama.' + ozelAsama) : t('scene.analysingHint')}
                 </p>
                 <p className="m-0 text-[11.5px] leading-snug text-neutral-400 dark:text-neutral-500">
                   {t('scene.analysingPrivacy')}
                 </p>
+                {/*
+                  VAZGEÇ — bekleme zorunlu değil.
+
+                  İnceleme yalnızca kioskun oturacağı zemin çizgisini ve
+                  bakış açısını buluyor; ikisi de olmadan fotoğraf açılıyor.
+                  Kullanıcıyı sonunu beklemeye mecbur bırakmanın bir sebebi
+                  yok.
+                */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    incelemeIptalRef.current = true
+                  }}
+                  className="rounded-lg border border-neutral-300 px-3 py-1.5 text-[13.5px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+                >
+                  {t('sih.vazgec')}
+                </button>
               </div>
             </div>
           )}
@@ -13303,19 +13365,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   sığdırılacak alan yokken PASİF ve altında ne yapılması
                   gerektiği yazıyor. Kaybolan düğme, pasif düğmeden kötü.
                 */}
+                {/*
+                  YAPILACAK ADIM PASİF DEĞİL, ÇALIŞIR.
+
+                  Düğme alan işaretlenmemişken pasifti ve altında "önce
+                  fotoğrafta alanı işaretleyin" yazıyordu — ama işaretlemeyi
+                  BAŞLATAN bir yer yoktu: o düğme ölçü sihirbazının içinde
+                  duruyor ve sihirbaz referans bitince kapanıyor. Yani
+                  kullanıcıya yapması gereken şey söyleniyor, yapabileceği
+                  yer verilmiyordu. Aynı düğme artık sıradaki adımı yapıyor:
+                  alan yoksa işaretlemeyi başlatıyor, alan varsa sığdırıyor.
+                */}
                 {scene === 'ozel' && ozelSahne && (
                   <>
                     <button
                       type="button"
-                      disabled={!alanIsaretli}
-                      onClick={() => alanIsaretli && tasarimiAlanaSigdir()}
-                      className={`mt-2 w-full rounded-lg px-4 py-2.5 text-[16px] font-semibold transition-opacity ${
-                        alanIsaretli
-                          ? 'bg-brand text-white hover:opacity-90'
-                          : 'cursor-not-allowed bg-neutral-100 text-neutral-400 dark:bg-[#222833] dark:text-neutral-500'
-                      }`}
+                      onClick={() => {
+                        if (alanIsaretli) {
+                          tasarimiAlanaSigdir()
+                          return
+                        }
+                        setAlanNokta([])
+                        setRefKipi(false)
+                        setAlanKipi(true)
+                      }}
+                      className="mt-2 w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90"
                     >
-                      {t('ekran.alanaSigdir')}
+                      {alanIsaretli ? t('ekran.alanaSigdir') : t('sih.sec.alan')}
                     </button>
                     {!alanIsaretli && (
                       <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
