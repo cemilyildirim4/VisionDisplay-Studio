@@ -1742,6 +1742,51 @@ export default function WallPreview({
                 </div>
               )}
 
+              {/*
+                KABİNİN KALINLIĞI — MEKÂNDA DUVARA DÜŞEN GÖLGE.
+
+                Mekân sahnelerinde tasarım duvara yapıştırılmış bir kâğıt gibi
+                duruyordu: kabinin derinliği (modelin depthMm'i, tipik olarak
+                7–10 cm) hiçbir yerde görünmüyordu.
+
+                Duvara TAM KARŞIDAN bakılan bir sahnede kabinin hiçbir yanı
+                görünmez — yan yüzü çizmek yalan olurdu. Derinliği okutan tek
+                şey, duvardan çıkan cismin duvara düşürdüğü gölgedir; kaymanın
+                büyüklüğü de doğrudan o derinlikten geliyor, yani 10 cm'lik
+                kabin 7 cm'likten daha belirgin bir gölge bırakıyor.
+
+                Işık sol üstten: gölge sağ alta düşüyor (bkz. KalinlikKatmani,
+                aynı ışık yönü). Katman tasarımın ARKASINDA; ölçü etiketleriyle
+                ve seçim çerçeveleriyle hiç karışmıyor, PDF'te de tasarımla
+                birlikte çıkıyor.
+              */}
+              {sahneVar &&
+                !ekranGizle &&
+                (() => {
+                  const derinlikM = Math.max(0, (model?.depthMm || 0) / 1000)
+                  const derinlikPx = derinlikM * pxPerM
+                  if (!(derinlikPx > 0.5)) return null
+                  /* Köşeli ve küp birleşimde tasarım dikdörtgen değil: oradaki
+                     derinliği kolların kendi açısı zaten gösteriyor. */
+                  if (kupKipi || birlesimKipi) return null
+                  return (
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        left: marginXpx + derinlikPx * 0.55,
+                        top: stripTop + derinlikPx * 0.8,
+                        width: totalWpx,
+                        height: maxHpx,
+                        background: 'rgba(14,18,25,0.34)',
+                        filter: `blur(${Math.max(1.5, derinlikPx * 0.45)}px)`,
+                        pointerEvents: 'none',
+                        zIndex: 0,
+                      }}
+                    />
+                  )
+                })()}
+
               {/* Ekranlar şeridi (ortalanmış, alta hizalı) */}
               <div
                 /* Testin görünürlüğü ölçebilmesi için sabit işaret. */
