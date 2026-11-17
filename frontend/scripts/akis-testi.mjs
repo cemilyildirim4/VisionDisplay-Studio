@@ -435,6 +435,31 @@ async function akis(baslik, yol) {
  * "REFERANS BİTİNCE TASARIM FOTOĞRAFIN ÜSTÜNE GELİYOR").
  */
 
+/**
+ * FOTOĞRAFTA GÖRÜNEN TASARIM.
+ *
+ * Fotoğraf kipinde tasarım 3B katmanda, referanstan gelen ölçekle
+ * çiziliyor; tuvaldeki düz çizim (data-tasarim-yuz) bilerek gizleniyor ki
+ * aynı tasarım iki farklı boyda görünmesin (bkz. App.jsx ekranGizle).
+ * Dolayısıyla görünürlük de buradan ölçülüyor.
+ */
+const yer3dTasarim = (s) =>
+  s.evaluate(() => {
+    const k = [...document.querySelectorAll('div')].find(
+      (d) => d.style.perspective && d.style.position === 'absolute',
+    )
+    if (!k) return { var: false }
+    const ic = k.firstElementChild
+    const ekran = ic && ic.querySelector('div')
+    if (!ekran) return { var: false }
+    let saydamlik = 1
+    for (let d = ekran; d && d !== document.documentElement; d = d.parentElement) {
+      saydamlik *= Number(getComputedStyle(d).opacity || 1)
+    }
+    const r = ekran.getBoundingClientRect()
+    return { var: true, saydamlik: Number(saydamlik.toFixed(2)), en: Math.round(r.width), boy: Math.round(r.height) }
+  })
+
 /** 3B yerleşim tutamağı: perspektifi kuran kutu ve içindeki dönüş. */
 const yer3dDurum = (s) =>
   s.evaluate(() => {
@@ -463,10 +488,13 @@ const a = await akis('A — TASARIMI FOTOĞRAFA YERLEŞTİR', async ({ s, denetl
   if (await icerir('Yerleşimi bitir')) return dus('kaldırılan "Yerleşimi bitir" düğmesi duruyor')
   if (!(await denetle('referans bitti, tasarım geldi'))) return false
 
-  const g = await tasarimGorunur(s)
+  const g = await yer3dTasarim(s)
   console.log('  · tasarım                     :', JSON.stringify(g))
   if (!g.var || !(g.en > 4)) return dus('tasarım fotoğrafa gelmedi')
   if (!(g.saydamlik > 0.05)) return dus('tasarım geldi ama görünmüyor')
+  /* Düz çizim aynı anda görünmemeli: iki boy, iki ölçek demek. */
+  const duz = await tasarimGorunur(s)
+  if (duz.var && duz.saydamlik > 0.05) return dus('tasarım hem 3B hem düz çiziliyor')
 
   const t = await tuval(s)
   const once = await yer3dDurum(s)
@@ -475,8 +503,10 @@ const a = await akis('A — TASARIMI FOTOĞRAFA YERLEŞTİR', async ({ s, denetl
 
   /* TAŞIMA: tasarımın üstünden sürükle. */
   const kutuY = await s.evaluate(() => {
-    const e = document.querySelector('[data-tasarim-yuz]')
-    const r = e.getBoundingClientRect()
+    const k = [...document.querySelectorAll('div')].find(
+      (d) => d.style.perspective && d.style.position === 'absolute',
+    )
+    const r = k.firstElementChild.querySelector('div').getBoundingClientRect()
     return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
   })
   await surukle(s, kutuY.x, kutuY.y, 150, -80)
@@ -560,7 +590,7 @@ const dYol = await akis('D — SIFIRLA VE BAŞTAN KUR', async ({ s, bas, denetle
   if (!(await bas('Devam', 1800))) return dus('ikinci kurulumda ölçekten sonra "Devam" yok')
   if (await icerir('ekranı yerleştirin')) return dus('ikinci kurulumda kaldırılan dört köşe akışı açıldı')
   if (!(await denetle('ikinci kurulumda tasarım yeniden geldi'))) return false
-  const g2 = await tasarimGorunur(s)
+  const g2 = await yer3dTasarim(s)
   console.log('  · ikinci kurulumda            :', JSON.stringify(g2))
   if (!g2.var || !(g2.saydamlik > 0.05)) return dus('ikinci kurulumda tasarım görünmüyor')
   return true

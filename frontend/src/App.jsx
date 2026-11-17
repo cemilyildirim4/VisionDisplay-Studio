@@ -11113,7 +11113,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 beklenmiyor (o düğme akış yenilenirken kalkmıştı ve
                 tasarimAcik'ı yazan kimse kalmamıştı).
               */
-              ekranGizle={(tasarimGizli && !olcuTamam) || olcuAraciAcik}
+              /*
+                TASARIM İKİ KEZ ÇİZİLMİYOR.
+
+                Fotoğraf kipinde tasarım 3B katmanda, referanstan gelen
+                ölçekle duruyor (bkz. FotoYerlesim3D, yer3dOlcek). Buradaki
+                düz çizim ise sahnenin kendi ölçeğini kullanıyor; ikisi
+                aynı anda görününce ekranda AYNI tasarımın iki farklı boyu
+                oluyordu. Ölçülen örnek: referans 480 px / 200 cm, yani
+                138 px/m; düz çizim ise 206 px/m ile çiziliyordu — panelde
+                yazan ölçekle ekranda görünen ölçü tutmuyordu.
+              */
+              ekranGizle={(tasarimGizli && !olcuTamam) || olcuAraciAcik || yer3dAcik}
               uc3dKatman={
                 uc3dKatmanVar
                   ? ({ koseler, genislik, yukseklik }) => (

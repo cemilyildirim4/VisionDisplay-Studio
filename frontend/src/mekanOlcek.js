@@ -29,9 +29,18 @@
  * yalnızca ölçü etiketleri içindir, çizim ölçeğini belirlemez.
  */
 
-/* Sabit kadrajın kapsadığı mekân (m). Tipik bir toplantı salonu/cephe önü. */
-export const KADRAJ_EN_M = 12
-export const KADRAJ_BOY_M = 7
+/*
+ * SABİT KADRAJIN KAPSADIĞI MEKÂN (m) — tipik bir toplantı salonu / cephe önü.
+ *
+ * Bu sayı "kameranın ne kadar geniş gördüğü"dür ve ikisini birden belirler:
+ * küçük duvar kadrajda ne kadar küçük kalacak, büyük duvar ne zaman
+ * kadrajı dolduracak. 12 m denendi: 1 m'lik varsayılan duvar tuvalin
+ * dörtte birine düşüyor ve oda tünele benziyordu. 8 m'de 1–11 m arası
+ * duvar ölçüsü ekranda karşılığını buluyor, varsayılan duvar da küçük ama
+ * okunaklı kalıyor.
+ */
+export const KADRAJ_EN_M = 8
+export const KADRAJ_BOY_M = 4.5
 
 /* Sığdırma payı: yanlarda ve üstte mekânın kendisi görünsün. */
 const SIGDIRMA_PAYI = 0.62
