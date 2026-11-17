@@ -2010,6 +2010,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * iniyor, birleşim ve görseller yok oluyordu.
        */
       setSabitEkranlar((l) => l.map((x) => ({ ...x, oran: null })))
+      /* Tasarımın fotoğraftaki yeri ve bakış açısı da eski fotoğrafa aitti. */
+      setYer3d(null)
       /* Duvar dibi noktaları da bu fotoğrafa aitti. */
       setDuvarKipi(false)
       setDuvarNokta([])
@@ -4948,49 +4950,46 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * mantığı); eşitlikte yatay kalıyor. Kullanıcıya yön sorulmuyor.
      * ───────────────────────────────────────────────────────────────────
      */
-    const sigan = (alanM, kabinM) => Math.max(1, Math.floor(alanM / kabinM + 1e-9))
-    const kurul = (kabinWmm, kabinHmm) => {
-      const kw = kabinWmm / 1000
-      const kh = kabinHmm / 1000
-      const c = sigan(alanWm, kw)
-      const r = sigan(alanHm, kh)
-      /* Küçük olan kazanıyor: artık taşma yok, sapma = kalan boşluk. */
-      return { cols: c, rows: r, sapma: (alanWm - c * kw) + (alanHm - r * kh), adet: c * r }
-    }
-    const gWmm = m.widthMm || 500
-    const gHmm = m.heightMm || 500
-    const yatay = kurul(gWmm, gHmm)
-    const dikey = kurul(gHmm, gWmm)
-    /* En çok kabin sığan duruş; eşitlikte yatay (sebepsiz çevirme yok). */
-    const dikeySec = dikey.adet > yatay.adet
-    const kazanan = dikeySec ? dikey : yatay
-    /* Kazanan yönün kabin ölçüsü: dikeyde kabin yan yatıyor. */
-    const cwM2 = ((dikeySec ? m.heightMm : m.widthMm) || 500) / 1000
-    const chM2 = ((dikeySec ? m.widthMm : m.heightMm) || 500) / 1000
-    const c = kazanan.cols
-    const r = kazanan.rows
+    /*
+     * ───────────────────────────────────────────────────────────────────
+     * ORAN KORUNUYOR — SIĞDIRMA TASARIMI EZMİYOR.
+     *
+     * Eskiden sütun ve satır BİRBİRİNDEN BAĞIMSIZ hesaplanıyordu: alana
+     * kaç kabin sığıyorsa o kadar. Sonuç, kullanıcının kurduğu tasarımın
+     * oranının bozulmasıydı — 4 × 1'lik ince bir şerit, kare bir alana
+     * sığdırılınca 6 × 4'lük bir panoya dönüşüyordu. Üstelik duruş da
+     * (yatay/dikey) kendiliğinden çevriliyordu.
+     *
+     * Artık sığdırma TEK bir ölçek çarpanı: eldeki tasarımın eni ve boyu
+     * aynı oranda büyüyor ya da küçülüyor, en yakın tam kabine aşağı
+     * yuvarlanarak. Oran korunuyor, taşma olmuyor, duruş kullanıcının
+     * seçtiği gibi kalıyor.
+     * ───────────────────────────────────────────────────────────────────
+     */
+    const cwM2 = cwM
+    const chM2 = chM
+    if (!(cwM2 > 0) || !(chM2 > 0)) return
+    const suAnWm = cols * cwM2
+    const suAnHm = rows * chM2
+    if (!(suAnWm > 0) || !(suAnHm > 0)) return
+    const carpan = Math.min(alanWm / suAnWm, alanHm / suAnHm)
+    const c = Math.max(1, Math.min(colsMax, Math.floor(cols * carpan + 1e-9)))
+    const r = Math.max(1, Math.min(rowsMax, Math.floor(rows * carpan + 1e-9)))
     const yeniWm = c * cwM2
     const yeniHm = r * chM2
     if (!(yeniWm > 0) || !(yeniHm > 0)) return
-    setOrientation(dikeySec ? 'portrait' : 'landscape')
     setCols(c)
     setRows(r)
     /*
-     * DUVAR ÖTEKİ EKRANLARI DA BARINDIRIYOR.
+     * DUVAR ÖLÇÜSÜNE DOKUNULMUYOR.
      *
-     * Duvar yalnızca sığdırılan ekranın yeni enine büyütülüyordu. Oysa
-     * sütun üst sınırı (colsMax) duvardan ÖTEKİ ekranların enini düşerek
-     * hesaplanıyor: yan yana duran bir ekran varken hesaplanan sütun
-     * sayısı o sınıra takılıp sessizce geri kırpılıyor, tasarım da
-     * işaretlenen alanı dolduramıyordu. Ölçülen örnek: alan 1,89 m,
-     * hesap 11 sütun (16 cm kabinle 1,76 m), duvar 1,76 m'ye büyüyor,
-     * sınır (1,76 − 0,32) / 0,16 = 9 çıkıyor ve ekran 9 sütunda kalıyordu.
-     * Duvar artık öteki ekranların enini de kapsıyor.
-     *
-     * Aşağı yuvarlamak son kabini düşürür; bu yüzden cmYukari.
+     * Sığdırma duvarı da büyütüyordu: fotoğrafta bir alan işaretleyip
+     * sığdırmak, sol panelde yazan duvar ölçüsünü sessizce değiştiriyordu.
+     * Duvar kullanıcının girdiği bir ölçü — fotoğraftaki bir alan onu
+     * belirlemez. Sütun/satır üst sınırı zaten donanımdan geliyor
+     * (colsMax/rowsMax), duvardan değil; dolayısıyla duvarı büyütmenin
+     * sığdırmaya bir katkısı da yok.
      */
-    setWidth((e) => Math.max(e, cmYukari(yeniWm + digerlerininEni)))
-    setHeight((e) => Math.max(e, cmYukari(yeniHm)))
     /*
      * Çizim YENİ gerçek ölçüyle, alanın ortasına. Ölçü dışarıdan veriliyor
      * çünkü cols/rows daha state'e yazılmadı ve tasarimWm hâlâ eskisini
@@ -9730,47 +9729,47 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setSagBolum(scene === 'ozel' ? 'olcum' : 'mekan')
   }, [scene])
 
-  /* Referans bitince yerleştirme başlıyor. */
+  /*
+   * REFERANS BİTİNCE TASARIM FOTOĞRAFIN ÜSTÜNE GELİYOR — TEK YÖNTEM.
+   *
+   * Eskiden iki yol vardı: birleşik bir tasarım (L, U, küp, açılı) bütün
+   * hâlinde geliyor, tek ekran ya da düz dizilim ise EKRAN EKRAN, her
+   * birinin dört köşesi tıklanarak yerleştiriliyordu. İkinci yol
+   * kullanıcıdan fotoğrafın perspektifini elle çizmesini istiyor; ekran
+   * başına dört tıklama, yanlış tıklamada baştan. Kullanıcı tek yöntem
+   * istedi ve doğru yöntem bu: ölçü zaten referanstan biliniyor, geriye
+   * tasarımın NEREDE duracağı ve hangi açıdan görüneceği kalıyor.
+   *
+   * Tasarım gerçek ölçüsünde fotoğrafın ortasına geliyor; üstünden
+   * sürüklemek taşıyor, boşluktan sürüklemek döndürüyor (bkz.
+   * FotoYerlesim3D). Dört köşe akışının kodu duruyor ama artık hiçbir
+   * yerden başlatılmıyor.
+   */
   useEffect(() => {
     if (scene !== 'ozel' || !ozelSahne) return
     if (sihirbazAdim !== 3) return
-    if (yerSira !== null) return
-    /*
-     * YERLEŞİM TİPİ SEÇİLİYSE TASARIM BÜTÜN HÂLİNDE GELİYOR.
-     *
-     * L, U, küp ve açılı birer ŞEKİL: ekranların birbirine göre açısı ve
-     * sırası baştan belli. Böyle bir tasarımı ekran ekran yerleştirmek,
-     * kullanıcıdan zaten bildiğimiz bir şeyi yeniden çizmesini istemek
-     * olurdu — üstelik küpte imkânsız (arka yüzler ve üst kapak fotoğrafta
-     * hiç görünmüyor). Referans bitince tasarım bütün hâlinde fotoğrafın
-     * ortasına geliyor; ölçüsü referanstan ve kilitli, kullanıcıya kalan
-     * iş yerini ve bakış açısını seçmek.
-     *
-     * Tip SEÇİLİ DEĞİLKEN (tek ekran ya da düz dizilim) eski yol duruyor:
-     * her ekran kendi dört köşesinden yerleşiyor ve sıradaki ekran bir
-     * öncekinin kenarından devam ediyor (bkz. kenarSecenekleri).
-     */
-    if (['l', 'u', 'kutu', 'acili'].includes(grup?.tip) && !yer3d) {
-      setYerSira(null)
-      setSihirbazAdim(0)
-      /* Hafif yukarıdan: kutunun üst kapağı da görünüyor (bkz. Kup2D BASLANGIC_EGIM). */
-      setYer3d({ ux: 0.5, uy: 0.5, yaw: 0, egim: 14, kilit: false })
-      return
-    }
-    /*
-     * BİRİKİMLER KORUNUYOR.
-     *
-     * Burada her seferinde temizleniyordu ve sıra ilk ekrana dönüyordu:
-     * yeni bir ekran eklemek, yerleşmiş ekranları yeniden yerleştirtmek
-     * anlamına geliyordu. Sıra yalnızca yerleşmemiş ilk ekrandan
-     * başlıyor; hepsi yerleştiyse adım hiç açılmıyor.
-     */
-    const bos = ilkYerlesmemis()
-    if (bos < 0) return
     setYerNokta([])
-    setYerSira(bos)
+    setYerSira(null)
+    setSihirbazAdim(0)
+    /*
+     * Eldeki duruş korunuyor: yeni ekran eklemek ya da ölçüye geri dönmek
+     * tasarımı fotoğrafın ortasına geri fırlatmıyor. Küpte başlangıç
+     * eğimi hafif yukarıdan, üst kapak da görünsün diye.
+     */
+    setYer3d((y) => y || { ux: 0.5, uy: 0.5, yaw: 0, egim: grup?.tip === 'kutu' ? 14 : 0, kilit: false })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sihirbazAdim, scene, ozelSahne])
+
+  /*
+   * DÖRT KÖŞE AKIŞI UYKUDA.
+   *
+   * Akışın kendisi (sıradaki ekran, köşe toplama, kaydetme) yerinde duruyor
+   * ama hiçbir düğme onu başlatmıyor. Kodu silmek yerine burada açıkça
+   * "kullanılmıyor" diye işaretleniyor: yöntem geri istenirse tek yapılacak
+   * şey yukarıdaki etkiyi eski hâline döndürmek.
+   */
+  void ilkYerlesmemis
+  void dortKoseyeGec
 
   /*
    * ÖLÇÜ DEĞİŞİNCE EKRAN DUVARIN DÜZLEMİNDE BÜYÜYOR.
@@ -12204,7 +12203,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   <button
                     type="button"
                     onClick={ekranEkle}
-                    disabled={scene === 'ozel' && !koseMutlak}
+                    /*
+                     * EKLEME HER MEKÂNDA AÇIK.
+                     *
+                     * Düğme kendi fotoğrafında, eldeki ekranın dört köşesi
+                     * işaretlenmeden pasifti — dört köşe akışı kalkınca
+                     * (bkz. yerleşim etkisi) o koşul hiç sağlanmıyor ve
+                     * fotoğraf kipinde ekran eklenemiyordu. Ekran listesi
+                     * mekândan bağımsız; yeni ekran gruba katılıp tasarımla
+                     * birlikte fotoğrafın üstünde çiziliyor.
+                     */
                     className="rounded-lg bg-brand px-3 py-1.5 text-[14px] font-semibold text-white transition-opacity enabled:hover:opacity-90 disabled:opacity-40"
                   >
                     + {t('ekran.ekle')}
@@ -12519,25 +12527,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           fotoğrafsız sahnede düzenlenecek bir alan olmadığı
                           için gizli.
                         */}
-                        {/* Sığdırılacak bir alan yoksa düğmenin yapacağı iş de yok. */}
-                        {/* Sağ paneldeki ile aynı kural: hep görünür, yoksa pasif. */}
-                        {scene === 'ozel' && ozelSahne && (
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              disabled={!alanIsaretli}
-                              title={alanIsaretli ? undefined : t('ekran.alanaSigdirNot')}
-                              onClick={() => alanIsaretli && tasarimiAlanaSigdir()}
-                              className={`w-full rounded-lg border py-1 text-[13.5px] font-medium transition-colors ${
-                                alanIsaretli
-                                  ? 'border-neutral-300 text-neutral-700 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300'
-                                  : 'cursor-not-allowed border-neutral-200 text-neutral-400 dark:border-[#2c333f] dark:text-neutral-600'
-                              }`}
-                            >
-                              {t('ekran.alanaSigdir')}
-                            </button>
-                          </div>
-                        )}
+                        {/*
+                          "ALANA SIĞDIR" TEK YERDE.
+
+                          Düğme hem burada hem sağdaki Ölçüm bölümünde
+                          duruyordu: aynı işi yapan iki düğme, biri pasif
+                          biri aktif görünebiliyor ve hangisinin geçerli
+                          olduğu belli olmuyordu. İşaretlenen alan ölçümün
+                          parçası; düğme de orada kaldı.
+                        */}
                       </div>
                   </div>
                 )
@@ -13123,7 +13121,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   hazır mekânda ya da mekânsız çalışırken ise değiştirilecek
                   bir fotoğraf yok.
                 */}
-                {!olcuAcik && scene === 'ozel' && (
+                {/*
+                  FOTOĞRAF DÜĞMESİ HİÇ KAYBOLMUYOR.
+
+                  Düğme ölçüm akışı açıkken gizleniyordu; fotoğraf yüklenir
+                  yüklenmez akış kendiliğinden açıldığı için düğme de aynı
+                  anda yok oluyordu. Yanlış fotoğrafı yükleyen kullanıcının
+                  onu değiştirecek yeri kalmıyordu.
+                */}
+                {scene === 'ozel' && (
                 <button
                   type="button"
                   onClick={() => ozelDosyaRef.current?.click()}
@@ -13220,18 +13226,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       </>
                       )
                     ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setYer3d((y) => ({ ...y, kilit: !y.kilit }))}
-                          className="w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90"
-                        >
-                          {yer3d.kilit ? t('yer3d.duzenle') : t('yer3d.bitir')}
-                        </button>
-                        <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {yer3d.kilit ? t('yer3d.sabit') : t('yer3d.ipucu')}
-                        </p>
-                      </>
+                      /*
+                       * "YERLEŞİMİ BİTİR" KALDIRILDI.
+                       *
+                       * Düğme tasarımı kilitliyordu. Bitirilecek bir adım yok:
+                       * tasarım fotoğrafın üstünde duruyor ve istendiği an
+                       * yeri değiştirilebiliyor. Kilit yalnızca kullanıcının
+                       * sürüklemesini sessizce etkisiz kılıyor, sonra da
+                       * "neden taşıyamıyorum" sorusunu doğuruyordu. Geriye
+                       * ne yapılacağını söyleyen tek satır kalıyor.
+                       */
+                      <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                        {t('yer3d.ipucu')}
+                      </p>
                     )}
                     {/*
                       DÖRT KÖŞE SEÇENEĞİ PANELDEN KALKMIYOR.
@@ -13261,20 +13268,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       bir yüzey de yok. Küp bütün hâlinde geliyor, seçenek
                       de karıştırmasın diye gizleniyor.
                     */}
-                    {!!yer3d && grup?.tip !== 'kutu' && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={dortKoseyeGec}
-                          className="mt-1.5 w-full rounded-lg border border-neutral-200 px-4 py-2 text-[14.5px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
-                        >
-                          {t('yer3d.dortKose')}
-                        </button>
-                        <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                          {t('yer3d.dortKoseNot')}
-                        </p>
-                      </>
-                    )}
+                    {/*
+                      "4 KÖŞE İLE YERLEŞTİR" KALDIRILDI — TEK YÖNTEM VAR.
+
+                      İki yerleştirme yolu sunmak, kullanıcıya bizim
+                      çözemediğimiz bir kararı devretmekti. Ölçü referanstan
+                      zaten biliniyor; dört köşe işaretlemek aynı bilgiyi
+                      elle, daha zahmetli ve daha hatalı biçimde yeniden
+                      üretiyordu (bkz. yukarıdaki yerleşim etkisi).
+                    */}
                   </div>
                 )}
 

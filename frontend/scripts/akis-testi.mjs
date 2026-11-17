@@ -427,67 +427,76 @@ async function akis(baslik, yol) {
   }
 }
 
-/* ── A) EKRAN EKRAN YERLEŞTİR ────────────────────────────────────────── */
+/* ── A) TASARIMI FOTOĞRAFA YERLEŞTİR ─────────────────────────────────── */
 /*
- * Referans bitince sıradaki ekran soruluyor. Kullanıcı dört köşeye
- * tıklıyor; perspektif oradan geliyor, sistem fotoğraftan tahmin
- * yapmıyor.
+ * Referans bitince tasarım gerçek ölçüsünde fotoğrafın üstüne geliyor;
+ * üstünden sürüklemek taşıyor, boşluktan sürüklemek döndürüyor. Ekranları
+ * tek tek dört köşesinden yerleştiren eski yol kaldırıldı (bkz. App.jsx,
+ * "REFERANS BİTİNCE TASARIM FOTOĞRAFIN ÜSTÜNE GELİYOR").
  */
-const dortKoseyeTikla = async (s, kx, ky, ken, kboy) => {
-  const t = await tuval(s)
-  const x = t.x + t.w * kx
-  const y = t.y + t.h * ky
-  const en = t.w * ken
-  const boy = t.h * kboy
-  for (const [px, py] of [
-    [x, y],
-    [x + en, y + boy * 0.05],
-    [x + en, y + boy],
-    [x, y + boy * 0.95],
-  ]) {
-    await s.mouse.move(px, py)
-    await s.mouse.down()
-    await s.mouse.up()
-    await s.waitForTimeout(420)
-  }
-  await s.waitForTimeout(900)
-  /* Dort kose konduktan sonra duzeltme firsati var: onay ayri bir adim. */
-  const onaylandi = await s.evaluate(() => {
-    const d = [...document.querySelectorAll('button')].find((x) => (x.textContent || '').trim() === 'Bu ekranı onayla')
-    if (!d) return false
-    d.click()
-    return true
+
+/** 3B yerleşim tutamağı: perspektifi kuran kutu ve içindeki dönüş. */
+const yer3dDurum = (s) =>
+  s.evaluate(() => {
+    const el = [...document.querySelectorAll('div')].find(
+      (d) => d.style.perspective && d.style.position === 'absolute',
+    )
+    if (!el) return null
+    const ic = el.firstElementChild
+    return { sol: el.style.left, ust: el.style.top, donus: ic ? ic.style.transform : '' }
   })
-  await s.waitForTimeout(1600)
-  return onaylandi
+
+const surukle = async (s, x0, y0, dx, dy) => {
+  await s.mouse.move(x0, y0)
+  await s.mouse.down()
+  await s.mouse.move(x0 + dx, y0 + dy, { steps: 12 })
+  await s.mouse.up()
+  await s.waitForTimeout(700)
 }
 
-const a = await akis('A — EKRAN EKRAN YERLEŞTİR', async ({ s, denetle, icerir, dus }) => {
+const a = await akis('A — TASARIMI FOTOĞRAFA YERLEŞTİR', async ({ s, denetle, icerir, dus }) => {
   /* Kaldırılan yollar geri sızmamalı. */
   if (await icerir('Duvar diplerini işaretle')) return dus('kaldırılan "duvar dibi" adımı hâlâ çıkıyor')
   if (await icerir('Ortadaki tutamakla')) return dus('kaldırılan tutamak yönergesi hâlâ çıkıyor')
-  if (!(await icerir('ekranı yerleştirin'))) return dus('ekran yerleştirme yönergesi çıkmadı')
-  if (!(await denetle('yerleştirme adımı açıldı'))) return false
-
-  /* İşaretleme sürerken tasarım gizli olmalı: altındaki yer görünsün. */
-  const once = await tasarimGorunur(s)
-  if (once.var && once.saydamlik > 0.05) return dus('köşeler konurken tasarım görünüyor')
-
-  if (!(await dortKoseyeTikla(s, 0.3, 0.3, 0.25, 0.3))) return dus('"Bu ekranı onayla" düğmesi çıkmadı')
-  if (!(await denetle('ekran yerleştirildi'))) return false
+  if (await icerir('ekranı yerleştirin')) return dus('kaldırılan dört köşe akışı hâlâ açılıyor')
+  if (await icerir('4 köşe ile yerleştir')) return dus('kaldırılan "4 köşe ile yerleştir" düğmesi duruyor')
+  if (await icerir('Yerleşimi bitir')) return dus('kaldırılan "Yerleşimi bitir" düğmesi duruyor')
+  if (!(await denetle('referans bitti, tasarım geldi'))) return false
 
   const g = await tasarimGorunur(s)
-  console.log('  · yerleştikten sonra          :', JSON.stringify(g))
-  if (!g.var || !(g.en > 10)) return dus('tasarım gelmedi')
-  if (!(g.saydamlik > 0.05)) return dus('yerleştiği hâlde tasarım görünmüyor')
+  console.log('  · tasarım                     :', JSON.stringify(g))
+  if (!g.var || !(g.en > 4)) return dus('tasarım fotoğrafa gelmedi')
+  if (!(g.saydamlik > 0.05)) return dus('tasarım geldi ama görünmüyor')
+
+  const t = await tuval(s)
+  const once = await yer3dDurum(s)
+  if (!once) return dus('3B yerleşim katmanı yok')
+  console.log('  · başlangıç                   :', JSON.stringify(once))
+
+  /* TAŞIMA: tasarımın üstünden sürükle. */
+  const kutuY = await s.evaluate(() => {
+    const e = document.querySelector('[data-tasarim-yuz]')
+    const r = e.getBoundingClientRect()
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+  })
+  await surukle(s, kutuY.x, kutuY.y, 150, -80)
+  const tasindi = await yer3dDurum(s)
+  console.log('  · taşıdıktan sonra            :', JSON.stringify(tasindi))
+  if (tasindi.sol === once.sol && tasindi.ust === once.ust) return dus('sürükleme tasarımı taşımadı')
+
+  /* DÖNDÜRME: boş alandan sürükle. */
+  await surukle(s, t.x + 50, t.y + 50, 180, 60)
+  const dondu = await yer3dDurum(s)
+  console.log('  · döndürdükten sonra          :', JSON.stringify(dondu))
+  if (dondu.donus === tasindi.donus) return dus('boş alandan sürüklemek döndürmedi')
+  if (dondu.sol !== tasindi.sol || dondu.ust !== tasindi.ust) return dus('döndürürken tasarım da taşındı')
   return true
 })
 
 /* ── D) SIFIRLA, SONRA BAŞTAN KUR ─────────────────────────────────── */
 const dYol = await akis('D — SIFIRLA VE BAŞTAN KUR', async ({ s, bas, denetle, icerir, dus }) => {
   /* Akışın ORTASINDA sıfırlanıyor: en çok artık state burada kalıyor. */
-  if (!(await icerir('ekranı yerleştirin'))) return dus('yerleştirme adımı açılmadı')
-  if (!(await denetle('yerleştirme adımında (yarım bırakılacak)'))) return false
+  if (!(await denetle('tasarım fotoğrafta (yarım bırakılacak)'))) return false
 
   if (!(await bas('Sıfırla', 1200))) return dus('"Sıfırla" düğmesi bulunamadı')
   if (!(await icerir('Model seçimine kadar her şey silinecek'))) return dus('sıfırlama onayı açılmadı')
@@ -549,9 +558,8 @@ const dYol = await akis('D — SIFIRLA VE BAŞTAN KUR', async ({ s, bas, denetle
   if (!(await kartaSayiYaz(s, 210))) return dus('ikinci kurulumda santim kutusu yok')
   await s.waitForTimeout(900)
   if (!(await bas('Devam', 1800))) return dus('ikinci kurulumda ölçekten sonra "Devam" yok')
-  if (!(await icerir('ekranı yerleştirin'))) return dus('ikinci kurulumda yerleştirme açılmadı')
-  if (!(await denetle('ikinci kurulumda yerleştirme adımı açıldı'))) return false
-  await dortKoseyeTikla(s, 0.3, 0.3, 0.25, 0.3)
+  if (await icerir('ekranı yerleştirin')) return dus('ikinci kurulumda kaldırılan dört köşe akışı açıldı')
+  if (!(await denetle('ikinci kurulumda tasarım yeniden geldi'))) return false
   const g2 = await tasarimGorunur(s)
   console.log('  · ikinci kurulumda            :', JSON.stringify(g2))
   if (!g2.var || !(g2.saydamlik > 0.05)) return dus('ikinci kurulumda tasarım görünmüyor')
