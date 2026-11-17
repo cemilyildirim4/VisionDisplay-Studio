@@ -979,6 +979,10 @@ export default function WallPreview({
   sade = false,
   onColsChange,
   onRowsChange,
+  /* Çizimdeki bir ekrana tıklayınca onu düzenlemeye alan geri çağırma. */
+  onEkranSec = null,
+  /* Hangi ekran düzenleniyor — çizimde çerçeveyle işaretleniyor. */
+  seciliEkranId = null,
   colsMax = Infinity,
   rowsMax = Infinity,
   hideRegions = false,
@@ -1732,6 +1736,8 @@ export default function WallPreview({
                     contentUrl={contentUrl}
                     hideRegions={hideRegions}
                     curveAmount={curveAmount}
+                    onEkranSec={onEkranSec}
+                    seciliEkranId={seciliEkranId}
                   />
                 </div>
               )}
@@ -1828,6 +1834,48 @@ export default function WallPreview({
                         {/* Kart numarasıyla aynı: dizideki yeri değil, kendi sırası. */}
                         {s.sira || i + 1}
                       </span>
+                    ))}
+                  </div>
+                )}
+
+                {/*
+                  z4: EKRAN SEÇİMİ.
+
+                  Çoklu tasarımda çizimdeki bir ekrana tıklamak hiçbir şey
+                  yapmıyordu: hangi ekranın düzenlendiğini yalnızca soldaki
+                  kart listesi söylüyor, ± düğmeleri de hep o ekrana
+                  işliyordu (ölçüldü: 1. ekrana tıklandıktan sonra bile
+                  "Sütun +" 3. ekranı büyütüyor). Artık tıklanan ekran
+                  düzenlemeye geçiyor ve seçili olan çerçeveyle belli
+                  oluyor — ± kontrolleri zaten yalnızca seçili ekranı
+                  değiştiriyor.
+                */}
+                {onEkranSec && placed.length > 1 && (
+                  <div style={{ position: 'absolute', inset: 0, zIndex: 4 }} data-pdf-gizle>
+                    {placed.map((s, i) => (
+                      <button
+                        key={'sec' + i}
+                        type="button"
+                        aria-label={`${s.sira || i + 1}. ekran`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onEkranSec(s.id)
+                        }}
+                        style={{
+                          position: 'absolute',
+                          left: s.xStart,
+                          top: maxHpx - s.hPx,
+                          width: s.wPx,
+                          height: s.hPx,
+                          padding: 0,
+                          background: 'transparent',
+                          borderRadius: 2,
+                          cursor: 'pointer',
+                          /* Seçili olanın çerçevesi; ötekiler görünmez ama tıklanabilir. */
+                          border:
+                            s.id === seciliEkranId ? '2px solid #2962ad' : '2px solid transparent',
+                        }}
+                      />
                     ))}
                   </div>
                 )}

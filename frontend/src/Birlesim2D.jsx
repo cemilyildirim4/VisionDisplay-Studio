@@ -68,6 +68,9 @@ export default function Birlesim2D({
   contentUrl = null,
   hideRegions = false,
   curveAmount = 60,
+  /* Tıklanan ekranı düzenlemeye alan geri çağırma (bkz. WallPreview). */
+  onEkranSec = null,
+  seciliEkranId = null,
   /* Sade kip: kenarlıklar ve ayrım çizgileri kalkıyor. */
   sade = false,
   /*
@@ -362,6 +365,37 @@ export default function Birlesim2D({
                 }deg)`,
               }}
             >
+              {/*
+                SEÇİM ÇERÇEVESİ VE TIKLAMA.
+
+                Birleşik çizimde de tıklanan ekran düzenlemeye geçiyor;
+                seçili olanın kenarı çiziliyor. Katman ekranın üstünde
+                ama saydam, yalnızca kendi dörtgenini yakalıyor.
+              */}
+              {onEkranSec && (
+                <button
+                  type="button"
+                  data-pdf-gizle
+                  aria-label={`${p.e.sira || ''}. ekran`}
+                  onClick={(ev) => {
+                    ev.stopPropagation()
+                    onEkranSec(p.e.id)
+                  }}
+                  style={{
+                    position: 'absolute',
+                    left: -(d.u0 - payL),
+                    top: 0,
+                    width: p.w,
+                    height: p.h,
+                    zIndex: 4,
+                    padding: 0,
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    border:
+                      p.e.id === seciliEkranId ? '2px solid #2962ad' : '2px solid transparent',
+                  }}
+                />
+              )}
               {/* Ekran tam eninde çiziliyor; dilim kendi penceresini gösteriyor. */}
               <div
                 style={{

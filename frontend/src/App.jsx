@@ -10941,6 +10941,19 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               sade={!showMeasurements}
               onColsChange={setCols}
               onRowsChange={setRows}
+              /*
+               * ÇİZİMDEN EKRAN SEÇME.
+               *
+               * Hangi ekranın düzenlendiği yalnızca soldaki kart listesinden
+               * anlaşılıyordu; çizimdeki ekrana tıklamak hiçbir şey
+               * yapmıyordu. Elde duran ekran zaten düzenleniyor, onu
+               * yeniden "düzenlemeye almak" gereksiz.
+               */
+              seciliEkranId={aktifEkranId}
+              onEkranSec={(id) => {
+                if (id === aktifEkranId) return
+                ekraniDuzenle(id)
+              }}
               colsMax={colsMax}
               rowsMax={rowsMax}
               hideRegions={isVideoWall}
