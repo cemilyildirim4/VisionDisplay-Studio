@@ -1,3 +1,5 @@
+import { mekanOlcegi } from './mekanOlcek.js'
+
 /**
  * DIŞ MEKÂN — bina cephesi. Çizim, fotoğraf değil.
  *
@@ -17,16 +19,14 @@
 
 
 /**
- * Cephenin tuvale sığması için ölçek (px/m) — DUVAR ölçüsünden hesaplanır.
+ * Cephenin ölçeği (px/m) — DUVAR ölçüsünden hesaplanır.
  *
- * 0,62: yanlarda gökyüzü ve komşu binalar, altta kaldırım görünsün diye pay
- * bırakılıyor. Cephe tuvali baştan başa kaplasaydı dış mekân değil düz bir
- * yüzey gibi dururdu. Salon.jsx ile aynı oran — iki mekân arasında geçiş
- * yapınca ekranın büyüklüğü zıplamasın diye.
+ * Salonla BİREBİR aynı hesap (bkz. mekanOlcek.js): iki mekân arasında geçiş
+ * yapınca ekranın büyüklüğü zıplamasın diye. Duvar ölçüsü büyüdükçe cephe de
+ * büyüyor; yanlarda gökyüzü ve komşu binalar, altta kaldırım için pay kalıyor.
  */
 export function cepheOlcek(tuvalW, tuvalH, duvarWm, duvarHm) {
-  if (!tuvalW || !tuvalH || !(duvarWm > 0) || !(duvarHm > 0)) return null
-  return Math.min((tuvalW * 0.62) / duvarWm, (tuvalH * 0.62) / duvarHm)
+  return mekanOlcegi(tuvalW, tuvalH, duvarWm, duvarHm)
 }
 
 export default function Cephe({

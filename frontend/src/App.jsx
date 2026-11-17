@@ -19,6 +19,7 @@ import DikeyUyari from './DikeyUyari.jsx'
 import ChatHelp from './ChatHelp.jsx'
 import Scene, { PANO_ID, SALON_ID, CEPHE_ID } from './Scene.jsx'
 import { salonOlcek } from './Salon.jsx'
+import { mekanOlcegi } from './mekanOlcek.js'
 import {
   santimOku,
   referansOlcek,
@@ -3633,13 +3634,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * yakınlaşmasıyla çözülüyor (bkz. sahneYakinlik).
      */
     /*
-     * DUVARI ESNEYEN SAHNE: ölçek duvarın tuvale sığdırılmasından geliyor —
-     * çizilmiş iç/dış mekânla birebir aynı kural (salonOlcek). Böylece 6 m
-     * duvar da 18 m duvar da kadraja oturuyor, tasarım duvara göre ölçekli
-     * kalıyor.
+     * DUVARI ESNEYEN SAHNE (AVM koridoru, şehir meydanı): ölçek çizilmiş
+     * iç/dış mekânla BİREBİR aynı kuraldan geliyor (bkz. mekanOlcek.js).
+     * Duvar ölçüsünü büyütmek fotoğraftaki duvarı da büyütüyor — dokuz dilim
+     * zaten yalnızca duvarı esnetiyor, çevresi yerinde kalıyor.
      */
     if (fotoSahne?.duvarKutu && mekanDuvarWm > 0 && mekanDuvarHm > 0) {
-      return salonOlcek(tuvalBoyut.w, tuvalBoyut.h, mekanDuvarWm, mekanDuvarHm)
+      return mekanOlcegi(tuvalBoyut.w, tuvalBoyut.h, mekanDuvarWm, mekanDuvarHm)
     }
     if (!fotoSahne?.dosya || !(ekranWm > 0) || !(ekranHm > 0)) return null
     const yer = fotoYerlesim(fotoSahne, tuvalBoyut.w, tuvalBoyut.h)

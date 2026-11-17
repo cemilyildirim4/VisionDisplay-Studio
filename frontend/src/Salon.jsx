@@ -1,3 +1,5 @@
+import { mekanOlcegi } from './mekanOlcek.js'
+
 /**
  * TOPLANTI SALONU — çizilmiş mekân, fotoğraf değil.
  *
@@ -22,19 +24,19 @@
  */
 
 /**
- * Salonun tuvale sığması için ölçek (px/m) — DUVAR ölçüsünden hesaplanır.
+ * Salonun ölçeği (px/m) — DUVAR ölçüsünden hesaplanır.
  *
  * Eskiden salon ekrana orantılıydı: duvar kutularına ne yazılırsa yazılsın
  * oda aynı görünüyordu. Artık "Duvar" alanları gerçekten arka duvarı, "Ekran"
  * alanları da ekranı belirliyor; ikisi bağımsız ve ikisi de gerçek metre.
  *
- * 0,62: yanlarda, üstte ve altta yan duvarların/tavanın/zeminin görünmesi için
- * pay bırakılıyor. Duvar tuvali baştan başa kaplasaydı oda değil düz bir yüzey
- * gibi dururdu.
+ * Hesabın kendisi bütün mekânlarda ortak (bkz. mekanOlcek.js): duvar ölçüsünü
+ * büyütünce odadaki duvar da büyüyor. Önceki "duvarı tuvale sığdır" kuralında
+ * duvar her ölçüde tuvalin %62'sini kaplıyordu, yani duvar ölçüsünü
+ * değiştirmek mekânda hiçbir şeyi değiştirmiyordu.
  */
 export function salonOlcek(tuvalW, tuvalH, duvarWm, duvarHm) {
-  if (!tuvalW || !tuvalH || !(duvarWm > 0) || !(duvarHm > 0)) return null
-  return Math.min((tuvalW * 0.62) / duvarWm, (tuvalH * 0.62) / duvarHm)
+  return mekanOlcegi(tuvalW, tuvalH, duvarWm, duvarHm)
 }
 
 export default function Salon({
