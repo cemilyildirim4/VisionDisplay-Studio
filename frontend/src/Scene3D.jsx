@@ -8,7 +8,6 @@ import { USDZExporter } from 'three/examples/jsm/exporters/USDZExporter.js'
 import * as THREE from 'three'
 import { useLang } from './useLang.js'
 import { curveDepthFor, DEFAULT_CONTENT_SRC } from './content.js'
-import { ORNEK_MEKANLAR } from './ornekMekanlar.js'
 import { videoSrcFor, createVideoElement } from './videoContent.js'
 import { birlesimDilimleri } from './birlesimOlcu.js'
 /* AR yerleştirme akışının görünen parçaları kamera ekranıyla ORTAK — bkz. ArYerlestirme.jsx */
@@ -1094,8 +1093,80 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
   )
 }
 
-function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenType, curveAmount, leftCols, rightCols, lYon, screens, grupTipi }) {
+/**
+ * ÇİZİLMİŞ ODA — zemin, arka duvar ve iki yan duvar.
+ *
+ * 3B görünümde tasarım boşlukta duruyordu: arkasında ya düz bir fotoğraf ya
+ * da koyu bir hiçlik vardı, altında zemin yoktu. Ekranın ne kadar büyük
+ * olduğu da nereye monte edildiği de okunmuyordu — "Örnek mekân" denen şey
+ * bir duvar kâğıdından ibaretti.
+ *
+ * Oda tasarımın ölçüsünden türüyor: ekran duvara yaslanıyor, zemin ekranın
+ * dibinden başlıyor, yan duvarlar kadrajı kapatıyor. Yüzeyler İÇE bakıyor
+ * (FrontSide): kamera uzaklaşıp odanın dışına çıktığında duvarlar görüşü
+ * kesmiyor, kendiliğinden kayboluyorlar.
+ */
+function Oda3D({ olcu }) {
+  if (!olcu) return null
+  const { w, h, d, merkez } = olcu
+  /* Oda tasarımdan belirgin biçimde büyük: ekran odayı doldurmamalı. */
+  const odaW = Math.max(7, w * 2.4)
+  const odaH = Math.max(3.2, h * 1.9)
+  const odaD = Math.max(9, d + 8)
+  /* Zemin yüksekliği ölçüyle birlikte geliyor; kamera da aynı sayıya bakıyor. */
+  const zeminY = olcu.zeminY
+  const arkaZ = merkez.z - d / 2 - 0.02
+  const onZ = arkaZ + odaD
+  const ortaZ = (arkaZ + onZ) / 2
+  return (
+    <group>
+      {/* ZEMİN — ekranın dibinden öne doğru. */}
+      <mesh position={[merkez.x, zeminY - 0.002, ortaZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[odaW, odaD]} />
+        <meshStandardMaterial color="#b4ada2" roughness={0.95} metalness={0} />
+      </mesh>
+      {/* ARKA DUVAR — ekran buna asılı. */}
+      <mesh position={[merkez.x, zeminY + odaH / 2, arkaZ]} receiveShadow>
+        <planeGeometry args={[odaW, odaH]} />
+        <meshStandardMaterial color="#e9ebef" roughness={0.95} metalness={0} />
+      </mesh>
+      {/*
+        SÜPÜRGELİK — duvarın zeminle birleştiği yer.
+
+        Düz beyaz bir duvar ile düz bir zemin yan yana gelince araları tek
+        bir çizgiye iniyor ve oda bir odadan çok iki boyalı yüzeye
+        benziyordu. İnce bir süpürgelik birleşimi okunur kılıyor; gerçek
+        odalarda da orada bir şey vardır.
+      */}
+      <mesh position={[merkez.x, zeminY + 0.05, arkaZ + 0.012]}>
+        <planeGeometry args={[odaW, 0.1]} />
+        <meshStandardMaterial color="#c9ccd3" roughness={0.7} metalness={0.05} />
+      </mesh>
+
+      {/* YAN DUVARLAR — içe bakıyor. */}
+      <mesh
+        position={[merkez.x - odaW / 2, zeminY + odaH / 2, ortaZ]}
+        rotation={[0, Math.PI / 2, 0]}
+      >
+        <planeGeometry args={[odaD, odaH]} />
+        <meshStandardMaterial color="#dfe2e8" roughness={0.95} metalness={0} />
+      </mesh>
+      <mesh
+        position={[merkez.x + odaW / 2, zeminY + odaH / 2, ortaZ]}
+        rotation={[0, -Math.PI / 2, 0]}
+      >
+        <planeGeometry args={[odaD, odaH]} />
+        <meshStandardMaterial color="#dfe2e8" roughness={0.95} metalness={0} />
+      </mesh>
+    </group>
+  )
+}
+
+function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenType, curveAmount, leftCols, rightCols, lYon, screens, grupTipi, oda = false }) {
   const { camera } = useThree()
+  const kontrol = useThree((d) => d.controls)
+  /* Tasarımın gerçek sınır kutusu — hem kamera hem oda buradan. */
+  const [olcu, setOlcu] = useState(null)
   const cabinetCount = screens?.length
     ? screens.reduce((acc, s) => acc + Math.max(1, s.cols || 1) * Math.max(1, s.rows || 1), 0)
     : cols * rows
@@ -1121,6 +1192,69 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
   useEffect(() => {
     if (urunRef.current) onReady?.(urunRef.current, camera)
   }, [camera, onReady, screens, cols, rows, screenType, content, contentUrl])
+
+  /*
+   * KAMERA TASARIMIN TAMAMINI GÖSTERİYOR.
+   *
+   * Açılış uzaklığı tasarımın en ve boyundan HESAPLANIYORDU; ama o hesap
+   * ekranların yan yana dizildiğini varsayıyor, köşeli birleşimlerde (L, U,
+   * açılı) derinliği ve kanatların yana taşmasını hiç görmüyordu. Sonuç:
+   * tasarımın bir kanadı kadrajın dışında kalıyordu.
+   *
+   * Artık ölçü ÇİZİLEN nesnenin kendisinden okunuyor (Box3): ne çizildiyse
+   * o kadraja giriyor. Kamera kutunun merkezine bakıyor, uzaklık dikey ve
+   * yatay görüş açısının gerektirdiğinin büyüğü artı tasarımın yarı
+   * derinliği; %15 pay kenarların kadraja yapışmasını önlüyor.
+   */
+  useEffect(() => {
+    const nesne = urunRef.current
+    if (!nesne) return
+    const kutu = new THREE.Box3().setFromObject(nesne)
+    if (kutu.isEmpty()) return
+    const boyut = kutu.getSize(new THREE.Vector3())
+    const merkez = kutu.getCenter(new THREE.Vector3())
+    if (!(boyut.x > 0) || !(boyut.y > 0)) return
+    /*
+     * EKRAN DUVARA ASILI, ZEMİNE DEĞİL.
+     *
+     * Zemin tasarımın tam dibine konunca 30 cm'lik bir ekran yerde duruyor
+     * gibi görünüyordu. Gerçekte ekran duvara monte ediliyor ve merkezi
+     * kabaca göz hizasında (~1,5 m) oluyor. Tasarım bundan yüksekse kendi
+     * ağırlığıyla zemine iner: 3 m'lik bir duvar ekranı zaten yerden başlar.
+     */
+    const montajM = oda ? Math.max(0, 1.5 - boyut.y / 2) : 0
+    const zeminY = merkez.y - boyut.y / 2 - montajM
+    setOlcu({ w: boyut.x, h: boyut.y, d: Math.max(0.05, boyut.z), merkez, zeminY })
+    const dikeyYari = ((camera.fov || 45) / 2) * (Math.PI / 180)
+    const yatayYari = Math.atan(Math.tan(dikeyYari) * (camera.aspect || 1.6))
+    /*
+     * ODA VARKEN KADRAJ ZEMİNİ DE ALIYOR.
+     *
+     * Kamera yalnızca tasarıma bakınca 30 cm'lik bir ekranda 70
+     * santimetrelik bir kadraj çıkıyordu: odanın duvarı tek renk bir fona
+     * dönüyor, zemin hiç görünmüyordu. Kadraj artık ZEMİNDEN tasarımın bir
+     * miktar üstüne kadar; bakış noktası da ikisinin ortası. Ekranın ne
+     * kadar büyük olduğu ancak zeminle birlikte okunuyor.
+     */
+    /* Zeminin biraz ötesi de kadrajda: alt bar zemin çizgisini yutuyordu. */
+    const altY = oda ? zeminY - 0.55 : merkez.y - boyut.y / 2
+    const ustY = merkez.y + boyut.y / 2 + (oda ? 0.6 : 0)
+    const hedefY = oda ? (altY + ustY) / 2 : merkez.y
+    const gorunenBoy = oda ? Math.max(ustY - altY, 2.4) : boyut.y * 1.15
+    const gorunenEn = oda ? Math.max(boyut.x * 1.35, 3.2) : boyut.x * 1.15
+    const uzak =
+      Math.max(0.6, gorunenBoy / 2 / Math.tan(dikeyYari), gorunenEn / 2 / Math.tan(yatayYari)) +
+      boyut.z / 2
+    camera.position.set(merkez.x, hedefY, merkez.z + uzak)
+    camera.near = Math.max(0.02, uzak / 200)
+    camera.far = Math.max(60, uzak * 20)
+    camera.updateProjectionMatrix()
+    if (kontrol?.target) {
+      kontrol.target.set(merkez.x, hedefY, merkez.z)
+      kontrol.update?.()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camera, kontrol, screens, cols, rows, screenType, curveAmount, grupTipi, model, oda])
 
   return (
     <>
@@ -1152,8 +1286,17 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
         />
       </group>
 
-      {/* Zemin gölgesi en yüksek ekranın altına oturur (çoklu ekranda boylar farklı) */}
-      <ContactShadows position={[0, -(enYuksekRows * (model?.heightMm || 500)) / 2000 - 0.05, 0]} opacity={0.45} scale={10} blur={2} far={2} />
+      {/* Çizilmiş oda — arka plan fotoğrafı yokken (bkz. Oda3D). */}
+      {oda && <Oda3D olcu={olcu} />}
+
+      {/*
+        ZEMİN GÖLGESİ — tasarımın hemen altında.
+
+        Oda çiziliyorsa ve ekran duvara asılıysa (altında boşluk var)
+        gölge zemine değil, duvara düşen yumuşak bir iz olarak kalıyor;
+        tasarımın dibine çizilen sert gölge orada havada duruyordu.
+      */}
+      <ContactShadows position={[0, -(enYuksekRows * (model?.heightMm || 500)) / 2000 - 0.05, 0]} opacity={oda ? 0.22 : 0.45} scale={10} blur={2} far={2} />
     </>
   )
 }
@@ -1768,8 +1911,23 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
    * Boşken arkada koyu stüdyo zemini kalır — eski davranış aynen korunuyor.
    */
   const [arkaFoto, setArkaFoto] = useState(null)
-  const [ornekAcik, setOrnekAcik] = useState(false)
   const fotoRef = useRef(null)
+  /*
+   * DÖNDÜRME İPUCU GÖRÜNÜR YERDE.
+   *
+   * İpucu yalnızca alt barın en altında, sönük gri bir satırdı: 3B açılınca
+   * gözün gittiği yer sahnenin ortası ve kullanıcı sahnenin döndürülebildiğini
+   * hiç fark etmiyordu. Aynı cümle artık sahnenin üstünde bir rozet olarak
+   * duruyor ve ilk dokunuşta ya da birkaç saniye sonra kendiliğinden
+   * kayboluyor — kalıcı bir engel değil, bir kez söylenen bir şey.
+   */
+  const [ipucu, setIpucu] = useState(true)
+  useEffect(() => {
+    if (!open) return undefined
+    setIpucu(true)
+    const z = setTimeout(() => setIpucu(false), 6000)
+    return () => clearTimeout(z)
+  }, [open])
 
   /*
    * 3B, 2D'DEKİ MEKÂNLA AÇILIYOR.
@@ -1813,7 +1971,6 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
     const okuyucu = new FileReader()
     okuyucu.onload = () => {
       setArkaFoto(okuyucu.result)
-      setOrnekAcik(false)
     }
     okuyucu.readAsDataURL(f)
   }
@@ -1826,7 +1983,6 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
    */
   const kapat = useCallback(() => {
     setArkaFoto(null)
-    setOrnekAcik(false)
     onClose?.()
   }, [onClose])
 
@@ -1958,6 +2114,7 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
       */}
       <Canvas
         shadows
+        onPointerDown={() => setIpucu(false)}
         gl={{ preserveDrawingBuffer: true }}
         /* Açılış: tam karşıdan, tasarım kadrajı dolduracak uzaklıkta. */
         camera={{
@@ -1981,6 +2138,8 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           lYon={lYon}
           screens={screens}
           grupTipi={grupTipi}
+          /* Arka planda fotoğraf yoksa mekân çiziliyor: zemin + üç duvar. */
+          oda={!arkaFoto}
         />
         <IlkKare onIlkKare={() => setSahneHazir(true)} />
         {/*
@@ -2012,6 +2171,21 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
         />
       </Canvas>
 
+      {/* Döndürme ipucu — sahnenin üstünde, ilk dokunuşta kayboluyor. */}
+      {ipucu && sahneHazir && (
+        <div className="pointer-events-none absolute top-14 left-1/2 z-20 -translate-x-1/2 px-3">
+          <div className="flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-[12.5px] text-white/90 shadow-lg backdrop-blur-sm">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3.5 12a8.5 8.5 0 0 1 14.5-6" />
+              <path d="M20.5 12a8.5 8.5 0 0 1-14.5 6" />
+              <path d="M18 2.5V6h-3.5" />
+              <path d="M6 21.5V18h3.5" />
+            </svg>
+            <span>{t('scene3d.hint')}</span>
+          </div>
+        </div>
+      )}
+
       {/* Sahne kurulana kadar: kapkara ekran "donmuş" izlenimi veriyordu. */}
       {!sahneHazir && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#0b0d12] text-white/70">
@@ -2021,31 +2195,10 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
       )}
 
       {/*
-        ÖRNEK MEKÂN ŞERİDİ — alt barın üstünde açılıp kapanır; kameradaki
-        şeridin birebir karşılığı, aynı görselleri kullanır.
+        ÖRNEK MEKÂN FOTOĞRAF ŞERİDİ KALDIRILDI — yerini çizilmiş oda aldı
+        (bkz. Oda3D). Fotoğraflar kamera görünümünde kullanılmaya devam
+        ediyor (ArView, ORNEK_MEKANLAR).
       */}
-      {ornekAcik && (
-        <div className="absolute bottom-24 left-2 right-2 sm:bottom-24 sm:inset-x-0 px-2 sm:px-4">
-          <div className="flex gap-2 overflow-x-auto pb-1 justify-start sm:justify-center max-w-full">
-            {ORNEK_MEKANLAR.map((o) => (
-              <button
-                key={o.yol}
-                type="button"
-                onClick={() => {
-                  setArkaFoto(o.yol)
-                  setOrnekAcik(false)
-                }}
-                className={`shrink-0 w-24 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                  arkaFoto === o.yol ? 'border-brand' : 'border-white/40 hover:border-white/80'
-                }`}
-                title={t(o.ad)}
-              >
-                <img src={o.yol} alt={t(o.ad)} className="w-full h-full object-cover" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ---------------------------------------------------------- ALT BAR */}
       <div className="absolute bottom-2 left-2 right-2 sm:bottom-0 sm:inset-x-0 pb-3 sm:pb-4 pt-6 sm:pt-8 bg-gradient-to-t from-black/80 to-transparent">
@@ -2057,11 +2210,21 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
             yapılan mekânlarda (İç/Dış mekân) fotoğraf olmadığı için
             buradaki örnek şeridi açılıyor.
           */}
+          {/*
+            "ÖRNEK MEKÂN" = ÇİZİLMİŞ ODA.
+
+            Düğme hazır oda FOTOĞRAFLARINDAN birini arkaya yapıştıran bir
+            şerit açıyordu: tasarım yine boşlukta duruyor, fotoğraf da
+            perspektifi tutmadığı için ekran odanın içinde değil önünde
+            asılı görünüyordu. Artık gerçek bir oda çiziliyor — zemin, arka
+            duvar, yan duvarlar — ve ekran o odanın duvarında duruyor
+            (bkz. Oda3D).
+          */}
           <ArkaPlanDugme
-            onClick={() => (sahneFoto ? setArkaFoto(sahneFoto) : setOrnekAcik((a) => !a))}
+            onClick={() => setArkaFoto(null)}
             etiket={t('ar.background')}
             deger={t('ar.samples')}
-            aktif={ornekAcik || (!!sahneFoto && arkaFoto === sahneFoto)}
+            aktif={!arkaFoto}
           />
           {/*
             FOTOĞRAF: KULLANICININ 2D'DE YÜKLEDİĞİ.
@@ -2076,14 +2239,10 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
             pasif={!kullaniciFoto}
             aktif={!!kullaniciFoto && arkaFoto === kullaniciFoto}
           />
-          {/* Vazgeçme yolu: arka planı kaldırıp koyu stüdyo zeminine döner */}
-          {arkaFoto && (
-            <ArkaPlanDugme
-              onClick={() => setArkaFoto(null)}
-              etiket={t('ar.background')}
-              deger={t('ar.removeBg')}
-            />
-          )}
+          {/*
+            "Arka planı kaldır" kalktı: fotoğrafı kaldırmak ile örnek mekâna
+            dönmek artık aynı şey, iki düğmeye gerek yok.
+          */}
         </div>
         {/* Pasif seçeneğin sebebi: kullanıcı neden basamadığını bilsin. */}
         {!kullaniciFoto && (
