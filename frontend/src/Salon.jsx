@@ -125,14 +125,37 @@ export default function Salon({
               points={`${onSol},${onUst} ${onSag},${onUst} ${duvarSag},${tavanY} ${duvarSol},${tavanY}`}
             />
           </clipPath>
+          {/* Zemin derzleri yan duvarlara taşmasın. */}
+          <clipPath id="salon-zemin-kirp">
+            <polygon
+              points={`${onSol},${onAlt} ${onSag},${onAlt} ${duvarSag},${sahneY} ${duvarSol},${sahneY}`}
+            />
+          </clipPath>
           <linearGradient id="salon-tavan" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#f2f4f7" />
             <stop offset="100%" stopColor="#dfe3ea" />
           </linearGradient>
+          {/*
+            ZEMİN — düz kahverengi bir levha yerine kademeli bir yüzey.
+
+            Eski iki duraklı degrade, tuvalin alt yarısını tek parça koyu
+            kahverengiye boyuyordu; yatay bir yüzey değil, arkada duran
+            başka bir duvar gibi duruyordu (dış mekândaki zeminde de aynı
+            sorun vardı ve orada derzlerle çözülmüştü).
+          */}
           <linearGradient id="salon-zemin" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#b9a58c" />
-            <stop offset="100%" stopColor="#8a7862" />
+            <stop offset="0%" stopColor="#cfc4b4" />
+            <stop offset="35%" stopColor="#b6a893" />
+            <stop offset="100%" stopColor="#8d7f6c" />
           </linearGradient>
+          {/*
+            KÖŞE GÖLGESİ — duvarların birleştiği yerdeki yumuşak kararma.
+            Odanın kutu olduğunu çizgi çekmeden anlatıyor.
+          */}
+          <radialGradient id="salon-kose-golge" cx="0.5" cy="0.5" r="0.62">
+            <stop offset="55%" stopColor="#2b3442" stopOpacity="0" />
+            <stop offset="100%" stopColor="#2b3442" stopOpacity="0.16" />
+          </radialGradient>
           <linearGradient id="salon-duvar-sol" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#d3d8e0" />
             <stop offset="100%" stopColor="#f0f2f6" />
@@ -141,9 +164,19 @@ export default function Salon({
             <stop offset="0%" stopColor="#f0f2f6" />
             <stop offset="100%" stopColor="#d3d8e0" />
           </linearGradient>
+          {/*
+            ARKA DUVAR ODANIN PARÇASI.
+
+            Tonu yan duvarlardan belirgin biçimde açıktı; oda beyaz,
+            ortasındaki duvar ayrı ve daha parlak bir levha gibi
+            duruyordu — "arka duvardaki açık panel" denen şey buydu.
+            Artık yan duvarların duvara komşu ucuyla (#f0f2f6) aynı
+            tondan başlıyor ve çok az koyulaşıyor; sınırı yalnızca
+            köşelerdeki yumuşak gölge çiziyor.
+          */}
           <linearGradient id="salon-arka" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#eef0f4" />
-            <stop offset="100%" stopColor="#dcdfe6" />
+            <stop offset="0%" stopColor="#f0f2f6" />
+            <stop offset="100%" stopColor="#e6e9ef" />
           </linearGradient>
           {/* Ekranın duvara vuran ışığı */}
           <radialGradient id="salon-isik" cx="0.5" cy="0.5" r="0.5">
@@ -194,16 +227,27 @@ export default function Salon({
              * çizgisidir. Eskiden ön ucu tuvalin kenarına, arka ucu gelişigüzel
              * bir orana konuyordu; hiçbiri kaçış noktasında birleşmiyordu.
              */
+            /*
+             * ŞERİDİN ÖNE DOĞRU AÇILMASI SINIRLI.
+             *
+             * Genişlik tam perspektifle (×k) büyütülüyordu. k, ön çerçeveyi
+             * tuvali taşıracak kadar büyütmek için seçiliyor ve küçük bir
+             * duvarda 8–10'a çıkıyor: arkada 2 piksellik şerit önde 20
+             * piksel oluyor ve tavanda dev çapraz bantlar beliriyordu —
+             * "artefakt gibi duruyor" denen şey buydu. Gerçek bir aydınlatma
+             * hattının eni de sabittir; perspektifte yalnızca bir miktar
+             * genişler. Çarpan 2,2 ile sınırlı ve şerit çok daha sönük.
+             */
             const arkaX = duvarSol + t * (duvarSag - duvarSol)
             const [onX, onY] = ileri(arkaX, tavanY)
-            const arkaYari = Math.max(0.6, (duvarSag - duvarSol) * 0.006)
-            const onYari = arkaYari * k
+            const arkaYari = Math.max(0.5, (duvarSag - duvarSol) * 0.004)
+            const onYari = arkaYari * Math.min(k, 2.2)
             return (
               <polygon
                 key={i}
                 points={`${onX - onYari},${onY} ${onX + onYari},${onY} ${arkaX + arkaYari},${tavanY} ${arkaX - arkaYari},${tavanY}`}
                 fill="#8ea0b8"
-                opacity="0.15"
+                opacity="0.09"
               />
             )
           })}
@@ -215,25 +259,77 @@ export default function Salon({
           odayı kutu olarak okumuyordu. Dört köşe çizgisi de kaçış noktasında
           birleştiği için derinliği doğrudan anlatıyor.
         */}
-        <g stroke="#9aa6b8" strokeWidth="1" opacity="0.35" fill="none">
+        {/*
+          ZEMİN DERZLERİ — kaçış noktasında birleşen kaplama çizgileri.
+
+          Dış mekânın zemininde kullanılan kuralın aynısı: kaçış noktasına
+          giden derzler ve izleyiciye yaklaştıkça aralığı açılan enine
+          çizgiler (perspektifte uzak sıralar sıkışır). İkisi de sönük;
+          zemin ekranın önüne geçmemeli.
+        */}
+        <g clipPath="url(#salon-zemin-kirp)" opacity="0.4">
+          {[0, 0.2, 0.4, 0.6, 0.8, 1].map((t, i) => {
+            const arkaX = duvarSol + t * (duvarSag - duvarSol)
+            const [onX, onY] = ileri(arkaX, sahneY)
+            return (
+              <line
+                key={`zd${i}`}
+                x1={arkaX}
+                y1={sahneY}
+                x2={onX}
+                y2={onY}
+                stroke="#5d5142"
+                strokeWidth={Math.max(0.6, tuvalW * 0.0011)}
+              />
+            )
+          })}
+          {[1, 2, 3, 4].map((i) => {
+            const t = i / 4
+            const y = sahneY + (onAlt - sahneY) * t * t
+            return (
+              <line
+                key={`ze${i}`}
+                x1={0}
+                y1={y}
+                x2={tuvalW}
+                y2={y}
+                stroke="#5d5142"
+                strokeWidth={Math.max(0.6, tuvalW * 0.0009)}
+                opacity="0.55"
+              />
+            )
+          })}
+        </g>
+
+        {/*
+          KÖŞE ÇİZGİLERİ — duvar/tavan/zemin birleşimleri.
+
+          Eskiden 0,35 opaklıkta çizgilerdi ve arka duvarı çerçeveleyip onu
+          mekândan ayrı bir levha gibi gösteriyordu. Artık yalnızca bir iz:
+          odanın kutu olduğunu asıl köşe gölgesi anlatıyor.
+        */}
+        <g stroke="#9aa6b8" strokeWidth="1" opacity="0.16" fill="none">
           <polyline points={`${onSol},${onUst} ${duvarSol},${tavanY} ${duvarSag},${tavanY} ${onSag},${onUst}`} />
           <polyline points={`${onSol},${onAlt} ${duvarSol},${sahneY} ${duvarSag},${sahneY} ${onSag},${onAlt}`} />
           <line x1={duvarSol} y1={tavanY} x2={duvarSol} y2={sahneY} />
           <line x1={duvarSag} y1={tavanY} x2={duvarSag} y2={sahneY} />
         </g>
 
+        {/* Köşelere doğru yumuşak kararma — odayı kutu yapan asıl şey. */}
+        <rect x={0} y={0} width={tuvalW} height={tuvalH} fill="url(#salon-kose-golge)" />
+
         {/* Ekranın duvara vuran soğuk ışığı */}
         <ellipse cx={cx} cy={cy} rx={wPx * 1.35} ry={hPx * 1.9} fill="url(#salon-isik)" />
 
-        {/* Sahne alnı — ekranın altındaki podyumun ön kenarı */}
-        <rect
-          x={duvarSol}
-          y={sahneY}
-          width={duvarSag - duvarSol}
-          height={Math.max(1, hPx * 0.012)}
-          fill="#9aa1ac"
-          opacity="0.5"
-        />
+        {/*
+          SAHNE ALNI KALDIRILDI.
+
+          Duvarın tam dibinde, duvar genişliğinde gri bir bant çiziliyordu.
+          Podyum kenarı olsun diye konmuştu ama odada podyum yok; yaptığı tek
+          şey arka duvarı alttan çerçeveleyip onu ayrı bir levha gibi
+          göstermekti. Duvarın zeminle birleştiği yeri köşe çizgisi ve köşe
+          gölgesi zaten anlatıyor.
+        */}
 
         {/*
           KASA (ekranın çevresindeki koyu çerçeve) KALDIRILDI.

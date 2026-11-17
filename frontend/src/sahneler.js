@@ -220,6 +220,16 @@ export const SAHNELER = [
      * yeniden ölçüldü: duvar x 384–1306, y 410–590; altında doğrudan döşeme.
      */
     duvarKutu: { x0: 384, y0: 410, x1: 1306, y1: 590 },
+    /*
+     * DUVAR MEYDANDA DURAN BİR YÜZEY.
+     *
+     * Burada duvar sınırı çizilmiyordu: doku dokuz dilim esnediği için
+     * nerede bittiği belli olmuyor, duvar meydanın ortasında havada duran
+     * açık bir blok gibi görünüyordu. AVM koridorundaki aynı işaret
+     * (ince kenar + dışa düşen gölge) buraya da konuyor; üstüne kaide ve
+     * zemine düşen temas gölgesi ekleniyor (bkz. DuvarDilim).
+     */
+    duvarYuzeyi: true,
     maskeli: false,
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).

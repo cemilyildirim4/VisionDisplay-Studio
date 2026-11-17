@@ -105,7 +105,49 @@ export default function DuvarDilim({ sahne, kutu, tuvalW, tuvalH, duvarWpx, duva
    * çizgisi ve dışa düşen gölge. Tıklamaya kapalı, ekranın altında kalıyor.
    */
   if (sahne.duvarYuzeyi) {
+    /*
+     * KAİDE VE TEMAS GÖLGESİ.
+     *
+     * Kenar çizgisi duvarın nerede bittiğini söylüyordu ama duvar yine de
+     * zemine BASMIYOR gibi duruyordu: dibinde ne bir kaide ne de bir gölge
+     * vardı, dokunun bittiği yerde doku başlıyordu. Gerçek bir duvarın
+     * dibinde iki şey olur — biraz daha geniş bir kaide ve zemine düşen
+     * yumuşak bir temas gölgesi. İkisi de duvarın ölçüsüyle orantılı.
+     */
+    const kaideH = Math.max(3, duvarHpx * 0.045)
+    const kaideTasma = Math.max(2, duvarWpx * 0.008)
+    /* Temas gölgesi kaidenin dibinde, duvardan geniş ve çok yumuşak. */
     dilimler.push(
+      <div
+        key="duvar-temas-golge"
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: duvarSol - duvarWpx * 0.06,
+          top: duvarUst + duvarHpx + kaideH - kaideH * 0.4,
+          width: duvarWpx * 1.12,
+          height: Math.max(6, duvarHpx * 0.1),
+          pointerEvents: 'none',
+          background:
+            'radial-gradient(50% 50% at 50% 0%, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.18) 55%, rgba(0,0,0,0) 100%)',
+          filter: 'blur(1.5px)',
+        }}
+      />,
+      <div
+        key="duvar-kaide"
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: duvarSol - kaideTasma,
+          top: duvarUst + duvarHpx,
+          width: duvarWpx + kaideTasma * 2,
+          height: kaideH,
+          pointerEvents: 'none',
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(0,0,0,0.16) 55%, rgba(0,0,0,0.3) 100%)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
+        }}
+      />,
       <div
         key="duvar-sinir"
         aria-hidden="true"
