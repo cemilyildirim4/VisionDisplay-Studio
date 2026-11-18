@@ -1268,14 +1268,22 @@ export default function WallPreview({
           return { enM: k.cizimEn / 1000, boyM: k.cizimBoy / 1000 }
         })()
       : null
-    const wallWm = Math.max(
-      0.1,
-      Number(width) || 0,
-      kaplanan ? 0 : totalWm,
-      grupGercekWm,
-      kupKutuM?.enM || 0,
-    )
-    const wallHm = Math.max(0.1, Number(height) || 0, maxHm, kupKutuM?.boyM || 0)
+    /*
+     * DUVAR NE YAZILDIYSA O.
+     *
+     * Duvar "en az tasarım kadar" çiziliyordu: 0,90 m yazılan duvar 1,28
+     * m'lik tasarımla birlikte 1,28 m'ye esniyor, kullanıcının yazdığı sayı
+     * çizimde hiçbir şeye karşılık gelmiyordu. Tasarım duvardan büyükse
+     * artık duvarın DIŞINA taşıyor — gerçekte de öyle olurdu — ve sol
+     * panelde "Tasarım duvardan büyük" yazıyor.
+     *
+     * Kadraj ayrı bir hesap: ölçek ikisinin BÜYÜĞÜNE göre seçiliyor ki
+     * taşan kısım tuvalin dışında kalmasın.
+     */
+    const wallWm = Math.max(0.1, Number(width) || 0)
+    const wallHm = Math.max(0.1, Number(height) || 0)
+    const kadrajWm = Math.max(wallWm, kaplanan ? 0 : totalWm, grupGercekWm, kupKutuM?.enM || 0)
+    const kadrajHm = Math.max(wallHm, maxHm, kupKutuM?.boyM || 0)
     // Duvarın çevresindeki mutlak konumlu öğeler için sabit pay (tek ekran
     // dalındaki hesapla aynı mantık): kırpılmasınlar diye yer ayrılır.
     // Silüet duvarla aynı satırda olduğu için genişliği de hesaba katılır.
@@ -1380,7 +1388,7 @@ export default function WallPreview({
     const kullanH = Math.min(size.h * doluluk, availH)
     const duvarOlcegi = Number.isFinite(sahneOlcek)
       ? sahneOlcek
-      : Math.min(kullanW / (wallWm + humanWmM), kullanH / (wallHm + kavisPayiM))
+      : Math.min(kullanW / (kadrajWm + humanWmM), kullanH / (kadrajHm + kavisPayiM))
     /*
      * KÜPTE ÖLÇEĞİ KÜPÜN ÇİZİM KUTUSU BELİRLİYOR.
      *
@@ -1638,7 +1646,8 @@ export default function WallPreview({
             */}
             <div
               style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }}
-              className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative ${kavisPayiM > 0 ? 'overflow-visible' : 'overflow-hidden'}`}
+              /* Taşan tasarım kesilmiyor: duvardan büyükse dışarıda görünüyor. */
+              className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative overflow-visible`}
             >
               {/*
                 KÜP — ŞERİT DEĞİL KUTU.
@@ -2083,9 +2092,12 @@ export default function WallPreview({
 
                 {/* Sağ kenar: üst boşluk | ekran yüksekliği | alt boşluk */}
                 <div style={{ position: 'absolute', left: Math.min(wallW + 10 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
-                  <SegV h={stripTop} label={fmtU(marginYm)} muted kacis="ust" />
+                  {/* Pay negatifse (tasarım duvardan büyük) yazılacak bir boşluk yok. */}
+                  {marginYm > 0.0045 && <SegV h={stripTop} label={fmtU(marginYm)} muted kacis="ust" />}
                   <SegV h={maxHpx} label={fmtU(maxHm)} />
-                  <SegV h={wallH - stripTop - maxHpx} label={fmtU(marginYm)} muted kacis="alt" />
+                  {marginYm > 0.0045 && (
+                    <SegV h={wallH - stripTop - maxHpx} label={fmtU(marginYm)} muted kacis="alt" />
+                  )}
                 </div>
                 <HL top={stripTop} left={olcuSol + olcuW} width={wallW - (olcuSol + olcuW) + 40} />
                 <HL top={stripTop + maxHpx} left={olcuSol + olcuW} width={wallW - (olcuSol + olcuW) + 40} />
@@ -2116,8 +2128,9 @@ export default function WallPreview({
    * kendiliğinden gereksiz kılıyor: fitScale 1'de kalıyor (nativeW ≤ wallW),
    * paylar negatife düşmüyor. Yani tasarım artık kırpılmıyor, duvar esniyor.
    */
-  const wallWm = Math.max(0.1, Number(width) || 0, Math.max(1, cols) * cw)
-  const wallHm = Math.max(0.1, Number(height) || 0, Math.max(1, rows) * ch)
+  /* Duvar ne yazıldıysa o (bkz. çoklu daldaki aynı not). */
+  const wallWm = Math.max(0.1, Number(width) || 0)
+  const wallHm = Math.max(0.1, Number(height) || 0)
 
   /*
    * ÖLÇEK HESABI — duvar kaç piksele sığacak?
@@ -2190,8 +2203,13 @@ export default function WallPreview({
    * ekranın çevresinde aşırı esniyordu.
    */
   // nCols/nRows bu noktada henüz bildirilmedi; doğrudan cols/rows kullanılıyor
-  const sigdirWm = sahneVar ? Math.min(wallWm, Math.max(1, cols) * cw) : wallWm + humanWm
-  const sigdirHm = sahneVar ? Math.min(wallHm, Math.max(1, rows) * ch) : wallHm
+  /* Kadraj duvarı da tasarımı da alıyor: taşan kısım tuvalin dışında kalmasın. */
+  const sigdirWm = sahneVar
+    ? Math.min(wallWm, Math.max(1, cols) * cw)
+    : Math.max(wallWm, Math.max(1, cols) * cw) + humanWm
+  const sigdirHm = sahneVar
+    ? Math.min(wallHm, Math.max(1, rows) * ch)
+    : Math.max(wallHm, Math.max(1, rows) * ch)
   // Ust sinir yalnizca sahne YOKKEN — bkz. cok ekranli daldaki ayni hesap
   /*
    * SAHNE ÖLÇEĞİ VERİLDİYSE BİREBİR UYULUR.
@@ -2253,7 +2271,15 @@ export default function WallPreview({
    * Buradaki min(1, ...) yalnızca güvenlik ağı: ekranın FİZİKSEL ölçüsü duvarı
    * aşarsa (paylaşılan bozuk bağlantı gibi) çizim taşmasın diye.
    */
-  const fitScale = Math.min(1, wallW / nativeW, wallH / nativeH)
+  /*
+   * TASARIM KÜÇÜLTÜLMÜYOR.
+   *
+   * Ekran duvarı aşınca duvara sığacak kadar küçültülüyordu: kullanıcı 0,90
+   * m'lik duvar yazdığında 1,28 m'lik tasarım sessizce 0,90 m gibi
+   * çiziliyor, yani yanlış bir ölçü gösteriliyordu. Kabin ölçüsü gerçek
+   * kalıyor; duvardan büyükse taşan kısım duvarın dışında görünüyor.
+   */
+  const fitScale = 1
   const screenW = nativeW * fitScale
   const screenH = nativeH * fitScale
 
@@ -2279,8 +2305,9 @@ export default function WallPreview({
    * biri, 18–32 piksel arasında. Küçük tasarımda ekranı bastırmıyor, büyük
    * tasarımda kaybolmuyor.
    */
-  const marginXpx = Math.max(0, (wallW - screenW) / 2)
-  const marginYpx = Math.max(0, (wallH - screenH) / 2)
+  /* Negatif olabiliyor: tasarım duvardan büyükse ikisi de ortalı kalsın. */
+  const marginXpx = (wallW - screenW) / 2
+  const marginYpx = (wallH - screenH) / 2
   /* Ölçüm kancası bu payı okuyor (bkz. yukarıdaki useLayoutEffect). */
 
 
@@ -2323,8 +2350,8 @@ export default function WallPreview({
    * tepesine binmesinler (bkz. aşağıdaki üst ölçü etiketleri).
    */
   const bombeUstPx = (bulgeM * pxPerM) / 2
-  const marginXm = Math.max(0, (wallWm - screenWm) / 2)
-  const marginYm = Math.max(0, (wallHm - screenHm) / 2)
+  const marginXm = (wallWm - screenWm) / 2
+  const marginYm = (wallHm - screenHm) / 2
 
   return (
     <div

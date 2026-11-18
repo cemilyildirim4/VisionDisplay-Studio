@@ -3395,8 +3395,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return 0.5
   }, [cokluAktif, ekranParcalari, cols, screenType, tasarimWm])
 
-  const mekanDuvarWm = Math.max(Number(width) || 0, tasarimWm)
-  const mekanDuvarHm = Math.max(Number(height) || 0, tasarimHm)
+  /*
+   * MEKÂNDAKİ DUVAR GİRİLEN ÖLÇÜDE.
+   *
+   * Duvar "en az tasarım kadar" çiziliyordu: 0,90 m yazılan duvar, 1,28
+   * m'lik tasarımla birlikte 1,28 m çiziliyor ve kullanıcının yazdığı sayı
+   * ekranda hiçbir şeye karşılık gelmiyordu. Duvar ne yazıldıysa o;
+   * tasarım büyükse duvarın dışına taşıyor ve uyarı çıkıyor
+   * (bkz. tasarimDuvardanBuyuk).
+   */
+  const mekanDuvarWm = Math.max(0.1, Number(width) || 0)
+  const mekanDuvarHm = Math.max(0.1, Number(height) || 0)
   const panoOlcek =
     panoSahne && tuvalBoyut.w && ekranWm > 0 && ekranHm > 0
       ? (() => {
@@ -10431,6 +10440,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   /* Satır sınırı da duvardan değil, donanımdan (bkz. colsMax). */
   const rowsMax = EN_COK_KABIN_EKSEN
+
+  /*
+   * TASARIM DUVARDAN BÜYÜK OLAMAZ — SINIR TEK YERDE.
+   *
+   * Hesap yalnızca sağ panelin içindeydi; tuvalin üstündeki +/− düğmeleri
+   * donanım sınırını (200) okuyordu ve 1 m'lik duvarda tasarım oradan 1,28
+   * m'ye çıkabiliyordu. İki denetim aynı sayıya bakıyor.
+   *
+   * Kendi fotoğrafında duvar kutusunun bir karşılığı yok (ölçek referanstan
+   * geliyor, tasarım fotoğrafın üstünde duruyor): orada sınır yine donanım
+   * sınırı.
+   */
+  const duvarSinirli = !(scene === 'ozel' && ozelSahne) && cwM > 0 && chM > 0
+  const duvardaKalanEn = Math.max(0, (Number(width) || 0) - digerlerininEni)
+  const colsSinir = duvarSinirli
+    ? Math.max(1, Math.min(colsMax, Math.floor(duvardaKalanEn / cwM + 1e-9)))
+    : colsMax
+  const rowsSinir = duvarSinirli
+    ? Math.max(1, Math.min(rowsMax, Math.floor((Number(height) || 0) / chM + 1e-9)))
+    : rowsMax
+  const duvarDolu = duvarSinirli && (cols >= colsSinir || rows >= rowsSinir)
+  /* Duvar elle küçültülünce tasarım dışarıda kalabiliyor: söylenmesi gerek. */
+  const tasarimDuvardanBuyuk =
+    duvarSinirli &&
+    ((Number(width) || 0) + 1e-6 < tasarimWm || (Number(height) || 0) + 1e-6 < tasarimHm)
   /*
    * DUVARIN ALT SINIRI TASARIMA BAĞLI DEĞİL.
    *
@@ -11070,8 +11104,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 if (id === aktifEkranId) return
                 ekraniDuzenle(id)
               }}
-              colsMax={colsMax}
-              rowsMax={rowsMax}
+              colsMax={colsSinir}
+              rowsMax={rowsSinir}
               hideRegions={isVideoWall}
               /*
                * FOTOĞRAF GELENE KADAR NORMAL ÖNİZLEME.
@@ -12295,6 +12329,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   {t('wall.enAz').replace('{0}', sayiYaz(duvarUyari.enAz, 2))}
                 </p>
               )}
+              {/* Duvar tasarımdan küçük: çizimde taşan kısım zaten görünüyor. */}
+              {tasarimDuvardanBuyuk && (
+                <p className="m-0 mt-0.5 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
+                  {t('duvar.tasarimBuyuk')}
+                </p>
+              )}
             </div>
           )}
 
@@ -12514,15 +12554,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                  * (ölçek referanstan geliyor, tasarım fotoğrafın üstünde
                  * duruyor), orada sınır yine donanım sınırı.
                  */
-                const duvarSinirli = !(scene === 'ozel' && ozelSahne) && cwM > 0 && chM > 0
-                const duvardaKalanEn = Math.max(0, (Number(width) || 0) - digerlerininEni)
-                const colsSinir = duvarSinirli
-                  ? Math.max(1, Math.min(colsMax, Math.floor(duvardaKalanEn / cwM + 1e-9)))
-                  : colsMax
-                const rowsSinir = duvarSinirli
-                  ? Math.max(1, Math.min(rowsMax, Math.floor((Number(height) || 0) / chM + 1e-9)))
-                  : rowsMax
-                const duvarDolu = duvarSinirli && (cols >= colsSinir || rows >= rowsSinir)
+                /* Sınırlar gövdede, tek yerde (bkz. colsSinir). */
                 return (
                   <div
                     data-ekran={acik.sira}

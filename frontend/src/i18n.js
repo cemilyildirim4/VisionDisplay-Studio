@@ -241,6 +241,7 @@ const dict = {
   'birim.kabin': { tr: 'kabin', en: 'cabinets', ar: 'خزانة' },
   'birim.panel': { tr: 'panel', en: 'panels', ar: 'لوحة' },
   'ekran.kaldir': { tr: 'Kaldır', en: 'Remove', ar: 'إزالة' },
+  'duvar.tasarimBuyuk': { tr: 'Tasarım duvardan büyük', en: 'The design is larger than the wall', ar: 'التصميم أكبر من الجدار' },
   'ekran.duvarDolu': { tr: 'Duvar dolu — duvar ölçüsünü büyütün', en: 'The wall is full — increase the wall size', ar: 'الجدار ممتلئ — زد مقاس الجدار' },
   'ekran.alanaSigdir': { tr: 'Alana sığdır', en: 'Fit to area', ar: 'ملاءمة المنطقة' },
   'ekran.alanaSigdirNot': {
