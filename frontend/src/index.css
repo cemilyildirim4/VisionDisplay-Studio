@@ -509,3 +509,18 @@ html, body {
   content: attr(data-es);
   visibility: hidden;
 }
+
+/*
+ * ARAÇ ŞERİDİ — SIĞMAZSA KAYIYOR, SARMIYOR.
+ *
+ * Düğme yazıları geri geldi (bkz. arac-etiket); dar masaüstünde dokuz
+ * düğme tek satıra sığmayabiliyor. Sarmak anteti ikinci satıra itiyordu,
+ * taşmak da düğmeleri ekranın dışında bırakıyordu. Şerit kendi içinde
+ * yatay kayıyor; kaydırma çubuğu gizli, çünkü şeridin kendisi ince.
+ */
+.arac-serit {
+  scrollbar-width: none;
+}
+.arac-serit::-webkit-scrollbar {
+  display: none;
+}

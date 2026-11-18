@@ -24,14 +24,28 @@ export default function ConnectionBanner() {
         ? 'Sunucu geçici olarak yanıt veremiyor. Biraz sonra tekrar deneyin.'
         : 'API bağlantısı kurulamadı. Backend çalışıyor mu kontrol edin.'
 
+  /*
+   * UYARI ALTTA, KÜÇÜK.
+   *
+   * Şerit sayfanın en üstünde ve her şeyin önünde (z-100) duruyordu: üst
+   * menünün ilk satırını, 3B görünümün başlığını ve "Kapat" düğmesini
+   * kapatıyor, kullanıcı pencereden çıkamıyordu. Uyarının kendisi gerekli
+   * ama ikinci derecede bir bilgi — altta, ortada, küçük bir balon olarak
+   * duruyor; z değeri de pencerelerin altında kalıyor ki hiçbir düğmeyi
+   * örtmesin.
+   */
   return (
     <div
       role="status"
-      className={`fixed top-0 inset-x-0 z-[100] px-3 py-2 text-center text-[12.5px] font-medium text-white ${
-        state === 'retrying' ? 'bg-[#2962ad]' : 'bg-[#b45309]'
-      }`}
+      className="pointer-events-none fixed inset-x-0 bottom-3 z-[55] flex justify-center px-3"
     >
-      {text}
+      <span
+        className={`max-w-[92vw] rounded-full px-3.5 py-1.5 text-center text-[12.5px] font-medium text-white shadow-lg ${
+          state === 'retrying' ? 'bg-[#2962ad]' : 'bg-[#b45309]'
+        }`}
+      >
+        {text}
+      </span>
     </div>
   )
 }

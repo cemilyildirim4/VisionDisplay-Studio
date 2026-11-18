@@ -32,10 +32,33 @@ export const VIEW_DIST_DIAGONAL_FACTOR = 1.0
  * Modelin kendi izleme mesafesi — ekran boyutundan bağımsız.
  * Model listesinde/karşılaştırmada bu değer kullanılır.
  */
+/*
+ * KURAL ÖNCE PİKSEL ARALIĞINDAN.
+ *
+ * Modelde elle girilmiş bir mesafe varsa o kullanılıyordu; kayıtlardaki
+ * değerler ise eski 2,5 katsayısıyla hesaplanmış sayılardı (P1.25 için
+ * 3,1 m). Sektör kuralı birebir: piksel aralığı kaç mm ise o kadar metre.
+ * Elle girilen değer yalnızca piksel aralığı BİLİNMİYORSA devreye giriyor.
+ */
 export function baseViewingDistance(model) {
   if (!model) return 0
+  const pitch = Number(model.pixelPitchMm) || 0
+  if (pitch > 0) return +(pitch * VIEW_DIST_PITCH_FACTOR).toFixed(2)
   if (model.viewingDistanceM != null) return Number(model.viewingDistanceM)
-  return +((model.pixelPitchMm || 0) * VIEW_DIST_PITCH_FACTOR).toFixed(1)
+  return 0
+}
+
+/**
+ * MESAFE YAZISI — gereksiz sıfır yok, kırpma da yok.
+ *
+ * Tek ondalıkla yazılıyordu: 1,25 m'lik bir mesafe "1,3 m" oluyordu, yani
+ * ürünün kuralı ("piksel aralığı kaç mm ise o kadar metre") ekranda tutmuyor
+ * gibi görünüyordu. En çok iki ondalık; sondaki sıfırlar atılıyor, yani 3 m
+ * yine "3 m".
+ */
+export function mesafeYazisi(m) {
+  const n = Math.round((Number(m) || 0) * 100) / 100
+  return String(n).replace('.', ',')
 }
 
 /**

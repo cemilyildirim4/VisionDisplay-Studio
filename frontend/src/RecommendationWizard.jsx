@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
-import { baseViewingDistance } from './viewingDistance.js'
+import { baseViewingDistance, mesafeYazisi } from './viewingDistance.js'
 import { rankCabinets } from './recommendEngine.js'
 import { mmYazi } from './birim.js'
 
@@ -91,7 +91,7 @@ function RecCard({ rec, badge, why, pickLabel, onPick }) {
             {cab.pixelPitchMm ? `P${mmYazi(cab.pixelPitchMm)} · ` : ''}
             {cab.brightnessNits ? `${cab.brightnessNits} nits · ` : ''}
             {cab.ipRating ? `IP${cab.ipRating} · ` : ''}
-            {baseViewingDistance(cab).toFixed(1)} m
+            {mesafeYazisi(baseViewingDistance(cab))} m
           </div>
           <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 mb-0 leading-relaxed">{why}</p>
         </div>

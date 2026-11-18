@@ -1106,13 +1106,26 @@ export function CabinetGrid({ model, cols, rows, content, contentUrl, detailLeve
  * (FrontSide): kamera uzaklaşıp odanın dışına çıktığında duvarlar görüşü
  * kesmiyor, kendiliğinden kayboluyorlar.
  */
+/*
+ * ODANIN GERÇEK ÖLÇÜSÜ (m) — tasarımdan BAĞIMSIZ.
+ *
+ * Oda ekranın ölçüsünden türüyordu (en = ekran × 2,4 gibi): 30 cm'lik ekran
+ * küçük bir odada, 6 m'lik ekran kocaman bir odada duruyor ve ikisi ekranda
+ * BİREBİR AYNI büyüklükte görünüyordu — yani oda ekranın ne kadar büyük
+ * olduğunu hiç anlatmıyordu. Oda artık sıradan bir toplantı salonu: 8 m
+ * geniş, 3,2 m yüksek, 10 m derin. Ekran bu odanın içinde kendi gerçek
+ * oranında duruyor; tasarım odadan büyükse oda da onu alacak kadar açılıyor.
+ */
+export const ODA_EN_M = 8
+export const ODA_BOY_M = 3.2
+export const ODA_DERINLIK_M = 10
+
 function Oda3D({ olcu }) {
   if (!olcu) return null
   const { w, h, d, merkez } = olcu
-  /* Oda tasarımdan belirgin biçimde büyük: ekran odayı doldurmamalı. */
-  const odaW = Math.max(7, w * 2.4)
-  const odaH = Math.max(3.2, h * 1.9)
-  const odaD = Math.max(9, d + 8)
+  const odaW = Math.max(ODA_EN_M, w + 2)
+  const odaH = Math.max(ODA_BOY_M, h + 0.6)
+  const odaD = Math.max(ODA_DERINLIK_M, d + 6)
   /* Zemin yüksekliği ölçüyle birlikte geliyor; kamera da aynı sayıya bakıyor. */
   const zeminY = olcu.zeminY
   const arkaZ = merkez.z - d / 2 - 0.02
@@ -1141,6 +1154,25 @@ function Oda3D({ olcu }) {
       <mesh position={[merkez.x, zeminY + 0.05, arkaZ + 0.012]}>
         <planeGeometry args={[odaW, 0.1]} />
         <meshStandardMaterial color="#c9ccd3" roughness={0.7} metalness={0.05} />
+      </mesh>
+
+      {/*
+        TAVAN — EKRANIN ARKASINDAKİ SİYAH BLOK BUYDU.
+
+        Odanın tavanı yoktu: sahne biraz döndürülünce ya da yukarı
+        bakılınca duvar bitiyor ve üstünde sahnenin koyu arka planı
+        görünüyordu. Ekranın hemen arkasından başlayıp yukarı uzanan o koyu
+        alan, ekranın arkasına yapışmış kocaman bir blok gibi okunuyordu —
+        oysa orada hiçbir şey yoktu, eksik olan tavandı. Yüzeyi aşağı
+        bakıyor: kamera odanın dışına çıkınca kendiliğinden kayboluyor,
+        görüşü kesmiyor.
+      */}
+      <mesh
+        position={[merkez.x, zeminY + odaH, ortaZ]}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <planeGeometry args={[odaW, odaD]} />
+        <meshStandardMaterial color="#f2f3f6" roughness={0.95} metalness={0} />
       </mesh>
 
       {/* YAN DUVARLAR — içe bakıyor. */}
@@ -1236,12 +1268,23 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
      * miktar üstüne kadar; bakış noktası da ikisinin ortası. Ekranın ne
      * kadar büyük olduğu ancak zeminle birlikte okunuyor.
      */
-    /* Zeminin biraz ötesi de kadrajda: alt bar zemin çizgisini yutuyordu. */
-    const altY = oda ? zeminY - 0.55 : merkez.y - boyut.y / 2
-    const ustY = merkez.y + boyut.y / 2 + (oda ? 0.6 : 0)
+    /*
+     * ODA VARKEN KADRAJ DA SABİT — EKRAN GERÇEK BOYUNDA OKUNSUN.
+     *
+     * Kadraj tasarımın ölçüsünden türerken (ekran × 1,35) her ekran kadrajı
+     * aynı oranda dolduruyordu: 30 cm'lik ekran da 6 m'lik ekran da ekranda
+     * aynı büyüklükteydi. Kadraj artık ODANIN ölçüsü: zeminden tavan
+     * hizasına, odanın eni kadar. Küçük ekran odanın içinde küçücük,
+     * büyük ekran duvarı kaplıyor — aradaki fark görülüyor. Tasarım odadan
+     * büyükse kadraj onu alacak kadar açılıyor.
+     */
+    const altY = oda ? zeminY - 0.1 : merkez.y - boyut.y / 2
+    const ustY = oda
+      ? Math.max(zeminY + ODA_BOY_M, merkez.y + boyut.y / 2 + 0.4)
+      : merkez.y + boyut.y / 2
     const hedefY = oda ? (altY + ustY) / 2 : merkez.y
-    const gorunenBoy = oda ? Math.max(ustY - altY, 2.4) : boyut.y * 1.15
-    const gorunenEn = oda ? Math.max(boyut.x * 1.35, 3.2) : boyut.x * 1.15
+    const gorunenBoy = oda ? (ustY - altY) * 1.04 : boyut.y * 1.15
+    const gorunenEn = oda ? Math.max(ODA_EN_M * 0.95, boyut.x * 1.2) : boyut.x * 1.15
     const uzak =
       Math.max(0.6, gorunenBoy / 2 / Math.tan(dikeyYari), gorunenEn / 2 / Math.tan(yatayYari)) +
       boyut.z / 2
@@ -1296,7 +1339,24 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
         gölge zemine değil, duvara düşen yumuşak bir iz olarak kalıyor;
         tasarımın dibine çizilen sert gölge orada havada duruyordu.
       */}
-      <ContactShadows position={[0, -(enYuksekRows * (model?.heightMm || 500)) / 2000 - 0.05, 0]} opacity={oda ? 0.22 : 0.45} scale={10} blur={2} far={2} />
+      {/*
+        Oda varken gölge ZEMİNE düşüyor ve tasarımın enine göre ölçülüyor.
+        Sabit 10 m'lik düzlem, tasarımın hemen altında havada duran koyu bir
+        levha gibi görünüyordu (ekran duvara asılı olduğu için altı boş).
+      */}
+      <ContactShadows
+        position={[
+          oda ? olcu?.merkez?.x || 0 : 0,
+          oda
+            ? (olcu?.zeminY ?? 0) + 0.004
+            : -(enYuksekRows * (model?.heightMm || 500)) / 2000 - 0.05,
+          oda ? (olcu?.merkez?.z || 0) + 0.6 : 0,
+        ]}
+        opacity={oda ? 0.3 : 0.45}
+        scale={oda ? Math.max(4, (olcu?.w || 1) * 2.4) : 10}
+        blur={2}
+        far={oda ? 3 : 2}
+      />
     </>
   )
 }

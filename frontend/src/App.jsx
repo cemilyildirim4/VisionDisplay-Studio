@@ -176,7 +176,7 @@ import { icDortgen, duvarDunyasi, dunyaDortgeni } from './homografi.js'
 import { bolmeDilimleri } from './icerikBolme.js'
 import { kenarHaritasiCikar, yapisacakNokta } from './kenarBulucu.js'
 import { dogruKesisimi } from './alanKenar.js'
-import { viewingDistanceFor } from './viewingDistance.js'
+import { viewingDistanceFor, mesafeYazisi } from './viewingDistance.js'
 import { useSurukleme, kaymayiSinirla } from './hooks/useSurukleme.js'
 import { useYon } from './hooks/useYon.js'
 import { panoOlculeri, PANO_SAHNE_EN_M } from './Pano.jsx'
@@ -3982,27 +3982,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * 'orta' köşede duvar katlanmıyor: orada köşe duvarın kenarında değil,
    * ekranın kendi serbest köşesi duvarın önünde duruyor.
    */
-  const fotoDuvarKosesi = (() => {
-    if (!lFotoDuvarMekan || !lEkran || lKose === 'orta') return null
-    if (!(cizimOlcek > 0) || !(tuvalBoyut.w > 0)) return null
-    const sol = Math.max(1, Math.ceil(lEkran.cols / 2))
-    const sag = Math.max(1, lEkran.cols - sol)
-    const yanM = (lKose === 'sol' ? sol : sag) * cwM
-    if (!(yanM > 0)) return null
-    /* Duvar ekranın bittiği yerde bitmiyor, köşeden biraz daha devam ediyor. */
-    const derinlikM = yanM * 1.35
-    const koseler = cepheYanYuzu({
-      tuvalW: tuvalBoyut.w,
-      tuvalH: tuvalBoyut.h,
-      pxPerM: cizimOlcek,
-      duvarWm: mekanDuvarWm,
-      duvarHm: mekanDuvarHm,
-      kose: lKose,
-      derinlikM,
-    })
-    if (!koseler) return null
-    return { koseler, derinlikM, duvarWm: mekanDuvarWm, kose: lKose }
-  })()
+  /*
+   * DUVAR KÖŞEDEN DÖNMÜYOR — TEK DİKDÖRTGEN.
+   *
+   * L ya da U seçilince hazır mekândaki duvar ikiye katlanıyor, yan yüzü de
+   * fotoğraftan kopyalanmış bir doku ile dolduruluyordu. Duvar kullanıcının
+   * girdiği TEK bir ölçü; tasarımın köşeli olması mekânın duvarını köşeli
+   * yapmaz. Ekranın kendi köşesi duruyor (bkz. lKoseGeo), yalnızca duvarın
+   * katlanması kalktı.
+   */
+  const fotoDuvarKosesi = null
 
   const sahneOlcekVarsayilan = panoOlcek || fotoOlcek || salonOlcegi || cepheOlcegi
 
@@ -4860,7 +4849,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * ancak kullanıcı ona bastığında başlıyor.
      */
     setRef2Kipi(false)
-    setSihirbazAdim(4)
+    /*
+     * ONAY AKIŞI BİTİRİYOR — "KUTUYU YERİNE KOY" ADIMI YOK.
+     *
+     * Alan onaylanınca 4. adım açılıyordu: ikinci referans, elle en/boy,
+     * kutuyu taşı. Ölçek zaten referanstan biliniyor, tasarım da
+     * fotoğrafın üstünde duruyor; o adım aynı bilgiyi üçüncü kez,
+     * kullanıcıdan isteyerek topluyordu. Onay artık tek şey yapıyor:
+     * tasarımı işaretlenen alana sığdırıp akışı kapatıyor.
+     */
+    setSihirbazAdim(0)
+    if (k) tasarimiAlanaSigdir(k)
     /*
      * ONAY TASARIMI GÖSTERİYOR.
      *
@@ -4996,17 +4995,66 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const cwM2 = cwM
     const chM2 = chM
     if (!(cwM2 > 0) || !(chM2 > 0)) return
-    const suAnWm = cols * cwM2
-    const suAnHm = rows * chM2
+    /*
+     * ───────────────────────────────────────────────────────────────────
+     * ÇARPAN TASARIMIN TAMAMINDAN — EKRANLAR BİRBİRİNDEN AYRILMIYOR.
+     *
+     * Hesap yalnızca SEÇİLİ ekranın sütun/satırına bakıyordu: yan yana iki
+     * eşit ekrandan biri 3 × 3 kalırken öteki 5 × 3 oluyor, tasarım
+     * basamaklı bir şeye dönüyordu. Üstelik sığdırılan şey tasarımın
+     * tamamı değil tek bir ekran olduğu için işaretlenen alan da
+     * doğru doldurulmuyordu.
+     *
+     * Çarpan artık tasarımın BÜTÜNÜNDEN geliyor ve HER ekrana aynı
+     * uygulanıyor: eşit ekranlar eşit kalıyor, oranlar korunuyor.
+     * Aşağı yuvarlama taşmayı imkânsız kılıyor.
+     * ───────────────────────────────────────────────────────────────────
+     */
+    const suAnWm = tasarimWm > 0 ? tasarimWm : cols * cwM2
+    const suAnHm = tasarimHm > 0 ? tasarimHm : rows * chM2
     if (!(suAnWm > 0) || !(suAnHm > 0)) return
     const carpan = Math.min(alanWm / suAnWm, alanHm / suAnHm)
+    if (!(carpan > 0)) return
     const c = Math.max(1, Math.min(colsMax, Math.floor(cols * carpan + 1e-9)))
     const r = Math.max(1, Math.min(rowsMax, Math.floor(rows * carpan + 1e-9)))
-    const yeniWm = c * cwM2
-    const yeniHm = r * chM2
+    /* Öteki ekranlar da aynı çarpanla; biri büyüyüp öteki kalmıyor. */
+    setSabitEkranlar((liste) =>
+      liste.map((x) => {
+        const ayar = x.ayar || {}
+        const c0 = Math.max(1, ayar.cols || 1)
+        const r0 = Math.max(1, ayar.rows || 1)
+        const yc = Math.max(1, Math.min(colsMax, Math.floor(c0 * carpan + 1e-9)))
+        const yr = Math.max(1, Math.min(rowsMax, Math.floor(r0 * carpan + 1e-9)))
+        if (yc === c0 && yr === r0) return x
+        return { ...x, ayar: { ...ayar, cols: yc, rows: yr } }
+      }),
+    )
+    /* Gerçekleşen çarpan: yuvarlama sonrası tasarımın yeni ölçüsü. */
+    const yeniWm = suAnWm * (c / Math.max(1, cols))
+    const yeniHm = suAnHm * (r / Math.max(1, rows))
     if (!(yeniWm > 0) || !(yeniHm > 0)) return
     setCols(c)
     setRows(r)
+    /*
+     * TASARIM ALANIN ORTASINA, DÜZ.
+     *
+     * Çizilen tasarım artık 3B yerleşim katmanından geliyor (bkz.
+     * FotoYerlesim3D); sığdırma ise yalnızca eski dört köşe dörtgenini
+     * yazıyordu. Sonuç: kabin sayısı alana göre değişiyor ama tasarım
+     * durduğu yerde, eğri açısıyla kalıyordu. Yerleşim de alanın ortasına
+     * alınıyor ve bakış açısı sıfırlanıyor — "eğikse düzelsin".
+     */
+    if (tuvalBoyut.w > 0 && tuvalBoyut.h > 0) {
+      const mx = alanTuval.reduce((a, p) => a + p.x, 0) / 4
+      const my = alanTuval.reduce((a, p) => a + p.y, 0) / 4
+      setYer3d((y) => ({
+        ...(y || { kilit: false }),
+        ux: Math.min(1, Math.max(0, mx / tuvalBoyut.w)),
+        uy: Math.min(1, Math.max(0, my / tuvalBoyut.h)),
+        yaw: 0,
+        egim: 0,
+      }))
+    }
     /*
      * DUVAR ÖLÇÜSÜNE DOKUNULMUYOR.
      *
@@ -7658,7 +7706,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     /* İşaretleme kapanıyor: artık taşınan şey tasarımın kendisi. */
     setRefKipi(false)
     setAlanKipi(false)
-    setSihirbazAdim(4)
+    /* 4. adım kalktı: ikinci referans uygulanınca akış kapanıyor. */
+    setSihirbazAdim(0)
   }
 
   /*
@@ -7759,6 +7808,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     }
     setSihirbazAdim(1)
   }
+  /*
+   * BAŞTAN BAŞLA — FOTOĞRAF DAHİL HER ŞEY.
+   *
+   * Düğme ölçümü sıfırlıyor ama FOTOĞRAFI bırakıyordu: "baştan" denen yer,
+   * kullanıcının beğenmediği fotoğrafın hâlâ ekranda durduğu bir yerdi ve
+   * fotoğrafı değiştirmenin yolu başka bir düğmedeydi. Artık sahne de
+   * siliniyor; ekran fotoğraf seçme hâline dönüyor, yeni fotoğraf gelince
+   * akış kendiliğinden 1. adımdan başlıyor (bkz. mekanFotoSecildi).
+   */
+  const bastanBasla = () => {
+    sihirbaziBaslat()
+    setOzelSahne(null)
+    ozelSahneGorsel.current = null
+    setRefKipi(false)
+    setLKoseKipi(false)
+    setOzelUyari(null)
+    setSihirbazAdim(0)
+    /*
+     * Fotoğraf seçici hemen açılıyor: "baştan başla" demek yeni bir
+     * fotoğrafla başlamak demek. Açılmasaydı kullanıcı boş bir tuvalle
+     * kalıyor ve fotoğrafı nereden ekleyeceğini Mekân bölümünde aramak
+     * zorunda kalıyordu (mekân listesinde "Kendi fotoğrafım" seçilince de
+     * aynısı yapılıyor).
+     */
+    ozelDosyaRef.current?.click()
+  }
   const sihirbazIleri = () => {
     /*
      * L'DE ÜÇ ADIM: çizgiyi işaretle, ölçüleri yaz, kanatları duvara otur.
@@ -7780,7 +7855,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       /* 2. adıma geçerken işaretleme kipi kapanmıyor: kullanıcı uzunluğu
          yazarken noktaları hâlâ düzeltebilsin. 3. adımda kapanıyor. */
       if (a === 2) setRefKipi(false)
-      return Math.min(4, a + 1)
+      /* Üçüncü adım akışı kapatıp tasarımı getiriyor; dördüncü adım yok. */
+      return Math.min(3, a + 1)
     })
   }
   const sihirbazGeri = () => {
@@ -8094,7 +8170,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   /* Panelde yazılan mesafenin ham metni (bkz. OlcuSihirbazi, aynı gerekçe). */
   const [mesafeYazi, setMesafeYazi] = useState(null)
   const mesafeGoster =
-    mesafeYazi ?? (izlemeMesafesi == null ? '' : Number(izlemeMesafesi).toFixed(1).replace('.', ','))
+    mesafeYazi ?? (izlemeMesafesi == null ? '' : mesafeYazisi(izlemeMesafesi))
   const mesafeYaz = (metin) => {
     setMesafeYazi(metin)
     const n = Number(String(metin).replace(',', '.'))
@@ -10424,69 +10500,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * (bkz. bakisUzakligi) 1000 px/m ile hesaplanıp bine bölünüyor.
    */
   /*
-   * TİP SEÇİLİNCE DUVAR TASARIMA OTURUYOR — HER KENARDA 5 CM.
+   * DUVAR ÖLÇÜSÜNE YERLEŞİM TİPİ KARIŞMIYOR.
    *
-   * Duvar yalnızca "ekrandan küçük kalmasın" diye büyütülüyordu; yerleşim
-   * tipi değişince eski ölçü olduğu gibi kalıyor, tasarımın çevresinde
-   * kocaman bir boşluk duruyordu (küpte yanlarda 13,6, altta üstte 20,5 cm).
-   * Tip ya da üyeler değişince duvar bir kez tasarımın kapladığı yere
-   * oturuyor: her kenarda tam 5 cm pay.
-   *
-   * Küpte tasarımın eni kutunun KÖŞEGENİ (kenar × √2); kutu çaprazdan
-   * görünüyor. Yükseklik de eğimli duruştan geliyor (bkz. kupCizimKutusu).
-   *
-   * Bir kez: imza (tip + üyeler) değişmedikçe tekrar yazılmıyor, yoksa
-   * kullanıcının elle büyüttüğü duvar her çizimde geri alınırdı.
+   * Yerleşim tipi (L, U, küp, açılı) seçilince duvar bir kez tasarımın
+   * kapladığı yere oturtuluyordu: her kenarda 5 cm pay. Sonuç, kullanıcının
+   * elle yazdığı duvarın sessizce değişmesiydi — 3,00 × 1,00 m girilmiş bir
+   * duvar, U seçilince 0,42 × 0,26 m oluyordu (ölçüldü). Duvar kullanıcının
+   * verdiği bir ölçü; tasarımın şekli onu belirlemez. Tasarım duvardan
+   * büyükse zaten kendisi görünüyor, duvarı daraltmaya da gerek yok.
    */
-  const duvarOturImzaRef = useRef(null)
-  useEffect(() => {
-    if (!grup?.tip || !Array.isArray(grup.uyeler) || grup.uyeler.length < 2) {
-      duvarOturImzaRef.current = null
-      return
-    }
-    /*
-     * DUVAR YALNIZCA TİP DEĞİŞİNCE OTURUYOR.
-     *
-     * İmza üye listesini de kapsıyordu: ekran eklemek ya da çıkarmak
-     * duvarı yeniden hesaplatıyor, kullanıcının elle yazdığı ölçüyü
-     * eziyordu (ölçüldü: 6,00 × 3,00 m girilmiş duvar, ikinci ekran
-     * eklenince 2,02 × 0,58 oluyordu). Duvar artık yalnızca yerleşim
-     * TİPİ seçilince tasarıma oturuyor; ekran ekleyip çıkarmak girilen
-     * ölçüye dokunmuyor.
-     */
-    const imza = String(grup.tip)
-    if (duvarOturImzaRef.current === imza) return
-    /*
-     * İLK KURULUMDA DUVARA DOKUNULMUYOR.
-     *
-     * İkinci ekran eklenince grup kendiliğinden kuruluyor (tip 'duz');
-     * kullanıcı bir tip SEÇMİŞ değil. O anda duvarı tasarıma oturtmak,
-     * kullanıcının elle yazdığı ölçüyü sebepsiz siliyordu. İlk imza
-     * yalnızca kaydediliyor; duvar ancak tip gerçekten DEĞİŞİNCE
-     * oturuyor.
-     */
-    if (duvarOturImzaRef.current === null) {
-      duvarOturImzaRef.current = imza
-      return
-    }
-    let enM = 0
-    let boyM = 0
-    if (grup.tip === 'kutu') {
-      const olcu = kupOlculeri(ekranSeridi.filter((x) => grup.uyeler.includes(x.id)))
-      if (!olcu) return
-      const kutu = kupCizimKutusu({ ...olcu, pxPerM: 1000 })
-      enM = (kutu.cizimEn - KUP_CIZIM_PAYI * 2) / 1000
-      boyM = (kutu.cizimBoy - KUP_CIZIM_PAYI * 2) / 1000
-    } else {
-      enM = tasarimWm
-      boyM = tasarimHm
-    }
-    if (!(enM > 0) || !(boyM > 0)) return
-    duvarOturImzaRef.current = imza
-    setWidth(cmYukari(enM + DUVAR_PAYI * 2))
-    setHeight(cmYukari(boyM + DUVAR_PAYI * 2))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grup?.tip, grup?.uyeler, ekranSeridi, tasarimWm, tasarimHm])
 
   const kupUstImzaRef = useRef(null)
   useEffect(() => {
@@ -10530,11 +10552,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   useEffect(() => {
     if (!hasModel) return
-    if (cokluAktif) {
-      if ((Number(width) || 0) + EPS < tasarimWm) setWidth(cmYukari(tasarimWm))
-      if ((Number(height) || 0) + EPS < tasarimHm) setHeight(cmYukari(tasarimHm))
-      return
-    }
+    /*
+     * DUVARI BÜYÜTEN YOK.
+     *
+     * Çoklu ekranda duvar, tasarımın sınır kutusuna göre kendiliğinden
+     * büyütülüyordu: L ya da U seçmek kullanıcının yazdığı 3 m'lik duvarı
+     * sessizce 5 m yapıyordu. Duvar kullanıcının verdiği bir ölçü; şeklin
+     * değişmesi onu değiştirmez. Kabin sayısının üst sınırı da duvardan
+     * değil donanımdan geliyor (colsMax/rowsMax), yani büyütmenin bir
+     * işlevi de yoktu.
+     */
+    if (cokluAktif) return
     if ((Number(width) || 0) + EPS < cwM) {
       setWidth(cmYukari(cwM))
       return
@@ -10647,7 +10675,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           olduğunda (1700 px ve üstü) açılıyor; altında düğmeler yalnız
           ikon ve adları ipucunda duruyor.
         */}
-        <div ref={seritRef} className="flex min-w-0 flex-1 flex-wrap sm:flex-nowrap items-center gap-1.5 xl:gap-2 w-full sm:w-auto justify-start sm:justify-end">
+        <div ref={seritRef} className="arac-serit flex min-w-0 flex-1 flex-wrap sm:flex-nowrap items-center gap-1.5 xl:gap-2 w-full sm:w-auto justify-start sm:justify-end sm:overflow-x-auto">
 <IconButton active={hasModel} pasifNot={t('tool.modelGerek')} label={t('tool.reset')} onClick={() => hasModel && setResetConfirmOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />
@@ -11611,6 +11639,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           */}
           {alanTuval &&
             !alanKipi &&
+            /*
+             * ÖLÇÜM BİTİNCE İZ KALMIYOR.
+             *
+             * Kesik çizgi ve köşe noktaları ölçüm kapandıktan sonra da
+             * duruyordu: fotoğrafın üstünde işi bitmiş bir yardımcı çizgi,
+             * teklif ekran görüntüsüne de giriyordu. Çizgi yalnızca ölçüm
+             * açıkken görünüyor.
+             */
+            olcuAcik &&
             /* Tutamaklar varken seçicinin kendi dörtgeni çiziliyor; ikisi üst üste gelmesin. */
             !alanTutamaklari &&
             !refKipi &&
@@ -12416,6 +12453,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 if (!acik) return null
                 /* Gövde satırdan taşındığı gibi duruyor; oradaki adla eşleşsin. */
                 const e = acik
+                /*
+                 * PANELDE YAZAN TÜR, ÇİZİLEN TÜR.
+                 *
+                 * L, U ve küp grubundaki ekran DÜZ çiziliyor (kavis o
+                 * şekillerle çakışıyor, bkz. ekranParcalariHam). Panelde ise
+                 * kullanıcının en son seçtiği "İçbükey" seçili duruyordu:
+                 * ekranda düz bir yüzey, panelde kavisli bir seçim. Seçili
+                 * olan artık ÇİZİLEN tür; kavis ayarı da o zaman gizleniyor.
+                 * Ekranın kendi seçimi silinmiyor, gruptan çıkınca geri
+                 * geliyor.
+                 */
+                const katiSekilde =
+                  !!grup &&
+                  ['l', 'u', 'kutu'].includes(grup.tip) &&
+                  (grup.uyeler || []).includes(acik.id)
+                const etkinTur = katiSekilde ? 'flat' : screenType
                 return (
                   <div
                     data-ekran={acik.sira}
@@ -12448,7 +12501,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             </div>
                             <Segmented
                               cols={3}
-                              value={screenType}
+                              value={etkinTur}
                               onChange={setScreenType}
                               options={[
                                 { v: 'flat', l: t('screen.flat') },
@@ -12456,12 +12509,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 { v: 'curvedIn', l: t('screen.curvedIn') },
                               ]}
                             />
-                            {(screenType === 'curved' || screenType === 'curvedIn') && (
+                            {(etkinTur === 'curved' || etkinTur === 'curvedIn') && (
                               <KavisAyari
                                 t={t}
                                 deger={curveAmount}
                                 onChange={setCurveAmount}
-                                icbukey={screenType === 'curvedIn'}
+                                icbukey={etkinTur === 'curvedIn'}
                                 genislikM={tasarimWm}
                               />
                             )}
@@ -13609,7 +13662,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               alanNokta.length === 4
                                 ? () => {
                                     setRefKipi(false)
-                                    setSihirbazAdim(4)
+                                    setAlanKipi(false)
+                                    setSihirbazAdim(0)
+                                    tasarimiAlanaSigdir()
                                   }
                                 : null
                             }
@@ -13646,6 +13701,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             /* L'nin son adımı: kanat şekli (bkz. lSekilPaneli). */
                             kanatSekli={lSekilPaneli}
                           />
+                          {/*
+                            BAŞTAN BAŞLA HER ADIMDA.
+
+                            Düğme yalnızca akış KAPALIYKEN, özetin altında
+                            duruyordu: ölçüm sırasında yanlış bir nokta
+                            koyan kullanıcının çıkış kapısı yoktu (sihirbaz
+                            kartında kapatma düğmesi de bilerek yok).
+                            Kartın hemen altında, her adımda.
+                          */}
+                          <button
+                            type="button"
+                            onClick={bastanBasla}
+                            className="mt-2 w-full rounded-lg border border-neutral-300 py-2 text-[14px] font-semibold text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+                          >
+                            {t('sih.yeniden')}
+                          </button>
                           </div>
                         ) : (
                           <>
@@ -13707,7 +13778,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             )}
                             <button
                               type="button"
-                              onClick={sihirbaziBaslat}
+                              onClick={() => {
+                                /* Hiç ölçü yoksa düğme "Referans ölçü al": fotoğrafa dokunmuyor. */
+                                const olcuVar = lYerlesimKipi ? !!lKoseOlcek : !!(olcuKutu || refPxCm)
+                                if (olcuVar) bastanBasla()
+                                else sihirbaziBaslat()
+                              }}
                               className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
                             >
                               {lYerlesimKipi
@@ -14184,10 +14260,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       (izlemeM == null && !(scene === 'ozel' && ozelSahne)) ||
                         (scene === 'ozel' && ozelSahne && taslakKutu) ? (
                         <span className="text-[15px] font-semibold tabular-nums text-neutral-800 dark:text-neutral-200">
-                          {(scene === 'ozel' && taslakKutu
-                            ? izlemeMesafesi.toFixed(2)
-                            : izlemeMesafesi.toFixed(1)
-                          ).replace('.', ',')}{' '}
+                          {mesafeYazisi(izlemeMesafesi)}{' '}
                           m
                         </span>
                       ) : (
@@ -15695,9 +15768,16 @@ function IconButton({ children, label, active, onClick, sadeceIkon = false, pasi
     >
       <span className="shrink-0 flex items-center justify-center">{children}</span>
       {/* Yatay telefonda da görünür (bkz. .arac-etiket). */}
-      {/* 1280 px altında yalnız ikon: şerit tek sırada kalsın, ad title ipucunda. */}
+      {/*
+        YAZILAR GERİ GELDİ.
+
+        Yazılar yalnızca 1700 px'ten itibaren açılıyordu; sıradan bir dizüstü
+        ekranında (1366–1536) şerit dokuz anlamsız ikondan ibaret kalıyordu.
+        Yazılar 1180 px'ten itibaren açık; şerit sığmazsa alt satıra inmiyor,
+        kendi içinde yatay kayıyor (bkz. arac-serit, index.css).
+      */}
       {!sadeceIkon && (
-        <span className="arac-etiket hidden min-[1700px]:inline">
+        <span className="arac-etiket hidden min-[1180px]:inline">
           {/*
             Öteki yazı sözde öğeye (::after) konuyor: yer kaplıyor ama
             düğmenin metnine karışmıyor — aria-label, title ve testler

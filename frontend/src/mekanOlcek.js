@@ -30,33 +30,32 @@
  */
 
 /*
- * SABİT KADRAJIN KAPSADIĞI MEKÂN (m) — tipik bir toplantı salonu / cephe önü.
+ * SABİT KADRAJIN KAPSADIĞI MEKÂN (m) — kameranın ne kadar geniş gördüğü.
  *
- * Bu sayı "kameranın ne kadar geniş gördüğü"dür ve ikisini birden belirler:
- * küçük duvar kadrajda ne kadar küçük kalacak, büyük duvar ne zaman
- * kadrajı dolduracak. 12 m denendi: 1 m'lik varsayılan duvar tuvalin
- * dörtte birine düşüyor ve oda tünele benziyordu. 8 m'de 1–11 m arası
- * duvar ölçüsü ekranda karşılığını buluyor, varsayılan duvar da küçük ama
- * okunaklı kalıyor.
+ * Ölçek YALNIZCA bu kadrajdan geliyor: 1 m her mekânda aynı piksel sayısı.
+ * Dolayısıyla 4 m'lik duvar 1 m'lik duvarın tam dört katı çiziliyor — metre
+ * ile ekrandaki boy birebir orantılı. 10 m seçildi: 1 m'lik varsayılan duvar
+ * kadrajın onda birinde kalıyor (gerçekte de öyle), 9–10 m'lik bir duvar
+ * kadrajı dolduruyor.
  */
-export const KADRAJ_EN_M = 8
-export const KADRAJ_BOY_M = 4.5
+export const KADRAJ_EN_M = 10
+export const KADRAJ_BOY_M = 6
 
-/* Sığdırma payı: yanlarda ve üstte mekânın kendisi görünsün. */
-const SIGDIRMA_PAYI = 0.62
-/* Duvar hiçbir koşulda kadrajı aşmasın (çok geniş duvarlarda devreye girer). */
-const EN_COK_EN = 0.9
-const EN_COK_BOY = 0.86
+/*
+ * TAVAN — yalnızca çok büyük duvarlar için.
+ *
+ * 11 m'den geniş duvar kadrajı aşıyor ve çizim tuvalin dışına taşıyordu.
+ * Bu sınır devreye girene kadar (günlük ölçülerin tamamı) orantı birebir
+ * korunuyor; aşan duvarlarda da duvarla birlikte tasarım aynı oranda
+ * küçüldüğü için ikisinin birbirine oranı yine doğru kalıyor.
+ */
+const EN_COK_EN = 0.92
+const EN_COK_BOY = 0.88
 
 export function mekanOlcegi(tuvalW, tuvalH, duvarWm, duvarHm) {
   if (!tuvalW || !tuvalH || !(duvarWm > 0) || !(duvarHm > 0)) return null
-  const sigdirma = Math.min(
-    (tuvalW * SIGDIRMA_PAYI) / duvarWm,
-    (tuvalH * SIGDIRMA_PAYI) / duvarHm,
-  )
   const sabit = Math.min(tuvalW / KADRAJ_EN_M, tuvalH / KADRAJ_BOY_M)
-  const karisim = Math.sqrt(sigdirma * sabit)
-  return Math.min(karisim, (tuvalW * EN_COK_EN) / duvarWm, (tuvalH * EN_COK_BOY) / duvarHm)
+  return Math.min(sabit, (tuvalW * EN_COK_EN) / duvarWm, (tuvalH * EN_COK_BOY) / duvarHm)
 }
 
 export default mekanOlcegi

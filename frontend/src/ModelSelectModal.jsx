@@ -29,12 +29,13 @@ const TAB_META = {
       'col.viewingDistance',
       'col.compare',
     ],
-    grid: 'minmax(110px,1.3fr) 0.8fr 1.5fr 1.9fr 1fr 1.3fr 0.9fr',
+    /* Ad sütunu geniş: uzun model adları iki harfte kesilmesin. */
+    grid: 'minmax(160px,2fr) 0.8fr 1.5fr 1.9fr 1fr 1.3fr 0.9fr',
   },
   videowall: {
     labelKey: 'msm.tabVideowall',
     columnKeys: ['col.modelName', 'col.size', 'col.bezel', 'col.maxBrightness', 'col.dimensions', 'col.compare'],
-    grid: 'minmax(110px,1.3fr) 0.8fr 1.4fr 1.2fr 1.9fr 0.9fr',
+    grid: 'minmax(160px,2fr) 0.8fr 1.4fr 1.2fr 1.9fr 0.9fr',
   },
 }
 
@@ -752,17 +753,28 @@ export default function ModelSelectModal({ open, onClose, cabinets, onChoose, on
                     {rowValues(c).map((val, idx) => (
                       <span
                         key={idx}
+                        /*
+                          UZUN AD KESİLİYOR, TAŞMIYOR.
+
+                          Hücrenin kendisinde min-w-0 yoktu: ızgara hücresi
+                          içeriğinin altına inemediği için "truncate" hiç
+                          devreye girmiyor, uzun ad yandaki sütunun üstüne
+                          taşıyordu. Ad artık üç nokta ile kesiliyor, tamamı
+                          ipucunda (title) duruyor; rozet de alt satıra
+                          kaçmıyor.
+                        */
                         className={
                           idx === 0
-                            ? `font-medium ${isSel ? 'text-brand dark:text-brand-light' : 'text-neutral-900 dark:text-neutral-100'}`
-                            : 'text-neutral-600 dark:text-neutral-300'
+                            ? `min-w-0 font-medium ${isSel ? 'text-brand dark:text-brand-light' : 'text-neutral-900 dark:text-neutral-100'}`
+                            : 'min-w-0 truncate text-neutral-600 dark:text-neutral-300'
                         }
+                        title={typeof val === 'string' || typeof val === 'number' ? String(val) : undefined}
                       >
                         {idx === 0 ? (
-                          <span className="inline-flex items-center gap-2 min-w-0 flex-wrap">
+                          <span className="flex min-w-0 items-center gap-2">
                             {/* Ürün görseli: kod okumadan hangi ürün olduğu anlaşılsın. */}
                             <UrunGorseli kaynak={c.imageUrl} />
-                            <span className="truncate">{val}</span>
+                            <span className="min-w-0 flex-1 truncate">{val}</span>
                             <ProductTypeBadge productType={c.productType} />
                           </span>
                         ) : (
