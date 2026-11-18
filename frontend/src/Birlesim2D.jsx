@@ -92,6 +92,15 @@ export default function Birlesim2D({
   yaw = 0,
   egim = 0,
   /*
+   * PERSPEKTİF YALNIZCA MEKÂNLARDA.
+   *
+   * Tasarım ekranında perspektif, döndürülen tasarımı yakına gelen ucundan
+   * şişiriyor ve şekil yana kaçıyordu: kullanıcının istediği, tasarımın
+   * OLDUĞU YERDE dönmesi. Mekânlarda (ve fotoğrafta) perspektif duruyor,
+   * çünkü orada tasarım gerçek bir ortamın içinde.
+   */
+  perspektifli = true,
+  /*
    * ÇİZİMİN SIĞACAĞI KUTU (duvarın içi).
    *
    * Perspektifle öne gelen kol kutuyu büyütüyor; sınır verilmediğinde
@@ -272,7 +281,17 @@ export default function Birlesim2D({
    * gerekirse kamera geri çekiliyor.
    */
   const enYakinDonuk = koseler.reduce((t2, p) => Math.max(t2, p[2]), 0)
-  const D = Math.max(Dham, enYakinDonuk / 0.5)
+  /*
+   * Perspektifsiz görünümde kamera şeklin kaç katı uzakta duruyor. 8 kat:
+   * yakın ve uzak kenar arasındaki büyüme %10'un altında kalıyor, yani
+   * tasarım dönerken büyüyüp kaymıyor; buna karşılık 90°'ye dönmüş bir kol
+   * yine ince bir yamuk olarak görünüyor (tam paralel izdüşümde o kol
+   * çizgiye inerdi ve L ile düz ekran ayırt edilemezdi).
+   */
+  const ZAYIF_PERSPEKTIF = 8
+  const D = perspektifli
+    ? Math.max(Dham, enYakinDonuk / 0.5)
+    : Math.max(Dham, enYakinDonuk / 0.5, yayilim * ZAYIF_PERSPEKTIF, boyPx * ZAYIF_PERSPEKTIF)
 
   /*
    * KUTU İZDÜŞÜMDEN.

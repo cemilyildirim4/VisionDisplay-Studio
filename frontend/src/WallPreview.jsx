@@ -1832,6 +1832,8 @@ export default function WallPreview({
                     seciliEkranId={seciliEkranId}
                     /* Çerçeve yalnızca mekânda (bkz. Birlesim2D → cerceve). */
                     cerceve={sahneVar}
+                    /* Tasarım ekranında perspektif yok: olduğu yerde dönüyor. */
+                    perspektifli={sahneVar}
                   />
                 </div>
               )}
