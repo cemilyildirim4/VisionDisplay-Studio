@@ -30,32 +30,30 @@
  */
 
 /*
- * SABİT KADRAJIN KAPSADIĞI MEKÂN (m) — kameranın ne kadar geniş gördüğü.
+ * KAMERA DUVARIN ÖNÜNDE — TASARIM EKRANINDAKİ ORANIN AYNISI.
  *
- * Ölçek YALNIZCA bu kadrajdan geliyor: 1 m her mekânda aynı piksel sayısı.
- * Dolayısıyla 4 m'lik duvar 1 m'lik duvarın tam dört katı çiziliyor — metre
- * ile ekrandaki boy birebir orantılı. 10 m seçildi: 1 m'lik varsayılan duvar
- * kadrajın onda birinde kalıyor (gerçekte de öyle), 9–10 m'lik bir duvar
- * kadrajı dolduruyor.
+ * Ölçek sabit bir kadrajdan geliyordu (10 × 6 m): 1 m'lik bir duvar kadrajın
+ * onda biri, yani mekânda nokta kadar kalıyordu. Kullanıcının gördüğü
+ * "mekânda duvar da tasarım da çok uzak" buydu — ölçüldü: 1,00 m duvar
+ * 1.070 piksellik tuvalde 107 piksel.
+ *
+ * Kamera artık duvara göre duruyor: duvar her ölçüde tuvalin aynı oranını
+ * kaplıyor, tıpkı arka plansız tasarım ekranındaki gibi. "Duvar büyüdü mü"
+ * sorusunun cevabı kaybolmuyor, çünkü mekândaki İNSAN gerçek metre ölçüsünde
+ * çiziliyor: 1 m'lik duvarın yanında insan duvardan uzun, 4 m'lik duvarın
+ * yanında duvarın dörtte biri kadar duruyor.
+ *
+ * Oran %62/%58: tasarım ekranında duvar tuvalin dörtte üçünü kaplıyor, ama
+ * burada duvarın ÇEVRESİNE de yer gerek (tavan, zemin, yan duvarlar). Bu
+ * değerler duvarı öne çıkarırken mekânı da görünür bırakıyor.
  */
-export const KADRAJ_EN_M = 10
-export const KADRAJ_BOY_M = 6
+const PAY_EN = 0.62
+const PAY_BOY = 0.58
 
-/*
- * TAVAN — yalnızca çok büyük duvarlar için.
- *
- * 11 m'den geniş duvar kadrajı aşıyor ve çizim tuvalin dışına taşıyordu.
- * Bu sınır devreye girene kadar (günlük ölçülerin tamamı) orantı birebir
- * korunuyor; aşan duvarlarda da duvarla birlikte tasarım aynı oranda
- * küçüldüğü için ikisinin birbirine oranı yine doğru kalıyor.
- */
-const EN_COK_EN = 0.92
-const EN_COK_BOY = 0.88
 
 export function mekanOlcegi(tuvalW, tuvalH, duvarWm, duvarHm) {
   if (!tuvalW || !tuvalH || !(duvarWm > 0) || !(duvarHm > 0)) return null
-  const sabit = Math.min(tuvalW / KADRAJ_EN_M, tuvalH / KADRAJ_BOY_M)
-  return Math.min(sabit, (tuvalW * EN_COK_EN) / duvarWm, (tuvalH * EN_COK_BOY) / duvarHm)
+  return Math.min((tuvalW * PAY_EN) / duvarWm, (tuvalH * PAY_BOY) / duvarHm)
 }
 
 export default mekanOlcegi

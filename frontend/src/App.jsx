@@ -406,7 +406,16 @@ const tipUygunMu = (tip, sayi) =>
  * aradaki eklemler 180° (düz) geliyordu ve beş ekranlı bir U, üç yüz
  * yerine dört yüz gibi duruyordu.
  */
-function eklemVarsayilanAcisi(tip, j, uyeSayisi, aciliAci = 135) {
+/*
+ * AÇILIDA VARSAYILAN 180° — YANİ DÜZ.
+ *
+ * Açılı grup 135° ile doğuyordu: ikinci ekran eklenince tasarım
+ * kullanıcının istemediği bir V şekline giriyordu. Ekranlar artık her zaman
+ * açılı kuruluyor (bkz. grupTipi), o yüzden doğuştan gelen açı DÜZ olmalı;
+ * kullanıcı eklemleri tek tek büküyor, kısayol düğmeleri de (L, U) hazır
+ * açıları yazıyor.
+ */
+function eklemVarsayilanAcisi(tip, j, uyeSayisi, aciliAci = 180) {
   if (tip === 'l' || tip === 'u' || tip === 'kutu') return 90
   if (tip === 'duz') return 180
   return aciliAci
@@ -1258,8 +1267,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [grup, setGrup] = useState(null)
   const [grupSecim, setGrupSecim] = useState([])
-  const [grupTipi, setGrupTipi] = useState('duz')
-  const [grupAcisi, setGrupAcisi] = useState(135)
+  /* Ekranlar her zaman açılı birleşiyor; şekil düğmeleri yalnızca açı yazıyor. */
+  /* Tasarımın fareyle çevrilmiş açısı (derece); çift tıklama sıfırlıyor. */
+  const [grupDonus, setGrupDonus] = useState({ yaw: 0, egim: 0 })
+  const [grupTipi, setGrupTipi] = useState('acili')
+  const [grupAcisi, setGrupAcisi] = useState(180)
   /*
    * Kutunun KENDİ metni. Sayıdan ayrı tutuluyor, çünkü yazmaya başlayan
    * kullanıcı önce kutuyu boşaltıyor; boş metin sayı olarak geçersiz ama
@@ -5806,19 +5818,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     duzVarsayilanRef.current = true
     const idler = ekranParcalari.map((x) => x.id)
     setGrupSecim(idler)
-    setGrupTipi('duz')
-    birlesimiKur('duz', idler, grupAcisi, lYonSecim)
+    /*
+     * AÇILI DOĞUYOR, 180° YANİ DÜZ DURUYOR.
+     *
+     * Grup "düz" tipiyle kuruluyordu ve eklem açıları hiç görünmüyordu:
+     * kullanıcı L ya da U istediğinde şekil düğmesine basmak zorundaydı.
+     * Açılı tip her sayıda kurulabiliyor ve her eklemin açısı tek tek
+     * yazılabiliyor; 180° başladığı için görüntü düzle birebir aynı.
+     */
+    setGrupTipi('acili')
+    birlesimiKur('acili', idler, 180, lYonSecim)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grup, ekranParcalari.length])
-
-  /*
-   * KULLANICININ GRUPTAN ÇIKARDIĞI EKRANLAR.
-   *
-   * Aşağıdaki etki yeni ekranları kendiliğinden gruba alıyor; çipe basıp
-   * çıkarılan ekran da hemen geri alınsaydı çip çalışmaz olurdu. Çıkarma
-   * kararı burada saklanıyor, yeniden eklenince siliniyor.
-   */
-  const grupDisiRef = useRef(new Set())
 
   /*
    * YENİ EKRAN KENDİLİĞİNDEN GRUBA GİRİYOR.
@@ -5834,14 +5845,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * kalıyor, kullanıcı çiple ya da başka bir tiple istediğini kuruyor.
    */
   useEffect(() => {
-    if (!grup || !['duz', 'acili'].includes(grup.tip)) return
+    /* Küpün beşinci (üst) ekranı kendi hesabından geliyor: o grup dışında. */
+    if (!grup || grup.tip === 'kutu') return
     const uyeler = grup.uyeler || []
-    const eksik = ekranParcalari
-      .map((x) => x.id)
-      .filter((id) => !uyeler.includes(id) && !grupDisiRef.current.has(id))
+    const eksik = ekranParcalari.map((x) => x.id).filter((id) => !uyeler.includes(id))
     if (!eksik.length) return
     const yeni = [...uyeler, ...eksik]
     setGrupSecim(yeni)
+    /* Sayı L/U/küpe uymuyorsa birlesimiKur zaten açılıya düşürüyor. */
     birlesimiKur(grup.tip, yeni, grupAcisi, lYonSecim)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grup, ekranParcalari])
@@ -5915,7 +5926,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (g && Array.isArray(g.uyeler) && g.uyeler.includes(id)) {
       const kalan = g.uyeler.filter((x) => x !== id)
       if (kalan.length < 2) {
-        setGrupTipi('duz')
+        setGrupTipi('acili')
         setGrup(null)
       } else if (!tipUygunMu(g.tip, kalan.length)) {
         /* Kalan sayı bu şekle uymuyor: grup Açılı'ya geçiyor (bkz. tipUygunMu). */
@@ -8670,16 +8681,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }, [content, contentUrl, aktifEkranId, icerikGruplari, grup])
 
   /*
-   * İKİ EKRAN VARSA İKİSİ DE İŞARETLİ.
-   * Tek olasılık zaten o; kullanıcıdan iki kutucuğu ayrıca işaretlemesini
-   * istemek boş bir adım. Daha çok ekran varken seçim kullanıcıya kalıyor.
+   * BİRDEN ÇOK EKRAN = TEK BİRLEŞİM.
+   *
+   * Hangi ekranların birleşeceği çiplerle seçiliyordu; seçilmeyen ekran
+   * tasarımın yanında ayrı duruyordu. Grubu kuran etki yukarıda
+   * (duzVarsayilanRef), yeni ekranı içine alan etki de orada: burada ayrıca
+   * bir şey yapmaya gerek yok.
    */
-  useEffect(() => {
-    if (grupSecim.length || grup) return
-    const hepsi = [...sabitEkranlar.map((e) => e.id), aktifEkranId].filter(Boolean)
-    if (hepsi.length === 2) setGrupSecim(hepsi)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sabitEkranlar, aktifEkranId])
 
   const bolunmusDilimler = (() => {
     const m = selectedModel || previewModel
@@ -11116,6 +11124,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               rowsMax={rowsSinir}
               colsIpucu={duvarSinirli ? t('ekran.duvarDolu') : null}
               rowsIpucu={duvarSinirli ? t('ekran.duvarDolu') : null}
+              donus={grupDonus}
+              /*
+               * Kendi fotoğrafında tasarımı döndürmenin kendi yolu var
+               * (sürükleyerek yerleştirme, bkz. FotoYerlesim3D); orada iki
+               * döndürme birbirine girmesin diye kapalı.
+               */
+              onDonus={scene === 'ozel' && ozelSahne ? null : setGrupDonus}
               hideRegions={isVideoWall}
               /*
                * FOTOĞRAF GELENE KADAR NORMAL ÖNİZLEME.
@@ -11471,14 +11486,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       /* Shift: seçime ekle/çıkar. Düz tıklama: düzenlemeye al. */
                       if (shift) {
                         /*
-                         * Tasarım alanındaki seçim ile yerleşim çipleri AYNI
-                         * listeyi kullanıyor; iki ayrı seçim kullanıcıyı
-                         * hangisinin geçerli olduğunu tahmin etmeye bırakıyordu.
+                         * Shift artık yalnızca işaretliyor, BİRLEŞİMDEN
+                         * çıkarmıyor: ekranların hepsi her zaman birleşik
+                         * (bkz. "BİRDEN ÇOK EKRAN = TEK BİRLEŞİM").
                          */
-                        const yeni = grupSecim.includes(id)
-                          ? grupSecim.filter((x) => x !== id)
-                          : [...grupSecim, id]
-                        setGrupSecim(yeni)
                         setSecimKumesi((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]))
                         return
                       }
@@ -12817,56 +12828,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </div>
 
                   {/*
-                    Seçim satırları ekran listesiyle AYNI kaynaktan
-                    (ekranOzetleri): küçük resim ve dizilim burada da
-                    görünsün, kullanıcı hangi ekranı işaretlediğini
-                    sırasından tahmin etmek zorunda kalmasın.
+                    ÇİP SEÇİMİ KALKTI — EKRANLAR HER ZAMAN BİRLEŞİK.
+                  
+                    Burada "1 · 3×6" gibi çipler vardı ve hangi ekranların
+                    birleşeceği oradan seçiliyordu. Seçilmeyen ekran tasarımın
+                    yanında ayrı duruyor, kullanıcı da onu bozuk sanıyordu.
+                    Bütün ekranlar artık tek birleşim (bkz. "BİRDEN ÇOK EKRAN =
+                    TEK BİRLEŞİM"); ayırmak isteyen "Ayır" düğmesini kullanıyor.
                   */}
-                  {/*
-                    ÇİP IZGARASI — alt alta onay kutuları paneli uzatıyordu.
-                    İki sütun: dört ekran iki satır, altı ekran üç satır.
-                    Seçim durumu çipin KENDİSİNDE (dolu mavi), ayrı bir
-                    kutucuğa gerek yok.
-                  */}
-                  <div
-                    className="order-2 grid w-full gap-0.5"
-                    /* Kaç ekran varsa o kadar sütun: liste hep tek satır. */
-                    style={{ gridTemplateColumns: `repeat(${ekranOzetleri.length}, minmax(0, 1fr))` }}
-                  >
-                    {ekranOzetleri.map((e) => {
-                      const secili = grupSecim.includes(e.id)
-                      return (
-                        <button
-                          key={e.id ?? 'aktif'}
-                          type="button"
-                          onClick={() => {
-                            const yeni = secili ? grupSecim.filter((x) => x !== e.id) : [...grupSecim, e.id]
-                            /* Çıkarma kararı saklanıyor; yoksa otomatik ekleme geri alırdı. */
-                            if (secili) grupDisiRef.current.add(e.id)
-                            else grupDisiRef.current.delete(e.id)
-                            setGrupSecim(yeni)
-                            birlesimiKur(grupTipi, yeni, grupAcisi, lYonSecim)
-                          }}
-                          className={`flex min-w-0 items-center gap-0.5 rounded-md border px-0.5 py-0.5 text-[10.5px] leading-tight transition-colors ${
-                            secili
-                              ? 'border-brand bg-brand text-white'
-                              : 'border-neutral-300 text-neutral-600 hover:border-brand dark:border-[#39414f] dark:text-neutral-300'
-                          }`}
-                        >
-                          <span className="relative h-3 w-4 shrink-0 overflow-hidden rounded-sm border border-black/15">
-                            <IcerikOnizleme
-                              oge={icerikHavuzuTam.find((x) => x.id === e.havuzId)}
-                              dilim={e.dilim}
-                              oynatImi
-                            />
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-left">
-                            {e.sira} · {e.ayar.cols || 1}×{e.ayar.rows || 1}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
 
                   {/*
                     Şekil düğmesi doğrudan işi yapıyor; ayrıca onay istemiyor.
@@ -12906,16 +12875,46 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           duruyor; hangi ekranların gireceğini kullanıcı
                           çiplerden seçebiliyor.
                         */
+                        /* Küp dört yüz ister; ötekiler iki ekrandan sonra serbest. */
                         disabled={ekranOzetleri.length < (GRUP_EN_AZ[tip] || 2)}
                         onClick={() => {
                           /* Sıra ekran numarasından geliyor, tıklama sırasından değil. */
                           const sirali = ekranOzetleri.map((x) => x.id)
-                          const taban =
-                            grupSecim.length >= 2 ? sirali.filter((id) => grupSecim.includes(id)) : sirali
-                          const tamSayi = GRUP_TAM_SAYI[tip]
-                          const secim = tamSayi ? taban.slice(0, tamSayi) : taban
-                          /* Tipe basmak "bunlar birleşsin" demek: eski çıkarma kararları siliniyor. */
-                          grupDisiRef.current = new Set(sirali.filter((id) => !secim.includes(id)))
+                          /*
+                           * ŞEKİL DÜĞMELERİ ARTIK KISAYOL.
+                           *
+                           * Düğme "şu ekranlar şu şekilde birleşsin" demekti ve
+                           * şeklin istediği sayıda ekranı alıp kalanını dışarıda
+                           * bırakıyordu. Ekranlar artık her zaman birleşik; düğme
+                           * yalnızca EKLEM AÇILARINI yazıyor:
+                           *   Düz 180°, L ilk eklem 90°, U iki uç eklem 90°.
+                           * Kalan eklemler düz kalıyor, yani beş ekranla da L
+                           * kurulabiliyor. Küp kapalı bir kutu olduğu için
+                           * (beşinci yüzü kendisi ekliyor) kendi tipinde kalıyor.
+                           */
+                          if (tip !== 'kutu') {
+                            setGrupTipi('acili')
+                            setGrupSecim(sirali)
+                            birlesimiKur('acili', sirali, 180, lYonSecim)
+                            setGrup((g) => {
+                              if (!g || !Array.isArray(g.uyeler)) return g
+                              const eklemSayisi = Math.max(0, g.uyeler.length - 1)
+                              const aci = (j) => {
+                                if (tip === 'l') return j === 0 ? 90 : 180
+                                if (tip === 'u') return j === 0 || j === eklemSayisi - 1 ? 90 : 180
+                                return 180
+                              }
+                              return {
+                                ...g,
+                                eklemler: Array.from({ length: eklemSayisi }, (_, j) => ({
+                                  aci: aci(j),
+                                  kose: g.eklemler?.[j]?.kose || 'koseli',
+                                })),
+                              }
+                            })
+                            return
+                          }
+                          const secim = sirali.slice(0, GRUP_TAM_SAYI.kutu)
                           setGrupTipi(tip)
                           setGrupSecim(secim)
                           birlesimiKur(tip, secim, grupAcisi, lYonSecim)

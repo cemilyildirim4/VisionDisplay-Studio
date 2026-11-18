@@ -74,6 +74,16 @@ export default function Birlesim2D({
   /* Sade kip: kenarlıklar ve ayrım çizgileri kalkıyor. */
   sade = false,
   /*
+   * FAREYLE DÖNDÜRME (derece).
+   *
+   * Tasarım karşıdan sabit duruyordu; açılı bir grupta kolların gerçekten
+   * nereye baktığı ancak yandan görülüyor. Kullanıcı tasarımı sürükleyerek
+   * kendi ekseninde çeviriyor (yaw) ve eğiyor (egim). Duvar ve mekân
+   * yerinde kalıyor: dönen şey tasarımın KENDİSİ.
+   */
+  yaw = 0,
+  egim = 0,
+  /*
    * ÇİZİMİN SIĞACAĞI KUTU (duvarın içi).
    *
    * Perspektifle öne gelen kol kutuyu büyütüyor; sınır verilmediğinde
@@ -319,6 +329,8 @@ export default function Birlesim2D({
           width: 0,
           height: boyPx,
           transformStyle: 'preserve-3d',
+          /* Önce kendi ekseninde dön, sonra eğil (CSS sağdan sola uygular). */
+          transform: yaw || egim ? `rotateX(${egim}deg) rotateY(${yaw}deg)` : undefined,
         }}
       >
         {dilimler.map((d, i) => {
@@ -339,11 +351,31 @@ export default function Birlesim2D({
            * olduğu için o kenarda iki dilimin açısı birkaç derece fark
            * ediyor, yani bindirmeye de gerek yok.
            */
-          const ilkDilim = d.dilim && d.u0 <= 1e-6
-          const sonDilim = d.dilim && (i === dilimler.length - 1 || dilimler[i + 1].i !== d.i)
-          const payL = d.dilim && !ilkDilim ? BINDIRME : 0
-          const payR = d.dilim && !sonDilim ? BINDIRME : 0
+          /*
+           * EKRANLAR ARASINDA AÇIK RENKLİ ÇİZGİ KALMIYOR.
+           *
+           * Pay yalnızca AYNI ekranın dilimleri arasında veriliyordu: iki
+           * ekranın buluştuğu eklemde kutular uç uca geliyor ve yuvarlama
+           * yüzünden aralarından arka plan sızıyordu — tasarımın ortasında
+           * açık renkli dikey bir çizgi (ölçüldü: ekranlar arası boşluk).
+           *
+           * Pay artık her kenarda var; ekranın kendi görüntüsünün ulaşmadığı
+           * ince şerit de panelin zemin rengiyle dolduruluyor. Yani eklemde
+           * boşluk değil, gerçek bir LED duvarda olduğu gibi KOYU bir dikiş
+           * görünüyor.
+           */
+          const payL = BINDIRME
+          const payR = BINDIRME
           const kutuW = d.w + payL + payR
+          /*
+           * ARKA YÜZDE GÖRÜNTÜ YOK.
+           *
+           * LED ekran çift taraflı değil; arkasına geçildiğinde görüntü
+           * ters çevrilmiş hâlde görünüyordu. Dilimin bize dönük olup
+           * olmadığı açısından belli: yüzün normali rotateY(t) ile dönüyor,
+           * yaw da eklenince cos negatife düşerse o yüz arkasını gösteriyor.
+           */
+          const arkaYuz = Math.cos(d.t + (yaw * Math.PI) / 180) <= 0.02
           return (
             <div
               key={(p.e.id ?? 'e') + '-' + i}
@@ -354,7 +386,9 @@ export default function Birlesim2D({
                 width: kutuW,
                 height: p.h,
                 marginLeft: -(d.w / 2 + payL),
-                overflow: d.dilim ? 'hidden' : undefined,
+                overflow: 'hidden',
+                /* Görüntünün ulaşmadığı pay şeridi: panelin zemini. */
+                background: '#0a0a0a',
                 /*
                  * rotateY(θ) ekranın en eksenini (cos θ, 0, −sin θ) yapıyor;
                  * üstten bakıştaki derinlik ekseni de eksi Z. İkisi aynı
@@ -404,6 +438,8 @@ export default function Birlesim2D({
                   top: 0,
                   width: p.w,
                   height: p.h,
+                  /* Arka yüz: kasanın kendisi, görüntü değil. */
+                  visibility: arkaYuz ? 'hidden' : undefined,
                 }}
               >
                 <Screen

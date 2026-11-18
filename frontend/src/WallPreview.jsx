@@ -1006,6 +1006,16 @@ export default function WallPreview({
   /* Sınıra gelince pasif düğmenin üstünde çıkan açıklama (duvar dolu gibi). */
   colsIpucu = null,
   rowsIpucu = null,
+  /*
+   * TASARIMIN KENDİ DÖNÜŞÜ (derece) ve onu değiştiren geri çağırma.
+   *
+   * Birden çok ekran birleşince kolların gerçekten nereye baktığı karşıdan
+   * anlaşılmıyor. Tasarımın üstünde sürüklemek onu kendi ekseninde
+   * çeviriyor; duvar ve mekân yerinde kalıyor. Çift tıklama karşıya
+   * döndürüyor.
+   */
+  donus = null,
+  onDonus = null,
   hideRegions = false,
   curveAmount = 60,
   // Arkada bir mekân sahnesi çizildiyse duvar kutusu SAYDAM olur; odanın kendi
@@ -1147,6 +1157,34 @@ export default function WallPreview({
    * hâlde ~26 px), çizim ise iki katından fazla büyür.
    */
   const dar = size.w > 0 && size.w < 560
+
+  /* Fareyle döndürme: basıldığı yer ve o andaki açı. */
+  const donusBas = useRef(null)
+  const donusBaslat = (ev) => {
+    if (!onDonus || ev.button !== 0) return
+    donusBas.current = {
+      x: ev.clientX,
+      y: ev.clientY,
+      yaw: donus?.yaw || 0,
+      egim: donus?.egim || 0,
+      tasidi: false,
+    }
+    ev.currentTarget.setPointerCapture?.(ev.pointerId)
+  }
+  const donusSurdur = (ev) => {
+    const b = donusBas.current
+    if (!b || !onDonus) return
+    const dx = ev.clientX - b.x
+    const dy = ev.clientY - b.y
+    /* Birkaç piksellik titreme tıklamayı döndürmeye çevirmesin. */
+    if (!b.tasidi && Math.abs(dx) + Math.abs(dy) < 4) return
+    b.tasidi = true
+    /* Eğim sınırlı: tasarım tepetaklak olup okunmaz hâle gelmesin. */
+    onDonus({ yaw: b.yaw + dx * 0.45, egim: Math.max(-30, Math.min(30, b.egim - dy * 0.3)) })
+  }
+  const donusBitir = () => {
+    donusBas.current = null
+  }
 
   const olcekRef = useRef(null)
   useEffect(() => {
@@ -1753,9 +1791,20 @@ export default function WallPreview({
                     alignItems: 'flex-end',
                     justifyContent: 'center',
                     opacity: ekranGizle ? 0 : undefined,
+                    cursor: onDonus ? 'grab' : undefined,
+                    /* Dokunmatikte kaydırma yerine döndürme. */
+                    touchAction: onDonus ? 'none' : undefined,
                   }}
+                  onPointerDown={donusBaslat}
+                  onPointerMove={donusSurdur}
+                  onPointerUp={donusBitir}
+                  onPointerCancel={donusBitir}
+                  /* Çift tıklama: tasarım yeniden karşıya döner. */
+                  onDoubleClick={() => onDonus?.({ yaw: 0, egim: 0 })}
                 >
                   <Birlesim2D
+                    yaw={donus?.yaw || 0}
+                    egim={donus?.egim || 0}
                     /* Çizim kaplanan alana sığıyor: etiketle aynı genişlik. */
                     enCokW={olcuW}
                     enCokH={stripTop + maxHpx}

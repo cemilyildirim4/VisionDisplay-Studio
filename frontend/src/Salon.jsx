@@ -69,7 +69,6 @@ export default function Salon({
   const cy = tuvalH / 2
   /* Kaçış noktası: merkezden kaydırılmış hâli. Arka duvar merkezde kalıyor. */
   const kx = cx + (Number(kacisKaymasi) || 0)
-  const ky = cy
 
   // Ekranın tuvaldeki yeri (gerçek ekran da tam buraya çizilir)
   const eSol = cx - wPx / 2
@@ -89,6 +88,22 @@ export default function Salon({
   const sahneY = cy + duvarH / 2 // duvarın zeminle birleştiği çizgi
 
   /*
+   * BAKIŞ YÜKSEKLİĞİ: AYAKTA DURAN BİR İNSANIN GÖZÜ.
+   *
+   * Kaçış noktası tuvalin tam ortasındaydı, yani kamera duvarın yarı
+   * yüksekliğinden bakıyordu: 4 m'lik bir duvarda göz 2 m'de, 1 m'lik
+   * duvarda 50 cm'de — her duvarda başka bir boydan. Oysa mekânı gezen
+   * hep aynı insan. Göz artık zeminden 1,60 m'de; alçak duvarda ekrana
+   * yukarıdan bakılıyor, yüksek duvarda ekran yukarıda kalıyor.
+   *
+   * SINIR: odanın tavanı duvarın kendisi (bkz. tavanY). Göz tavanın
+   * üstüne çıkarsa tavan ile zemin yer değiştirir ve oda ters dönerdi;
+   * bu yüzden alçak duvarlarda göz, duvar boyunun %80'inde kalıyor.
+   */
+  const GOZ_M = 1.6
+  const ky = sahneY - Math.min(GOZ_M, duvarHm * 0.8) * m
+
+  /*
    * TEK KAÇIŞ NOKTALI PERSPEKTİF — kaçış noktası tuvalin merkezi (cx, cy).
    *
    * ÖNCEKİ ÇİZİM TUTARSIZDI: tavan/zemin/yan duvarlar arka duvarın
@@ -102,7 +117,20 @@ export default function Salon({
    * k, ön çerçeve tuvali taşıracak kadar büyük seçiliyor; taşan kısım zaten
    * görünmüyor (SVG tuvali kırpıyor).
    */
-  const k = Math.max(tuvalW / duvarW, tuvalH / duvarH) * 1.06
+  /*
+   * Ön çerçeve tuvali her yönden aşmalı. Kaçış noktası artık ortada
+   * olmadığı için katsayı dört kenarın HEPSİNDEN hesaplanıyor; eskisi
+   * (tuval/duvar oranı) yalnızca ortadaki kaçış noktası için yeterliydi
+   * ve göz aşağı indiğinde tavan tuvalin üstünü boş bırakıyordu.
+   */
+  const k =
+    Math.max(
+      kx / Math.max(1e-6, kx - duvarSol),
+      (tuvalW - kx) / Math.max(1e-6, duvarSag - kx),
+      ky / Math.max(1e-6, ky - tavanY),
+      (tuvalH - ky) / Math.max(1e-6, sahneY - ky),
+      1,
+    ) * 1.06
   /*
    * Ön çerçeve, arka duvarın KAÇIŞ NOKTASI etrafında k katı büyütülmüş hâli.
    * Kaçış noktası kaydığında bu dört kenar da onunla birlikte kayıyor; sekiz
