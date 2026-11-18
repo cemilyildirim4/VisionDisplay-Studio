@@ -10591,17 +10591,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           .replace('{r}', String(kupUstGereken.satir))
       : null
 
-  /*
-   * DUVARIN ALT SINIRI TASARIMA BAĞLI DEĞİL.
-   *
-   * Alt sınır "mevcut tasarımı barındıran en küçük ölçü" idi: tasarım
-   * büyüdükçe sınır da büyüyor ve duvarın "−" düğmesi kilitleniyordu —
-   * kullanıcı kendi yazdığı duvarı küçültemiyordu. Duvar kullanıcının
-   * ölçüsü; sığmayan tasarımı küçültmek de artık "+" düğmesinin işi
-   * (bkz. colsSinir / rowsSinir). Alt sınır yalnızca sıfır olmasın diye.
-   */
+  /* Sıfır olmasın diye mutlak alt sınır. */
   const widthMin = 0.1
   const heightMin = 0.1
+
+  /*
+   * DUVAR TASARIMDAN KÜÇÜK OLAMAZ.
+   *
+   * Duvar serbestçe küçültülebiliyordu: 0,96 m'lik tasarımın duvarı 0,10
+   * m'ye kadar iniyor, tasarım duvarın dışında asılı kalıyordu. Alt sınır
+   * tasarımın kendi ölçüsü; "−" düğmesi orada pasifleşiyor ve üstüne
+   * gelince sebebi fare ucunda yazıyor. Daha küçük bir sayı yazılırsa kutu
+   * eski değerine dönüyor ve altında en az ne olabileceği çıkıyor (bkz.
+   * SayiKutusu → onAltSinir). Tasarımı küçültmek "+/−" düğmelerinin işi
+   * (bkz. colsSinir / rowsSinir).
+   *
+   * Yukarı yuvarlanıyor: 0,955 m'lik tasarım 0,96 m duvara sığsın.
+   */
+  const yukariYuvarla = (m) => Math.ceil((Number(m) || 0) * 100) / 100
+  const duvarEnAzEn = duvarSinirli ? Math.max(widthMin, yukariYuvarla(tasarimWm)) : widthMin
+  const duvarEnAzBoy = duvarSinirli ? Math.max(heightMin, yukariYuvarla(tasarimHm)) : heightMin
 
   /*
    * Duvar, ekrandan küçük kalamaz. Tek ekranda kabin sayısı duvara kırpılır.
@@ -11082,7 +11091,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 ekranSeridi.every((x) => Number.isFinite(x.yon))
               }
               /* Rozetler de "Ölçüleri gizle" ile kalkıyor. */
-              numaraGoster={showMeasurements}
               /*
                * SADE KİP — kenarlıklar ve ayrım çizgileri de kalksın.
                * Ölçü kalkınca tasarım tek görsel gibi görünmeli; yarım
@@ -11106,6 +11114,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               }}
               colsMax={colsSinir}
               rowsMax={rowsSinir}
+              colsIpucu={duvarSinirli ? t('ekran.duvarDolu') : null}
+              rowsIpucu={duvarSinirli ? t('ekran.duvarDolu') : null}
               hideRegions={isVideoWall}
               /*
                * FOTOĞRAF GELENE KADAR NORMAL ÖNİZLEME.
@@ -12297,7 +12307,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     setWidth(v)
                   }}
                   onAltSinir={(enAz) => setDuvarUyari(enAz == null ? null : { yon: 'en', enAz })}
-                  min={widthMin}
+                  min={duvarEnAzEn}
+                  altIpucu={t('duvar.tasarimdanKucuk')}
                   max={40}
                   adim={0.1}
                   birim="m"
@@ -12311,7 +12322,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     setHeight(v)
                   }}
                   onAltSinir={(enAz) => setDuvarUyari(enAz == null ? null : { yon: 'boy', enAz })}
-                  min={heightMin}
+                  min={duvarEnAzBoy}
+                  altIpucu={t('duvar.tasarimdanKucuk')}
                   max={20}
                   adim={0.1}
                   birim="m"
@@ -12618,8 +12630,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             + düğmesi dışarı düşüyordu.
                           */}
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                            <SayiKutusu etiket={t('screen.colsShort')} deger={cols} onChange={setCols} min={1} max={colsSinir} />
-                            <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsSinir} />
+                            {/* Pasif "+"ın sebebi fare ucunda yazıyor (bkz. ustIpucu). */}
+                            <SayiKutusu etiket={t('screen.colsShort')} deger={cols} onChange={setCols} min={1} max={colsSinir} ustIpucu={duvarSinirli ? t('ekran.duvarDolu') : null} />
+                            <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsSinir} ustIpucu={duvarSinirli ? t('ekran.duvarDolu') : null} />
                           </div>
                           {/* Sebebi düğmenin yanında: "+" neden basılmıyor. */}
                           {duvarDolu && (
@@ -15572,7 +15585,19 @@ function KutuSarmali({ etiket, etiketUstte, sik, children }) {
   )
 }
 
-function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null, etiketUstte = false, sik = false, onAltSinir = null }) {
+/*
+ * altIpucu / ustIpucu: düğme sınıra dayanıp pasifleştiğinde SEBEBİ.
+ * Pasif <button> fare olaylarını almadığı için title kabına konuyor.
+ */
+function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, birim = null, etiketUstte = false, sik = false, onAltSinir = null, altIpucu = null, ustIpucu = null }) {
+  const sarmala = (govde, ipucu, pasif) =>
+    pasif && ipucu ? (
+      <span title={ipucu} className="flex shrink-0">
+        {govde}
+      </span>
+    ) : (
+      govde
+    )
   const [taslak, setTaslak] = useState(null)
   const dugme =
     (sik ? 'h-[22px] w-[17px] ' : 'h-6 w-6 ') +
@@ -15612,15 +15637,19 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
   }
   return (
     <KutuSarmali etiket={etiket} etiketUstte={etiketUstte} sik={sik}>
-      <button
-        type="button"
-        aria-label="−"
-        onClick={() => onChange(Math.max(min, yuvarla((Number(deger) || 0) - adim)))}
-        disabled={(Number(deger) || 0) <= min}
-        className={dugme}
-      >
-        −
-      </button>
+      {sarmala(
+        <button
+          type="button"
+          aria-label="−"
+          onClick={() => onChange(Math.max(min, yuvarla((Number(deger) || 0) - adim)))}
+          disabled={(Number(deger) || 0) <= min}
+          className={dugme}
+        >
+          −
+        </button>,
+        altIpucu,
+        (Number(deger) || 0) <= min,
+      )}
       <input
         type="text"
         inputMode="decimal"
@@ -15637,15 +15666,19 @@ function SayiKutusu({ etiket, deger, onChange, min = 1, max = 99, adim = 1, biri
           sik ? 'w-[2.2rem] shrink-0 text-[13px]' : 'w-[3.4rem] text-[14.5px]'
         }`}
       />
-      <button
-        type="button"
-        aria-label="+"
-        onClick={() => onChange(Math.min(max, yuvarla((Number(deger) || 0) + adim)))}
-        disabled={(Number(deger) || 0) >= max}
-        className={dugme}
-      >
-        +
-      </button>
+      {sarmala(
+        <button
+          type="button"
+          aria-label="+"
+          onClick={() => onChange(Math.min(max, yuvarla((Number(deger) || 0) + adim)))}
+          disabled={(Number(deger) || 0) >= max}
+          className={dugme}
+        >
+          +
+        </button>,
+        ustIpucu,
+        (Number(deger) || 0) >= max,
+      )}
       {birim && (
         <span
           className={`shrink-0 text-neutral-500 dark:text-neutral-400 ${sik ? 'text-[12px]' : 'text-[13px]'}`}

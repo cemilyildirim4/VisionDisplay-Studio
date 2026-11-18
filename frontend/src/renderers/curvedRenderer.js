@@ -78,20 +78,55 @@ function gradient(ctx, w, stops) {
 }
 
 /**
- * x konumundaki dikey dilimin üst kenarı ve yüksekliği.
+ * Yüzeyin x noktasının GÖRÜNEN ölçeği (0..1).
  *
- * Kavis, dilimin görünen yüksekliğiyle temsil edilir (perspektif kısalması):
- *  - DIŞA kavisli (konveks): merkez izleyiciye YAKIN → ortada daha UZUN görünür.
- *  - İÇE kavisli (konkav): merkez izleyiciden UZAK → ortada daha KISA görünür.
+ * İKİ YÖN AYNI BÜYÜKLÜKTE.
  *
- * yOff = maxD/2 taban kaydırması sayesinde iki yön de aynı tuvale sığar.
+ * Eskiden dışa kavisli ekran ortada UZUYOR (h + 2d), içe kavisli ise
+ * KISALIYORDU (h − 2d): aynı kavis yüzdesinde iki tasarım arasında 4d'lik
+ * bir fark oluşuyor, biri ötekinden gözle görülür biçimde büyük duruyordu.
+ * Oysa ikisinin yay açısı da aynı; karşıdan bakışta ikisi de aynı yeri
+ * kaplar, yalnızca ekranın hangi yerinin izleyiciye DÖNÜK olduğu değişir.
+ *
+ * Artık ikisi de aynı kutuya sığıyor ve birbirinin aynası:
+ *  - DIŞA kavisli: merkez karşımıza dönük (tam boy), kenarlar yana döndüğü
+ *    için kısalmış görünüyor.
+ *  - İÇE kavisli: kenarlar karşımıza dönük (tam boy), merkez kısalıyor.
  */
-function edgeAt(x, w, h, amp, concave, yOff) {
-  if (w <= 0) return { top: yOff, height: h }
+function gorunenOlcek(x, w, kucultme, concave) {
+  if (!(w > 0)) return 1
   const t = (2 * x) / w - 1 // -1 (sol) .. 0 (merkez) .. +1 (sağ)
-  const bulge = Math.max(0, 1 - t * t)
-  const d = (amp * bulge) / 2
-  return concave ? { top: yOff + d, height: Math.max(1, h - 2 * d) } : { top: yOff - d, height: h + 2 * d }
+  const bombe = Math.max(0, 1 - t * t) // 0 kenarda, 1 merkezde
+  /* Bizden en çok "kaçan" yer: dışa kavislide kenarlar, içe kavislide merkez. */
+  const kacis = concave ? bombe : 1 - bombe
+  return 1 - kucultme * kacis
+}
+
+/**
+ * oran = derinlik / genişlik → toplam yay açısı (radyan).
+ *
+ * d(θ) kapalı biçimde ters çevrilemiyor ama θ arttıkça d sürekli artıyor;
+ * ikiye bölme yeterli. (content.js'teki yayAcisiRad ile aynı hesap; burada
+ * yüzdeden değil, doğrudan derinlik oranından gidiliyor.)
+ */
+function yayAcisi(oran) {
+  if (!(oran > 0)) return 0
+  let alt = 0
+  let ust = Math.PI
+  for (let i = 0; i < 30; i++) {
+    const orta = (alt + ust) / 2
+    if ((1 - Math.cos(orta / 2)) / orta < oran) alt = orta
+    else ust = orta
+  }
+  return (alt + ust) / 2
+}
+
+/** x konumundaki dikey dilimin üst kenarı ve yüksekliği. */
+function edgeAt(x, w, h, kucultme, concave, yOff) {
+  if (w <= 0) return { top: yOff, height: h }
+  const boy = Math.max(1, h * gorunenOlcek(x, w, kucultme, concave))
+  /* Kısalma yatay orta çizgiye göre: karşıdan bakan göz ekranın ortasında. */
+  return { top: yOff + (h - boy) / 2, height: boy }
 }
 
 /**
@@ -188,11 +223,29 @@ export function drawCurvedScreen(ctx, o) {
 
   if (!(w > 0) || !(h > 0)) return
 
-  const amp = curve * maxD
+  /*
+   * KISALMA ORANI EKRANIN BOYUNDAN DEĞİL, AÇISINDAN GELİYOR.
+   *
+   * Eskiden sarkma doğrudan derinlik pikseliydi (amp): geniş ve alçak bir
+   * ekranda ekranın boyunu aşıyor, dar ve yüksek olanda hiç görünmüyordu —
+   * aynı yüzde, bambaşka bir kavis. Yana dönen bir yüzeyin ne kadar
+   * kısaldığı yalnızca DÖNME AÇISINA bağlıdır: 1 − cos(θ/2).
+   *
+   * ABARTI: karşıdan bakışta gerçek kısalma birkaç yüzde kalır, yani kavis
+   * çizimde hiç belli olmazdı. Teknik çizimlerde olağan olduğu gibi etki
+   * abartılıyor; yön ve oranlar doğru kalıyor.
+   *
+   * TAVAN: 64 derecede abartılmış kısalma yarıya yaklaşıyor ve ekran
+   * mercek gibi duruyordu (ölçüldü). Üçte bir, kavisi belli eden ama
+   * kenarları hâlâ ekran gibi tutan sınır.
+   */
+  const KISALMA_ABARTI = 3
+  const oran = w > 0 ? (curve * maxD) / w : 0
+  const kucultme = Math.min(0.3, KISALMA_ABARTI * (1 - Math.cos(yayAcisi(oran) / 2)))
   const yOff = maxD / 2
   const totalH = h + maxD
   const step = STEP
-  const E = (x) => edgeAt(x, w, h, amp, concave, yOff)
+  const E = (x) => edgeAt(x, w, h, kucultme, concave, yOff)
 
   ctx.clearRect(0, 0, w, totalH)
 
@@ -211,8 +264,9 @@ export function drawCurvedScreen(ctx, o) {
    * her dilimde küçültme oluyor, büyütme hiç olmuyor. Kenarlardaki
    * dilimler zaten küçülüyordu, onlar değişmiyor.
    */
-  const esneme = h > 0 ? Math.min(3, (h + Math.max(0, amp)) / h) : 1
-  const yuzey = yuzeyiCiz(Math.ceil(w * bs), Math.ceil(h * bs * esneme), o)
+  /* Dilim hiçbir yerde h'den uzun değil (bkz. gorunenOlcek): kopyalama hep
+     küçültme, yani büyütmeden gelen bulanıklık yok. */
+  const yuzey = yuzeyiCiz(Math.ceil(w * bs), Math.ceil(h * bs), o)
   const yuzeyH = yuzey.height
 
   // Kenarların pürüzsüz çıkması için tüm panel çizimi dış hatla kırpılır.
@@ -225,13 +279,40 @@ export function drawCurvedScreen(ctx, o) {
    * ve yarım piksel pay ekler. Böylece dilim kırpma yolunun dışına taşar,
    * fazlası kırpılır; eksik kalsaydı kenarda saydam çentikler oluşurdu.
    */
-  for (let x = 0; x < w; x += step) {
+  /*
+   * GÖRÜNTÜ DE KAVİSLE BİRLİKTE KISALIYOR.
+   *
+   * Görsel yatayda birebir kopyalanıyordu: yüzey büküldüğü hâlde üstündeki
+   * görüntü düz bir ekrandaki gibi eşit aralıklı duruyor, kavis yalnızca
+   * ekranın dış hattından anlaşılıyordu. Gerçekte bizden kaçan bölge DAR
+   * görünür: dışa kavislide kenarlar, içe kavislide orta sıkışır.
+   *
+   * Hedefte dilimler eşit; KAYNAKTAN alınan parça 1/ölçek kadar geniş.
+   * Toplam w'ye normalleniyor, yani yüzeyin tamamı kullanılıyor ve ekranın
+   * dış ölçüsü değişmiyor (komşu ekranlarla arası açılmasın).
+   */
+  const dilim = Math.max(1, Math.ceil(w / step))
+  const kaynakKenar = new Float64Array(dilim + 1)
+  let toplam = 0
+  for (let i = 0; i < dilim; i++) {
+    const xo = Math.min(w, (i + 0.5) * step)
+    toplam += 1 / Math.max(0.2, gorunenOlcek(xo, w, kucultme, concave))
+    kaynakKenar[i + 1] = toplam
+  }
+  const kNorm = toplam > 0 ? w / toplam : 1
+  for (let i = 0; i <= dilim; i++) kaynakKenar[i] *= kNorm
+
+  for (let i = 0; i < dilim; i++) {
+    const x = i * step
     const sw = Math.min(step, w - x)
+    if (!(sw > 0)) break
     const a = E(x)
     const b = E(x + sw)
     const top = Math.min(a.top, b.top) - 0.5
     const bottom = Math.max(a.top + a.height, b.top + b.height) + 0.5
-    ctx.drawImage(yuzey, x * bs, 0, Math.max(1, sw * bs), yuzeyH, x, top, sw + 0.6, bottom - top)
+    const kx = kaynakKenar[i]
+    const kw = Math.max(0.5, kaynakKenar[i + 1] - kx)
+    ctx.drawImage(yuzey, kx * bs, 0, Math.max(1, kw * bs), yuzeyH, x, top, sw + 0.6, bottom - top)
   }
 
   ctx.restore() // panel kırpması biter

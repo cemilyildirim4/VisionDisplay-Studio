@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
-import { baseViewingDistance } from './viewingDistance.js'
-import { DEFAULT_CONTENT_SRC, curveDepthFor, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, L_KIRILMA_PCT, L_KACIS_ORANI } from './content.js'
+import { viewingDistanceFor } from './viewingDistance.js'
+import { DEFAULT_CONTENT_SRC, LED_GRADIENT, LED_LIT_FILTER, LED_SHEEN, ledDotSize, L_KIRILMA_PCT, L_KACIS_ORANI } from './content.js'
 import { videoSrcFor, senkronaKatil } from './videoContent.js'
 import { useLang } from './useLang.js'
 import { yonDonusumu } from './hooks/useYon.js'
@@ -732,6 +732,16 @@ export function Screen({ wPx, hPx, cols, rows, type, resolution, model, content,
  */
 const ETIKET_EN_AZ = 50
 
+/*
+ * ÖLÇÜ ETİKETİ İLE ÇİZİM ARASINDAKİ EN AZ BOŞLUK (px).
+ *
+ * Etiketler duvara ve tasarıma yapışıyor, dar ölçülerde üstlerine biniyordu.
+ * Aralık her etikete aynı miktarda ekleniyor; tuvalde etiketlere ayrılan pay
+ * da aynı kadar büyüyor, yani etiketler çizimden uzaklaşırken tuvalin dışına
+ * taşmıyor.
+ */
+const ETIKET_ARALIK = 12
+
 /**
  * Yatay ölçü etiketi.
  *
@@ -852,8 +862,15 @@ function SegV({ h, label, muted, yazi = 11, kacis = null }) {
  * de yanlıştı — küçük bir tasarımda düğmeler ekranı bastırıyor, büyük bir
  * tasarımda kaybolup gidiyordu.
  */
-function StepBtn({ dir, onClick, disabled, boy = 28 }) {
-  return (
+/*
+ * Pasif düğmenin SEBEBİ.
+ *
+ * Düğme kendi kendine pasifleşiyor ve neden olduğu hiçbir yerde yazmıyordu.
+ * İpucu düğmenin KABINA konuyor: pasif bir <button> fare olaylarını almaz,
+ * title'ı da görünmez — kap alıyor.
+ */
+function StepBtn({ dir, onClick, disabled, boy = 28, ipucu = null }) {
+  const govde = (
     <button
       type="button"
       onClick={onClick}
@@ -867,6 +884,12 @@ function StepBtn({ dir, onClick, disabled, boy = 28 }) {
         <line x1="6" y1="12" x2="18" y2="12" />
       </svg>
     </button>
+  )
+  if (!disabled || !ipucu) return govde
+  return (
+    <span title={ipucu} style={{ display: 'flex' }}>
+      {govde}
+    </span>
   )
 }
 
@@ -968,11 +991,6 @@ export default function WallPreview({
   /* L / U / açılı: kollar gerçek açısıyla, önden sabit. */
   birlesimKipi = false,
   /*
-   * Numara rozetleri "Ölçüleri gizle" ile birlikte kalkıyor. Ayrı bir
-   * özellik, çünkü showMeasurements fotoğraf mekânında zaten kapalı.
-   */
-  numaraGoster = true,
-  /*
    * SADE KİP — "Ölçüleri gizle" açıkken kenarlıklar ve ayrım çizgileri de
    * kalkıyor; tasarım tek bir görsel gibi duruyor.
    */
@@ -985,6 +1003,9 @@ export default function WallPreview({
   seciliEkranId = null,
   colsMax = Infinity,
   rowsMax = Infinity,
+  /* Sınıra gelince pasif düğmenin üstünde çıkan açıklama (duvar dolu gibi). */
+  colsIpucu = null,
+  rowsIpucu = null,
   hideRegions = false,
   curveAmount = 60,
   // Arkada bir mekân sahnesi çizildiyse duvar kutusu SAYDAM olur; odanın kendi
@@ -1331,8 +1352,10 @@ export default function WallPreview({
      * sahnelerde pay aynı kalıyor.
      */
     const cokDuvarKip = !sahneVar && !kupKipi && !dar && list.length > 1
-    const yanPaySon = cokDuvarKip ? 120 : yanPay
-    const dikeyPaySon = cokDuvarKip ? 150 : dikeyPay
+    /* Açılan aralık kadar daha pay: etiket çizime değmesin ama tuvalden de
+       taşmasın (bkz. ETIKET_ARALIK). */
+    const yanPaySon = (cokDuvarKip ? 120 : yanPay) + (sahneVar ? 0 : 2 * ETIKET_ARALIK)
+    const dikeyPaySon = (cokDuvarKip ? 150 : dikeyPay) + (sahneVar ? 0 : 2 * ETIKET_ARALIK)
     const availW = Math.max(dar ? 120 : 180, size.w - yanPaySon - (showHumanM ? 24 : 0))
     const availH = Math.max(dar ? 110 : 140, size.h - dikeyPaySon)
     /*
@@ -1354,14 +1377,13 @@ export default function WallPreview({
      * Pay, düzendeki EN DERİN kavisten hesaplanıyor: her ekranın derinliği
      * kendi genişliğine oranlı, yani en geniş kavisli ekran belirleyici.
      */
-    const kavisPayiM = list.reduce((enBuyuk, s) => {
-      if (s.type !== 'curved' && s.type !== 'curvedIn') return enBuyuk
-      const derinlik =
-        (Math.max(0, Math.min(100, s.curveAmount ?? curveAmount)) / 100) *
-        curveDepthFor(s.type === 'curvedIn') *
-        s.wm
-      return Math.max(enBuyuk, derinlik)
-    }, 0)
+    /*
+     * KAVİS ARTIK KUTUSUNUN DIŞINA TAŞMIYOR (bkz. curvedRenderer →
+     * gorunenOlcek): yay, ekranın kendi boyunun içinde kalıyor. Taşma için
+     * ayrılan pay çizimi küçültüyordu — kavisli tasarım düzden küçük
+     * görünüyordu. Pay sıfır; değişken, okuyan yerler bozulmasın diye duruyor.
+     */
+    const kavisPayiM = 0
 
     /*
      * SAHNE ÖLÇEĞİ VERİLDİYSE BİREBİR UYULUR (bkz. tek ekran dalı).
@@ -1865,43 +1887,16 @@ export default function WallPreview({
                   yutmuyor, ekranın kendi çizimine de karışmıyor.
                 */}
                 {/*
-                  MEKÂNDA NUMARA ROZETİ YOK.
+                  NUMARA ROZETİ TASARIM GÖRÜNÜMÜNDE DE YOK.
 
-                  Rozet sabit 24 piksel; mekân sahnesinde ekranlar gerçek
-                  ölçekte çizildiği için 0,32 m'lik bir ekran 29 × 15 piksel
-                  kalıyor ve rozet ekrandan BÜYÜK oluyordu. Üç ekranın
-                  arkasında üç gri yuvarlak gölge gibi görünen şey buydu.
-                  Numara yalnızca tasarım görünümünde, ekranların büyük
-                  çizildiği yerde duruyor.
+                  Rozet ekranın tam ortasında duruyordu: tek görselde
+                  resmin üstüne iki koyu yuvarlak biniyor, PDF'e giden
+                  çizimde de ürünün parçasıymış gibi görünüyordu. Hangi
+                  ekranın hangisi olduğu soldaki kart listesinde yazıyor.
+                  Mekân sahnelerinde rozet zaten çizilmiyordu (gerçek
+                  ölçekte ekrandan büyük kalıyordu); fotoğraf yerleşiminin
+                  kendi numaraları duruyor.
                 */}
-                {placed.length > 1 && numaraGoster && !sahneVar && (
-                  <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
-                    {placed.map((s, i) => (
-                      <span
-                        key={i}
-                        style={{
-                          position: 'absolute',
-                          left: s.xStart + s.wPx / 2,
-                          top: maxHpx - s.hPx / 2,
-                          transform: 'translate(-50%, -50%)',
-                          width: 24,
-                          height: 24,
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 12.5,
-                          fontWeight: 700,
-                          color: '#ffffff',
-                          background: 'rgba(0,19,52,0.55)',
-                        }}
-                      >
-                        {/* Kart numarasıyla aynı: dizideki yeri değil, kendi sırası. */}
-                        {s.sira || i + 1}
-                      </span>
-                    ))}
-                  </div>
-                )}
 
                 {/*
                   z4: EKRAN SEÇİMİ.
@@ -1936,9 +1931,19 @@ export default function WallPreview({
                           background: 'transparent',
                           borderRadius: 2,
                           cursor: 'pointer',
-                          /* Seçili olanın çerçevesi; ötekiler görünmez ama tıklanabilir. */
+                          /*
+                           * ÇERÇEVE YALNIZCA MEKÂNDA.
+                           *
+                           * Tasarım görünümünde seçili ekranın çevresindeki
+                           * mavi çerçeve ürünün parçasıymış gibi duruyordu;
+                           * hangi ekranın düzenlendiği zaten soldaki kartta
+                           * belli. Tıklayıp seçmek sürüyor, yalnızca çizgi
+                           * görünmüyor.
+                           */
                           border:
-                            s.id === seciliEkranId ? '2px solid #2962ad' : '2px solid transparent',
+                            s.id === seciliEkranId && sahneVar
+                              ? '2px solid #2962ad'
+                              : '2px solid transparent',
                         }}
                       />
                     ))}
@@ -2011,10 +2016,12 @@ export default function WallPreview({
                   Ekranların kendi enleri etiket olarak yazılmaya devam
                   ediyor (bkz. aşağıdaki parcaCizgisi haritası).
                 */}
-                <VL left={0} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
-                <VL left={wallW} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
-                <VL left={olcuSol} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
-                <VL left={olcuSol + olcuW} top={-56 - bombePx} height={wallH + 140 + kavisPayiPx} />
+                {/* Etiketler çizimden uzaklaştı (bkz. ETIKET_ARALIK); kılavuz
+                    çizgileri de onlara kadar uzuyor. */}
+                <VL left={0} top={-56 - ETIKET_ARALIK - bombePx} height={wallH + 140 + 2 * ETIKET_ARALIK + kavisPayiPx} />
+                <VL left={wallW} top={-56 - ETIKET_ARALIK - bombePx} height={wallH + 140 + 2 * ETIKET_ARALIK + kavisPayiPx} />
+                <VL left={olcuSol} top={-56 - ETIKET_ARALIK - bombePx} height={wallH + 140 + 2 * ETIKET_ARALIK + kavisPayiPx} />
+                <VL left={olcuSol + olcuW} top={-56 - ETIKET_ARALIK - bombePx} height={wallH + 140 + 2 * ETIKET_ARALIK + kavisPayiPx} />
 
                 {/*
                   SOL/SAĞ KENAR PAYI — DAR BOŞLUKTA DA YAZILIYOR.
@@ -2046,7 +2053,7 @@ export default function WallPreview({
                       */
                       style={{
                         left: olcuSol > 34 ? olcuSol / 2 : 0,
-                        top: -62 - bombePx,
+                        top: -62 - ETIKET_ARALIK - bombePx,
                         transform: olcuSol > 34 ? 'translateX(-50%)' : 'translateX(-8%)',
                       }}
                     >
@@ -2056,7 +2063,7 @@ export default function WallPreview({
                       className="absolute"
                       style={{
                         left: olcuSol > 34 ? wallW - olcuSol / 2 : wallW,
-                        top: -62 - bombePx,
+                        top: -62 - ETIKET_ARALIK - bombePx,
                         transform: olcuSol > 34 ? 'translateX(-50%)' : 'translateX(-92%)',
                       }}
                     >
@@ -2075,7 +2082,7 @@ export default function WallPreview({
                     <div
                       key={`lbl${i}`}
                       className="absolute flex flex-col items-center gap-1 max-w-[70vw] pointer-events-none"
-                      style={{ left: olcuSol + olcuCenter(s), transform: 'translateX(-50%)', top: isTop ? -34 - bombePx : wallH + 26 + bombePx }}
+                      style={{ left: olcuSol + olcuCenter(s), transform: 'translateX(-50%)', top: isTop ? -34 - ETIKET_ARALIK - bombePx : wallH + 26 + ETIKET_ARALIK + bombePx }}
                     >
                       {/*
                         GERÇEK ÖLÇÜ. Kutu genişliği çaprazdan görünen
@@ -2091,7 +2098,7 @@ export default function WallPreview({
                 })}
 
                 {/* Sağ kenar: üst boşluk | ekran yüksekliği | alt boşluk */}
-                <div style={{ position: 'absolute', left: Math.min(wallW + 10 + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'absolute', left: Math.min(wallW + 10 + ETIKET_ARALIK + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
                   {/* Pay negatifse (tasarım duvardan büyük) yazılacak bir boşluk yok. */}
                   {marginYm > 0.0045 && <SegV h={stripTop} label={fmtU(marginYm)} muted kacis="ust" />}
                   <SegV h={maxHpx} label={fmtU(maxHm)} />
@@ -2179,8 +2186,11 @@ export default function WallPreview({
    * düğme kutunun değil EKRANIN dışına düşüyor ve tıklanamıyordu; o yüzden dar
    * ekranda sahneyle birlikte de en az 152 px (76 + 76) ayrılıyor.
    */
-  const SIDE_UI_PX = sahneVar ? (dar ? Math.max(sahnePay, 152) : sahnePay) : dar ? 152 : 180 // sol + sağ
-  const VERT_UI_PX = sahneVar ? sahnePay : dar ? 92 : 190 // üst + alt
+  /* Aralık kadar fazladan pay (bkz. ETIKET_ARALIK). */
+  const SIDE_UI_PX =
+    (sahneVar ? (dar ? Math.max(sahnePay, 152) : sahnePay) : dar ? 152 : 180) +
+    (sahneVar ? 0 : 4 * ETIKET_ARALIK) // sol + sağ
+  const VERT_UI_PX = (sahneVar ? sahnePay : dar ? 92 : 190) + (sahneVar ? 0 : 4 * ETIKET_ARALIK) // üst + alt
   const showHuman = !sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005
   const HUMAN_GAP_PX = 24 // flex gap-6
   const humanWm = showHuman ? HUMAN_HEIGHT_M * HUMAN_FIG_W_RATIO : 0
@@ -2227,11 +2237,8 @@ export default function WallPreview({
     ? sahneOlcek
     : Math.min(tekKullanW / sigdirWm, tekKullanH / sigdirHm)
 
-  const curveKPre =
-    screenType === 'curved' || screenType === 'curvedIn'
-      ? (Math.max(0, Math.min(100, curveAmount)) / 100) * curveDepthFor(screenType === 'curvedIn')
-      : 0
-  const bulgeM = curveKPre * Math.max(1, cols) * cw
+  /* Kavis kutusunun dışına taşmıyor (bkz. çoklu daldaki aynı not): pay yok. */
+  const bulgeM = 0
 
   /*
    * Kavis duvarın dışına taşar. Taşan kısım için ayrıca yer açmaya GEREK YOK:
@@ -2284,15 +2291,16 @@ export default function WallPreview({
   const screenH = nativeH * fitScale
 
   /*
-   * ÇİZİMDEKİ MESAFE = MODEL LİSTESİNDEKİ MESAFE.
+   * MESAFE TASARIMA GÖRE HESAPLANIYOR.
    *
-   * Burada kabin sayısına göre büyüyen değer (viewingDistanceFor)
-   * kullanılıyordu; model listesi ve öneri sihirbazı ise modelin kendi
-   * değerini gösteriyordu. Aynı model için iki ayrı sayı görünüyordu.
-   * İkisi de artık modelin kendi izleme mesafesini okuyor: yönetim
-   * panelinde girilen değer, yoksa piksel aralığının karşılığı.
+   * Modelin kendi değeri yazılıyordu: duvar da tasarım da büyüse sayı
+   * değişmiyordu. Oysa modelin yanında yazan mesafe TEK BİR PANELİN
+   * değeri — "bundan yakına gelirsen pikselleri ayırt edersin". Ekran
+   * büyüdükçe asıl belirleyici olan, ekranın tamamını görebilmek için
+   * gereken uzaklık oluyor. İkisinin büyüğü alınıyor (viewingDistanceFor)
+   * ve sütun/satır değişir değişmez yeniden hesaplanıyor.
    */
-  const viewDist = baseViewingDistance(model)
+  const viewDist = viewingDistanceFor(model, nCols, nRows)
 
   /*
    * Ekranın fiziksel ölçüsü doğrudan kabin sayısından geliyor; duvara
@@ -2474,7 +2482,7 @@ export default function WallPreview({
               <div
                 style={{
                   position: 'absolute',
-                  top: gorunenKutu.y - olcuYazi * 2.2 - sahnePayPx - bombeUstPx,
+                  top: gorunenKutu.y - olcuYazi * 2.2 - ETIKET_ARALIK - sahnePayPx - bombeUstPx,
                   left: gorunenKutu.x,
                   width: gorunenKutu.w,
                   display: 'flex',
@@ -2520,7 +2528,7 @@ export default function WallPreview({
                     style={{
                       left: marginXpx > 34 ? marginXpx / 2 : 0,
                       /* Pay etiketi her zaman bir üst satırda: en etiketiyle çakışmıyor. */
-                      top: -olcuYazi * 4.2 - sahnePayPx - bombeUstPx,
+                      top: -olcuYazi * 4.2 - 2 * ETIKET_ARALIK - sahnePayPx - bombeUstPx,
                       transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-8%)',
                     }}
                   >
@@ -2530,7 +2538,7 @@ export default function WallPreview({
                     className="absolute"
                     style={{
                       left: marginXpx > 34 ? wallW - marginXpx / 2 : wallW,
-                      top: -olcuYazi * 4.2 - sahnePayPx - bombeUstPx,
+                      top: -olcuYazi * 4.2 - 2 * ETIKET_ARALIK - sahnePayPx - bombeUstPx,
                       transform: marginXpx > 34 ? 'translateX(-50%)' : 'translateX(-92%)',
                     }}
                   >
@@ -2546,7 +2554,7 @@ export default function WallPreview({
                   <div
                     className="absolute"
                     style={{
-                      left: wallW + olcuYazi * 0.8 + sahnePayPx,
+                      left: wallW + olcuYazi * 0.8 + 2 * ETIKET_ARALIK + sahnePayPx,
                       top: marginYpx > 34 ? marginYpx / 2 : 0,
                       transform: marginYpx > 34 ? 'translateY(-50%)' : 'translateY(-8%)',
                     }}
@@ -2556,7 +2564,7 @@ export default function WallPreview({
                   <div
                     className="absolute"
                     style={{
-                      left: wallW + olcuYazi * 0.8 + sahnePayPx,
+                      left: wallW + olcuYazi * 0.8 + 2 * ETIKET_ARALIK + sahnePayPx,
                       top: marginYpx > 34 ? wallH - marginYpx / 2 : wallH,
                       transform: marginYpx > 34 ? 'translateY(-50%)' : 'translateY(-92%)',
                     }}
@@ -2570,7 +2578,7 @@ export default function WallPreview({
               <div
                 style={{
                   position: 'absolute',
-                  left: gorunenKutu.x + gorunenKutu.w + olcuYazi * 0.8 + sahnePayPx,
+                  left: gorunenKutu.x + gorunenKutu.w + olcuYazi * 0.8 + ETIKET_ARALIK + sahnePayPx,
                   top: gorunenKutu.y,
                   height: gorunenKutu.h,
                   display: 'flex',
@@ -2592,7 +2600,7 @@ export default function WallPreview({
               >
                 <StepBtn boy={dugmeBoy} dir="minus" onClick={() => onColsChange?.(Math.max(1, nCols - 1))} disabled={nCols <= 1} />
                 <div className="w-px bg-neutral-200 dark:bg-[#2c333f]" />
-                <StepBtn boy={dugmeBoy} dir="plus" onClick={() => onColsChange?.(Math.min(colsMax, nCols + 1))} disabled={nCols >= colsMax} />
+                <StepBtn boy={dugmeBoy} dir="plus" onClick={() => onColsChange?.(Math.min(colsMax, nCols + 1))} disabled={nCols >= colsMax} ipucu={colsIpucu} />
               </div>
 
               {/* Sağdaki +/- : Satır (ekran yüksekliği) */}
@@ -2613,7 +2621,7 @@ export default function WallPreview({
               >
                 <StepBtn boy={dugmeBoy} dir="minus" onClick={() => onRowsChange?.(Math.max(1, nRows - 1))} disabled={nRows <= 1} />
                 <div className="h-px bg-neutral-200 dark:bg-[#2c333f]" />
-                <StepBtn boy={dugmeBoy} dir="plus" onClick={() => onRowsChange?.(Math.min(rowsMax, nRows + 1))} disabled={nRows >= rowsMax} />
+                <StepBtn boy={dugmeBoy} dir="plus" onClick={() => onRowsChange?.(Math.min(rowsMax, nRows + 1))} disabled={nRows >= rowsMax} ipucu={rowsIpucu} />
               </div>
 
               {/*
