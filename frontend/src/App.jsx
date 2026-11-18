@@ -2516,11 +2516,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * korunuyor — sebepsiz yere ekranı çevirmek şaşırtıcı olurdu.
    */
   /*
-   * fitToWall KALDIRILDI — düğmesi de kaldırıldı (bkz. sağ panel).
+   * DUVARA SIĞDIR — eldeki ekranı duvarda kalan paya doldurur.
    *
-   * Aynı hesap "en çok LED" önerisinde ve ölçü sihirbazında duruyor
-   * (bkz. yerlesimSecenekleri); burada ikinci bir kopya kalmasına gerek yok.
+   * Bir partide yanlışlıkla kaldırılmıştı; kaldırılması istenen "Tam sığdır"
+   * idi. Duvarın TAMAMINA değil, bu ekrana KALAN paya sığdırıyor: öteki
+   * ekranların enleri düşülüyor, yoksa çoklu tasarımda ekranlar üst üste
+   * biner ve toplam duvarı aşardı.
    */
+  const fitToWall = () => {
+    const m = selectedModel
+    if (!m) return
+    const kalanEn = Math.max(0, (Number(width) || 0) - digerlerininEni)
+    const { yatay, dikey } = yerlesimSecenekleri(m, kalanEn, Number(height) || 0)
+    /*
+     * EŞİTLİKTE YATAY KAZANIYOR.
+     *
+     * Kabin döndüğünde piksel sayısı değişmiyor, yalnızca yer değiştiriyor;
+     * bu yüzden iki dizilim sık sık BİREBİR aynı çıkıyor. Eşitlik bir
+     * üstünlük değil: yatay varsayılan kalıyor.
+     */
+    const dikeySec = dikey.piksel > yatay.piksel
+    const kazanan = dikeySec ? dikey : yatay
+    setOrientation(dikeySec ? 'portrait' : 'landscape')
+    setCols(kazanan.cols)
+    setRows(kazanan.rows)
+  }
 
 
   /*
@@ -6311,9 +6331,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const kh = (previewModel?.heightMm || 500) / 1000
     const yeniCols = Math.max(1, Math.floor(hedef.wm / kw + 1e-6))
     const yeniRows = Math.max(1, Math.floor(hedef.hm / kh + 1e-6))
-    /* Duvar, ekranın altında kalmasın. Aşağı yuvarlamak son kabini düşürür. */
-    setWidth((e) => Math.max(e, cmYukari(yeniCols * kw)))
-    setHeight((e) => Math.max(e, cmYukari(yeniRows * kh)))
+    /* Duvar ölçüsüne dokunulmuyor: yalnızca kullanıcı değiştirir. */
     setCols(yeniCols)
     setRows(yeniRows)
     setOlcuSorusu(false)
@@ -7203,9 +7221,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setOrientation(dikeySec ? 'portrait' : 'landscape')
     setCols(c)
     setRows(r)
-    /* Duvar grubun tamamını almalı. Aşağı yuvarlamak son kabini düşürür. */
-    setWidth((e) => Math.max(e, cmYukari(c * cwM2 + digerlerininEni)))
-    setHeight((e) => Math.max(e, cmYukari(r * chM2)))
+    /* Duvar ölçüsüne dokunulmuyor: yalnızca kullanıcı değiştirir. */
     /*
      * SONUCU SÖYLE.
      *
@@ -10541,8 +10557,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           .replace('{r}', String(kupUstGereken.satir))
       : null
 
-  const widthMin = hasModel ? Math.max(0.1, tasarimToplamEn) : 0
-  const heightMin = hasModel ? Math.max(0.1, tasarimEnYuksek) : 0
+  /*
+   * DUVARIN ALT SINIRI TASARIMA BAĞLI DEĞİL.
+   *
+   * Alt sınır "mevcut tasarımı barındıran en küçük ölçü" idi: tasarım
+   * büyüdükçe sınır da büyüyor ve duvarın "−" düğmesi kilitleniyordu —
+   * kullanıcı kendi yazdığı duvarı küçültemiyordu. Duvar kullanıcının
+   * ölçüsü; sığmayan tasarımı küçültmek de artık "+" düğmesinin işi
+   * (bkz. colsSinir / rowsSinir). Alt sınır yalnızca sıfır olmasın diye.
+   */
+  const widthMin = 0.1
+  const heightMin = 0.1
 
   /*
    * Duvar, ekrandan küçük kalamaz. Tek ekranda kabin sayısı duvara kırpılır.
@@ -10562,15 +10587,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
      * değil donanımdan geliyor (colsMax/rowsMax), yani büyütmenin bir
      * işlevi de yoktu.
      */
+    /*
+     * DUVARI BÜYÜTEN KURAL KALMADI.
+     *
+     * Duvar bir kabinden küçük kalırsa kendiliğinden kabin ölçüsüne
+     * çıkıyordu; yani kullanıcının yazdığı 0,50 m'lik duvar, kabin 0,32 ×
+     * 0,16 iken sessizce değişebiliyordu. Duvar yalnızca kullanıcı
+     * değiştirince değişiyor. Tasarımın duvarı aşmaması "+" düğmesinin
+     * durmasıyla sağlanıyor (bkz. colsSinir / rowsSinir).
+     */
     if (cokluAktif) return
-    if ((Number(width) || 0) + EPS < cwM) {
-      setWidth(cmYukari(cwM))
-      return
-    }
-    if ((Number(height) || 0) + EPS < chM) {
-      setHeight(cmYukari(chM))
-      return
-    }
     if (cols > colsMax) setCols(colsMax)
     if (rows > rowsMax) setRows(rowsMax)
   }, [hasModel, cokluAktif, width, height, cwM, chM, cols, rows, colsMax, rowsMax, tasarimWm, tasarimHm])
@@ -12476,6 +12502,27 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   ['l', 'u', 'kutu'].includes(grup.tip) &&
                   (grup.uyeler || []).includes(acik.id)
                 const etkinTur = katiSekilde ? 'flat' : screenType
+                /*
+                 * TASARIM DUVARDAN BÜYÜK OLAMAZ — "+" ORADA DURUYOR.
+                 *
+                 * Sütun/satır üst sınırı yalnızca donanımdandı (200) ve
+                 * tasarım duvarı rahatça aşıyordu; duvar da bunu "kendini
+                 * büyüterek" kapatıyordu. Artık ters: duvar sabit,
+                 * sığmayan kabin eklenmiyor ve sebebi yazıyor.
+                 *
+                 * Kendi fotoğrafında duvar kutusunun bir karşılığı yok
+                 * (ölçek referanstan geliyor, tasarım fotoğrafın üstünde
+                 * duruyor), orada sınır yine donanım sınırı.
+                 */
+                const duvarSinirli = !(scene === 'ozel' && ozelSahne) && cwM > 0 && chM > 0
+                const duvardaKalanEn = Math.max(0, (Number(width) || 0) - digerlerininEni)
+                const colsSinir = duvarSinirli
+                  ? Math.max(1, Math.min(colsMax, Math.floor(duvardaKalanEn / cwM + 1e-9)))
+                  : colsMax
+                const rowsSinir = duvarSinirli
+                  ? Math.max(1, Math.min(rowsMax, Math.floor((Number(height) || 0) / chM + 1e-9)))
+                  : rowsMax
+                const duvarDolu = duvarSinirli && (cols >= colsSinir || rows >= rowsSinir)
                 return (
                   <div
                     data-ekran={acik.sira}
@@ -12539,19 +12586,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             + düğmesi dışarı düşüyordu.
                           */}
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                            <SayiKutusu etiket={t('screen.colsShort')} deger={cols} onChange={setCols} min={1} max={colsMax} />
-                            <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsMax} />
+                            <SayiKutusu etiket={t('screen.colsShort')} deger={cols} onChange={setCols} min={1} max={colsSinir} />
+                            <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsSinir} />
                           </div>
-                          {/*
-                            "DUVARA SIĞDIR" KALDIRILDI.
-
-                            Düğme duvarın tamamını değil ELDEKİ ekrana kalan
-                            payı dolduruyordu; çoklu tasarımda seçili ekranın
-                            satırını artırıp gruptaki öteki ekranı da
-                            büyütüyor, sonucun neye göre çıktığı
-                            anlaşılmıyordu. Kabin sayısı zaten yandaki
-                            sütun/satır kutularından yazılıyor.
-                          */}
+                          {/* Sebebi düğmenin yanında: "+" neden basılmıyor. */}
+                          {duvarDolu && (
+                            <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
+                              {t('ekran.duvarDolu')}
+                            </p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={fitToWall}
+                            className="mt-1.5 w-full rounded-lg border border-neutral-300 py-1 text-[13.5px] font-medium text-neutral-700 transition-colors hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+                          >
+                            {t('conf.fitToWall')}
+                          </button>
 
                           {/*
                             Metre ve piksel ALTTA tek satırda: kullanıcı kabin
