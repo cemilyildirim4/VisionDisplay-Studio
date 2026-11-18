@@ -8762,8 +8762,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const paylasimNotu = (id) => {
     const kume = paylasimKumesi(id)
     if (!kume) return null
+    /*
+     * Birleşik gruptaki ekranda not YAZILMIYOR: ekranların birleşik olduğu
+     * zaten görünüyor, satır yalnızca paneli uzatıyordu.
+     */
     const grupta = grup?.uyeler && kume === grup.uyeler
-    if (grupta) return { metin: t('icerik.grupGorseli'), ayrilabilir: false }
+    if (grupta) return null
     const siralar = kume
       .map((x) => ekranOzetleri.find((o) => o.id === x)?.sira)
       .filter(Boolean)
@@ -10468,7 +10472,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const rowsSinir = duvarSinirli
     ? Math.max(1, Math.min(rowsMax, Math.floor((Number(height) || 0) / chM + 1e-9)))
     : rowsMax
-  const duvarDolu = duvarSinirli && (cols >= colsSinir || rows >= rowsSinir)
   /* Duvar elle küçültülünce tasarım dışarıda kalabiliyor: söylenmesi gerek. */
   const tasarimDuvardanBuyuk =
     duvarSinirli &&
@@ -12645,12 +12648,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             <SayiKutusu etiket={t('screen.colsShort')} deger={cols} onChange={setCols} min={1} max={colsSinir} ustIpucu={duvarSinirli ? t('ekran.duvarDolu') : null} />
                             <SayiKutusu etiket={t('screen.rowsShort')} deger={rows} onChange={setRows} min={1} max={rowsSinir} ustIpucu={duvarSinirli ? t('ekran.duvarDolu') : null} />
                           </div>
-                          {/* Sebebi düğmenin yanında: "+" neden basılmıyor. */}
-                          {duvarDolu && (
-                            <p className="mt-1 mb-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
-                              {t('ekran.duvarDolu')}
-                            </p>
-                          )}
+                          {/*
+                            "Duvar dolu" satırı kalktı: aynı şey zaten pasif
+                            "+" düğmesinin üstüne gelince yazıyor
+                            (bkz. ustIpucu) ve panelde sürekli duran turuncu
+                            bir uyarıya gerek yok.
+                          */}
                           <button
                             type="button"
                             onClick={fitToWall}
