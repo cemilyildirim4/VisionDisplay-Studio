@@ -15420,6 +15420,8 @@ function Sigdir({ children, className = '', sarmal = '' }) {
     const ic = icRef.current
     if (!dis || !ic) return undefined
     let sira = 0
+    /* Son 1,5 saniyede uygulanmak istenen ölçekler (bkz. salınım kilidi). */
+    let gecmis = []
     /*
      * TİTREME NEDEN OLUYORDU.
      *
@@ -15449,7 +15451,27 @@ function Sigdir({ children, className = '', sarmal = '' }) {
       const simdi = olcekRef.current
       const kucul = basamakli < simdi - 1e-6
       const buyu = basamakli > simdi + 0.06
-      if (kucul || buyu) setOlcek(Math.min(1, basamakli))
+      if (!kucul && !buyu) return
+      /*
+       * SALINIM KİLİDİ.
+       *
+       * Basamaklama ve isteksiz büyüme çoğu durumda yetiyor; ama beşinci
+       * ekran eklenince içerik iki basamak arasında kalıyor (küçülünce satır
+       * sarması değişip yer açılıyor, büyüyünce yine taşıyor) ve panel
+       * gözle görülür biçimde titriyordu. Kısa sürede dörtten çok değişim
+       * olursa en KÜÇÜK ölçekte kilitleniyor: taşma olmayan taraf o.
+       * Liste 1,5 saniyede eskiyor, yani gerçek bir değişiklikten sonra
+       * panel yine kendini ayarlıyor.
+       */
+      const an = typeof performance === 'undefined' ? Date.now() : performance.now()
+      gecmis = gecmis.filter((x) => an - x.t < 1500)
+      gecmis.push({ t: an, v: basamakli })
+      if (gecmis.length > 4) {
+        const enKucuk = Math.min(...gecmis.map((x) => x.v))
+        if (enKucuk < simdi - 1e-6) setOlcek(enKucuk)
+        return
+      }
+      setOlcek(Math.min(1, basamakli))
     }
     const sonra = () => {
       cancelAnimationFrame(sira)

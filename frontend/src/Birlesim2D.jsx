@@ -456,8 +456,6 @@ export default function Birlesim2D({
                 height: p.h,
                 marginLeft: -(d.w / 2 + payL),
                 overflow: 'hidden',
-                /* Görüntünün ulaşmadığı pay şeridi: panelin zemini. */
-                background: '#0a0a0a',
                 /*
                  * rotateY(θ) ekranın en eksenini (cos θ, 0, −sin θ) yapıyor;
                  * üstten bakıştaki derinlik ekseni de eksi Z. İkisi aynı
@@ -501,20 +499,30 @@ export default function Birlesim2D({
                   }}
                 />
               )}
-              {/* Ekran tam eninde çiziliyor; dilim kendi penceresini gösteriyor. */}
+              {/*
+                GÖRÜNTÜ KUTUNUN TAMAMINI KAPLIYOR — ARADA ÇİZGİ YOK.
+
+                Dilim kutusu iki yanından kıl payı büyüyor (bindirme), ama
+                görüntü eski eninde kalıyordu: kalan ince şerit önce arka
+                planı gösteriyordu (açık renkli çizgi), sonra panelin zemin
+                rengiyle dolduruldu (koyu çizgi). İkisi de tasarımın
+                ortasında bir dikiş gibi duruyordu. Görüntü artık bindirme
+                kadar geniş çiziliyor: iki ekran kesintisiz birleşiyor.
+                Esneme bütün ekranda 1,2 piksel, yani gözle görülmüyor.
+              */}
               <div
                 style={{
                   position: 'absolute',
-                  left: -(d.u0 - payL),
+                  left: -d.u0,
                   top: 0,
-                  width: p.w,
+                  width: p.w + payL + payR,
                   height: p.h,
                   /* Arka yüz: kasanın kendisi, görüntü değil. */
                   visibility: arkaYuz ? 'hidden' : undefined,
                 }}
               >
                 <Screen
-                  wPx={p.w}
+                  wPx={p.w + payL + payR}
                   hPx={p.h}
                   cols={p.e.cols}
                   rows={p.e.rows}
@@ -525,8 +533,15 @@ export default function Birlesim2D({
                   contentUrl={p.e.content ? p.e.contentUrl || null : contentUrl}
                   hideRegions={hideRegions}
                   sade={sade}
-                  /* Yayın dilimiyse ekranın kenar çizgisi çizilmiyor. */
-                  kenarsiz={!!d.dilim}
+                  /*
+                   * BİRLEŞİK ÇİZİMDE KENAR ÇİZGİSİ YOK.
+                   *
+                   * Her ekran kendi kenarına ince bir açık şerit çiziyordu;
+                   * yan yana iki ekranda bu şeritler birleşip tasarımın
+                   * ortasında bir çizgi oluşturuyordu. Birleşim tek bir
+                   * yüzey gibi görünmeli.
+                   */
+                  kenarsiz
                   /* Her ekran kendi kavisiyle; tek genel değer hepsini büküyordu. */
                   curveAmount={p.e.curveAmount ?? curveAmount}
                   leftCols={p.e.leftCols}
