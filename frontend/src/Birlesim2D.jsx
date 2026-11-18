@@ -71,6 +71,14 @@ export default function Birlesim2D({
   /* Tıklanan ekranı düzenlemeye alan geri çağırma (bkz. WallPreview). */
   onEkranSec = null,
   seciliEkranId = null,
+  /*
+   * SEÇİLİ EKRANIN ÇERÇEVESİ YALNIZCA MEKÂNDA.
+   *
+   * Tasarım görünümünde mavi çerçeve ürünün parçasıymış gibi duruyordu;
+   * hangi ekranın düzenlendiği zaten soldaki kartta belli. Tıklayıp seçmek
+   * sürüyor, yalnızca çizgi görünmüyor.
+   */
+  cerceve = false,
   /* Sade kip: kenarlıklar ve ayrım çizgileri kalkıyor. */
   sade = false,
   /*
@@ -217,7 +225,54 @@ export default function Birlesim2D({
    * arka ekranın yanındaki sığ kol birkaç piksele iniyor ve U yine L gibi
    * okunuyordu; yayılım artık yalnızca aşırı yakın bakışı engelliyor.
    */
-  const D = Math.max(100, derinlik * 2.2, yayilim * 0.35, enYakin * 1.6)
+  const Dham = Math.max(100, derinlik * 2.2, yayilim * 0.35, enYakin * 1.6)
+
+  /*
+   * KUTU DÖNÜŞÜ DE HESABA KATIYOR.
+   *
+   * İzdüşüm yalnızca kolların kendi açısına bakıyordu; fareyle çevrilen
+   * tasarım kutusundan taşıyor, duvarın ve tuvalin dışına çıkıp sol panelin
+   * kenarına kadar uzanıyordu (ölçüldü: sol kenar tuvalin 19.899 piksel
+   * dışında). Köşeler, CSS'in zincire uyguladığı dönüşün AYNISIYLA (önce
+   * rotateY, sonra rotateX) çevrilip öyle izdüşürülüyor.
+   */
+  const ry = (yaw * Math.PI) / 180
+  const rx = (egim * Math.PI) / 180
+  const cosY = Math.cos(ry)
+  const sinY = Math.sin(ry)
+  const cosX = Math.cos(rx)
+  const sinX = Math.sin(rx)
+  /* CSS ekseni: y aşağı, z izleyiciye doğru. */
+  const cevir = (x, y, z) => {
+    const x1 = x * cosY + z * sinY
+    const z1 = -x * sinY + z * cosY
+    return [x1, y * cosX - z1 * sinX, y * sinX + z1 * cosX]
+  }
+
+  /** Zincirin bütün köşeleri, dönüş uygulanmış hâlde. */
+  const koseler = []
+  for (const d of dilimler) {
+    const cx = d.mx - ortX
+    const cz = -(d.mz - ortZ)
+    const cy = gozAlt - d.p.h / 2
+    for (const u of [-d.w / 2, d.w / 2]) {
+      const X0 = cx + Math.cos(d.t) * u
+      const Z0 = cz - Math.sin(d.t) * u
+      for (const v of [-d.p.h / 2, d.p.h / 2]) koseler.push(cevir(X0, cy + v, Z0))
+    }
+  }
+
+  /*
+   * KAMERA DÖNEN ŞEKLİN ÖNÜNDE KALIYOR.
+   *
+   * Uzaklık yalnızca duran şekle göre seçiliyordu. Tasarım çevrilince
+   * zincirin bir ucu göz düzlemine (z = D) giriyor, orada izdüşüm
+   * patlıyor ve o kol ekranı baştan başa kaplayan dev bir şekle dönüşüyordu.
+   * En yakın köşe artık uzaklığın en çok yarısı kadar yaklaşabiliyor;
+   * gerekirse kamera geri çekiliyor.
+   */
+  const enYakinDonuk = koseler.reduce((t2, p) => Math.max(t2, p[2]), 0)
+  const D = Math.max(Dham, enYakinDonuk / 0.5)
 
   /*
    * KUTU İZDÜŞÜMDEN.
@@ -230,24 +285,14 @@ export default function Birlesim2D({
   let sagEn = 0
   let ustY = 0
   let altY = 0
-  for (const d of dilimler) {
-    const cx = d.mx - ortX
-    const cz = -(d.mz - ortZ)
-    /* Parçanın merkezi, gözden ölçülü: parçalar alttan hizalı duruyor. */
-    const cy = gozAlt - d.p.h / 2
-    for (const u of [-d.w / 2, d.w / 2]) {
-      const X = cx + Math.cos(d.t) * u
-      const Z = cz - Math.sin(d.t) * u
-      const k = D / (D - Z)
-      for (const v of [-d.p.h / 2, d.p.h / 2]) {
-        const px = X * k
-        const py = (cy + v) * k
-        if (px < solEn) solEn = px
-        if (px > sagEn) sagEn = px
-        if (py < ustY) ustY = py
-        if (py > altY) altY = py
-      }
-    }
+  for (const [X, Y, Z] of koseler) {
+    const k = D / (D - Z)
+    const px = X * k
+    const py = Y * k
+    if (px < solEn) solEn = px
+    if (px > sagEn) sagEn = px
+    if (py < ustY) ustY = py
+    if (py > altY) altY = py
   }
 
   const PAY = 8
@@ -268,9 +313,14 @@ export default function Birlesim2D({
    * içinde kendi yerine konuyor. Kutu duvarda ortalanınca tasarım da
    * ortalanıyor; iki yandaki boşluk gerçekten eşit oluyor.
    */
-  /* Ölçülen sınır varsa o geçerli; ilk çizimde hesap yedek. */
-  const solKenar = gercekKenar ? gercekKenar.sol : solEn
-  const sagKenar = gercekKenar ? gercekKenar.sag : sagEn
+  /*
+   * Ölçülen sınır varsa o geçerli; ilk çizimde hesap yedek. Dönmüş tasarımda
+   * ölçüm kullanılmıyor: ölçüm bir kare geriden geliyor ve dönüş sürerken
+   * kutu ile şekil birbirini kovalıyordu.
+   */
+  const donuk = !!yaw || !!egim
+  const solKenar = gercekKenar && !donuk ? gercekKenar.sol : solEn
+  const sagKenar = gercekKenar && !donuk ? gercekKenar.sag : sagEn
   const kutuEn = sagKenar - solKenar + PAY * 2
   /* Zincirin orijini kutunun içinde: sol taşma kadar sağda. */
   const orijinX = -solKenar + PAY
@@ -426,7 +476,9 @@ export default function Birlesim2D({
                     background: 'transparent',
                     cursor: 'pointer',
                     border:
-                      p.e.id === seciliEkranId ? '2px solid #2962ad' : '2px solid transparent',
+                      p.e.id === seciliEkranId && cerceve
+                        ? '2px solid #2962ad'
+                        : '2px solid transparent',
                   }}
                 />
               )}

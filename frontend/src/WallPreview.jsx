@@ -1158,6 +1158,16 @@ export default function WallPreview({
    */
   const dar = size.w > 0 && size.w < 560
 
+  /*
+   * DÖNMÜŞ TASARIMDA ÖLÇÜ ETİKETİ YOK.
+   *
+   * Etiketler ve kılavuz çizgileri duvara göre, yani KARŞIDAN bakışa göre
+   * konumlanıyor; tasarım çevrilince yazılar şeklin üstüne biniyor ve
+   * gösterdikleri kenarla ilgisi kalmıyor. Çift tıklayıp karşıya dönünce
+   * hepsi geri geliyor.
+   */
+  const donuk = !!(donus && (donus.yaw || donus.egim))
+
   /* Fareyle döndürme: basıldığı yer ve o andaki açı. */
   const donusBas = useRef(null)
   const donusBaslat = (ev) => {
@@ -1201,7 +1211,8 @@ export default function WallPreview({
   const cw = (model.widthMm || 500) / 1000
   const ch = (model.heightMm || 500) / 1000
   // Ölçü etiketi (tüm ölçüler metre)
-  const fmtU = (m) => `${Number(m).toLocaleString(sayiYeri(), { maximumFractionDigits: 3 })} m`
+  /* İki ondalık: "0,964 m" gibi üçüncü hane montajda bir şey anlatmıyor. */
+  const fmtU = (m) => `${Number(m).toLocaleString(sayiYeri(), { maximumFractionDigits: 2 })} m`
   // İzleme mesafesi: kısa etiket (1 ondalık) — diyagonal çizgide taşmasın
   /* İki ondalık: P1.25 modelinde mesafe 1,25 m; tek ondalık 1,3 m yazıyordu. */
   const fmtDist = (m) => `${Number(m).toLocaleString('tr-TR', { maximumFractionDigits: 2 })} m`
@@ -1819,6 +1830,8 @@ export default function WallPreview({
                     curveAmount={curveAmount}
                     onEkranSec={onEkranSec}
                     seciliEkranId={seciliEkranId}
+                    /* Çerçeve yalnızca mekânda (bkz. Birlesim2D → cerceve). */
+                    cerceve={sahneVar}
                   />
                 </div>
               )}
@@ -2052,7 +2065,7 @@ export default function WallPreview({
               })}
             </div>
 
-            {showMeasurements && (
+            {showMeasurements && !donuk && (
               <>
                 {/*
                   DÖRT ÇİZGİ YETİYOR: duvarın iki kenarı, tasarımın iki kenarı.
@@ -2125,13 +2138,27 @@ export default function WallPreview({
                     "Ekran 01 · İç L Tipi" adı rozeti kaldırıldı: hangi ekranın
                     hangisi olduğu sol paneldeki listede zaten yazıyor, çizimin
                     üstünde ürünün parçasıymış gibi duruyordu. */}
+                {/*
+                  HER EKRANIN ÖLÇÜSÜ KENDİ ÜST KENARININ ORTASINDA.
+
+                  Etiketler dönüşümlü olarak duvarın en üstüne ve en altına
+                  yazılıyordu: ekranla etiketi arasında bazen yarım duvar
+                  kalıyor, hangi sayının hangi ekrana ait olduğu
+                  okunmuyordu. Artık hepsi üstte ve her biri kendi ekranının
+                  üst kenarının ortasında duruyor (ekranlar farklı boydaysa
+                  etiketler de o kadar aşağıda).
+                */}
                 {parcaCizgisi && placed.map((s, i) => {
-                  const isTop = i % 2 === 0
+                  const ustKenar = stripTop + (maxHpx - s.hPx)
                   return (
                     <div
                       key={`lbl${i}`}
                       className="absolute flex flex-col items-center gap-1 max-w-[70vw] pointer-events-none"
-                      style={{ left: olcuSol + olcuCenter(s), transform: 'translateX(-50%)', top: isTop ? -34 - ETIKET_ARALIK - bombePx : wallH + 26 + ETIKET_ARALIK + bombePx }}
+                      style={{
+                        left: olcuSol + olcuCenter(s),
+                        transform: 'translateX(-50%)',
+                        top: ustKenar - 30 - ETIKET_ARALIK - bombePx,
+                      }}
                     >
                       {/*
                         GERÇEK ÖLÇÜ. Kutu genişliği çaprazdan görünen
@@ -2407,6 +2434,19 @@ export default function WallPreview({
    * tepesine binmesinler (bkz. aşağıdaki üst ölçü etiketleri).
    */
   const bombeUstPx = (bulgeM * pxPerM) / 2
+  /*
+   * ÜST ÖLÇÜ ETİKETİNİN SATIRI.
+   *
+   * Etiket tasarımın üstünde, ikisinin arasında ETIKET_ARALIK kadar boşlukla
+   * duruyor. Duvar payı etiketi almıyorsa (tasarım duvarın üst çizgisine
+   * yakınsa) etiket duvarın dışına, üst çizginin üstüne çıkıyor: orası boş.
+   */
+  const ustEtiketBoy = olcuYazi * 1.9
+  const ustEtiketIc = gorunenKutu.y - ETIKET_ARALIK - ustEtiketBoy - bombeUstPx - sahnePayPx
+  const ustEtiketY =
+    ustEtiketIc > ETIKET_ARALIK
+      ? ustEtiketIc
+      : -ETIKET_ARALIK - ustEtiketBoy - bombeUstPx - sahnePayPx
   const marginXm = (wallWm - screenWm) / 2
   const marginYm = (wallHm - screenHm) / 2
 
@@ -2497,7 +2537,7 @@ export default function WallPreview({
             küçülüp ekranı kapatmıyor, büyük tasarımda kaybolmuyor.
           */}
           {/* eslint-disable-next-line no-unused-vars */}
-          {showMeasurements && (
+          {showMeasurements && !donuk && (
             /*
              * ÖLÇÜLER TASARIMLA BİRLİKTE GİDİYOR.
              *
@@ -2531,7 +2571,15 @@ export default function WallPreview({
               <div
                 style={{
                   position: 'absolute',
-                  top: gorunenKutu.y - olcuYazi * 2.2 - ETIKET_ARALIK - sahnePayPx - bombeUstPx,
+                  /*
+                   * ÜST ETİKET NE TASARIMA NE DUVARA DEĞİYOR.
+                   *
+                   * Etiket tasarımın üstüne sabit bir payla konuyordu; duvar
+                   * payı dar olunca duvarın üst çizgisine yapışıyor, hatta
+                   * üstüne biniyordu. Duvar payı etikete yetmiyorsa etiket
+                   * duvarın DIŞINA çıkıyor — orası her zaman boş.
+                   */
+                  top: ustEtiketY,
                   left: gorunenKutu.x,
                   width: gorunenKutu.w,
                   display: 'flex',
@@ -2643,7 +2691,15 @@ export default function WallPreview({
                 /* Kabın dışına taşıp yarım görünmesinler. */
                 style={{
                   left: Math.min(Math.max(dugmeBoy, gorunenKutu.x + gorunenKutu.w / 2), Math.max(dugmeBoy, size.w - dugmeBoy)),
-                  top: Math.max(2, gorunenKutu.y - dugmeBoy - olcuYazi * 2.6 - sahnePayPx),
+                  /*
+                   * DÜĞME ÖLÇÜ ETİKETİNİN ÜSTÜNDE, TASARIMA DEĞMİYOR.
+                   *
+                   * Konumu doğrudan tasarımın üst kenarından hesaplanıyordu
+                   * ve etiketle aynı şeride düşüyordu: hap, tasarımın üst
+                   * kenarına biniyordu. Sıra artık yukarıdan aşağı
+                   * kesinleşmiş: düğme, boşluk, etiket, boşluk, tasarım.
+                   */
+                  top: Math.max(2, ustEtiketY - ETIKET_ARALIK - dugmeBoy),
                   transform: 'translateX(-50%)',
                 }}
               >
