@@ -11321,7 +11321,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             Sabitlenenler kendi dörtgeninden, elde duran ekran koseMutlak'tan
             (grup varsa gruptaki yerinden) okunuyor.
           */}
-          {showMeasurements && !yerlesimBitti && scene === 'ozel' && !refKipi && !lKoseKipi && (
+          {/*
+            NUMARA YALNIZCA ÖLÇÜM SÜRERKEN.
+
+            Rozetler ölçüm bittikten sonra da tasarımın üstünde duruyordu:
+            işi biten bir yardımcı işaret, teklif ekran görüntüsüne de
+            giriyordu. Ölçüm kapanınca tasarım temiz kalıyor.
+          */}
+          {showMeasurements && olcuAcik && !yerlesimBitti && scene === 'ozel' && !refKipi && !lKoseKipi && (
             <EkranNumaralari
               aktifId={aktifEkranId}
               ekranlar={[
@@ -13440,7 +13447,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   yer verilmiyordu. Aynı düğme artık sıradaki adımı yapıyor:
                   alan yoksa işaretlemeyi başlatıyor, alan varsa sığdırıyor.
                 */}
-                {scene === 'ozel' && ozelSahne && (
+                {/*
+                  ÖNCE REFERANS, SONRA ALAN.
+
+                  Düğme fotoğraf yüklenir yüklenmez çıkıyordu; oysa ölçek
+                  henüz yok, işaretlenen alanın kaç metre olduğu da
+                  bilinemiyor. Sırayı bozan bir seçenek, yapılamayacak bir
+                  işi öneriyordu. Referans alınınca görünüyor.
+                */}
+                {scene === 'ozel' && ozelSahne && (refPxCm || alanIsaretli) && (
                   <>
                     <button
                       type="button"

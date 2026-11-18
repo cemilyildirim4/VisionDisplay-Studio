@@ -1120,7 +1120,7 @@ export const ODA_EN_M = 8
 export const ODA_BOY_M = 3.2
 export const ODA_DERINLIK_M = 10
 
-function Oda3D({ olcu }) {
+function Oda3D({ olcu, doku = null }) {
   if (!olcu) return null
   const { w, h, d, merkez } = olcu
   const odaW = Math.max(ODA_EN_M, w + 2)
@@ -1138,10 +1138,23 @@ function Oda3D({ olcu }) {
         <planeGeometry args={[odaW, odaD]} />
         <meshStandardMaterial color="#b4ada2" roughness={0.95} metalness={0} />
       </mesh>
-      {/* ARKA DUVAR — ekran buna asılı. */}
+      {/*
+        ARKA DUVAR — ekran buna asılı.
+
+        Kullanıcının fotoğrafı seçiliyse duvarın DOKUSU oluyor. Fotoğraf
+        eskiden 3B tuvalin arkasında duran düz bir <img> idi: sahne
+        döndürülünce ya da uzaklaşılınca o görüntü olduğu yerde kalıyor,
+        ekran boşlukta kayıyordu. Doku olarak duvara geçince fotoğraf da
+        sahnenin bir parçası — perspektifiyle birlikte dönüyor ve ekran
+        gerçekten o duvarın önünde duruyor.
+      */}
       <mesh position={[merkez.x, zeminY + odaH / 2, arkaZ]} receiveShadow>
         <planeGeometry args={[odaW, odaH]} />
-        <meshStandardMaterial color="#e9ebef" roughness={0.95} metalness={0} />
+        {doku ? (
+          <meshBasicMaterial map={doku} toneMapped={false} />
+        ) : (
+          <meshStandardMaterial color="#e9ebef" roughness={0.95} metalness={0} />
+        )}
       </mesh>
       {/*
         SÜPÜRGELİK — duvarın zeminle birleştiği yer.
@@ -1194,8 +1207,32 @@ function Oda3D({ olcu }) {
   )
 }
 
-function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenType, curveAmount, leftCols, rightCols, lYon, screens, grupTipi, oda = false }) {
+function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenType, curveAmount, leftCols, rightCols, lYon, screens, grupTipi, oda = false, arkaFoto = null }) {
   const { camera } = useThree()
+  /* Arka plan fotoğrafı arka duvarın dokusu (bkz. Oda3D). */
+  const [odaDoku, setOdaDoku] = useState(null)
+  useEffect(() => {
+    if (!arkaFoto) {
+      setOdaDoku(null)
+      return undefined
+    }
+    let birakildi = false
+    const g = new Image()
+    g.crossOrigin = 'anonymous'
+    g.onload = () => {
+      if (birakildi) return
+      const d = new THREE.Texture(g)
+      d.colorSpace = THREE.SRGBColorSpace
+      d.anisotropy = 4
+      d.needsUpdate = true
+      setOdaDoku(d)
+    }
+    g.src = arkaFoto
+    return () => {
+      birakildi = true
+    }
+  }, [arkaFoto])
+  useEffect(() => () => odaDoku?.dispose?.(), [odaDoku])
   const kontrol = useThree((d) => d.controls)
   /* Tasarımın gerçek sınır kutusu — hem kamera hem oda buradan. */
   const [olcu, setOlcu] = useState(null)
@@ -1329,8 +1366,8 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
         />
       </group>
 
-      {/* Çizilmiş oda — arka plan fotoğrafı yokken (bkz. Oda3D). */}
-      {oda && <Oda3D olcu={olcu} />}
+      {/* Çizilmiş oda — fotoğraf varsa arka duvarın dokusu (bkz. Oda3D). */}
+      {oda && <Oda3D olcu={olcu} doku={odaDoku} />}
 
       {/*
         ZEMİN GÖLGESİ — tasarımın hemen altında.
@@ -2130,10 +2167,11 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
         bilgi
         onVazgec={() => setUyari(null)}
       />
-      {/* Arka plan görseli — 3D tuvali saydam olduğu için sahnenin arkasında kalır */}
-      {arkaFoto && (
-        <img src={arkaFoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-      )}
+      {/*
+        Arka plan artık sahnenin İÇİNDE: fotoğraf odanın arka duvarına
+        doku olarak geçiyor (bkz. SceneContent → Oda3D). Buradaki düz
+        <img> sahneyle birlikte dönmediği için kaldırıldı.
+      */}
       <input ref={fotoRef} type="file" accept="image/*" onChange={fotoSecildi} className="hidden" />
 
       <div className="absolute top-0 inset-x-0 z-10 flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-b from-black/70 to-transparent">
@@ -2198,8 +2236,17 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           lYon={lYon}
           screens={screens}
           grupTipi={grupTipi}
-          /* Arka planda fotoğraf yoksa mekân çiziliyor: zemin + üç duvar. */
-          oda={!arkaFoto}
+          /*
+           * ODA HER ZAMAN ÇİZİLİYOR — ÖLÇEK BURADAN OKUNUYOR.
+           *
+           * Fotoğraf seçilince oda kapanıyor ve kamera tasarıma göre
+           * yakınlaşıyordu: 0,32 m'lik bir ekran da 6 m'lik bir ekran da
+           * kadrajı aynı oranda dolduruyor, yani ekranın ne kadar büyük
+           * olduğu hiç okunmuyordu. Oda duruyor, kadraj odanın ölçüsünde
+           * sabit; fotoğraf da odanın arka duvarına geçiyor.
+           */
+          oda
+          arkaFoto={arkaFoto}
         />
         <IlkKare onIlkKare={() => setSahneHazir(true)} />
         {/*

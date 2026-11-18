@@ -1144,7 +1144,8 @@ export default function WallPreview({
   // Ölçü etiketi (tüm ölçüler metre)
   const fmtU = (m) => `${Number(m).toLocaleString(sayiYeri(), { maximumFractionDigits: 3 })} m`
   // İzleme mesafesi: kısa etiket (1 ondalık) — diyagonal çizgide taşmasın
-  const fmtDist = (m) => `${Number(m).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} m`
+  /* İki ondalık: P1.25 modelinde mesafe 1,25 m; tek ondalık 1,3 m yazıyordu. */
+  const fmtDist = (m) => `${Number(m).toLocaleString('tr-TR', { maximumFractionDigits: 2 })} m`
 
   /*
    * ÖLÇÜM KANCASI ERKEN DÖNÜŞÜN ÜSTÜNDE OLMAK ZORUNDA.
@@ -1854,7 +1855,17 @@ export default function WallPreview({
                   Listedeki satırla şeritteki ekranı eşlemek için; tıklamayı
                   yutmuyor, ekranın kendi çizimine de karışmıyor.
                 */}
-                {placed.length > 1 && numaraGoster && (
+                {/*
+                  MEKÂNDA NUMARA ROZETİ YOK.
+
+                  Rozet sabit 24 piksel; mekân sahnesinde ekranlar gerçek
+                  ölçekte çizildiği için 0,32 m'lik bir ekran 29 × 15 piksel
+                  kalıyor ve rozet ekrandan BÜYÜK oluyordu. Üç ekranın
+                  arkasında üç gri yuvarlak gölge gibi görünen şey buydu.
+                  Numara yalnızca tasarım görünümünde, ekranların büyük
+                  çizildiği yerde duruyor.
+                */}
+                {placed.length > 1 && numaraGoster && !sahneVar && (
                   <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
                     {placed.map((s, i) => (
                       <span
