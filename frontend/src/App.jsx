@@ -5,7 +5,7 @@ import { KIOSK_GOVDESI_ACIK } from './featureFlags.js'
 import { mekaniSil } from './fotoDeposu.js'
 import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
-import ExportModal from './ExportModal.jsx'
+import ExportModal, { MiniPcSecimi } from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import { useConfigurationPreview } from './useConfigurationPreview.js'
@@ -13318,13 +13318,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                 hesabı ve kayıtlı teklifler hâlâ onu okuyor.
               */}
 
-              {/*
-                MİNİ PC SORUSU BURADAN KALKTI.
-
-                Soru artık "PDF Raporu Al" penceresinin en üstünde (bkz.
-                ExportModal): kararın tek sonucu o rapor, paneldeki yeri de
-                tasarımla ilgisi olmayan bir blok olarak duruyordu.
-              */}
+              <div className="mb-5">
+                <h2 className="text-[25px] font-bold tracking-tight m-0 mb-1">{t('minipc.section')}</h2>
+                <p className="text-[14px] text-neutral-400 dark:text-neutral-500 m-0 mb-3">{t('minipc.sectionHint')}</p>
+                <div className="rounded-xl border border-neutral-200 dark:border-[#2c333f] px-3.5 py-3">
+                  <MiniPcSecimi deger={hasMiniPc} onChange={setHasMiniPc} />
+                </div>
+              </div>
 
               {/*
                 MEKÂN — ekranın arkasına çizilen oda.
@@ -14781,12 +14781,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             </button>
 
           {/*
-            DÜĞME MODEL SEÇİLİYSE HEP AÇIK.
-
-            Mini PC sorusu cevaplanmadan düğme soluk kalıyor ve altında
-            "önce şu soruyu cevaplayın" notu duruyordu. Soru artık pencerenin
-            kendi içinde (bkz. ExportModal): düğme pencereyi açıyor, indirme
-            düğmeleri orada cevaba bağlı.
+            Mini PC kararı sağ panelde, mekânın üstünde verilir.
+            PDF penceresi bu cevabı kullanır; seçilmeden indirme açılmaz.
           */}
           <button
             type="button"
@@ -14935,8 +14931,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        /* Mini PC kararı pencerenin içinde veriliyor; cevap buraya dönüyor. */
-        onMiniPc={setHasMiniPc}
         summary={{
           modelCode: selectedModel?.modelCode,
           // Rapordaki teknik özet (ağırlık, güç, ısı) modelin kendi
