@@ -422,6 +422,33 @@ function eklemVarsayilanAcisi(tip, j, uyeSayisi, aciliAci = 180) {
 }
 
 /*
+ * YÜRÜRLÜKTEKİ ŞEKİL — DÜĞMENİN MAVİ OLANI.
+ *
+ * Şekil düğmeleri (Düz / L / U) kısayol: yalnızca EKLEM AÇILARINI yazıyorlar,
+ * grubun tipi hepsinde "acili" kalıyor. Düğmenin seçili görünmesi ise tipe
+ * bakıyordu; dolayısıyla hangi şekle basılırsa basılsın hiçbiri mavi olmuyor,
+ * mavi olan tek düğme "Açılı" oluyordu. Şekil artık açılardan okunuyor:
+ * hepsi düz → Düz, yalnızca ilk eklem 90° → L, iki uç eklem 90° → U. Eklemler
+ * elle başka bir açıya çevrilirse hiçbiri seçili görünmüyor — çünkü o şekil
+ * gerçekten bu üçünden biri değil.
+ */
+function yerlesimSekli(grup, grupTipi) {
+  if (grupTipi === 'kutu') return 'kutu'
+  if (!grup || !Array.isArray(grup.uyeler)) return null
+  const eklemSayisi = Math.max(0, grup.uyeler.length - 1)
+  if (!eklemSayisi) return 'duz'
+  const eklemler = Array.isArray(grup.eklemler) ? grup.eklemler : []
+  const aci = (j) => Number(eklemler[j]?.aci ?? 180)
+  const duz = (j) => Math.abs(aci(j) - 180) < 0.5
+  const dik = (j) => Math.abs(aci(j) - 90) < 0.5
+  const sira = Array.from({ length: eklemSayisi }, (_, j) => j)
+  if (sira.every(duz)) return 'duz'
+  if (dik(0) && sira.slice(1).every(duz)) return 'l'
+  if (eklemSayisi >= 2 && dik(0) && dik(eklemSayisi - 1) && sira.slice(1, eklemSayisi - 1).every(duz)) return 'u'
+  return null
+}
+
+/*
  * BİRLEŞECEK KENARLAR — ekranın solu komşunun sağına, sağı soluna.
  *
  * Köşe sırası: 0 sol üst, 1 sağ üst, 2 sağ alt, 3 sol alt. Sol kenar
@@ -12869,8 +12896,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     Her şeklin kendi en az ekran sayısı var: U üç, küp dört
                     yüzeyden oluşuyor.
                   */}
-                  <div className="order-1 grid min-w-0 flex-1 grid-cols-5 gap-0.5">
-                    {Object.keys(GRUP_EN_AZ).map((tip) => (
+                  {/*
+                    DÖRT DÜĞME, İKİ SATIR.
+
+                    Beş düğme tek sıradaydı ve yazılar 10,5 piksele kadar
+                    küçülmüştü. "Açılı" kalktı: o bir şekil değil, grubun iç
+                    tipi — ekranlar zaten her zaman açılı kuruluyor (bkz.
+                    grupTipi), yani düğme hiçbir şeyi değiştirmiyordu ama
+                    sürekli seçili görünen tek düğme oydu.
+                  */}
+                  <div className="order-1 grid min-w-0 flex-1 grid-cols-2 gap-0.5">
+                    {['duz', 'l', 'u', 'kutu'].map((tip) => (
                       <button
                         key={tip}
                         type="button"
@@ -12966,8 +13002,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           }
                         }}
                         title={t('yerlesim.' + tip)}
-                        className={`rounded-md px-0.5 py-0.5 text-[10.5px] font-semibold leading-tight transition-colors disabled:opacity-40 ${
-                          grup && grupTipi === tip
+                        className={`rounded-md px-1 py-1 text-[11.5px] font-semibold leading-tight transition-colors disabled:opacity-40 ${
+                          grup && yerlesimSekli(grup, grupTipi) === tip
                             ? 'bg-brand text-white'
                             : 'border border-neutral-300 text-neutral-600 enabled:hover:border-brand enabled:hover:text-brand dark:border-[#39414f] dark:text-neutral-400'
                         }`}
