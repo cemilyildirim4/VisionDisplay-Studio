@@ -1690,6 +1690,29 @@ export default function WallPreview({
       className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0"
       style={gizle ? { visibility: 'hidden' } : undefined}
     >
+      {/*
+        YÖNÜ SIFIRLA — ÇİFT TIKLAMANIN GÖRÜNEN HÂLİ.
+
+        Tasarımı karşıya çevirmenin tek yolu çift tıklamaktı; ekranda bunu
+        anlatan hiçbir işaret yoktu, döndüren kullanıcı eski görünüme
+        dönemiyordu. Düğme yalnızca tasarım DÖNÜKKEN çıkıyor (karşıdayken
+        yapacağı bir iş yok) ve PDF'e girmiyor.
+      */}
+      {onDonus && donuk && (
+        <button
+          type="button"
+          data-pdf-gizle
+          onClick={() => onDonus({ yaw: 0, egim: 0 })}
+          title={t('donus.sifirla')}
+          className="absolute right-2 top-2 z-20 inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-[#39414f] dark:bg-[#161a21] dark:text-neutral-200 dark:hover:bg-[#1d222b]"
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7" />
+            <path d="M3 4v5h5" />
+          </svg>
+          {t('donus.sifirla')}
+        </button>
+      )}
         <div dir="ltr" className="flex items-end gap-3 sm:gap-6 max-w-full">
          {showHumanM && (
   <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
