@@ -361,10 +361,23 @@ export default function Birlesim2D({
    * Alt kenar sabit kalsın diye ölçek tabandan uygulanıyor; grup
    * duvarın tasarım alt çizgisinde duruyor.
    */
+  /*
+   * KENAR PAYI SIĞDIRMAYA KATILMIYOR.
+   *
+   * Kutu, çizimin dört yanına PAY kadar boşluk bırakıyor (kenar yuvarlanırken
+   * kırpılmasın diye). Sığdırma o boşluğu da çizimden sayıyordu: duvarıyla
+   * aynı ölçüdeki 3,84 m'lik bir tasarım duvarın %98'ine iniyor, iki yanda
+   * gerçekte olmayan bir boşluk doğuyordu (ölçüldü: 760 / 776 piksel). Pay
+   * sabit 16 piksel olduğu için oran küçük çizimlerde daha da bozuluyordu.
+   * Sığdırma artık çizimin KENDİ ölçüsüne bakıyor; döndürülmemiş tasarım
+   * duvarla birebir aynı ölçekte çiziliyor.
+   */
+  const cizimEn = Math.max(1, kutuEn - PAY * 2)
+  const cizimBoy = Math.max(1, kutuBoy - PAY * 2)
   const olcek = Math.min(
     1,
-    enCokW > 0 ? enCokW / kutuEn : 1,
-    enCokH > 0 ? enCokH / kutuBoy : 1,
+    enCokW > 0 ? enCokW / cizimEn : 1,
+    enCokH > 0 ? enCokH / cizimBoy : 1,
   )
   /* Ölçüm bu ölçeği geri çeviriyor (bkz. yukarıdaki useLayoutEffect). */
   olcekRef.current = olcek

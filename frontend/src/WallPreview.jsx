@@ -1548,6 +1548,19 @@ export default function WallPreview({
     const marginYm = (wallHm - maxHm) / 2
     const humanH = HUMAN_HEIGHT_M * pxPerM
 
+    /*
+     * SAĞ KENARDAKİ ÖLÇÜ SÜTUNU TUVALİN İÇİNDE KALIYOR.
+     *
+     * Sütunun en sağ sınırı (tuval − duvar) / 2 ile hesaplanıyordu, yani
+     * duvarın tuvalde ORTALANDIĞI varsayılıyordu. Oysa duvarın solunda insan
+     * silüeti duruyor: duvar o kadar sağa kayıyor ve sağda kalan boşluk
+     * hesaplanandan dar oluyor — "0,02 m" etiketleri tuvalin kenarında
+     * kesiliyordu. Boşluk artık silüetin eni ve aradaki boşluk düşülerek
+     * hesaplanıyor.
+     */
+    const insanPx = humanWmM * pxPerM
+    const sagBosluk = Math.max(0, (size.w - wallW - insanPx - (showHumanM ? 24 : 0)) / 2)
+
     let xAcc = 0
     /* Gerçek enlerin dizilimi: ölçü etiketleri ve içerik dilimi buradan. */
     let gAcc = 0
@@ -2226,7 +2239,7 @@ export default function WallPreview({
                 })}
 
                 {/* Sağ kenar: üst boşluk | ekran yüksekliği | alt boşluk */}
-                <div style={{ position: 'absolute', left: Math.min(wallW + 10 + ETIKET_ARALIK + sahnePayPx, Math.max(0, wallW + (size.w - wallW) / 2 - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'absolute', left: Math.min(wallW + 10 + ETIKET_ARALIK + sahnePayPx, Math.max(0, wallW + sagBosluk - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
                   {/* Pay negatifse (tasarım duvardan büyük) yazılacak bir boşluk yok. */}
                   {marginYm > 0.0045 && <SegV h={stripTop} label={fmtU(marginYm)} muted kacis="ust" />}
                   <SegV h={maxHpx} label={fmtU(maxHm)} />
