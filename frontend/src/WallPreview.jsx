@@ -1018,6 +1018,8 @@ export default function WallPreview({
   onDonus = null,
   /* Tasarım duvardan büyük mü (bkz. App → tasarimDuvardanBuyuk). */
   tasma = false,
+  /* Varsayılan bakış açısı (bkz. App → varsayilanYaw). */
+  donusVarsayilan = null,
   hideRegions = false,
   curveAmount = 60,
   // Arkada bir mekân sahnesi çizildiyse duvar kutusu SAYDAM olur; odanın kendi
@@ -1170,6 +1172,18 @@ export default function WallPreview({
    */
   const donuk = !!(donus && (donus.yaw || donus.egim))
 
+  /*
+   * "YÖNÜ SIFIRLA" VARSAYILAN BAKIŞA DÖNDÜRÜYOR.
+   *
+   * Varsayılan bakış artık her zaman karşıdan değil: çoklu tasarım, bir
+   * ekranı karşıya alacak kadar çevrilmiş geliyor (bkz. App →
+   * varsayilanYaw). Bu yüzden düğmenin görünme ölçütü "açı sıfır değil"
+   * olamaz; ölçüt varsayılandan SAPMA.
+   */
+  const varsayilanFark =
+    Math.abs((donus?.yaw || 0) - (Number(donusVarsayilan?.yaw) || 0)) > 0.01 ||
+    Math.abs((donus?.egim || 0) - (Number(donusVarsayilan?.egim) || 0)) > 0.01
+
   /* Fareyle döndürme: basıldığı yer ve o andaki açı. */
   const donusBas = useRef(null)
   const donusBaslat = (ev) => {
@@ -1203,7 +1217,7 @@ export default function WallPreview({
    * yazılıyor, aşağıda iki tuvale de konuyor.
    */
   const sifirlaDugmesi =
-    onDonus && donuk ? (
+    onDonus && varsayilanFark ? (
       <button
         type="button"
         data-pdf-gizle

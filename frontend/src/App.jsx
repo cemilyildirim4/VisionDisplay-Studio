@@ -3200,6 +3200,55 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const cokluAktif = (scene !== 'ozel' || !ozelSahne) && ekranParcalari.length > 1
 
   /*
+   * VARSAYILAN BAKIŞ — BİR EKRAN KARŞIDAN DÜZ.
+   *
+   * Çoklu tasarım her zaman karşıdan (yaw = 0) çiziliyordu: L'de iki kol da
+   * eğik duruyor, hiçbirinin yüzü görünmüyordu — kullanıcı kurduğu şeyi
+   * ancak fareyle çevirdikten sonra görebiliyordu. Bakış artık bir ekranı
+   * karşıya alacak kadar çevrilmiş geliyor:
+   *   2 ekran   → 1. ekran karşıda, 2. ekran sağında,
+   *   tek sayı  → ortadaki ekran karşıda,
+   *   çift sayı → ortadaki iki ekranın EKLEMİ karşıda, görünüm simetrik.
+   *
+   * Küpe dokunulmuyor: onun kendi duruş açısı var (bkz. KUP_DURUS_ACISI).
+   * Açı, ekranların ÇİZİM yönünden okunuyor; Birlesim2D zinciri aynı
+   * açılarla kuruyor, yani ekranın yüzü tam karşıya geliyor.
+   */
+  const varsayilanYaw = (() => {
+    const uyeler = Array.isArray(grup?.uyeler) ? grup.uyeler : null
+    if (!uyeler || uyeler.length < 2 || grup.tip === 'kutu') return 0
+    const acilar = uyeler
+      .map((id) => ekranSeridi.find((x) => x.id === id))
+      .filter(Boolean)
+      .map((x) => (Number.isFinite(x.cizimYon) ? x.cizimYon : x.yon))
+      .filter((a) => Number.isFinite(a))
+    const n = acilar.length
+    if (n < 2) return 0
+    const hedef =
+      n === 2 ? acilar[0] : n % 2 ? acilar[(n - 1) / 2] : (acilar[n / 2 - 1] + acilar[n / 2]) / 2
+    /* CSS rotateY ile zincirin açısı aynı işaretli (bkz. Birlesim2D). */
+    return -(hedef * 180) / Math.PI
+  })()
+
+  /*
+   * ELLE DÖNDÜRÜLDÜYSE VARSAYILAN BAKIŞ GERİ GELMİYOR.
+   *
+   * Bakış ekran eklenince, silinince ya da eklem açısı değişince yeniden
+   * kuruluyor. Kullanıcı tasarımı fareyle çevirdiyse kendi açısı korunuyor;
+   * "Yönü sıfırla" ve çift tıklama bu bayrağı temizleyip varsayılana
+   * döndürüyor (bkz. onDonus).
+   */
+  const elleDonusRef = useRef(false)
+  useEffect(() => {
+    if (elleDonusRef.current) return
+    setGrupDonus((d) =>
+      Math.abs((d?.yaw || 0) - varsayilanYaw) < 0.01 && !(d?.egim || 0)
+        ? d
+        : { yaw: varsayilanYaw, egim: 0 },
+    )
+  }, [varsayilanYaw])
+
+  /*
    * KAPLANAN ALAN — BİRLEŞİM TEK PARÇA GİBİ SAYILIYOR.
    *
    * Enler yan yana diziliyormuş gibi toplanıyordu: küpün dört yüzü ve U'nun
@@ -11155,6 +11204,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               colsIpucu={duvarSinirli ? t('ekran.duvarDolu') : null}
               rowsIpucu={duvarSinirli ? t('ekran.duvarDolu') : null}
               donus={grupDonus}
+              donusVarsayilan={{ yaw: varsayilanYaw, egim: 0 }}
               /* Duvarı aşan tasarımın çevresi çizimde kırmızı. */
               tasma={tasarimDuvardanBuyuk}
               /*
@@ -11162,7 +11212,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * (sürükleyerek yerleştirme, bkz. FotoYerlesim3D); orada iki
                * döndürme birbirine girmesin diye kapalı.
                */
-              onDonus={scene === 'ozel' && ozelSahne ? null : setGrupDonus}
+              onDonus={
+                scene === 'ozel' && ozelSahne
+                  ? null
+                  : (d) => {
+                      /* {0,0} = "yönü sıfırla" / çift tıklama: varsayılan bakışa dön. */
+                      const sifirla = !d || (!d.yaw && !d.egim)
+                      elleDonusRef.current = !sifirla
+                      setGrupDonus(sifirla ? { yaw: varsayilanYaw, egim: 0 } : d)
+                    }
+              }
               hideRegions={isVideoWall}
               /*
                * FOTOĞRAF GELENE KADAR NORMAL ÖNİZLEME.
