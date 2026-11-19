@@ -1016,6 +1016,8 @@ export default function WallPreview({
    */
   donus = null,
   onDonus = null,
+  /* Tasarım duvardan büyük mü (bkz. App → tasarimDuvardanBuyuk). */
+  tasma = false,
   hideRegions = false,
   curveAmount = 60,
   // Arkada bir mekân sahnesi çizildiyse duvar kutusu SAYDAM olur; odanın kendi
@@ -1195,6 +1197,30 @@ export default function WallPreview({
   const donusBitir = () => {
     donusBas.current = null
   }
+
+  /*
+   * Düğme iki dalda da (tek ekran / çoklu ekran) aynı: burada bir kez
+   * yazılıyor, aşağıda iki tuvale de konuyor.
+   */
+  const sifirlaDugmesi =
+    onDonus && donuk ? (
+      <button
+        type="button"
+        data-pdf-gizle
+        onClick={() => onDonus({ yaw: 0, egim: 0 })}
+        title={t('donus.sifirla')}
+        className="absolute right-2 top-2 z-20 inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-[#39414f] dark:bg-[#161a21] dark:text-neutral-200 dark:hover:bg-[#1d222b]"
+      >
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 12a9 9 0 1 0 3-6.7" />
+          <path d="M3 4v5h5" />
+        </svg>
+        {t('donus.sifirla')}
+      </button>
+    ) : null
+
+  /* Taşan tasarımın kırmızı çizgisi yalnızca TASARIM ekranında. */
+  const tasmaCizgi = !!tasma && !sahneVar
 
   const olcekRef = useRef(null)
   useEffect(() => {
@@ -1698,21 +1724,7 @@ export default function WallPreview({
         dönemiyordu. Düğme yalnızca tasarım DÖNÜKKEN çıkıyor (karşıdayken
         yapacağı bir iş yok) ve PDF'e girmiyor.
       */}
-      {onDonus && donuk && (
-        <button
-          type="button"
-          data-pdf-gizle
-          onClick={() => onDonus({ yaw: 0, egim: 0 })}
-          title={t('donus.sifirla')}
-          className="absolute right-2 top-2 z-20 inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-[#39414f] dark:bg-[#161a21] dark:text-neutral-200 dark:hover:bg-[#1d222b]"
-        >
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M3 12a9 9 0 1 0 3-6.7" />
-            <path d="M3 4v5h5" />
-          </svg>
-          {t('donus.sifirla')}
-        </button>
-      )}
+      {sifirlaDugmesi}
         <div dir="ltr" className="flex items-end gap-3 sm:gap-6 max-w-full">
          {showHumanM && (
   <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
@@ -1857,6 +1869,7 @@ export default function WallPreview({
                     cerceve={sahneVar}
                     /* Tasarım ekranında perspektif yok: olduğu yerde dönüyor. */
                     perspektifli={sahneVar}
+                    tasmaCerceve={tasmaCizgi}
                   />
                 </div>
               )}
@@ -2481,6 +2494,7 @@ export default function WallPreview({
       className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0"
       style={gizle ? { visibility: 'hidden' } : undefined}
     >
+      {sifirlaDugmesi}
       <div dir="ltr" className="flex items-end gap-3 sm:gap-6 max-w-full">
         {!sahneVar && size.w >= 560 && wallHm >= HUMAN_MIN_WALL_M - 0.005 && (
             <HumanSilhouette height={humanH} showMeasure={showMeasurements} />
@@ -2494,7 +2508,26 @@ export default function WallPreview({
             ...(tutamak ? tutamak.style : null),
           }}
         >
-          <div style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }} className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative flex items-center justify-center`}>
+          <div
+            style={{
+              width: wallW,
+              height: wallH,
+              transform: yonDonusumu(yon, wallW) || undefined,
+              /*
+               * TEK EKRANDA DA 3B.
+               *
+               * Dönüş ekranın kendi kutusuna uygulanıyor, perspektif ise
+               * duvar kutusunda duruyor — duvarın kendisi dönmüyor.
+               * Tasarım ekranında perspektif ZAYIF (çoklu ekrandaki kuralın
+               * aynısı): ekran olduğu yerde dönüyor, uzaklaşmıyor.
+               */
+              perspective: donuk
+                ? Math.max(600, (sahneVar ? 2.2 : 8) * Math.max(screenW, screenH))
+                : undefined,
+              perspectiveOrigin: '50% 50%',
+            }}
+            className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative flex items-center justify-center`}
+          >
             {/*
               Dört köşe hedefi varken dönüşüm EKRAN KUTUSUNA uygulanıyor:
               duvar kutusu tasarımdan büyük olabiliyor, homografi ise tam
@@ -2504,11 +2537,33 @@ export default function WallPreview({
               ref={ekranKutuRef}
               /* Testin görünürlüğü ölçebilmesi için sabit işaret. */
               data-tasarim-yuz
+              /*
+               * Sürükleme yalnızca TASARIMIN üstünde: sahnelerde tasarımı
+               * taşıyan tutamak (bkz. kayma) duvarın boş yerinde çalışmayı
+               * sürdürüyor. Dörtgen hedefi varken (kendi fotoğrafı) dönüş
+               * kapalı: orada yerleştirmenin kendi döndürmesi var.
+               */
+              onPointerDown={kose ? undefined : donusBaslat}
+              onPointerMove={kose ? undefined : donusSurdur}
+              onPointerUp={kose ? undefined : donusBitir}
+              onPointerCancel={kose ? undefined : donusBitir}
+              onDoubleClick={kose ? undefined : () => onDonus?.({ yaw: 0, egim: 0 })}
               style={{
                 width: screenW,
                 height: screenH,
-                transform: koseDonusumu(screenW, screenH, kose) || undefined,
-                transformOrigin: '0 0',
+                transform: kose
+                  ? koseDonusumu(screenW, screenH, kose) || undefined
+                  : donuk
+                    ? `rotateX(${donus?.egim || 0}deg) rotateY(${donus?.yaw || 0}deg)`
+                    : undefined,
+                /* Homografi köşeden ölçüyor; kendi ekseninde dönüş merkezden. */
+                transformOrigin: kose ? '0 0' : '50% 50%',
+                cursor: !kose && onDonus ? 'grab' : undefined,
+                /* Dokunmatikte kaydırma yerine döndürme. */
+                touchAction: !kose && onDonus ? 'none' : undefined,
+                /* Duvarı aşan tasarım: ince kırmızı çizgi (bkz. tasmaCizgi). */
+                outline: tasmaCizgi ? '1px solid #dc2626' : undefined,
+                outlineOffset: tasmaCizgi ? '1px' : undefined,
                 /* Yerinde 3B çizildiyse düz çizim gizleniyor: ekran iki kez görünmesin. */
                 opacity: ekranGizle ? 0 : undefined,
               }}

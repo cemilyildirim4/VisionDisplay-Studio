@@ -11128,6 +11128,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               colsIpucu={duvarSinirli ? t('ekran.duvarDolu') : null}
               rowsIpucu={duvarSinirli ? t('ekran.duvarDolu') : null}
               donus={grupDonus}
+              /* Duvarı aşan tasarımın çevresi çizimde kırmızı. */
+              tasma={tasarimDuvardanBuyuk}
               /*
                * Kendi fotoğrafında tasarımı döndürmenin kendi yolu var
                * (sürükleyerek yerleştirme, bkz. FotoYerlesim3D); orada iki
@@ -12357,9 +12359,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               )}
               {/* Duvar tasarımdan küçük: çizimde taşan kısım zaten görünüyor. */}
               {tasarimDuvardanBuyuk && (
-                <p className="m-0 mt-0.5 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
-                  {t('duvar.tasarimBuyuk')}
-                </p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="m-0 text-[12.5px] leading-snug text-amber-600 dark:text-amber-400">
+                    {t('duvar.tasarimBuyuk')}
+                  </p>
+                  {/*
+                    DUVARI BÜYÜT — UYARININ YANINDA KENDİ ÇÖZÜMÜ.
+
+                    Tasarım duvarı aşınca kullanıcının elinde iki yol vardı:
+                    ekranı küçültmek ya da iki duvar kutusunu tek tek doğru
+                    sayıya getirmek. Düğme YALNIZCA küçük kalan kenarı
+                    büyütüyor (alt sınırlar zaten tasarımın ölçüsü), diğerine
+                    dokunmuyor.
+                  */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDuvarUyari(null)
+                      if (duvarEnAzEn > (Number(width) || 0) + 1e-9) setWidth(duvarEnAzEn)
+                      if (duvarEnAzBoy > (Number(height) || 0) + 1e-9) setHeight(duvarEnAzBoy)
+                    }}
+                    className="rounded-full border border-amber-500 px-2.5 py-0.5 text-[12.5px] font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-400/70 dark:text-amber-300 dark:hover:bg-amber-400/10"
+                  >
+                    {t('duvar.buyut')}
+                  </button>
+                </div>
               )}
             </div>
           )}

@@ -79,6 +79,13 @@ export default function Birlesim2D({
    * sürüyor, yalnızca çizgi görünmüyor.
    */
   cerceve = false,
+  /*
+   * TASARIM DUVARDAN BÜYÜKKEN ÇİZİMİN ÇEVRESİ KIRMIZI.
+   *
+   * Duvarı aşan tasarım çizimde duvarın dışında duruyor; bunun bir uyarı
+   * olduğu yalnızca sol paneldeki yazıdan anlaşılıyordu.
+   */
+  tasmaCerceve = false,
   /* Sade kip: kenarlıklar ve ayrım çizgileri kalkıyor. */
   sade = false,
   /*
@@ -388,6 +395,25 @@ export default function Birlesim2D({
         transformOrigin: '50% 100%',
       }}
     >
+      {/*
+        Çerçeve kutunun payı (PAY) kadar içeride: tam çizimin sınırında.
+        Tasarım DÖNÜKKEN gizleniyor, çünkü o hâlde kutu artık şeklin sınırı
+        değil, dönmüş şeklin izdüşümünü saran dikdörtgen.
+      */}
+      {tasmaCerceve && !donuk && (
+        <div
+          style={{
+            position: 'absolute',
+            left: PAY,
+            top: PAY,
+            width: Math.max(0, kutuEn - PAY * 2),
+            height: Math.max(0, kutuBoy - PAY * 2),
+            border: '1px solid #dc2626',
+            pointerEvents: 'none',
+            zIndex: 6,
+          }}
+        />
+      )}
       <div
         ref={icRef}
         style={{

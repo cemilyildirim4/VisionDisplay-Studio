@@ -244,6 +244,7 @@ const dict = {
   'duvar.tasarimdanKucuk': { tr: 'Duvar tasarımdan küçük olamaz — önce ekranı küçültün', en: 'The wall cannot be smaller than the design — shrink the screen first', ar: 'لا يمكن أن يكون الجدار أصغر من التصميم — صغّر الشاشة أولاً' },
   'duvar.tasarimBuyuk': { tr: 'Tasarım duvardan büyük', en: 'The design is larger than the wall', ar: 'التصميم أكبر من الجدار' },
   'ekran.duvarDolu': { tr: 'Duvar dolu — duvar ölçüsünü büyütün', en: 'The wall is full — increase the wall size', ar: 'الجدار ممتلئ — زد مقاس الجدار' },
+  'duvar.buyut': { tr: 'Duvarı büyüt', en: 'Enlarge the wall', ar: 'كبّر الجدار' },
   'donus.sifirla': { tr: 'Yönü sıfırla', en: 'Reset orientation', ar: 'إعادة ضبط الاتجاه' },
   'ekran.alanaSigdir': { tr: 'Alana sığdır', en: 'Fit to area', ar: 'ملاءمة المنطقة' },
   'ekran.alanaSigdirNot': {
