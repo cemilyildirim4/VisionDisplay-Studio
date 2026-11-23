@@ -1026,6 +1026,8 @@ export default function WallPreview({
   // Arkada bir mekân sahnesi çizildiyse duvar kutusu SAYDAM olur; odanın kendi
   // duvarı görünsün diye. Beyaz dikdörtgen gri odanın içinde yama gibi durur.
   sahneVar = false,
+  /* Mekânda duvarın yüzey rengi; varsa duvar tasarımla birlikte kırılıyor. */
+  duvarDolgu = null,
   /*
    * Ekranın GÖRÜNEN yüzü gizlensin mi. Fotoğraflı mekânda tasarım gerçek
    * 3B olarak çiziliyor (Mekan3D.jsx); düz çizim de altında durunca aynı
@@ -1941,6 +1943,33 @@ export default function WallPreview({
                     perspektifli={sahneVar}
                     tasmaCerceve={tasmaCizgi}
                     onParcaKutulari={setParcaKutulari}
+                    /*
+                     * Mekânda duvar tasarımla birlikte kırılıyor (bkz.
+                     * Birlesim2D → duvarYuzu). Paylar duvarın tasarım
+                     * dışında kalan kısmı: üstte/altta şeridin boşluğu,
+                     * yanlarda duvarın tasarımdan artan eni.
+                     */
+                    duvarYuzu={
+                      sahneVar && duvarDolgu
+                        ? {
+                            dolgu: duvarDolgu,
+                            ust: stripTop,
+                            alt: Math.max(0, wallH - stripTop - maxHpx),
+                            /*
+                             * YANLARDAKİ PAY KISITLI.
+                             *
+                             * Pay duvarın tamamı kadar uzatılınca kırılan
+                             * parçanın yakın ucu kameraya çok yaklaşıyor ve
+                             * perspektif onu devasa büyütüyordu: duvar odanın
+                             * yan duvarlarını da kaplıyordu. Pay tasarımın
+                             * çevresini saracak kadar; ötesi mekânın kendi
+                             * düz duvarı olarak devam ediyor.
+                             */
+                            sol: Math.min(Math.max(0, (wallW - olcuW) / 2), 0.6 * pxPerM),
+                            sag: Math.min(Math.max(0, (wallW - olcuW) / 2), 0.6 * pxPerM),
+                          }
+                        : null
+                    }
                   />
                 </div>
               )}

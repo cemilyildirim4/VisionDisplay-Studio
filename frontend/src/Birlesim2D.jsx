@@ -108,6 +108,14 @@ export default function Birlesim2D({
    */
   perspektifli = true,
   /*
+   * MEKÂNDA DUVAR DA TASARIMLA BİRLİKTE KIRILIYOR.
+   *
+   * { dolgu, ust, alt, sol, sag } — duvarın yüzey rengi ve tasarımın
+   * dışında kalan duvar payları (piksel, zincirle aynı ölçekte).
+   * Boşsa duvar çizilmiyor (tasarım ekranı, düz tasarımlar).
+   */
+  duvarYuzu = null,
+  /*
    * ÇİZİMİN SIĞACAĞI KUTU (duvarın içi).
    *
    * Perspektifle öne gelen kol kutuyu büyütüyor; sınır verilmediğinde
@@ -500,6 +508,81 @@ export default function Birlesim2D({
           }}
         />
       )}
+      {/*
+        DUVAR TASARIMIN ŞEKLİNİ ALIYOR.
+
+        Mekânlarda duvar düz bir yüzeydi: 100°'ye bükülmüş bir L, dümdüz
+        bir duvarın önünde havada duruyormuş gibi görünüyordu. Duvar artık
+        tasarımın EKLEMLERİNDEN bölünüyor; her parça önündeki ekranla AYNI
+        düzlemde duruyor, yani duvarın köşesi ekranın açısı neyse o.
+
+        Panolar ekranlarla aynı üç boyutlu zincirde (aynı dönüş, aynı
+        perspektif) çiziliyor; hizanın şaşmamasının sebebi bu. Ölçüm yapan
+        zincirin (icRef) KARDEŞİ olarak duruyorlar: çizimin sınırını ve
+        ölçü etiketlerini değiştirmiyorlar.
+
+        Düz tasarımda hiç çizilmiyor — orada kırılacak bir köşe yok ve
+        mekânın kendi duvarı zaten doğru duruyor.
+      */}
+      {duvarYuzu?.dolgu && dilimler.length > 1 &&
+        dilimler.some((d) => Math.abs(d.t - dilimler[0].t) > 1e-6) && (
+          <div
+            style={{
+              position: 'absolute',
+              left: orijinX,
+              top: gozY + gozAlt - boyPx,
+              width: 0,
+              height: boyPx,
+              transformStyle: 'preserve-3d',
+              transform: yaw || egim ? `rotateX(${egim}deg) rotateY(${yaw}deg)` : undefined,
+              pointerEvents: 'none',
+            }}
+          >
+            {dilimler.map((d, i) => {
+              const ustPay = Math.max(0, Number(duvarYuzu.ust) || 0)
+              const altPay = Math.max(0, Number(duvarYuzu.alt) || 0)
+              /* Tasarımın bittiği yerde duvar bitmiyor: uçlar duvarın payı kadar uzuyor. */
+              const solPay = i === 0 ? Math.max(0, Number(duvarYuzu.sol) || 0) : 0
+              const sagPay =
+                i === dilimler.length - 1 ? Math.max(0, Number(duvarYuzu.sag) || 0) : 0
+              /* Yandan bakılan yüz daha az ışık alıyor; köşeyi okutan şey bu fark. */
+              const golge = 0.22 * Math.abs(Math.sin(d.t))
+              return (
+                <div
+                  key={'duvar' + i}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: boyPx - d.p.h - ustPay,
+                    width: d.w + BINDIRME * 2 + solPay + sagPay,
+                    height: ustPay + d.p.h + altPay,
+                    marginLeft: -(d.w / 2 + BINDIRME + solPay),
+                    background: duvarYuzu.dolgu,
+                    backfaceVisibility: 'hidden',
+                    /*
+                     * Kendi ekranının bir tık ARKASINDA: aynı düzlemde
+                     * olsalardı tarayıcı hangisini üste çizeceğini
+                     * seçemez, yüzey titrerdi.
+                     */
+                    transform: `translate3d(${d.mx - ortX}px, 0, ${
+                      -(d.mz - ortZ)
+                    }px) rotateY(${(d.t * 180) / Math.PI}deg) translateZ(-1px)`,
+                  }}
+                >
+                  {golge > 0.004 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: `rgba(17, 24, 39, ${golge.toFixed(3)})`,
+                      }}
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       <div
         ref={icRef}
         style={{

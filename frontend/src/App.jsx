@@ -11270,6 +11270,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * yüklenene kadar ekran eskisi gibi duvarıyla çiziliyor.
                */
               sahneVar={scene !== 'none' && !(scene === 'ozel' && !ozelSahne)}
+              /*
+               * ÇİZİLMİŞ MEKÂNLARDA DUVAR TASARIMLA BİRLİKTE KIRILIYOR.
+               *
+               * Renk mekânın kendi duvar gradyanının aynısı (bkz. Salon.jsx
+               * "salon-arka", Cephe.jsx "cephe-yuzey"): kırılan parçalar
+               * mekânın duvarının devamı gibi duruyor. Fotoğraflı
+               * mekânlarda yapılmıyor — orada duvar gerçek bir fotoğraf,
+               * düz renkle kaplamak yama gibi görünürdü.
+               */
+              duvarDolgu={
+                scene === SALON_ID
+                  ? 'linear-gradient(180deg, #f0f2f6 0%, #e6e9ef 100%)'
+                  : scene === CEPHE_ID
+                    ? 'linear-gradient(180deg, #eef0f4 0%, #dcdfe6 100%)'
+                    : null
+              }
               sahnePayPx={sahnePayPx}
               kose={scene === 'ozel' && !ozelSahne ? null : koseTuval}
               /*
