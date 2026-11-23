@@ -503,12 +503,6 @@ const dict = {
 
   // ---------- S-Kutu ----------
   'sbox.heading': { tr: 'S-Kutu Yedekliliği', en: 'S-Box Redundancy', ar: 'تكرار S-Box' },
-  'minipc.section': { tr: 'Görüntü kaynağı', en: 'Video source', ar: 'مصدر الصورة' },
-  'minipc.sectionHint': {
-    tr: 'Ekrandaki yayın Mini PC ile mi oynatılsın, yoksa yalnızca işlemci üzerinden mi gitsin?',
-    en: 'Should the screen play from a Mini PC, or only through the processor?',
-    ar: 'هل تُشغَّل الشاشة عبر Mini PC أم عبر المعالج فقط؟',
-  },
   'minipc.heading': { tr: 'Mini PC Sistemi Dahil Edilsin', en: 'Include Mini PC System', ar: 'تضمين نظام Mini PC' },
   'minipc.hint': {
     tr: 'Görüntü kaynağı doğrudan Mini PC üzerinden yürütülsün',
