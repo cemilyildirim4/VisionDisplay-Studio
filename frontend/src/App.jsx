@@ -3224,8 +3224,20 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       .filter((a) => Number.isFinite(a))
     const n = acilar.length
     if (n < 2) return 0
-    const hedef =
-      n === 2 ? acilar[0] : n % 2 ? acilar[(n - 1) / 2] : (acilar[n / 2 - 1] + acilar[n / 2]) / 2
+    /*
+     * KÖŞE TAM ORTADA.
+     *
+     * Bakış, ortadaki EKRANI karşıya alıyordu: iki ekranlı bir L'de o,
+     * birinci ekrandı; köşe kenarda kalıyor, ikinci ekran yana doğru
+     * kaçıyordu. Bakış artık iki UÇ ekranın tam ortasını karşıya alıyor,
+     * yani şeklin kendi simetri ekseni ekranın ortasına geliyor: L'nin
+     * köşesi tam ortada, iki kolu eşit açıyla duruyor.
+     *
+     * Öteki şekiller değişmiyor: düz tasarımda bütün açılar aynı olduğu
+     * için orta da aynı; U'da iki uç kanat simetrik olduğu için orta yine
+     * ortadaki ekranın açısı.
+     */
+    const hedef = (acilar[0] + acilar[n - 1]) / 2
     /*
      * EK AÇI YOK — BAKIŞ SİMETRİK.
      *
@@ -5801,9 +5813,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * her yeniden kurulumda sessizce "köşeli"ye düşüyordu.
        */
       eklemler: Array.from({ length: Math.max(0, sirali.length - 1) }, (_, j) => ({
+        /*
+         * YENİ EKLEM DÜZ DOĞUYOR.
+         *
+         * Serbest açılı grupta yeni eklem grubun açısıyla doğuyordu: 1-2
+         * eklemine 150° verilmiş bir tasarıma üçüncü ekran eklenince 2-3
+         * eklemi de 150° geliyor, yeni ekran öncekinin arkasına katlanıp
+         * neredeyse hiç görünmüyordu — ekranın eklenip eklenmediği belli
+         * olmuyordu. Yeni eklem artık DÜZ (180°) doğuyor: eklenen ekran
+         * yan yana, tam görünür hâlde geliyor; kullanıcı isterse onu da
+         * kendi açısına büküyor. Var olan eklemler hiç değişmiyor.
+         */
         aci:
           (eski?.tip === sonTip ? eski?.eklemler?.[j]?.aci : undefined) ??
-          eklemVarsayilanAcisi(sonTip, j, sirali.length, aci ?? 135),
+          (sonTip === 'acili' && eski?.tip === sonTip
+            ? 180
+            : eklemVarsayilanAcisi(sonTip, j, sirali.length, aci ?? 135)),
         /*
          * L, U ve küp KÖŞELİ doğuyor: köşesi yuvarlatılmış bir L artık
          * L gibi okunmuyor. Aynı tip içinde kullanıcının seçimi korunuyor.

@@ -2317,15 +2317,37 @@ export default function WallPreview({
               gösterecek bir kenarı yok.
             */}
             {showMeasurements && parcaCizgisi && !!parcaKutulari?.length && !!duvarKonum &&
-              parcaKutulari.map((k) =>
-                k.sag - k.sol < 6 ? null : (
+              (() => {
+                /*
+                 * YAN YANA DÜŞEN ETİKETLER ÜST ÜSTE BİNMİYOR.
+                 *
+                 * Köşe ortada duran bir L'de iki kol ekranın ortasında
+                 * buluşuyor: iki etiketin yeri birkaç piksel ayrı kalıyor ve
+                 * sayılar iç içe geçiyordu. Birbirine yakın düşen etiketler
+                 * sırayla bir satır yukarı alınıyor; ikisi de okunuyor ve
+                 * hangisinin hangi ekran olduğu yerinden belli oluyor.
+                 */
+                const EN_AZ_ARA = 54
+                const SATIR = 26
+                let oncekiOrta = null
+                let kat = 0
+                return [...parcaKutulari]
+                  .filter((k) => k.sag - k.sol >= 6)
+                  .sort((a, b) => a.sol + a.sag - (b.sol + b.sag))
+                  .map((k) => {
+                    const orta = (k.sol + k.sag) / 2
+                    kat = oncekiOrta != null && orta - oncekiOrta < EN_AZ_ARA ? kat + 1 : 0
+                    oncekiOrta = orta
+                    return { k, orta, kat }
+                  })
+                  .map(({ k, orta, kat: katNo }) => (
                   <div
                     key={`pk${k.id}`}
                     className="absolute flex flex-col items-center gap-1 max-w-[70vw] pointer-events-none"
                     style={{
-                      left: (k.sol + k.sag) / 2 - duvarKonum.sol,
+                      left: orta - duvarKonum.sol,
                       transform: 'translateX(-50%)',
-                      top: k.ust - duvarKonum.ust - 30 - ETIKET_ARALIK,
+                      top: k.ust - duvarKonum.ust - 30 - ETIKET_ARALIK - katNo * SATIR,
                       zIndex: 5,
                     }}
                   >
@@ -2333,8 +2355,8 @@ export default function WallPreview({
                       {fmtU(k.en)}
                     </span>
                   </div>
-                ),
-              )}
+                ))
+              })()}
           </div>
         </div>
       </div>
