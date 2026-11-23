@@ -1,3 +1,4 @@
+import { varlik } from './varlik.js'
 /**
  * Masaüstü Bilişim Teknolojileri — marka sabitleri.
  * PDF / canvas (html2canvas) CSS değişkenlerini çözemediği için hex burada tutulur.
@@ -7,7 +8,7 @@ export const BRAND = {
   company: 'Masaüstü Bilişim Teknolojileri',
   companyShort: 'Masaüstü Bilişim',
   product: 'Vision Display Studio',
-  logoSrc: '/masaustu-logo-isaret.png',
+  logoSrc: varlik('masaustu-logo-isaret.png'),
   blue: '#2962ad',
   blueDark: '#204d8a',
   blueLight: '#6d92c8',

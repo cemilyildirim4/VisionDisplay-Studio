@@ -1,3 +1,4 @@
+import { varlik } from './varlik.js'
 /**
  * FOTOĞRAFLI MEKÂNLAR
  *
@@ -51,7 +52,7 @@ export const SAHNELER = [
     kiosk: true, // kasa + direk + kaide cizilsin
     zoomlu: true, // sahne yakinlasip uzaklasabiliyor (bkz. App.jsx sahneYakinlik)
     ad: 'avm.title',
-    dosya: '/zoom-destekli-ic-mekan-led-ana-arka-plan.png',
+    dosya: varlik('zoom-destekli-ic-mekan-led-ana-arka-plan.png'),
     kaynak: { w: 1672, h: 941 },
     /*
      * Panel, fotografta var olan bir yuzey degil: ekranin oturacagi yeri
@@ -179,7 +180,7 @@ export const SAHNELER = [
     kiosk: true, // kasa + direk + kaide cizilsin
     zoomlu: true, // sahne yakinlasip uzaklasabiliyor (bkz. App.jsx sahneYakinlik)
     ad: 'dis.title',
-    dosya: '/zoom-destekli-dis-mekan-led-ana-arka-plan.png',
+    dosya: varlik('zoom-destekli-dis-mekan-led-ana-arka-plan.png'),
     kaynak: { w: 1672, h: 941 },
     /*
      * Zemin cizgisi: dosemenin ortasi (0,80). Metre karsiligi: tas duvar
@@ -252,7 +253,7 @@ export const SAHNELER = [
   {
     id: 'foto',
     ad: 'scene.foto', // i18n anahtarı
-    dosya: '/pano-foto.jpg',
+    dosya: varlik('pano-foto.jpg'),
     kaynak: { w: 1881, h: 1463 },
     /*
      * Ölçülen LED yüzeyi. Kaynak 1254x1254'tü, panel 321,297-930,642 olarak
@@ -286,7 +287,7 @@ export const SAHNELER = [
      */
     id: 'meydan',
     ad: 'scene.meydan',
-    dosya: '/duvar.jpg',
+    dosya: varlik('duvar.jpg'),
     kaynak: { w: 1672, h: 941 },
     /*
      * Panel, arka duvarın ortasında seçilmiş bir alan; fotoğrafta öyle bir

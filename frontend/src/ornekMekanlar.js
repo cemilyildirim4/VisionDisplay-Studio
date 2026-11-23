@@ -1,3 +1,4 @@
+import { varlik } from './varlik.js'
 /**
  * ÖRNEK MEKÂNLAR — ekranın önüne konabilecek hazır arka planlar.
  *
@@ -9,8 +10,8 @@
  * yazmak ve i18n.js'e adının çevirisini eklemek yeterli.
  */
 export const ORNEK_MEKANLAR = [
-  { yol: '/ornek-toplanti.jpg', ad: 'ar.bgMeeting' },
-  { yol: '/ornek-toplanti-genis.jpg', ad: 'ar.bgMeetingWide' },
-  { yol: '/ornek-gri-oda.jpg', ad: 'ar.bgGreyRoom' },
-  { yol: '/ornek-koyu-oda.jpg', ad: 'ar.bgDarkRoom' },
+  { yol: varlik('ornek-toplanti.jpg'), ad: 'ar.bgMeeting' },
+  { yol: varlik('ornek-toplanti-genis.jpg'), ad: 'ar.bgMeetingWide' },
+  { yol: varlik('ornek-gri-oda.jpg'), ad: 'ar.bgGreyRoom' },
+  { yol: varlik('ornek-koyu-oda.jpg'), ad: 'ar.bgDarkRoom' },
 ]

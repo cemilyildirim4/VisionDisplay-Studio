@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
+import { varlik } from './varlik.js'
 
 /**
  * Gizlilik ve Güvenlik Notu (KVKK tarzı aydınlatma metni).
@@ -42,7 +43,7 @@ export default function PrivacyModal({ open, onClose }) {
         <div className="bg-brand text-white px-5 py-4 flex items-start justify-between gap-3 shrink-0 relative">
           <div className="flex items-center gap-3 min-w-0">
             <span className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 p-1">
-              <img src="/masaustu-logo-isaret.png" alt="" className="w-full h-full object-contain" />
+              <img src={varlik('masaustu-logo-isaret.png')} alt="" className="w-full h-full object-contain" />
             </span>
             <div className="min-w-0">
               <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/70">Masaüstü Bilişim</p>

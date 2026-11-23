@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useGovdeKilidi } from './hooks/useGovdeKilidi.js'
 import { useLang } from './useLang.js'
 import { CONTACT } from './contactInfo.js'
+import { varlik } from './varlik.js'
 
 /**
  * İletişim pop-up'ı.
@@ -65,7 +66,7 @@ export default function ContactModal({ open, onClose }) {
         <div className="bg-brand text-white px-5 py-4 flex items-start justify-between gap-3 relative">
           <div className="flex items-center gap-3 min-w-0">
             <span className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 p-1">
-              <img src="/masaustu-logo-isaret.png" alt="" className="w-full h-full object-contain" />
+              <img src={varlik('masaustu-logo-isaret.png')} alt="" className="w-full h-full object-contain" />
             </span>
             <div className="min-w-0">
               <h2 className="text-base font-bold m-0 leading-tight">{t('contact.heading')}</h2>

@@ -1,3 +1,4 @@
+import { varlik } from './varlik.js'
 /**
  * Video içerik yardımcıları.
  *
@@ -10,7 +11,7 @@
  * (kavisli ekran) kullanılır.
  */
 
-export const SAMPLE_VIDEO_SRC = '/sample-video.mp4'
+export const SAMPLE_VIDEO_SRC = varlik('sample-video.mp4')
 
 /** Bu içerik türü video mu? Video ise kaynağını verir, değilse null. */
 export function videoSrcFor(content, contentUrl) {

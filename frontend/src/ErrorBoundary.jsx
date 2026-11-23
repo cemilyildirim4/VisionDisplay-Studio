@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { varlik } from './varlik.js'
 
 /**
  * Global Error Boundary.
@@ -63,7 +64,7 @@ export default class ErrorBoundary extends Component {
       return (
         <div className="fixed inset-0 z-[999] bg-[#f7f9fc] dark:bg-[#0b0f16] flex items-center justify-center p-6">
           <div className="max-w-sm text-center brand-page-enter">
-            <img src="/masaustu-logo-isaret.png" alt="" className="h-12 w-auto mx-auto mb-4 brand-logo-enter" />
+            <img src={varlik('masaustu-logo-isaret.png')} alt="" className="h-12 w-auto mx-auto mb-4 brand-logo-enter" />
             <div className="brand-stripe h-[3px] w-24 mx-auto mb-5 rounded-full" aria-hidden />
             <h1 className="text-base font-bold text-neutral-900 dark:text-neutral-100 mb-2">
               Bir şeyler ters gitti

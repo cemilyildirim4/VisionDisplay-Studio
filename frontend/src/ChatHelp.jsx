@@ -3,6 +3,7 @@ import { useLang } from './useLang.js'
 import { TOPICS, FALLBACK, GREETING, findTopic, alanIlgili, enYakinKonu, olasiKonu, onayMi, devamMi } from './helpTopics.js'
 import { API_URL, apiFetch } from './apiClient.js'
 import { CHAT_LOG_ENABLED } from './featureFlags.js'
+import { varlik } from './varlik.js'
 
 
 
@@ -193,7 +194,7 @@ export default function ChatHelp({ open, onClose }) {
           <div className="relative z-10 flex shrink-0 items-center justify-between bg-brand px-3.5 py-2 text-white">
             <div className="flex items-center gap-2 min-w-0">
               <span className="w-7 h-7 rounded-lg bg-white dark:bg-[#121821] flex items-center justify-center shrink-0 p-0.5">
-                <img src="/masaustu-logo-isaret.png" alt="" className="w-full h-full object-contain" />
+                <img src={varlik('masaustu-logo-isaret.png')} alt="" className="w-full h-full object-contain" />
               </span>
               <div className="min-w-0">
                 <div className="text-[13px] font-semibold leading-tight truncate">{t('chat.title')}</div>
@@ -228,7 +229,7 @@ export default function ChatHelp({ open, onClose }) {
                 // Bot mesajları logolu — kimin konuştuğu belli olsun
                 <div key={i} ref={i === msgs.length - 1 ? sonBalonRef : null} className="self-start flex items-start gap-2 max-w-[92%]">
                   <img
-                    src="/masaustu-logo-isaret.png"
+                    src={varlik('masaustu-logo-isaret.png')}
                     alt=""
                     className="w-6 h-6 object-contain shrink-0 mt-0.5"
                   />

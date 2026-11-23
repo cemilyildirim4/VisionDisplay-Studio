@@ -1,3 +1,4 @@
+import { varlik } from './varlik.js'
 /**
  * DERİNLİK KESTİRİMİ — fotoğrafın üç boyutlu okunması.
  *
@@ -44,11 +45,11 @@ async function oturum() {
   if (oturumSozu) return oturumSozu
   oturumSozu = (async () => {
     const ort = await import('onnxruntime-web/wasm')
-    ort.env.wasm.wasmPaths = '/ort/'
+    ort.env.wasm.wasmPaths = varlik('ort/')
     ort.env.wasm.numThreads = 1
     ort.env.wasm.proxy = false
     ort.env.logLevel = 'error'
-    const s = await ort.InferenceSession.create('/modeller/derinlik.onnx', {
+    const s = await ort.InferenceSession.create(varlik('modeller/derinlik.onnx'), {
       executionProviders: ['wasm'],
       graphOptimizationLevel: 'all',
     })

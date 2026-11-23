@@ -20,6 +20,7 @@
  */
 
 import { useState } from 'react'
+import { varlik } from './varlik.js'
 
 // Hepsi EKRAN genişliğine/yüksekliğine orandır; sabit piksel yok ki
 // her ölçekte aynı görünsün.
@@ -70,7 +71,7 @@ export function panoOlculeri(wPx, hPx) {
  * tasarımla birlikte büyüyor. Fotoğraf yalnızca çevreyi (gökyüzü, yol,
  * zemin) verir. Bkz. yedekler/pano-arkaplan-promptu.md
  */
-const ARKAPLAN_YOLU = '/pano-arkaplan.jpg'
+const ARKAPLAN_YOLU = varlik('pano-arkaplan.jpg')
 
 /**
  * Arka plandaki manzaranın GERÇEK genişliği (metre). Panonun ölçeği buradan

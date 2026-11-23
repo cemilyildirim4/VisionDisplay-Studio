@@ -11,6 +11,7 @@ import Birlesim2D from './Birlesim2D.jsx'
 import { sayiYeri } from './sayiBicimi.js'
 import { birlesimKapladigi } from './birlesimOlcu.js'
 import { koseDonusumu } from './homografi.js'
+import { varlik } from './varlik.js'
 
 /**
  * Çalışma alanı önizlemesi.
@@ -930,7 +931,7 @@ function HumanSilhouette({ height, showMeasure = true }) {
       }}
     >
       <img
-        src="/human.png"
+        src={varlik('human.png')}
         alt=""
         style={{
           position: 'absolute',

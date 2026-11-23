@@ -1,3 +1,4 @@
+import { varlik } from './varlik.js'
 /**
  * Yüklenen GÖRSELİN üst sınırı (MB).
  *
@@ -10,7 +11,7 @@
 export const IMAGE_MAX_MB = 60
 
 // Varsayılan içerik görseli — public/default-content.jpg (kullanıcı bu dosyayı ekler)
-export const DEFAULT_CONTENT_SRC = '/default-content.jpg'
+export const DEFAULT_CONTENT_SRC = varlik('default-content.jpg')
 
 /*
  * KAVİS DERİNLİĞİ — TEK GERÇEK HESAP, İKİ YÖN.

@@ -1,3 +1,4 @@
+import { varlik } from './varlik.js'
 /**
  * NESNE TANIMA (yapay sinir ağı) — fotoğraftaki eşyaları gerçekten görmek.
  *
@@ -98,11 +99,11 @@ async function oturum() {
      * şart koşuyor. Vercel'de bu başlıklar yok ve açmak başka şeyleri bozardı.
      * Tek parçacıkla model birkaç saniyede bitiyor, tek seferlik bir iş.
      */
-    ort.env.wasm.wasmPaths = '/ort/'
+    ort.env.wasm.wasmPaths = varlik('ort/')
     ort.env.wasm.numThreads = 1
     ort.env.wasm.proxy = false
     ort.env.logLevel = 'error'
-    const s = await ort.InferenceSession.create('/modeller/nesne.onnx', {
+    const s = await ort.InferenceSession.create(varlik('modeller/nesne.onnx'), {
       executionProviders: ['wasm'],
       graphOptimizationLevel: 'all',
     })
