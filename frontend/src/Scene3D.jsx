@@ -1291,7 +1291,22 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
      * kabaca göz hizasında (~1,5 m) oluyor. Tasarım bundan yüksekse kendi
      * ağırlığıyla zemine iner: 3 m'lik bir duvar ekranı zaten yerden başlar.
      */
-    const montajM = oda ? Math.max(0, 1.5 - boyut.y / 2) : 0
+    /*
+     * EKRAN DUVARDA, GÖZ HİZASINDA — YERDE DEĞİL.
+     *
+     * Montaj yüksekliği "1,5 − yarı boy" idi ve sıfırda kesiliyordu: boyu
+     * 3 metreye yaklaşan bir tasarım doğrudan ZEMİNE oturuyor, 2B mekânda
+     * duvara asılı duran aynı ekran 3B'de yerde duran bir pano gibi
+     * görünüyordu. Kural artık MERKEZ üzerinden: merkez göz hizasında
+     * (1,50 m), ama ekranın altı zeminden en az 10 cm yukarıda ve üstü de
+     * tavanın 10 cm altında kalacak biçimde sınırlanıyor.
+     */
+    const yariBoy = boyut.y / 2
+    const odaYuksek = Math.max(ODA_BOY_M, boyut.y + 0.6)
+    const enAzMerkez = 0.1 + yariBoy
+    const enCokMerkez = Math.max(enAzMerkez, odaYuksek - 0.1 - yariBoy)
+    const merkezYer = Math.min(Math.max(1.5, enAzMerkez), enCokMerkez)
+    const montajM = oda ? Math.max(0, merkezYer - yariBoy) : 0
     const zeminY = merkez.y - boyut.y / 2 - montajM
     setOlcu({ w: boyut.x, h: boyut.y, d: Math.max(0.05, boyut.z), merkez, zeminY })
     const dikeyYari = ((camera.fov || 45) / 2) * (Math.PI / 180)
@@ -2258,6 +2273,14 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           Hız yarıya indi; dikey açı da insan bakışının aralığında tutuldu
           (polar 0 = tam tepe, 90° = göz hizası): ne tepeden ne zeminin
           altından bakılabiliyor.
+
+          SAHNE ARTIK KENDİ ÇEVRESİNDE DÖNMÜYOR.
+
+          Oda yalnızca ARKA duvarını gösteriyor: fotoğraf oraya geçiyor, yan
+          duvarlar boş. Kamera yana döndükçe fotoğraf iyice yamuluyor, sonunda
+          kadrajı boş gri bir yan duvar kaplıyordu. Bakış artık karşıdan en
+          çok 25° sağa/sola ve göz hizasından 10° yukarı/aşağı: ekranı her
+          yönden görmeye yetiyor, odanın bittiği yere kadar gitmiyor.
         */}
         <OrbitControls
           makeDefault
@@ -2265,8 +2288,10 @@ export default function Scene3D({ open, onClose, model, cols, rows, content, con
           rotateSpeed={0.42}
           enableDamping
           dampingFactor={0.09}
-          minPolarAngle={Math.PI * 0.18}
-          maxPolarAngle={Math.PI * 0.54}
+          minAzimuthAngle={(-25 * Math.PI) / 180}
+          maxAzimuthAngle={(25 * Math.PI) / 180}
+          minPolarAngle={Math.PI / 2 - (10 * Math.PI) / 180}
+          maxPolarAngle={Math.PI / 2 + (10 * Math.PI) / 180}
           /*
             YAKINLAŞMANIN DA SINIRI VAR.
             Alt sınır sabit 0,8 m idi: küçük bir tasarımda kamera kabinin

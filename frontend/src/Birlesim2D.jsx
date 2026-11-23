@@ -348,10 +348,17 @@ export default function Birlesim2D({
    * Tasarım ekranında perspektif ZAYIF ama sıfır değil: 8 kat uzaklıkta
    * izdüşüm neredeyse paralel oluyor ve 90°'lik kanat (L'nin ikinci ekranı,
    * U'nun yanları) tek bir çizgiye iniyordu — kullanıcı kurduğu köşeyi
-   * göremiyordu. 3 kat, kanatları açıp gösteriyor ama tasarımı hâlâ
-   * olduğu yerde döndürüyor.
+   * göremiyordu.
+   *
+   * KÖŞEYİ AÇAN ŞEY ARTIK YALNIZCA PERSPEKTİF. Önce bakışa 12° ek açı
+   * verilmişti; o açı U'nun bir kanadını açarken ötekini arkaya çeviriyordu.
+   * Ek açı kalktı (bkz. App → varsayılan bakış) ve kamera yaklaştı: kanatlar
+   * kameranın ekseninden uzakta kaldıkları için kendiliğinden açılıyor,
+   * üstelik SİMETRİK olarak. Düz tasarımda hiçbir şey değişmiyor: bütün
+   * dilimler aynı derinlikte olduğu için perspektif onları büyütüp
+   * küçültmüyor, duvarla birebir aynı ölçekte kalıyorlar.
    */
-  const ZAYIF_PERSPEKTIF = 3
+  const ZAYIF_PERSPEKTIF = 1.2
   const D = perspektifli
     ? Math.max(Dham, enYakinDonuk / 0.5)
     : Math.max(Dham, enYakinDonuk / 0.5, yayilim * ZAYIF_PERSPEKTIF, boyPx * ZAYIF_PERSPEKTIF)

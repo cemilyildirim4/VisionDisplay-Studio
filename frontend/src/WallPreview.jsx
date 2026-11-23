@@ -1238,11 +1238,27 @@ export default function WallPreview({
 
   /*
    * Her ekranın ÇİZİMDE kapladığı dörtgen (bkz. Birlesim2D →
-   * onParcaKutulari). Ölçü etiketleri buna göre konuyor; duvar kutusunun
-   * kendi yeri de ölçülüyor, çünkü gelen sayılar sayfa koordinatı.
+   * onParcaKutulari). Ölçü etiketleri buna göre konuyor.
+   *
+   * DUVARIN YERİ DE ÖLÇÜLÜYOR. Gelen sayılar sayfa koordinatı; duvarın
+   * kendi yeri çizim sırasında okunuyordu, yani BİR ÖNCEKİ yerleşimden.
+   * "Duvarı büyüt" duvarı büyütüp sola kaydırıyor ama çizimi yerinde
+   * bırakıyor: ölçüm değişmediği için etiketler eski duvara göre
+   * hesaplanmaya devam ediyor ve ekranların ortasından sol kenarına
+   * kayıyordu. Duvarın yeri artık her çizimden sonra ayrıca ölçülüyor.
    */
   const [parcaKutulari, setParcaKutulari] = useState(null)
   const duvarRef = useRef(null)
+  const [duvarKonum, setDuvarKonum] = useState(null)
+  useLayoutEffect(() => {
+    const r = duvarRef.current?.getBoundingClientRect()
+    if (!r) return
+    setDuvarKonum((o) =>
+      o && Math.abs(o.sol - r.left) < 0.5 && Math.abs(o.ust - r.top) < 0.5
+        ? o
+        : { sol: r.left, ust: r.top },
+    )
+  })
 
   const olcekRef = useRef(null)
   useEffect(() => {
@@ -1721,6 +1737,23 @@ export default function WallPreview({
     /* Ölçü etiketleri ve kenar payları kaplanan alandan. */
     const olcuW = kaplanan || birlesimKipi ? grupGercekWpx : totalWpx
     const olcuSol = Math.max(0, (wallW - olcuW) / 2)
+    /*
+     * SAĞ ÖLÇÜ SÜTUNU: TASARIMIN DIŞINDA, TUVALİN İÇİNDE.
+     *
+     * Taban duvardı. Tasarım duvardan büyükse (taşma) duvarın sağ kenarı
+     * tasarımın İÇİNE düşüyor, yükseklik etiketi de tasarımın üstüne
+     * biniyordu. Taban artık ikisinden dışta olanı.
+     *
+     * Sağ sınır da etiketin kendi genişliğini sayıyor: sütunun kutusu 26
+     * piksel ama içindeki sayı ("0,02 m") ondan geniş, bu yüzden tuvalin
+     * kenarında kesiliyordu.
+     */
+    /* olcuSol sıfırda kırpılıyor; tasarımın gerçek sağ kenarı kırpılmamış hâli. */
+    const olcuSagTaban = Math.max(wallW, (wallW + olcuW) / 2)
+    const olcuSagX = Math.max(
+      olcuSagTaban + 6,
+      Math.min(olcuSagTaban + 10 + ETIKET_ARALIK + sahnePayPx, Math.max(0, wallW + sagBosluk - 64)),
+    )
     const olcuToplamM = kaplanan || birlesimKipi ? grupGercekWm : totalWm
     const olcuMarginM = Math.max(0, (wallWm - olcuToplamM) / 2)
     /*
@@ -2249,7 +2282,7 @@ export default function WallPreview({
                 })}
 
                 {/* Sağ kenar: üst boşluk | ekran yüksekliği | alt boşluk */}
-                <div style={{ position: 'absolute', left: Math.min(wallW + 10 + ETIKET_ARALIK + sahnePayPx, Math.max(0, wallW + sagBosluk - 28)), top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'absolute', left: olcuSagX, top: 0, height: wallH, width: 26, display: 'flex', flexDirection: 'column' }}>
                   {/* Pay negatifse (tasarım duvardan büyük) yazılacak bir boşluk yok. */}
                   {marginYm > 0.0045 && <SegV h={stripTop} label={fmtU(marginYm)} muted kacis="ust" />}
                   <SegV h={maxHpx} label={fmtU(maxHm)} />
@@ -2283,18 +2316,16 @@ export default function WallPreview({
               Yandan bakılan (bir çizgiye inen) ekranın etiketi yazılmıyor:
               gösterecek bir kenarı yok.
             */}
-            {showMeasurements && parcaCizgisi && !!parcaKutulari?.length && (() => {
-              const kutu = duvarRef.current?.getBoundingClientRect()
-              if (!kutu) return null
-              return parcaKutulari.map((k) =>
+            {showMeasurements && parcaCizgisi && !!parcaKutulari?.length && !!duvarKonum &&
+              parcaKutulari.map((k) =>
                 k.sag - k.sol < 6 ? null : (
                   <div
                     key={`pk${k.id}`}
                     className="absolute flex flex-col items-center gap-1 max-w-[70vw] pointer-events-none"
                     style={{
-                      left: (k.sol + k.sag) / 2 - kutu.left,
+                      left: (k.sol + k.sag) / 2 - duvarKonum.sol,
                       transform: 'translateX(-50%)',
-                      top: k.ust - kutu.top - 30 - ETIKET_ARALIK,
+                      top: k.ust - duvarKonum.ust - 30 - ETIKET_ARALIK,
                       zIndex: 5,
                     }}
                   >
@@ -2303,8 +2334,7 @@ export default function WallPreview({
                     </span>
                   </div>
                 ),
-              )
-            })()}
+              )}
           </div>
         </div>
       </div>
@@ -2562,6 +2592,8 @@ export default function WallPreview({
    * kadar yukarıda; duvarın dışına çıkması sorun değil, orası boş.
    */
   const ustEtiketY = gorunenKutu.y - ETIKET_ARALIK - ustEtiketBoy - bombeUstPx - sahnePayPx
+  /* Duvarın üstünde kalan tuval payı: etiket ve hap oraya çıkabiliyor. */
+  const duvarUstBosluk = Math.max(0, (size.h - wallH) / 2)
   const marginXm = (wallWm - screenWm) / 2
   const marginYm = (wallHm - screenHm) / 2
 
@@ -2856,7 +2888,16 @@ export default function WallPreview({
                    * kenarına biniyordu. Sıra artık yukarıdan aşağı
                    * kesinleşmiş: düğme, boşluk, etiket, boşluk, tasarım.
                    */
-                  top: Math.max(2, ustEtiketY - ETIKET_ARALIK - dugmeBoy),
+                  /*
+                   * TAŞMADA DA TASARIMIN ÜSTÜNDE.
+                   *
+                   * Alt sınır tuvalin değil DUVARIN üstüydü (en az 2 px):
+                   * tasarım duvardan büyük olunca etiket duvarın üstüne
+                   * çıkıyor, hap ise 2 pikselde kalıp tasarımın üst kenarına
+                   * biniyordu. Sınır artık tuvalin üst kenarı; duvarın
+                   * dışına çıkması sorun değil, orası boş.
+                   */
+                  top: Math.max(2 - duvarUstBosluk, ustEtiketY - ETIKET_ARALIK - dugmeBoy),
                   transform: 'translateX(-50%)',
                 }}
               >
