@@ -30,6 +30,20 @@ function routeFromHash(hash) {
   return 'app'
 }
 
+/*
+ * AÇIK TANITIM KOPYASI.
+ *
+ * Sunucusuz barındırılan tanıtım kopyasında (GitHub Pages) davet kodu da
+ * admin girişi de sunucuya sorulduğu için site giriş ekranında kilitli
+ * kalıyor: kapı açılıyor ama içeri girilemiyordu. VITE_ACIK_DEMO=1 ile
+ * DERLENEN kopyada konfigüratör doğrudan açılıyor ve API kapalıyken
+ * devreye giren yerleşik demo veriyle çalışıyor (bkz. SAMPLE_CABINETS).
+ *
+ * Asıl yayında bu değişken tanımlı değil; orada kapı yerinde duruyor.
+ * Yönetim (#yonetim) ve hesap (#hesap) sayfaları her durumda korumalı.
+ */
+const ACIK_DEMO = import.meta.env.VITE_ACIK_DEMO === '1'
+
 /**
  * Konfigüratör oturum ister.
  *
@@ -40,7 +54,7 @@ function routeFromHash(hash) {
  */
 function KorumaliUygulama({ theme, onToggleTheme }) {
   const { isAuthenticated } = useSession()
-  if (!isAuthenticated) return <GirisKapisi />
+  if (!isAuthenticated && !ACIK_DEMO) return <GirisKapisi />
   return <App theme={theme} onToggleTheme={onToggleTheme} />
 }
 
@@ -64,7 +78,13 @@ export default function Root() {
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <SessionProvider>
-          <ConnectionBanner />
+          {/*
+            Açık tanıtım kopyasında sunucu OLMADIĞI için "API bağlantısı
+            kurulamadı" uyarısı doğru ama anlamsız: ziyaretçinin
+            düzeltebileceği bir şey yok, kopya zaten yerleşik demo veriyle
+            çalışıyor. Asıl yayında uyarı yerinde duruyor.
+          */}
+          {!ACIK_DEMO && <ConnectionBanner />}
           {route === 'admin' ? (
             <Suspense fallback={null}>
               <AdminPanel />
