@@ -116,6 +116,15 @@ export default function Birlesim2D({
   enCokW = 0,
   enCokH = 0,
   /*
+   * ÖLÇÜ ETİKETLERİ İÇİN: HER EKRANIN ÇİZİMDE KAPLADIĞI YER.
+   *
+   * Etiketler şeridin (karşıdan bakışın) hesabına göre konuyordu; L'de ve
+   * U'da ekranlar bambaşka yerde çizildiği için sayılar düz bir sıra hâlinde
+   * kalıyordu. Çizim bittikten sonra her ekranın ekrandaki dörtgeni
+   * ölçülüp yukarı bildiriliyor (sayfa koordinatı).
+   */
+  onParcaKutulari = null,
+  /*
    * YAN DUVAR KALDIRILDI.
    *
    * Mekânlarda dönen kolun arkasına yarı saydam beyaz birer yüzey
@@ -128,6 +137,9 @@ export default function Birlesim2D({
 }) {
   const icRef = useRef(null)
   const olcekRef = useRef(1)
+  /* Dilim sırasına karşılık gelen ekran kimlikleri (çizimde dolduruluyor). */
+  const bilgiRef = useRef([])
+  const sonKutularRef = useRef(null)
   const [gercekKenar, setGercekKenar] = useState(null)
   useLayoutEffect(() => {
     const ic = icRef.current
@@ -142,6 +154,38 @@ export default function Birlesim2D({
     if (!gercekKenar || Math.abs(gercekKenar.sol - sol) > 1 || Math.abs(gercekKenar.sag - sag) > 1) {
       setGercekKenar({ sol, sag })
     }
+
+    /* Her EKRANIN (dilimlerinin birleşimi) ekrandaki dörtgeni. */
+    const bilgi = bilgiRef.current || []
+    if (!onParcaKutulari || bilgi.length !== kutular.length) return
+    const harita = new Map()
+    kutular.forEach((r, i) => {
+      const b = bilgi[i]
+      if (!b || b.id == null) return
+      const v = harita.get(b.id)
+      if (!v) harita.set(b.id, { id: b.id, en: b.en, sol: r.left, sag: r.right, ust: r.top })
+      else {
+        v.sol = Math.min(v.sol, r.left)
+        v.sag = Math.max(v.sag, r.right)
+        v.ust = Math.min(v.ust, r.top)
+      }
+    })
+    const liste = [...harita.values()]
+    const eski = sonKutularRef.current
+    /* Aynı sayılar yeniden bildirilirse üst bileşen sonsuz çizime girer. */
+    const degisti =
+      !eski ||
+      eski.length !== liste.length ||
+      liste.some(
+        (k, i) =>
+          k.id !== eski[i].id ||
+          Math.abs(k.sol - eski[i].sol) > 0.5 ||
+          Math.abs(k.sag - eski[i].sag) > 0.5 ||
+          Math.abs(k.ust - eski[i].ust) > 0.5,
+      )
+    if (!degisti) return
+    sonKutularRef.current = liste
+    onParcaKutulari(liste)
   })
 
   if (!Array.isArray(ekranlar) || ekranlar.length < 2) return null
@@ -182,6 +226,11 @@ export default function Birlesim2D({
     parcalar.map((p) => ({ w: p.w, t: p.t, yuvarlak: !!p.e.yuvarlakSag })),
   ).map((d) => ({ ...d, p: parcalar[d.i], dilim: d.yay }))
   if (!dilimler.length) return null
+  /* Ölçüm kancası dilim sırasını buradan okuyor (bkz. useLayoutEffect). */
+  bilgiRef.current = dilimler.map((d) => ({
+    id: d.p.e.id,
+    en: d.p.e.gercekWm ?? d.p.e.wm ?? 0,
+  }))
 
   let x = 0
   let z = 0
@@ -295,7 +344,14 @@ export default function Birlesim2D({
    * yine ince bir yamuk olarak görünüyor (tam paralel izdüşümde o kol
    * çizgiye inerdi ve L ile düz ekran ayırt edilemezdi).
    */
-  const ZAYIF_PERSPEKTIF = 8
+  /*
+   * Tasarım ekranında perspektif ZAYIF ama sıfır değil: 8 kat uzaklıkta
+   * izdüşüm neredeyse paralel oluyor ve 90°'lik kanat (L'nin ikinci ekranı,
+   * U'nun yanları) tek bir çizgiye iniyordu — kullanıcı kurduğu köşeyi
+   * göremiyordu. 3 kat, kanatları açıp gösteriyor ama tasarımı hâlâ
+   * olduğu yerde döndürüyor.
+   */
+  const ZAYIF_PERSPEKTIF = 3
   const D = perspektifli
     ? Math.max(Dham, enYakinDonuk / 0.5)
     : Math.max(Dham, enYakinDonuk / 0.5, yayilim * ZAYIF_PERSPEKTIF, boyPx * ZAYIF_PERSPEKTIF)
@@ -406,6 +462,16 @@ export default function Birlesim2D({
         perspectiveOrigin: `${orijinX}px ${gozY}px`,
         transform: olcek < 1 ? `scale(${olcek})` : undefined,
         transformOrigin: '50% 100%',
+        /*
+         * ÇİZİM DUVARIN İÇİNDE DİKEYDE ORTALI.
+         *
+         * Kutunun altında da PAY kadar boşluk var; kutu alttan hizalandığı
+         * için çizim o kadar YUKARIDA duruyordu: 1 m duvarda 0,96 m tasarım
+         * üste yapışıyor, altta iki kat boşluk kalıyordu (etiketler 0,02 /
+         * 0,02 derken çizimde 0,00 / 0,04). Pay geri alınıyor; şerit zaten
+         * duvarın ortasında (bkz. WallPreview → stripTop).
+         */
+        marginBottom: -(PAY * olcek),
       }}
     >
       {/*
@@ -476,14 +542,23 @@ export default function Birlesim2D({
           const payR = BINDIRME
           const kutuW = d.w + payL + payR
           /*
-           * ARKA YÜZDE GÖRÜNTÜ YOK.
+           * ARKA YÜZDE GÖRÜNTÜ YOK — ÖLÇÜT GÖZÜN YERİ.
            *
-           * LED ekran çift taraflı değil; arkasına geçildiğinde görüntü
-           * ters çevrilmiş hâlde görünüyordu. Dilimin bize dönük olup
-           * olmadığı açısından belli: yüzün normali rotateY(t) ile dönüyor,
-           * yaw da eklenince cos negatife düşerse o yüz arkasını gösteriyor.
+           * LED ekran çift taraflı değil; arkasına geçildiğinde görüntü ters
+           * çevrilmiş hâlde görünüyordu. Ölçüt yalnızca dilimin AÇISIYDI
+           * (cos(t + yaw) < 0), yani göz hep tam karşıdaymış gibi: içe dönük
+           * U'nun iki kanadı da tam 90° olduğu için "ne önde ne arkada"
+           * sayılıyor, biri kayboluyordu. Oysa U'nun içine bakan göz her iki
+           * kanadın da YÜZÜNÜ görür.
+           *
+           * Ölçüt artık yüzün normali ile gözden dilime giden yönün işareti:
+           * normal göze dönükse yüz görünür. Göz, perspektif kutusunun
+           * önünde z = D noktasında (bkz. perspective) ve kutunun yatay
+           * ortasında duruyor.
            */
-          const arkaYuz = Math.cos(d.t + (yaw * Math.PI) / 180) <= 0.02
+          const [nx, , nz] = cevir(Math.sin(d.t), 0, Math.cos(d.t))
+          const [Xr, , Zr] = cevir(d.mx - ortX, 0, -(d.mz - ortZ))
+          const arkaYuz = nx * -Xr + nz * (D - Zr) <= 0
           return (
             <div
               key={(p.e.id ?? 'e') + '-' + i}
@@ -495,6 +570,16 @@ export default function Birlesim2D({
                 height: p.h,
                 marginLeft: -(d.w / 2 + payL),
                 overflow: 'hidden',
+                /*
+                 * ARKASI DÖNÜK EKRAN KAYBOLMUYOR.
+                 *
+                 * Arka yüzde yalnızca görüntü gizleniyordu ve kutunun zemini
+                 * de olmadığı için ekran tamamen yok oluyordu: tasarım biraz
+                 * fazla çevrilince ortada hiçbir şey kalmıyordu. Arkası dönük
+                 * dilim artık kasanın koyu yüzeyi olarak çiziliyor. Bütün
+                 * dilimler aynı renk olduğu için aralarında dikiş görünmüyor.
+                 */
+                background: arkaYuz ? '#15181d' : undefined,
                 /*
                  * rotateY(θ) ekranın en eksenini (cos θ, 0, −sin θ) yapıyor;
                  * üstten bakıştaki derinlik ekseni de eksi Z. İkisi aynı

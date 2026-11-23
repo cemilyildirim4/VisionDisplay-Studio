@@ -3226,8 +3226,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     if (n < 2) return 0
     const hedef =
       n === 2 ? acilar[0] : n % 2 ? acilar[(n - 1) / 2] : (acilar[n / 2 - 1] + acilar[n / 2]) / 2
+    /*
+     * KÖŞE GÖRÜNSÜN DİYE HAFİF AÇI.
+     *
+     * Hedef ekran tam karşıya alınınca 90°'lik komşusu TAM YANDAN görünüyor,
+     * yani bir çizgiye iniyor: L'nin ikinci ekranı, U'nun iki kanadı
+     * kayboluyordu. Bakış, kanatların ortalamasına doğru biraz daha
+     * çevriliyor — ana ekran hâlâ neredeyse karşıda, köşe de görünüyor.
+     * Simetrik şekilde (U) ortalama hedefe eşit; o zaman yön son ekrana
+     * göre seçiliyor, yoksa hiçbir kanat açılmazdı.
+     */
+    const EK = 12
+    const ortalama = acilar.reduce((t2, a) => t2 + a, 0) / n
+    const fark = ortalama - hedef
+    /* Düz tasarımda köşe yok: ek açı da yok, ekran karşıdan düz duruyor. */
+    const bukum = acilar.some((x) => Math.abs(x - hedef) > 1e-6)
+    const yon = !bukum
+      ? 0
+      : Math.abs(fark) > 1e-6
+        ? Math.sign(fark)
+        : Math.sign(acilar[n - 1] - acilar[0]) || 1
     /* CSS rotateY ile zincirin açısı aynı işaretli (bkz. Birlesim2D). */
-    return -(hedef * 180) / Math.PI
+    return -(hedef * 180) / Math.PI - EK * yon
   })()
 
   /*

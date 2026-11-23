@@ -1236,6 +1236,14 @@ export default function WallPreview({
   /* Taşan tasarımın kırmızı çizgisi yalnızca TASARIM ekranında. */
   const tasmaCizgi = !!tasma && !sahneVar
 
+  /*
+   * Her ekranın ÇİZİMDE kapladığı dörtgen (bkz. Birlesim2D →
+   * onParcaKutulari). Ölçü etiketleri buna göre konuyor; duvar kutusunun
+   * kendi yeri de ölçülüyor, çünkü gelen sayılar sayfa koordinatı.
+   */
+  const [parcaKutulari, setParcaKutulari] = useState(null)
+  const duvarRef = useRef(null)
+
   const olcekRef = useRef(null)
   useEffect(() => {
     if (olcekRef.current != null) onPxPerM?.(olcekRef.current)
@@ -1778,6 +1786,7 @@ export default function WallPreview({
               dalında ekran bu kutunun içinde olmadığı için sorun görülmüyordu.
             */}
             <div
+              ref={duvarRef}
               style={{ width: wallW, height: wallH, transform: yonDonusumu(yon, wallW) || undefined }}
               /* Taşan tasarım kesilmiyor: duvardan büyükse dışarıda görünüyor. */
               className={`${sahneVar ? '' : 'bg-white dark:bg-[#dfe3e9] border border-neutral-300 dark:border-[#9aa2ae]'} relative overflow-visible`}
@@ -1897,6 +1906,7 @@ export default function WallPreview({
                     /* Tasarım ekranında perspektif yok: olduğu yerde dönüyor. */
                     perspektifli={sahneVar}
                     tasmaCerceve={tasmaCizgi}
+                    onParcaKutulari={setParcaKutulari}
                   />
                 </div>
               )}
@@ -2213,7 +2223,7 @@ export default function WallPreview({
                   üst kenarının ortasında duruyor (ekranlar farklı boydaysa
                   etiketler de o kadar aşağıda).
                 */}
-                {parcaCizgisi && placed.map((s, i) => {
+                {parcaCizgisi && !parcaKutulari?.length && placed.map((s, i) => {
                   const ustKenar = stripTop + (maxHpx - s.hPx)
                   return (
                     <div
@@ -2260,6 +2270,41 @@ export default function WallPreview({
                 */}
               </>
             )}
+
+            {/*
+              ÖLÇÜ ETİKETİ EKRANIN GERÇEKTEN GÖRÜNDÜĞÜ YERDE.
+
+              Etiketler şeridin, yani KARŞIDAN bakışın hesabına göre
+              konuyordu: L'de ve U'da ekranlar çizimde bambaşka yerde
+              durduğu için sayılar düz bir sıra hâlinde yan yana kalıyor,
+              hangi sayının hangi ekrana ait olduğu anlaşılmıyordu; tasarım
+              dönükken de hepsi birden gizleniyordu. Konum artık ÇİZİMDEN
+              ölçülüyor, bu yüzden dönük tasarımda da doğru yerde duruyor.
+              Yandan bakılan (bir çizgiye inen) ekranın etiketi yazılmıyor:
+              gösterecek bir kenarı yok.
+            */}
+            {showMeasurements && parcaCizgisi && !!parcaKutulari?.length && (() => {
+              const kutu = duvarRef.current?.getBoundingClientRect()
+              if (!kutu) return null
+              return parcaKutulari.map((k) =>
+                k.sag - k.sol < 6 ? null : (
+                  <div
+                    key={`pk${k.id}`}
+                    className="absolute flex flex-col items-center gap-1 max-w-[70vw] pointer-events-none"
+                    style={{
+                      left: (k.sol + k.sag) / 2 - kutu.left,
+                      transform: 'translateX(-50%)',
+                      top: k.ust - kutu.top - 30 - ETIKET_ARALIK,
+                      zIndex: 5,
+                    }}
+                  >
+                    <span className="bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 text-[10px] sm:text-[11px] px-2 py-1 rounded-lg whitespace-nowrap max-w-[40vw] overflow-hidden text-ellipsis">
+                      {fmtU(k.en)}
+                    </span>
+                  </div>
+                ),
+              )
+            })()}
           </div>
         </div>
       </div>
@@ -2507,11 +2552,16 @@ export default function WallPreview({
    * yakınsa) etiket duvarın dışına, üst çizginin üstüne çıkıyor: orası boş.
    */
   const ustEtiketBoy = olcuYazi * 1.9
-  const ustEtiketIc = gorunenKutu.y - ETIKET_ARALIK - ustEtiketBoy - bombeUstPx - sahnePayPx
-  const ustEtiketY =
-    ustEtiketIc > ETIKET_ARALIK
-      ? ustEtiketIc
-      : -ETIKET_ARALIK - ustEtiketBoy - bombeUstPx - sahnePayPx
+  /*
+   * ÖLÇÜT DUVAR DEĞİL TASARIM.
+   *
+   * Etiket, duvarın payı dar olduğunda duvarın ÜST ÇİZGİSİNİN üstüne
+   * çıkıyordu. Tasarım duvardan büyükse (taşma) o nokta tasarımın İÇİNE
+   * düşüyor: etiket ve hemen üstündeki +/− hapı tasarımın üst kenarına
+   * biniyordu. Etiket her zaman tasarımın üst kenarından ETIKET_ARALIK
+   * kadar yukarıda; duvarın dışına çıkması sorun değil, orası boş.
+   */
+  const ustEtiketY = gorunenKutu.y - ETIKET_ARALIK - ustEtiketBoy - bombeUstPx - sahnePayPx
   const marginXm = (wallWm - screenWm) / 2
   const marginYm = (wallHm - screenHm) / 2
 
