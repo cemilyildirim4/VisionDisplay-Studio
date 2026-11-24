@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
@@ -1032,6 +1032,11 @@ export default function WallPreview({
    */
   duvarDolgu = null,
   /*
+   * Tasarımın kırık hattını yukarı (App → Scene) taşıyan geri çağrı.
+   * Oda bu hatta göre kuruluyor.
+   */
+  onDuvarHatti = null,
+  /*
    * Ekranın GÖRÜNEN yüzü gizlensin mi. Fotoğraflı mekânda tasarım gerçek
    * 3B olarak çiziliyor (Mekan3D.jsx); düz çizim de altında durunca aynı
    * ekran iki kez görünüyor ve ikisi birbirini kirletiyordu. Ölçü
@@ -1256,6 +1261,24 @@ export default function WallPreview({
   const [parcaKutulari, setParcaKutulari] = useState(null)
   const duvarRef = useRef(null)
   const [duvarKonum, setDuvarKonum] = useState(null)
+  /*
+   * Birleşim2D kırık hattı SAYFA koordinatıyla bildiriyor; mekân TUVAL
+   * koordinatı bekliyor. Çeviri burada: tuvalin sayfada nerede durduğunu
+   * bilen tek yer burası.
+   */
+  const duvarHattiBildir = useCallback(
+    (hat) => {
+      if (!onDuvarHatti) return
+      const r = containerRef.current?.getBoundingClientRect()
+      if (!hat || !r) {
+        onDuvarHatti(null)
+        return
+      }
+      const don = (p) => ({ x: p.x - r.left, y: p.y - r.top })
+      onDuvarHatti({ ust: hat.ust.map(don), alt: hat.alt.map(don) })
+    },
+    [onDuvarHatti],
+  )
   useLayoutEffect(() => {
     const r = duvarRef.current?.getBoundingClientRect()
     if (!r) return
@@ -1947,6 +1970,7 @@ export default function WallPreview({
                     perspektifli={sahneVar}
                     tasmaCerceve={tasmaCizgi}
                     onParcaKutulari={setParcaKutulari}
+                    onDuvarHatti={duvarHattiBildir}
                     /*
                      * Mekânda duvar tasarımla birlikte kırılıyor (bkz.
                      * Birlesim2D → duvarYuzu). Paylar duvarın tasarım

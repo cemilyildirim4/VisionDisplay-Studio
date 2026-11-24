@@ -135,6 +135,11 @@ export default function Birlesim2D({
    */
   onParcaKutulari = null,
   /*
+   * Tasarımın kırık hattını mekâna bildiren geri çağrı. Oda bu hatta göre
+   * kuruluyor (bkz. Salon.jsx / Cephe.jsx duvarHatti).
+   */
+  onDuvarHatti = null,
+  /*
    * YAN DUVAR KALDIRILDI.
    *
    * Mekânlarda dönen kolun arkasına yarı saydam beyaz birer yüzey
@@ -149,6 +154,10 @@ export default function Birlesim2D({
   const olcekRef = useRef(1)
   /* Niş degradesinin kimliği (bkz. aşağıda nis): kanca erken dönüşlerin üstünde kalmalı. */
   const nisId = useId()
+  /* Çizim kutusunun kendisi: kırık hattı sayfa koordinatına çevirmek için. */
+  const kutuRef = useRef(null)
+  const nisRef = useRef(null)
+  const sonHatRef = useRef(null)
   /* Dilim sırasına karşılık gelen ekran kimlikleri (çizimde dolduruluyor). */
   const bilgiRef = useRef([])
   const sonKutularRef = useRef(null)
@@ -199,6 +208,47 @@ export default function Birlesim2D({
     sonKutularRef.current = liste
     onParcaKutulari(liste)
   })
+
+  /*
+   * MEKÂNA KIRIK HAT BİLDİRİLİYOR.
+   *
+   * Oda, tasarımın kırık hattına göre kuruluyor (bkz. Salon/Cephe
+   * duvarHatti). Hat burada hesaplanıyor çünkü ekranların izdüşümü de
+   * burada: aynı sayılardan geldiği için duvarlar ekranlarla birebir
+   * örtüşüyor, hiza şaşmıyor. Sayfa koordinatına çevrilip veriliyor —
+   * kutunun nerede durduğunu ve ne kadar küçültüldüğünü başka kimse
+   * bilmiyor.
+   */
+  useLayoutEffect(() => {
+    if (!onDuvarHatti) return
+    const kutu = kutuRef.current?.getBoundingClientRect()
+    const n = nisRef.current
+    const o = olcekRef.current || 1
+    const sayfaya = (p) => ({ x: kutu.left + p[0] * o, y: kutu.top + p[1] * o })
+    const yeni =
+      n && kutu && o > 0
+        ? { ust: n.hatUst.map(sayfaya), alt: n.hatAlt.map(sayfaya) }
+        : null
+    const eski = sonHatRef.current
+    /* Aynı sayılar yeniden bildirilirse üst bileşen sonsuz çizime girer. */
+    const ayni =
+      (!yeni && !eski) ||
+      (!!yeni &&
+        !!eski &&
+        yeni.ust.length === eski.ust.length &&
+        yeni.ust.every(
+          (p, i) => Math.abs(p.x - eski.ust[i].x) < 0.5 && Math.abs(p.y - eski.ust[i].y) < 0.5,
+        ) &&
+        yeni.alt.every(
+          (p, i) => Math.abs(p.x - eski.alt[i].x) < 0.5 && Math.abs(p.y - eski.alt[i].y) < 0.5,
+        ))
+    if (ayni) return
+    sonHatRef.current = yeni
+    onDuvarHatti(yeni)
+  })
+
+  /* Erken çıkışta eski hat mekânda asılı kalmasın. */
+  nisRef.current = null
 
   if (!Array.isArray(ekranlar) || ekranlar.length < 2) return null
   if (ekranlar.some((e) => !Number.isFinite(e?.yon))) return null
@@ -466,27 +516,18 @@ export default function Birlesim2D({
    * bir pano gibi okunuyordu. Oysa 150°'lik bir U'da oda üç duvarlı
    * olmalı.
    *
-   * ŞİMDİ ÜÇ YÜZEY TAKIMI ÇİZİLİYOR:
-   *  - duvar yüzleri : her dilimin önündeki, onunla aynı düzlemde duran
-   *                    tavandan zemine kadar yüzey,
-   *  - zemin/tavan kamaları : o yüzeyin tabanını (ve tepesini) mekânın
-   *                    kendi düz duvar düzlemine bağlayan yatay parçalar.
-   *                    Zemin çizgisini kırılmış gösteren şey bunlar.
-   *  - uç dönüşleri  : tasarımın iki ucunda duvarı mekânın düz duvarına
-   *                    kapatan dikey parçalar.
+   * ODA TASARIMA GÖRE KURULUYOR, DUVARA OYUK AÇILMIYOR.
    *
-   * REFERANS DÜZLEM = TASARIMIN EN ÖNDEKİ NOKTASI (enYakin).
+   * Önce duvara girinti kazınıyordu: oda düz kalıyor, ekranların olduğu
+   * yere bir oyuk açılıyor, iki yanda düz duvar kalıyordu. Doğrusu, odanın
+   * KENDİ duvarlarının tasarımın parçaları olması: üç ekranlı bir U'da
+   * orta ekran odanın orta duvarı, yan ekranlar da yan duvarları.
    *
-   * Önce z = 0 (zincirin ortalama derinliği) alınmıştı; yanlıştı. Çizim
-   * kutusu tasarımın İZDÜŞÜMÜNE göre kuruluyor ve duvara o kutu
-   * sığdırılıyor (bkz. olcek): duvarı dolduran şey, perspektifte en çok
-   * büyüyen EN ÖNDEKİ kenar. Ortalama derinlik duvardan içeride kalıyor,
-   * kamalar da kısacık çıkıyordu — tasarımın üstünde dümdüz bir duvar
-   * bandı kalıyor ve duvar hiç kırılmamış gibi görünüyordu.
-   *
-   * En öndeki düzlem mekânın duvarıyla çakıştığı için artık her şey
-   * duvarın İÇİNE doğru giriyor: dışarı taşan parça yok, uçlar duvara
-   * sıfırlanıyor, aradaki her şey girinti.
+   * Burada yalnızca duvar YÜZEYLERİ çiziliyor; her biri önündeki ekranla
+   * aynı düzlemde ve açısına göre gölgeli. Odanın zemini, tavanı ve
+   * yanları bu hattan türetiliyor ama onları mekânın kendisi çiziyor
+   * (bkz. hatUst/hatAlt → Salon.jsx, Cephe.jsx duvarHatti): zemin dokusu,
+   * tavan şeritleri ve derzler orada tanımlı.
    *
    * Düz tasarımda hiç çizilmiyor: kırılacak köşe yok, mekânın kendi
    * duvarı zaten doğru.
@@ -501,9 +542,6 @@ export default function Birlesim2D({
     const yTavan = gozAlt - boyPx - ustPay
     const yZemin = gozAlt + altPay
 
-    /* Mekânın duz duvarının bulunduğu düzlem (bkz. yukarıdaki açıklama). */
-    const zDuvar = enYakin
-
     /* Zincirin izdüşümüyle birebir aynı: önce dönüş, sonra perspektif. */
     const iz = (X, Y, Z) => {
       const [x1, y1, z1] = cevir(X, Y, Z)
@@ -516,68 +554,48 @@ export default function Birlesim2D({
     ]
 
     const yuzler = []
-    const ekle = (noktalar, dolgu, golge) =>
-      yuzler.push({
-        p: noktalar.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '),
-        z: noktalar.reduce((t, p) => t + p[2], 0) / noktalar.length,
-        dolgu,
-        golge,
-      })
+    /* Odanın arka ucunu kuracak kırık hat: üst kenar ve alt kenar. */
+    const hatUst = []
+    const hatAlt = []
 
     const yuzDolgu = 'url(#' + nisId + ')'
-    dilimler.forEach((d, i) => {
+    dilimler.forEach((d) => {
       /* Bindirme payı: komşu yüzeyler arasında kıl payı çizgi kalmasın. */
       const [ax, az] = uc(d, -d.w / 2 - BINDIRME)
       const [bx, bz] = uc(d, d.w / 2 + BINDIRME)
-      /* Yandan bakılan yüz daha az ışık alıyor; köşeyi okutan şey bu fark. */
-      ekle(
-        [iz(ax, yTavan, az), iz(bx, yTavan, bz), iz(bx, yZemin, bz), iz(ax, yZemin, az)],
-        yuzDolgu,
-        0.22 * Math.abs(Math.sin(d.t)),
-      )
-      /*
-       * Girintinin içi dışarısı kadar ışık almıyor; kamaların hafif
-       * kararması, zemin ile tavanın gerçekten İÇERİ doğru kırıldığını
-       * okutuyor. Renkleri mekânın kendi zemin/tavan rengi olduğu için
-       * bu küçük fark olmadan kamalar mekânla birbirine karışıyor.
-       */
-      if (duvarYuzu.zemin)
-        ekle(
-          [iz(ax, yZemin, az), iz(bx, yZemin, bz), iz(bx, yZemin, zDuvar), iz(ax, yZemin, zDuvar)],
-          duvarYuzu.zemin,
-          0.14,
-        )
-      if (duvarYuzu.tavan)
-        ekle(
-          [iz(ax, yTavan, az), iz(bx, yTavan, bz), iz(bx, yTavan, zDuvar), iz(ax, yTavan, zDuvar)],
-          duvarYuzu.tavan,
-          0.14,
-        )
-      if (i === 0 || i === dilimler.length - 1) {
-        const [ux, uz] = i === 0 ? [ax, az] : [bx, bz]
-        /* Uç zaten duvar düzlemindeyse dönüş yok: duvara sıfırlanmış demektir. */
-        if (Math.abs(uz - zDuvar) > 0.5)
-          ekle(
-            [iz(ux, yTavan, uz), iz(ux, yTavan, zDuvar), iz(ux, yZemin, zDuvar), iz(ux, yZemin, uz)],
-            yuzDolgu,
-            0.3,
-          )
-      }
+      const au = iz(ax, yTavan, az)
+      const bu = iz(bx, yTavan, bz)
+      const aa = iz(ax, yZemin, az)
+      const ba = iz(bx, yZemin, bz)
+      hatUst.push(au, bu)
+      hatAlt.push(aa, ba)
+      const noktalar = [au, bu, ba, aa]
+      yuzler.push({
+        p: noktalar.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '),
+        z: noktalar.reduce((t, p) => t + p[2], 0) / noktalar.length,
+        dolgu: yuzDolgu,
+        /* Yandan bakılan yüz daha az ışık alıyor; köşeyi okutan şey bu fark. */
+        golge: 0.22 * Math.abs(Math.sin(d.t)),
+      })
     })
     /* Ressam sırası: uzaktaki önce, yakın olan onun üstüne biniyor. */
     yuzler.sort((a, b) => a.z - b.z)
     return {
       id: nisId,
       yuzler,
-      ustPx: iz(0, yTavan, zDuvar)[1],
-      altPx: iz(0, yZemin, zDuvar)[1],
+      hatUst,
+      hatAlt,
+      ustPx: hatUst.reduce((t, p) => Math.min(t, p[1]), Infinity),
+      altPx: hatAlt.reduce((t, p) => Math.max(t, p[1]), -Infinity),
       yuzUst: duvarYuzu.yuzUst,
       yuzAlt: duvarYuzu.yuzAlt,
     }
   })()
+  nisRef.current = nis
 
   return (
     <div
+      ref={kutuRef}
       style={{
         position: 'relative',
         /*

@@ -39,6 +39,11 @@ export default function Cephe({
   duvarHm,
   ekranSekli,
   /*
+   * Tasarımın kırık hattı (tuval koordinatı, bkz. Birlesim2D onDuvarHatti).
+   * Varsa binanın yüzü düz bir dikdörtgen değil, bu hat oluyor.
+   */
+  duvarHatti = null,
+  /*
    * BİNANIN DÖNEN YAN YÜZÜ — yalnızca L tipi ekranda.
    *
    * Cephe bugüne kadar düz bir yüzeydi: tam karşıdan görünen bir dikdörtgen,
@@ -78,6 +83,34 @@ export default function Cephe({
   const ufukY = alt + kaldirimH
   const zeminH = tuvalH - ufukY
 
+  /*
+   * BİNANIN YÜZÜ TASARIMIN KIRIK HATTI.
+   *
+   * Açılı dizilimde her ekran kendi duvarını alıyor: cephe düz bir levha
+   * olmaktan çıkıp ekranların açısına göre kırılıyor, binanın köşesi tam
+   * ekranların birleştiği yerde oluyor. Hattı Birleşim2D ölçüp veriyor
+   * (bkz. onDuvarHatti); ekranların izdüşümüyle aynı hesaptan geldiği için
+   * yüzey ekranlarla birebir örtüşüyor.
+   *
+   * Hat yoksa (düz yerleşim, tek ekran, küp) cephe eskisi gibi dikdörtgen.
+   */
+  const hatUst =
+    duvarHatti?.ust?.length >= 2
+      ? duvarHatti.ust
+      : [
+          { x: sol, y: ust },
+          { x: sag, y: ust },
+        ]
+  const hatAlt =
+    duvarHatti?.alt?.length >= 2
+      ? duvarHatti.alt
+      : [
+          { x: sol, y: alt },
+          { x: sag, y: alt },
+        ]
+  const nk = (l) => l.map((p) => `${p.x},${p.y}`).join(' ')
+  const cepheYuzu = `${nk(hatUst)} ${nk([...hatAlt].reverse())}`
+
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       <svg className="absolute inset-0" width={tuvalW} height={tuvalH}>
@@ -106,6 +139,10 @@ export default function Cephe({
             <stop offset="0%" stopColor="#eef0f4" />
             <stop offset="100%" stopColor="#dcdfe6" />
           </linearGradient>
+          {/* Cephenin kendi ayrıntıları (derz, parapet, zemin kotu) yüzün dışına taşmasın. */}
+          <clipPath id="cephe-yuz-kirp">
+            <polygon points={cepheYuzu} />
+          </clipPath>
           <linearGradient id="cephe-sokak" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#5c626a" />
             <stop offset="100%" stopColor="#3a3f46" />
@@ -317,15 +354,27 @@ export default function Cephe({
           />
         )}
 
-        {/* Binanın kaldırıma düşen gölgesi — cepheyi zemine oturtur */}
-        <rect
-          x={sol}
-          y={alt}
-          width={duvarW}
-          height={Math.max(1, kaldirimH * 0.45)}
-          fill="#5c626a"
-          opacity="0.28"
-        />
+        {/*
+          Binanın kaldırıma düşen gölgesi — cepheyi zemine oturtur. Eni
+          cephenin KENDİ tabanından: kırık cephede bina dar kalıyor, gölge
+          eski dikdörtgen kadar uzun durursa binanın iki yanında havada
+          asılı bir bant gibi görünüyordu.
+        */}
+        {(() => {
+          const gSol = Math.min(...hatAlt.map((p) => p.x))
+          const gSag = Math.max(...hatAlt.map((p) => p.x))
+          const gUst = Math.max(...hatAlt.map((p) => p.y))
+          return (
+            <rect
+              x={gSol}
+              y={gUst}
+              width={Math.max(1, gSag - gSol)}
+              height={Math.max(1, kaldirimH * 0.45)}
+              fill="#5c626a"
+              opacity="0.28"
+            />
+          )
+        })()}
 
         {/*
           BİNANIN DÖNEN YAN YÜZÜ — cepheden ÖNCE çiziliyor ki köşe dikişi
@@ -339,8 +388,8 @@ export default function Cephe({
             opacity="0.82"
           />
         )}
-        {/* CEPHE — ekranın monte edildiği yüzey */}
-        <rect x={sol} y={ust} width={duvarW} height={duvarH} fill="url(#cephe-yuzey)" />
+        {/* CEPHE — ekranın monte edildiği yüzey; açılıysa kırık hat. */}
+        <polygon points={cepheYuzu} fill="url(#cephe-yuzey)" />
         {/* Köşe dikişi: iki yüzün birleştiği dikey çizgi. */}
         {yanYuz && (
           <line
@@ -360,7 +409,7 @@ export default function Cephe({
               gösterir; onsuz cephe gökyüzüne yapışık duruyordu.
             • Zemin kotu: cephenin dibindeki koyu şerit (bodrum/giriş bandı).
         */}
-        <g opacity="0.5">
+        <g opacity="0.5" clipPath="url(#cephe-yuz-kirp)">
           {[0.2, 0.4, 0.6, 0.8].map((k) => (
             <line
               key={k}
@@ -373,30 +422,32 @@ export default function Cephe({
             />
           ))}
         </g>
-        <rect
-          x={sol}
-          y={ust}
-          width={duvarW}
-          height={Math.max(1.5, duvarH * 0.022)}
-          fill="#ffffff"
-          opacity="0.75"
-        />
-        <rect
-          x={sol}
-          y={ust + Math.max(1.5, duvarH * 0.022)}
-          width={duvarW}
-          height={Math.max(0.6, duvarH * 0.005)}
-          fill="#9aa3ae"
-          opacity="0.45"
-        />
-        <rect
-          x={sol}
-          y={alt - Math.max(2, duvarH * 0.03)}
-          width={duvarW}
-          height={Math.max(2, duvarH * 0.03)}
-          fill="#c3cad3"
-          opacity="0.7"
-        />
+        <g clipPath="url(#cephe-yuz-kirp)">
+          <rect
+            x={sol}
+            y={ust}
+            width={duvarW}
+            height={Math.max(1.5, duvarH * 0.022)}
+            fill="#ffffff"
+            opacity="0.75"
+          />
+          <rect
+            x={sol}
+            y={ust + Math.max(1.5, duvarH * 0.022)}
+            width={duvarW}
+            height={Math.max(0.6, duvarH * 0.005)}
+            fill="#9aa3ae"
+            opacity="0.45"
+          />
+          <rect
+            x={sol}
+            y={alt - Math.max(2, duvarH * 0.03)}
+            width={duvarW}
+            height={Math.max(2, duvarH * 0.03)}
+            fill="#c3cad3"
+            opacity="0.7"
+          />
+        </g>
         {/*
           Cephenin üst kenarındaki kahverengi saçak KALDIRILDI. Binaya karakter
           katsın diye eklenmişti ama duvarın üstünde asılı duran, hangi

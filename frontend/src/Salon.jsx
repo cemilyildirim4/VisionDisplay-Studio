@@ -49,6 +49,11 @@ export default function Salon({
   duvarHm,
   ekranSekli,
   /*
+   * Tasarımın kırık hattı (tuval koordinatı, bkz. Birlesim2D onDuvarHatti).
+   * Varsa odanın arka ucu bu hatta göre kuruluyor.
+   */
+  duvarHatti = null,
+  /*
    * KAÇIŞ NOKTASININ YATAY KAYMASI (px).
    *
    * Tek kaçış noktalı bir çizimde kaçış noktasını yana kaydırmak, KAMERAYI
@@ -144,6 +149,48 @@ export default function Salon({
   /** Arka duvar kenarındaki bir noktanın ön çerçevedeki karşılığı. */
   const ileri = (x, y) => [kx + (x - kx) * k, ky + (y - ky) * k]
 
+  /*
+   * ODANIN ARKA UCU TASARIMIN KIRIK HATTI.
+   *
+   * Düz bir arka duvar yerine, açılı dizilimde HER EKRAN KENDİ DUVARINI
+   * alıyor: üç ekranlı bir U'da orta ekran odanın orta duvarı, yan
+   * ekranlar da yan duvarları. Odanın köşeleri tam ekranların birleştiği
+   * yerde oluyor, iki yanda artakalan düz duvar kalmıyor.
+   *
+   * Hattı Birleşim2D ölçüp veriyor (bkz. onDuvarHatti). Ekranların
+   * izdüşümüyle AYNI hesaptan geldiği için duvarlar ekranlarla birebir
+   * örtüşüyor; hizanın şaşmamasının sebebi bu.
+   *
+   * Hat yoksa (düz yerleşim, tek ekran, küp) oda eskisi gibi kalıyor:
+   * arka duvar, duvar dikdörtgeninin kendisi.
+   */
+  const hatUst =
+    duvarHatti?.ust?.length >= 2
+      ? duvarHatti.ust
+      : [
+          { x: duvarSol, y: tavanY },
+          { x: duvarSag, y: tavanY },
+        ]
+  const hatAlt =
+    duvarHatti?.alt?.length >= 2
+      ? duvarHatti.alt
+      : [
+          { x: duvarSol, y: sahneY },
+          { x: duvarSag, y: sahneY },
+        ]
+  const nk = (l) => l.map((p) => `${p.x},${p.y}`).join(' ')
+  const nkTers = (l) => nk([...l].reverse())
+  const uSol = hatUst[0]
+  const uSag = hatUst[hatUst.length - 1]
+  const aSol = hatAlt[0]
+  const aSag = hatAlt[hatAlt.length - 1]
+  /* Tavan ve zemin: önde çerçeve, arkada tasarımın kırık hattı. */
+  const tavanYuzu = `${onSol},${onUst} ${onSag},${onUst} ${nkTers(hatUst)}`
+  const zeminYuzu = `${onSol},${onAlt} ${onSag},${onAlt} ${nkTers(hatAlt)}`
+  /* Yan duvarlar hattın UÇLARINDAN öne geliyor: odanın köşesi orada. */
+  const solYuz = `${onSol},${onUst} ${uSol.x},${uSol.y} ${aSol.x},${aSol.y} ${onSol},${onAlt}`
+  const sagYuz = `${onSag},${onUst} ${uSag.x},${uSag.y} ${aSag.x},${aSag.y} ${onSag},${onAlt}`
+  const arkaYuz = `${nk(hatUst)} ${nkTers(hatAlt)}`
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       <svg className="absolute inset-0" width={tuvalW} height={tuvalH}>
@@ -151,15 +198,11 @@ export default function Salon({
           {/* Şeritler tavanın dışına taşmasın (yan duvara binen çizgi
               perspektifi bozar). */}
           <clipPath id="salon-tavan-kirp">
-            <polygon
-              points={`${onSol},${onUst} ${onSag},${onUst} ${duvarSag},${tavanY} ${duvarSol},${tavanY}`}
-            />
+            <polygon points={tavanYuzu} />
           </clipPath>
           {/* Zemin derzleri yan duvarlara taşmasın. */}
           <clipPath id="salon-zemin-kirp">
-            <polygon
-              points={`${onSol},${onAlt} ${onSag},${onAlt} ${duvarSag},${sahneY} ${duvarSol},${sahneY}`}
-            />
+            <polygon points={zeminYuzu} />
           </clipPath>
           <linearGradient id="salon-tavan" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#f2f4f7" />
@@ -217,31 +260,25 @@ export default function Salon({
 
         {/* Tavan */}
         <polygon
-          points={`${onSol},${onUst} ${onSag},${onUst} ${duvarSag},${tavanY} ${duvarSol},${tavanY}`}
+          points={tavanYuzu}
           fill="url(#salon-tavan)"
         />
         {/* Zemin */}
         <polygon
-          points={`${onSol},${onAlt} ${onSag},${onAlt} ${duvarSag},${sahneY} ${duvarSol},${sahneY}`}
+          points={zeminYuzu}
           fill="url(#salon-zemin)"
         />
         {/* Yan duvarlar */}
         <polygon
-          points={`${onSol},${onUst} ${duvarSol},${tavanY} ${duvarSol},${sahneY} ${onSol},${onAlt}`}
+          points={solYuz}
           fill="url(#salon-duvar-sol)"
         />
         <polygon
-          points={`${onSag},${onUst} ${duvarSag},${tavanY} ${duvarSag},${sahneY} ${onSag},${onAlt}`}
+          points={sagYuz}
           fill="url(#salon-duvar-sag)"
         />
-        {/* Arka duvar */}
-        <rect
-          x={duvarSol}
-          y={tavanY}
-          width={duvarSag - duvarSol}
-          height={sahneY - tavanY}
-          fill="url(#salon-arka)"
-        />
+        {/* Arka duvar — düz dikdörtgen değil, tasarımın kırık hattı. */}
+        <polygon points={arkaYuz} fill="url(#salon-arka)" />
 
         {/*
           TAVAN IŞIK HATLARI — kaçış noktasına doğru daralan ince şeritler.
@@ -339,10 +376,10 @@ export default function Salon({
           odanın kutu olduğunu asıl köşe gölgesi anlatıyor.
         */}
         <g stroke="#9aa6b8" strokeWidth="1" opacity="0.16" fill="none">
-          <polyline points={`${onSol},${onUst} ${duvarSol},${tavanY} ${duvarSag},${tavanY} ${onSag},${onUst}`} />
-          <polyline points={`${onSol},${onAlt} ${duvarSol},${sahneY} ${duvarSag},${sahneY} ${onSag},${onAlt}`} />
-          <line x1={duvarSol} y1={tavanY} x2={duvarSol} y2={sahneY} />
-          <line x1={duvarSag} y1={tavanY} x2={duvarSag} y2={sahneY} />
+          <polyline points={`${onSol},${onUst} ${nk(hatUst)} ${onSag},${onUst}`} />
+          <polyline points={`${onSol},${onAlt} ${nk(hatAlt)} ${onSag},${onAlt}`} />
+          <line x1={uSol.x} y1={uSol.y} x2={aSol.x} y2={aSol.y} />
+          <line x1={uSag.x} y1={uSag.y} x2={aSag.x} y2={aSag.y} />
         </g>
 
         {/* Köşelere doğru yumuşak kararma — odayı kutu yapan asıl şey. */}

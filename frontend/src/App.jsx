@@ -3411,6 +3411,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     ? ekranParcalari.some((s) => (s.type || 'flat') === 'lshape')
     : (screenType || 'flat') === 'lshape'
 
+  /*
+   * TASARIMIN KIRIK HATTI — mekân odayı buna göre kuruyor.
+   *
+   * Birleşim2D ölçtüğü an bildiriyor (bkz. onDuvarHatti); burada yalnızca
+   * tutuluyor ve mekâna veriliyor.
+   */
+  const [duvarHatti, setDuvarHatti] = useState(null)
+
   const ekranSekli = useMemo(() => {
     if (!(tasarimWm > 0) || !(tasarimHm > 0)) return null
     // Tek ekranda da tür bilgisi var; çoklu ekranda her ekranın kendi türü
@@ -11137,6 +11145,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               duvarKosesi={fotoDuvarKosesi}
               ekranWpx={tasarimWm * (cizimOlcek || 0)}
               ekranHpx={tasarimHm * (cizimOlcek || 0)}
+              /*
+               * ODA TASARIMIN ŞEKLİNİ ALIYOR.
+               *
+               * Açılı bir dizilimde odanın arka ucu düz bir duvar değil,
+               * tasarımın kırık hattı: her ekran kendi duvarını alıyor.
+               * Yalnızca çizilmiş mekânlarda — fotoğraflı mekânlarda duvar
+               * gerçek bir fotoğraf, odayı yeniden kuramıyoruz.
+               */
+              duvarHatti={lCizimMekan ? duvarHatti : null}
               /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
               ekranSekli={ekranSekli}
               ayakOrani={ayakOrani}
@@ -11286,25 +11303,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   ? {
                       yuzUst: '#f0f2f6',
                       yuzAlt: '#e6e9ef',
-                      zemin: '#cfc4b4',
-                      tavan: '#e6eaf0',
                     }
                   : scene === CEPHE_ID
                     ? {
                         yuzUst: '#eef0f4',
                         yuzAlt: '#dcdfe6',
-                        zemin: '#b8bec5',
-                        /*
-                         * Dış mekânda da tavan VAR: girintinin üstü gökyüzü
-                         * değil, binanın kendi malzemesi (bir kapı nişinin
-                         * üst yüzü gibi). Boş bırakılınca tasarımın üstünde
-                         * dümdüz bir cephe bandı kalıyor ve duvar hiç
-                         * kırılmamış gibi görünüyordu.
-                         */
-                        tavan: '#dcdfe6',
                       }
                     : null
               }
+              /* Mekân odayı bu hatta göre kuruyor (bkz. duvarHatti). */
+              onDuvarHatti={setDuvarHatti}
               sahnePayPx={sahnePayPx}
               kose={scene === 'ozel' && !ozelSahne ? null : koseTuval}
               /*
