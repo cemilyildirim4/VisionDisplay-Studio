@@ -156,10 +156,12 @@ public static class HardwareMatcher
         var candidates = items
             .Where(p => EffectiveWattCapacity(p) > 0)
             .Where(p => VoltageCompatible(p, demand.ModuleVoltage))
-            .Where(p => EffectiveWattCapacity(p) >= OneModuleWatts(demand))
+            .Where(p => EffectiveWattCapacity(p) * ConfigurationCalculator.PsuContinuousDerate
+                >= OneModuleWatts(demand))
             .Select(p =>
             {
-                int qty = ConfigurationCalculator.CountPowerSupplies(demand.TotalModules, p);
+                int qty = ConfigurationCalculator.CountPowerSupplies(
+                    demand.TotalModules, p, OneModuleWatts(demand));
                 return (Item: p, Qty: qty, Cap: EffectiveWattCapacity(p));
             })
             .Where(x => x.Qty > 0)

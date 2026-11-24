@@ -5,7 +5,7 @@ import { KIOSK_GOVDESI_ACIK } from './featureFlags.js'
 import { mekaniSil } from './fotoDeposu.js'
 import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
-import ExportModal, { MiniPcSecimi } from './ExportModal.jsx'
+import ExportModal from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import { useConfigurationPreview } from './useConfigurationPreview.js'
@@ -13398,9 +13398,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               */}
 
               {/*
-                Mini PC sorusu panel gövdesinden kalktı: donanım/mekân
-                seçeneklerinin arasında yer yiyordu. Tek satır hâli PDF
-                düğmesinin hemen üstünde (panel dibi).
+                Mini PC sorusu burada yok: canvas ve modül seçimi LED
+                geometrisidir; Mini PC teklif/BOM kararıdır. Soru
+                "PDF Raporu Al" penceresindedir.
               */}
 
               {/*
@@ -14845,15 +14845,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             hiçbir çıkış kalmıyor, kullanıcı sıkışıyordu. PDF kendi şartını
             zaten pasiflikle ve altındaki notla söylüyor.
           */}
-          {/*
-            Mini PC: tek satır Evet/Hayır, İletişim + PDF'in hemen üstünde.
-            Karar rapora gittiği için düğmelerin yanında; donanım listesini
-            uzatmaz, özet kutusunu da şişirmez.
-          */}
-          <div className="mt-3">
-            <MiniPcSecimi compact deger={hasMiniPc} onChange={setHasMiniPc} />
-          </div>
-          <div className="mt-2 flex items-center gap-3">
+          <div className="mt-3 flex items-center gap-3">
             <button
               type="button"
               onClick={() => setContactOpen(true)}
@@ -14868,8 +14860,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {/*
             DÜĞME MODEL SEÇİLİYSE HEP AÇIK.
 
-            Mini PC cevabı üstteki tek satırda (ve gerekirse pencerede)
-            veriliyor; indirme düğmeleri pencerede cevaba bağlı.
+            Mini PC "PDF Raporu Al" penceresinde; indirme orada cevaba bağlı.
           */}
           <button
             type="button"
@@ -15018,7 +15009,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        /* Mini PC asıl olarak panel dibinde; pencere yalnızca boşsa sorar. */
+        /* Mini PC kararı PDF penceresinde; cevap buraya dönüyor. */
         onMiniPc={setHasMiniPc}
         summary={{
           modelCode: selectedModel?.modelCode,

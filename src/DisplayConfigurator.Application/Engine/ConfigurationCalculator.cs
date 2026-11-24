@@ -89,7 +89,7 @@ public static class ConfigurationCalculator
         }
 
         int powerSupplyQty = hw.PowerSupply != null
-            ? CountPowerSupplies(totalModules, hw.PowerSupply)
+            ? CountPowerSupplies(totalModules, hw.PowerSupply, maxWattsPerUnit)
             : 0;
         if (requireCompleteMatch && powerSupplyQty <= 0)
             throw new HardwareMatchException(
@@ -247,14 +247,35 @@ public static class ConfigurationCalculator
     }
 
     /// <summary>
-    /// Güç kaynağı adedi = yukarı yuvarla(toplam modül / PSU modül kapasitesi).
-    /// Kapasite yoksa 0 — çağıran hata üretir.
+    /// Sürekli yükte PSU etiket gücünün kullanılabilir payı (IEC/şantiye derating).
     /// </summary>
-    public static int CountPowerSupplies(int totalModules, PowerSupply psu)
+    public const decimal PsuContinuousDerate = 0.8m;
+
+    /// <summary>
+    /// Güç kaynağı adedi = max(akım kuralı, watt kuralı).
+    /// Akım: 40 A → 6, 60 A → 8 modül. Watt: etiket × 0,8 / modül maks. W.
+    /// İkisi de yoksa 0 — çağıran hata üretir.
+    /// </summary>
+    public static int CountPowerSupplies(int totalModules, PowerSupply psu, decimal wattsPerModule = 0)
     {
-        int capacity = ModulesPerPowerSupply(psu.Amperage);
-        if (capacity <= 0 || totalModules <= 0) return 0;
-        return (int)Math.Ceiling(totalModules / (double)capacity);
+        if (totalModules <= 0) return 0;
+
+        int ampCapacity = ModulesPerPowerSupply(psu.Amperage);
+        int byAmp = ampCapacity > 0
+            ? (int)Math.Ceiling(totalModules / (double)ampCapacity)
+            : 0;
+
+        decimal wattCap = HardwareMatcher.EffectiveWattCapacity(psu) * PsuContinuousDerate;
+        int byWatt = 0;
+        if (wattCap > 0 && wattsPerModule > 0)
+        {
+            int modulesPerPsu = Math.Max(1, (int)Math.Floor((double)(wattCap / wattsPerModule)));
+            byWatt = (int)Math.Ceiling(totalModules / (double)modulesPerPsu);
+        }
+
+        if (byAmp <= 0) return byWatt;
+        if (byWatt <= 0) return byAmp;
+        return Math.Max(byAmp, byWatt);
     }
 
     /// <summary>
@@ -509,13 +530,17 @@ public static class ConfigurationCalculator
     }
 
     /// <summary>
-    /// En uygun izleme mesafesi (m): pitch kuralı ile köşegen kuralının büyüğü.
+    /// En yakın izleme mesafesi (m): pitch (mm) kadar metre — sektör kuralı.
+    /// Katalogdaki eski 2,5× değerleri yok sayılır; pitch yoksa katalog kullanılır.
+    /// Önerilen mesafe: bununla ekran köşegeninin büyüğü (arayüzle aynı).
     /// </summary>
+    public const decimal ViewingDistancePitchFactor = 1.0m;
+
     public static decimal ViewingDistanceM(Cabin cabin, int cols, int rows)
     {
-        decimal pitchBase = cabin.ViewingDistanceM is > 0
-            ? cabin.ViewingDistanceM.Value
-            : Math.Round(cabin.PixelPitchMm * 2.5m, 1);
+        decimal pitchBase = cabin.PixelPitchMm > 0
+            ? Math.Round(cabin.PixelPitchMm * ViewingDistancePitchFactor, 2)
+            : (cabin.ViewingDistanceM is > 0 ? cabin.ViewingDistanceM.Value : 0m);
 
         if (cols <= 0 || rows <= 0) return pitchBase;
 

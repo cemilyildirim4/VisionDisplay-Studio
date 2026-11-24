@@ -56,12 +56,13 @@ public class ProfessionalReportDocument : IDocument
         });
 
         /*
-         * Yapılandırılmış ekran görseli kendi sayfasında durur. Admin raporda
-         * teknik tablo + enerji + donanım ShowEntire blokları ilk sayfayı
-         * doldurunca sondaki görsel sığmıyor ve QuestPDF tüm bloğu atıyordu.
-         * Ayrı sayfa bu kopukluğu kapatır; tuval JPEG'i şema yerine asıl görseldir.
+         * Tam boy tuval karesi YALNIZCA admin raporda ayrı sayfadır.
+         * Müşteri raporunda aynı JPEG zaten ilk sayfanın üstünde
+         * (ComposeClientVisual); ikinci kez basmak çift görsel üretiyordu.
+         * Her PDF indirmede tuval yeniden yakalanır — müşteride tek kopya,
+         * adminde ilk sayfa dolu olduğu için tam boy bu sayfada kalır.
          */
-        if (_extras.PreviewImage is { Length: > 0 })
+        if (_isAdmin && _extras.PreviewImage is { Length: > 0 })
         {
             var gorsel = _extras.PreviewImage;
             container.Page(page =>
@@ -304,26 +305,6 @@ public class ProfessionalReportDocument : IDocument
                 col.Item().PaddingTop(2)
                     .Text($"{wM:F2} × {hM:F2} m  ·  {areaM2:F2} m²")
                     .FontSize(9).FontColor(Colors.Grey.Darken1);
-            });
-    }
-
-    /// <summary>
-    /// Admin ilk sayfa dolu; ShowEntire görseli atıyordu. Küçük önizleme
-    /// taşmadan sığar; tam boy kare ayrı "YAPILANDIRMA GÖRSELİ" sayfasındadır.
-    /// </summary>
-    private void ComposeAdminVisualThumb(IContainer container)
-    {
-        if (_extras.PreviewImage is not { Length: > 0 }) return;
-
-        container.PaddingBottom(10).Border(1).BorderColor(BrandBlue)
-            .Background(Color.FromHex("#f8fafc")).Padding(6).Column(col =>
-            {
-                col.Item().Text("Yapılandırma görseli").FontSize(9).Bold().FontColor(BrandBlue);
-                col.Item().PaddingTop(4)
-                    .Element(c => DrawContainedImage(c, _extras.PreviewImage, 110));
-                col.Item().PaddingTop(4)
-                    .Text("Tam boy görsel, oran bozulmadan ayrı sayfada basılır.")
-                    .FontSize(7).FontColor(Colors.Grey.Darken1);
             });
     }
 
@@ -650,8 +631,8 @@ public class ProfessionalReportDocument : IDocument
 
         container.PaddingTop(12).Column(column =>
         {
-            if (_extras.PreviewImage is { Length: > 0 })
-                column.Item().Element(_isAdmin ? ComposeAdminVisualThumb : ComposeClientVisual);
+            if (!_isAdmin && _extras.PreviewImage is { Length: > 0 })
+                column.Item().Element(ComposeClientVisual);
 
             if (_isAdmin && _config.HasUnmetHardwareRequirements)
             {

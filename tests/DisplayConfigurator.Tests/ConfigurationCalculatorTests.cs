@@ -94,11 +94,11 @@ public class ConfigurationCalculatorTests
         Assert.Equal("800x600", result.TotalResolution);
         Assert.Equal(0.48, result.TotalPixelsMpx, 2);
 
-        // 12 modül, PSU 800 A → kapasite floor(800/60*8)=106 → 1 adet.
+        // 12 kabin × 600 W = 7,2 kW. PSU 4000 W × 0,8 = 3200 W → 5 kabin/PSU → 3 adet.
         // 800x600, kart 1920x1080 → 1 alıcı kart.
         Assert.Equal("CABINET", result.AssemblyType);
         Assert.Equal(1, result.ReceivingCardCount);
-        Assert.Equal(1, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
+        Assert.Equal(3, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
         Assert.Equal(0, result.HardwareBreakdown.Single(x => x.Key == "patchCable").Quantity);
 
         // 800x600 = 480.000 piksel, tek RJ45 portu (max 650.000) yeterli.
@@ -160,7 +160,7 @@ public class ConfigurationCalculatorTests
         Assert.Equal(10, result.ReceivingCardCount);
         // 2.400.000 px / 650.000 → 4 port. Patch = 10 kart − 4 port.
         Assert.Equal(6, result.HardwareBreakdown.Single(x => x.Key == "patchCable").Quantity);
-        Assert.Equal(1, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
+        Assert.Equal(12, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
         Assert.Equal(60, result.HardwareBreakdown.Single(x => x.Key == "module").Quantity);
     }
 
@@ -304,14 +304,14 @@ public class ConfigurationCalculatorTests
 
         var result = ConfigurationCalculator.Calculate(dto, cabin, hardware);
 
-        // 12 modül × 600 W = 7,2 kW; η=0,9 → 8 kW. 800 A kapasitesi 12 modülü tek kaynakta karşılar.
+        // 12 modül × 600 W = 7,2 kW; η=0,9 → 8 kW şebeke. Watt derating 3 PSU ister.
         Assert.Equal(8.00m, result.TotalMaxPowerKw);
         Assert.Equal(2400m / 0.9m / 1000m, result.TotalAvgPowerKw);
         Assert.Equal(2400m / 0.9m, result.TotalAvgPowerWatts);
         Assert.Equal(8000m, result.TotalMaxPowerWatts);
-        Assert.Equal(80m, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").LineTotal);
-        Assert.Equal(1, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
-        Assert.Equal(12080m, result.HardwareSubtotal);
+        Assert.Equal(240m, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").LineTotal);
+        Assert.Equal(3, result.HardwareBreakdown.Single(x => x.Key == "powerSupply").Quantity);
+        Assert.Equal(12240m, result.HardwareSubtotal);
 
         Assert.Equal(7200m * 3.412m, result.ModuleHeatDissipationBtu);
         Assert.Equal(8000m * 3.412m, result.HeatDissipationBtu);
@@ -383,6 +383,30 @@ public class ConfigurationCalculatorTests
         var psu = new PowerSupply { Amperage = 60m };
         Assert.Equal(8, ConfigurationCalculator.ModulesPerPowerSupply(60m));
         Assert.Equal(7, ConfigurationCalculator.CountPowerSupplies(56, psu));
+    }
+
+    [Fact]
+    public void CountPowerSupplies_WattDeratingAkimiAsincaKartArtar()
+    {
+        var psu = new PowerSupply
+        {
+            Amperage = 40m,
+            OutputVoltage = 5m,
+            MaxPowerOutputWatt = 200m,
+        };
+        Assert.Equal(2, ConfigurationCalculator.CountPowerSupplies(12, psu));
+        Assert.Equal(3, ConfigurationCalculator.CountPowerSupplies(12, psu, wattsPerModule: 40m));
+    }
+
+    [Fact]
+    public void ViewingDistanceM_PitchKuraliKosegeleBuyugu()
+    {
+        var cabin = SampleCabinet();
+        cabin.PixelPitchMm = 2.5m;
+        cabin.ViewingDistanceM = 6.25m;
+
+        Assert.Equal(2.5m, ConfigurationCalculator.ViewingDistanceM(cabin, 1, 1));
+        Assert.Equal(2.5m, ConfigurationCalculator.ViewingDistanceM(cabin, 4, 3));
     }
 
     [Fact]

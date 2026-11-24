@@ -2,12 +2,12 @@ namespace DisplayConfigurator.Application.Engine;
 
 /// <summary>
 /// Şebeke akımı, sigorta ve soğutma. Watt ham kalır; yuvarlama çağıran katmandadır.
-/// Tek faz 220 V sığmazsa (1,25 payından sonra 32 A üstü) 3 faz 380 V kullanılır.
+/// Tek faz 230 V sığmazsa (1,25 payından sonra 32 A üstü) 3 faz 400 V kullanılır.
 /// </summary>
 public static class PowerHeatMath
 {
-    public const decimal GridVoltage = 220m;
-    public const decimal ThreePhaseVoltage = 380m;
+    public const decimal GridVoltage = 230m;
+    public const decimal ThreePhaseVoltage = 400m;
     public const decimal PowerFactor = 0.95m;
     public const decimal BreakerTolerance = 1.25m;
     public const decimal BtuPerTon = 12_000m;

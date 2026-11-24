@@ -737,11 +737,11 @@ export default function ExportModal({ open, onClose, summary, onMiniPc }) {
         </div>
 
         {/*
-          Mini PC asıl yer: sağ panelde PDF düğmesinin üstü (tek satır).
-          Cevaplanmadıysa pencerede aynı kompakt satır yedek olarak durur;
-          cevaplandıysa burada tekrar yer kaplamaz.
+          Mini PC buradadır: teklif/BOM kararı, LED tuvali veya modül
+          seçimi değil. Kompakt satır yer kaplamaz; cevaplanmadan
+          indirme açılmaz (bkz. hazir → miniPcSecili).
         */}
-        {onMiniPc && !miniPcSecili && (
+        {onMiniPc && (
           <div className="mb-3">
             <MiniPcSecimi compact deger={summary.hasMiniPc} onChange={onMiniPc} />
           </div>
