@@ -2013,6 +2013,8 @@ const dict = {
   'sp.pkg.miniPc': { tr: 'Mini PC', en: 'Mini PC', ar: 'Mini PC' },
   'sp.pkg.patch': { tr: 'Patch Kablosu', en: 'Patch Cable', ar: 'كابل التوصيل' },
   'sp.pkg.receiving': { tr: 'Alıcı Kart', en: 'Receiving Card', ar: 'بطاقة الاستقبال' },
+  'sp.pkg.loopMax': { tr: 'Kart tam kapasite (512×512)', en: 'Card at full capacity (512×512)', ar: 'السعة الكاملة للبطاقة (512×512)' },
+  'sp.pkg.loopRec': { tr: 'Önerilen loop (max 3)', en: 'Recommended loop (max 3)', ar: 'التوصيل المقترح (حد أقصى 3)' },
   'sp.link': { tr: 'Bağlantı Tipi', en: 'Connection type', ar: 'نوع التوصيل' },
   'sp.pkg.included': { tr: 'Dahil', en: 'Included', ar: 'مضمّن' },
   'sp.pkg.viaProcessor': { tr: 'Dahil değil — işlemci üzerinden', en: 'Not included — via processor', ar: 'غير مضمّن — عبر المعالج' },

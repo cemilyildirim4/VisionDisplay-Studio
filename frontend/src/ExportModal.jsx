@@ -18,12 +18,35 @@ import {
 } from './contactFormValidation.js'
 import { istanbulSimdi, turkiyeTarihSaat } from './turkiyeSaati.js'
 
+function snapshotWebglCanvases(root) {
+  const snaps = []
+  for (const canvas of root.querySelectorAll('canvas')) {
+    try {
+      const url = canvas.toDataURL('image/png')
+      if (!url || url.length < 32) continue
+      const img = document.createElement('img')
+      img.src = url
+      img.setAttribute('data-pdf-canvas-snap', '')
+      img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:4'
+      const parent = canvas.parentElement
+      if (!parent) continue
+      if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative'
+      parent.appendChild(img)
+      snaps.push(img)
+    } catch {
+      /* WebGL preserveDrawingBuffer kapalıysa boş döner; html2canvas DOM katmanına düşer. */
+    }
+  }
+  return () => snaps.forEach((n) => n.remove())
+}
+
 async function captureScreenPreview() {
   const el = document.getElementById('pdf-onizleme')
   if (!el) return null
   const modal = document.getElementById('export-modal-root')
   const prevVis = modal?.style.visibility
   if (modal) modal.style.visibility = 'hidden'
+  const restoreSnaps = snapshotWebglCanvases(el)
   try {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
     const canvas = await html2canvas(el, {
@@ -44,6 +67,7 @@ async function captureScreenPreview() {
     console.error('Ekran önizlemesi yakalanamadı:', err)
     return null
   } finally {
+    restoreSnaps()
     if (modal) modal.style.visibility = prevVis || ''
   }
 }

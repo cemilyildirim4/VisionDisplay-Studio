@@ -316,6 +316,11 @@ function modelFormHatalari(form, seriesList) {
   if (!(Number(form.pixelWidth) > 0)) ekle('tech', 'Piksel genişliği 0’dan büyük olmalıdır.')
   if (!(Number(form.pixelHeight) > 0)) ekle('tech', 'Piksel yüksekliği 0’dan büyük olmalıdır.')
   if (!(Number(form.powerMaxWatts) > 0)) ekle('tech', 'Maksimum güç 0’dan büyük olmalıdır.')
+  const disMekan = /dış|dis mekan|outdoor/i.test(`${form.usage || ''} ${form.filterCategory || ''}`)
+  const nits = Number(form.brightnessNits)
+  if (Number.isFinite(nits) && nits < 0) ekle('tech', 'Parlaklık negatif olamaz.')
+  if (!disMekan && Number.isFinite(nits) && nits > 800)
+    ekle('tech', 'İç mekân modül parlaklığı en fazla 800 nit olabilir.')
   return hatalar
 }
 
@@ -1508,7 +1513,7 @@ export default function AdminPanel() {
                     <input required type="number" min="0.01" step="0.01" value={form.pixelPitchMm} onChange={(e) => set('pixelPitchMm', e.target.value)} className={inputCls} />
                   </Field>
                   {form.productType === 'MODULE' && (
-                    <Field label="Bağlantı" hint="Yalnızca modül. Looplamalı modül seri bağlanır ve kart yatay/dikey 512 piksel ile sınırlıdır. Loopsuz modülde her modül ayrı soket ister (16).">
+                    <Field label="Bağlantı" hint="Yalnızca modül. Looplamalı: kart 512×512 px doldurulabilir; önerilen kullanım yatayda en fazla 3'lü (veya 2'li) loop, dikeyde 8×64 px. Loopsuz: her modül ayrı soket (16).">
                       <label className="flex items-center gap-3 min-h-[44px] rounded-lg border border-neutral-200 dark:border-[#2c333f] px-3 cursor-pointer">
                         <input
                           type="checkbox"
@@ -1610,8 +1615,20 @@ export default function AdminPanel() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <Field label="Parlaklık (nit)">
-                    <input type="number" value={form.brightnessNits} onChange={(e) => set('brightnessNits', e.target.value)} className={inputCls} />
+                  <Field
+                    label="Parlaklık (nit)"
+                    hint={/dış|dis mekan|outdoor/i.test(`${form.usage || ''} ${form.filterCategory || ''}`)
+                      ? 'Dış mekân: tavan yok'
+                      : 'İç mekân tavanı 800 nit'}
+                  >
+                    <input
+                      type="number"
+                      min="0"
+                      max={/dış|dis mekan|outdoor/i.test(`${form.usage || ''} ${form.filterCategory || ''}`) ? undefined : 800}
+                      value={form.brightnessNits}
+                      onChange={(e) => set('brightnessNits', e.target.value)}
+                      className={inputCls}
+                    />
                   </Field>
                   <Field label="Yenileme Hızı (Hz)">
                     <input type="number" value={form.refreshRateHz} onChange={(e) => set('refreshRateHz', e.target.value)} className={inputCls} />

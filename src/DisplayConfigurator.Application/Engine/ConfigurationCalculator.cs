@@ -95,9 +95,11 @@ public static class ConfigurationCalculator
             throw new HardwareMatchException(
                 "Seçilen konfigürasyon için veritabanında uygun Güç Kaynağı bulunamadı.");
 
+        var loopPlan = PlanLoopableCards(
+            horizontalModules, verticalModules, cabin.PixelWidth, cabin.PixelHeight, hw.ReceivingCard);
         int receivingCardQty = CountReceivingCards(
             totalResW, totalResH, totalPixels, hw.ReceivingCard, totalModules,
-            cabin.ProductType, cabin.IsLoopable);
+            cabin.ProductType, cabin.IsLoopable, cabin.PixelWidth, cabin.PixelHeight);
         int processorQty = hw.Processor != null
             ? CountProcessors(totalPixels, totalResW, totalResH, hw.Processor, out int requiredPorts)
             : CountProcessors(totalPixels, totalResW, totalResH, processor: null, out requiredPorts);
@@ -182,6 +184,7 @@ public static class ConfigurationCalculator
             ModulesPerCard = modulesPerCard,
             ConnectionType = ModuleConnectionCode(cabin),
             ReceivingCardCount = receivingCardQty,
+            LoopCardPlan = IsModule(cabin.ProductType) && cabin.IsLoopable == true ? loopPlan : null,
             RequiredRj45Ports = requiredPorts,
             RecommendedProcessor = recommendedProcessor,
             AlternativeProcessor = alternativeProcessor,
@@ -259,6 +262,7 @@ public static class ConfigurationCalculator
     /// Kapasitesi 0 olan kart kullanılamaz (0 döner).
     /// </summary>
     public const int LoopableEdgePixels = 512;
+    public const int RecommendedMaxLoopModules = 3;
     public const int DefaultModuleSockets = 16;
 
     public static bool IsModule(string? productType) =>
@@ -283,7 +287,8 @@ public static class ConfigurationCalculator
 
     /// <summary>
     /// Kabin: kartın kendi piksel ve en/boy tavanı. Soket kuralı yok.
-    /// Looplamalı modül: soket sayılmaz; yatay ve dikey tavan 512 piksel.
+    /// Looplamalı modül: önerilen kullanım (yatayda en fazla 3'lü/2'li loop,
+    /// dikeyde 512 px) kart adedini belirler. 512×512 tam kapasite ayrı raporda durur.
     /// Loopsuz modül: max(piksel kartı, yukarı yuvarla(modül / soket)). Soket boşsa 16.
     /// </summary>
     public static int CountReceivingCards(
@@ -293,7 +298,9 @@ public static class ConfigurationCalculator
         ReceivingCard? card,
         int totalModules = 0,
         string? productType = null,
-        bool? isLoopable = null)
+        bool? isLoopable = null,
+        int modulePixelWidth = 0,
+        int modulePixelHeight = 0)
     {
         if (card == null) return 0;
         long capacity = HardwareMatcher.PixelCapacity(card);
@@ -313,17 +320,123 @@ public static class ConfigurationCalculator
 
         if (isLoopable == true)
         {
+            int cols = modulePixelWidth > 0 ? Math.Max(1, (int)Math.Ceiling(totalResW / (double)modulePixelWidth)) : 0;
+            int rows = modulePixelHeight > 0 ? Math.Max(1, (int)Math.Ceiling(totalResH / (double)modulePixelHeight)) : 0;
+            if (cols <= 0 && totalModules > 0 && rows > 0)
+                cols = Math.Max(1, (int)Math.Ceiling(totalModules / (double)rows));
+            if (rows <= 0 && totalModules > 0 && cols > 0)
+                rows = Math.Max(1, (int)Math.Ceiling(totalModules / (double)cols));
+
+            var plan = PlanLoopableCards(cols, rows, modulePixelWidth, modulePixelHeight, card);
+            if (plan.RecommendedCardCount > 0)
+                return Math.Max(byPixels, plan.RecommendedCardCount);
+
             int limitW = card.MaxPixelWidth > 0 ? Math.Min(LoopableEdgePixels, card.MaxPixelWidth) : LoopableEdgePixels;
             int limitH = card.MaxPixelHeight > 0 ? Math.Min(LoopableEdgePixels, card.MaxPixelHeight) : LoopableEdgePixels;
-            int byWidth = totalResW > 0 ? (int)Math.Ceiling(totalResW / (double)limitW) : 1;
-            int byHeight = totalResH > 0 ? (int)Math.Ceiling(totalResH / (double)limitH) : 1;
-            return Math.Max(byPixels, Math.Max(byWidth, byHeight));
+            int tilesX = totalResW > 0 ? (int)Math.Ceiling(totalResW / (double)limitW) : 1;
+            int tilesY = totalResH > 0 ? (int)Math.Ceiling(totalResH / (double)limitH) : 1;
+            return Math.Max(byPixels, Math.Max(1, tilesX * tilesY));
         }
 
         int sockets = card.HubPortCount > 0 ? card.HubPortCount : DefaultModuleSockets;
         if (totalModules <= 0) return byGeometry;
         int bySockets = (int)Math.Ceiling(totalModules / (double)sockets);
         return Math.Max(byGeometry, bySockets);
+    }
+
+    /// <summary>512 px tavanını doldurur; son grup 1 olabilir (4+1).</summary>
+    public static IReadOnlyList<int> SplitCapacityGroups(int count, int maxGroup)
+    {
+        if (count <= 0) return [];
+        maxGroup = Math.Max(1, maxGroup);
+        var groups = new List<int>();
+        int remaining = count;
+        while (remaining > 0)
+        {
+            int take = Math.Min(maxGroup, remaining);
+            groups.Add(take);
+            remaining -= take;
+        }
+
+        return groups;
+    }
+
+    /// <summary>
+    /// 1'li artık bırakmamaya çalışır: 4 → 2+2, 7 → 3+2+2, 5 → 3+2.
+    /// </summary>
+    public static IReadOnlyList<int> SplitLoopGroups(int count, int maxGroup = RecommendedMaxLoopModules)
+    {
+        if (count <= 0) return [];
+        maxGroup = Math.Max(1, maxGroup);
+        if (count <= maxGroup) return [count];
+
+        var groups = new List<int>();
+        int remaining = count;
+        while (remaining > 0)
+        {
+            if (remaining <= maxGroup)
+            {
+                groups.Add(remaining);
+                break;
+            }
+
+            int take = maxGroup;
+            if (remaining - take == 1 && maxGroup >= 2)
+                take = maxGroup - 1;
+            groups.Add(take);
+            remaining -= take;
+        }
+
+        return groups;
+    }
+
+    public static LoopCardPlanDto PlanLoopableCards(
+        int cols,
+        int rows,
+        int modulePixelWidth,
+        int modulePixelHeight,
+        ReceivingCard? card = null)
+    {
+        int limitW = card is { MaxPixelWidth: > 0 }
+            ? Math.Min(LoopableEdgePixels, card.MaxPixelWidth)
+            : LoopableEdgePixels;
+        int limitH = card is { MaxPixelHeight: > 0 }
+            ? Math.Min(LoopableEdgePixels, card.MaxPixelHeight)
+            : LoopableEdgePixels;
+
+        int pxW = Math.Max(0, modulePixelWidth);
+        int pxH = Math.Max(0, modulePixelHeight);
+        int maxModsX = pxW > 0 ? Math.Max(1, limitW / pxW) : 1;
+        int maxModsY = pxH > 0 ? Math.Max(1, limitH / pxH) : 1;
+        int recModsX = Math.Min(RecommendedMaxLoopModules, maxModsX);
+
+        cols = Math.Max(0, cols);
+        rows = Math.Max(0, rows);
+        var maxH = SplitCapacityGroups(cols, maxModsX);
+        var recH = SplitLoopGroups(cols, recModsX);
+        int vMax = rows <= 0 ? 0 : (int)Math.Ceiling(rows / (double)maxModsY);
+        int maxCards = maxH.Count == 0 || vMax == 0 ? 0 : maxH.Count * vMax;
+        int recCards = recH.Count == 0 || vMax == 0 ? 0 : recH.Count * vMax;
+
+        string Join(IReadOnlyList<int> g) => g.Count == 0 ? "—" : string.Join(" + ", g);
+
+        return new LoopCardPlanDto
+        {
+            MaxCapacityCardCount = maxCards,
+            RecommendedCardCount = recCards,
+            MaxModulesPerCardX = maxModsX,
+            MaxModulesPerCardY = maxModsY,
+            RecommendedMaxLoop = recModsX,
+            ModulePixelWidth = pxW,
+            ModulePixelHeight = pxH,
+            EdgePixels = LoopableEdgePixels,
+            MaxHorizontalGroups = maxH,
+            RecommendedHorizontalGroups = recH,
+            MaxCapacityLabel =
+                $"{limitW}×{limitH} px · yatay {maxModsX}×{pxW} px, dikey {maxModsY}×{pxH} px · {Join(maxH)} / {vMax} sıra → {maxCards} kart",
+            RecommendedLabel =
+                $"en fazla {recModsX}'lü (veya 2'li) loop · yatay {Join(recH)} · dikey en fazla {maxModsY} modül → {recCards} kart",
+        };
     }
 
     /// <summary>

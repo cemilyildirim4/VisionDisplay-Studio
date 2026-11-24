@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 using DisplayConfigurator.Api.Security;
 using DisplayConfigurator.Application.DTOs;
+using DisplayConfigurator.Application.Engine;
 using DisplayConfigurator.Application.Interfaces;
 using DisplayConfigurator.Domain.Entities;
 
@@ -258,6 +259,12 @@ public class CabinsController : ControllerBase
         if (input.DefaultModulesPerCard <= 0)
             return "Kart başına modül sayısı 0'dan büyük olmalı.";
 
+        var brightnessError = BrightnessLimits.Validate(
+            input.BrightnessNits,
+            BrightnessLimits.IsOutdoor(input.Usage, input.FilterCategory, input.Features));
+        if (brightnessError != null)
+            return brightnessError;
+
         if (input.IpRating is int ip && (ip < 10 || ip > 69))
             return "IP sınıfı 10–69 aralığında olmalı (ör. 20, 30, 65).";
 
@@ -289,7 +296,9 @@ public class CabinsController : ControllerBase
         cabin.WeightKg = input.WeightKg;
         cabin.PixelWidth = input.PixelWidth;
         cabin.PixelHeight = input.PixelHeight;
-        cabin.BrightnessNits = input.BrightnessNits;
+        cabin.BrightnessNits = BrightnessLimits.Clamp(
+            input.BrightnessNits,
+            BrightnessLimits.IsOutdoor(input.Usage, input.FilterCategory, input.Features));
         cabin.RefreshRateHz = input.RefreshRateHz;
         cabin.PowerTypicalWatts = input.PowerTypicalWatts;
         cabin.PowerMaxWatts = input.PowerMaxWatts;

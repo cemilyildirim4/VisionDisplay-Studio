@@ -31,6 +31,9 @@ public class ConfigurationResponseDto
     /// <summary>Yalnızca modül: loop veya loopless. Kabinde boş.</summary>
     public string? ConnectionType { get; set; }
     public int ReceivingCardCount { get; set; }
+
+    /// <summary>Looplamalı modülde 512×512 tam kapasite ve önerilen 3'lü/2'li dağılım. Diğerlerinde boş.</summary>
+    public LoopCardPlanDto? LoopCardPlan { get; set; }
     public int RequiredRj45Ports { get; set; }
     public string RecommendedProcessor { get; set; } = string.Empty;
 

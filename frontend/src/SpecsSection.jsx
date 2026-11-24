@@ -442,6 +442,18 @@ function SpecsBody({ model, cols = 1, rows = 1, sboxRedundancy = 'no', screenTyp
             />
             <Veri label={t('sp.pkg.patch')} value={lineQty('patchCable', patchCableCount(receivingCards, preview?.requiredRj45Ports ?? 1))} />
             <Veri label={t('sp.pkg.receiving')} value={lineQty('receivingCard', receivingCards)} />
+            {preview?.loopCardPlan && (
+              <>
+                <Veri
+                  label={t('sp.pkg.loopMax')}
+                  value={`${fmt(preview.loopCardPlan.maxCapacityCardCount)} ${t('sp.unit')} · ${preview.loopCardPlan.maxHorizontalGroups?.join(' + ') || '—'}`}
+                />
+                <Veri
+                  label={t('sp.pkg.loopRec')}
+                  value={`${fmt(preview.loopCardPlan.recommendedCardCount)} ${t('sp.unit')} · ${preview.loopCardPlan.recommendedHorizontalGroups?.join(' + ') || '—'}`}
+                />
+              </>
+            )}
           </Kart>
         )}
 

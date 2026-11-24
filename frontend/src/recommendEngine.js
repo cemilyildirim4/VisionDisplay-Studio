@@ -81,7 +81,7 @@ function techScore(cab, { outdoor, distanceM, purpose }) {
   const pitchPts = finerOk ? Math.max(pitchFit, 0.62) : pitchFit
 
   const nits = Number(cab.brightnessNits) || 0
-  const ideal = outdoor ? 5500 : purpose?.id === 'retail' ? 1500 : 800
+  const ideal = outdoor ? 5500 : 800
   const nitsFit = 1 - clamp01(Math.abs(nits - ideal) / Math.max(ideal, 1))
 
   let cat = 0.5

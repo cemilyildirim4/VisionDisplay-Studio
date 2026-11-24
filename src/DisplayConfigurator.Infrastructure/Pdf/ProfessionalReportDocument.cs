@@ -56,6 +56,28 @@ public class ProfessionalReportDocument : IDocument
         });
 
         /*
+         * Yapılandırılmış ekran görseli kendi sayfasında durur. Admin raporda
+         * teknik tablo + enerji + donanım ShowEntire blokları ilk sayfayı
+         * doldurunca sondaki görsel sığmıyor ve QuestPDF tüm bloğu atıyordu.
+         * Ayrı sayfa bu kopukluğu kapatır; tuval JPEG'i şema yerine asıl görseldir.
+         */
+        if (_extras.PreviewImage is { Length: > 0 })
+        {
+            var gorsel = _extras.PreviewImage;
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(1.8f, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(9.5f).FontFamily("Arial").FontColor(Ink));
+
+                page.Header().Element(ComposeVisualHeader);
+                page.Content().Element(c => ComposeConfiguredVisualPage(c, gorsel));
+                page.Footer().Element(ComposeFooter);
+            });
+        }
+
+        /*
          * MEKÂNDA GÖRÜNÜM — yalnızca müşteri kamerada bir kare KAYDETTİYSE.
          * Yapılandırma görseli ekranı teknik olarak gösteriyor; bu sayfa aynı
          * ekranın müşterinin kendi mekânındaki hâlini gösteriyor. Kare yoksa
@@ -100,6 +122,27 @@ public class ProfessionalReportDocument : IDocument
             });
             col.Item().PaddingTop(6).Height(3).Background(BrandBlue);
             col.Item().Height(2).Background(BrandOrange);
+        });
+    }
+
+    private void ComposeConfiguredVisualPage(IContainer container, byte[] gorsel)
+    {
+        int cols = Math.Max(1, _config.Cols);
+        int rows = Math.Max(1, _config.Rows);
+        double wM = _config.TotalWidthMm / 1000.0;
+        double hM = _config.TotalHeightMm / 1000.0;
+
+        container.Column(col =>
+        {
+            col.Item().Border(1).BorderColor(Color.FromHex("#e2e8f0"))
+                .Background(Color.FromHex("#f8fafc")).Padding(8)
+                .Element(c => DrawContainedImage(c, gorsel, 520));
+            col.Item().PaddingTop(10)
+                .Text($"{Empty(_config.CabinModelName, "Model")}  ·  {cols} × {rows}  ·  {wM:F2} × {hM:F2} m")
+                .FontSize(10).Bold().FontColor(Ink);
+            col.Item().PaddingTop(4)
+                .Text("Müşterinin yapılandırdığı / tasarladığı ekran. Tuvalden alınan görüntü kendi en-boy oranında basılır.")
+                .FontSize(7.5f).FontColor(Colors.Grey.Darken1);
         });
     }
 
@@ -159,15 +202,74 @@ public class ProfessionalReportDocument : IDocument
             col.Item().Element(DrawScreenTypeLegend);
         });
 
-            if (_extras.PreviewImage is { Length: > 0 })
+            /*
+             * Tuval görseli artık ayrı "YAPILANDIRMA GÖRSELİ" sayfasında.
+             * Burada yalnızca şema kalır; ShowEntire ile fotoğrafı düşürmeyiz.
+             */
+            if (_config.LoopCardPlan != null)
+                outer.Item().PaddingTop(12).Element(ComposeLoopCardPlan);
+        });
+    }
+
+    private void ComposeLoopCardPlan(IContainer container)
+    {
+        var plan = _config.LoopCardPlan;
+        if (plan == null) return;
+
+        container.Border(1).BorderColor(Color.FromHex("#e2e8f0")).Background(Colors.White).Padding(10).Column(col =>
+        {
+            col.Item().Text("Alıcı kart — loop dağılımı").FontSize(12).Bold().FontColor(BrandBlue);
+            col.Item().PaddingTop(4)
+                .Text("Looplamalı modülde kart 512×512 px tavanına kadar doldurulabilir; önerilen kullanım yatayda en fazla 3'lü (veya 2'li) looplama ve dikeyde 512 px / 8×64 px sınırıdır.")
+                .FontSize(8).FontColor(Colors.Grey.Darken1);
+
+            col.Item().PaddingTop(8).Row(row =>
             {
-                outer.Item().PaddingTop(12).ShowEntire().Column(img =>
+                row.RelativeItem().Border(1).BorderColor(Color.FromHex("#e2e8f0")).Background(Color.FromHex("#f8fafc")).Padding(8).Column(c =>
                 {
-                    img.Item().Text("Müşteri görseli").FontSize(11).Bold().FontColor(BrandBlue);
-                    img.Item().PaddingTop(6).Border(1).BorderColor(Color.FromHex("#e2e8f0"))
-                        .Background(Color.FromHex("#f8fafc")).Padding(6)
-                        .Element(c => DrawContainedImage(c, _extras.PreviewImage, 225));
+                    c.Item().Text("TAM KAPASİTE (512×512 px)").FontSize(7).Bold().FontColor(Colors.Grey.Darken1);
+                    c.Item().PaddingTop(4).Text($"{plan.MaxCapacityCardCount} kart").FontSize(14).Bold().FontColor(Ink);
+                    c.Item().PaddingTop(2).Text(
+                            $"Yatay {plan.MaxModulesPerCardX} × {plan.ModulePixelWidth} px = {plan.MaxModulesPerCardX * plan.ModulePixelWidth} px · dikey {plan.MaxModulesPerCardY} × {plan.ModulePixelHeight} px = {plan.MaxModulesPerCardY * plan.ModulePixelHeight} px")
+                        .FontSize(8).FontColor(Colors.Grey.Darken1);
+                    c.Item().PaddingTop(4).Text($"Yatay grup: {string.Join(" + ", plan.MaxHorizontalGroups)}").FontSize(8);
+                    c.Item().PaddingTop(6).Element(b => DrawLoopGroups(b, plan.MaxHorizontalGroups));
                 });
+                row.ConstantItem(10);
+                row.RelativeItem().Border(1).BorderColor(BrandBlue).Background(Color.FromHex("#eef3f9")).Padding(8).Column(c =>
+                {
+                    c.Item().Text("ÖNERİLEN KULLANIM (max 3 loop)").FontSize(7).Bold().FontColor(BrandBlue);
+                    c.Item().PaddingTop(4).Text($"{plan.RecommendedCardCount} kart").FontSize(14).Bold().FontColor(BrandBlue);
+                    c.Item().PaddingTop(2).Text(plan.RecommendedLabel).FontSize(8).FontColor(Colors.Grey.Darken1);
+                    c.Item().PaddingTop(4).Text($"Yatay grup: {string.Join(" + ", plan.RecommendedHorizontalGroups)}").FontSize(8);
+                    c.Item().PaddingTop(6).Element(b => DrawLoopGroups(b, plan.RecommendedHorizontalGroups));
+                });
+            });
+
+            col.Item().PaddingTop(8)
+                .Text("Örnek: 5 yatay modül → 3 + 2. 7 yatay modül → 3 + 2 + 2. Dikeyde 64 px modül en fazla 8 adet (512 px) bir karta bağlanır.")
+                .FontSize(7.5f).Italic().FontColor(Colors.Grey.Darken1);
+        });
+    }
+
+    private static void DrawLoopGroups(IContainer container, IReadOnlyList<int> groups)
+    {
+        if (groups.Count == 0)
+        {
+            container.Text("—").FontSize(8).FontColor(Colors.Grey.Medium);
+            return;
+        }
+
+        container.Row(row =>
+        {
+            for (var i = 0; i < groups.Count; i++)
+            {
+                int n = groups[i];
+                var captured = n;
+                row.RelativeItem(Math.Max(1, n)).PaddingRight(4).Border(1).BorderColor(BrandBlue)
+                    .Background(captured == 3 ? BrandBlue : Color.FromHex("#3d7bc2"))
+                    .PaddingVertical(6).AlignCenter()
+                    .Text($"{captured}'lü").FontSize(8).FontColor(Colors.White).Bold();
             }
         });
     }
@@ -604,7 +706,11 @@ public class ProfessionalReportDocument : IDocument
                 if (_cabin != null)
                 {
                     AddRow(table, "Piksel aralığı", FormatPitch(_cabin.PixelPitchMm), ref alt);
-                    AddRow(table, "Parlaklık", $"{_cabin.BrightnessNits:N0} nit", ref alt);
+                    bool outdoor = BrightnessLimits.IsOutdoor(_cabin.Usage, _cabin.FilterCategory, _cabin.Features);
+                    string nitText = $"{_cabin.BrightnessNits:N0} nit";
+                    if (!outdoor)
+                        nitText += $" (iç mekân tavanı {BrightnessLimits.MaxIndoorNits} nit)";
+                    AddRow(table, "Parlaklık", nitText, ref alt);
                     if (_cabin.RefreshRateHz > 0)
                         AddRow(table, "Yenileme hızı", $"{_cabin.RefreshRateHz} Hz", ref alt);
                 }
@@ -621,7 +727,15 @@ public class ProfessionalReportDocument : IDocument
                 {
                     if (ConfigurationCalculator.ConnectionTypeLabel(_config.ConnectionType) is string baglanti)
                         AddRow(table, "Bağlantı tipi", baglanti, ref alt);
-                    AddRow(table, "Alıcı kart (adet)", $"{_config.ReceivingCardCount}", ref alt);
+                    if (_config.LoopCardPlan is { } plan)
+                    {
+                        AddRow(table, "Alıcı kart (önerilen)", $"{plan.RecommendedCardCount}", ref alt);
+                        AddRow(table, "Alıcı kart (512×512 tam kapasite)", $"{plan.MaxCapacityCardCount}", ref alt);
+                    }
+                    else
+                    {
+                        AddRow(table, "Alıcı kart (adet)", $"{_config.ReceivingCardCount}", ref alt);
+                    }
                     AddRow(table, "Gerekli RJ45 Ethernet portu", portText, ref alt);
                     AddRow(table, "Tavsiye işlemci", Empty(_config.RecommendedProcessor, "—"), ref alt);
                     if (_config.AlternativeProcessorQuantity > 0 && !string.IsNullOrWhiteSpace(_config.AlternativeProcessor))

@@ -263,7 +263,7 @@ const SAMPLE_CABINETS = [
     weightKg: 1.6,
     pixelWidth: 200, // 320 / 1,6
     pixelHeight: 100, // 160 / 1,6
-    brightnessNits: 700,
+    brightnessNits: 800,
     usage: 'Ticari İç Mekan',
     ipRating: 30,
     refreshRateHz: 3840,

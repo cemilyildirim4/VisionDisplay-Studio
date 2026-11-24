@@ -486,6 +486,47 @@ public class ConfigurationCalculatorTests
     }
 
     [Fact]
+    public void SplitLoopGroups_TekliArtikBirakmaz()
+    {
+        Assert.Equal(new[] { 3, 2 }, ConfigurationCalculator.SplitLoopGroups(5));
+        Assert.Equal(new[] { 3, 2, 2 }, ConfigurationCalculator.SplitLoopGroups(7));
+        Assert.Equal(new[] { 2, 2 }, ConfigurationCalculator.SplitLoopGroups(4));
+        Assert.Equal(new[] { 3, 3 }, ConfigurationCalculator.SplitLoopGroups(6));
+        Assert.Equal(new[] { 4, 1 }, ConfigurationCalculator.SplitCapacityGroups(5, 4));
+    }
+
+    [Fact]
+    public void PlanLoopableCards_5x20_IkiYatayGrupVeDikey8()
+    {
+        var plan = ConfigurationCalculator.PlanLoopableCards(5, 20, 128, 64);
+        Assert.Equal(new[] { 3, 2 }, plan.RecommendedHorizontalGroups);
+        Assert.Equal(new[] { 4, 1 }, plan.MaxHorizontalGroups);
+        Assert.Equal(4, plan.MaxModulesPerCardX);
+        Assert.Equal(8, plan.MaxModulesPerCardY);
+        Assert.Equal(6, plan.MaxCapacityCardCount);
+        Assert.Equal(6, plan.RecommendedCardCount);
+    }
+
+    [Fact]
+    public void PlanLoopableCards_7Yatay_UcKartOnerir()
+    {
+        var plan = ConfigurationCalculator.PlanLoopableCards(7, 8, 128, 64);
+        Assert.Equal(new[] { 3, 2, 2 }, plan.RecommendedHorizontalGroups);
+        Assert.Equal(3, plan.RecommendedCardCount);
+        Assert.Equal(2, plan.MaxCapacityCardCount);
+    }
+
+    [Fact]
+    public void CountReceivingCards_Looplamali_Onerilen3luKullanir()
+    {
+        var card = new ReceivingCard { MaxPixelWidth = 512, MaxPixelHeight = 512, HubPortCount = 16 };
+        // 4×5, 128×64: tam kapasite 1 kart, önerilen 2+2 → 2 kart.
+        int qty = ConfigurationCalculator.CountReceivingCards(
+            512, 320, 512 * 320, card, 20, "MODULE", true, 128, 64);
+        Assert.Equal(2, qty);
+    }
+
+    [Fact]
     public void ApplyPsuLosses_Verim1_ModulGucunuKorur()
     {
         Assert.Equal(7200m, ConfigurationCalculator.ApplyPsuLosses(7200m, 1m));

@@ -11,7 +11,9 @@ public readonly record struct ScreenDemand(
     decimal ModuleMaxWatts,
     decimal? ModuleVoltage,
     string? ProductType = null,
-    bool? IsLoopable = null);
+    bool? IsLoopable = null,
+    int ModulePixelWidth = 0,
+    int ModulePixelHeight = 0);
 
 /// <summary>Yönetim kataloğunun bellek görüntüsü (aktif kayıtlar süzülmüş olabilir).</summary>
 public sealed class HardwareCatalogSnapshot
@@ -58,7 +60,9 @@ public static class HardwareMatcher
             modules * cabin.PowerMaxWatts,
             voltage,
             cabin.ProductType,
-            cabin.IsLoopable);
+            cabin.IsLoopable,
+            cabin.PixelWidth,
+            cabin.PixelHeight);
     }
 
     public static HardwareCatalogItems Match(
@@ -105,7 +109,8 @@ public static class HardwareMatcher
 
         int receivingQty = ConfigurationCalculator.CountReceivingCards(
             demand.TotalResW, demand.TotalResH, demand.TotalPixels, receivingCard,
-            demand.TotalModules, demand.ProductType, demand.IsLoopable);
+            demand.TotalModules, demand.ProductType, demand.IsLoopable,
+            demand.ModulePixelWidth, demand.ModulePixelHeight);
         ConfigurationCalculator.CountProcessors(
             demand.TotalPixels, demand.TotalResW, demand.TotalResH, processor, out int requiredPorts);
         int patchQty = ConfigurationCalculator.CountPatchCables(receivingQty, requiredPorts);
@@ -177,7 +182,8 @@ public static class HardwareMatcher
             {
                 int qty = ConfigurationCalculator.CountReceivingCards(
                     demand.TotalResW, demand.TotalResH, demand.TotalPixels, c,
-                    demand.TotalModules, demand.ProductType, demand.IsLoopable);
+                    demand.TotalModules, demand.ProductType, demand.IsLoopable,
+                    demand.ModulePixelWidth, demand.ModulePixelHeight);
                 return (Item: c, Qty: qty, Cap: PixelCapacity(c));
             })
             .Where(x => x.Qty > 0)

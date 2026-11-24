@@ -237,6 +237,19 @@ public class ConfigurationServiceTests
         Assert.True(tall.Length > 100);
     }
 
+    [Fact]
+    public async Task GeneratePdf_Admin_YapilandirmaGorseliniEkler()
+    {
+        var service = CreateService(out _, out _, seedHardware: false, pdfService: new PdfReportService());
+        var dto = new CreateConfigurationDto { ProjectName = "PDF", CabinId = 1, Cols = 4, Rows = 3 };
+        var withImage = await service.GenerateSpecSheetPdfFromDtoAsync(
+            dto, new PdfReportExtras { PreviewImage = TinyPng(40, 24) }, PdfReportKind.Admin);
+        var withoutImage = await service.GenerateSpecSheetPdfFromDtoAsync(
+            dto, new PdfReportExtras(), PdfReportKind.Admin);
+
+        Assert.True(withImage.Length > withoutImage.Length);
+    }
+
     private static byte[] TinyPng(int width, int height)
     {
         int stride = width * 3 + 1;

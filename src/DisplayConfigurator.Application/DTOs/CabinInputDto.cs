@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace DisplayConfigurator.Application.DTOs;
 
 /// <summary>
@@ -32,6 +34,8 @@ public class CabinInputDto
     public decimal? WeightKg { get; set; }
     public int PixelWidth { get; set; }
     public int PixelHeight { get; set; }
+    /// <summary>İç mekân tavanı 800 nit. Dış mekân ürünleri daha yüksek olabilir.</summary>
+    [Range(0, 10000)]
     public int BrightnessNits { get; set; }
     public int RefreshRateHz { get; set; }
     public decimal PowerTypicalWatts { get; set; }
