@@ -19,7 +19,7 @@
  * ÖLÇÜ GERÇEK. Her kolun eni kendi sütun sayısından, boyu kendi satır
  * sayısından; kollar birbirinden farklı olabilir.
  */
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { Screen } from './WallPreview.jsx'
 import { birlesimDilimleri } from './birlesimOlcu.js'
 
@@ -110,8 +110,10 @@ export default function Birlesim2D({
   /*
    * MEKÂNDA DUVAR DA TASARIMLA BİRLİKTE KIRILIYOR.
    *
-   * { dolgu, ust, alt, sol, sag } — duvarın yüzey rengi ve tasarımın
-   * dışında kalan duvar payları (piksel, zincirle aynı ölçekte).
+   * { yuzUst, yuzAlt, zemin, tavan, ust, alt } — duvar yüzeyinin üst/alt
+   * tonu, mekânın zemin ve tavan rengi (tavan boşsa çizilmiyor: dış
+   * mekânda duvarın üstü gökyüzü), bir de tasarımın üstünde ve altında
+   * kalan duvar payları (piksel, zincirle aynı ölçekte).
    * Boşsa duvar çizilmiyor (tasarım ekranı, düz tasarımlar).
    */
   duvarYuzu = null,
@@ -145,6 +147,8 @@ export default function Birlesim2D({
 }) {
   const icRef = useRef(null)
   const olcekRef = useRef(1)
+  /* Niş degradesinin kimliği (bkz. aşağıda nis): kanca erken dönüşlerin üstünde kalmalı. */
+  const nisId = useId()
   /* Dilim sırasına karşılık gelen ekran kimlikleri (çizimde dolduruluyor). */
   const bilgiRef = useRef([])
   const sonKutularRef = useRef(null)
@@ -453,6 +457,112 @@ export default function Birlesim2D({
   /* Ölçüm bu ölçeği geri çeviriyor (bkz. yukarıdaki useLayoutEffect). */
   olcekRef.current = olcek
 
+  /*
+   * MEKÂNDA DUVAR TASARIMIN ŞEKLİNİ ALIYOR — "NİŞ".
+   *
+   * ÖNCEKİ HÂLİ YETMİYORDU: duvarın yüzeyi kırılıyordu ama odanın geri
+   * kalanı düz kalıyordu. Zemin ile duvarın birleştiği çizgi dümdüz
+   * gidince, kırılan yüzey odanın duvarı değil, DÜZ bir duvara asılmış
+   * bir pano gibi okunuyordu. Oysa 150°'lik bir U'da oda üç duvarlı
+   * olmalı.
+   *
+   * ŞİMDİ ÜÇ YÜZEY TAKIMI ÇİZİLİYOR:
+   *  - duvar yüzleri : her dilimin önündeki, onunla aynı düzlemde duran
+   *                    tavandan zemine kadar yüzey,
+   *  - zemin/tavan kamaları : o yüzeyin tabanını (ve tepesini) mekânın
+   *                    kendi düz duvar düzlemine bağlayan yatay parçalar.
+   *                    Zemin çizgisini kırılmış gösteren şey bunlar.
+   *  - uç dönüşleri  : tasarımın iki ucunda duvarı mekânın düz duvarına
+   *                    kapatan dikey parçalar.
+   *
+   * REFERANS DÜZLEM z = 0: mekânın kendi düz duvarı tam orada ve orada
+   * izdüşüm ölçeği 1'dir (bkz. D / (D - z)). Kamalar oraya dayandığı için
+   * mekânın duvarıyla aralarında ölçek atlaması olmuyor.
+   *
+   * Düz tasarımda hiç çizilmiyor: kırılacak köşe yok, mekânın kendi
+   * duvarı zaten doğru.
+   */
+  const nis = (() => {
+    if (!duvarYuzu?.yuzUst || dilimler.length < 2) return null
+    if (!dilimler.some((d) => Math.abs(d.t - dilimler[0].t) > 1e-6)) return null
+
+    const ustPay = Math.max(0, Number(duvarYuzu.ust) || 0)
+    const altPay = Math.max(0, Number(duvarYuzu.alt) || 0)
+    /* Duvarın tepesi ve tabanı: parça boyundan DEĞİL, duvarın kendi ölçüsünden. */
+    const yTavan = gozAlt - boyPx - ustPay
+    const yZemin = gozAlt + altPay
+
+    /* Zincirin izdüşümüyle birebir aynı: önce dönüş, sonra perspektif. */
+    const iz = (X, Y, Z) => {
+      const [x1, y1, z1] = cevir(X, Y, Z)
+      const k = D / (D - z1)
+      return [orijinX + x1 * k, gozY + y1 * k, z1]
+    }
+    const uc = (d, u) => [
+      d.mx - ortX + Math.cos(d.t) * u,
+      -(d.mz - ortZ) - Math.sin(d.t) * u,
+    ]
+
+    const yuzler = []
+    const ekle = (noktalar, dolgu, golge) =>
+      yuzler.push({
+        p: noktalar.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '),
+        z: noktalar.reduce((t, p) => t + p[2], 0) / noktalar.length,
+        dolgu,
+        golge,
+      })
+
+    const yuzDolgu = 'url(#' + nisId + ')'
+    dilimler.forEach((d, i) => {
+      /* Bindirme payı: komşu yüzeyler arasında kıl payı çizgi kalmasın. */
+      const [ax, az] = uc(d, -d.w / 2 - BINDIRME)
+      const [bx, bz] = uc(d, d.w / 2 + BINDIRME)
+      /* Yandan bakılan yüz daha az ışık alıyor; köşeyi okutan şey bu fark. */
+      ekle(
+        [iz(ax, yTavan, az), iz(bx, yTavan, bz), iz(bx, yZemin, bz), iz(ax, yZemin, az)],
+        yuzDolgu,
+        0.22 * Math.abs(Math.sin(d.t)),
+      )
+      /*
+       * Girintinin içi dışarısı kadar ışık almıyor; kamaların hafif
+       * kararması, zemin ile tavanın gerçekten İÇERİ doğru kırıldığını
+       * okutuyor. Renkleri mekânın kendi zemin/tavan rengi olduğu için
+       * bu küçük fark olmadan kamalar mekânla birbirine karışıyor.
+       */
+      if (duvarYuzu.zemin)
+        ekle(
+          [iz(ax, yZemin, az), iz(bx, yZemin, bz), iz(bx, yZemin, 0), iz(ax, yZemin, 0)],
+          duvarYuzu.zemin,
+          0.08,
+        )
+      if (duvarYuzu.tavan)
+        ekle(
+          [iz(ax, yTavan, az), iz(bx, yTavan, bz), iz(bx, yTavan, 0), iz(ax, yTavan, 0)],
+          duvarYuzu.tavan,
+          0.08,
+        )
+      if (i === 0 || i === dilimler.length - 1) {
+        const [ux, uz] = i === 0 ? [ax, az] : [bx, bz]
+        if (Math.abs(uz) > 0.5)
+          ekle(
+            [iz(ux, yTavan, uz), iz(ux, yTavan, 0), iz(ux, yZemin, 0), iz(ux, yZemin, uz)],
+            yuzDolgu,
+            0.3,
+          )
+      }
+    })
+    /* Ressam sırası: uzaktaki önce, yakın olan onun üstüne biniyor. */
+    yuzler.sort((a, b) => a.z - b.z)
+    return {
+      id: nisId,
+      yuzler,
+      ustPx: iz(0, yTavan, 0)[1],
+      altPx: iz(0, yZemin, 0)[1],
+      yuzUst: duvarYuzu.yuzUst,
+      yuzAlt: duvarYuzu.yuzAlt,
+    }
+  })()
+
   return (
     <div
       style={{
@@ -509,80 +619,47 @@ export default function Birlesim2D({
         />
       )}
       {/*
-        DUVAR TASARIMIN ŞEKLİNİ ALIYOR.
+        MEKÂNIN DUVARI TASARIMIN ŞEKLİNİ ALIYOR.
 
-        Mekânlarda duvar düz bir yüzeydi: 100°'ye bükülmüş bir L, dümdüz
-        bir duvarın önünde havada duruyormuş gibi görünüyordu. Duvar artık
-        tasarımın EKLEMLERİNDEN bölünüyor; her parça önündeki ekranla AYNI
-        düzlemde duruyor, yani duvarın köşesi ekranın açısı neyse o.
-
-        Panolar ekranlarla aynı üç boyutlu zincirde (aynı dönüş, aynı
-        perspektif) çiziliyor; hizanın şaşmamasının sebebi bu. Ölçüm yapan
-        zincirin (icRef) KARDEŞİ olarak duruyorlar: çizimin sınırını ve
-        ölçü etiketlerini değiştirmiyorlar.
-
-        Düz tasarımda hiç çizilmiyor — orada kırılacak bir köşe yok ve
-        mekânın kendi duvarı zaten doğru duruyor.
+        Yüzeyler zincirle AYNI hesaptan (cevir + D) izdüşüyor; ekranların
+        duvara oturmasının sebebi bu. Ressam sırasıyla, uzaktan yakına
+        çiziliyorlar ve ölçü etiketlerine hiç karışmıyorlar.
       */}
-      {duvarYuzu?.dolgu && dilimler.length > 1 &&
-        dilimler.some((d) => Math.abs(d.t - dilimler[0].t) > 1e-6) && (
-          <div
-            style={{
-              position: 'absolute',
-              left: orijinX,
-              top: gozY + gozAlt - boyPx,
-              width: 0,
-              height: boyPx,
-              transformStyle: 'preserve-3d',
-              transform: yaw || egim ? `rotateX(${egim}deg) rotateY(${yaw}deg)` : undefined,
-              pointerEvents: 'none',
-            }}
-          >
-            {dilimler.map((d, i) => {
-              const ustPay = Math.max(0, Number(duvarYuzu.ust) || 0)
-              const altPay = Math.max(0, Number(duvarYuzu.alt) || 0)
-              /* Tasarımın bittiği yerde duvar bitmiyor: uçlar duvarın payı kadar uzuyor. */
-              const solPay = i === 0 ? Math.max(0, Number(duvarYuzu.sol) || 0) : 0
-              const sagPay =
-                i === dilimler.length - 1 ? Math.max(0, Number(duvarYuzu.sag) || 0) : 0
-              /* Yandan bakılan yüz daha az ışık alıyor; köşeyi okutan şey bu fark. */
-              const golge = 0.22 * Math.abs(Math.sin(d.t))
-              return (
-                <div
-                  key={'duvar' + i}
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: boyPx - d.p.h - ustPay,
-                    width: d.w + BINDIRME * 2 + solPay + sagPay,
-                    height: ustPay + d.p.h + altPay,
-                    marginLeft: -(d.w / 2 + BINDIRME + solPay),
-                    background: duvarYuzu.dolgu,
-                    backfaceVisibility: 'hidden',
-                    /*
-                     * Kendi ekranının bir tık ARKASINDA: aynı düzlemde
-                     * olsalardı tarayıcı hangisini üste çizeceğini
-                     * seçemez, yüzey titrerdi.
-                     */
-                    transform: `translate3d(${d.mx - ortX}px, 0, ${
-                      -(d.mz - ortZ)
-                    }px) rotateY(${(d.t * 180) / Math.PI}deg) translateZ(-1px)`,
-                  }}
-                >
-                  {golge > 0.004 && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: `rgba(17, 24, 39, ${golge.toFixed(3)})`,
-                      }}
-                    />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
+      {nis && (
+        <svg
+          data-nis="1"
+          width={kutuEn}
+          height={kutuBoy}
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            /* Niş çizim kutusunun dışına taşıyor: zemin kaması öne, duvar yukarı. */
+            overflow: 'visible',
+            pointerEvents: 'none',
+          }}
+        >
+          <defs>
+            <linearGradient
+              id={nis.id}
+              gradientUnits="userSpaceOnUse"
+              x1="0"
+              y1={nis.ustPx}
+              x2="0"
+              y2={nis.altPx}
+            >
+              <stop offset="0%" stopColor={nis.yuzUst} />
+              <stop offset="100%" stopColor={nis.yuzAlt} />
+            </linearGradient>
+          </defs>
+          {nis.yuzler.map((y, i) => (
+            <g key={'nis' + i}>
+              <polygon points={y.p} fill={y.dolgu} />
+              {y.golge > 0.004 && <polygon points={y.p} fill="#111827" opacity={y.golge} />}
+            </g>
+          ))}
+        </svg>
+      )}
       <div
         ref={icRef}
         style={{

@@ -11271,19 +11271,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                */
               sahneVar={scene !== 'none' && !(scene === 'ozel' && !ozelSahne)}
               /*
-               * ÇİZİLMİŞ MEKÂNLARDA DUVAR TASARIMLA BİRLİKTE KIRILIYOR.
+               * ÇİZİLMİŞ MEKÂNLARDA ODANIN UCU TASARIMIN ŞEKLİNİ ALIYOR.
                *
-               * Renk mekânın kendi duvar gradyanının aynısı (bkz. Salon.jsx
-               * "salon-arka", Cephe.jsx "cephe-yuzey"): kırılan parçalar
-               * mekânın duvarının devamı gibi duruyor. Fotoğraflı
-               * mekânlarda yapılmıyor — orada duvar gerçek bir fotoğraf,
-               * düz renkle kaplamak yama gibi görünürdü.
+               * Renkler mekânın kendi renklerinin aynısı: duvar için
+               * Salon.jsx "salon-arka" / Cephe.jsx "cephe-yuzey", zemin
+               * için salonun zemin degradesinin üst tonu ve cephenin
+               * kaldırımı. Dış mekânda tavan yok — duvarın üstü gökyüzü.
+               *
+               * Fotoğraflı mekânlarda yapılmıyor: orada duvar gerçek bir
+               * fotoğraf, düz renkle kaplamak yama gibi görünürdü.
                */
               duvarDolgu={
                 scene === SALON_ID
-                  ? 'linear-gradient(180deg, #f0f2f6 0%, #e6e9ef 100%)'
+                  ? {
+                      yuzUst: '#f0f2f6',
+                      yuzAlt: '#e6e9ef',
+                      zemin: '#cfc4b4',
+                      tavan: '#e6eaf0',
+                    }
                   : scene === CEPHE_ID
-                    ? 'linear-gradient(180deg, #eef0f4 0%, #dcdfe6 100%)'
+                    ? {
+                        yuzUst: '#eef0f4',
+                        yuzAlt: '#dcdfe6',
+                        zemin: '#b8bec5',
+                        tavan: null,
+                      }
                     : null
               }
               sahnePayPx={sahnePayPx}

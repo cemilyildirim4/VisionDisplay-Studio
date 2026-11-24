@@ -1026,7 +1026,10 @@ export default function WallPreview({
   // Arkada bir mekân sahnesi çizildiyse duvar kutusu SAYDAM olur; odanın kendi
   // duvarı görünsün diye. Beyaz dikdörtgen gri odanın içinde yama gibi durur.
   sahneVar = false,
-  /* Mekânda duvarın yüzey rengi; varsa duvar tasarımla birlikte kırılıyor. */
+  /*
+   * Mekânın duvar/zemin/tavan renkleri; varsa duvar tasarımla birlikte
+   * kırılıyor (bkz. Birlesim2D → duvarYuzu).
+   */
   duvarDolgu = null,
   /*
    * Ekranın GÖRÜNEN yüzü gizlensin mi. Fotoğraflı mekânda tasarım gerçek
@@ -1949,24 +1952,22 @@ export default function WallPreview({
                      * dışında kalan kısmı: üstte/altta şeridin boşluğu,
                      * yanlarda duvarın tasarımdan artan eni.
                      */
+                    /*
+                     * YANLARDA PAY YOK.
+                     *
+                     * Duvar bir ara uçlardan yana uzatılıyordu; kırılan
+                     * parçanın yakın ucu kameraya yaklaşıyor ve perspektif
+                     * onu devasa büyütüyordu. Tasarımın bittiği yerde duvar
+                     * artık mekânın düz duvarına DÖNEREK kapanıyor (bkz.
+                     * Birlesim2D → nis, uç dönüşleri); ötesi mekânın kendi
+                     * duvarı.
+                     */
                     duvarYuzu={
                       sahneVar && duvarDolgu
                         ? {
-                            dolgu: duvarDolgu,
+                            ...duvarDolgu,
                             ust: stripTop,
                             alt: Math.max(0, wallH - stripTop - maxHpx),
-                            /*
-                             * YANLARDAKİ PAY KISITLI.
-                             *
-                             * Pay duvarın tamamı kadar uzatılınca kırılan
-                             * parçanın yakın ucu kameraya çok yaklaşıyor ve
-                             * perspektif onu devasa büyütüyordu: duvar odanın
-                             * yan duvarlarını da kaplıyordu. Pay tasarımın
-                             * çevresini saracak kadar; ötesi mekânın kendi
-                             * düz duvarı olarak devam ediyor.
-                             */
-                            sol: Math.min(Math.max(0, (wallW - olcuW) / 2), 0.6 * pxPerM),
-                            sag: Math.min(Math.max(0, (wallW - olcuW) / 2), 0.6 * pxPerM),
                           }
                         : null
                     }
