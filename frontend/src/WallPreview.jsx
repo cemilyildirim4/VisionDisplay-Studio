@@ -1787,6 +1787,7 @@ export default function WallPreview({
       ref={containerRef}
       /* Aday kareler açıkken bu katman soluyor; kareler fotoğrafın üstünde okunur kalıyor. */
       data-tasarim-katman
+      data-pdf-yuz
       className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0"
       style={gizle ? { visibility: 'hidden' } : undefined}
     >
@@ -2653,6 +2654,7 @@ export default function WallPreview({
   return (
     <div
       ref={containerRef}
+      data-pdf-yuz
       className="relative w-full h-[50vh] sm:h-[60vh] md:h-full flex items-center justify-center overflow-hidden min-h-0"
       style={gizle ? { visibility: 'hidden' } : undefined}
     >

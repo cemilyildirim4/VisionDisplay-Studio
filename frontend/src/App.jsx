@@ -5,7 +5,7 @@ import { KIOSK_GOVDESI_ACIK } from './featureFlags.js'
 import { mekaniSil } from './fotoDeposu.js'
 import ModelSelectModal from './ModelSelectModal.jsx'
 import RecommendationWizard from './RecommendationWizard.jsx'
-import ExportModal from './ExportModal.jsx'
+import ExportModal, { MiniPcSecimi } from './ExportModal.jsx'
 import WallPreview from './WallPreview.jsx'
 import SpecsSection from './SpecsSection.jsx'
 import { useConfigurationPreview } from './useConfigurationPreview.js'
@@ -13390,11 +13390,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               */}
 
               {/*
-                MİNİ PC SORUSU BURADAN KALKTI.
-
-                Soru artık "PDF Raporu Al" penceresinin en üstünde (bkz.
-                ExportModal): kararın tek sonucu o rapor, paneldeki yeri de
-                tasarımla ilgisi olmayan bir blok olarak duruyordu.
+                Mini PC sorusu panel gövdesinden kalktı: donanım/mekân
+                seçeneklerinin arasında yer yiyordu. Tek satır hâli PDF
+                düğmesinin hemen üstünde (panel dibi).
               */}
 
               {/*
@@ -14839,7 +14837,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             hiçbir çıkış kalmıyor, kullanıcı sıkışıyordu. PDF kendi şartını
             zaten pasiflikle ve altındaki notla söylüyor.
           */}
-          <div className="mt-3 flex items-center gap-3">
+          {/*
+            Mini PC: tek satır Evet/Hayır, İletişim + PDF'in hemen üstünde.
+            Karar rapora gittiği için düğmelerin yanında; donanım listesini
+            uzatmaz, özet kutusunu da şişirmez.
+          */}
+          <div className="mt-3">
+            <MiniPcSecimi compact deger={hasMiniPc} onChange={setHasMiniPc} />
+          </div>
+          <div className="mt-2 flex items-center gap-3">
             <button
               type="button"
               onClick={() => setContactOpen(true)}
@@ -14854,10 +14860,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           {/*
             DÜĞME MODEL SEÇİLİYSE HEP AÇIK.
 
-            Mini PC sorusu cevaplanmadan düğme soluk kalıyor ve altında
-            "önce şu soruyu cevaplayın" notu duruyordu. Soru artık pencerenin
-            kendi içinde (bkz. ExportModal): düğme pencereyi açıyor, indirme
-            düğmeleri orada cevaba bağlı.
+            Mini PC cevabı üstteki tek satırda (ve gerekirse pencerede)
+            veriliyor; indirme düğmeleri pencerede cevaba bağlı.
           */}
           <button
             type="button"
@@ -15006,7 +15010,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        /* Mini PC kararı pencerenin içinde veriliyor; cevap buraya dönüyor. */
+        /* Mini PC asıl olarak panel dibinde; pencere yalnızca boşsa sorar. */
         onMiniPc={setHasMiniPc}
         summary={{
           modelCode: selectedModel?.modelCode,

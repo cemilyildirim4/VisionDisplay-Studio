@@ -40,6 +40,131 @@ function snapshotWebglCanvases(root) {
   return () => snaps.forEach((n) => n.remove())
 }
 
+const dataUrlOnbellegi = new Map()
+
+async function urlToDataUrl(url) {
+  if (!url || url.startsWith('data:') || url.startsWith('#') || url.startsWith('about:')) return url
+  if (dataUrlOnbellegi.has(url)) return dataUrlOnbellegi.get(url)
+  const is = fetch(url)
+    .then(async (res) => {
+      if (!res.ok) throw new Error(`görsel alınamadı (${res.status})`)
+      const blob = await res.blob()
+      return await new Promise((resolve, reject) => {
+        const r = new FileReader()
+        r.onload = () => resolve(r.result)
+        r.onerror = reject
+        r.readAsDataURL(blob)
+      })
+    })
+  dataUrlOnbellegi.set(url, is)
+  try {
+    return await is
+  } catch (err) {
+    dataUrlOnbellegi.delete(url)
+    throw err
+  }
+}
+
+function arkaPlanUrlListesi(bg) {
+  if (!bg || bg === 'none') return []
+  return [...String(bg).matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/g)].map((m) => m[2]).filter(Boolean)
+}
+
+/*
+ * ÖZEL FOTOĞRAF + html2canvas.
+ *
+ * "Kendi fotoğrafımı kullan" görseli blob: adresiyle <img> ve CSS
+ * background-image olarak duruyor. html2canvas DOM'u klonlarken
+ * useCORS:true o adrese anonymous CORS yüklemesi bağlar; blob: URL
+ * bu yüklemede taint olur veya sessizce atlanır. toDataURL SecurityError
+ * verince yakalama null döner ve PDF görseli boş kalır. Aynı src cache'i
+ * sonraki tasarım değişikliklerinde de eski/boş kareyi kilitler.
+ *
+ * Çözüm: her dışa aktarmada canlı DOM'daki img + arka plan URL'lerini
+ * data URL'e çevirmek, 2B yüz gizlenmişse (3B üstteyken) ve WebGL
+ * karesi yoksa onu geçici göstermek.
+ */
+async function hazirlaPdfYakalamasi(root) {
+  const restores = []
+  const webglVar = !!root.querySelector('[data-pdf-canvas-snap]')
+  if (!webglVar) {
+    for (const el of root.querySelectorAll('[data-pdf-yuz]')) {
+      if (getComputedStyle(el).visibility !== 'hidden') continue
+      const prev = el.style.visibility
+      el.style.visibility = 'visible'
+      restores.push(() => {
+        el.style.visibility = prev
+      })
+    }
+  }
+
+  for (const img of root.querySelectorAll('img')) {
+    const src = img.currentSrc || img.getAttribute('src') || ''
+    if (!src || src.startsWith('data:')) continue
+    try {
+      const data = await urlToDataUrl(src)
+      const prevSrc = img.getAttribute('src')
+      const prevCo = img.getAttribute('crossorigin')
+      img.removeAttribute('crossorigin')
+      img.src = data
+      restores.push(() => {
+        if (prevSrc != null) img.setAttribute('src', prevSrc)
+        else img.removeAttribute('src')
+        if (prevCo != null) img.setAttribute('crossorigin', prevCo)
+        else img.removeAttribute('crossorigin')
+      })
+      await img.decode?.().catch(() => {})
+    } catch {
+      /* Orijinal src kalsın; html2canvas yine denesin. */
+    }
+  }
+
+  for (const el of root.querySelectorAll('*')) {
+    const inlineBg = el.style.backgroundImage
+    const bg = inlineBg || getComputedStyle(el).backgroundImage
+    const urls = arkaPlanUrlListesi(bg)
+    if (!urls.length) continue
+    let next = bg
+    let changed = false
+    for (const u of urls) {
+      if (!u || u.startsWith('data:') || u.startsWith('#')) continue
+      try {
+        const data = await urlToDataUrl(u)
+        next = next.split(u).join(data)
+        changed = true
+      } catch {
+        /* Dilim atlanır; diğerleri yine yazılır. */
+      }
+    }
+    if (!changed) continue
+    const prev = el.style.backgroundImage
+    el.style.backgroundImage = next
+    restores.push(() => {
+      el.style.backgroundImage = prev
+    })
+  }
+
+  return () => {
+    for (let i = restores.length - 1; i >= 0; i--) restores[i]()
+  }
+}
+
+function yakalamaOlcegi(el) {
+  const w = Math.max(1, el.clientWidth || 800)
+  const h = Math.max(1, el.clientHeight || 600)
+  return Math.min(2, 1600 / Math.max(w, h), 4096 / w, 4096 / h)
+}
+
+function jpegDataUrl(canvas, startQuality = 0.88) {
+  let quality = startQuality
+  let url = canvas.toDataURL('image/jpeg', quality)
+  while (url.length > 5_500_000 && quality > 0.28) {
+    quality = Math.max(0.28, quality - 0.12)
+    url = canvas.toDataURL('image/jpeg', quality)
+  }
+  return url.length > 5_500_000 ? null : url
+}
+
 async function captureScreenPreview() {
   const el = document.getElementById('pdf-onizleme')
   if (!el) return null
@@ -47,35 +172,82 @@ async function captureScreenPreview() {
   const prevVis = modal?.style.visibility
   if (modal) modal.style.visibility = 'hidden'
   const restoreSnaps = snapshotWebglCanvases(el)
+  let restoreMedia = () => {}
   try {
+    restoreMedia = await hazirlaPdfYakalamasi(el)
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-    const canvas = await html2canvas(el, {
-      scale: 2,
+    const opts = {
       backgroundColor: '#f4f4f4',
-      useCORS: true,
+      useCORS: false,
+      allowTaint: false,
       logging: false,
+      imageTimeout: 15000,
+      cacheBust: true,
       ignoreElements: (n) => n.hasAttribute?.('data-pdf-gizle'),
-    })
-    let quality = 0.9
-    let url = canvas.toDataURL('image/jpeg', quality)
-    while (url.length > 5_500_000 && quality > 0.5) {
-      quality -= 0.15
-      url = canvas.toDataURL('image/jpeg', quality)
+      onclone: (doc, cloned) => {
+        const kok = cloned || doc
+        kok.querySelectorAll?.('img')?.forEach((img) => img.removeAttribute('crossorigin'))
+      },
+    }
+    let canvas = await html2canvas(el, { ...opts, scale: yakalamaOlcegi(el) })
+    let url = jpegDataUrl(canvas)
+    if (!url) {
+      canvas = await html2canvas(el, { ...opts, scale: Math.min(1, yakalamaOlcegi(el)) })
+      url = jpegDataUrl(canvas, 0.72)
     }
     return url
   } catch (err) {
     console.error('Ekran önizlemesi yakalanamadı:', err)
     return null
   } finally {
+    restoreMedia()
     restoreSnaps()
     if (modal) modal.style.visibility = prevVis || ''
   }
 }
 
-export function MiniPcSecimi({ deger, onChange }) {
+export function MiniPcSecimi({ deger, onChange, compact = false }) {
   const { t } = useLang()
   const grup = useId()
   const [acik, setAcik] = useState(false)
+  const hap = (secili) =>
+    `min-h-[32px] rounded-full px-3 text-[13px] font-semibold transition-colors ${
+      secili
+        ? 'bg-brand text-white'
+        : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#1c222c]'
+    }`
+  if (compact) {
+    return (
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 truncate text-[13px] font-medium text-neutral-700 dark:text-neutral-200">
+            {t('minipc.ask')}
+          </span>
+          <button
+            type="button"
+            aria-expanded={acik}
+            aria-label={t('minipc.info')}
+            title={t('minipc.info')}
+            onClick={() => setAcik((v) => !v)}
+            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-neutral-300 text-[11px] font-bold leading-none text-neutral-500 hover:border-brand hover:text-brand dark:border-[#39414f] dark:text-neutral-300"
+          >
+            ?
+          </button>
+          <div className="ml-auto flex shrink-0 rounded-full border border-neutral-200 p-0.5 dark:border-[#2c333f]">
+            <button type="button" className={hap(deger === true)} onClick={() => onChange(true)}>
+              {t('common.yes')}
+            </button>
+            <button type="button" className={hap(deger === false)} onClick={() => onChange(false)}>
+              {t('common.no')}
+            </button>
+          </div>
+        </div>
+        {acik && (
+          <p className="mt-1.5 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">{t('minipc.info')}</p>
+        )}
+      </div>
+    )
+  }
   const kart = (secili) =>
     `flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[14px] font-medium leading-snug transition-colors ${
       secili
@@ -565,18 +737,13 @@ export default function ExportModal({ open, onClose, summary, onMiniPc }) {
         </div>
 
         {/*
-          MİNİ PC SORUSU PENCERENİN EN ÜSTÜNDE.
-
-          Soru sağ panelde, mekân seçiminin üstünde duruyordu: tasarımla
-          ilgisi olmayan bir karar orada yer kaplıyor, cevaplanmadığında da
-          "PDF Raporu Al" düğmesi sessizce soluk kalıyordu. Kararın tek
-          sonucu bu rapor (donanım listesi ve fiyat) — sorulduğu yer de
-          artık burası. Cevaplanmadan aşağıdaki iki indirme düğmesi açılmıyor
-          (bkz. hazir → miniPcSecili).
+          Mini PC asıl yer: sağ panelde PDF düğmesinin üstü (tek satır).
+          Cevaplanmadıysa pencerede aynı kompakt satır yedek olarak durur;
+          cevaplandıysa burada tekrar yer kaplamaz.
         */}
-        {onMiniPc && (
-          <div className="mb-4 rounded-xl border border-neutral-200 dark:border-[#2c333f] px-3.5 py-3">
-            <MiniPcSecimi deger={summary.hasMiniPc} onChange={onMiniPc} />
+        {onMiniPc && !miniPcSecili && (
+          <div className="mb-3">
+            <MiniPcSecimi compact deger={summary.hasMiniPc} onChange={onMiniPc} />
           </div>
         )}
 
