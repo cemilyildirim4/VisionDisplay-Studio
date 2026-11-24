@@ -11294,7 +11294,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         yuzUst: '#eef0f4',
                         yuzAlt: '#dcdfe6',
                         zemin: '#b8bec5',
-                        tavan: null,
+                        /*
+                         * Dış mekânda da tavan VAR: girintinin üstü gökyüzü
+                         * değil, binanın kendi malzemesi (bir kapı nişinin
+                         * üst yüzü gibi). Boş bırakılınca tasarımın üstünde
+                         * dümdüz bir cephe bandı kalıyor ve duvar hiç
+                         * kırılmamış gibi görünüyordu.
+                         */
+                        tavan: '#dcdfe6',
                       }
                     : null
               }

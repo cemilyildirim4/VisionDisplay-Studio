@@ -475,9 +475,18 @@ export default function Birlesim2D({
    *  - uç dönüşleri  : tasarımın iki ucunda duvarı mekânın düz duvarına
    *                    kapatan dikey parçalar.
    *
-   * REFERANS DÜZLEM z = 0: mekânın kendi düz duvarı tam orada ve orada
-   * izdüşüm ölçeği 1'dir (bkz. D / (D - z)). Kamalar oraya dayandığı için
-   * mekânın duvarıyla aralarında ölçek atlaması olmuyor.
+   * REFERANS DÜZLEM = TASARIMIN EN ÖNDEKİ NOKTASI (enYakin).
+   *
+   * Önce z = 0 (zincirin ortalama derinliği) alınmıştı; yanlıştı. Çizim
+   * kutusu tasarımın İZDÜŞÜMÜNE göre kuruluyor ve duvara o kutu
+   * sığdırılıyor (bkz. olcek): duvarı dolduran şey, perspektifte en çok
+   * büyüyen EN ÖNDEKİ kenar. Ortalama derinlik duvardan içeride kalıyor,
+   * kamalar da kısacık çıkıyordu — tasarımın üstünde dümdüz bir duvar
+   * bandı kalıyor ve duvar hiç kırılmamış gibi görünüyordu.
+   *
+   * En öndeki düzlem mekânın duvarıyla çakıştığı için artık her şey
+   * duvarın İÇİNE doğru giriyor: dışarı taşan parça yok, uçlar duvara
+   * sıfırlanıyor, aradaki her şey girinti.
    *
    * Düz tasarımda hiç çizilmiyor: kırılacak köşe yok, mekânın kendi
    * duvarı zaten doğru.
@@ -491,6 +500,9 @@ export default function Birlesim2D({
     /* Duvarın tepesi ve tabanı: parça boyundan DEĞİL, duvarın kendi ölçüsünden. */
     const yTavan = gozAlt - boyPx - ustPay
     const yZemin = gozAlt + altPay
+
+    /* Mekânın duz duvarının bulunduğu düzlem (bkz. yukarıdaki açıklama). */
+    const zDuvar = enYakin
 
     /* Zincirin izdüşümüyle birebir aynı: önce dönüş, sonra perspektif. */
     const iz = (X, Y, Z) => {
@@ -531,21 +543,22 @@ export default function Birlesim2D({
        */
       if (duvarYuzu.zemin)
         ekle(
-          [iz(ax, yZemin, az), iz(bx, yZemin, bz), iz(bx, yZemin, 0), iz(ax, yZemin, 0)],
+          [iz(ax, yZemin, az), iz(bx, yZemin, bz), iz(bx, yZemin, zDuvar), iz(ax, yZemin, zDuvar)],
           duvarYuzu.zemin,
-          0.08,
+          0.14,
         )
       if (duvarYuzu.tavan)
         ekle(
-          [iz(ax, yTavan, az), iz(bx, yTavan, bz), iz(bx, yTavan, 0), iz(ax, yTavan, 0)],
+          [iz(ax, yTavan, az), iz(bx, yTavan, bz), iz(bx, yTavan, zDuvar), iz(ax, yTavan, zDuvar)],
           duvarYuzu.tavan,
-          0.08,
+          0.14,
         )
       if (i === 0 || i === dilimler.length - 1) {
         const [ux, uz] = i === 0 ? [ax, az] : [bx, bz]
-        if (Math.abs(uz) > 0.5)
+        /* Uç zaten duvar düzlemindeyse dönüş yok: duvara sıfırlanmış demektir. */
+        if (Math.abs(uz - zDuvar) > 0.5)
           ekle(
-            [iz(ux, yTavan, uz), iz(ux, yTavan, 0), iz(ux, yZemin, 0), iz(ux, yZemin, uz)],
+            [iz(ux, yTavan, uz), iz(ux, yTavan, zDuvar), iz(ux, yZemin, zDuvar), iz(ux, yZemin, uz)],
             yuzDolgu,
             0.3,
           )
@@ -556,8 +569,8 @@ export default function Birlesim2D({
     return {
       id: nisId,
       yuzler,
-      ustPx: iz(0, yTavan, 0)[1],
-      altPx: iz(0, yZemin, 0)[1],
+      ustPx: iz(0, yTavan, zDuvar)[1],
+      altPx: iz(0, yZemin, zDuvar)[1],
       yuzUst: duvarYuzu.yuzUst,
       yuzAlt: duvarYuzu.yuzAlt,
     }
