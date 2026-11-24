@@ -1120,6 +1120,18 @@ export const ODA_EN_M = 8
 export const ODA_BOY_M = 3.2
 export const ODA_DERINLIK_M = 10
 
+/*
+ * FOTOĞRAFLI ARKA DUVARIN YANLARA PAYI.
+ *
+ * Fotoğraf arka duvarın dokusu; iki yanında odanın kendi YAN DUVARLARI
+ * duruyordu ve kadrajın sağ/sol kenarında dikey birer gri çubuk olarak
+ * görünüyorlardı — fotoğrafın çerçevesi gibi. Fotoğraf varken yan duvarlar
+ * çizilmiyor, arka duvar da onların yerini kapatacak kadar genişliyor.
+ * Fotoğraf GERİLMİYOR: dokunun ortası birebir duruyor, uzayan paylarda
+ * kenar pikseli devam ediyor (bkz. SceneContent, ClampToEdgeWrapping).
+ */
+const FOTO_PAYI = 1.6
+
 function Oda3D({ olcu, doku = null }) {
   if (!olcu) return null
   const { w, h, d, merkez } = olcu
@@ -1149,7 +1161,8 @@ function Oda3D({ olcu, doku = null }) {
         gerçekten o duvarın önünde duruyor.
       */}
       <mesh position={[merkez.x, zeminY + odaH / 2, arkaZ]} receiveShadow>
-        <planeGeometry args={[odaW, odaH]} />
+        {/* Fotoğraf varken kadrajı dolduruyor (bkz. FOTO_PAYI). */}
+        <planeGeometry args={[doku ? odaW * FOTO_PAYI : odaW, odaH]} />
         {doku ? (
           <meshBasicMaterial map={doku} toneMapped={false} />
         ) : (
@@ -1188,21 +1201,26 @@ function Oda3D({ olcu, doku = null }) {
         <meshStandardMaterial color="#f2f3f6" roughness={0.95} metalness={0} />
       </mesh>
 
-      {/* YAN DUVARLAR — içe bakıyor. */}
-      <mesh
-        position={[merkez.x - odaW / 2, zeminY + odaH / 2, ortaZ]}
-        rotation={[0, Math.PI / 2, 0]}
-      >
-        <planeGeometry args={[odaD, odaH]} />
-        <meshStandardMaterial color="#dfe2e8" roughness={0.95} metalness={0} />
-      </mesh>
-      <mesh
-        position={[merkez.x + odaW / 2, zeminY + odaH / 2, ortaZ]}
-        rotation={[0, -Math.PI / 2, 0]}
-      >
-        <planeGeometry args={[odaD, odaH]} />
-        <meshStandardMaterial color="#dfe2e8" roughness={0.95} metalness={0} />
-      </mesh>
+      {/* YAN DUVARLAR — içe bakıyor. Fotoğraf varken çizilmiyorlar: gri
+          çerçeve onlardı (bkz. FOTO_PAYI). */}
+      {!doku && (
+        <>
+          <mesh
+            position={[merkez.x - odaW / 2, zeminY + odaH / 2, ortaZ]}
+            rotation={[0, Math.PI / 2, 0]}
+          >
+            <planeGeometry args={[odaD, odaH]} />
+            <meshStandardMaterial color="#dfe2e8" roughness={0.95} metalness={0} />
+          </mesh>
+          <mesh
+            position={[merkez.x + odaW / 2, zeminY + odaH / 2, ortaZ]}
+            rotation={[0, -Math.PI / 2, 0]}
+          >
+            <planeGeometry args={[odaD, odaH]} />
+            <meshStandardMaterial color="#dfe2e8" roughness={0.95} metalness={0} />
+          </mesh>
+        </>
+      )}
     </group>
   )
 }
@@ -1224,6 +1242,14 @@ function SceneContent({ model, cols, rows, content, contentUrl, onReady, screenT
       const d = new THREE.Texture(g)
       d.colorSpace = THREE.SRGBColorSpace
       d.anisotropy = 4
+      /*
+       * Duvar fotoğrafın yanlara payı kadar geniş (bkz. FOTO_PAYI); doku da
+       * o oranda daraltılıp ortalanıyor ki fotoğraf GERİLMESİN. Payda kalan
+       * yere kenar pikseli uzuyor — fotoğrafın devamı gibi duruyor.
+       */
+      d.wrapS = THREE.ClampToEdgeWrapping
+      d.repeat.x = FOTO_PAYI
+      d.offset.x = -(FOTO_PAYI - 1) / 2
       d.needsUpdate = true
       setOdaDoku(d)
     }

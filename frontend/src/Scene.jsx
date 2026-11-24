@@ -45,11 +45,6 @@ export default function Scene({
   duvarWm,
   duvarHm,
   ekranSekli,
-  /*
-   * Tasarımın kırık hattı (tuval koordinatı). Varsa oda düz bir arka duvar
-   * yerine bu hatta göre kuruluyor; bkz. Salon.jsx / Cephe.jsx.
-   */
-  duvarHatti = null,
   ayakOrani = 0.5,
   yon = null,
   kioskGizle = false,
@@ -105,7 +100,6 @@ export default function Scene({
         duvarWm={duvarWm}
         duvarHm={duvarHm}
         ekranSekli={ekranSekli}
-        duvarHatti={duvarHatti}
         kacisKaymasi={kacisKaymasi}
       />
     )
@@ -122,7 +116,6 @@ export default function Scene({
         duvarWm={duvarWm}
         duvarHm={duvarHm}
         ekranSekli={ekranSekli}
-        duvarHatti={duvarHatti}
       />
     )
   }

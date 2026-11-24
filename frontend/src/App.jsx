@@ -194,19 +194,18 @@ const Mekan3D = guvenliLazy(() => import('./Mekan3D.jsx'))
 const DuvarIzgara = guvenliLazy(() => import('./DuvarIzgara.jsx'))
 
 /*
- * YERİNDE 3B ŞİMDİLİK KAPALI.
+ * YERİNDE 3B KAPALI.
  *
- * Katman çalışıyor ama ekranı YANLIŞ yere ve yanlış boyda koyuyor: tasarımın
- * ortasında/altında duran koyu kutu buydu ve kullanıcı mesafeyi her
- * ayarladığında önüne çıkıyordu. Yanlış duran bir 3B, düz çizimden kötü.
+ * Katman (Mekan3D.jsx) fotoğraflı mekânda tasarımın üstüne TEK ve DÜZ bir
+ * ekran çiziyor; asıl tasarım onun ALTINDA kalıyordu. L'nin köşesi
+ * okunmuyor, tasarım döndürülünce de dönüş görünmüyordu: katmanın duruşu
+ * tasarımın dönüşünden değil fotoğrafın köşe tutamaklarından geliyor ve
+ * açılı birleşimi hiç bilmiyor.
  *
- * Kod olduğu gibi duruyor (Mekan3D.jsx). Eksik olan şey benim tarafımda:
- * yerleşimi yerelde uçtan uca üretip ölçeği ve merkezi doğrulayamadım
- * (yerel arka uç CORS yüzünden model seçimi tamamlanmıyor). Doğrulandığında
- * bu bayrak true yapılıp geri açılacak; başka hiçbir yerde değişiklik
- * gerekmiyor.
+ * Kod olduğu gibi duruyor; açılı ve küp birleşimi de çizebildiğinde geri
+ * açılacak. Başka hiçbir yerde değişiklik gerekmiyor.
  */
-const YERINDE_3B = true
+const YERINDE_3B = false
 import { DEFAULT_CONTENT_SRC, LED_GRADIENT, ledDotsStyle, curveArcDegrees, curveDiameterM, curveAmountForDiameter, L_KIRILMA_PCT, curveDepthFor, IMAGE_MAX_MB, KAVIS_ACI_ADIMI, curveAmountForArc, kavisAciSecenekleri, kavisYuzdesiniOturt } from './content.js'
 import { LANGUAGES } from './i18n.js'
 import { useAcilirKonum } from './hooks/useAcilirKonum.js'
@@ -3412,12 +3411,13 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     : (screenType || 'flat') === 'lshape'
 
   /*
-   * TASARIMIN KIRIK HATTI — mekân odayı buna göre kuruyor.
+   * ODA TASARIMIN ŞEKLİNİ ALMIYOR.
    *
-   * Birleşim2D ölçtüğü an bildiriyor (bkz. onDuvarHatti); burada yalnızca
-   * tutuluyor ve mekâna veriliyor.
+   * Bir ara odanın arka ucu tasarımın kırık hattından kuruluyordu: 150°'lik
+   * bir U'da oda dar bir koridora, dış mekânda da bina ince bir kuleye
+   * dönüşüyordu. Mekânın ölçüsü KULLANICININ girdiği duvar ölçüsü; açılı
+   * tasarım onun önünde duruyor.
    */
-  const [duvarHatti, setDuvarHatti] = useState(null)
 
   const ekranSekli = useMemo(() => {
     if (!(tasarimWm > 0) || !(tasarimHm > 0)) return null
@@ -10691,6 +10691,52 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * büyükse zaten kendisi görünüyor, duvarı daraltmaya da gerek yok.
    */
 
+  /*
+   * KÜPÜN DUVARI.
+   *
+   * ÇİZİM görünümünde duvar kutunun ölçüsüne oturuyor: yoksa kutunun iki
+   * yanında kocaman boş duvar kalıyor ve çizim tuvale sığmıyor. MEKÂNDA ise
+   * tam tersi — orada duvar odanın (ya da fotoğraftaki duvarın) ölçüsü
+   * demek. Kutuya küçültülünce oda kutunun çevresine büzülüyor, fotoğraflı
+   * mekânda da ölçek o küçük ölçüye göre hesaplanıp küp bütün sahneyi
+   * kaplayan siyah bir blok oluyordu (bkz. sahneOlcek).
+   *
+   * Bu yüzden ölçü ikisi arasında gidip geliyor ve kullanıcının kendi
+   * ölçüsü saklanıyor. Arada duvarı elle değiştirdiyse dokunulmuyor:
+   * kullanıcının yazdığı ölçü her şeyin üstünde.
+   */
+  const kupDuvarRef = useRef(null)
+  const kupDuvarinaOturt = (uyeIdleri) => {
+    const kutu = birlesimKapladigi(
+      ekranSeridi.filter((x) => uyeIdleri.includes(x.id)),
+      true,
+    )
+    if (!(kutu?.enM > 0) || !(kutu?.boyM > 0)) return
+    /* Yukarı yuvarlanıyor: kutu duvarın dışında kalmasın. */
+    const en = Math.ceil(kutu.enM * 100) / 100
+    const boy = Math.ceil(kutu.boyM * 100) / 100
+    kupDuvarRef.current = {
+      en: Number(width) || 0,
+      boy: Number(height) || 0,
+      kupEn: en,
+      kupBoy: boy,
+    }
+    setWidth(en)
+    setHeight(boy)
+  }
+  const kupDuvariniGeriAl = () => {
+    const k = kupDuvarRef.current
+    if (!k) return
+    kupDuvarRef.current = null
+    const yaklasik = (a, b) => Math.abs((Number(a) || 0) - (Number(b) || 0)) < 0.005
+    if (!yaklasik(width, k.kupEn) || !yaklasik(height, k.kupBoy)) return
+    if (!(k.en > 0) || !(k.boy > 0)) return
+    setWidth(k.en)
+    setHeight(k.boy)
+  }
+  /* Mekân çizilmiyorsa (ya da fotoğraf henüz yoksa) çizim görünümündeyiz. */
+  const cizimGorunumu = (sahneId) => sahneId === 'none' || (sahneId === 'ozel' && !ozelSahne)
+
   const kupUstImzaRef = useRef(null)
   useEffect(() => {
     if (!kupUstGereken) {
@@ -11145,15 +11191,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
               duvarKosesi={fotoDuvarKosesi}
               ekranWpx={tasarimWm * (cizimOlcek || 0)}
               ekranHpx={tasarimHm * (cizimOlcek || 0)}
-              /*
-               * ODA TASARIMIN ŞEKLİNİ ALIYOR.
-               *
-               * Açılı bir dizilimde odanın arka ucu düz bir duvar değil,
-               * tasarımın kırık hattı: her ekran kendi duvarını alıyor.
-               * Yalnızca çizilmiş mekânlarda — fotoğraflı mekânlarda duvar
-               * gerçek bir fotoğraf, odayı yeniden kuramıyoruz.
-               */
-              duvarHatti={lCizimMekan ? duvarHatti : null}
               /* Kasa dikdörtgen değil, ekranın dış hattını izlesin (iç L tipi) */
               ekranSekli={ekranSekli}
               ayakOrani={ayakOrani}
@@ -11287,32 +11324,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                * yüklenene kadar ekran eskisi gibi duvarıyla çiziliyor.
                */
               sahneVar={scene !== 'none' && !(scene === 'ozel' && !ozelSahne)}
-              /*
-               * ÇİZİLMİŞ MEKÂNLARDA ODANIN UCU TASARIMIN ŞEKLİNİ ALIYOR.
-               *
-               * Renkler mekânın kendi renklerinin aynısı: duvar için
-               * Salon.jsx "salon-arka" / Cephe.jsx "cephe-yuzey", zemin
-               * için salonun zemin degradesinin üst tonu ve cephenin
-               * kaldırımı. Dış mekânda tavan yok — duvarın üstü gökyüzü.
-               *
-               * Fotoğraflı mekânlarda yapılmıyor: orada duvar gerçek bir
-               * fotoğraf, düz renkle kaplamak yama gibi görünürdü.
-               */
-              duvarDolgu={
-                scene === SALON_ID
-                  ? {
-                      yuzUst: '#f0f2f6',
-                      yuzAlt: '#e6e9ef',
-                    }
-                  : scene === CEPHE_ID
-                    ? {
-                        yuzUst: '#eef0f4',
-                        yuzAlt: '#dcdfe6',
-                      }
-                    : null
-              }
-              /* Mekân odayı bu hatta göre kuruyor (bkz. duvarHatti). */
-              onDuvarHatti={setDuvarHatti}
               sahnePayPx={sahnePayPx}
               kose={scene === 'ozel' && !ozelSahne ? null : koseTuval}
               /*
@@ -13094,6 +13105,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                            * (beşinci yüzü kendisi ekliyor) kendi tipinde kalıyor.
                            */
                           if (tip !== 'kutu') {
+                            /* Küpten çıkılıyor: duvar eski ölçüsüne dönüyor. */
+                            kupDuvariniGeriAl()
                             setGrupTipi('acili')
                             setGrupSecim(sirali)
                             birlesimiKur('acili', sirali, 180, lYonSecim)
@@ -13120,24 +13133,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           setGrupSecim(secim)
                           birlesimiKur(tip, secim, grupAcisi, lYonSecim)
                           /*
-                           * KÜPE BASMAK DUVARI KUTUNUN ÖLÇÜSÜNE GETİRİYOR.
-                           *
-                           * Duvar beş ekran yan yanaymış gibi kalıyor,
-                           * kutunun iki yanında kocaman boş duvar
-                           * duruyordu. Yalnızca bu ANDA ayarlanıyor:
-                           * kullanıcı sonra duvarı elle değiştirebilsin.
+                           * ÇİZİM GÖRÜNÜMÜNDE DUVAR KUTUNUN ÖLÇÜSÜNE
+                           * GELİYOR; mekânda kullanıcının ölçüsü kalıyor
+                           * (bkz. kupDuvarinaOturt).
                            */
-                          if (tip === 'kutu') {
-                            const kutu = birlesimKapladigi(
-                              ekranSeridi.filter((x) => secim.includes(x.id)),
-                              true,
-                            )
-                            if (kutu?.enM > 0 && kutu?.boyM > 0) {
-                              /* Yukarı yuvarlanıyor: kutu duvarın dışında kalmasın. */
-                              setWidth(Math.ceil(kutu.enM * 100) / 100)
-                              setHeight(Math.ceil(kutu.boyM * 100) / 100)
-                            }
-                          }
+                          if (cizimGorunumu(scene)) kupDuvarinaOturt(secim)
                         }}
                         title={t('yerlesim.' + tip)}
                         className={`rounded-md px-1 py-1 text-[11.5px] font-semibold leading-tight transition-colors disabled:opacity-40 ${
@@ -13452,6 +13452,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         key={s.id}
                         type="button"
                         onClick={() => {
+                          /*
+                           * KÜPTE DUVAR GÖRÜNÜMLE BİRLİKTE DEĞİŞİYOR.
+                           *
+                           * Mekâna geçerken kullanıcının kendi ölçüsüne
+                           * dönüyor (yoksa oda kutunun çevresine büzülüyor),
+                           * çizime dönerken yine kutuya oturuyor
+                           * (bkz. kupDuvarinaOturt).
+                           */
+                          if (grup?.tip === 'kutu' && cizimGorunumu(s.id) !== cizimGorunumu(scene)) {
+                            if (cizimGorunumu(s.id)) kupDuvarinaOturt(grupSecim)
+                            else kupDuvariniGeriAl()
+                          }
                           setScene(s.id)
                           /*
                            * "Kendi fotoğrafım" seçildi ama ortada fotoğraf yok:

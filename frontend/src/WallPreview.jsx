@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import CurvedScreen from './CurvedScreen.jsx'
 import LedDotsCanvas from './LedDotsCanvas.jsx'
 import { viewingDistanceFor } from './viewingDistance.js'
@@ -1027,16 +1027,6 @@ export default function WallPreview({
   // duvarı görünsün diye. Beyaz dikdörtgen gri odanın içinde yama gibi durur.
   sahneVar = false,
   /*
-   * Mekânın duvar/zemin/tavan renkleri; varsa duvar tasarımla birlikte
-   * kırılıyor (bkz. Birlesim2D → duvarYuzu).
-   */
-  duvarDolgu = null,
-  /*
-   * Tasarımın kırık hattını yukarı (App → Scene) taşıyan geri çağrı.
-   * Oda bu hatta göre kuruluyor.
-   */
-  onDuvarHatti = null,
-  /*
    * Ekranın GÖRÜNEN yüzü gizlensin mi. Fotoğraflı mekânda tasarım gerçek
    * 3B olarak çiziliyor (Mekan3D.jsx); düz çizim de altında durunca aynı
    * ekran iki kez görünüyor ve ikisi birbirini kirletiyordu. Ölçü
@@ -1261,30 +1251,6 @@ export default function WallPreview({
   const [parcaKutulari, setParcaKutulari] = useState(null)
   const duvarRef = useRef(null)
   const [duvarKonum, setDuvarKonum] = useState(null)
-  /*
-   * Birleşim2D kırık hattı SAYFA koordinatıyla bildiriyor; mekân TUVAL
-   * koordinatı bekliyor. Çeviri burada: tuvalin sayfada nerede durduğunu
-   * bilen tek yer burası.
-   */
-  const duvarHattiBildir = useCallback(
-    (hat) => {
-      if (!onDuvarHatti) return
-      const r = containerRef.current?.getBoundingClientRect()
-      if (!hat || !r) {
-        onDuvarHatti(null)
-        return
-      }
-      const don = (p) => ({ x: p.x - r.left, y: p.y - r.top })
-      const donVarsa = (p) => (p ? don(p) : null)
-      onDuvarHatti({
-        ust: hat.ust.map(don),
-        alt: hat.alt.map(don),
-        uzantiUst: (hat.uzantiUst || [null, null]).map(donVarsa),
-        uzantiAlt: (hat.uzantiAlt || [null, null]).map(donVarsa),
-      })
-    },
-    [onDuvarHatti],
-  )
   useLayoutEffect(() => {
     const r = duvarRef.current?.getBoundingClientRect()
     if (!r) return
@@ -1976,32 +1942,6 @@ export default function WallPreview({
                     perspektifli={sahneVar}
                     tasmaCerceve={tasmaCizgi}
                     onParcaKutulari={setParcaKutulari}
-                    onDuvarHatti={duvarHattiBildir}
-                    /*
-                     * Mekânda duvar tasarımla birlikte kırılıyor (bkz.
-                     * Birlesim2D → duvarYuzu). Paylar duvarın tasarım
-                     * dışında kalan kısmı: üstte/altta şeridin boşluğu,
-                     * yanlarda duvarın tasarımdan artan eni.
-                     */
-                    /*
-                     * YANLARDA PAY YOK.
-                     *
-                     * Duvar bir ara uçlardan yana uzatılıyordu; kırılan
-                     * parçanın yakın ucu kameraya yaklaşıyor ve perspektif
-                     * onu devasa büyütüyordu. Tasarımın bittiği yerde duvar
-                     * artık mekânın düz duvarına DÖNEREK kapanıyor (bkz.
-                     * Birlesim2D → nis, uç dönüşleri); ötesi mekânın kendi
-                     * duvarı.
-                     */
-                    duvarYuzu={
-                      sahneVar && duvarDolgu
-                        ? {
-                            ...duvarDolgu,
-                            ust: stripTop,
-                            alt: Math.max(0, wallH - stripTop - maxHpx),
-                          }
-                        : null
-                    }
                   />
                 </div>
               )}
@@ -2164,13 +2104,12 @@ export default function WallPreview({
                           borderRadius: 2,
                           cursor: 'pointer',
                           /*
-                           * SEÇİM ÇERÇEVESİ HİÇ ÇİZİLMİYOR.
+                           * SEÇİM ÇERÇEVESİ ÇİZİLMİYOR.
                            *
                            * Mavi çerçeve ürünün bir parçasıymış gibi
-                           * duruyordu; önce yalnızca tasarım görünümünden
-                           * kaldırılmıştı, mekânda da istenmiyor. Hangi
-                           * ekranın düzenlendiği soldaki kartta belli.
-                           * Tıklayıp seçmek sürüyor, yalnızca çizgi yok.
+                           * duruyordu; hangi ekranın düzenlendiği soldaki
+                           * kartta belli. Tıklayıp seçmek sürüyor, yalnızca
+                           * çizgi görünmüyor.
                            */
                           border: '2px solid transparent',
                         }}
