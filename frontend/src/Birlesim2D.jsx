@@ -227,7 +227,12 @@ export default function Birlesim2D({
     const sayfaya = (p) => ({ x: kutu.left + p[0] * o, y: kutu.top + p[1] * o })
     const yeni =
       n && kutu && o > 0
-        ? { ust: n.hatUst.map(sayfaya), alt: n.hatAlt.map(sayfaya) }
+        ? {
+            ust: n.hatUst.map(sayfaya),
+            alt: n.hatAlt.map(sayfaya),
+            uzantiUst: n.uzantiUst.map((p) => (p ? sayfaya(p) : null)),
+            uzantiAlt: n.uzantiAlt.map((p) => (p ? sayfaya(p) : null)),
+          }
         : null
     const eski = sonHatRef.current
     /* Aynı sayılar yeniden bildirilirse üst bileşen sonsuz çizime girer. */
@@ -578,6 +583,39 @@ export default function Birlesim2D({
         golge: 0.22 * Math.abs(Math.sin(d.t)),
       })
     })
+    /*
+     * ODANIN YAN DUVARI UÇTAKİ EKRANIN DÜZLEMİNDE DEVAM EDİYOR.
+     *
+     * Duvar, son ekranın bittiği yerde kesiliyordu; oda ondan sonra
+     * perspektifin kendi açısıyla birden yana açılıyor, tavan ile zemin
+     * huni gibi genişliyordu. Yan duvar artık son ekranın AYNI
+     * düzleminde uzuyor: 90°'lik bir U'da oda koridor oluyor, 150°'de
+     * yumuşakça açılıyor. Odanın yan duvarının açısını ekran belirliyor,
+     * perspektif değil.
+     *
+     * Uzatma sınırlı: kamera düzlemine girip izdüşümü patlatmasın diye
+     * en çok SON_K kadar büyüme, ayrıca tasarımın kendi eninin on iki
+     * katı. Uç GERİYE gidiyorsa uzatma yok — o yön kaçış noktasında tek
+     * bir noktaya kapanır, orada mekân eski kuralıyla devam etsin.
+     */
+    const SON_K = 12
+    const uzanti = (d, u0, yon) => {
+      const dz = -Math.sin(d.t) * yon
+      const dx = Math.cos(d.t) * yon
+      if (!(dz > 1e-6)) return null
+      const z0 = uc(d, u0)[1]
+      const zSon = D * (1 - 1 / SON_K)
+      if (z0 >= zSon) return null
+      const Lx = Math.abs(dx) > 1e-6 ? (12 * yayilim) / Math.abs(dx) : Infinity
+      const L = Math.min((zSon - z0) / dz, Lx)
+      if (!(L > 0) || !Number.isFinite(L)) return null
+      const [x, z] = uc(d, u0 + yon * L)
+      return { ust: iz(x, yTavan, z), alt: iz(x, yZemin, z) }
+    }
+    const ilkD = dilimler[0]
+    const sonD = dilimler[dilimler.length - 1]
+    const uzSol = uzanti(ilkD, -ilkD.w / 2 - BINDIRME, -1)
+    const uzSag = uzanti(sonD, sonD.w / 2 + BINDIRME, 1)
     /* Ressam sırası: uzaktaki önce, yakın olan onun üstüne biniyor. */
     yuzler.sort((a, b) => a.z - b.z)
     return {
@@ -585,6 +623,8 @@ export default function Birlesim2D({
       yuzler,
       hatUst,
       hatAlt,
+      uzantiUst: [uzSol?.ust || null, uzSag?.ust || null],
+      uzantiAlt: [uzSol?.alt || null, uzSag?.alt || null],
       ustPx: hatUst.reduce((t, p) => Math.min(t, p[1]), Infinity),
       altPx: hatAlt.reduce((t, p) => Math.max(t, p[1]), -Infinity),
       yuzUst: duvarYuzu.yuzUst,
@@ -814,10 +854,15 @@ export default function Birlesim2D({
                     padding: 0,
                     background: 'transparent',
                     cursor: 'pointer',
-                    border:
-                      p.e.id === seciliEkranId && cerceve
-                        ? '2px solid #2962ad'
-                        : '2px solid transparent',
+                    /*
+                     * SEÇİM ÇERÇEVESİ ÇİZİLMİYOR.
+                     *
+                     * Seçili ekranın çevresindeki mavi çizgi ürünün bir
+                     * parçasıymış gibi duruyordu; hangi ekranın düzenlendiği
+                     * zaten soldaki kartta belli. Tıklayıp seçmek sürüyor,
+                     * yalnızca çizgi görünmüyor.
+                     */
+                    border: '2px solid transparent',
                   }}
                 />
               )}

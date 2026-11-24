@@ -111,6 +111,22 @@ export default function Cephe({
   const nk = (l) => l.map((p) => `${p.x},${p.y}`).join(' ')
   const cepheYuzu = `${nk(hatUst)} ${nk([...hatAlt].reverse())}`
 
+  /*
+   * ZEMİN BİNANIN TABANINA GELİYOR.
+   *
+   * Sokak ile kaldırım, duvar dikdörtgeninin alt kenarından (alt)
+   * başlıyordu. Cephe kırılınca binanın tabanı orada değil: perspektifte
+   * öne gelen kanat daha aşağıda, geride kalan orta duvar daha yukarıda
+   * kalıyor ve bina kaldırımın üstünde HAVADA duruyordu. Zeminin arka
+   * sınırı artık binanın kendi tabanı; iki yanda da sokağın kendi ufkuna
+   * bağlanıyor.
+   */
+  const zeminHat = [{ x: 0, y: alt }, ...hatAlt, { x: tuvalW, y: alt }]
+  const sokakYuzu = `${nk(zeminHat)} ${tuvalW},${tuvalH} 0,${tuvalH}`
+  const kaldirimYuzu = `${nk(zeminHat)} ${nk(
+    [...zeminHat].reverse().map((p) => ({ x: p.x, y: p.y + kaldirimH })),
+  )}`
+
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       <svg className="absolute inset-0" width={tuvalW} height={tuvalH}>
@@ -290,9 +306,9 @@ export default function Cephe({
         })()}
 
         {/* Sokak */}
-        <rect x={0} y={alt} width={tuvalW} height={tuvalH - alt} fill="url(#cephe-sokak)" />
+        <polygon points={sokakYuzu} fill="url(#cephe-sokak)" />
         {/* Kaldırım — cephenin dibindeki açık şerit */}
-        <rect x={0} y={alt} width={tuvalW} height={kaldirimH} fill="#b8bec5" />
+        <polygon points={kaldirimYuzu} fill="#b8bec5" />
 
         {/*
           ZEMİN PERSPEKTİFİ.

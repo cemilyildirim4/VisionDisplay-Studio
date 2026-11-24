@@ -1275,7 +1275,13 @@ export default function WallPreview({
         return
       }
       const don = (p) => ({ x: p.x - r.left, y: p.y - r.top })
-      onDuvarHatti({ ust: hat.ust.map(don), alt: hat.alt.map(don) })
+      const donVarsa = (p) => (p ? don(p) : null)
+      onDuvarHatti({
+        ust: hat.ust.map(don),
+        alt: hat.alt.map(don),
+        uzantiUst: (hat.uzantiUst || [null, null]).map(donVarsa),
+        uzantiAlt: (hat.uzantiAlt || [null, null]).map(donVarsa),
+      })
     },
     [onDuvarHatti],
   )
@@ -2158,18 +2164,15 @@ export default function WallPreview({
                           borderRadius: 2,
                           cursor: 'pointer',
                           /*
-                           * ÇERÇEVE YALNIZCA MEKÂNDA.
+                           * SEÇİM ÇERÇEVESİ HİÇ ÇİZİLMİYOR.
                            *
-                           * Tasarım görünümünde seçili ekranın çevresindeki
-                           * mavi çerçeve ürünün parçasıymış gibi duruyordu;
-                           * hangi ekranın düzenlendiği zaten soldaki kartta
-                           * belli. Tıklayıp seçmek sürüyor, yalnızca çizgi
-                           * görünmüyor.
+                           * Mavi çerçeve ürünün bir parçasıymış gibi
+                           * duruyordu; önce yalnızca tasarım görünümünden
+                           * kaldırılmıştı, mekânda da istenmiyor. Hangi
+                           * ekranın düzenlendiği soldaki kartta belli.
+                           * Tıklayıp seçmek sürüyor, yalnızca çizgi yok.
                            */
-                          border:
-                            s.id === seciliEkranId && sahneVar
-                              ? '2px solid #2962ad'
-                              : '2px solid transparent',
+                          border: '2px solid transparent',
                         }}
                       />
                     ))}

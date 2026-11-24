@@ -184,12 +184,31 @@ export default function Salon({
   const uSag = hatUst[hatUst.length - 1]
   const aSol = hatAlt[0]
   const aSag = hatAlt[hatAlt.length - 1]
-  /* Tavan ve zemin: önde çerçeve, arkada tasarımın kırık hattı. */
-  const tavanYuzu = `${onSol},${onUst} ${onSag},${onUst} ${nkTers(hatUst)}`
-  const zeminYuzu = `${onSol},${onAlt} ${onSag},${onAlt} ${nkTers(hatAlt)}`
-  /* Yan duvarlar hattın UÇLARINDAN öne geliyor: odanın köşesi orada. */
-  const solYuz = `${onSol},${onUst} ${uSol.x},${uSol.y} ${aSol.x},${aSol.y} ${onSol},${onAlt}`
-  const sagYuz = `${onSag},${onUst} ${uSag.x},${uSag.y} ${aSag.x},${aSag.y} ${onSag},${onAlt}`
+  /*
+   * ODANIN YANLARI UÇTAKİ EKRANIN HİZASINDA DEVAM EDİYOR.
+   *
+   * Duvar, son ekranın bittiği yerde kesiliyor ve oda birden yana
+   * açılıyordu: tavan ile zemin huni gibi genişliyordu. Uzantı
+   * noktaları, uçtaki ekranın KENDİ düzleminde ileri taşınmış hâli
+   * (bkz. Birlesim2D → uzanti). Tavan, zemin ve yan duvarlar artık
+   * oraya dayanıyor; 90°'lik bir U'da oda koridor oluyor.
+   *
+   * Uzantı yoksa (düz tasarım ya da duvarın geriye gittiği yön) eski
+   * kural: ön çerçevenin köşesi.
+   */
+  const uzUst = duvarHatti?.uzantiUst || [null, null]
+  const uzAlt = duvarHatti?.uzantiAlt || [null, null]
+  const kSolUst = uzUst[0] || { x: onSol, y: onUst }
+  const kSolAlt = uzAlt[0] || { x: onSol, y: onAlt }
+  const kSagUst = uzUst[1] || { x: onSag, y: onUst }
+  const kSagAlt = uzAlt[1] || { x: onSag, y: onAlt }
+  /* Tavan ve zemin tuvalin dışına kadar sürsün; ön kenarları görünmemeli. */
+  const UZAK = tuvalH * 4
+  const tavanYuzu = `${kSolUst.x},${kSolUst.y} ${nk(hatUst)} ${kSagUst.x},${kSagUst.y} ${kSagUst.x},${kSagUst.y - UZAK} ${kSolUst.x},${kSolUst.y - UZAK}`
+  const zeminYuzu = `${kSolAlt.x},${kSolAlt.y} ${nk(hatAlt)} ${kSagAlt.x},${kSagAlt.y} ${kSagAlt.x},${kSagAlt.y + UZAK} ${kSolAlt.x},${kSolAlt.y + UZAK}`
+  /* Yan duvarlar hattın UÇLARINDAN aynı düzlemde öne geliyor. */
+  const solYuz = `${kSolUst.x},${kSolUst.y} ${uSol.x},${uSol.y} ${aSol.x},${aSol.y} ${kSolAlt.x},${kSolAlt.y}`
+  const sagYuz = `${kSagUst.x},${kSagUst.y} ${uSag.x},${uSag.y} ${aSag.x},${aSag.y} ${kSagAlt.x},${kSagAlt.y}`
   const arkaYuz = `${nk(hatUst)} ${nkTers(hatAlt)}`
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -227,15 +246,25 @@ export default function Salon({
           */}
           <radialGradient id="salon-kose-golge" cx="0.5" cy="0.5" r="0.62">
             <stop offset="55%" stopColor="#2b3442" stopOpacity="0" />
-            <stop offset="100%" stopColor="#2b3442" stopOpacity="0.16" />
+            {/* Kenarlardaki kararma çubuk gibi duruyordu; yalnızca bir iz kaldı. */}
+            <stop offset="100%" stopColor="#2b3442" stopOpacity="0.06" />
           </radialGradient>
+          {/*
+            YAN DUVARLAR NEREDEYSE ARKA DUVARLA AYNI TONDA.
+
+            Dış uçları belirgin biçimde koyuydu (#d3d8e0): tuvalin iki
+            kenarında dikey gri çubuklar gibi duruyor, odanın parçası
+            değil arka plana konmuş bir bant gibi okunuyordu. Fark artık
+            yalnızca bir iz; derinliği zaten tavan şeritleri ve zemin
+            derzleri anlatıyor.
+          */}
           <linearGradient id="salon-duvar-sol" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#d3d8e0" />
+            <stop offset="0%" stopColor="#e9ecf2" />
             <stop offset="100%" stopColor="#f0f2f6" />
           </linearGradient>
           <linearGradient id="salon-duvar-sag" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#f0f2f6" />
-            <stop offset="100%" stopColor="#d3d8e0" />
+            <stop offset="100%" stopColor="#e9ecf2" />
           </linearGradient>
           {/*
             ARKA DUVAR ODANIN PARÇASI.
