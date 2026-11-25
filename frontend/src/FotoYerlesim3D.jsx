@@ -41,7 +41,7 @@ export default function FotoYerlesim3D({
   sade = false,
   tuvalW = 0,
   tuvalH = 0,
-  /* { ux, uy, yaw, egim } — ux/uy tuvalin 0..1'i, açılar derece. */
+  /* { ux, uy, yaw, egim, donme } — ux/uy tuvalin 0..1'i, açılar derece. */
   durum,
   onDegis,
   kilitli = false,
@@ -56,6 +56,16 @@ export default function FotoYerlesim3D({
     uy: 0.5,
     yaw: 0,
     egim: 0,
+    /*
+     * DÜZLEM İÇİ DÖNME — referansın eğimi.
+     *
+     * yaw ve egim bakış açısını değiştiriyor; bu ise tasarımı fotoğrafın
+     * düzleminde çeviriyor. Değeri referans çizgisinin görseldeki
+     * eğiminden geliyor (bkz. App.jsx refEgimDerece): eğik çekilmiş bir
+     * fotoğrafta tasarım duvarla aynı eğimde duruyor, kullanıcı elle
+     * düzeltmek zorunda kalmıyor.
+     */
+    donme: 0,
     ...(durum || null),
   }
 
@@ -188,6 +198,13 @@ export default function FotoYerlesim3D({
           top: d.uy * tuvalH,
           width: 0,
           height: 0,
+          /*
+           * Dönme en dışta: içerideki dönüşümler (yaw/egim, dilimlerin
+           * kendi açıları) olduğu gibi kalsın, tasarımın tamamı birlikte
+           * eğilsin. Kutu sıfır boyutlu, dönme noktası da tutamağın
+           * kendisi.
+           */
+          transform: d.donme ? `rotate(${d.donme}deg)` : undefined,
           /* Küpte perspektifi Kup2D kendi uzaklığıyla kuruyor. */
           perspective: kutuKipi ? undefined : uzak,
         }}

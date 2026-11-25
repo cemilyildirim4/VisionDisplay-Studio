@@ -429,10 +429,11 @@ async function akis(baslik, yol) {
 
 /* ── A) TASARIMI FOTOĞRAFA YERLEŞTİR ─────────────────────────────────── */
 /*
- * Referans bitince tasarım gerçek ölçüsünde fotoğrafın üstüne geliyor;
- * üstünden sürüklemek taşıyor, boşluktan sürüklemek döndürüyor. Ekranları
- * tek tek dört köşesinden yerleştiren eski yol kaldırıldı (bkz. App.jsx,
- * "REFERANS BİTİNCE TASARIM FOTOĞRAFIN ÜSTÜNE GELİYOR").
+ * Referans bitince EKRANLAR SIRAYLA yerleşiyor: her ekranın duracağı yerin
+ * dört köşesi işaretleniyor. Tasarımın tamamı ancak "Tasarımı ekrana getir"
+ * düğmesiyle geliyor; geldikten sonra üstünden sürüklemek taşıyor,
+ * boşluktan sürüklemek döndürüyor (bkz. App.jsx, "EKRANLAR SIRAYLA
+ * YERLEŞİYOR").
  */
 
 /**
@@ -479,14 +480,16 @@ const surukle = async (s, x0, y0, dx, dy) => {
   await s.waitForTimeout(700)
 }
 
-const a = await akis('A — TASARIMI FOTOĞRAFA YERLEŞTİR', async ({ s, denetle, icerir, dus }) => {
+const a = await akis('A — TASARIMI FOTOĞRAFA YERLEŞTİR', async ({ s, bas, denetle, icerir, dus }) => {
   /* Kaldırılan yollar geri sızmamalı. */
   if (await icerir('Duvar diplerini işaretle')) return dus('kaldırılan "duvar dibi" adımı hâlâ çıkıyor')
   if (await icerir('Ortadaki tutamakla')) return dus('kaldırılan tutamak yönergesi hâlâ çıkıyor')
-  if (await icerir('ekranı yerleştirin')) return dus('kaldırılan dört köşe akışı hâlâ açılıyor')
-  if (await icerir('4 köşe ile yerleştir')) return dus('kaldırılan "4 köşe ile yerleştir" düğmesi duruyor')
-  if (await icerir('Yerleşimi bitir')) return dus('kaldırılan "Yerleşimi bitir" düğmesi duruyor')
-  if (!(await denetle('referans bitti, tasarım geldi'))) return false
+  /* Referans bitince sıra akışı açılmalı: tasarımın tamamı kendiliğinden gelmiyor. */
+  if (!(await icerir('ekranı yerleştirin'))) return dus('referans bitti ama sıra akışı açılmadı')
+  if (!(await denetle('referans bitti, ekranlar sırayla yerleşiyor'))) return false
+  /* Tasarımın tamamı yalnızca düğmeyle geliyor. */
+  if (!(await bas('Tasarımı ekrana getir', 2200))) return dus('"Tasarımı ekrana getir" düğmesi yok')
+  if (!(await denetle('tasarım düğmeyle bütün hâlinde geldi'))) return false
 
   const g = await yer3dTasarim(s)
   console.log('  · tasarım                     :', JSON.stringify(g))
@@ -588,7 +591,8 @@ const dYol = await akis('D — SIFIRLA VE BAŞTAN KUR', async ({ s, bas, denetle
   if (!(await kartaSayiYaz(s, 210))) return dus('ikinci kurulumda santim kutusu yok')
   await s.waitForTimeout(900)
   if (!(await bas('Devam', 1800))) return dus('ikinci kurulumda ölçekten sonra "Devam" yok')
-  if (await icerir('ekranı yerleştirin')) return dus('ikinci kurulumda kaldırılan dört köşe akışı açıldı')
+  if (!(await icerir('ekranı yerleştirin'))) return dus('ikinci kurulumda sıra akışı açılmadı')
+  if (!(await bas('Tasarımı ekrana getir', 2200))) return dus('ikinci kurulumda "Tasarımı ekrana getir" yok')
   if (!(await denetle('ikinci kurulumda tasarım yeniden geldi'))) return false
   const g2 = await yer3dTasarim(s)
   console.log('  · ikinci kurulumda            :', JSON.stringify(g2))

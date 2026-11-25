@@ -2124,9 +2124,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
        * ekran eklerken bir daha sorulmuyor (bkz. duzenlemede,
        * yeniEkranaBasla).
        */
-      /* L'de ilk iş köşe çizgisi; referans orada da sorulmuyor. */
-      setRefKipi(!lTipiVar)
-      setLKoseKipi(lTipiVar)
+      /*
+       * REFERANS HER ZAMAN SORULUYOR — EKRAN SAYISI FARK ETMİYOR.
+       *
+       * Birden fazla ekran varken referans atlanıyor, ilk iş köşe çizgisini
+       * işaretlemek oluyordu. Oysa fotoğrafın santim ölçeği REFERANSTAN
+       * geliyor: atlandığında ölçek hiç kurulmuyor, ekranlar da gerçek
+       * ölçüsüyle değil göz kararıyla yerleşiyordu.
+       */
+      setRefKipi(true)
+      setLKoseKipi(false)
       setSihirbazAdim(1)
       let kayit = null
       incelemeIptalRef.current = false
@@ -3995,7 +4002,15 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * yok. Kullanıcının fotoğrafında ise köşenin nerede olduğunu ondan başka
    * kimse bilmiyor.
    */
-  const lYerlesimKipi = lTipiAktif && scene === 'ozel' && !!ozelSahne
+  /*
+   * L AKIŞI ARTIK KENDİLİĞİNDEN AÇILMIYOR.
+   *
+   * Ekran sayısı birden fazlaysa sihirbaz referans yerine köşe çizgisi
+   * kartını gösteriyordu; referans her zaman sorulduğuna göre (bkz.
+   * mekanFotoSecildi) o kart yanlış kart. Akış yalnızca kullanıcı köşe
+   * çizgisini işaretlemeyi kendisi başlattığında açılıyor.
+   */
+  const lYerlesimKipi = lKoseKipi && lTipiAktif && scene === 'ozel' && !!ozelSahne
   const lKacisKaymasi = (() => {
     if (!lTipiAktif || !lCizimMekan || !(lDuvarWpx > 0)) return 0
     const varsayilan = (lKose === 'sol' ? 1 : -1) * lDuvarWpx * 0.22
@@ -7925,13 +7940,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setYerlesimBitti(false)
     setOzelUyari(null)
     yerKoseRef.current = {}
-    /* 4) İlk adım — L'de referans yok, doğrudan köşe çizgisi. */
-    if (lYerlesimKipi) {
-      setRefKipi(false)
-      setLKoseKipi(true)
-    } else {
-      setRefKipi(true)
-    }
+    /* 4) İlk adım her zaman referans (bkz. mekanFotoSecildi). */
+    setRefKipi(true)
+    setLKoseKipi(false)
     setSihirbazAdim(1)
   }
   /*
@@ -8076,6 +8087,11 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * düzlem içi dönme, ya da fareyle verilen çevirme/yatırma.
    */
   const refEgimi = refAci?.kutuAci || 0
+  /*
+   * Tasarım fotoğrafa referansın eğimiyle geliyor (bkz. yer3d.donme);
+   * CSS derece istiyor, referansAcisi radyan veriyor.
+   */
+  const refEgimDerece = (refEgimi * 180) / Math.PI
   /*
    * EĞİM EKRANDAKİ DÖRTGENDEN OKUNUYOR, SAKLANAN AÇIDAN DEĞİL.
    *
@@ -9995,15 +10011,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   useEffect(() => {
     if (scene !== 'ozel' || !ozelSahne) return
     if (sihirbazAdim !== 3) return
-    setYerNokta([])
-    setYerSira(null)
-    setSihirbazAdim(0)
     /*
-     * Eldeki duruş korunuyor: yeni ekran eklemek ya da ölçüye geri dönmek
-     * tasarımı fotoğrafın ortasına geri fırlatmıyor. Küpte başlangıç
-     * eğimi hafif yukarıdan, üst kapak da görünsün diye.
+     * KÜP BÜTÜN HÂLİNDE GELİYOR.
+     *
+     * Kutunun arka iki yüzü ve kapağı fotoğrafta hiç görünmüyor; dört
+     * köşesi işaretlenecek bir yüzey yok. Eldeki duruş korunuyor, başlangıç
+     * eğimi de hafif yukarıdan: üst kapak görünsün.
      */
-    setYer3d((y) => y || { ux: 0.5, uy: 0.5, yaw: 0, egim: grup?.tip === 'kutu' ? 14 : 0, kilit: false })
+    if (grup?.tip === 'kutu') {
+      setYerNokta([])
+      setYerSira(null)
+      setSihirbazAdim(0)
+      setYer3d((y) => y || { ux: 0.5, uy: 0.5, yaw: 0, egim: 14, donme: refEgimDerece, kilit: false })
+      return
+    }
+    /*
+     * EKRANLAR SIRAYLA YERLEŞİYOR.
+     *
+     * Referans bitince tasarımın TAMAMI fotoğrafın ortasına geliyordu;
+     * kullanıcının tek tek yerleştirme isteği buna çarpıyordu. Akış artık
+     * sıradaki ekranla başlıyor: her ekranın duracağı yerin dört köşesi
+     * işaretleniyor, perspektif oradan çıkıyor. Tasarımı bütün hâlinde
+     * isteyen sağdaki "Tasarımı ekrana getir" düğmesini kullanıyor.
+     */
+    if (yer3d) return
+    if (yerSira != null) return
+    if (!ekranParcalari.length) return
+    const ilk = ekranParcalari.findIndex(
+      (x) => yerlesecekIdler.includes(x.id) && !yerlesmisIdler.includes(x.id),
+    )
+    const i = ilk >= 0 ? ilk : 0
+    setYerSira(i)
+    setYerNokta(yerBaslangici(ekranParcalari[i].id))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sihirbazAdim, scene, ozelSahne])
 
@@ -13379,6 +13418,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           }
                           setScene(s.id)
                           /*
+                           * ÖLÇÜM BÖLÜMÜ KENDİLİĞİNDEN AÇILIYOR.
+                           *
+                           * Mekân değişince açılıyordu (bkz. sagBolum etkisi),
+                           * ama "Kendi fotoğrafım" zaten seçiliyken ikinci kez
+                           * basıldığında mekân DEĞİŞMİYOR: etki işlemiyor ve
+                           * panel mekân listesinde kalıyordu. Burada doğrudan
+                           * yazılıyor.
+                           */
+                          if (s.id === 'ozel') setSagBolum('olcum')
+                          /*
                            * "Kendi fotoğrafım" seçildi ama ortada fotoğraf yok:
                            * kullanıcıdan ayrıca bir düğme aramasını istemek
                            * yerine dosya seçici doğrudan açılıyor.
@@ -13554,7 +13603,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                       düzenle oradan yapılıyor.
                     */}
                     {!yer3d ? (
-                      ['l', 'u', 'kutu', 'acili'].includes(grup?.tip) ? null : (
                       <>
                         <button
                           type="button"
@@ -13563,7 +13611,26 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             /* Dört köşe akışı kapanıyor: iki katman aynı tıklamayı beklemesin. */
                             setSihirbazAdim(0)
                             setYerSira(null)
-                            setYer3d({ ux: 0.5, uy: 0.5, yaw: 0, egim: 0, kilit: false })
+                            setYerNokta([])
+                            /* Tasarım görünür olsun: akış sırasında gizleniyordu. */
+                            setTasarimAcik(true)
+                            /*
+                             * TASARIM EKRANDAKİ HÂLİYLE GELİYOR.
+                             *
+                             * Çevirme ve yatırma sıfır: fotoğrafta tasarım
+                             * ekranındaki duruşunun aynısı duruyor. Tek
+                             * eğim REFERANSTAN geliyor (bkz. refEgimDerece)
+                             * — çizgi fotoğrafta ne kadar eğikse tasarım da
+                             * o kadar eğik, kullanıcı elle çevirmesin.
+                             */
+                            setYer3d({
+                              ux: 0.5,
+                              uy: 0.5,
+                              yaw: 0,
+                              egim: 0,
+                              donme: refEgimDerece,
+                              kilit: false,
+                            })
                           }}
                           className="w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                         >
@@ -13575,7 +13642,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           </p>
                         )}
                       </>
-                      )
                     ) : (
                       /*
                        * "YERLEŞİMİ BİTİR" KALDIRILDI.
@@ -13587,9 +13653,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                        * "neden taşıyamıyorum" sorusunu doğuruyordu. Geriye
                        * ne yapılacağını söyleyen tek satır kalıyor.
                        */
-                      <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
-                        {t('yer3d.ipucu')}
-                      </p>
+                      <>
+                        <p className="m-0 mt-1 text-[12px] leading-snug text-neutral-500 dark:text-neutral-400">
+                          {t('yer3d.ipucu')}
+                        </p>
+                        {/*
+                          TEK TEK YERLEŞTİRMEYE DÖNÜŞ.
+
+                          Varsayılan yol ekranları sırayla yerleştirmek;
+                          "Tasarımı ekrana getir" ondan çıkıyor. Geri dönecek
+                          bir kapı yoksa kullanıcının elinde yalnızca fotoğrafı
+                          silen "Baştan başla" kalıyordu.
+
+                          Küpte gizli: kutunun arka yüzleri ve kapağı
+                          fotoğrafta işaretlenemiyor.
+                        */}
+                        {grup?.tip !== 'kutu' && (
+                          <button
+                            type="button"
+                            onClick={dortKoseyeGec}
+                            className="mt-2 w-full rounded-lg border border-brand px-4 py-2.5 text-[16px] font-semibold text-brand transition-colors hover:bg-brand-tint dark:hover:bg-[#1b2436]"
+                          >
+                            {t('yer3d.dortKose')}
+                          </button>
+                        )}
+                      </>
                     )}
                     {/*
                       DÖRT KÖŞE SEÇENEĞİ PANELDEN KALKMIYOR.
