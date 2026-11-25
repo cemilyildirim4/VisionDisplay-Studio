@@ -390,13 +390,23 @@ export default function Kup2D({
     const b = yuzBoyu(y)
     if (!(e > 0) || !(b > 0)) return null
     const hedefW = 4 * e
-    const hedefH = 2 * b
+    /*
+     * AÇILIMIN ÜST SIRASI YALNIZCA ÜST EKRAN VARKEN.
+     *
+     * Açılım her zaman 4 × 2 idi: görselin ALT yarısı dört yan yüze,
+     * ÜST yarısı da kapaktaki dört üçgene gidiyordu. Üst yüz artık ekran
+     * değil (küp dört ekranla kuruluyor), yani o üst yarı hiçbir yerde
+     * görünmüyor ve görselin yarısı boşa gidiyordu. Üst ekran yokken
+     * açılım 4 × 1: görsel doğrudan DÖRDE bölünüp yan yüzlere yayılıyor.
+     */
+    const ustPay = ustEkran ? b : 0
+    const hedefH = b + ustPay
     const bgH = gorselOran > 0 ? Math.max(hedefH, hedefW / gorselOran) : hedefH
     const bgW = gorselOran > 0 ? bgH * gorselOran : hedefW
-    return { bgW, bgH, dx: (bgW - hedefW) / 2, dy: (bgH - hedefH) / 2, e, b, i }
+    return { bgW, bgH, dx: (bgW - hedefW) / 2, dy: (bgH - hedefH) / 2, e, b, i, ustPay }
   }
 
-  /* Yan yüz: açılımın alt yarısındaki kendi çeyreği. */
+  /* Yan yüz: açılımın alt sırasındaki kendi çeyreği (bkz. kupAcilimi). */
   const yuzIcerigi = (ekran, i) => {
     const a = kupAcilimi(i)
     if (!a) return ekran?.icerikProp || null
@@ -404,7 +414,7 @@ export default function Kup2D({
       spanW: a.bgW,
       spanH: a.bgH,
       offsetX: a.dx + i * a.e,
-      offsetY: a.dy + a.b,
+      offsetY: a.dy + a.ustPay,
     }
   }
   const kapakIcerigi = ustEkran?.icerikProp || null

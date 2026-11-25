@@ -5750,57 +5750,28 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const sonTip = tipUygunMu(tip, sirali.length) ? tip : 'acili'
     if (sonTip !== tip) setGrupTipi(sonTip)
     /*
-     * KÜPTEN ÇIKINCA ÜST EKRAN GİDİYOR.
+     * KÜPÜN ÜST YÜZÜ EKRAN DEĞİL.
      *
-     * Beşinci ekranı kullanıcı eklemedi, küp açtı (bkz. kupUstu). Başka bir
-     * yerleşime geçilince o ekran tasarımda kalıyor, kabin sayısına ve
-     * fiyata da giriyordu: kullanıcı hiç istemediği bir ekranı elle silmek
-     * zorundaydı. Küpün kendi parçası, küple birlikte kalkıyor.
-     */
-    if (sonTip !== 'kutu') {
-      const kupUstIdleri = hepsi.filter((e) => e.kupUstu).map((e) => e.id)
-      if (kupUstIdleri.length) {
-        setSabitEkranlar((l) => l.filter((e) => !kupUstIdleri.includes(e.id)))
-        setGrupSecim((s) => s.filter((id) => !kupUstIdleri.includes(id)))
-        for (let k = sirali.length - 1; k >= 0; k--) {
-          if (kupUstIdleri.includes(sirali[k])) sirali.splice(k, 1)
-        }
-        if (sirali.length < 2) {
-          setGrup(null)
-          return
-        }
-      }
-    }
-    /*
-     * KÜPÜN ÜST YÜZÜ SEÇİME GİRMİYOR.
+     * Küp bir ara dört yan ekranın üstüne BEŞİNCİ bir ekran koyuyordu:
+     * kullanıcı hiç istemediği bir ekranı kabin sayısında, fiyatta ve
+     * PDF'te buluyordu, üstelik paylaşılan görselin yarısı o kapağa
+     * gidiyordu. Küp artık DÖRT ekranla kuruluyor, görsel dörde bölünüp
+     * yan yüzlere yayılıyor (bkz. Kup2D → kupAcilimi) ve kutunun üstü
+     * ekran değil kapak.
      *
-     * Küp DÖRT yan ekranla kuruluyor; üst yüz seçilenlerin dışında kalan
-     * ilk ekrandan kendiliğinden geliyor ve sona ekleniyor (Kup2D beşinci
-     * üyeyi üst yüz sayıyor). Ölçüsü de kendiliğinden kutunun üstünü
-     * kapatacak sayıya geliyor (bkz. kupUstGereken). Elde yedek ekran
-     * yoksa kutunun üstü açık kalıyor — eskiden de öyleydi.
+     * Eski tasarımlarda kalan beşinci ekran burada temizleniyor.
      */
-    if (sonTip === 'kutu') {
-      let ust = hepsi.find((e) => !sirali.includes(e.id))
-      /*
-       * YEDEK EKRAN YOKSA ÜST YÜZ KENDİLİĞİNDEN DOĞUYOR.
-       *
-       * Eskiden elde beşinci bir ekran yoksa kutunun üstü açık kalıyordu:
-       * kullanıcı küpü seçiyor, üst yüzü ayrıca eklemesi gerektiğini
-       * hiçbir yerde görmüyordu. Küp dört yan yüzle seçiliyor, beşincisi
-       * burada kuruluyor; ölçüsü kutunun üstünü kapatacak sayıya
-       * kendiliğinden geliyor (bkz. kupUstGereken) ve normal bir ekran
-       * olduğu için kabin sayısına, fiyata ve PDF'e giriyor.
-       */
-      if (!ust) {
-        const kimlik = yeniEkranKimligi()
-        const sira = Math.max(0, ...hepsi.map((e) => e.sira || 0)) + 1
-        const ayar = { ...ekranAyariAnlik(), content: 'led', contentUrl: null }
-        /* kupUstu: bu ekranı kullanıcı değil küp açtı; küp kapanınca gidiyor. */
-        setSabitEkranlar((l) => [...l, { id: kimlik, sira, oran: null, ayar, kupUstu: true }])
-        ust = { id: kimlik, sira, kupUstu: true }
+    const kupUstIdleri = hepsi.filter((e) => e.kupUstu).map((e) => e.id)
+    if (kupUstIdleri.length) {
+      setSabitEkranlar((l) => l.filter((e) => !kupUstIdleri.includes(e.id)))
+      setGrupSecim((s) => s.filter((id) => !kupUstIdleri.includes(id)))
+      for (let k = sirali.length - 1; k >= 0; k--) {
+        if (kupUstIdleri.includes(sirali[k])) sirali.splice(k, 1)
       }
-      sirali.push(ust.id)
+      if (sirali.length < 2) {
+        setGrup(null)
+        return
+      }
     }
     setGrup((eski) => ({
       tip: sonTip,
@@ -5869,11 +5840,10 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   useEffect(() => {
     const hepsiUye = Array.isArray(grup?.uyeler) ? grup.uyeler : null
     /*
-     * KÜPTE BEŞİNCİ EKRAN DIŞARIDA.
+     * KÜPTE YALNIZCA DÖRT YAN YÜZ.
      *
-     * Üst yüzün ölçüsü kutunun üstünü kapatacak sayıdan geliyor
-     * (bkz. kupUstGereken); yan yüzlere eşitlenirse o hesapla çakışıyor
-     * ve kapak kutuya oturmuyor. Eşitleme dört YAN yüze uygulanıyor.
+     * Küp dört ekranla kuruluyor; eski tasarımlardan beşinci bir üye
+     * kalmışsa eşitlemeye girmiyor (o üye kutunun kapağıydı).
      */
     const uyeler = hepsiUye && grup.tip === 'kutu' ? hepsiUye.slice(0, 4) : hepsiUye
     if (!uyeler || uyeler.length < 2 || grup.tekGorsel === false) {
@@ -10624,48 +10594,9 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const tasarimToplamEn = kaplananEn
   const tasarimEnYuksek = kaplananBoy
   /*
-   * BEŞİNCİ EKRAN KUTUNUN ÜSTÜNÜ KAPATIYOR MU.
-   *
-   * Kapak ekranın kendi ölçüsünde çiziliyor (bkz. Kup2D): ölçü tutmazsa
-   * kutunun üstünde boş bir pay kalıyor. Kullanıcı bunu çizimde fark
-   * etmeyebilir, o yüzden kaç kabin gerektiği kutucukların altında
-   * yazıyor. Ölçü tutunca uyarı kendiliğinden kayboluyor.
-   */
-  const kupUstGereken = (() => {
-    if (grup?.tip !== 'kutu' || !Array.isArray(grup.uyeler) || grup.uyeler.length < 5) return null
-    const ust = ekranOzetleri.find((x) => x.id === grup.uyeler[4])
-    const yan = grup.uyeler.slice(0, 4).map((id) => ekranOzetleri.find((x) => x.id === id))
-    if (!ust || yan.some((y) => !y)) return null
-    const en = Math.max(yan[0].enM || 0, yan[2].enM || 0)
-    const derinlik = Math.max(yan[1].enM || 0, yan[3].enM || 0) || en
-    /* Kabin ölçüsü modelden ve üst ekranın KENDİ yönünden; sütun/satırdan bağımsız. */
-    const m = selectedModel
-    if (!m || !(en > 0) || !(derinlik > 0)) return null
-    const dikey = ust.ayar.orientation === 'portrait'
-    const kabinEn = ((dikey ? m.heightMm : m.widthMm) || 500) / 1000
-    const kabinBoy = ((dikey ? m.widthMm : m.heightMm) || 500) / 1000
-    if (!(kabinEn > 0) || !(kabinBoy > 0)) return null
-    return {
-      id: ust.id,
-      sutun: Math.max(1, Math.round(en / kabinEn)),
-      satir: Math.max(1, Math.round(derinlik / kabinBoy)),
-      simdikiSutun: Math.max(1, ust.ayar.cols || 1),
-      simdikiSatir: Math.max(1, ust.ayar.rows || 1),
-      /* Yan yüzlerin ölçüsü: değişince üst yüz yeniden hesaplanıyor. */
-      yanImza: yan.map((y) => `${y.ayar.cols || 1}x${y.ayar.rows || 1}${y.ayar.orientation || ''}`).join('|'),
-    }
-  })()
-
-  /*
-   * ÜST YÜZ KÜPE BASILINCA KENDİLİĞİNDEN ÖLÇÜLENİYOR.
-   *
-   * Beşinci ekran yan yüzlerle aynı dizilimle doğuyor ve kutunun üstünü
-   * kapatmıyordu; kullanıcı doğru sayıyı kendi bulmak zorundaydı. Küp
-   * seçilince ve YAN yüzlerin ölçüsü değişince üst yüz kutunun üstünü tam
-   * kapatacak sayıya getiriliyor (ör. 2 sütunluk yanlarda üst 2×4).
-   *
-   * Yalnızca yan yüzlerin imzasına bakılıyor: kullanıcı üst ekranın
-   * sayısını elle değiştirdiğinde bu etki çalışmıyor, eli tutulmuyor.
+   * ÜST YÜZÜN ÖLÇÜ HESABI KALKTI: küpün üstü artık ekran değil, kapak
+   * (bkz. birlesimiKur, Kup2D). Kapatacak kabin sayısını yazan uyarı da
+   * bu yüzden yok.
    */
   /*
    * KÜPTE DUVAR KUTUSU ÇİZİMLE TUTUYOR.
@@ -10736,37 +10667,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   }
   /* Mekân çizilmiyorsa (ya da fotoğraf henüz yoksa) çizim görünümündeyiz. */
   const cizimGorunumu = (sahneId) => sahneId === 'none' || (sahneId === 'ozel' && !ozelSahne)
-
-  const kupUstImzaRef = useRef(null)
-  useEffect(() => {
-    if (!kupUstGereken) {
-      kupUstImzaRef.current = null
-      return
-    }
-    const imza = kupUstGereken.id + '|' + kupUstGereken.yanImza
-    if (kupUstImzaRef.current === imza) return
-    kupUstImzaRef.current = imza
-    const { id, sutun, satir, simdikiSutun, simdikiSatir } = kupUstGereken
-    if (sutun === simdikiSutun && satir === simdikiSatir) return
-    if (id === aktifEkranId) {
-      setCols(sutun)
-      setRows(satir)
-      return
-    }
-    setSabitEkranlar((l) =>
-      l.map((e) => (e.id === id ? { ...e, ayar: { ...e.ayar, cols: sutun, rows: satir } } : e)),
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kupUstGereken?.id, kupUstGereken?.yanImza])
-
-  const kupUstUyari =
-    kupUstGereken &&
-    (kupUstGereken.sutun !== kupUstGereken.simdikiSutun ||
-      kupUstGereken.satir !== kupUstGereken.simdikiSatir)
-      ? t('kup.ustUyari')
-          .replace('{s}', String(kupUstGereken.sutun))
-          .replace('{r}', String(kupUstGereken.satir))
-      : null
 
   /* Sıfır olmasın diye mutlak alt sınır. */
   const widthMin = 0.1
@@ -12732,13 +12632,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   )
                 })}
               </ul>
-
-              {/* Beşinci ekran kutunun üstünü kapatmıyorsa kaç kabin gerektiği yazıyor. */}
-              {kupUstUyari && (
-                <p className="mt-1 mb-0 text-[13px] leading-snug text-amber-600 dark:text-amber-400">
-                  {kupUstUyari}
-                </p>
-              )}
 
               {/*
                 AYARLAR — KUTULARIN ALTINDA, SEÇİLİ EKRANA AİT.
