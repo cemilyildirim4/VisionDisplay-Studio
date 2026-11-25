@@ -13058,13 +13058,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     ancak kullanıcı bilir.
                   */}
                   {/*
-                    YALNIZCA L VE U'DA.
+                    KIRILMANIN YÖNÜ — DÜĞMELER PANELE GERİ GELDİ.
 
-                    Açıda yön zaten açının kendisinden geliyor (90°'nin
-                    altı içe, üstü dışa), küpte ise böyle bir seçim yok.
-                    İkisinde de düğmeler duruyor ama hiçbir şey yapmıyordu.
+                    Düğmeler yalnızca grubun TİPİ "l" ya da "u" iken
+                    çiziliyordu. Şekil düğmeleri artık kısayol (bkz.
+                    yerlesimSekli): hangisine basılırsa basılsın tip "acili"
+                    kalıyor, dolayısıyla yön düğmeleri hiçbir zaman
+                    görünmüyordu. Ölçüt artık ŞEKİL: kırık bir dizilim varsa
+                    düğmeler duruyor. Küpte ve dümdüz dizilimde yönün
+                    anlamı yok.
+
+                    İçe doğru: kollar kullanıcıya doğru kapanıyor (oda
+                    köşesi). Dışa doğru: kollar geriye katlanıyor (kolon
+                    köşesi). İkisi bambaşka görünür; hangisinin kurulacağını
+                    ancak kullanıcı bilir.
                   */}
-                  {(grupTipi === 'l' || grupTipi === 'u') && (
+                  {grup && grupTipi !== 'kutu' && yerlesimSekli(grup, grupTipi) !== 'duz' && (
                     <div className="order-4 flex w-full overflow-hidden rounded-lg border border-neutral-300 dark:border-[#39414f]">
                       {['ice', 'disa'].map((y) => (
                         <button
@@ -13072,10 +13081,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           type="button"
                           onClick={() => {
                             setLYonSecim(y)
-                            birlesimiKur(grupTipi, grupSecim, grupAcisi, y)
+                            /*
+                             * EKLEM AÇILARI KORUNUYOR.
+                             *
+                             * Düğme birleşimi baştan kuruyordu: tek bir açıyla
+                             * (grupAcisi) kurulduğu için elle yazılmış eklem
+                             * açıları siliniyordu. Değişen tek şey kırılmanın
+                             * yönü; o da grubun kendi alanında duruyor
+                             * (bkz. birlesimGeometrisi → yon).
+                             */
+                            setGrup((g) => (g ? { ...g, lYon: y } : g))
                           }}
                           className={`flex-1 px-1 py-1 text-[13.5px] ${
-                            lYonSecim === y ? 'bg-brand text-white' : 'text-neutral-600 dark:text-neutral-300'
+                            (grup?.lYon || lYonSecim) === y
+                              ? 'bg-brand text-white'
+                              : 'text-neutral-600 dark:text-neutral-300'
                           }`}
                         >
                           {t('yerlesim.' + y)}
