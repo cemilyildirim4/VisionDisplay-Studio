@@ -5199,23 +5199,36 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setCols(c)
     setRows(r)
     /*
-     * TASARIM ALANIN ORTASINA, DÜZ.
+     * ───────────────────────────────────────────────────────────────────
+     * TASARIM ALANIN ORTASINA, ALANIN KENDİ EĞİMİYLE.
      *
-     * Çizilen tasarım artık 3B yerleşim katmanından geliyor (bkz.
-     * FotoYerlesim3D); sığdırma ise yalnızca eski dört köşe dörtgenini
-     * yazıyordu. Sonuç: kabin sayısı alana göre değişiyor ama tasarım
-     * durduğu yerde, eğri açısıyla kalıyordu. Yerleşim de alanın ortasına
-     * alınıyor ve bakış açısı sıfırlanıyor — "eğikse düzelsin".
+     * Önce bakış açısı SIFIRLANIYORDU ("eğikse düzelsin"): sığdırma,
+     * tasarımı alanın ortasına koyuyor ama dümdüz karşıdan gösteriyordu.
+     * Eğik çekilmiş bir fotoğrafta sonuç duvara oturmuyor, üstünde duran
+     * ayrı bir pano gibi görünüyordu — işaretlenen alanın tek işi ölçü
+     * vermek değil, DÜZLEMİ vermek.
+     *
+     * Artık üçü birden işaretlenen dörtgenden geliyor:
+     *   konum  → dörtgenin ağırlık merkezi,
+     *   eğim   → dörtgenin kısalmasından (bkz. dortgenDurusu),
+     *   ölçü   → yukarıda kabin sayısıyla alana göre kuruldu.
+     * Böylece tasarım alanın İÇİNE, onun perspektifinde oturuyor.
+     *
+     * Kilit değişmiyor: tasarım oturduğu yerde duruyor ama kullanıcı
+     * isterse yine sürükleyip ince ayar yapabiliyor.
+     * ───────────────────────────────────────────────────────────────────
      */
     if (tuvalBoyut.w > 0 && tuvalBoyut.h > 0) {
       const mx = alanTuval.reduce((a, p) => a + p.x, 0) / 4
       const my = alanTuval.reduce((a, p) => a + p.y, 0) / 4
+      const durus = dortgenDurusu(alanTuval)
       setYer3d((y) => ({
         ...(y || { kilit: false }),
         ux: Math.min(1, Math.max(0, mx / tuvalBoyut.w)),
         uy: Math.min(1, Math.max(0, my / tuvalBoyut.h)),
-        yaw: 0,
-        egim: 0,
+        yaw: durus ? durus.yaw : 0,
+        egim: durus ? durus.egim : 0,
+        donme: durus ? durus.donme : 0,
       }))
     }
     /*
@@ -7112,6 +7125,76 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const boyPx = (uzak(koseler[0], koseler[3]) + uzak(koseler[1], koseler[2])) / 2
     if (!(enPx > 1) || !(boyPx > 1)) return null
     return { enCm: (enPx / olcekPxM) * 100, boyCm: (boyPx / olcekPxM) * 100 }
+  }
+
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * İŞARETLENEN DÖRTGENİN DURUŞU — yaw, eğim ve düzlem içi dönme.
+   *
+   * Dört köşe duvarın yalnızca ölçüsünü değil DÜZLEMİNİ de veriyor. 3B
+   * katman o düzlemi üç açıyla kuruyor (bkz. FotoYerlesim3D: dışta
+   * rotate(donme), içte rotateX(-egim) rotateY(yaw)); burada perspektif
+   * çözümünden gelen yüzey doğrultuları o üç açıya çevriliyor.
+   *
+   * KAMERA KOORDİNATINDAN CSS'E. Çözüm x sağa, y aşağı, z İLERİ (sahneye
+   * doğru) veriyor; CSS'te z İZLEYİCİYE doğru, yani z'nin işareti dönüyor.
+   * Zincir M = Rz(donme)·Rx(-egim)·Ry(yaw) açılınca üç açı doğrudan çıkıyor:
+   *
+   *   egim  = asin(dikey.z)                  (aşağı yön sahneye gidiyorsa +)
+   *   yaw   = asin(yatay.z / cos(egim))      (sağ yön sahneye gidiyorsa +)
+   *   donme = atan2(-dikey.x, dikey.y)       (düzlem içi çevirme)
+   *
+   * Karşıdan çekilmiş fotoğrafta yüzeyin kaçış noktası yok, çözüm de yok:
+   * orada açı aramanın anlamı kalmıyor, yalnızca kenarın görüntüdeki
+   * eğimi (dönme) yazılıyor.
+   *
+   * BU PERSPEKTİFİN BİREBİR KOPYASI DEĞİL. Tarayıcının sahte kamerası
+   * tasarımdan çok daha uzakta duruyor (bkz. FotoYerlesim3D → uzak), yani
+   * kenarların birbirine göre daralması fotoğraftaki kadar sert olmuyor.
+   * Taşınan şey yüzeyin DURUŞU: tasarım duvarla aynı yöne bakıyor.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const dortgenDurusu = (koseler) => {
+    if (!Array.isArray(koseler) || koseler.length !== 4) return null
+    const vx = (koseler[1].x - koseler[0].x + koseler[2].x - koseler[3].x) / 2
+    const vy = (koseler[1].y - koseler[0].y + koseler[2].y - koseler[3].y) / 2
+    /* Çözüm çıkmazsa duvar karşıdan görünüyor: yalnızca düzlem içi eğim. */
+    const duz = { yaw: 0, egim: 0, donme: (Math.atan2(vy, vx) * 180) / Math.PI }
+    const cm = Number(String(refUzunlukCm).replace(',', '.'))
+    if (refNokta.length !== 2 || !(cm > 0)) return duz
+    const a = oranTuvale(refNokta[0])
+    const b = oranTuvale(refNokta[1])
+    const asal = oranTuvale({ x: 0.5, y: 0.5 })
+    const odak =
+      cozulenOdak > 1
+        ? cozulenOdak
+        : odakYazilandan > 1
+          ? odakYazilandan
+          : exifOdak > 1
+            ? exifOdak
+            : fotoOdak > 1
+              ? fotoOdak
+              : fotoYer?.genislik > 0
+                ? fotoYer.genislik * (sahneYakinlik || 1) * 0.785
+                : 0
+    const g = dortgenGercekOlcu(koseler, a, b, cm, asal, odak)
+    if (!g?.yatay || !g?.dikey) return duz
+    const kis = (x) => Math.min(1, Math.max(-1, x))
+    const derece = (r) => (r * 180) / Math.PI
+    const egimR = Math.asin(kis(g.dikey.z))
+    const kosEgim = Math.cos(egimR)
+    const yawR = kosEgim > 1e-6 ? Math.asin(kis(g.yatay.z / kosEgim)) : 0
+    /*
+     * SINIR 70°. Ötesi fotoğrafta neredeyse kenardan bakmak demek: tasarım
+     * ince bir çizgiye iniyor ve birkaç piksellik işaretleme hatası açıyı
+     * uçuruyor. Kullanıcı isterse sürükleyerek daha ileri gidebiliyor.
+     */
+    const sinirla = (d) => Math.min(70, Math.max(-70, d))
+    return {
+      yaw: sinirla(derece(yawR)),
+      egim: sinirla(derece(egimR)),
+      donme: derece(Math.atan2(-g.dikey.x, g.dikey.y)),
+    }
   }
 
   const sayiCm = (x) => {

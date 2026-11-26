@@ -666,5 +666,30 @@ export function dortgenGercekOlcu(koseler, refA, refB, refCm, asal, odakTahmin =
   /* Saçma sonuç (ölçüm bozuk) kullanılmıyor: 1 cm ile 100 m arası makul. */
   if (enCm < 1 || boyCm < 1 || enCm > 10000 || boyCm > 10000) return null
 
-  return { enCm, boyCm, odak: f, odakTahmin: odakTahminMi }
+  /*
+   * DÜZLEMİN YÖNLERİ DE DÖNÜYOR — ölçü kadar DURUŞ da burada hazır.
+   *
+   * Yüzeyin kamera koordinatındaki yatay ve dikey doğrultusu, dörtgeni
+   * ekranda eğimiyle göstermek isteyen taraf için (bkz. App.jsx
+   * dortgenDurusu). Kaçış noktasının ışını yönü verir ama İŞARETİ vermez
+   * (kaçış noktası kenarın iki ucundan birinde olabilir); bu yüzden yön
+   * düzleme düşürülmüş köşelerden alınıyor: yatay p0→p1, dikey p0→p3.
+   * Karşılıklı iki kenarın ortalaması, işaretleme gürültüsüne karşı.
+   */
+  const birimYon = (v) => {
+    const u = Math.hypot(v.x, v.y, v.z)
+    return u > 1e-9 ? { x: v.x / u, y: v.y / u, z: v.z / u } : null
+  }
+  const yatay = birimYon({
+    x: X1.x - X0.x + (X2.x - X3.x),
+    y: X1.y - X0.y + (X2.y - X3.y),
+    z: X1.z - X0.z + (X2.z - X3.z),
+  })
+  const dikey = birimYon({
+    x: X3.x - X0.x + (X2.x - X1.x),
+    y: X3.y - X0.y + (X2.y - X1.y),
+    z: X3.z - X0.z + (X2.z - X1.z),
+  })
+
+  return { enCm, boyCm, odak: f, odakTahmin: odakTahminMi, yatay, dikey }
 }
