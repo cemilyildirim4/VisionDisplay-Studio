@@ -1141,6 +1141,12 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const [yerNokta, setYerNokta] = useState([])
   /* Hangi ekranlar yerleşti — yerleşmemişin rozeti çizilmiyor. */
   const [yerlesmisIdler, setYerlesmisIdler] = useState([])
+  /*
+   * ALANA SIĞDIRILAN EKRANLAR — yalnızca panelde ne yazacağını belirliyor.
+   * Sığdırılan ekranın satırında ölçüsünün yanında "alana sığdırıldı"
+   * yazıyor; kullanıcı kendi kurduğu ölçünün değiştiğini orada görüyor.
+   */
+  const [yerSigdirilanIdler, setYerSigdirilanIdler] = useState([])
   /* Sağ panelde açık olan bölüm: 'mekan' ya da 'olcum' (aynı anda biri). */
   const [sagBolum, setSagBolum] = useState('mekan')
   const [refUzunlukCm, setRefUzunlukCm] = useState('')
@@ -9894,7 +9900,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    * Hem onay düğmesi hem de başka ekrana geçiş bu adımı kullanıyor;
    * ikisi ayrı yazıldığında geçişte kaydetme unutulmuştu.
    */
-  const yerKaydet = (ekran, nokta) => {
+  const yerKaydet = (ekran, nokta, olcuUstu = null) => {
     if (!ekran || !Array.isArray(nokta) || nokta.length !== 4) return null
     /*
      * EKRAN İŞARETLENEN DÖRT KÖŞEDE DURUYOR.
@@ -9924,8 +9930,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const duzlem = koseSirala(nokta)
     const olcu = dortgenOlcusuCm(duzlem)
     const ozet = ekranOzetleri.find((x) => x.id === ekran.id)
-    const enM = ozet?.enM || 0
-    const boyM = ozet?.boyM || 0
+    /*
+     * ÖLÇÜ DIŞARIDAN DA VERİLEBİLİYOR.
+     *
+     * "Alana sığdır" önce kabin sayısını değiştirip hemen ardından aynı
+     * dörtgene yeniden yerleştiriyor. setCols/setRows o anda henüz
+     * state'e işlememiş oluyor ve ekranOzetleri ESKİ ölçüyü söylüyor;
+     * ekran büyümüş kabin sayısıyla ama eski boyuyla oturuyordu. Yeni
+     * ölçü bu yüzden doğrudan veriliyor.
+     */
+    const enM = olcuUstu?.enM > 0 ? olcuUstu.enM : ozet?.enM || 0
+    const boyM = olcuUstu?.boyM > 0 ? olcuUstu.boyM : ozet?.boyM || 0
     let duzgun = duzlem
     let merkez = null
     if (olcu?.enCm > 0 && olcu?.boyCm > 0 && enM > 0 && boyM > 0) {
@@ -9968,11 +9983,58 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     return yeni
   }
 
-  const yerEkraniOnayla = () => {
-    if (yerNokta.length !== 4 || !yerEkran) return
-    const yeni = yerKaydet(yerEkran, yerNokta)
+  /*
+   * ───────────────────────────────────────────────────────────────────────
+   * BİR EKRANI KENDİ İŞARETLENEN ALANINA SIĞDIRMA HESABI.
+   *
+   * Paneldeki "Alana sığdır" bütün tasarımı birden büyütüyordu; sırayla
+   * yerleştirmede bu yanlış, çünkü her ekranın KENDİ alanı var. Burada
+   * hesap tek ekrana ait: o ekranın dörtgeni kaç metre, kendi ölçüsü kaç
+   * metre, aradaki çarpan kaç kabine denk geliyor.
+   *
+   * ORAN KORUNUYOR: tek çarpan hem sütuna hem satıra uygulanıyor, yani
+   * 4 × 1'lik ince bir şerit kare bir alanda kareye dönmüyor. Aşağı
+   * yuvarlama taşmayı imkânsız kılıyor — bir kabin daha eklemek alanı
+   * aşıyorsa eklenmiyor (bkz. tasarimiAlanaSigdir, aynı kural).
+   *
+   * Hesap SADECE hesap: hiçbir şeyi değiştirmiyor. Düğmenin altındaki
+   * "4 × 4 → 1,28 × 0,64 m" yazısı da bunu okuyor, yani kullanıcı neyin
+   * değişeceğini basmadan önce görüyor.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const alanaSigdirmaHesabi = (ekran, nokta) => {
+    if (!ekran || !Array.isArray(nokta) || nokta.length !== 4) return null
+    const olcu = dortgenOlcusuCm(koseSirala(nokta))
+    const ozet = ekranOzetleri.find((x) => x.id === ekran.id)
+    if (!(olcu?.enCm > 0) || !(olcu?.boyCm > 0) || !ozet) return null
+    const c0 = Math.max(1, ozet.ayar?.cols || 1)
+    const r0 = Math.max(1, ozet.ayar?.rows || 1)
+    const enM = ozet.enM || 0
+    const boyM = ozet.boyM || 0
+    if (!(enM > 0) || !(boyM > 0)) return null
+    const carpan = Math.min(olcu.enCm / 100 / enM, olcu.boyCm / 100 / boyM)
+    if (!(carpan > 0)) return null
+    const c = Math.max(1, Math.min(EN_COK_KABIN_EKSEN, Math.floor(c0 * carpan + 1e-9)))
+    const r = Math.max(1, Math.min(EN_COK_KABIN_EKSEN, Math.floor(r0 * carpan + 1e-9)))
+    return {
+      c0,
+      r0,
+      c,
+      r,
+      enM: (enM * c) / c0,
+      boyM: (boyM * r) / r0,
+      alanEnM: olcu.enCm / 100,
+      alanBoyM: olcu.boyCm / 100,
+      degisti: c !== c0 || r !== r0,
+    }
+  }
+
+  /*
+   * SIRADAKİ EKRANA GEÇİŞ — onay ve sığdırma aynı yoldan gidiyor.
+   * İkisi ayrı yazıldığında biri sırayı ilerletmeyi unutuyordu.
+   */
+  const yerSiradakineGec = (yeni) => {
     if (!yeni) return
-    /* Sıra, yerleşmemiş ilk ekrana geçiyor (küpte arka yüzler atlanıyor). */
     const sonraki = ekranParcalari.findIndex(
       (x) => yerlesecekIdler.includes(x.id) && !yeni.includes(x.id),
     )
@@ -9990,6 +10052,68 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setYerSira(null)
     setTasarimAcik(true)
     setSihirbazAdim(0)
+  }
+
+  /*
+   * "ALANA SIĞDIR" — ekranı büyütüp aynı dörtgene oturtuyor.
+   *
+   * Onaylamanın kardeşi: ikisi de ekranı işaretlenen alana, alanın
+   * eğimiyle koyuyor; farkı ÖLÇÜ. Onay ölçüyü korur, sığdırma alana
+   * sığan en çok kabine çıkar. Bu yüzden ikisi de aynı adımı atıyor:
+   * kaydet, sıradaki ekrana geç.
+   */
+  const yerEkraniSigdir = () => {
+    if (yerNokta.length !== 4 || !yerEkran) return
+    const h = alanaSigdirmaHesabi(yerEkran, yerNokta)
+    if (!h) return
+    if (yerEkran.id === aktifEkranId) {
+      setCols(h.c)
+      setRows(h.r)
+    } else {
+      setSabitEkranlar((liste) =>
+        liste.map((x) =>
+          x.id === yerEkran.id
+            ? { ...x, ayar: { ...(x.ayar || {}), cols: h.c, rows: h.r } }
+            : x,
+        ),
+      )
+    }
+    /*
+     * SIĞDIRMANIN SONUCU EZİLMİYOR.
+     *
+     * Düzenlenmekte olan ekranda ölçü değişince devreye giren perspektif
+     * düzeltmesi (bkz. sonOlcuRef) ekranı ESKİ konumuna göre yeniden
+     * kuruyor: küçük ekranın SOL ÜST köşesi yerinde kalsın diye büyüyen
+     * ekranı oradan başlatıyor. Ölçülen örnek: 0,96 × 0,48 m lik ekran
+     * 3,52 × 1,76 m ye çıkınca doğru BOYDA ama 110 piksel sağa kaymış
+     * olarak, işaretlenen alanın dışında duruyordu.
+     *
+     * Yeni ölçü burada kaydediliyor: düzeltme "ölçü değişmedi" görüp
+     * karışmıyor ve dörtgen yerKaydet'in bıraktığı gibi, alanın ortasında
+     * kalıyor. Aynı korumayı tasarimiAlanaSigdir da kullanıyor.
+     *
+     * Yalnızca düzenlenen ekranda: ötekinde ekranWm zaten değişmiyor,
+     * oraya yazmak düzeltmeyi bir sonraki gerçek ölçü değişikliğinde
+     * yanıltırdı.
+     */
+    if (yerEkran.id === aktifEkranId) sonOlcuRef.current = { w: h.enM, h: h.boyM }
+    setYerSigdirilanIdler((l) => (l.includes(yerEkran.id) ? l : [...l, yerEkran.id]))
+    yerSiradakineGec(yerKaydet(yerEkran, yerNokta, { enM: h.enM, boyM: h.boyM }))
+  }
+
+  /*
+   * SIRASI GELEN EKRANIN ÖZETİ VE SIĞDIRMA ÖNİZLEMESİ.
+   * Panel bunlardan okuyor; render sırasında hesaplanıyor ki köşe
+   * işaretlendikçe yazılar da anında değişsin.
+   */
+  const yerAktifOzet = yerEkran ? ekranOzetleri.find((x) => x.id === yerEkran.id) : null
+  const yerSigdirma =
+    yerEkran && yerNokta.length === 4 ? alanaSigdirmaHesabi(yerEkran, yerNokta) : null
+
+  const yerEkraniOnayla = () => {
+    if (yerNokta.length !== 4 || !yerEkran) return
+    /* Sıra, yerleşmemiş ilk ekrana geçiyor (küpte arka yüzler atlanıyor). */
+    yerSiradakineGec(yerKaydet(yerEkran, yerNokta))
   }
 
 
@@ -13827,6 +13951,43 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </div>
                 )}
 
+                {/*
+                  ───────────────────────────────────────────────────────────
+                  REFERANS BİTTİ — İKİ ADIMLIK KART TEK SATIRA İNİYOR.
+
+                  Referans bir kez soruluyor, ama sorulduğu kart kapanınca
+                  panelde ölçeğin kurulu olduğuna dair hiçbir iz kalmıyordu:
+                  kullanıcı "acaba silindi mi, yeniden mi yazsam" diye
+                  başa dönüyordu. Tek satır hem ölçeğin durduğunu söylüyor
+                  hem de değiştirmenin tek kapısı oluyor — başka hiçbir
+                  düğme referansı tekrar sormuyor.
+                  ───────────────────────────────────────────────────────────
+                */}
+                {scene === 'ozel' && ozelSahne && refPxCm && !refKipi && sihirbazAdim !== 1 && sihirbazAdim !== 2 && (
+                  <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-neutral-200 px-3.5 py-2.5 dark:border-[#2c333f]">
+                    <span className="flex items-center gap-1.5 text-[13px] text-neutral-600 dark:text-neutral-300">
+                      <span aria-hidden="true" className="font-bold text-emerald-700 dark:text-emerald-400">
+                        ✓
+                      </span>
+                      {t('yer.referans')}
+                      <span className="font-semibold text-neutral-800 dark:text-neutral-100">
+                        {sayiYaz(Number(String(refUzunlukCm).replace(',', '.')), 0)} cm
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRefNokta([])
+                        setRefKipi(true)
+                        setSihirbazAdim(1)
+                      }}
+                      className="shrink-0 text-[13px] font-medium text-brand transition-opacity hover:opacity-80"
+                    >
+                      {t('yer.degistir')}
+                    </button>
+                  </div>
+                )}
+
                 {yerlesimBitti && !olcuAcik && scene === 'ozel' && ozelSahne && (
                   <button
                     type="button"
@@ -13869,7 +14030,17 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   bilinemiyor. Sırayı bozan bir seçenek, yapılamayacak bir
                   işi öneriyordu. Referans alınınca görünüyor.
                 */}
-                {scene === 'ozel' && ozelSahne && (refPxCm || alanIsaretli) && (
+                {/*
+                  SIRALI YERLEŞTİRME SÜRERKEN BU DÜĞME GİZLİ.
+
+                  Sıra kartının içinde o ekrana ait bir "Alana sığdır"
+                  duruyor (bkz. OlcuSihirbazi, 3. adım). Panelde ikinci bir
+                  tane daha olması aynı adı taşıyan ama BAŞKA iş yapan iki
+                  düğme demekti: karttaki yalnızca sırası gelen ekranı,
+                  buradaki tasarımın tamamını büyütüyor. Yerleştirme bitince
+                  bu yine görünüyor.
+                */}
+                {scene === 'ozel' && ozelSahne && sihirbazAdim !== 3 && (refPxCm || alanIsaretli) && (
                   <>
                     <button
                       type="button"
@@ -13971,16 +14142,70 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               setSihirbazAdim(0)
                               setYerlesimBitti(true)
                             }}
-                            yerYonerge={yerAktif ? t('yer.ekran').replace('{0}', String(yerEkran?.sira ?? yerSira + 1)) : ''}
-                            yerSayac={yerAktif ? t('yer.kose').replace('{0}', String(yerNokta.length)) : ''}
+                            /*
+                              SIRA KARTININ BÜTÜN YAZILARI BURADA HAZIRLANIYOR.
+                              Sihirbaz ölçü ya da kabin hesabı yapmıyor; aynı
+                              sayıyı iki yerde hesaplamak ikisinin ayrışması
+                              demek olurdu (bkz. alanaSigdirmaHesabi).
+                            */
+                            yerSayi={yerAktif ? yerlesmisIdler.filter((id) => yerlesecekIdler.includes(id)).length + 1 : 0}
+                            yerToplam={yerlesecekIdler.length}
+                            yerKoseSayisi={yerNokta.length}
+                            yerAktifKabin={yerAktifOzet ? (yerAktifOzet.ayar?.cols || 1) + ' × ' + (yerAktifOzet.ayar?.rows || 1) : ''}
+                            yerAktifOlcu={yerAktifOzet ? mYazi(yerAktifOzet.enM) + ' × ' + mYazi(yerAktifOzet.boyM) + ' m' : ''}
+                            yerAlanYazi={
+                              yerSigdirma
+                                ? t('yer.alanOlcusu')
+                                    .replace('{0}', mYazi(yerSigdirma.alanEnM))
+                                    .replace('{1}', mYazi(yerSigdirma.alanBoyM))
+                                : ''
+                            }
+                            yerYerlestirNot={
+                              yerAktifOzet && yerNokta.length === 4
+                                ? t('yer.yerlestirNot')
+                                    .replace('{0}', mYazi(yerAktifOzet.enM))
+                                    .replace('{1}', mYazi(yerAktifOzet.boyM))
+                                : ''
+                            }
+                            yerSigdirNot={
+                              yerNokta.length !== 4
+                                ? ''
+                                : yerSigdirma?.degisti
+                                  ? t('yer.sigdirNot')
+                                      .replace('{0}', String(yerSigdirma.c))
+                                      .replace('{1}', String(yerSigdirma.r))
+                                      .replace('{2}', mYazi(yerSigdirma.enM))
+                                      .replace('{3}', mYazi(yerSigdirma.boyM))
+                                  : t('yer.sigdirYok')
+                            }
+                            yerSigdirHazir={yerNokta.length === 4 && !!yerSigdirma?.degisti}
+                            onYerSigdir={yerAktif ? yerEkraniSigdir : null}
+                            onKoseDuzelt={yerAktif ? () => setYerNokta([]) : null}
+                            yerBitirHazir={
+                              yerlesecekIdler.length > 0 &&
+                              yerlesecekIdler.every(
+                                (id) =>
+                                  yerlesmisIdler.includes(id) ||
+                                  (yerEkran?.id === id && yerNokta.length === 4),
+                              )
+                            }
                             yerListe={ekranParcalari
                               .filter((x) => yerlesecekIdler.includes(x.id))
-                              .map((x) => ({
-                              id: x.id,
-                              sira: x.sira,
-                              yerlesti: yerlesmisIdler.includes(x.id),
-                              aktif: ekranParcalari[yerSira]?.id === x.id,
-                            }))}
+                              .map((x) => {
+                                const o = ekranOzetleri.find((y) => y.id === x.id)
+                                const olcu = o ? mYazi(o.enM) + ' × ' + mYazi(o.boyM) + ' m' : ''
+                                return {
+                                  id: x.id,
+                                  sira: x.sira,
+                                  yerlesti: yerlesmisIdler.includes(x.id),
+                                  aktif: ekranParcalari[yerSira]?.id === x.id,
+                                  bilgi:
+                                    olcu +
+                                    (yerSigdirilanIdler.includes(x.id)
+                                      ? ' · ' + t('yer.sigdirildi')
+                                      : ' · ' + t('yer.yerlesti')),
+                                }
+                              })}
                             onYerSec={yerEkraniSec}
                             onIsaretle={() => {
                               setRefNokta([])

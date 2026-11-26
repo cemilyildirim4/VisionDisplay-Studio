@@ -139,7 +139,7 @@ for (let i = 0; i < alanlar.length; i++) {
   /* Birden çok ekran varken hangisinin yerleştirileceği listeden seçiliyor. */
   await bas(`${i + 1}. ekranı yerleştir`, 1200)
   await tikla(alanlar[i].map(([a, b]) => [mY.x + mY.w * a, mY.y + mY.h * b]))
-  await bas('Bu ekranı onayla', 1800)
+  await bas('Bu ekranı yerleştir', 1800)
 }
 console.log('3 ekran kuruldu ve yerleştirildi')
 await yerlesmeyiBekle()

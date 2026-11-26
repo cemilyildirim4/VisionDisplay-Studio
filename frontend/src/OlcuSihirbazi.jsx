@@ -113,11 +113,26 @@ function SihirbazKart({
    */
   onYerOnayla = null,
   yerOnayHazir = false,
+  /*
+   * SIRA KARTI — yalnızca o anki ekran açık, ötekiler tek satır.
+   * Hepsi App.jsx'te hesaplanıp hazır metin olarak geliyor: sihirbaz
+   * ölçü/kabin hesabı yapmıyor, yalnızca gösteriyor.
+   */
+  yerSayi = 0,
+  yerToplam = 0,
+  yerKoseSayisi = 0,
+  yerAktifOlcu = '',
+  yerAktifKabin = '',
+  yerAlanYazi = '',
+  yerYerlestirNot = '',
+  yerSigdirNot = '',
+  yerSigdirHazir = false,
+  onYerSigdir = null,
+  onKoseDuzelt = null,
+  yerBitirHazir = false,
   /* Sıradaki ekranın yönergesi ve konan köşe sayısı — tuvalde değil burada. */
   /* Yerleşimi bitir: ölçüm katmanlarını kapatıyor (bkz. App → yerlesimBitti). */
   onYerBitir = null,
-  yerYonerge = '',
-  yerSayac = '',
   /* Her ekran için bir düğme: yerleştir ya da düzenle. */
   yerListe = [],
   onYerSec = null,
@@ -808,62 +823,187 @@ function SihirbazKart({
           {!alanKipi && adim === 3 && !lKose && (
             <>
               {/*
-                YERLEŞTİRME — tasarım zaten ekranda.
-                Ölçek referanstan geldiği için boyut kilitli; kullanıcıya
-                kalan iş taşımak ve kanatları duvara yatırmak.
+                ───────────────────────────────────────────────────────────
+                YERLEŞTİRME — SIRASI GELEN EKRAN AÇIK, ÖTEKİLER TEK SATIR.
+
+                Önce hepsi aynı görünüyordu: alt alta üç "N. ekranı
+                yerleştir" düğmesi, üstünde de tek bir yönerge. Kullanıcı
+                hangi ekranda olduğunu, o ekranın kaç metre olduğunu ve
+                köşelerin kaçını işaretlediğini bir arada göremiyordu.
+
+                Artık sırası gelen ekran AÇIK KART: adı, kabin sayısı,
+                gerçek ölçüsü, dört köşenin kaçı dolu ve işaretlenen alanın
+                ölçüsü orada. Ötekiler tek satır — yerleşmiş olan yeşil ve
+                ölçüsüyle, yerleşmemiş olan soluk ve "bekliyor".
+                ───────────────────────────────────────────────────────────
               */}
-              <p className={aciklama}>{t('yer.adimAciklama')}</p>
-              {yerYonerge && (
-                <p className="mt-1 text-[14px] font-semibold leading-snug text-neutral-800 dark:text-neutral-100">
-                  {yerYonerge}
-                </p>
-              )}
-              {yerSayac && (
-                <p className={`${kucuk} tabular-nums text-neutral-500 dark:text-neutral-400`}>{yerSayac}</p>
-              )}
-              {/*
-                EKRAN LİSTESİ — hangi ekranın yerleştiği tek bakışta.
-                Yerleşmiş olana basmak köşelerini düzeltmeye açıyor.
-              */}
-              {yerListe.length > 0 && onYerSec && (
-                <div className="mt-2 flex flex-col gap-1">
-                  {yerListe.map((x) => (
-                    <button
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500 dark:text-neutral-400">
+                  {t('yer.bolum')}
+                </span>
+                {yerToplam > 0 && (
+                  <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-[12px] font-semibold tabular-nums text-brand">
+                    {yerSayi} / {yerToplam}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-2 flex flex-col gap-1.5">
+                {yerListe.map((x) =>
+                  x.aktif ? (
+                    /* SIRASI GELEN EKRAN — açık kart. */
+                    <div
                       key={x.id}
-                      type="button"
-                      onClick={() => onYerSec(x.sira)}
-                      className={`w-full rounded-lg px-3 py-2 text-left text-[14px] font-medium transition-colors ${
-                        x.aktif
-                          ? 'border-2 border-brand bg-brand/5 text-neutral-800 dark:bg-brand/10 dark:text-neutral-100'
-                          : 'border border-neutral-200 text-neutral-600 hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400'
+                      /*
+                        AÇIK KART BEYAZ, MAVİ DEĞİL.
+
+                        Sihirbazın gövdesi zaten brand-tint; kartı da aynı
+                        tonla boyayınca sırası gelen ekran arka plandan
+                        ayrışmıyor, öteki satırlarla aynı ağırlıkta
+                        görünüyordu. Beyaz zemin ve kalın kenar, "şu an
+                        burasıyla uğraşıyorsun" demenin en sessiz yolu.
+                      */
+                      className="rounded-lg border-2 border-brand bg-white p-3 dark:bg-[#1b2029]"
+                    >
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">
+                          {t('yer.ekranN').replace('{0}', String(x.sira))}
+                        </span>
+                        <span className="text-[12px] tabular-nums text-neutral-600 dark:text-neutral-300">
+                          {yerAktifKabin}
+                          {yerAktifKabin && yerAktifOlcu ? ' · ' : ''}
+                          {yerAktifOlcu}
+                        </span>
+                      </div>
+
+                      {yerKoseSayisi < 4 && (
+                        <p className="mt-1.5 mb-0 text-[13px] leading-snug text-neutral-700 dark:text-neutral-300">
+                          {t('yer.koseTikla')}
+                        </p>
+                      )}
+
+                      {/* Dört köşenin kaçı dolu — noktalar ve sayı. */}
+                      <div className="mt-2 flex items-center gap-2 rounded-lg border border-brand/40 bg-white px-3 py-2 dark:border-[#2c333f] dark:bg-[#1b2029]">
+                        {[0, 1, 2, 3].map((i) => (
+                          <span
+                            key={i}
+                            aria-hidden="true"
+                            className={`h-2.5 w-2.5 rounded-full ${
+                              i < yerKoseSayisi
+                                ? 'bg-brand'
+                                : 'border border-neutral-400 dark:border-neutral-600'
+                            }`}
+                          />
+                        ))}
+                        <span className="ml-0.5 text-[12px] font-medium tabular-nums text-neutral-600 dark:text-neutral-300">
+                          {t('yer.kose').replace('{0}', String(yerKoseSayisi))}
+                          {yerAlanYazi ? ' · ' + yerAlanYazi : ''}
+                        </span>
+                      </div>
+
+                      {/* ÖLÇÜYÜ KORUYAN YOL. */}
+                      {onYerOnayla && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={onYerOnayla}
+                            disabled={!yerOnayHazir}
+                            className={`mt-2 w-full ${ana} disabled:opacity-40`}
+                          >
+                            {t('yer.onayla')}
+                          </button>
+                          {yerYerlestirNot && (
+                            <p className="mt-1 mb-0 text-[11.5px] leading-snug text-neutral-600 dark:text-neutral-400">
+                              {yerYerlestirNot}
+                            </p>
+                          )}
+                        </>
+                      )}
+
+                      {/* ÖLÇÜYÜ BÜYÜTEN YOL — ikisi yan yana, farkı yazıyor. */}
+                      {onYerSigdir && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={onYerSigdir}
+                            disabled={!yerSigdirHazir}
+                            className="mt-2 w-full rounded-lg border border-brand bg-white px-3 py-2.5 text-[14px] font-semibold text-brand transition-colors hover:bg-brand-tint disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-transparent disabled:text-neutral-400 dark:bg-transparent dark:hover:bg-[#1b2436] dark:disabled:border-[#2c333f] dark:disabled:text-neutral-600"
+                          >
+                            {t('ekran.alanaSigdir')}
+                          </button>
+                          {yerSigdirNot && (
+                            <p className="mt-1 mb-0 text-[11.5px] leading-snug text-neutral-600 dark:text-neutral-400">
+                              {yerSigdirNot}
+                            </p>
+                          )}
+                        </>
+                      )}
+
+                      {onKoseDuzelt && yerKoseSayisi > 0 && (
+                        <button
+                          type="button"
+                          onClick={onKoseDuzelt}
+                          className="mt-1.5 w-full rounded-lg px-3 py-1.5 text-[13px] font-medium text-brand transition-colors hover:opacity-80"
+                        >
+                          {t('yer.koseDuzelt')}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    /* ÖTEKİ EKRANLAR — tek satır. */
+                    <div
+                      key={x.id}
+                      className={`flex items-center gap-2 rounded-lg px-3 py-2 ${
+                        x.yerlesti
+                          ? 'border border-emerald-200 bg-emerald-50/70 dark:border-[#24402f] dark:bg-[#15241c]'
+                          : 'border border-neutral-200 dark:border-[#2c333f]'
                       }`}
                     >
-                      {(x.yerlesti ? t('yer.ekraniDuzenle') : t('yer.ekraniYerlestir')).replace(
-                        '{0}',
-                        String(x.sira),
+                      {x.yerlesti && (
+                        <span aria-hidden="true" className="text-[13px] font-bold text-emerald-700 dark:text-emerald-400">
+                          ✓
+                        </span>
                       )}
-                    </button>
-                  ))}
-                </div>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[14px] font-medium text-neutral-700 dark:text-neutral-200">
+                          {t('yer.ekranN').replace('{0}', String(x.sira))}
+                        </span>
+                        <span className="block text-[11.5px] tabular-nums text-neutral-500 dark:text-neutral-400">
+                          {x.yerlesti ? x.bilgi || t('yer.yerlesti') : t('yer.bekliyor')}
+                        </span>
+                      </span>
+                      {x.yerlesti && onYerSec && (
+                        <button
+                          type="button"
+                          onClick={() => onYerSec(x.sira)}
+                          className="rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-[12px] font-semibold text-brand transition-colors hover:border-brand dark:border-[#2c333f] dark:bg-[#1b2029]"
+                        >
+                          {t('yer.duzenleKisa')}
+                        </button>
+                      )}
+                    </div>
+                  ),
+                )}
+              </div>
+
+              {yerListe.some((x) => x.yerlesti) && (
+                <p className={`${kucuk} text-neutral-500 dark:text-neutral-400`}>
+                  {t('yer.duzenleNot')}
+                </p>
               )}
-              {onYerOnayla && (
-                <button
-                  type="button"
-                  onClick={onYerOnayla}
-                  disabled={!yerOnayHazir}
-                  className={`mt-2 w-full ${ana} disabled:opacity-40`}
-                >
-                  {t('yer.onayla')}
-                </button>
-              )}
+
               {/*
                 YERLEŞİMİ BİTİR — ölçümle ilgili ne varsa gizleniyor.
-                Köşe noktaları, referans çizgisi, ölçü yazıları ve ekran
-                numaraları kalkıyor; geri dönüş sağ paneldeki
-                "Yerleşimi düzenle" düğmesiyle.
+                Hepsi yerleşmeden pasif: yarım bir yerleşimi "bitti" saymak
+                kullanıcıyı eksik bir tasarımla baş başa bırakıyordu.
               */}
               {onYerBitir && (
-                <button type="button" onClick={onYerBitir} className={`mt-2 w-full ${yan}`}>
+                <button
+                  type="button"
+                  onClick={onYerBitir}
+                  disabled={!yerBitirHazir}
+                  className={`mt-2 w-full ${ana} disabled:opacity-40`}
+                >
                   {t('yer.bitir')}
                 </button>
               )}
@@ -876,6 +1016,17 @@ function SihirbazKart({
                   {t('sih.geri')}
                 </button>
               </div>
+              {/*
+                SIFIRLAMANIN BEDELİ YAZIYOR.
+
+                "Baştan başla" paneldeki tek sessiz düğme ama en pahalısı:
+                referansı ve bütün yerleşimleri birden siliyor. Ne olacağı
+                yazmazken kullanıcı onu "sıradaki ekrana geç" sanıp
+                basıyordu.
+              */}
+              <p className="mt-1 mb-0 text-center text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+                {t('yer.sifirlaNot')}
+              </p>
             </>
           )}
 

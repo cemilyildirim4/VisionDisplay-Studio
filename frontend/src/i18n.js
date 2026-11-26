@@ -808,8 +808,53 @@ const dict = {
   'yer.kose': { tr: '{0} / 4 köşe', en: '{0} / 4 corners', ar: '{0} / ٤ زوايا' },
   'yer.ekraniYerlestir': { tr: '{0}. ekranı yerleştir', en: 'Place screen {0}', ar: 'ضع الشاشة {0}' },
   'yer.ekraniDuzenle': { tr: '{0}. ekranı düzenle', en: 'Adjust screen {0}', ar: 'عدّل الشاشة {0}' },
-  'yer.onayla': { tr: 'Bu ekranı onayla', en: 'Confirm this screen', ar: 'تأكيد هذه الشاشة' },
+  /*
+   * "Onayla" neyi onayladığını söylemiyordu; yanındaki "Alana sığdır" ise
+   * ne yaptığını söylüyor. İkisi yan yana durduğu için fark adlarından
+   * okunmalı: biri ekranı olduğu ölçüde YERLEŞTİRİYOR, öteki SIĞDIRIYOR.
+   */
+  'yer.onayla': { tr: 'Bu ekranı yerleştir', en: 'Place this screen', ar: 'ضع هذه الشاشة' },
   'yer.bitir': { tr: 'Yerleşimi bitir', en: 'Finish placement', ar: 'إنهاء الوضع' },
+  'yer.ekranN': { tr: '{0}. ekran', en: 'Screen {0}', ar: 'الشاشة {0}' },
+  'yer.bolum': { tr: 'Yerleştirme', en: 'Placement', ar: 'الوضع' },
+  'yer.koseTikla': {
+    tr: 'Duracağı yerin dört köşesine fotoğrafta tıklayın.',
+    en: 'Click the four corners where it will sit.',
+    ar: 'انقر الزوايا الأربع لموضعها في الصورة.',
+  },
+  'yer.alanOlcusu': { tr: 'alan {0} × {1} m', en: 'area {0} × {1} m', ar: 'المنطقة {0} × {1} م' },
+  'yer.yerlestirNot': {
+    tr: 'Ekran {0} × {1} m kalır, alanın eğimine oturur.',
+    en: 'The screen stays {0} × {1} m and takes the area’s tilt.',
+    ar: 'تبقى الشاشة {0} × {1} م وتأخذ ميل المنطقة.',
+  },
+  'yer.sigdirNot': {
+    tr: 'Alana sığan en çok kabine çıkar: {0} × {1} → {2} × {3} m.',
+    en: 'Grows to the most cabinets that fit: {0} × {1} → {2} × {3} m.',
+    ar: 'يزيد إلى أكبر عدد خزائن يتسع: {0} × {1} ← {2} × {3} م.',
+  },
+  'yer.sigdirYok': {
+    tr: 'Bu alana daha fazla kabin sığmıyor.',
+    en: 'No more cabinets fit in this area.',
+    ar: 'لا مزيد من الخزائن يتسع في هذه المنطقة.',
+  },
+  'yer.koseDuzelt': { tr: 'Köşeleri düzelt', en: 'Adjust the corners', ar: 'عدّل الزوايا' },
+  'yer.bekliyor': { tr: 'bekliyor', en: 'waiting', ar: 'بالانتظار' },
+  'yer.yerlesti': { tr: 'yerleşti', en: 'placed', ar: 'تم الوضع' },
+  'yer.duzenleKisa': { tr: 'Düzenle', en: 'Adjust', ar: 'عدّل' },
+  'yer.sigdirildi': { tr: 'alana sığdırıldı', en: 'fitted to the area', ar: 'ملائمة للمنطقة' },
+  'yer.duzenleNot': {
+    tr: 'Düzenle, o ekranın köşelerini yeniden açar. Ölçüm silinmez.',
+    en: 'Adjust reopens that screen’s corners. The measurement is kept.',
+    ar: 'يعيد التعديل فتح زوايا تلك الشاشة. يبقى القياس.',
+  },
+  'yer.sifirlaNot': {
+    tr: 'Referansı ve bütün yerleşimleri birden siler. Ölçümü silen tek yer burası.',
+    en: 'Clears the reference and every placement. The only thing that clears the measurement.',
+    ar: 'يمسح المرجع وكل المواضع. المكان الوحيد الذي يمسح القياس.',
+  },
+  'yer.referans': { tr: 'Referans', en: 'Reference', ar: 'المرجع' },
+  'yer.degistir': { tr: 'Değiştir', en: 'Change', ar: 'تغيير' },
   'yer.duzenle': { tr: 'Yerleşimi düzenle', en: 'Edit placement', ar: 'تعديل الوضع' },
   'yer.kenarSec': { tr: 'Başlangıç kenarını seçin', en: 'Choose the starting edge', ar: 'اختر الحافة الأولى' },
   'yer.duzelt': { tr: 'Köşeleri sürükleyerek düzeltebilirsiniz.', en: 'You can drag the corners to adjust.', ar: 'يمكنك سحب الزوايا للتعديل.' },
