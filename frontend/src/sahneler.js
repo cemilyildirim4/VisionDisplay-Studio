@@ -142,6 +142,16 @@ export const SAHNELER = [
      * duvarın kendi ölçüsü, çizim değişmiyor.
      */
     duvarYuzeyi: true,
+    /*
+     * KAİDE YOK — duvar BİNANIN kendi duvarı.
+     *
+     * Fotoğrafta duvarın dibinde zaten metal bir süpürgelik var; üstüne
+     * ikinci bir kaide çizilince duvarın dibi çift şerit oluyordu. Kalın
+     * dış gölge de duvarı koridorun önüne asılmış bir pano gibi
+     * gösteriyordu. Şehir meydanındaki duvar ayrık bir blok, orada ikisi de
+     * duruyor (bkz. DuvarDilim).
+     */
+    duvarKaide: false,
     maskeli: false, // fotografta kendi LED yuzeyi yok
     /*
      * MEKÂNIN GERÇEK ÖLÇÜLERİ (yaklaşık).

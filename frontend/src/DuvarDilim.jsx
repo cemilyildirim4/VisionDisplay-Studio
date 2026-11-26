@@ -32,45 +32,40 @@ export default function DuvarDilim({ sahne, kutu, tuvalW, tuvalH, duvarWpx, duva
   const duvarUst = tuvalH / 2 - duvarHpx / 2
 
   /*
-   * KADRAJ HER ZAMAN DOLU — dış dilimler gerektiğinde büyüyor.
+   * DIŞ DİLİMLER BÜYÜTÜLMÜYOR, KENDİ YÖNÜNDE ESNİYOR.
    *
-   * Dış dilimler fotoğrafın kendi ölçeğinde (disOlcek) çiziliyordu. O ölçek
-   * fotoğrafın TAMAMI için hesaplanmış bir kaplama ölçeği; ama burada duvar
-   * dilimi esniyor ve duvar yeniden ORTALANıyor, yani fotoğraf artık o
-   * hesabın varsaydığı yerde durmuyor. Duvar kısaldıkça çevresi de yetişemez
-   * oluyor ve kenarda beyaz bir şerit kalıyordu.
+   * Önce şöyleydi: dış dilimlerin hepsi TEK bir ölçekle (olcek) çiziliyor ve
+   * o ölçek, kadrajın boş kalan en geniş kenarını kapatacak kadar
+   * BÜYÜTÜLÜYORDU. AVM koridorunda duvarın üstünde kaynakta yalnızca 178
+   * piksel tavan olduğu için bu ölçek 1,40'a fırlıyor, duvarın kendi ölçeği
+   * ise 0,56 kalıyordu: çevre duvardan 2,5 KAT BÜYÜK çiziliyor, kolonlar
+   * devleşip duvarın üstüne taşıyor ve duvar fotoğrafa yapıştırılmış bir
+   * pano gibi duruyordu.
    *
-   * AVM koridorunda bu üstte görülüyordu: duvarın üstünde kaynakta yalnızca
-   * 178 piksel tavan var (şehir meydanında 410). Duvar ortalanınca o tavan
-   * tuvalin üst yarısını dolduramıyor.
-   *
-   * Çözüm, dış dilimleri kadrajı kapatacak kadar BÜYÜTMEK. Dört kenar ayrı
-   * ayrı hesaplanıp en büyüğü alınıyor; ölçek tek olduğu için hiçbir dilimin
-   * en-boy oranı bozulmuyor — mekân sadece biraz yakından görünüyor.
+   * Dokuz dilimin mantığı zaten bu değil: kenar dilimleri BOŞLUĞU DOLDURMAK
+   * için kendi yönünde esner. Yan dilimler yatayda, üst/alt dilimler dikeyde
+   * uzuyor; dikişin ÜSTÜNDEKİ yön her zaman komşusuyla aynı ölçekte
+   * (yan dilimlerin dikey ölçeği satırdan, üst/alt dilimlerin yatay ölçeği
+   * sütundan geliyor). Böylece çevre duvarla hizalı kalıyor ve kadraj yine
+   * tam doluyor. disOlcek artık yalnızca kaynak boşsa (kenar payı yok)
+   * devreye giriyor.
    */
-  const gerek = (pay, bosluk) => (pay > 0 ? bosluk / 2 / pay : 0)
-  const olcek = Math.max(
-    disOlcek,
-    gerek(sol, tuvalW - duvarWpx),
-    gerek(sag, tuvalW - duvarWpx),
-    gerek(ust, tuvalH - duvarHpx),
-    gerek(alt, tuvalH - duvarHpx),
-  )
-
-  const solPx = sol * olcek
-  const sagPx = sag * olcek
-  const ustPx = ust * olcek
-  const altPx = alt * olcek
+  const solPx = Math.max(0, duvarSol)
+  const sagPx = Math.max(0, tuvalW - duvarSol - duvarWpx)
+  const ustPx = Math.max(0, duvarUst)
+  const altPx = Math.max(0, tuvalH - duvarUst - duvarHpx)
+  /* Kaynakta o kenarda piksel yoksa esnetilecek bir şey de yok. */
+  const esne = (hedefPx, kaynakPx) => (kaynakPx > 0 ? hedefPx / kaynakPx : disOlcek)
 
   const sutun = [
-    { x: duvarSol - solPx, w: solPx, sx: olcek, kx: 0 },
+    { x: duvarSol - solPx, w: solPx, sx: esne(solPx, sol), kx: 0 },
     { x: duvarSol, w: duvarWpx, sx: duvarWpx / (kutu.x1 - kutu.x0), kx: kutu.x0 },
-    { x: duvarSol + duvarWpx, w: sagPx, sx: olcek, kx: kutu.x1 },
+    { x: duvarSol + duvarWpx, w: sagPx, sx: esne(sagPx, sag), kx: kutu.x1 },
   ]
   const satir = [
-    { y: duvarUst - ustPx, h: ustPx, sy: olcek, ky: 0 },
+    { y: duvarUst - ustPx, h: ustPx, sy: esne(ustPx, ust), ky: 0 },
     { y: duvarUst, h: duvarHpx, sy: duvarHpx / (kutu.y1 - kutu.y0), ky: kutu.y0 },
-    { y: duvarUst + duvarHpx, h: altPx, sy: olcek, ky: kutu.y1 },
+    { y: duvarUst + duvarHpx, h: altPx, sy: esne(altPx, alt), ky: kutu.y1 },
   ]
 
   const dilimler = []
@@ -106,18 +101,21 @@ export default function DuvarDilim({ sahne, kutu, tuvalW, tuvalH, duvarWpx, duva
    */
   if (sahne.duvarYuzeyi) {
     /*
-     * KAİDE VE TEMAS GÖLGESİ.
+     * KAİDE VE TEMAS GÖLGESİ — YALNIZCA AYRIK DURAN DUVARDA.
      *
-     * Kenar çizgisi duvarın nerede bittiğini söylüyordu ama duvar yine de
-     * zemine BASMIYOR gibi duruyordu: dibinde ne bir kaide ne de bir gölge
-     * vardı, dokunun bittiği yerde doku başlıyordu. Gerçek bir duvarın
-     * dibinde iki şey olur — biraz daha geniş bir kaide ve zemine düşen
-     * yumuşak bir temas gölgesi. İkisi de duvarın ölçüsüyle orantılı.
+     * Şehir meydanındaki duvar meydanın ortasında duran ayrı bir blok:
+     * dibinde kaide ve zemine düşen gölge olmadan havada duruyor gibiydi.
+     * AVM koridorunda ise duvar BİNANIN kendi duvarı ve fotoğrafta zaten
+     * kendi süpürgeliği var — oraya ikinci bir kaide çizmek duvarın dibine
+     * çift şerit koyuyor, kalın gölge de duvarı fotoğrafın önüne
+     * yapıştırılmış bir pano gibi gösteriyordu (bkz. sahneler.js
+     * duvarKaide).
      */
+    const ayrikDuvar = sahne.duvarKaide !== false
     const kaideH = Math.max(3, duvarHpx * 0.045)
     const kaideTasma = Math.max(2, duvarWpx * 0.008)
     /* Temas gölgesi kaidenin dibinde, duvardan geniş ve çok yumuşak. */
-    dilimler.push(
+    if (ayrikDuvar) dilimler.push(
       <div
         key="duvar-temas-golge"
         aria-hidden="true"
@@ -148,6 +146,16 @@ export default function DuvarDilim({ sahne, kutu, tuvalW, tuvalH, duvarWpx, duva
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
         }}
       />,
+    )
+    /*
+     * DUVARIN KENARI — binanın duvarında çok daha sessiz.
+     *
+     * Ayrık duvarda kenar + dışa düşen gölge duvarı mekândan ayırıyor.
+     * Binanın duvarında ayrılacak bir şey yok: orada bu işaret yalnızca
+     * kullanıcının girdiği ölçünün NEREDE bittiğini söylüyor, o yüzden ince
+     * ve soluk.
+     */
+    dilimler.push(
       <div
         key="duvar-sinir"
         aria-hidden="true"
@@ -158,8 +166,12 @@ export default function DuvarDilim({ sahne, kutu, tuvalW, tuvalH, duvarWpx, duva
           width: duvarWpx,
           height: duvarHpx,
           pointerEvents: 'none',
-          border: '1px solid rgba(255,255,255,0.45)',
-          boxShadow: '0 10px 26px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(0,0,0,0.06)',
+          border: ayrikDuvar
+            ? '1px solid rgba(255,255,255,0.45)'
+            : '1px solid rgba(255,255,255,0.18)',
+          boxShadow: ayrikDuvar
+            ? '0 10px 26px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(0,0,0,0.06)'
+            : 'inset 0 0 0 1px rgba(0,0,0,0.04)',
         }}
       />,
     )
