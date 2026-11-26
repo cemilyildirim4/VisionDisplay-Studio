@@ -11363,7 +11363,32 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                */
               tutamak={tasimaAcik && !kutuKipi ? etkinTutamak : null}
               yon={surukleAktif && !koseTuval ? mekanYon : null}
-              sahneOlcekVarsayilan={sahneOlcekVarsayilan}
+              /*
+               * ───────────────────────────────────────────────────────────
+               * KENDİ FOTOĞRAFINDA ÖLÇEK REFERANSTAN — TUVALE SIĞDIRMA YOK.
+               *
+               * Hazır mekânların ölçeği var (panoOlcek, fotoOlcek, salon,
+               * cephe); "Kendi fotoğrafım"ın yoktu. Ölçek yokken WallPreview
+               * kendi kuralına düşüyor: tasarımı TUVALE SIĞDIRIYOR. Sonuç,
+               * aynı ekranın aynı fotoğrafta iki ayrı boyda çizilmesiydi —
+               * ölçülen örnekte yerleştirilmiş ekran 82 px (0,96 m, doğru),
+               * yerleştirilmemiş olan 185 px, yani 2,16 m gibi. Kullanıcı
+               * fotoğrafın üstünde kocaman bir şerit görüyordu.
+               *
+               * Referans kurulduğu andan itibaren fotoğrafın gerçek
+               * piksel/metre karşılığı elimizde (yer3dOlcek); ekran artık
+               * onunla çiziliyor, yani fotoğrafta her zaman GERÇEK boyunda.
+               *
+               * Yerleştirilmiş ekranı bozmuyor: orada çizim dört köşeye
+               * homografiyle oturuyor (bkz. koseDonusumu), kaynak kutunun
+               * ölçeği sonucu değiştirmiyor.
+               * ───────────────────────────────────────────────────────────
+               */
+              sahneOlcekVarsayilan={
+                scene === 'ozel' && ozelSahne && yer3dOlcek > 0
+                  ? yer3dOlcek
+                  : sahneOlcekVarsayilan
+              }
               onPxPerM={setCizimOlcek}
               onEkranKutusu={ekranKutuYeriniYaz}
               /*
