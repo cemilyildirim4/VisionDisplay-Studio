@@ -838,7 +838,6 @@ const dict = {
     en: 'No more cabinets fit in this area.',
     ar: 'لا مزيد من الخزائن يتسع في هذه المنطقة.',
   },
-  'yer.koseDuzelt': { tr: 'Köşeleri düzelt', en: 'Adjust the corners', ar: 'عدّل الزوايا' },
   'yer.bekliyor': { tr: 'bekliyor', en: 'waiting', ar: 'بالانتظار' },
   'yer.yerlesti': { tr: 'yerleşti', en: 'placed', ar: 'تم الوضع' },
   'yer.duzenleKisa': { tr: 'Düzenle', en: 'Adjust', ar: 'عدّل' },

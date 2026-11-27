@@ -128,7 +128,6 @@ function SihirbazKart({
   yerSigdirNot = '',
   yerSigdirHazir = false,
   onYerSigdir = null,
-  onKoseDuzelt = null,
   yerBitirHazir = false,
   /* Sıradaki ekranın yönergesi ve konan köşe sayısı — tuvalde değil burada. */
   /* Yerleşimi bitir: ölçüm katmanlarını kapatıyor (bkz. App → yerlesimBitti). */
@@ -939,14 +938,28 @@ function SihirbazKart({
                         </>
                       )}
 
-                      {onKoseDuzelt && yerKoseSayisi > 0 && (
-                        <button
-                          type="button"
-                          onClick={onKoseDuzelt}
-                          className="mt-1.5 w-full rounded-lg px-3 py-1.5 text-[13px] font-medium text-brand transition-colors hover:opacity-80"
-                        >
-                          {t('yer.koseDuzelt')}
-                        </button>
+                      {/*
+                        ───────────────────────────────────────────────────
+                        "KÖŞELERİ DÜZELT" DÜĞMESİ KALDIRILDI.
+
+                        Düğme adında "düzelt" yazıyor ama yaptığı şey dört
+                        işareti birden SİLMEKTİ: basan kullanıcı fotoğrafı
+                        bomboş buluyor ve dördünü yeniden tıklamak zorunda
+                        kalıyordu. Düzeltmek isteyen biri için bu bir işlev
+                        değil, yaptığı işin kaybı.
+
+                        Üstelik gereksizdi: köşeler konduğu andan itibaren
+                        zaten sürüklenebilir tutamak (bkz. ReferansSecici).
+                        Yanlış konan bir köşe tutulup doğru yere çekiliyor,
+                        ötekilere dokunmadan. Düğmenin vaat ettiği şey
+                        halihazırda vardı; eksik olan tek şey bunun
+                        SÖYLENMESİYDİ.
+                        ───────────────────────────────────────────────────
+                      */}
+                      {yerKoseSayisi > 0 && (
+                        <p className="mt-1.5 mb-0 text-[11.5px] leading-snug text-neutral-600 dark:text-neutral-400">
+                          {t('yer.duzelt')}
+                        </p>
                       )}
                     </div>
                   ) : (

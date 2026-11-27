@@ -14196,7 +14196,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             }
                             yerSigdirHazir={yerNokta.length === 4 && !!yerSigdirma?.degisti}
                             onYerSigdir={yerAktif ? yerEkraniSigdir : null}
-                            onKoseDuzelt={yerAktif ? () => setYerNokta([]) : null}
                             yerBitirHazir={
                               yerlesecekIdler.length > 0 &&
                               yerlesecekIdler.every(
