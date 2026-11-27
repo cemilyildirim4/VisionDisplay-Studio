@@ -13791,6 +13791,45 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   onAc={() => setSagBolum('olcum')}
                 >
 
+                {/* Referans satırı bölümün İLK şeyi: ölçek her şeyin öncülü. */}
+                {/*
+                  ───────────────────────────────────────────────────────────
+                  REFERANS BİTTİ — İKİ ADIMLIK KART TEK SATIRA İNİYOR.
+
+                  Referans bir kez soruluyor, ama sorulduğu kart kapanınca
+                  panelde ölçeğin kurulu olduğuna dair hiçbir iz kalmıyordu:
+                  kullanıcı "acaba silindi mi, yeniden mi yazsam" diye
+                  başa dönüyordu. Tek satır hem ölçeğin durduğunu söylüyor
+                  hem de değiştirmenin tek kapısı oluyor — başka hiçbir
+                  düğme referansı tekrar sormuyor.
+                  ───────────────────────────────────────────────────────────
+                */}
+                {scene === 'ozel' && ozelSahne && refPxCm && !refKipi && sihirbazAdim !== 1 && sihirbazAdim !== 2 && (
+                  <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-neutral-200 px-3.5 py-2.5 dark:border-[#2c333f]">
+                    <span className="flex items-center gap-1.5 text-[13px] text-neutral-600 dark:text-neutral-300">
+                      <span aria-hidden="true" className="font-bold text-emerald-700 dark:text-emerald-400">
+                        ✓
+                      </span>
+                      {t('yer.referans')}
+                      <span className="font-semibold text-neutral-800 dark:text-neutral-100">
+                        {sayiYaz(Number(String(refUzunlukCm).replace(',', '.')), 0)} cm
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRefNokta([])
+                        setRefKipi(true)
+                        setSihirbazAdim(1)
+                      }}
+                      className="shrink-0 text-[13px] font-medium text-brand transition-opacity hover:opacity-80"
+                    >
+                      {t('yer.degistir')}
+                    </button>
+                  </div>
+                )}
+
+
                 {/*
                   TASARIMI ALANA SIĞDIR — bir adımın içinde saklı değil.
                   Fotoğrafta alan işaretlendiği anda yapılacak ilk iş bu;
@@ -13951,43 +13990,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                   </div>
                 )}
 
-                {/*
-                  ───────────────────────────────────────────────────────────
-                  REFERANS BİTTİ — İKİ ADIMLIK KART TEK SATIRA İNİYOR.
-
-                  Referans bir kez soruluyor, ama sorulduğu kart kapanınca
-                  panelde ölçeğin kurulu olduğuna dair hiçbir iz kalmıyordu:
-                  kullanıcı "acaba silindi mi, yeniden mi yazsam" diye
-                  başa dönüyordu. Tek satır hem ölçeğin durduğunu söylüyor
-                  hem de değiştirmenin tek kapısı oluyor — başka hiçbir
-                  düğme referansı tekrar sormuyor.
-                  ───────────────────────────────────────────────────────────
-                */}
-                {scene === 'ozel' && ozelSahne && refPxCm && !refKipi && sihirbazAdim !== 1 && sihirbazAdim !== 2 && (
-                  <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-neutral-200 px-3.5 py-2.5 dark:border-[#2c333f]">
-                    <span className="flex items-center gap-1.5 text-[13px] text-neutral-600 dark:text-neutral-300">
-                      <span aria-hidden="true" className="font-bold text-emerald-700 dark:text-emerald-400">
-                        ✓
-                      </span>
-                      {t('yer.referans')}
-                      <span className="font-semibold text-neutral-800 dark:text-neutral-100">
-                        {sayiYaz(Number(String(refUzunlukCm).replace(',', '.')), 0)} cm
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRefNokta([])
-                        setRefKipi(true)
-                        setSihirbazAdim(1)
-                      }}
-                      className="shrink-0 text-[13px] font-medium text-brand transition-opacity hover:opacity-80"
-                    >
-                      {t('yer.degistir')}
-                    </button>
-                  </div>
-                )}
-
                 {yerlesimBitti && !olcuAcik && scene === 'ozel' && ozelSahne && (
                   <button
                     type="button"
@@ -14053,7 +14055,21 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         setRefKipi(false)
                         setAlanKipi(true)
                       }}
-                      className="mt-2 w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90"
+                      /*
+                        DOLU MAVİ YALNIZCA YAPILACAK ADIMDA.
+
+                        Düğme iki iş yapıyor: alan yoksa işaretlemeyi
+                        BAŞLATIYOR (sıradaki adım, dolayısıyla vurgulu),
+                        alan varsa sığdırıyor (isteğe bağlı bir ayar).
+                        İkisi de dolu maviyken panelde üst üste iki ana
+                        düğme duruyordu — "Tasarımı ekrana getir" ile
+                        yan yana hangisinin asıl iş olduğu belirsizdi.
+                      */
+                      className={
+                        alanIsaretli
+                          ? 'mt-2 w-full rounded-lg border border-brand px-4 py-2.5 text-[16px] font-semibold text-brand transition-colors hover:bg-brand-tint dark:hover:bg-[#1b2436]'
+                          : 'mt-2 w-full rounded-lg bg-brand px-4 py-2.5 text-[16px] font-semibold text-white transition-opacity hover:opacity-90'
+                      }
                     >
                       {alanIsaretli ? t('ekran.alanaSigdir') : t('sih.sec.alan')}
                     </button>
@@ -14382,36 +14398,38 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                               yazmak yanlıştı — eksik bir şey yokken eksikmiş
                               gibi duruyordu.
                             */}
-                            <div className="flex items-center gap-1.5 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
-                              <span
-                                className={`inline-block h-2.5 w-2.5 rounded-[3px] ${
-                                  (lYerlesimKipi ? lKoseOlcek : refPxCm)
-                                    ? 'bg-emerald-500'
-                                    : 'bg-neutral-300 dark:bg-[#39404d]'
-                                }`}
-                              />
-                              {lYerlesimKipi ? t('refL.baslik') : t('ref2.baslik')}
-                            </div>
-                            {lYerlesimKipi ? (
-                              lKoseOlcek ? (
-                                <p className="mt-0.5 mb-0 text-[13px] leading-snug text-emerald-700 dark:text-emerald-400">
-                                  {Math.round(lKoseOlcek.px)} px / {Math.round(lKoseOlcek.cm)} cm ={' '}
-                                  <strong>{lKoseOlcek.pxCm.toFixed(3).replace('.', ',')} px/cm</strong>
-                                </p>
-                              ) : (
+                            {/*
+                              ───────────────────────────────────────────────
+                              ÖLÇEK KURULUYSA BU BAŞLIK HİÇ YOK.
+
+                              Burada "● Referans ölçü" başlığı ve altında
+                              "436 px / 200 cm = 2,179 px/cm" yazıyordu. İkisi
+                              de fazlaydı:
+
+                              Referans panelde ZATEN iki yerde duruyor —
+                              bölüm başlığındaki "✓ 200 cm" ve hemen
+                              yukarıdaki "Referans 200 cm · Değiştir" satırı.
+                              Üçüncüsü hiçbir şey eklemiyordu.
+
+                              px/cm ise bizim hesabımızın ARA SONUCU:
+                              fotoğrafta bir santimin kaç piksel ettiği.
+                              Doğru çalıştığını görmek için konmuştu;
+                              kullanıcının bakacağı sayı 200 cm, bu değil.
+
+                              Ölçek HENÜZ YOKKEN başlık duruyor: orada
+                              söylenecek bir şey var — eksik olan şey.
+                              ───────────────────────────────────────────────
+                            */}
+                            {!(lYerlesimKipi ? lKoseOlcek : refPxCm) && (
+                              <>
+                                <div className="flex items-center gap-1.5 text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
+                                  <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-neutral-300 dark:bg-[#39404d]" />
+                                  {lYerlesimKipi ? t('refL.baslik') : t('ref2.baslik')}
+                                </div>
                                 <p className="mt-0.5 mb-0 text-[13.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                                  {t('refL.yok')}
+                                  {lYerlesimKipi ? t('refL.yok') : t('sih.ozetYok')}
                                 </p>
-                              )
-                            ) : refPxCm ? (
-                              <p className="mt-0.5 mb-0 text-[13px] leading-snug text-emerald-700 dark:text-emerald-400">
-                                {Math.round(refOlcek.pxMesafe)} px / {refOlcek.gercekCm} cm ={' '}
-                                <strong>{refPxCm.x.toFixed(3).replace('.', ',')} px/cm</strong>
-                              </p>
-                            ) : (
-                              <p className="mt-0.5 mb-0 text-[13.5px] leading-snug text-neutral-500 dark:text-neutral-400">
-                                {t('sih.ozetYok')}
-                              </p>
+                              </>
                             )}
                             {olcuKutu && !lYerlesimKipi && (
                               <p className="mt-0.5 mb-0 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
@@ -14430,24 +14448,33 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                 {t('ref2.eskidi')}
                               </p>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                /* Hiç ölçü yoksa düğme "Referans ölçü al": fotoğrafa dokunmuyor. */
-                                const olcuVar = lYerlesimKipi ? !!lKoseOlcek : !!(olcuKutu || refPxCm)
-                                if (olcuVar) bastanBasla()
-                                else sihirbaziBaslat()
-                              }}
-                              className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
-                            >
-                              {lYerlesimKipi
-                                ? lKoseOlcek
-                                  ? t('refL.yeniden')
-                                  : t('refL.basla')
-                                : olcuKutu || refPxCm
-                                  ? t('sih.yeniden')
-                                  : t('sih.basla')}
-                            </button>
+                            {/*
+                              ───────────────────────────────────────────────
+                              MAVİ DÜĞME YALNIZCA ÖLÇEK YOKKEN.
+
+                              Burada tek bir düğme iki ayrı iş yapıyordu:
+                              ölçek yoksa "Referans ölçü al" (zararsız, akışı
+                              başlatıyor), varsa "Baştan başla" (referansı ve
+                              bütün yerleşimleri siliyor). İkisi de panelin
+                              TEK dolu mavi düğmesiydi — yani göz ilk oraya
+                              gidiyor ve gördüğü şey her şeyi silen düğme
+                              oluyordu.
+
+                              Ayrıldılar: başlatmak burada ve mavi kalıyor,
+                              sıfırlamak kartın en altına, çizginin altına,
+                              sessiz yazı olarak indi (aşağıda).
+                              ───────────────────────────────────────────────
+                            */}
+                            {!(lYerlesimKipi ? lKoseOlcek : olcuKutu || refPxCm) && (
+                              <button
+                                type="button"
+                                /* Hiç ölçü yok: fotoğrafa dokunmadan akışı başlatıyor. */
+                                onClick={sihirbaziBaslat}
+                                className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-semibold bg-brand text-white hover:opacity-90 transition-opacity"
+                              >
+                                {lYerlesimKipi ? t('refL.basla') : t('sih.basla')}
+                              </button>
+                            )}
                             {/*
                               KANAT ŞEKLİ — DÜĞME ARKASINDA DEĞİL, AÇIKTA.
 
@@ -14520,7 +14547,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                       setSihirbazAdim(1)
                                     }
                                   }}
-                                  className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                                  className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-semibold border border-brand text-brand transition-colors hover:bg-brand-tint dark:hover:bg-[#1b2436]"
                                 >
                                   {t('ref2.duzenle')}
                                 </button>
@@ -14528,13 +14555,40 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                   ÇİZGİYİ GİZLE — müşteriye gösterilecek kare temiz kalsın.
                                   Düzenlemeye girilince çizgi kendiliğinden geri geliyor.
                                 */}
+                                {/*
+                                  ÇİZGİYİ GİZLE SESSİZ BİR YAZI.
+
+                                  Kutulu düğme olarak "Düzenle" ile aynı
+                                  ağırlıktaydı; oysa biri ölçüyü değiştirmeye
+                                  giriyor, öteki yalnızca ekran görüntüsü
+                                  alırken bir kez basılan bir görünüm anahtarı.
+                                */}
                                 <button
                                   type="button"
                                   onClick={() => setCizgiGizli((o) => !o)}
-                                  className="mt-1.5 w-full py-2 rounded-lg text-[14.5px] font-medium border border-neutral-200 dark:border-[#2c333f] text-neutral-600 dark:text-neutral-400 hover:border-brand hover:text-brand transition-colors"
+                                  className="mt-1 w-full py-1.5 rounded-lg text-[13px] font-medium text-neutral-500 transition-colors hover:text-brand dark:text-neutral-400"
                                 >
                                   {cizgiGizli ? t('ref2.cizgiGoster') : t('ref2.cizgiGizle')}
                                 </button>
+
+                                {/*
+                                  SIFIRLAMA EN ALTTA, ÇİZGİNİN ALTINDA.
+                                  Yerleştirme kartındakiyle aynı duruş: sessiz
+                                  yazı ve altında ne sileceği (bkz.
+                                  OlcuSihirbazi, yer.sifirlaNot).
+                                */}
+                                <div className="mt-2 border-t border-neutral-200 pt-2 dark:border-[#2c333f]">
+                                  <button
+                                    type="button"
+                                    onClick={bastanBasla}
+                                    className="w-full py-1.5 rounded-lg text-[13px] font-medium text-neutral-500 transition-colors hover:text-brand dark:text-neutral-400"
+                                  >
+                                    {lYerlesimKipi ? t('refL.yeniden') : t('sih.yeniden')}
+                                  </button>
+                                  <p className="m-0 text-center text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+                                    {t('yer.sifirlaNot')}
+                                  </p>
+                                </div>
                                 {PANEL.olcuDuzenlePaneli && duzenleAcik && (
                                   <div className="mt-1.5 rounded-lg border border-neutral-200 p-2 dark:border-[#2c333f]">
                                     {/*
