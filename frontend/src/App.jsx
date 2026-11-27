@@ -10029,10 +10029,34 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     const enM = ozet.enM || 0
     const boyM = ozet.boyM || 0
     if (!(enM > 0) || !(boyM > 0)) return null
-    const carpan = Math.min(olcu.enCm / 100 / enM, olcu.boyCm / 100 / boyM)
-    if (!(carpan > 0)) return null
-    const c = Math.max(1, Math.min(EN_COK_KABIN_EKSEN, Math.floor(c0 * carpan + 1e-9)))
-    const r = Math.max(1, Math.min(EN_COK_KABIN_EKSEN, Math.floor(r0 * carpan + 1e-9)))
+    /*
+     * İKİ EKSEN AYRI — ALAN GERÇEKTEN DOLUYOR.
+     *
+     * Önce TEK çarpan vardı (iki yönün küçüğü) ve bu tasarımın en-boy
+     * oranını koruyordu. Bedeli: oranı alandan farklı olan bir tasarım bir
+     * yönde doluyor, ötekinde boşluk bırakıyordu. Ölçülen örnek: 3,59 ×
+     * 1,90 m lik alana 3,52 × 1,76 m — yatayda %98, dikeyde %93.
+     *
+     * Ürün kararı: "sığdır" DOLDURMAK demek; kabin sayısının ve oranın
+     * değişmesi sorun değil. Her yön kendi çarpanıyla hesaplanıyor.
+     */
+    const carpanEn = olcu.enCm / 100 / enM
+    const carpanBoy = olcu.boyCm / 100 / boyM
+    if (!(carpanEn > 0) || !(carpanBoy > 0)) return null
+    /*
+     * EN YAKIN KABİNE YUVARLANIYOR — AŞAĞI DEĞİL.
+     *
+     * Aşağı yuvarlamak taşmayı imkânsız kılıyordu ama bedeli şuydu:
+     * 191,9 cm ölçülen 192 cm'lik bir alanda çarpan 5,997 çıkıyor ve bir
+     * kabin komple yutuluyor; kullanıcı "sığdır" deyip kenarda parmak
+     * kalınlığında boşluk görüyordu. Ürün kararı değişti: sığdırmak
+     * DOLDURMAK demek, kabin sayısının değişmesi sorun değil.
+     *
+     * En yakına yuvarlamak en çok yarım kabin taşma bırakıyor; aşağı
+     * yuvarlamak ise bir kabine kadar boşluk bırakıyordu.
+     */
+    const c = Math.max(1, Math.min(EN_COK_KABIN_EKSEN, Math.round(c0 * carpanEn)))
+    const r = Math.max(1, Math.min(EN_COK_KABIN_EKSEN, Math.round(r0 * carpanBoy)))
     return {
       c0,
       r0,
@@ -10133,6 +10157,18 @@ function App({ theme, onToggleTheme: temaDegistir }) {
 
   const yerKenarCizimeGec = () => {
     setYerCizgi([])
+    /*
+     * DÖRT KÖŞE DOLUYSA YER AÇILIYOR.
+     *
+     * Düğme eskiden "Köşeleri düzelt"in arkasındaydı: kullanıcı önce onu
+     * basıp işaretleri siliyor, sonra ortaya çıkan kenar düğmesine
+     * basıyordu — tek bir iş için iki basış. Düğme tek kalınca bu adım
+     * buraya taşındı: köşeler zaten doluysa eklenecek yer yok, siliniyor.
+     *
+     * KİLİTLİ KÖŞELER KALIYOR: komşu ekranla paylaşılan kenar silinirse
+     * birleşim açılırdı (bkz. kenariSec, yerKilit).
+     */
+    setYerNokta((l) => (l.length >= 4 ? l.slice(0, Math.max(0, yerKilit)) : l))
     setYerKenarKipi(true)
   }
   const yerKenarVazgec = () => {
@@ -10149,19 +10185,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
     setYerCizgi([])
     setYerKenarKipi(false)
   }
-  /*
-   * KÖŞELERİ DÜZELT — dört işaret silinip yeniden konuyor.
-   *
-   * Tek tek sürüklemek ince ayar için; bu ise "buraya hiç olmadı, baştan
-   * işaretleyeyim" demenin yolu. Yalnızca o EKRANIN köşelerini siliyor;
-   * referansa, öteki ekranlara ve ölçüye dokunmuyor.
-   */
-  const yerKoseleriDuzelt = () => {
-    setYerCizgi([])
-    setYerKenarKipi(false)
-    setYerNokta([])
-  }
-
   const yerEkraniOnayla = () => {
     if (yerNokta.length !== 4 || !yerEkran) return
     /* Sıra, yerleşmemiş ilk ekrana geçiyor (küpte arka yüzler atlanıyor). */
@@ -12034,7 +12057,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
           )}
 
           {yerAktif && !yerKenarKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
-            <>
               <div style={{ position: 'absolute', inset: 0, zIndex: 18 }}>
                 <ReferansSecici
                   foto={isaretFoto}
@@ -12058,16 +12080,37 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                    */
                 />
               </div>
-              {/*
-                BAŞLANGIÇ KENARI SEÇİMİ.
+          )}
 
-                Birleşik tipte yeni ekran bir öncekinin kenarından başlıyor;
-                hangisi olduğunu kullanıcı seçiyor. İki yan kenar hafifçe
-                vurgulanıyor, tıklanan kenarın iki köşesi yeni ekrana kilitli
-                geliyor (bkz. kenariSec). Katman nokta koymayı engellemesin
-                diye yalnızca çizginin üstünde tıklanabilir.
-              */}
-              {kenarSecenekleri.length > 0 && (
+          {/*
+            ───────────────────────────────────────────────────────────────
+            BAŞLANGIÇ KENARI SEÇİMİ.
+
+            Birleşik tipte yeni ekran bir öncekinin kenarından başlıyor;
+            hangisi olduğunu kullanıcı seçiyor. Tıklanan kenarın iki köşesi
+            yeni ekrana kilitli geliyor (bkz. kenariSec).
+
+            KENAR ÇİZİMİNDE DE DURUYOR. Önce yalnızca köşe seçme kipinde
+            çiziliyordu: ikinci ekranın köşesi görünmüyorsa kullanıcı
+            kenarlardan bulma kipine giriyor ve orada birleşim çubuğu
+            kayboluyordu — yani aynı anda hem köşeyi bulup hem ekranı
+            komşusuna birleştiremiyordu.
+
+            BİRLEŞİM SEÇİLİNCE KAYBOLUYOR. Çubuğun görünmez tıklama
+            şeridi 16 piksel genişti ve birleşim çizgisinin iki yanındaki
+            her tıklamayı yutuyordu: birleşim çizgisinin tam üstüne köşe
+            koymak isteyen kullanıcı nokta koyamıyordu. Kenar seçimi bir
+            kerelik bir iş ve seçildiği anda iki köşe zaten kilitleniyor;
+            o andan sonra çubuk çekiliyor ve çizginin üstü tamamen
+            işaretlemeye kalıyor. Şerit de 16'dan 9'a indi.
+            ───────────────────────────────────────────────────────────────
+          */}
+          {yerAktif &&
+            fotoYer?.genislik > 0 &&
+            scene === 'ozel' &&
+            ozelSahne &&
+            kenarSecenekleri.length > 0 &&
+            !yerKenarSecim[yerEkran?.id] && (
                 <svg
                   className="absolute inset-0"
                   width={tuvalBoyut.w}
@@ -12091,8 +12134,8 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                         x2={s.uc[1].x}
                         y2={s.uc[1].y}
                         stroke="transparent"
-                        strokeWidth="16"
-                        strokeLinecap="round"
+                        strokeWidth="9"
+                        strokeLinecap="butt"
                         style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
                         onPointerDown={(e) => {
                           e.preventDefault()
@@ -12103,9 +12146,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                     </g>
                   ))}
                 </svg>
-              )}
-            </>
-          )}
+            )}
 
           {refKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <ReferansSecici
@@ -14279,7 +14320,6 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             onYerKenarBasla={yerAktif ? yerKenarCizimeGec : null}
                             onYerKenarVazgec={yerKenarVazgec}
                             onYerKenardanKur={yerKenardanKur}
-                            onKoseDuzelt={yerAktif ? yerKoseleriDuzelt : null}
                             onYerSigdir={yerAktif ? yerEkraniSigdir : null}
                             yerBitirHazir={
                               yerlesecekIdler.length > 0 &&

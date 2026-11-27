@@ -134,7 +134,6 @@ function SihirbazKart({
   onYerKenarBasla = null,
   onYerKenarVazgec = null,
   onYerKenardanKur = null,
-  onKoseDuzelt = null,
   onYerSigdir = null,
   yerBitirHazir = false,
   /* Sıradaki ekranın yönergesi ve konan köşe sayısı — tuvalde değil burada. */
@@ -1019,7 +1018,7 @@ function SihirbazKart({
                         Köşe tamamlanana kadar kenar yolu açık: bir
                         fotoğrafta birden çok köşe görünmeyebiliyor.
                       */}
-                      {onYerKenarBasla && yerKoseSayisi < 4 && (
+                      {onYerKenarBasla && (
                         <button
                           type="button"
                           onClick={onYerKenarBasla}
@@ -1030,19 +1029,18 @@ function SihirbazKart({
                       )}
 
                       {/*
-                        KÖŞELERİ DÜZELT — dört işareti silip yeniden koymak.
-                        Tek bir köşeyi düzeltmek için gerekmiyor: konan
-                        köşeler zaten sürüklenebilir tutamak.
+                        "KÖŞELERİ DÜZELT" AYRI BİR DÜĞME DEĞİL.
+
+                        İki düğme üst üste duruyordu ve kullanıcı ikisine
+                        peş peşe basıyordu: önce "Köşeleri düzelt" (işaretler
+                        siliniyor), sonra ortaya çıkan "Köşe görünmüyor"
+                        (kenar kipi açılıyor). Oysa yapmak istediği tek şey
+                        vardı — kenarlardan köşe bulmak.
+
+                        Tek düğme kaldı ve doğrudan kenar çizimini açıyor;
+                        tek bir köşeyi düzeltmek için zaten düğme gerekmiyor,
+                        konan köşeler sürüklenebilir tutamak.
                       */}
-                      {onKoseDuzelt && yerKoseSayisi > 0 && (
-                        <button
-                          type="button"
-                          onClick={onKoseDuzelt}
-                          className="mt-1 w-full rounded-lg px-3 py-1.5 text-[13px] font-medium text-brand transition-colors hover:opacity-80"
-                        >
-                          {t('yer.koseDuzelt')}
-                        </button>
-                      )}
                       </>
                       )}
                     </div>
