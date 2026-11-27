@@ -10155,6 +10155,22 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const yerKenarKesisimi =
     yerCizgi.length >= 4 ? dogruKesisimi(yerCizgi[0], yerCizgi[1], yerCizgi[2], yerCizgi[3]) : null
 
+  /*
+   * SON KÖŞEYİ GERİ AL.
+   *
+   * Yanlış yere tıklayan kullanıcının elinde hiçbir geri dönüş yoktu:
+   * köşeyi sürükleyip düzeltmek vardı ama "bu işaretleme baştan olsun"
+   * demenin yolu yoktu. Basıldıkça bir köşe siliniyor; dördü de silinip
+   * baştan işaretlenebiliyor.
+   *
+   * KİLİTLİ KÖŞELERE DOKUNMUYOR: komşu ekranla paylaşılan kenarın iki
+   * köşesi kenar seçiminden geliyor, silinirse birleşim açılırdı
+   * (bkz. kenariSec, yerKilit).
+   */
+  const yerKoseGeriAl = () => {
+    setYerNokta((l) => (l.length > yerKilit ? l.slice(0, -1) : l))
+  }
+
   const yerKenarCizimeGec = () => {
     setYerCizgi([])
     /*
@@ -14319,6 +14335,7 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                             yerKenarHazir={!!yerKenarKesisimi}
                             onYerKenarBasla={yerAktif ? yerKenarCizimeGec : null}
                             onYerKenarVazgec={yerKenarVazgec}
+                            onKoseGeriAl={yerNokta.length > yerKilit ? yerKoseGeriAl : null}
                             onYerKenardanKur={yerKenardanKur}
                             onYerSigdir={yerAktif ? yerEkraniSigdir : null}
                             yerBitirHazir={

@@ -133,6 +133,7 @@ function SihirbazKart({
   yerKenarHazir = false,
   onYerKenarBasla = null,
   onYerKenarVazgec = null,
+  onKoseGeriAl = null,
   onYerKenardanKur = null,
   onYerSigdir = null,
   yerBitirHazir = false,
@@ -1014,6 +1015,22 @@ function SihirbazKart({
                         SÖYLENMESİYDİ.
                         ───────────────────────────────────────────────────
                       */}
+                      {/*
+                        GERİ AL — yanlış konan köşeyi silmek.
+                        Sürükleyerek düzeltmek ince ayar için; bu ise
+                        "buraya hiç olmadı" demenin yolu. Basıldıkça bir
+                        köşe gidiyor, dördü de silinebiliyor.
+                      */}
+                      {onKoseGeriAl && (
+                        <button
+                          type="button"
+                          onClick={onKoseGeriAl}
+                          className="mt-1.5 w-full rounded-lg px-3 py-1.5 text-[13px] font-medium text-brand transition-colors hover:opacity-80"
+                        >
+                          {t('yer.geriAl')}
+                        </button>
+                      )}
+
                       {/*
                         Köşe tamamlanana kadar kenar yolu açık: bir
                         fotoğrafta birden çok köşe görünmeyebiliyor.
