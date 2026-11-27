@@ -1341,6 +1341,23 @@ function App({ theme, onToggleTheme: temaDegistir }) {
    */
   const [alanCizgi, setAlanCizgi] = useState([])
   /*
+   * ───────────────────────────────────────────────────────────────────────
+   * YERLEŞTİRMEDE DE KENARLARDAN KÖŞE.
+   *
+   * "Köşe görünmüyor — kenarlardan bul" yalnızca ALAN işaretleme akışında
+   * vardı (alanCizgi). Ekranlar sırayla yerleştirilmeye başlayınca köşeler
+   * artık yerNokta'da toplanıyor ve araç oraya hiç bağlanmamıştı: duvarın
+   * köşesi bir kolonun arkasında kalıyorsa tıklanacak bir nokta yok,
+   * kullanıcının elinde de bir çare kalmıyordu.
+   *
+   * Aynı araç, ayrı durum: çizgiler tuval pikselinde tutuluyor çünkü
+   * yerNokta da öyle (alanNokta ise oran). İkisini tek durumda toplamak
+   * koordinat uzaylarını karıştırırdı.
+   * ───────────────────────────────────────────────────────────────────────
+   */
+  const [yerKenarKipi, setYerKenarKipi] = useState(false)
+  const [yerCizgi, setYerCizgi] = useState([])
+  /*
    * GÖRÜNMEYEN KÖŞEYİ BULMA — tek köşelik bir alt kip.
    *
    * Varsayılan yol dört köşeye tıklamak. Bir köşe görünmüyorsa (kadrajın
@@ -10110,6 +10127,41 @@ function App({ theme, onToggleTheme: temaDegistir }) {
   const yerSigdirma =
     yerEkran && yerNokta.length === 4 ? alanaSigdirmaHesabi(yerEkran, yerNokta) : null
 
+  /* İki çizginin kesişimi: görünmeyen köşe (bkz. gorunmeyenKoseyiEkle). */
+  const yerKenarKesisimi =
+    yerCizgi.length >= 4 ? dogruKesisimi(yerCizgi[0], yerCizgi[1], yerCizgi[2], yerCizgi[3]) : null
+
+  const yerKenarCizimeGec = () => {
+    setYerCizgi([])
+    setYerKenarKipi(true)
+  }
+  const yerKenarVazgec = () => {
+    setYerCizgi([])
+    setYerKenarKipi(false)
+  }
+  /*
+   * Köşe kadrajın dışına da düşebiliyor: sınır uygulanmıyor, hesap görüntü
+   * düzleminde çalışıyor ve pikselin fotoğrafın içinde olması gerekmiyor.
+   */
+  const yerKenardanKur = () => {
+    if (!yerKenarKesisimi || yerNokta.length >= 4) return
+    yerNoktaDegisti([...yerNokta, yerKenarKesisimi])
+    setYerCizgi([])
+    setYerKenarKipi(false)
+  }
+  /*
+   * KÖŞELERİ DÜZELT — dört işaret silinip yeniden konuyor.
+   *
+   * Tek tek sürüklemek ince ayar için; bu ise "buraya hiç olmadı, baştan
+   * işaretleyeyim" demenin yolu. Yalnızca o EKRANIN köşelerini siliyor;
+   * referansa, öteki ekranlara ve ölçüye dokunmuyor.
+   */
+  const yerKoseleriDuzelt = () => {
+    setYerCizgi([])
+    setYerKenarKipi(false)
+    setYerNokta([])
+  }
+
   const yerEkraniOnayla = () => {
     if (yerNokta.length !== 4 || !yerEkran) return
     /* Sıra, yerleşmemiş ilk ekrana geçiyor (küpte arka yüzler atlanıyor). */
@@ -11957,7 +12009,31 @@ function App({ theme, onToggleTheme: temaDegistir }) {
             perspektif oradan geliyor. Katman en üstte: alttaki katmanlar
             tıklamaları yutuyordu.
           */}
-          {yerAktif && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+          {/*
+            KENAR ÇİZİMİ — köşe görünmediğinde açılan alt kip.
+            Köşe seçici bu sırada kapalı ki tıklamalar karışmasın.
+          */}
+          {yerAktif && yerKenarKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 18 }}>
+              <ReferansSecici
+                foto={isaretFoto}
+                kenaraYapis={kenaraYapis}
+                olcek={isaretZoom}
+                onKaydir={isaretKaydir}
+                kenarCizim
+                /* İki kenar = dört nokta; kesişimleri aranan köşe. */
+                enCokNokta={4}
+                kesisimNoktasi={yerKenarKesisimi}
+                noktalar={yerCizgi}
+                onDegis={setYerCizgi}
+                tuvalW={tuvalBoyut.w}
+                tuvalH={tuvalBoyut.h}
+                sinir={fotoSinir}
+              />
+            </div>
+          )}
+
+          {yerAktif && !yerKenarKipi && fotoYer?.genislik > 0 && scene === 'ozel' && ozelSahne && (
             <>
               <div style={{ position: 'absolute', inset: 0, zIndex: 18 }}>
                 <ReferansSecici
@@ -13939,15 +14015,16 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                           Küpte gizli: kutunun arka yüzleri ve kapağı
                           fotoğrafta işaretlenemiyor.
                         */}
-                        {grup?.tip !== 'kutu' && (
-                          <button
-                            type="button"
-                            onClick={dortKoseyeGec}
-                            className="mt-2 w-full rounded-lg border border-brand px-4 py-2.5 text-[16px] font-semibold text-brand transition-colors hover:bg-brand-tint dark:hover:bg-[#1b2436]"
-                          >
-                            {t('yer3d.dortKose')}
-                          </button>
-                        )}
+                        {/*
+                          "4 KÖŞE İLE YERLEŞTİR" KALDIRILDI — GEREKSİZ.
+
+                          Dört köşe akışı zaten varsayılan: referans bitince
+                          kendiliğinden başlıyor ve her ekranın sırası
+                          panelde açık duruyor. Buradaki düğme çalışan
+                          yöntemi yeniden başlatmaktan başka bir şey
+                          yapmıyor, üstelik iki ayrı yöntem varmış gibi
+                          gösteriyordu. Geri dönüş yolu "Yerleşimi düzenle".
+                        */}
                       </>
                     )}
                     {/*
@@ -14195,6 +14272,14 @@ function App({ theme, onToggleTheme: temaDegistir }) {
                                   : t('yer.sigdirYok')
                             }
                             yerSigdirHazir={yerNokta.length === 4 && !!yerSigdirma?.degisti}
+                            /* Kenarlardan köşe bulma — yerleştirmenin kendi kipi. */
+                            yerKenarKipi={yerKenarKipi}
+                            yerKenarSayisi={Math.floor(yerCizgi.length / 2)}
+                            yerKenarHazir={!!yerKenarKesisimi}
+                            onYerKenarBasla={yerAktif ? yerKenarCizimeGec : null}
+                            onYerKenarVazgec={yerKenarVazgec}
+                            onYerKenardanKur={yerKenardanKur}
+                            onKoseDuzelt={yerAktif ? yerKoseleriDuzelt : null}
                             onYerSigdir={yerAktif ? yerEkraniSigdir : null}
                             yerBitirHazir={
                               yerlesecekIdler.length > 0 &&

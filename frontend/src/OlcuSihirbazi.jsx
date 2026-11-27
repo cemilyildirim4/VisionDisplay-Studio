@@ -127,6 +127,14 @@ function SihirbazKart({
   yerYerlestirNot = '',
   yerSigdirNot = '',
   yerSigdirHazir = false,
+  /* Kenarlardan köşe bulma — yerleştirme adımının kendi alt kipi. */
+  yerKenarKipi = false,
+  yerKenarSayisi = 0,
+  yerKenarHazir = false,
+  onYerKenarBasla = null,
+  onYerKenarVazgec = null,
+  onYerKenardanKur = null,
+  onKoseDuzelt = null,
   onYerSigdir = null,
   yerBitirHazir = false,
   /* Sıradaki ekranın yönergesi ve konan köşe sayısı — tuvalde değil burada. */
@@ -900,6 +908,57 @@ function SihirbazKart({
                         </span>
                       </div>
 
+                      {/*
+                        ───────────────────────────────────────────────────
+                        KÖŞE GÖRÜNMÜYORSA KENARLARDAN.
+
+                        Duvarın köşesi bir kolonun arkasında kalıyor,
+                        kadrajın dışına düşüyor ya da duvar orada hiç
+                        bitmiyorsa tıklanacak bir köşe yok. O zaman o
+                        köşeye bakan İKİ KENARA birer çizgi çekiliyor ve
+                        köşe kesişimlerinden kuruluyor.
+
+                        Araç alan işaretlemede zaten vardı; sırayla
+                        yerleştirmeye geçince oraya bağlanmamıştı
+                        (bkz. App.jsx yerKenarCizimeGec).
+                        ───────────────────────────────────────────────────
+                      */}
+                      {yerKenarKipi ? (
+                        <>
+                          <p className="mt-2 mb-0 text-[13px] leading-snug text-neutral-700 dark:text-neutral-300">
+                            {t('sih.kenarAciklama')}
+                          </p>
+                          <p
+                            className={`${kucuk} tabular-nums ${
+                              yerKenarHazir
+                                ? 'text-emerald-700 dark:text-emerald-400'
+                                : 'text-neutral-500 dark:text-neutral-400'
+                            }`}
+                          >
+                            {yerKenarSayisi} / 2 {t('sih.kenarSayac')}
+                            {yerKenarHazir ? ' · ' + t('sih.kesisimHazir') : ''}
+                          </p>
+                          <div className="mt-2 flex items-center gap-1.5">
+                            <button type="button" onClick={onYerKenarVazgec} className={yan}>
+                              {t('sih.vazgec')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={onYerKenardanKur}
+                              disabled={!yerKenarHazir}
+                              className={ana}
+                            >
+                              {t('sih.kenarKur')}
+                            </button>
+                          </div>
+                          {yerKenarSayisi >= 2 && !yerKenarHazir && (
+                            <p className={`${kucuk} text-amber-600 dark:text-amber-400`}>
+                              {t('sih.kenarKesismedi')}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                      <>
                       {/* ÖLÇÜYÜ KORUYAN YOL. */}
                       {onYerOnayla && (
                         <>
@@ -956,10 +1015,35 @@ function SihirbazKart({
                         SÖYLENMESİYDİ.
                         ───────────────────────────────────────────────────
                       */}
-                      {yerKoseSayisi > 0 && (
-                        <p className="mt-1.5 mb-0 text-[11.5px] leading-snug text-neutral-600 dark:text-neutral-400">
-                          {t('yer.duzelt')}
-                        </p>
+                      {/*
+                        Köşe tamamlanana kadar kenar yolu açık: bir
+                        fotoğrafta birden çok köşe görünmeyebiliyor.
+                      */}
+                      {onYerKenarBasla && yerKoseSayisi < 4 && (
+                        <button
+                          type="button"
+                          onClick={onYerKenarBasla}
+                          className="mt-1.5 w-full rounded-lg border border-neutral-200 px-3 py-2 text-[13.5px] font-medium text-neutral-600 transition-colors hover:border-brand hover:text-brand dark:border-[#2c333f] dark:text-neutral-400"
+                        >
+                          {t('sih.kenarBasla')}
+                        </button>
+                      )}
+
+                      {/*
+                        KÖŞELERİ DÜZELT — dört işareti silip yeniden koymak.
+                        Tek bir köşeyi düzeltmek için gerekmiyor: konan
+                        köşeler zaten sürüklenebilir tutamak.
+                      */}
+                      {onKoseDuzelt && yerKoseSayisi > 0 && (
+                        <button
+                          type="button"
+                          onClick={onKoseDuzelt}
+                          className="mt-1 w-full rounded-lg px-3 py-1.5 text-[13px] font-medium text-brand transition-colors hover:opacity-80"
+                        >
+                          {t('yer.koseDuzelt')}
+                        </button>
+                      )}
+                      </>
                       )}
                     </div>
                   ) : (

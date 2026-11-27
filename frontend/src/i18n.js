@@ -816,6 +816,7 @@ const dict = {
   'yer.onayla': { tr: 'Bu ekranı yerleştir', en: 'Place this screen', ar: 'ضع هذه الشاشة' },
   'yer.bitir': { tr: 'Yerleşimi bitir', en: 'Finish placement', ar: 'إنهاء الوضع' },
   'yer.ekranN': { tr: '{0}. ekran', en: 'Screen {0}', ar: 'الشاشة {0}' },
+  'yer.koseDuzelt': { tr: 'Köşeleri düzelt', en: 'Redo the corners', ar: 'أعد وضع الزوايا' },
   'yer.bolum': { tr: 'Yerleştirme', en: 'Placement', ar: 'الوضع' },
   'yer.koseTikla': {
     tr: 'Duracağı yerin dört köşesine fotoğrafta tıklayın.',
